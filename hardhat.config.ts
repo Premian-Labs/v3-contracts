@@ -22,6 +22,7 @@ Dotenv.config();
 const {
   API_KEY_ALCHEMY,
   API_KEY_ETHERSCAN,
+  API_KEY_OPTIMISM,
   API_KEY_ARBISCAN,
   API_KEY_FTMSCAN,
   PKEY_ETH_MAIN,
@@ -55,11 +56,11 @@ export default {
       blockGasLimit: 180000000000,
       ...(FORK_MODE === 'true'
         ? {
-            forking: {
-              url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-              blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
-            },
-          }
+          forking: {
+            url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
+            blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
+          },
+        }
         : {}),
     },
     mainnet: {
@@ -92,6 +93,11 @@ export default {
       //gas: 120000000000,
       blockGasLimit: 120000000000,
       //gasPrice: 10,
+      timeout: 300000,
+    },
+    optimism: {
+      url: `https://mainnet.optimism.io`,
+      accounts: [PKEY_ETH_MAIN],
       timeout: 300000,
     },
     arbitrum: {
@@ -140,6 +146,7 @@ export default {
       mainnet: API_KEY_ETHERSCAN,
       arbitrumOne: API_KEY_ARBISCAN,
       opera: API_KEY_FTMSCAN,
+      optimisticEthereum: API_KEY_OPTIMISM,
     },
   },
 
