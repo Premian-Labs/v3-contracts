@@ -13,9 +13,6 @@ import 'hardhat-docgen';
 import 'hardhat-gas-reporter';
 import 'hardhat-spdx-license-identifier';
 import 'solidity-coverage';
-// tasks and task overrides
-import './tasks/accounts';
-import './tasks/typechain_generate_types';
 
 Dotenv.config();
 
