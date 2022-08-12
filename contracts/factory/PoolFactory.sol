@@ -4,7 +4,7 @@
 pragma solidity ^0.8.0;
 
 import {IPoolFactory} from "./IPoolFactory.sol";
-import {PoolProxy} from "./PoolProxy.sol";
+import {PoolProxy} from "../pool/PoolProxy.sol";
 
 contract PoolFactory is IPoolFactory {
     function deployPool(
