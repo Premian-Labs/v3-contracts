@@ -10,7 +10,14 @@ library PoolStorage {
     using ABDKMath64x64 for int128;
     using PoolStorage for PoolStorage.Layout;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.Pool");
+    enum TokenType {
+        FREE_LIQUIDITY,
+        LONG,
+        SHORT
+    }
+
+    bytes32 internal constant STORAGE_SLOT =
+        keccak256("premia.contracts.storage.Pool");
 
     struct Layout {
         // ERC20 token addresses
@@ -22,6 +29,8 @@ library PoolStorage {
         // token metadata
         uint8 underlyingDecimals;
         uint8 baseDecimals;
+        // Whether its a call or put pool
+        bool isCallPool;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -30,5 +39,4 @@ library PoolStorage {
             l.slot := slot
         }
     }
-
 }

@@ -27,7 +27,8 @@ contract PoolProxy is Proxy {
         address base,
         address underlying,
         address baseOracle,
-        address underlyingOracle
+        address underlyingOracle,
+        bool isCallPool
     ) {
         DIAMOND = diamond;
         OwnableStorage.layout().owner = msg.sender;
@@ -47,6 +48,8 @@ contract PoolProxy is Proxy {
 
             l.baseDecimals = baseDecimals;
             l.underlyingDecimals = underlyingDecimals;
+
+            l.isCallPool = isCallPool;
         }
 
         {
