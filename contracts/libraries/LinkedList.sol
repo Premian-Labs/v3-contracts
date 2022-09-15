@@ -7,13 +7,15 @@ pragma solidity ^0.8.0;
  * @dev Derived from https://github.com/vittominacori/solidity-linked-list/ (MIT license)
  */
 library LinkedList {
-    uint256 private constant _NULL = 0;
-    uint256 private constant _HEAD = 0;
+    uint256 private constant NULL = 0;
+    uint256 private constant HEAD = 0;
 
-    bool private constant _PREV = false;
-    bool private constant _NEXT = true;
+    uint256 private constant MAX_UINT = uint256(int256(-1));
 
-    error LinkedList__InsertZero();
+    bool private constant PREV = false;
+    bool private constant NEXT = true;
+
+    error LinkedList__InsertInvalid();
 
     struct List {
         uint256 size;
@@ -27,9 +29,7 @@ library LinkedList {
      */
     function listExists(List storage self) internal view returns (bool) {
         // if the head nodes previous or next pointers both point to itself, then there are no items in the list
-        if (
-            self.list[_HEAD][_PREV] != _HEAD || self.list[_HEAD][_NEXT] != _HEAD
-        ) {
+        if (self.list[HEAD][PREV] != HEAD || self.list[HEAD][NEXT] != HEAD) {
             return true;
         } else {
             return false;
@@ -47,10 +47,8 @@ library LinkedList {
         view
         returns (bool)
     {
-        if (
-            self.list[_node][_PREV] == _HEAD && self.list[_node][_NEXT] == _HEAD
-        ) {
-            if (self.list[_HEAD][_NEXT] == _node) {
+        if (self.list[_node][PREV] == HEAD && self.list[_node][NEXT] == HEAD) {
+            if (self.list[HEAD][NEXT] == _node) {
                 return true;
             } else {
                 return false;
@@ -88,7 +86,7 @@ library LinkedList {
         if (!nodeExists(self, _node)) {
             return (false, 0, 0);
         } else {
-            return (true, self.list[_node][_PREV], self.list[_node][_NEXT]);
+            return (true, self.list[_node][PREV], self.list[_node][NEXT]);
         }
     }
 
@@ -97,7 +95,7 @@ library LinkedList {
      * @param self stored linked list from contract
      * @param _node id of the node to step from
      * @param _direction direction to step in
-     * @return node in _direction (0 if no match)
+     * @return node in _direction (0 if no match before, MAX_UINT if no match after)
      */
     function getAdjacent(
         List storage self,
@@ -105,7 +103,8 @@ library LinkedList {
         bool _direction
     ) internal view returns (uint256) {
         if (!nodeExists(self, _node)) {
-            return 0;
+            if (_direction == PREV) return 0;
+            return MAX_UINT;
         } else {
             return self.list[_node][_direction];
         }
@@ -115,14 +114,14 @@ library LinkedList {
      * @dev Returns the link of a node `_node` in direction `_NEXT`.
      * @param self stored linked list from contract
      * @param _node id of the node to step from
-     * @return next node (0 if no match)
+     * @return next node (MAX_UINT if no match)
      */
     function getNextNode(List storage self, uint256 _node)
         internal
         view
         returns (uint256)
     {
-        return getAdjacent(self, _node, _NEXT);
+        return getAdjacent(self, _node, NEXT);
     }
 
     /**
@@ -136,7 +135,7 @@ library LinkedList {
         view
         returns (uint256)
     {
-        return getAdjacent(self, _node, _PREV);
+        return getAdjacent(self, _node, PREV);
     }
 
     /**
@@ -151,9 +150,9 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
-        if (_new == 0) revert LinkedList__InsertZero();
+        if (_new == 0 || _new == MAX_UINT) revert LinkedList__InsertInvalid();
 
-        return _insert(self, _node, _new, _NEXT);
+        return _insert(self, _node, _new, NEXT);
     }
 
     /**
@@ -168,9 +167,9 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
-        if (_new == 0) revert LinkedList__InsertZero();
+        if (_new == 0 || _new == MAX_UINT) revert LinkedList__InsertInvalid();
 
-        return _insert(self, _node, _new, _PREV);
+        return _insert(self, _node, _new, PREV);
     }
 
     /**
@@ -183,17 +182,12 @@ library LinkedList {
         internal
         returns (uint256)
     {
-        if ((_node == _NULL) || (!nodeExists(self, _node))) {
+        if ((_node == NULL) || (!nodeExists(self, _node))) {
             return 0;
         }
-        _createLink(
-            self,
-            self.list[_node][_PREV],
-            self.list[_node][_NEXT],
-            _NEXT
-        );
-        delete self.list[_node][_PREV];
-        delete self.list[_node][_NEXT];
+        _createLink(self, self.list[_node][PREV], self.list[_node][NEXT], NEXT);
+        delete self.list[_node][PREV];
+        delete self.list[_node][NEXT];
 
         self.size -= 1; // NOT: SafeMath library should be used here to decrement.
 
@@ -210,7 +204,7 @@ library LinkedList {
         internal
         returns (bool)
     {
-        return _push(self, _node, _NEXT);
+        return _push(self, _node, NEXT);
     }
 
     /**
@@ -223,7 +217,7 @@ library LinkedList {
         internal
         returns (bool)
     {
-        return _push(self, _node, _PREV);
+        return _push(self, _node, PREV);
     }
 
     /**
@@ -232,7 +226,7 @@ library LinkedList {
      * @return uint256 the removed node
      */
     function popFront(List storage self) internal returns (uint256) {
-        return _pop(self, _NEXT);
+        return _pop(self, NEXT);
     }
 
     /**
@@ -241,7 +235,7 @@ library LinkedList {
      * @return uint256 the removed node
      */
     function popBack(List storage self) internal returns (uint256) {
-        return _pop(self, _PREV);
+        return _pop(self, PREV);
     }
 
     /**
@@ -256,7 +250,7 @@ library LinkedList {
         uint256 _node,
         bool _direction
     ) private returns (bool) {
-        return _insert(self, _HEAD, _node, _direction);
+        return _insert(self, HEAD, _node, _direction);
     }
 
     /**
@@ -269,7 +263,7 @@ library LinkedList {
         private
         returns (uint256)
     {
-        uint256 adj = getAdjacent(self, _HEAD, _direction);
+        uint256 adj = getAdjacent(self, HEAD, _direction);
         return remove(self, adj);
     }
 
