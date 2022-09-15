@@ -8,21 +8,22 @@ import {ITicks} from "./ITicks.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
 
-error Ticks__InvalidInsertLocation();
-error Ticks__InvalidInsert();
-
 contract Ticks is ITicks {
     using PoolStorage for PoolStorage.Layout;
     using LinkedList for LinkedList.List;
+
+    error Ticks__InvalidInsertLocation();
+    error Ticks__InvalidInsert();
+    error Ticks__FailedInsert();
 
     /*
      * @notice Get the left and right Tick to insert a new Tick between.
      * @dev To be called from off-chain, then left and right points passed in
      *      to deposit/withdraw (correctness of left/right points can be
      *      verified much cheaper on-chain than finding on-chain)
-     * @param lower The lower-bound Tick for a new position.
-     * @param upper The upper-bound Tick for a new position.
-     * @param current The Pool's current left tick.
+     * @param lower The id of the lower-bound Tick for a new position.
+     * @param upper The id of the upper-bound Tick for a new position.
+     * @param current The Pool's current left tick id.
      * @return left The left Tick from the new position
      * @return right The right Tick from the new position
      */
@@ -34,17 +35,13 @@ contract Ticks is ITicks {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         left = current;
-        while (left > lower) {
-            (bool exists, uint256 price) = l.ticks.getPreviousNode(left);
-            if (!exists) break;
-            left = price;
+        while (left > 0 && left > lower) {
+            left = l.tickIndex.getPreviousNode(left);
         }
 
         right = current;
-        while (right < upper) {
-            (bool exists, uint256 price) = l.ticks.getNextNode(right);
-            if (!exists) break;
-            right = price;
+        while (right > 0 && right < upper) {
+            left = l.tickIndex.getNextNode(right);
         }
 
         if (left == 0 || right == 0) revert Ticks__InvalidInsertLocation();

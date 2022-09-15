@@ -13,6 +13,8 @@ library LinkedList {
     bool private constant _PREV = false;
     bool private constant _NEXT = true;
 
+    error LinkedList__InsertZero();
+
     struct List {
         uint256 size;
         mapping(uint256 => mapping(bool => uint256)) list;
@@ -58,6 +60,7 @@ library LinkedList {
         }
     }
 
+    // ToDo : Remove ?
     /**
      * @dev Returns the number of elements in the list
      * @param self stored linked list from contract
@@ -94,17 +97,17 @@ library LinkedList {
      * @param self stored linked list from contract
      * @param _node id of the node to step from
      * @param _direction direction to step in
-     * @return bool, uint256 true if node exists or false otherwise, node in _direction
+     * @return node in _direction (0 if no match)
      */
     function getAdjacent(
         List storage self,
         uint256 _node,
         bool _direction
-    ) internal view returns (bool, uint256) {
+    ) internal view returns (uint256) {
         if (!nodeExists(self, _node)) {
-            return (false, 0);
+            return 0;
         } else {
-            return (true, self.list[_node][_direction]);
+            return self.list[_node][_direction];
         }
     }
 
@@ -112,12 +115,12 @@ library LinkedList {
      * @dev Returns the link of a node `_node` in direction `_NEXT`.
      * @param self stored linked list from contract
      * @param _node id of the node to step from
-     * @return bool, uint256 true if node exists or false otherwise, next node
+     * @return next node (0 if no match)
      */
     function getNextNode(List storage self, uint256 _node)
         internal
         view
-        returns (bool, uint256)
+        returns (uint256)
     {
         return getAdjacent(self, _node, _NEXT);
     }
@@ -126,12 +129,12 @@ library LinkedList {
      * @dev Returns the link of a node `_node` in direction `_PREV`.
      * @param self stored linked list from contract
      * @param _node id of the node to step from
-     * @return bool, uint256 true if node exists or false otherwise, previous node
+     * @return previous node (0 if no match)
      */
     function getPreviousNode(List storage self, uint256 _node)
         internal
         view
-        returns (bool, uint256)
+        returns (uint256)
     {
         return getAdjacent(self, _node, _PREV);
     }
@@ -148,6 +151,8 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
+        if (_new == 0) revert LinkedList__InsertZero();
+
         return _insert(self, _node, _new, _NEXT);
     }
 
@@ -163,6 +168,8 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
+        if (_new == 0) revert LinkedList__InsertZero();
+
         return _insert(self, _node, _new, _PREV);
     }
 
@@ -262,8 +269,7 @@ library LinkedList {
         private
         returns (uint256)
     {
-        uint256 adj;
-        (, adj) = getAdjacent(self, _HEAD, _direction);
+        uint256 adj = getAdjacent(self, _HEAD, _direction);
         return remove(self, adj);
     }
 

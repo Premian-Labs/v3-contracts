@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
 import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
+import {ITicks} from "./ITicks.sol";
 
 library PoolStorage {
     using ABDKMath64x64 for int128;
@@ -32,8 +33,11 @@ library PoolStorage {
         uint8 baseDecimals;
         // Whether its a call or put pool
         bool isCallPool;
-        // Ticks linked list
-        LinkedList.List ticks;
+        // Index of all existing ticks sorted
+        LinkedList.List tickIndex;
+        mapping(uint256 => ITicks.TickData) ticks;
+        uint256 currentTickId;
+        uint256 marketPrice;
     }
 
     function layout() internal pure returns (Layout storage l) {
