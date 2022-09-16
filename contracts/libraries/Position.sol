@@ -20,9 +20,9 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
            DS => C_A:= DS * (1 - P_bar(T_upper, P_DS))    (1 contract of short options = (1 - P_bar) unit of ask collateral)
  */
 library Position {
-    using Position for Position.PositionData;
+    using Position for Position.Data;
 
-    struct PositionData {
+    struct Data {
         // The Agent that owns the exposure change of the Position.
         address owner;
         // The Agent that can control modifications to the Position.
@@ -45,15 +45,11 @@ library Position {
         Exposure.Data lastExposure;
     }
 
-    function transitionPrice(PositionData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function transitionPrice(Data memory self) internal pure returns (uint256) {
         return self._transitionPrice(true);
     }
 
-    function _transitionPrice(PositionData memory self, bool useBidAveragePrice)
+    function _transitionPrice(Data memory self, bool useBidAveragePrice)
         internal
         pure
         returns (uint256)
@@ -80,30 +76,18 @@ library Position {
             1e18;
     }
 
-    function averagePrice(PositionData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function averagePrice(Data memory self) internal pure returns (uint256) {
         return (self.upper + self.lower) / 2;
     }
 
-    function bidAveragePrice(PositionData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function bidAveragePrice(Data memory self) internal pure returns (uint256) {
         return (self._transitionPrice(false) + self.lower) / 2;
     }
 
     /**
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
-    function lambdaBid(PositionData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function lambdaBid(Data memory self) internal pure returns (uint256) {
         return
             self.bid == 0
                 ? self.short
@@ -113,22 +97,18 @@ library Position {
     /**
      * @notice The total number of short contracts that must be sold to move through this Position's range.
      */
-    function lambdaAsk(PositionData memory self)
-        internal
-        pure
-        returns (uint256)
-    {
+    function lambdaAsk(Data memory self) internal pure returns (uint256) {
         return self.ask + self.long;
     }
 
-    function _lambda(PositionData memory self) internal pure returns (uint256) {
+    function _lambda(Data memory self) internal pure returns (uint256) {
         return self.lambdaBid() + self.lambdaAsk();
     }
 
     /**
      * @notice The per-tick liquidity delta for a specific position.
      */
-    function delta(PositionData memory self, uint256 minTickDistance)
+    function delta(Data memory self, uint256 minTickDistance)
         internal
         pure
         returns (uint256)
@@ -138,10 +118,10 @@ library Position {
                 minTickDistance) / 1e18;
     }
 
-    function add(PositionData memory self, PositionData memory other)
+    function add(Data memory self, Data memory other)
         internal
         pure
-        returns (PositionData memory)
+        returns (Data memory)
     {
         self.bid += other.bid;
         self.ask += other.ask;
@@ -151,10 +131,10 @@ library Position {
         return self;
     }
 
-    function sub(PositionData memory self, PositionData memory other)
+    function sub(Data memory self, Data memory other)
         internal
         pure
-        returns (PositionData memory)
+        returns (Data memory)
     {
         self.bid -= other.bid;
         self.ask -= other.ask;

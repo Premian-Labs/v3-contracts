@@ -14,7 +14,7 @@ import {Tick} from "../libraries/Tick.sol";
 
 contract PoolTicks is IPoolTicks {
     using PoolStorage for PoolStorage.Layout;
-    using Position for Position.PositionData;
+    using Position for Position.Data;
     using Exposure for Exposure.Data;
     using LinkedList for LinkedList.List;
 
