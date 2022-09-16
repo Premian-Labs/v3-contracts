@@ -5,19 +5,41 @@ pragma solidity ^0.8.0;
 
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
+/**
+ * @notice Keeps track of LP positions
+           Stores the lower and upper Ticks of a user's range order, and tracks
+           the pro-rata exposure of the order.
+
+           P_DL:= The price at which all long options are closed
+           P_DS:= The price at which all short options are covered
+
+           C_B => DL:= C_B / P_bar(P_DL, T_lower)         (1 unit of bid collateral = (1 / P_bar) contracts of long options)
+           C_A => DS:= C_A                                (1 unit of ask collateral = 1 contract of short options)
+           DL => C_B:= DL * P_bar(T_lower, P_DL)          (1 unit of long options = P_bar units of bid collateral)
+           DS => C_A:= DS * (1 - P_bar(T_upper, P_DS))    (1 contract of short options = (1 - P_bar) unit of ask collateral)
+ */
 library Position {
     using Position for Position.PositionData;
 
     struct PositionData {
+        // The Agent that owns the exposure change of the Position.
         address owner;
+        // The Agent that can control modifications to the Position.
         address operator;
+        // The direction of the range order.
         PoolStorage.TradeSide side;
         // ToDo : Probably can use uint64
+        // The lower tick price of the range order.
         uint256 lower;
+        // The upper tick price of the range order.
         uint256 upper;
+        // The amount of bid collateral the LP provides.
         uint256 bid;
+        // The amount of bid collateral the LP provides.
         uint256 ask;
+        // The amount of long contracts the LP provides.
         uint256 long;
+        // The amount of short contracts the LP provides.
         uint256 short;
         PoolStorage.Exposure lastExposure;
     }
@@ -102,6 +124,9 @@ library Position {
         return self.lambdaBid() + self.lambdaAsk();
     }
 
+    /**
+     * @notice The per-tick liquidity delta for a specific position.
+     */
     function delta(PositionData memory self, uint256 minTickDistance)
         internal
         pure
