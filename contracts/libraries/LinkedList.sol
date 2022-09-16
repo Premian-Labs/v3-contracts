@@ -10,7 +10,7 @@ library LinkedList {
     uint256 private constant NULL = 0;
     uint256 private constant HEAD = 0;
 
-    uint256 private constant MAX_UINT = uint256(int256(-1));
+    uint256 private constant MAX_UINT256 = uint256(int256(-1));
 
     bool private constant PREV = false;
     bool private constant NEXT = true;
@@ -104,7 +104,7 @@ library LinkedList {
     ) internal view returns (uint256) {
         if (!nodeExists(self, _node)) {
             if (_direction == PREV) return 0;
-            return MAX_UINT;
+            return MAX_UINT256;
         } else {
             return self.list[_node][_direction];
         }
@@ -150,7 +150,8 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
-        if (_new == 0 || _new == MAX_UINT) revert LinkedList__InsertInvalid();
+        if (_new == 0 || _new == MAX_UINT256)
+            revert LinkedList__InsertInvalid();
 
         return _insert(self, _node, _new, NEXT);
     }
@@ -167,7 +168,8 @@ library LinkedList {
         uint256 _node,
         uint256 _new
     ) internal returns (bool) {
-        if (_new == 0 || _new == MAX_UINT) revert LinkedList__InsertInvalid();
+        if (_new == 0 || _new == MAX_UINT256)
+            revert LinkedList__InsertInvalid();
 
         return _insert(self, _node, _new, PREV);
     }

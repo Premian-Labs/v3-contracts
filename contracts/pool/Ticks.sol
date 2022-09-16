@@ -16,7 +16,9 @@ contract Ticks is ITicks {
     error Ticks__InvalidInsert();
     error Ticks__FailedInsert();
 
-    /*
+    uint256 private constant MAX_UINT256 = uint256(int256(-1));
+
+    /**
      * @notice Get the left and right Tick to insert a new Tick between.
      * @dev To be called from off-chain, then left and right points passed in
      *      to deposit/withdraw (correctness of left/right points can be
@@ -39,11 +41,24 @@ contract Ticks is ITicks {
             left = l.tickIndex.getPreviousNode(left);
         }
 
+        while (left < MAX_UINT256 && l.tickIndex.getNextNode(left) <= lower) {
+            left = l.tickIndex.getNextNode(left);
+        }
+
         right = current;
-        while (right > 0 && right < upper) {
+        while (right < MAX_UINT256 && right < upper) {
             left = l.tickIndex.getNextNode(right);
         }
 
-        if (left == 0 || right == 0) revert Ticks__InvalidInsertLocation();
+        while (right > 0 && l.tickIndex.getPreviousNode(right) >= upper) {
+            right = l.tickIndex.getPreviousNode(right);
+        }
+
+        if (
+            left == 0 ||
+            right == 0 ||
+            left == MAX_UINT256 ||
+            right == MAX_UINT256
+        ) revert Ticks__InvalidInsertLocation();
     }
 }
