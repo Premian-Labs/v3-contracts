@@ -18,6 +18,7 @@ library PoolStorage {
         SHORT
     }
 
+    // ToDo : Move somewhere else ?
     struct Exposure {
         uint128 buyGrowthPerLiq;
         uint128 buyDecayPerLiq;
@@ -25,6 +26,12 @@ library PoolStorage {
         uint128 sellDecayPerLiq;
         uint128 feesPerBuyLiq;
         uint128 feesPerSellLiq;
+    }
+
+    // ToDo : Move somewhere else ?
+    enum TradeSide {
+        BUY,
+        SELL
     }
 
     bytes32 internal constant STORAGE_SLOT =
