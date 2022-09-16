@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 
 import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
+import {Exposure} from "../libraries/Exposure.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {ITicks} from "./ITicks.sol";
 
@@ -16,16 +17,6 @@ library PoolStorage {
         FREE_LIQUIDITY,
         LONG,
         SHORT
-    }
-
-    // ToDo : Move somewhere else ?
-    struct Exposure {
-        uint128 buyGrowthPerLiq;
-        uint128 buyDecayPerLiq;
-        uint128 sellGrowthPerLiq;
-        uint128 sellDecayPerLiq;
-        uint128 feesPerBuyLiq;
-        uint128 feesPerSellLiq;
     }
 
     // ToDo : Move somewhere else ?
@@ -54,7 +45,9 @@ library PoolStorage {
         mapping(uint256 => ITicks.TickData) ticks;
         uint256 currentTickId;
         uint256 marketPrice;
-        Exposure exposure;
+        Exposure.Data exposure;
+        uint256 strike;
+        uint256 liq;
     }
 
     function layout() internal pure returns (Layout storage l) {
