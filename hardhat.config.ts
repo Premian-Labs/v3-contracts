@@ -34,7 +34,7 @@ export default {
   solidity: {
     compilers: [
       {
-        version: '0.8.15',
+        version: '0.8.17',
         settings: {
           optimizer: {
             enabled: true,
@@ -53,11 +53,11 @@ export default {
       blockGasLimit: 180000000000,
       ...(FORK_MODE === 'true'
         ? {
-          forking: {
-            url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-            blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
-          },
-        }
+            forking: {
+              url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
+              blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
+            },
+          }
         : {}),
     },
     mainnet: {
