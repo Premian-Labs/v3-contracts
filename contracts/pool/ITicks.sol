@@ -2,17 +2,13 @@
 
 pragma solidity ^0.8.0;
 
+import {PoolStorage} from "./PoolStorage.sol";
+
 interface ITicks {
     struct TickData {
-        uint256 price;
+        uint256 price; // ToDo : Should not be required as we use price to index in the mapping
         int256 delta;
-        // ToDo : Probably need to do some packing if we need all those here -> See precision required
-        uint256 externalBuyGrowthPerLiq;
-        uint256 externalBuyDecayPerLiq;
-        uint256 externalSellGrowthPerLiq;
-        uint256 externalSellDecayPerLiq;
-        uint256 externalFeePerSellLiq;
-        uint256 externalFeePerBuyLiq;
+        PoolStorage.Exposure exposure;
     }
 
     function getInsertTicks(

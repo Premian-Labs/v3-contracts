@@ -18,6 +18,15 @@ library PoolStorage {
         SHORT
     }
 
+    struct Exposure {
+        uint128 buyGrowthPerLiq;
+        uint128 buyDecayPerLiq;
+        uint128 sellGrowthPerLiq;
+        uint128 sellDecayPerLiq;
+        uint128 feesPerBuyLiq;
+        uint128 feesPerSellLiq;
+    }
+
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");
 
@@ -38,6 +47,7 @@ library PoolStorage {
         mapping(uint256 => ITicks.TickData) ticks;
         uint256 currentTickId;
         uint256 marketPrice;
+        Exposure exposure;
     }
 
     function layout() internal pure returns (Layout storage l) {

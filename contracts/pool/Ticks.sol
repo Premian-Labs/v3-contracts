@@ -61,4 +61,24 @@ contract Ticks is ITicks {
             right == MAX_UINT256
         ) revert Ticks__InvalidInsertLocation();
     }
+
+    /**
+     * @notice Creates a Tick for a given price, or returns the existing tick.
+     * @param price The price of the Tick
+     * @return tick The Tick for a given price
+     */
+    function getOrCreateTick(uint256 price)
+        internal
+        returns (TickData memory tick)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
+
+        tick = price <= l.marketPrice
+            ? TickData(price, 0, l.exposure)
+            : TickData(price, 0, PoolStorage.Exposure(0, 0, 0, 0, 0, 0));
+
+        l.ticks[price] = tick;
+    }
 }
