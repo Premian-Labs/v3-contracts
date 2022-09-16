@@ -5,9 +5,12 @@ pragma solidity ^0.8.0;
 
 import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
+
 import {Exposure} from "../libraries/Exposure.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
-import {ITicks} from "./ITicks.sol";
+import {Tick} from "../libraries/Tick.sol";
+
+import {IPoolTicks} from "./IPoolTicks.sol";
 
 library PoolStorage {
     using ABDKMath64x64 for int128;
@@ -42,7 +45,7 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         LinkedList.List tickIndex;
-        mapping(uint256 => ITicks.TickData) ticks;
+        mapping(uint256 => Tick.Data) ticks;
         uint256 currentTickId;
         uint256 marketPrice;
         Exposure.Data exposure;
@@ -55,6 +58,10 @@ library PoolStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function minTickDistance(Layout storage l) internal view returns (uint256) {
+        return l.isCallPool ? 1e14 : l.strike / 1e4;
     }
 
     /**

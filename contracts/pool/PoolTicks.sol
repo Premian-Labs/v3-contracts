@@ -3,13 +3,19 @@
 
 pragma solidity ^0.8.0;
 
-import {ITicks} from "./ITicks.sol";
+import {IPoolTicks} from "./IPoolTicks.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
-import {LinkedList} from "../libraries/LinkedList.sol";
 
-contract Ticks is ITicks {
+import {Exposure} from "../libraries/Exposure.sol";
+import {LinkedList} from "../libraries/LinkedList.sol";
+import {Position} from "../libraries/Position.sol";
+import {Tick} from "../libraries/Tick.sol";
+
+contract PoolTicks is IPoolTicks {
     using PoolStorage for PoolStorage.Layout;
+    using Position for Position.PositionData;
+    using Exposure for Exposure.Data;
     using LinkedList for LinkedList.List;
 
     error Ticks__InvalidInsertLocation();
@@ -67,17 +73,17 @@ contract Ticks is ITicks {
      * @param price The price of the Tick
      * @return tick The Tick for a given price
      */
-    function getOrCreateTick(uint256 price)
+    function _getOrCreateTick(uint256 price)
         internal
-        returns (TickData memory tick)
+        returns (Tick.Data memory tick)
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.tickIndex.nodeExists(price)) return l.ticks[price];
 
         tick = price <= l.marketPrice
-            ? TickData(price, 0, l.exposure)
-            : TickData(price, 0, PoolStorage.Exposure(0, 0, 0, 0, 0, 0));
+            ? Tick.Data(price, 0, l.exposure)
+            : Tick.Data(price, 0, Exposure.Data(0, 0, 0, 0, 0, 0));
 
         l.ticks[price] = tick;
     }
