@@ -50,6 +50,8 @@ library PoolStorage {
         uint256 globalFeesPerLiq;
         uint256 strike;
         uint256 liq;
+        // Current tick normalized price
+        uint256 tick;
     }
 
     function layout() internal pure returns (Layout storage l) {

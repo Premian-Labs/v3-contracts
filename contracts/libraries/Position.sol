@@ -5,6 +5,10 @@ pragma solidity ^0.8.0;
 
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
+import {Math} from "./Math.sol";
+
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 /**
  * @notice Keeps track of LP positions
            Stores the lower and upper Ticks of a user's range order, and tracks
@@ -19,6 +23,8 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
            DS => C_A:= DS * (1 - P_bar(T_upper, P_DS))    (1 contract of short options = (1 - P_bar) unit of ask collateral)
  */
 library Position {
+    using SafeCast for uint256;
+    using Math for int256;
     using Position for Position.Data;
 
     error Position__NotEnoughCollateral();
@@ -36,53 +42,54 @@ library Position {
         // The upper tick price of the range order.
         uint256 upper;
         // The amount of ask (bid) collateral the LP provides.
-        uint256 collateral;
+        int256 collateral;
         // The amount of long (short) contracts the LP provides.
-        uint256 contracts;
+        int256 contracts;
         // Used to track claimable fees over time.
         uint256 lastFeesPerLiq;
         // The amount of fees a user can claim now. Resets after claim.
         uint256 claimableFees;
     }
 
-    function transitionPrice(Data memory self) internal pure returns (uint256) {
+    function transitionPrice(Data memory self) internal pure returns (int256) {
         if (self.side == PoolStorage.TradeSide.BUY) {
             return
-                self.upper -
-                ((self.averagePrice() * self.contracts) / self.collateral) *
-                (self.upper - self.lower);
+                int256(self.upper) -
+                ((self.averagePrice().toInt256() * self.contracts) /
+                    self.collateral) *
+                int256(self.upper - self.lower);
         }
 
         return
-            self.lower +
+            int256(self.lower) +
             ((self.contracts * 1e18) / self.lambdaAsk()) *
-            (self.upper - self.lower);
+            int256(self.upper - self.lower);
     }
 
     function averagePrice(Data memory self) internal pure returns (uint256) {
         return (self.upper + self.lower) / 2;
     }
 
-    function bidAveragePrice(Data memory self) internal pure returns (uint256) {
-        return (self.transitionPrice() + self.lower) / 2;
+    function bidAveragePrice(Data memory self) internal pure returns (int256) {
+        return (self.transitionPrice() + int256(self.lower)) / 2;
     }
 
     function shortAveragePrice(Data memory self)
         internal
         pure
-        returns (uint256)
+        returns (int256)
     {
-        return (self.upper + self.transitionPrice()) / 2;
+        return (int256(self.upper) + self.transitionPrice()) / 2;
     }
 
     /**
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
-    function lambdaBid(Data memory self) internal pure returns (uint256) {
-        uint256 additionalShortCollateralRequired = (self.contracts *
+    function lambdaBid(Data memory self) internal pure returns (int256) {
+        int256 additionalShortCollateralRequired = (self.contracts *
             self.shortAveragePrice()) / 1e18;
 
-        if (self.collateral < additionalShortCollateralRequired)
+        if (self.collateral.abs() < additionalShortCollateralRequired.abs())
             revert Position__NotEnoughCollateral();
 
         return
@@ -94,11 +101,11 @@ library Position {
     /**
      * @notice The total number of short contracts that must be sold to move through this Position's range.
      */
-    function lambdaAsk(Data memory self) internal pure returns (uint256) {
+    function lambdaAsk(Data memory self) internal pure returns (int256) {
         return self.collateral + self.contracts;
     }
 
-    function _lambda(Data memory self) internal pure returns (uint256) {
+    function _lambda(Data memory self) internal pure returns (int256) {
         return
             self.side == PoolStorage.TradeSide.BUY
                 ? self.lambdaBid()
@@ -111,10 +118,12 @@ library Position {
     function delta(Data memory self, uint256 minTickDistance)
         internal
         pure
-        returns (uint256)
+        returns (int256)
     {
         return
-            (((self._lambda() * (self.upper - self.lower)) / 1e18) *
-                minTickDistance) / 1e18;
+            int256(
+                (((self._lambda() * int256(self.upper - self.lower)) / 1e18) *
+                    int256(minTickDistance)) / 1e18
+            );
     }
 }
