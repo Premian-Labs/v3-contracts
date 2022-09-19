@@ -27,7 +27,7 @@ contract PoolTicks is IPoolTicks {
     error PoolTicks__InvalidInsert();
     error PoolTicks__FailedInsert();
 
-    uint256 private constant MAX_UINT256 = uint256(int256(-1));
+    uint256 private constant MAX_UINT256 = type(uint256).max;
 
     /**
      * @notice Get the left and right Tick to insert a new Tick between.
