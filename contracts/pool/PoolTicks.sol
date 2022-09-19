@@ -29,11 +29,11 @@ contract PoolTicks is IPoolTicks {
      * @dev To be called from off-chain, then left and right points passed in
      *      to deposit/withdraw (correctness of left/right points can be
      *      verified much cheaper on-chain than finding on-chain)
-     * @param lower The id of the lower-bound Tick for a new position.
-     * @param upper The id of the upper-bound Tick for a new position.
-     * @param current The Pool's current left tick id.
-     * @return left The left Tick from the new position
-     * @return right The right Tick from the new position
+     * @param lower The normalized price of the lower-bound Tick for a new position.
+     * @param upper The normalized price the upper-bound Tick for a new position.
+     * @param current The Pool's current left tick normalized price.
+     * @return left The normalized price of the left Tick from the new position
+     * @return right The normalized price of the right Tick from the new position
      */
     function getInsertTicks(
         uint256 lower,
@@ -53,7 +53,7 @@ contract PoolTicks is IPoolTicks {
 
         right = current;
         while (right < MAX_UINT256 && right < upper) {
-            left = l.tickIndex.getNextNode(right);
+            right = l.tickIndex.getNextNode(right);
         }
 
         while (right > 0 && l.tickIndex.getPreviousNode(right) >= upper) {
