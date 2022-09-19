@@ -18,6 +18,7 @@ contract PoolTicks is IPoolTicks {
     using LinkedList for LinkedList.List;
     using Tick for Tick.Data;
     using Math for uint256;
+    using Math for int256;
 
     error PoolTicks__InvalidInsertLocation();
     error PoolTicks__InvalidInsert();
@@ -136,6 +137,85 @@ contract PoolTicks is IPoolTicks {
                     l.tick = lower;
                 }
             }
+        }
+    }
+
+    /**
+     * @notice Removes liquidity from a pair of Ticks and if necessary, removes
+     *         the Tick(s) from the doubly-linked Tick list.
+     * @param lower The normalized price of the lower-bound Tick for a new position.
+     * @param upper The normalized price of the upper-bound Tick for a new position.
+     * @param position The Position to insert into Ticks.
+     */
+    function _remove(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice,
+        Position.Data memory position
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        int256 delta = position.delta(l.minTickDistance());
+        bool leftSide = position.side == PoolStorage.TradeSide.BUY;
+        bool rightSide = position.side == PoolStorage.TradeSide.SELL;
+
+        int256 lowerDelta = l.ticks[lower].delta;
+        int256 upperDelta = l.ticks[upper].delta;
+
+        // right-side original state:
+        //   lower_tick.delta += delta
+        //   upper_tick.delta -= delta
+
+        if (rightSide) {
+            if (lower > marketPrice) {
+                // |---------p----l------------> original state
+                lowerDelta -= delta;
+            } else {
+                // |------------l---p---------> left-tick crossed
+                lowerDelta += delta;
+            }
+
+            if (upper > marketPrice) {
+                // |------------p----u--------> original state
+                upperDelta += delta;
+            } else {
+                // |----------------u----p----> right-tick crossed
+                upperDelta -= delta;
+            }
+        }
+
+        // left-side original state:
+        //   lower_tick.delta -= delta
+        //   upper_tick.delta += delta
+
+        if (leftSide) {
+            if (upper < marketPrice) {
+                // <---------u----p-----------| original state
+                upperDelta -= delta;
+            } else {
+                // # <--------------p----u------| right-tick crossed
+                upperDelta += delta;
+            }
+
+            if (lower < marketPrice) {
+                // <-----l----p---------------| original state
+                lowerDelta += delta;
+            } else {
+                // <---------p---l------------| left-tick crossed
+                lowerDelta -= delta;
+            }
+        }
+
+        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        if (lowerDelta.abs() == 0) {
+            l.tickIndex.remove(lower);
+            delete l.ticks[lower];
+        }
+
+        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        if (upperDelta.abs() == 0) {
+            l.tickIndex.remove(upper);
+            delete l.ticks[upper];
         }
     }
 
