@@ -12,6 +12,8 @@ import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 contract PoolTicks is IPoolTicks {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
@@ -19,6 +21,7 @@ contract PoolTicks is IPoolTicks {
     using Tick for Tick.Data;
     using Math for uint256;
     using Math for int256;
+    using SafeCast for uint256;
 
     error PoolTicks__InvalidInsertLocation();
     error PoolTicks__InvalidInsert();
@@ -98,7 +101,7 @@ contract PoolTicks is IPoolTicks {
             lower == upper
         ) revert PoolTicks__InvalidInsert();
 
-        int256 delta = position.delta(l.minTickDistance());
+        int256 delta = position.delta(l.minTickDistance()).toInt256();
 
         if (position.side == PoolStorage.TradeSide.SELL) {
             l.ticks[lower].delta += delta;
@@ -155,7 +158,7 @@ contract PoolTicks is IPoolTicks {
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        int256 delta = position.delta(l.minTickDistance());
+        int256 delta = position.delta(l.minTickDistance()).toInt256();
         bool leftSide = position.side == PoolStorage.TradeSide.BUY;
         bool rightSide = position.side == PoolStorage.TradeSide.SELL;
 
