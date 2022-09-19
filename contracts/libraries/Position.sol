@@ -21,6 +21,8 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
 library Position {
     using Position for Position.Data;
 
+    error Position__NotEnoughCollateral();
+
     struct Data {
         // The Agent that owns the exposure change of the Position.
         address owner;
@@ -33,45 +35,28 @@ library Position {
         uint256 lower;
         // The upper tick price of the range order.
         uint256 upper;
-        // The amount of bid collateral the LP provides.
-        uint256 bid;
-        // The amount of bid collateral the LP provides.
-        uint256 ask;
-        // The amount of long contracts the LP provides.
-        uint256 long;
-        // The amount of short contracts the LP provides.
-        uint256 short;
+        // The amount of ask (bid) collateral the LP provides.
+        uint256 collateral;
+        // The amount of long (short) contracts the LP provides.
+        uint256 contracts;
+        // Used to track claimable fees over time.
+        uint256 lastFeesPerLiq;
+        // The amount of fees a user can claim now. Resets after claim.
+        uint256 claimableFees;
     }
 
     function transitionPrice(Data memory self) internal pure returns (uint256) {
-        return self._transitionPrice(true);
-    }
-
-    function _transitionPrice(Data memory self, bool useBidAveragePrice)
-        internal
-        pure
-        returns (uint256)
-    {
         if (self.side == PoolStorage.TradeSide.BUY) {
-            uint256 minBid;
-            if (useBidAveragePrice) {
-                minBid = (self.bidAveragePrice() * self.short) / 1e18;
-            } else {
-                minBid = (self.averagePrice() * self.short) / 1e18;
-            }
-
-            uint256 _lambdaBid = self.bid + minBid;
-
             return
                 self.upper -
-                ((minBid / _lambdaBid) * (self.upper - self.lower)) /
-                1e18;
+                ((self.averagePrice() * self.contracts) / self.collateral) *
+                (self.upper - self.lower);
         }
 
         return
-            self.long +
-            ((self.long / self.lambdaAsk()) * (self.upper - self.lower)) /
-            1e18;
+            self.lower +
+            ((self.contracts * 1e18) / self.lambdaAsk()) *
+            (self.upper - self.lower);
     }
 
     function averagePrice(Data memory self) internal pure returns (uint256) {
@@ -79,28 +64,45 @@ library Position {
     }
 
     function bidAveragePrice(Data memory self) internal pure returns (uint256) {
-        return (self._transitionPrice(false) + self.lower) / 2;
+        return (self.transitionPrice() + self.lower) / 2;
+    }
+
+    function shortAveragePrice(Data memory self)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (self.upper + self.transitionPrice()) / 2;
     }
 
     /**
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
     function lambdaBid(Data memory self) internal pure returns (uint256) {
+        uint256 additionalShortCollateralRequired = (self.contracts *
+            self.shortAveragePrice()) / 1e18;
+
+        if (self.collateral < additionalShortCollateralRequired)
+            revert Position__NotEnoughCollateral();
+
         return
-            self.bid == 0
-                ? self.short
-                : self.short + (self.bid * 1e18) / self.bidAveragePrice();
+            self.contracts +
+            (self.collateral - additionalShortCollateralRequired) /
+            self.bidAveragePrice();
     }
 
     /**
      * @notice The total number of short contracts that must be sold to move through this Position's range.
      */
     function lambdaAsk(Data memory self) internal pure returns (uint256) {
-        return self.ask + self.long;
+        return self.collateral + self.contracts;
     }
 
     function _lambda(Data memory self) internal pure returns (uint256) {
-        return self.lambdaBid() + self.lambdaAsk();
+        return
+            self.side == PoolStorage.TradeSide.BUY
+                ? self.lambdaBid()
+                : self.lambdaAsk();
     }
 
     /**
@@ -115,44 +117,4 @@ library Position {
             (((self._lambda() * (self.upper - self.lower)) / 1e18) *
                 minTickDistance) / 1e18;
     }
-
-    function add(Data memory self, Data memory other)
-        internal
-        pure
-        returns (Data memory)
-    {
-        self.bid += other.bid;
-        self.ask += other.ask;
-        self.long += other.long;
-        self.short += other.short;
-
-        return self;
-    }
-
-    function sub(Data memory self, Data memory other)
-        internal
-        pure
-        returns (Data memory)
-    {
-        self.bid -= other.bid;
-        self.ask -= other.ask;
-        self.long -= other.long;
-        self.short -= other.short;
-
-        return self;
-    }
-
-    // ToDo : See if we need this
-    //    function neg(PositionData memory self)
-    //        internal
-    //        view
-    //        returns (PositionData memory)
-    //    {
-    //        self.bid = -self.bid;
-    //        self.ask = -self.ask;
-    //        self.long = -self.long;
-    //        self.short = -self.short;
-    //
-    //        return self;
-    //    }
 }
