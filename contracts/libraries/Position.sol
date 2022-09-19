@@ -32,7 +32,7 @@ library Position {
         // The Agent that can control modifications to the Position.
         address operator;
         // The direction of the range order.
-        PoolStorage.TradeSide side;
+        PoolStorage.Side rangeSide;
         // ToDo : Probably can use uint64
         // The lower tick price of the range order.
         uint256 lower;
@@ -49,7 +49,7 @@ library Position {
     }
 
     function transitionPrice(Data memory self) internal pure returns (uint256) {
-        if (self.side == PoolStorage.TradeSide.BUY) {
+        if (self.rangeSide == PoolStorage.Side.BUY) {
             return
                 self.upper -
                 ((self.averagePrice() * self.contracts) / self.collateral) *
@@ -103,7 +103,7 @@ library Position {
 
     function _lambda(Data memory self) internal pure returns (uint256) {
         return
-            self.side == PoolStorage.TradeSide.BUY
+            self.rangeSide == PoolStorage.Side.BUY
                 ? self.lambdaBid()
                 : self.lambdaAsk();
     }

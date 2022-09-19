@@ -22,7 +22,7 @@ library PoolStorage {
     }
 
     // ToDo : Move somewhere else ?
-    enum TradeSide {
+    enum Side {
         BUY,
         SELL
     }

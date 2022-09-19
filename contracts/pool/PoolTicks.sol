@@ -103,7 +103,7 @@ contract PoolTicks is IPoolTicks {
 
         int256 delta = position.delta(l.minTickDistance()).toInt256();
 
-        if (position.side == PoolStorage.TradeSide.SELL) {
+        if (position.rangeSide == PoolStorage.Side.SELL) {
             l.ticks[lower].delta += delta;
             l.ticks[upper].delta -= delta;
         } else {
@@ -115,7 +115,7 @@ contract PoolTicks is IPoolTicks {
             if (l.tickIndex.insertAfter(left, lower) == false)
                 revert PoolTicks__FailedInsert();
 
-            if (position.side == PoolStorage.TradeSide.SELL) {
+            if (position.rangeSide == PoolStorage.Side.SELL) {
                 if (position.lower == l.marketPrice) {
                     l.ticks[lower] = l.ticks[lower].cross(l.globalFeesPerLiq);
                     l.liq = l.liq.addInt256(delta);
@@ -131,7 +131,7 @@ contract PoolTicks is IPoolTicks {
             if (l.tickIndex.insertBefore(right, upper) == false)
                 revert PoolTicks__FailedInsert();
 
-            if (position.side == PoolStorage.TradeSide.BUY) {
+            if (position.rangeSide == PoolStorage.Side.BUY) {
                 l.ticks[upper] = l.ticks[upper].cross(l.globalFeesPerLiq);
                 if (l.tick <= position.upper) {
                     l.liq = l.liq.addInt256(delta);
@@ -159,8 +159,8 @@ contract PoolTicks is IPoolTicks {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         int256 delta = position.delta(l.minTickDistance()).toInt256();
-        bool leftSide = position.side == PoolStorage.TradeSide.BUY;
-        bool rightSide = position.side == PoolStorage.TradeSide.SELL;
+        bool leftRangeSide = position.rangeSide == PoolStorage.Side.BUY;
+        bool rightRangeSide = position.rangeSide == PoolStorage.Side.SELL;
 
         int256 lowerDelta = l.ticks[lower].delta;
         int256 upperDelta = l.ticks[upper].delta;
@@ -169,7 +169,7 @@ contract PoolTicks is IPoolTicks {
         //   lower_tick.delta += delta
         //   upper_tick.delta -= delta
 
-        if (rightSide) {
+        if (rightRangeSide) {
             if (lower > marketPrice) {
                 // |---------p----l------------> original state
                 lowerDelta -= delta;
@@ -191,7 +191,7 @@ contract PoolTicks is IPoolTicks {
         //   lower_tick.delta -= delta
         //   upper_tick.delta += delta
 
-        if (leftSide) {
+        if (leftRangeSide) {
             if (upper < marketPrice) {
                 // <---------u----p-----------| original state
                 upperDelta -= delta;
