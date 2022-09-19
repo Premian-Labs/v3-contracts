@@ -6,7 +6,6 @@ pragma solidity ^0.8.0;
 import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
 
-import {Exposure} from "../libraries/Exposure.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Tick} from "../libraries/Tick.sol";
 
@@ -48,7 +47,7 @@ library PoolStorage {
         mapping(uint256 => Tick.Data) ticks;
         uint256 currentTickId;
         uint256 marketPrice;
-        Exposure.Data exposure;
+        uint256 globalFeesPerLiq;
         uint256 strike;
         uint256 liq;
     }

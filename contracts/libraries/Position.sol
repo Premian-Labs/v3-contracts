@@ -3,7 +3,6 @@
 
 pragma solidity ^0.8.0;
 
-import {Exposure} from "./Exposure.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 /**
@@ -42,7 +41,6 @@ library Position {
         uint256 long;
         // The amount of short contracts the LP provides.
         uint256 short;
-        Exposure.Data lastExposure;
     }
 
     function transitionPrice(Data memory self) internal pure returns (uint256) {

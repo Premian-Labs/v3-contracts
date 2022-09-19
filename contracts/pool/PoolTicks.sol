@@ -7,7 +7,6 @@ import {IPoolTicks} from "./IPoolTicks.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
-import {Exposure} from "../libraries/Exposure.sol";
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
@@ -15,7 +14,6 @@ import {Tick} from "../libraries/Tick.sol";
 contract PoolTicks is IPoolTicks {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
-    using Exposure for Exposure.Data;
     using LinkedList for LinkedList.List;
 
     error Ticks__InvalidInsertLocation();
@@ -81,9 +79,11 @@ contract PoolTicks is IPoolTicks {
 
         if (l.tickIndex.nodeExists(price)) return l.ticks[price];
 
-        tick = price <= l.marketPrice
-            ? Tick.Data(price, 0, l.exposure)
-            : Tick.Data(price, 0, Exposure.Data(0, 0, 0, 0, 0, 0));
+        tick = Tick.Data(
+            price,
+            0,
+            price <= l.marketPrice ? l.globalFeesPerLiq : 0
+        );
 
         l.ticks[price] = tick;
     }
