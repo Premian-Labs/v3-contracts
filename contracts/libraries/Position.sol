@@ -43,7 +43,7 @@ library Position {
         // The amount of long (short) contracts the LP provides.
         uint256 contracts;
         // Used to track claimable fees over time.
-        uint256 lastFeesPerLiq;
+        uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim.
         uint256 claimableFees;
     }
@@ -111,13 +111,14 @@ library Position {
     /**
      * @notice The per-tick liquidity delta for a specific position.
      */
-    function delta(Data memory self, uint256 minTickDistance)
+    function phi(Data memory self, uint256 minTickDistance)
         internal
         pure
         returns (uint256)
     {
+        // ToDo : Check if precision is enough
         return
-            (((self._lambda() * (self.upper - self.lower)) / 1e18) *
-                minTickDistance) / 1e18;
+            ((self._lambda() * 1e18) / (self.upper - self.lower)) *
+            (1e18 / minTickDistance);
     }
 }

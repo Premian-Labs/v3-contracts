@@ -101,7 +101,7 @@ contract PoolTicks is IPoolTicks {
             lower == upper
         ) revert PoolTicks__InvalidInsert();
 
-        int256 delta = position.delta(l.minTickDistance()).toInt256();
+        int256 delta = position.phi(l.minTickDistance()).toInt256();
 
         if (position.rangeSide == PoolStorage.Side.SELL) {
             l.ticks[lower].delta += delta;
@@ -117,13 +117,13 @@ contract PoolTicks is IPoolTicks {
 
             if (position.rangeSide == PoolStorage.Side.SELL) {
                 if (position.lower == l.marketPrice) {
-                    l.ticks[lower] = l.ticks[lower].cross(l.globalFeesPerLiq);
-                    l.liq = l.liq.addInt256(delta);
+                    l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
+                    l.liquidityRate = l.liquidityRate.addInt256(delta);
 
                     if (l.tick < position.lower) l.tick = lower;
                 }
             } else {
-                l.ticks[lower] = l.ticks[lower].cross(l.globalFeesPerLiq);
+                l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
             }
         }
 
@@ -132,9 +132,9 @@ contract PoolTicks is IPoolTicks {
                 revert PoolTicks__FailedInsert();
 
             if (position.rangeSide == PoolStorage.Side.BUY) {
-                l.ticks[upper] = l.ticks[upper].cross(l.globalFeesPerLiq);
+                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
                 if (l.tick <= position.upper) {
-                    l.liq = l.liq.addInt256(delta);
+                    l.liquidityRate = l.liquidityRate.addInt256(delta);
                 }
                 if (l.tick < position.lower) {
                     l.tick = lower;
@@ -158,7 +158,7 @@ contract PoolTicks is IPoolTicks {
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        int256 delta = position.delta(l.minTickDistance()).toInt256();
+        int256 phi = position.phi(l.minTickDistance()).toInt256();
         bool leftRangeSide = position.rangeSide == PoolStorage.Side.BUY;
         bool rightRangeSide = position.rangeSide == PoolStorage.Side.SELL;
 
@@ -166,46 +166,46 @@ contract PoolTicks is IPoolTicks {
         int256 upperDelta = l.ticks[upper].delta;
 
         // right-side original state:
-        //   lower_tick.delta += delta
-        //   upper_tick.delta -= delta
+        //   lower_tick.delta += phi
+        //   upper_tick.delta -= phi
 
         if (rightRangeSide) {
             if (lower > marketPrice) {
                 // |---------p----l------------> original state
-                lowerDelta -= delta;
+                lowerDelta -= phi;
             } else {
                 // |------------l---p---------> left-tick crossed
-                lowerDelta += delta;
+                lowerDelta += phi;
             }
 
             if (upper > marketPrice) {
                 // |------------p----u--------> original state
-                upperDelta += delta;
+                upperDelta += phi;
             } else {
                 // |----------------u----p----> right-tick crossed
-                upperDelta -= delta;
+                upperDelta -= phi;
             }
         }
 
         // left-side original state:
-        //   lower_tick.delta -= delta
-        //   upper_tick.delta += delta
+        //   lower_tick.delta -= phi
+        //   upper_tick.delta += phi
 
         if (leftRangeSide) {
             if (upper < marketPrice) {
                 // <---------u----p-----------| original state
-                upperDelta -= delta;
+                upperDelta -= phi;
             } else {
                 // # <--------------p----u------| right-tick crossed
-                upperDelta += delta;
+                upperDelta += phi;
             }
 
             if (lower < marketPrice) {
                 // <-----l----p---------------| original state
-                lowerDelta += delta;
+                lowerDelta += phi;
             } else {
                 // <---------p---l------------| left-tick crossed
-                lowerDelta -= delta;
+                lowerDelta -= phi;
             }
         }
 
@@ -238,7 +238,7 @@ contract PoolTicks is IPoolTicks {
         tick = Tick.Data(
             price,
             0,
-            price <= l.marketPrice ? l.globalFeesPerLiq : 0
+            price <= l.marketPrice ? l.globalFeeRate : 0
         );
 
         l.ticks[price] = tick;
