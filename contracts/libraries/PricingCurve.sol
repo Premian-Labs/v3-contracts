@@ -25,13 +25,13 @@ library PricingCurve {
         PoolStorage.Side tradeSide; // The direction of the trade
     }
 
-    function liqForRange(Args memory args) public pure returns (uint256) {
+    function liqForRange(Args memory args) internal pure returns (uint256) {
         return
             args.liq /
             (((args.upper - args.lower) * args.minTickDistance) / 1e18);
     }
 
-    function u(Args memory args, uint256 x) public pure returns (uint256) {
+    function u(Args memory args, uint256 x) internal pure returns (uint256) {
         args.liq = liqForRange(args);
         bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
 
@@ -45,7 +45,7 @@ library PricingCurve {
                 : args.upper - ((args.upper - args.lower) * proportion) / 1e18;
     }
 
-    function uInv(Args memory args, uint256 p) public pure returns (uint256) {
+    function uInv(Args memory args, uint256 p) internal pure returns (uint256) {
         uint256 proportion = args.tradeSide == PoolStorage.Side.BUY
             ? (p - args.lower) / (args.upper - args.lower)
             : (args.upper - p) / (args.upper - args.lower);
@@ -53,7 +53,7 @@ library PricingCurve {
         return (liqForRange(args) * proportion) / 1e18;
     }
 
-    function uMean(uint256 start, uint256 end) public pure returns (uint256) {
+    function uMean(uint256 start, uint256 end) internal pure returns (uint256) {
         return
             Math.min(start, end) +
             (Math.max(start, end) - Math.min(start, end)) /
@@ -72,7 +72,7 @@ library PricingCurve {
      * @return The quantity needed to reach `price` from the lower/upper tick coming from the buy/sell direction
      */
     function quantity(Args memory args, uint256 targetPrice)
-        public
+        internal
         pure
         returns (uint256)
     {
@@ -92,7 +92,7 @@ library PricingCurve {
      * @return The maximum trade size within the current tick range
      */
     function maxTradeSide(Args memory args, uint256 marketPrice)
-        public
+        internal
         pure
         returns (uint256)
     {
@@ -115,7 +115,7 @@ library PricingCurve {
      * @return The price reached from the current lower/upper tick after buying/selling `trade_size` amount of contracts.
      */
     function price(Args memory args, uint256 size)
-        public
+        internal
         pure
         returns (uint256)
     {
@@ -131,7 +131,7 @@ library PricingCurve {
         Args memory args,
         uint256 marketPrice,
         uint256 size
-    ) public pure returns (uint256) {
+    ) internal pure returns (uint256) {
         return price(args, size + quantity(args, marketPrice));
     }
 }
