@@ -7,7 +7,7 @@ library Tick {
     struct Data {
         uint256 price; // ToDo : Should not be required as we use price to index in the mapping
         int256 delta;
-        uint256 externalFeesPerLiq;
+        uint256 externalFeeRate;
     }
 
     /**
@@ -15,13 +15,13 @@ library Tick {
      *         update both the Pool liquidity state and the Tick's external per liquidity
      *         values to account for the change.
      */
-    function cross(Data memory self, uint256 globalFeesPerLiq)
+    function cross(Data memory self, uint256 globalFeeRate)
         internal
         pure
         returns (Data memory)
     {
         self.delta = -self.delta; // Flip the tick
-        self.externalFeesPerLiq = globalFeesPerLiq - self.externalFeesPerLiq;
+        self.externalFeeRate = globalFeeRate - self.externalFeeRate;
         return self;
     }
 }

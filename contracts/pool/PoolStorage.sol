@@ -47,9 +47,9 @@ library PoolStorage {
         mapping(uint256 => Tick.Data) ticks;
         uint256 currentTickId;
         uint256 marketPrice;
-        uint256 globalFeesPerLiq;
+        uint256 globalFeeRate;
         uint256 strike;
-        uint256 liq;
+        uint256 liquidityRate;
         // Current tick normalized price
         uint256 tick;
     }
