@@ -52,14 +52,16 @@ library Position {
         if (self.rangeSide == PoolStorage.Side.BUY) {
             return
                 self.upper -
-                ((self.averagePrice() * self.contracts) / self.collateral) *
-                (self.upper - self.lower);
+                (((self.averagePrice() * self.contracts) / self.collateral) *
+                    (self.upper - self.lower)) /
+                1e18;
         }
 
         return
             (self.lower) +
-            ((self.contracts * 1e18) / self.lambdaAsk()) *
-            (self.upper - self.lower);
+            (((self.contracts * 1e18) / self.lambdaAsk()) *
+                (self.upper - self.lower)) /
+            1e18;
     }
 
     function averagePrice(Data memory self) internal pure returns (uint256) {
@@ -90,7 +92,7 @@ library Position {
 
         return
             self.contracts +
-            (self.collateral - additionalShortCollateralRequired) /
+            ((self.collateral - additionalShortCollateralRequired) * 1e18) /
             self.bidAveragePrice();
     }
 
@@ -118,7 +120,8 @@ library Position {
     {
         // ToDo : Check if precision is enough
         return
-            (self._lambda() * 1e18) / ((self.upper - self.lower) *
-            (1e18 / minTickDistance));
+            (self._lambda() * 1e18) /
+            ((self.upper - self.lower) * (1e18 / minTickDistance)) /
+            1e18;
     }
 }
