@@ -91,7 +91,7 @@ library PricingCurve {
      * @param marketPrice The current normalized market price
      * @return The maximum trade size within the current tick range
      */
-    function maxTradeSide(Args memory args, uint256 marketPrice)
+    function maxTradeSize(Args memory args, uint256 marketPrice)
         internal
         pure
         returns (uint256)
