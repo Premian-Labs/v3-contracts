@@ -18,26 +18,33 @@ library PricingCurve {
     error PricingCurve__InvalidQuantityArgs();
 
     struct Args {
-        uint256 liq; // Amount of liquidity
+        uint256 liquidityRate; // Amount of liquidity
         uint256 minTickDistance; // The minimum distance between two ticks
         uint256 lower; // The normalized price of the lower bound of the range
         uint256 upper; // The normalized price of the upper bound of the range
         PoolStorage.Side tradeSide; // The direction of the trade
     }
 
-    function liqForRange(Args memory args) internal pure returns (uint256) {
+    function liquidityForRange(Args memory args)
+        internal
+        pure
+        returns (uint256)
+    {
+        // ToDo : Check that precision is enough
         return
-            args.liq /
-            (((args.upper - args.lower) * args.minTickDistance) / 1e18);
+            (args.liquidityRate *
+                ((args.upper - args.lower) * (1e18 / args.minTickDistance))) /
+            1e18;
     }
 
     function u(Args memory args, uint256 x) internal pure returns (uint256) {
-        args.liq = liqForRange(args);
+        uint256 liquidity = liquidityForRange(args);
         bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
 
-        if (args.liq == 0) return isBuy ? args.lower : args.upper;
+        // ToDo : Check for rounding errors which might make this condition always false
+        if (liquidity == 0) return isBuy ? args.lower : args.upper;
 
-        uint256 proportion = (x * 1e18) / args.liq;
+        uint256 proportion = (x * 1e18) / liquidity;
 
         return
             isBuy
@@ -50,7 +57,7 @@ library PricingCurve {
             ? (p - args.lower) / (args.upper - args.lower)
             : (args.upper - p) / (args.upper - args.lower);
 
-        return (liqForRange(args) * proportion) / 1e18;
+        return (liquidityForRange(args) * proportion) / 1e18;
     }
 
     function uMean(uint256 start, uint256 end) internal pure returns (uint256) {
