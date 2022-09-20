@@ -118,7 +118,7 @@ library Position {
     {
         // ToDo : Check if precision is enough
         return
-            ((self._lambda() * 1e18) / (self.upper - self.lower)) *
-            (1e18 / minTickDistance);
+            (self._lambda() * 1e18) / ((self.upper - self.lower) *
+            (1e18 / minTickDistance));
     }
 }
