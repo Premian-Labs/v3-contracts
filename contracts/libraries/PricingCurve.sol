@@ -60,13 +60,6 @@ library PricingCurve {
         return (liquidityForRange(args) * proportion) / 1e18;
     }
 
-    function uMean(uint256 start, uint256 end) internal pure returns (uint256) {
-        return
-            Math.min(start, end) +
-            (Math.max(start, end) - Math.min(start, end)) /
-            2;
-    }
-
     /**
      * @notice Computes quantity needed to reach `price` from the current
      *         lower/upper tick coming from the buy/sell direction.
@@ -149,6 +142,9 @@ library PricingCurve {
      * @return The mean price between `start` and `end`
      */
     function mean(uint256 start, uint256 end) internal pure returns (uint256) {
-        return uMean(start, end);
+        return
+            Math.min(start, end) +
+            (Math.max(start, end) - Math.min(start, end)) /
+            2;
     }
 }
