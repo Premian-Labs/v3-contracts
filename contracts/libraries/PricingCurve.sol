@@ -17,54 +17,43 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
 library PricingCurve {
     error PricingCurve__InvalidQuantityArgs();
 
-    function liqForRange(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 lower,
-        uint256 upper
-    ) internal pure returns (uint256) {
-        return liq / (((upper - lower) * minTickDistance) / 1e18);
+    struct Args {
+        uint256 liq; // Amount of liquidity
+        uint256 minTickDistance; // The minimum distance between two ticks
+        uint256 lower; // The normalized price of the lower bound of the range
+        uint256 upper; // The normalized price of the upper bound of the range
+        PoolStorage.Side tradeSide; // The direction of the trade
     }
 
-    function u(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 x,
-        uint256 lower,
-        uint256 upper,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
-        liq = liqForRange(liq, minTickDistance, lower, upper);
-        bool isBuy = tradeSide == PoolStorage.Side.BUY;
+    function liqForRange(Args memory args) public pure returns (uint256) {
+        return
+            args.liq /
+            (((args.upper - args.lower) * args.minTickDistance) / 1e18);
+    }
 
-        if (liq == 0) return isBuy ? lower : upper;
+    function u(Args memory args, uint256 x) public pure returns (uint256) {
+        args.liq = liqForRange(args);
+        bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
 
-        uint256 proportion = (x * 1e18) / liq;
+        if (args.liq == 0) return isBuy ? args.lower : args.upper;
+
+        uint256 proportion = (x * 1e18) / args.liq;
 
         return
             isBuy
-                ? lower + ((upper - lower) * proportion) / 1e18
-                : upper - ((upper - lower) * proportion) / 1e18;
+                ? args.lower + ((args.upper - args.lower) * proportion) / 1e18
+                : args.upper - ((args.upper - args.lower) * proportion) / 1e18;
     }
 
-    function uInv(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 p,
-        uint256 lower,
-        uint256 upper,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
-        uint256 proportion = tradeSide == PoolStorage.Side.BUY
-            ? (p - lower) / (upper - lower)
-            : (upper - p) / (upper - lower);
+    function uInv(Args memory args, uint256 p) public pure returns (uint256) {
+        uint256 proportion = args.tradeSide == PoolStorage.Side.BUY
+            ? (p - args.lower) / (args.upper - args.lower)
+            : (args.upper - p) / (args.upper - args.lower);
 
-        return
-            (liqForRange(liq, minTickDistance, lower, upper) * proportion) /
-            1e18;
+        return (liqForRange(args) * proportion) / 1e18;
     }
 
-    function uMean(uint256 start, uint256 end) internal pure returns (uint256) {
+    function uMean(uint256 start, uint256 end) public pure returns (uint256) {
         return
             Math.min(start, end) +
             (Math.max(start, end) - Math.min(start, end)) /
@@ -78,141 +67,71 @@ library PricingCurve {
      *         |--------------------------------------|
      *         L               ^                      U
      *                       Price
-     * @param liq Amount of liquidity
-     * @param minTickDistance The minimum distance between two ticks
-     * @param current The normalized price of the current tick
-     * @param currentRight The normalized price of the tick at the right of the current tick
+     * @param args The main PricingCurve arguments
      * @param targetPrice The target price
-     * @param tradeSide The direction of the trade
      * @return The quantity needed to reach `price` from the lower/upper tick coming from the buy/sell direction
      */
-    function quantity(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 current,
-        uint256 currentRight,
-        uint256 targetPrice,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
+    function quantity(Args memory args, uint256 targetPrice)
+        public
+        pure
+        returns (uint256)
+    {
         if (
-            current > targetPrice ||
-            targetPrice > currentRight ||
-            current == currentRight
+            args.lower > targetPrice ||
+            targetPrice > args.upper ||
+            args.lower == args.upper
         ) revert PricingCurve__InvalidQuantityArgs();
 
-        return
-            uInv(
-                liq,
-                minTickDistance,
-                targetPrice,
-                current,
-                currentRight,
-                tradeSide
-            );
+        return uInv(args, targetPrice);
     }
 
     /**
      * @notice Calculates the max trade size within the current tick range using the quantity function.
-     * @param current The normalized price of the current tick
-     * @param currentRight The normalized price of the tick at the right of the current tick
+     * @param args The main PricingCurve arguments
      * @param marketPrice The current normalized market price
-     * @param tradeSide The direction of the trade
      * @return The maximum trade size within the current tick range
      */
-    function maxTradeSide(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 current,
-        uint256 currentRight,
-        uint256 marketPrice,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
-        uint256 targetPrice = tradeSide == PoolStorage.Side.BUY
-            ? currentRight
-            : current;
+    function maxTradeSide(Args memory args, uint256 marketPrice)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 targetPrice = args.tradeSide == PoolStorage.Side.BUY
+            ? args.upper
+            : args.lower;
 
         return
             Math.abs(
-                int256(
-                    quantity(
-                        liq,
-                        minTickDistance,
-                        current,
-                        currentRight,
-                        targetPrice,
-                        tradeSide
-                    )
-                ) -
-                    int256(
-                        quantity(
-                            liq,
-                            minTickDistance,
-                            current,
-                            currentRight,
-                            marketPrice,
-                            tradeSide
-                        )
-                    )
+                int256(quantity(args, targetPrice)) -
+                    int256(quantity(args, marketPrice))
             );
     }
 
     /**
      * @notice Computes price reached from the current lower/upper tick after
      *         buying/selling `trade_size` amount of contracts.
-     * @param liq Amount of liquidity
-     * @param minTickDistance The minimum distance between two ticks
-     * @param current The normalized price of the current tick
-     * @param currentRight The normalized price of the tick at the right of the current tick
+     * @param args The main PricingCurve arguments
      * @param size The size of the trade (number of contracts).
-     * @param tradeSide The direction of the trade
      * @return The price reached from the current lower/upper tick after buying/selling `trade_size` amount of contracts.
      */
-    function price(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 current,
-        uint256 currentRight,
-        uint256 size,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
-        return u(liq, minTickDistance, size, current, currentRight, tradeSide);
+    function price(Args memory args, uint256 size)
+        public
+        pure
+        returns (uint256)
+    {
+        return u(args, size);
     }
 
     /**
      * @notice Gets the next market price within a tick range
-     * @param liq Amount of liquidity
-     * @param minTickDistance The minimum distance between two ticks
-     * @param current The normalized price of the current tick
-     * @param currentRight The normalized price of the tick at the right of the current tick
+     * @param args The main PricingCurve arguments
      * @param marketPrice The normalized market price
-     * @param size The size of the trade
-     * @param tradeSide The direction of the trade
      */
     function nextPrice(
-        uint256 liq,
-        uint256 minTickDistance,
-        uint256 current,
-        uint256 currentRight,
+        Args memory args,
         uint256 marketPrice,
-        uint256 size,
-        PoolStorage.Side tradeSide
-    ) internal pure returns (uint256) {
-        return
-            price(
-                liq,
-                minTickDistance,
-                currentRight,
-                currentRight,
-                size +
-                    quantity(
-                        liq,
-                        minTickDistance,
-                        current,
-                        currentRight,
-                        marketPrice,
-                        tradeSide
-                    ),
-                tradeSide
-            );
+        uint256 size
+    ) public pure returns (uint256) {
+        return price(args, size + quantity(args, marketPrice));
     }
 }
