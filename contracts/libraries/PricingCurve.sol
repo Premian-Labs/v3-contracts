@@ -142,9 +142,6 @@ library PricingCurve {
      * @return The mean price between `start` and `end`
      */
     function mean(uint256 start, uint256 end) internal pure returns (uint256) {
-        return
-            Math.min(start, end) +
-            (Math.max(start, end) - Math.min(start, end)) /
-            2;
+        return Math.min(start, end) + Math.abs(int256(end) - int256(start)) / 2;
     }
 }
