@@ -40,6 +40,7 @@ library PoolStorage {
         // token metadata
         uint8 underlyingDecimals;
         uint8 baseDecimals;
+        uint64 maturity;
         // Whether its a call or put pool
         bool isCallPool;
         // Index of all existing ticks sorted
