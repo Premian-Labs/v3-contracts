@@ -72,10 +72,7 @@ contract PoolInternal is ERC1155EnumerableInternal {
                 marketPrice,
                 tradeSize
             );
-            uint256 quotePrice = PricingCurve.mean(
-                marketPrice,
-                nextMarketPrice
-            );
+            uint256 quotePrice = Math.mean(marketPrice, nextMarketPrice);
             uint256 premium = (quotePrice * tradeSize) / 1e18;
             uint256 takerFee = _takerFee(tradeSize, premium);
             uint256 takerPremium = premium + takerFee;
@@ -143,9 +140,9 @@ contract PoolInternal is ERC1155EnumerableInternal {
                 collateral = position.contracts;
                 long =
                     ((position.collateral -
-                        ((PricingCurve.mean(position.upper, transitionPrice) *
+                        ((Math.mean(position.upper, transitionPrice) *
                             position.contracts) / 1e18)) * 1e18) /
-                    PricingCurve.mean(transitionPrice, position.lower);
+                    Math.mean(transitionPrice, position.lower);
             } else if (marketPrice > position.upper) {
                 collateral = position.collateral;
                 short = position.contracts;
@@ -154,7 +151,7 @@ contract PoolInternal is ERC1155EnumerableInternal {
                     collateral +=
                         position.collateral -
                         (position.contracts *
-                            PricingCurve.mean(position.upper, marketPrice)) /
+                            Math.mean(position.upper, marketPrice)) /
                         1e18;
 
                     collateral +=
@@ -171,15 +168,12 @@ contract PoolInternal is ERC1155EnumerableInternal {
                     collateral +=
                         position.collateral -
                         (position.contracts *
-                            PricingCurve.mean(
-                                position.upper,
-                                transitionPrice
-                            )) /
+                            Math.mean(position.upper, transitionPrice)) /
                         1e18 -
-                        (PricingCurve.mean(transitionPrice, position.lower) *
+                        (Math.mean(transitionPrice, position.lower) *
                             (position.collateral -
                                 (position.contracts *
-                                    PricingCurve.mean(
+                                    Math.mean(
                                         position.upper,
                                         transitionPrice
                                     )) /
@@ -196,13 +190,13 @@ contract PoolInternal is ERC1155EnumerableInternal {
             } else if (marketPrice >= position.upper) {
                 collateral =
                     (position.contracts *
-                        PricingCurve.mean(position.lower, transitionPrice)) /
+                        Math.mean(position.lower, transitionPrice)) /
                     1e18;
                 short = position.collateral;
             } else {
                 collateral +=
                     (position.contracts *
-                        PricingCurve.mean(
+                        Math.mean(
                             position.lower,
                             Math.max(marketPrice, transitionPrice)
                         )) /

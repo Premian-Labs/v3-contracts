@@ -25,4 +25,8 @@ library Math {
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a > b ? a : b;
     }
+
+    function mean(uint256 a, uint256 b) internal pure returns (uint256) {
+        return min(a, b) + abs(int256(b) - int256(a)) / 2;
+    }
 }
