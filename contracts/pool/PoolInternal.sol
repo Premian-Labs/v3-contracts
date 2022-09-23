@@ -216,4 +216,50 @@ contract PoolInternal is ERC1155EnumerableInternal {
             }
         }
     }
+
+    /**
+     * @notice Calculates the growth and exposure change between the lower and upper Ticks of a Position.
+     *                  l         ▼         u
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * => (global - external(l) - external(u))
+     *
+     *             ▼    l                   u
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * => (global - (global - external(l)) - external(u))
+     *
+     *                  l                   u    ▼
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * => (global - external(l) - (global - external(u)))
+     *
+     * @param lower The lower-bound normalized price of the tick for a Position
+     * @param upper The upper-bound normalized price of the tick for a Position
+     * @return The fee growth within a Position since the last update
+     */
+    function _calculatePositionGrowth(uint256 lower, uint256 upper)
+        internal
+        view
+        returns (uint256)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 globalFeeRate = l.globalFeeRate;
+
+        // -------------------------------------------
+        // Calculate the liqs ABOVE the tick => fa(i)
+        // -------------------------------------------
+        // NOTE: tick.price can be different than actual market_price
+        uint256 lowerFeeRate = l.tick >= lower
+            ? globalFeeRate - l.ticks[lower].externalFeeRate
+            : l.ticks[lower].externalFeeRate;
+
+        // -------------------------------------------
+        // Calculate the liqs BELOW the tick => fb(i)
+        // -------------------------------------------
+        // NOTE: tick.price can be different than actual market_price
+        uint256 upperFeeRate = l.tick >= upper
+            ? globalFeeRate - l.ticks[upper].externalFeeRate
+            : l.ticks[upper].externalFeeRate;
+
+        return globalFeeRate - lowerFeeRate - upperFeeRate;
+    }
 }
