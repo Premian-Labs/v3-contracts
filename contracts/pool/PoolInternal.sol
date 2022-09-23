@@ -5,14 +5,16 @@ pragma solidity ^0.8.0;
 
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Math} from "../libraries/Math.sol";
+import {Position} from "../libraries/Position.sol";
 import {PricingCurve} from "../libraries/PricingCurve.sol";
 
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
 contract PoolInternal is ERC1155EnumerableInternal {
-    using PoolStorage for PoolStorage.Layout;
     using LinkedList for LinkedList.List;
+    using PoolStorage for PoolStorage.Layout;
+    using Position for Position.Data;
 
     error PoolInternal__ZeroSize();
     error PoolInternal__ExpiredOption();
@@ -101,5 +103,123 @@ contract PoolInternal is ERC1155EnumerableInternal {
         }
 
         return totalPremium;
+    }
+
+    /**
+     * @notice Calculates the current liquidity state for a position, given the initial state and current pool price.
+     *             ▼    l                   u
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * BUY:  (0, D_s, (C_bid - (mean(P_U, P_T) * D_s)) / mean(P_T, P_L), 0)
+     * SELL: (0, C_ask, D_l, 0)
+     *
+     *                  l                   u    ▼
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * BUY:  (C_bid, 0, 0, D_s)
+     * SELL: (D_l * mean(P_L, P_T), 0, 0, C_ask)
+     *
+     *                  l         ▼         u
+     * ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     * BUY (>= P_T):  (C_bid - D_s * mean(P_U, MP), (P_U - MP) / (P_U - P_T) * D_s, 0, D_s - (P_U - MP) / (P_U - P_T) * D_s)
+     * BUY (< P_T):  (C_bid - D_s * mean(P_U, P_T) - mean(P_T, P_L) * (C_bid - D_s * mean(P_U, P_T)), D_s, 0, 0)
+     * SELL (>= P_T): (D_l * mean(P_L, P_T), C_ask - (MP - P_T) / (P_U - P_T) * C_ask, 0, 0)
+     * SELL (< P_T): (D_l * mean(P_L, MP), C_ask, D_l - (MP - P_L) / (P_T - P_L) * D_l, 0)
+     */
+    function _calculatePositionLiquidity(Position.Data memory position)
+        internal
+        view
+        returns (
+            uint256 collateral,
+            uint256 long,
+            uint256 short
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 marketPrice = l.marketPrice;
+        uint256 transitionPrice = position.transitionPrice();
+
+        if (position.rangeSide == PoolStorage.Side.BUY) {
+            if (marketPrice <= position.lower) {
+                collateral = position.contracts;
+                long =
+                    ((position.collateral -
+                        ((PricingCurve.mean(position.upper, transitionPrice) *
+                            position.contracts) / 1e18)) * 1e18) /
+                    PricingCurve.mean(transitionPrice, position.lower);
+            } else if (marketPrice > position.upper) {
+                collateral = position.collateral;
+                short = position.contracts;
+            } else {
+                if (marketPrice >= position.upper) {
+                    collateral +=
+                        position.collateral -
+                        (position.contracts *
+                            PricingCurve.mean(position.upper, marketPrice)) /
+                        1e18;
+
+                    collateral +=
+                        ((((position.upper - marketPrice) * 1e18) /
+                            (position.upper - transitionPrice)) *
+                            position.contracts) /
+                        1e18;
+
+                    short =
+                        position.contracts -
+                        ((position.upper - marketPrice) * position.contracts) /
+                        (position.upper - transitionPrice);
+                } else {
+                    collateral +=
+                        position.collateral -
+                        (position.contracts *
+                            PricingCurve.mean(
+                                position.upper,
+                                transitionPrice
+                            )) /
+                        1e18 -
+                        (PricingCurve.mean(transitionPrice, position.lower) *
+                            (position.collateral -
+                                (position.contracts *
+                                    PricingCurve.mean(
+                                        position.upper,
+                                        transitionPrice
+                                    )) /
+                                1e18)) /
+                        1e18;
+
+                    collateral += position.contracts;
+                }
+            }
+        } else {
+            if (marketPrice <= position.lower) {
+                collateral = position.collateral;
+                long = position.contracts;
+            } else if (marketPrice >= position.upper) {
+                collateral =
+                    (position.contracts *
+                        PricingCurve.mean(position.lower, transitionPrice)) /
+                    1e18;
+                short = position.collateral;
+            } else {
+                collateral +=
+                    (position.contracts *
+                        PricingCurve.mean(
+                            position.lower,
+                            Math.max(marketPrice, transitionPrice)
+                        )) /
+                    1e18;
+
+                collateral +=
+                    position.collateral -
+                    ((marketPrice - Math.min(marketPrice, transitionPrice)) *
+                        position.collateral) /
+                    (position.upper - transitionPrice);
+
+                long =
+                    position.contracts -
+                    ((Math.min(marketPrice, transitionPrice) - position.lower) *
+                        position.contracts) /
+                    (transitionPrice - position.lower);
+            }
+        }
     }
 }
