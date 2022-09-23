@@ -18,7 +18,8 @@ contract PoolInternal is ERC1155EnumerableInternal {
     error PoolInternal__ExpiredOption();
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
-    uint256 private constant PROTOCOL_FEE_RATE = 3e3; // 30%
+    // ToDo : Define final number
+    uint256 private constant PROTOCOL_FEE_RATE = 5e3; // 50%
 
     /**
      * @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
@@ -80,8 +81,7 @@ contract PoolInternal is ERC1155EnumerableInternal {
             // Update price and liquidity variables
             uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
                 INVERSE_BASIS_POINT;
-            uint256 makerRebate = takerFee - protocolFee;
-            uint256 makerPremium = premium + makerRebate;
+            uint256 makerPremium = premium + (takerFee - protocolFee);
 
             // ToDo : Remove ?
             // l.globalFeeRate += (makerRebate * 1e18) / l.liquidityRate;
@@ -96,12 +96,7 @@ contract PoolInternal is ERC1155EnumerableInternal {
             } else {
                 // The trade will require crossing into the next tick range
                 size -= maxSize;
-
-                if (isBuy) {
-                    currentTick = args.upper;
-                } else {
-                    currentTick = args.lower;
-                }
+                currentTick = isBuy ? args.upper : args.lower;
             }
         }
 
