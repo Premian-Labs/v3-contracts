@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {Math} from "./Math.sol";
+import {WadMath} from "./WadMath.sol";
 
 /**
  * @notice Keeps track of LP positions
@@ -22,6 +23,7 @@ import {Math} from "./Math.sol";
  */
 library Position {
     using Math for int256;
+    using WadMath for uint256;
     using Position for Position.Data;
 
     error Position__NotEnoughCollateral();
@@ -52,16 +54,14 @@ library Position {
         if (self.rangeSide == PoolStorage.Side.BUY) {
             return
                 self.upper -
-                (((self.averagePrice() * self.contracts) / self.collateral) *
-                    (self.upper - self.lower)) /
-                1e18;
+                ((self.averagePrice() * self.contracts) / self.collateral)
+                    .mulWad(self.upper - self.lower);
         }
 
         return
-            (self.lower) +
-            (((self.contracts * 1e18) / self.lambdaAsk()) *
-                (self.upper - self.lower)) /
-            1e18;
+            self.lower +
+            (self.contracts * (self.upper - self.lower)) /
+            self.lambdaAsk();
     }
 
     function averagePrice(Data memory self) internal pure returns (uint256) {
@@ -84,16 +84,18 @@ library Position {
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
     function lambdaBid(Data memory self) internal pure returns (uint256) {
-        uint256 additionalShortCollateralRequired = (self.contracts *
-            self.shortAveragePrice()) / 1e18;
+        uint256 additionalShortCollateralRequired = self.contracts.mulWad(
+            self.shortAveragePrice()
+        );
 
         if (self.collateral < additionalShortCollateralRequired)
             revert Position__NotEnoughCollateral();
 
         return
             self.contracts +
-            ((self.collateral - additionalShortCollateralRequired) * 1e18) /
-            self.bidAveragePrice();
+            (self.collateral - additionalShortCollateralRequired).divWad(
+                self.bidAveragePrice()
+            );
     }
 
     /**
@@ -120,8 +122,8 @@ library Position {
     {
         // ToDo : Check if precision is enough
         return
-            (self._lambda() * 1e18) /
-            ((self.upper - self.lower) * (1e18 / minTickDistance)) /
-            1e18;
+            self._lambda().divWad(
+                (self.upper - self.lower) * (1e18 / minTickDistance)
+            );
     }
 }
