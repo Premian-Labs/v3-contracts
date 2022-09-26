@@ -41,29 +41,6 @@ library PricingCurve {
             );
     }
 
-    function u(Args memory args, uint256 x) internal pure returns (uint256) {
-        uint256 liquidity = liquidityForRange(args);
-        bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
-
-        // ToDo : Check for rounding errors which might make this condition always false
-        if (liquidity == 0) return isBuy ? args.lower : args.upper;
-
-        uint256 proportion = x.divWad(liquidity);
-
-        return
-            isBuy
-                ? args.lower + (args.upper - args.lower).mulWad(proportion)
-                : args.upper - (args.upper - args.lower).mulWad(proportion);
-    }
-
-    function uInv(Args memory args, uint256 p) internal pure returns (uint256) {
-        uint256 proportion = args.tradeSide == PoolStorage.Side.BUY
-            ? (p - args.lower) / (args.upper - args.lower)
-            : (args.upper - p) / (args.upper - args.lower);
-
-        return liquidityForRange(args).mulWad(proportion);
-    }
-
     /**
      * @notice Computes quantity needed to reach `price` from the current
      *         lower/upper tick coming from the buy/sell direction.
@@ -86,7 +63,11 @@ library PricingCurve {
             args.lower == args.upper
         ) revert PricingCurve__InvalidQuantityArgs();
 
-        return uInv(args, targetPrice);
+        uint256 proportion = args.tradeSide == PoolStorage.Side.BUY
+            ? (targetPrice - args.lower) / (args.upper - args.lower)
+            : (args.upper - targetPrice) / (args.upper - args.lower);
+
+        return liquidityForRange(args).mulWad(proportion);
     }
 
     /**
@@ -123,7 +104,18 @@ library PricingCurve {
         pure
         returns (uint256)
     {
-        return u(args, size);
+        uint256 liquidity = liquidityForRange(args);
+        bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
+
+        // ToDo : Check for rounding errors which might make this condition always false
+        if (liquidity == 0) return isBuy ? args.lower : args.upper;
+
+        uint256 proportion = size.divWad(liquidity);
+
+        return
+            isBuy
+                ? args.lower + (args.upper - args.lower).mulWad(proportion)
+                : args.upper - (args.upper - args.lower).mulWad(proportion);
     }
 
     /**
