@@ -4,6 +4,8 @@
 pragma solidity ^0.8.0;
 
 import {Math} from "./Math.sol";
+import {WadMath} from "./WadMath.sol";
+
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 /**
@@ -15,6 +17,8 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
  *         computations for more complex price calculations.
  */
 library PricingCurve {
+    using WadMath for uint256;
+
     error PricingCurve__InvalidQuantityArgs();
 
     struct Args {
@@ -32,9 +36,9 @@ library PricingCurve {
     {
         // ToDo : Check that precision is enough
         return
-            (args.liquidityRate *
-                ((args.upper - args.lower) * (1e18 / args.minTickDistance))) /
-            1e18;
+            args.liquidityRate.mulWad(
+                (args.upper - args.lower) * (1e18 / args.minTickDistance)
+            );
     }
 
     function u(Args memory args, uint256 x) internal pure returns (uint256) {
@@ -44,12 +48,12 @@ library PricingCurve {
         // ToDo : Check for rounding errors which might make this condition always false
         if (liquidity == 0) return isBuy ? args.lower : args.upper;
 
-        uint256 proportion = (x * 1e18) / liquidity;
+        uint256 proportion = x.divWad(liquidity);
 
         return
             isBuy
-                ? args.lower + ((args.upper - args.lower) * proportion) / 1e18
-                : args.upper - ((args.upper - args.lower) * proportion) / 1e18;
+                ? args.lower + (args.upper - args.lower).mulWad(proportion)
+                : args.upper - (args.upper - args.lower).mulWad(proportion);
     }
 
     function uInv(Args memory args, uint256 p) internal pure returns (uint256) {
@@ -57,7 +61,7 @@ library PricingCurve {
             ? (p - args.lower) / (args.upper - args.lower)
             : (args.upper - p) / (args.upper - args.lower);
 
-        return (liquidityForRange(args) * proportion) / 1e18;
+        return liquidityForRange(args).mulWad(proportion);
     }
 
     /**
