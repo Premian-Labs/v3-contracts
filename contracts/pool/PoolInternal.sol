@@ -257,4 +257,70 @@ contract PoolInternal is ERC1155EnumerableInternal {
 
         return globalFeeRate - lowerFeeRate - upperFeeRate;
     }
+
+    function _updatePosition()
+        internal
+        returns (
+            uint256 collateral,
+            uint256 long,
+            uint256 short
+        )
+    {
+        // ToDo : Implement
+    }
+
+    function _claim() internal {
+        // ToDo : Implement
+    }
+
+    function _deposit() internal {
+        // ToDo : Implement
+    }
+
+    function _withdraw() internal {
+        // ToDo : Implement
+    }
+
+    function _trade() internal {
+        // ToDo : Implement
+    }
+
+    function _annihilate() internal {
+        // ToDo : Implement
+    }
+
+    function _transferPosition() internal {
+        // ToDo : Implement
+    }
+
+    function _transferTrade() internal {
+        // ToDo : Implement
+    }
+
+    function _exercise() internal {
+        // ToDo : Implement
+    }
+
+    function _settle() internal {
+        // ToDo : Implement
+    }
+
+    function _settlePosition() internal {
+        // ToDo : Implement
+    }
+
+    /////////////////////////////////////////////
+    // ToDo : Move somewhere else auto functions ?
+
+    function _exerciseAuto() internal {
+        // ToDo : Implement
+    }
+
+    function _settleAuto() internal {
+        // ToDo : Implement
+    }
+
+    function _settlePositionAuto() internal {
+        // ToDo : Implement
+    }
 }
