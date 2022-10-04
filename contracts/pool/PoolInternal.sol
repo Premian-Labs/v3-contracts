@@ -11,6 +11,7 @@ import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
@@ -20,10 +21,163 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
     using WadMath for uint256;
+    using Tick for Tick.Data;
+    using SafeCast for uint256;
+    using Math for uint256;
+    using Math for int256;
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     // ToDo : Define final number
     uint256 private constant PROTOCOL_FEE_RATE = 5e3; // 50%
+
+    /**
+     * @notice Adds liquidity to a pair of Ticks and if necessary, inserts
+     *         the Tick(s) into the doubly-linked Tick list.
+     *
+     * @param lower The normalized price of the lower-bound Tick for a new position.
+     * @param upper The normalized price of the upper-bound Tick for a new position.
+     * @param left The normalized price of the left Tick for a new position.
+     * @param right The normalized price of the right Tick for a new position.
+     * @param position The Position to insert into Ticks.
+     */
+    function _insertTick(
+        uint256 lower,
+        uint256 upper,
+        uint256 left,
+        uint256 right,
+        Position.Data memory position
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (
+            left > lower ||
+            l.tickIndex.getNextNode(left) < lower ||
+            right < upper ||
+            l.tickIndex.getPreviousNode(right) > upper ||
+            left == right ||
+            lower == upper
+        ) revert Pool__TickInsertInvalid();
+
+        int256 delta = position.phi(l.minTickDistance()).toInt256();
+
+        if (position.rangeSide == PoolStorage.Side.SELL) {
+            l.ticks[lower].delta += delta;
+            l.ticks[upper].delta -= delta;
+        } else {
+            l.ticks[lower].delta -= delta;
+            l.ticks[upper].delta += delta;
+        }
+
+        if (left != lower) {
+            if (l.tickIndex.insertAfter(left, lower) == false)
+                revert Pool__TickInsertFailed();
+
+            if (position.rangeSide == PoolStorage.Side.SELL) {
+                if (position.lower == l.marketPrice) {
+                    l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
+                    l.liquidityRate = l.liquidityRate.addInt256(delta);
+
+                    if (l.tick < position.lower) l.tick = lower;
+                }
+            } else {
+                l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
+            }
+        }
+
+        if (right != upper) {
+            if (l.tickIndex.insertBefore(right, upper) == false)
+                revert Pool__TickInsertFailed();
+
+            if (position.rangeSide == PoolStorage.Side.BUY) {
+                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
+                if (l.tick <= position.upper) {
+                    l.liquidityRate = l.liquidityRate.addInt256(delta);
+                }
+                if (l.tick < position.lower) {
+                    l.tick = lower;
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Removes liquidity from a pair of Ticks and if necessary, removes
+     *         the Tick(s) from the doubly-linked Tick list.
+     * @param lower The normalized price of the lower-bound Tick for a new position.
+     * @param upper The normalized price of the upper-bound Tick for a new position.
+     * @param position The Position to insert into Ticks.
+     */
+    function _removeTick(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice,
+        Position.Data memory position
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        int256 phi = position.phi(l.minTickDistance()).toInt256();
+        bool leftRangeSide = position.rangeSide == PoolStorage.Side.BUY;
+        bool rightRangeSide = position.rangeSide == PoolStorage.Side.SELL;
+
+        int256 lowerDelta = l.ticks[lower].delta;
+        int256 upperDelta = l.ticks[upper].delta;
+
+        // right-side original state:
+        //   lower_tick.delta += phi
+        //   upper_tick.delta -= phi
+
+        if (rightRangeSide) {
+            if (lower > marketPrice) {
+                // |---------p----l------------> original state
+                lowerDelta -= phi;
+            } else {
+                // |------------l---p---------> left-tick crossed
+                lowerDelta += phi;
+            }
+
+            if (upper > marketPrice) {
+                // |------------p----u--------> original state
+                upperDelta += phi;
+            } else {
+                // |----------------u----p----> right-tick crossed
+                upperDelta -= phi;
+            }
+        }
+
+        // left-side original state:
+        //   lower_tick.delta -= phi
+        //   upper_tick.delta += phi
+
+        if (leftRangeSide) {
+            if (upper < marketPrice) {
+                // <---------u----p-----------| original state
+                upperDelta -= phi;
+            } else {
+                // # <--------------p----u------| right-tick crossed
+                upperDelta += phi;
+            }
+
+            if (lower < marketPrice) {
+                // <-----l----p---------------| original state
+                lowerDelta += phi;
+            } else {
+                // <---------p---l------------| left-tick crossed
+                lowerDelta -= phi;
+            }
+        }
+
+        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        if (lowerDelta.abs() == 0) {
+            l.tickIndex.remove(lower);
+            delete l.ticks[lower];
+        }
+
+        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        if (upperDelta.abs() == 0) {
+            l.tickIndex.remove(upper);
+            delete l.ticks[upper];
+        }
+    }
 
     /**
      * @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
@@ -301,8 +455,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         internal
         pure
     {
-        if (price % minTickDistance != 0)
-            revert Pool__InvalidTickWidth();
+        if (price % minTickDistance != 0) revert Pool__TickWidthInvalid();
     }
 
     function _deposit(
