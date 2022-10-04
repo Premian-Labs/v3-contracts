@@ -30,25 +30,31 @@ library Position {
 
     // ToDo : Should we move owner / operator / lastFeeRate / claimableFees somewhere else as its not used in any of the library functions ?
     struct Data {
-        // The Agent that owns the exposure change of the Position.
-        address owner;
-        // The Agent that can control modifications to the Position.
-        address operator;
-        // The direction of the range order.
+        // The Agent that owns the exposure change of the Position
+        //        address owner;
+        // The Agent that can control modifications to the Position
+        //        address operator;
+        // The direction of the range order
         PoolStorage.Side rangeSide;
         // ToDo : Probably can use uint64
-        // The lower tick price of the range order.
+        // The lower tick normalized price of the range order
         uint256 lower;
-        // The upper tick price of the range order.
+        // The upper tick normalized price of the range order
         uint256 upper;
-        // The amount of ask (bid) collateral the LP provides.
+        // The amount of ask (bid) collateral the LP provides
         uint256 collateral;
-        // The amount of long (short) contracts the LP provides.
+        // The amount of long (short) contracts the LP provides
         uint256 contracts;
-        // Used to track claimable fees over time.
-        uint256 lastFeeRate;
-        // The amount of fees a user can claim now. Resets after claim.
-        uint256 claimableFees;
+        // Used to track claimable fees over time
+        //        uint256 lastFeeRate;
+        // The amount of fees a user can claim now. Resets after claim
+        //        uint256 claimableFees;
+    }
+
+    struct Liquidity {
+        uint256 collateral;
+        uint256 long;
+        uint256 short;
     }
 
     function transitionPrice(Data memory self) internal pure returns (uint256) {
