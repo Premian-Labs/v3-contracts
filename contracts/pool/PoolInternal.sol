@@ -482,6 +482,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         //    self,
         //    )
 
+        // ToDo : Implement _updatePosition
         _updatePosition(p);
 
         if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
@@ -491,8 +492,56 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _insertTick(p, left, right);
     }
 
-    function _withdraw() internal {
-        // ToDo : Implement
+    /**
+     * @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+     * @param p The LP position to withdraw
+     */
+    function _withdraw(Position.Data memory p, Position.Liquidity memory liq)
+        internal
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
+
+        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p);
+
+        if (
+            pLiq.collateral < liq.collateral ||
+            pLiq.long < liq.long ||
+            pLiq.short < liq.short
+        ) revert Pool__InsufficientWithdrawableBalance();
+
+        // Ensure ticks exists
+        if (!l.tickIndex.nodeExists(p.lower)) revert Pool__TickNotFound();
+        if (!l.tickIndex.nodeExists(p.upper)) revert Pool__TickNotFound();
+
+        p.collateral = 0;
+        p.contracts = 0;
+
+        // ToDo : Implement _updatePosition
+        //    self.update_position(
+        //    position.owner,
+        //    position.operator,
+        //    lower_tick,
+        //    upper_tick,
+        //    position,
+        //    -liquidity
+        //    )
+        //
+        _updatePosition(p);
+
+        p.collateral = liq.collateral;
+        p.contracts = liq.short + liq.long;
+
+        bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
+        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
+            l.liquidityRate -= p.phi(minTickDistance);
+        }
+
+        _removeTick(p, l.marketPrice);
+
+        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
+        //    agent.transfer_to(liquidity.collateral, liquidity.long, liquidity.short, self)
     }
 
     function _trade() internal {
