@@ -34,20 +34,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @notice Adds liquidity to a pair of Ticks and if necessary, inserts
      *         the Tick(s) into the doubly-linked Tick list.
      *
-     * @param lower The normalized price of the lower-bound Tick for a new position.
-     * @param upper The normalized price of the upper-bound Tick for a new position.
+     * @param p The Position to insert into Ticks.
      * @param left The normalized price of the left Tick for a new position.
      * @param right The normalized price of the right Tick for a new position.
-     * @param position The Position to insert into Ticks.
      */
     function _insertTick(
-        uint256 lower,
-        uint256 upper,
+        Position.Data memory p,
         uint256 left,
-        uint256 right,
-        Position.Data memory position
+        uint256 right
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 lower = p.lower;
+        uint256 upper = p.upper;
 
         if (
             left > lower ||
@@ -58,9 +57,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             lower == upper
         ) revert Pool__TickInsertInvalid();
 
-        int256 delta = position.phi(l.minTickDistance()).toInt256();
+        int256 delta = p.phi(l.minTickDistance()).toInt256();
 
-        if (position.rangeSide == PoolStorage.Side.SELL) {
+        if (p.rangeSide == PoolStorage.Side.SELL) {
             l.ticks[lower].delta += delta;
             l.ticks[upper].delta -= delta;
         } else {
@@ -72,12 +71,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (l.tickIndex.insertAfter(left, lower) == false)
                 revert Pool__TickInsertFailed();
 
-            if (position.rangeSide == PoolStorage.Side.SELL) {
-                if (position.lower == l.marketPrice) {
+            if (p.rangeSide == PoolStorage.Side.SELL) {
+                if (lower == l.marketPrice) {
                     l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
                     l.liquidityRate = l.liquidityRate.addInt256(delta);
 
-                    if (l.tick < position.lower) l.tick = lower;
+                    if (l.tick < lower) l.tick = lower;
                 }
             } else {
                 l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
@@ -88,12 +87,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (l.tickIndex.insertBefore(right, upper) == false)
                 revert Pool__TickInsertFailed();
 
-            if (position.rangeSide == PoolStorage.Side.BUY) {
+            if (p.rangeSide == PoolStorage.Side.BUY) {
                 l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
-                if (l.tick <= position.upper) {
+                if (l.tick <= upper) {
                     l.liquidityRate = l.liquidityRate.addInt256(delta);
                 }
-                if (l.tick < position.lower) {
+                if (l.tick < lower) {
                     l.tick = lower;
                 }
             }
@@ -103,21 +102,18 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Removes liquidity from a pair of Ticks and if necessary, removes
      *         the Tick(s) from the doubly-linked Tick list.
-     * @param lower The normalized price of the lower-bound Tick for a new position.
-     * @param upper The normalized price of the upper-bound Tick for a new position.
-     * @param position The Position to insert into Ticks.
+     * @param p The Position to insert into Ticks.
+     * @param marketPrice The normalized market price
      */
-    function _removeTick(
-        uint256 lower,
-        uint256 upper,
-        uint256 marketPrice,
-        Position.Data memory position
-    ) internal {
+    function _removeTick(Position.Data memory p, uint256 marketPrice) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        int256 phi = position.phi(l.minTickDistance()).toInt256();
-        bool leftRangeSide = position.rangeSide == PoolStorage.Side.BUY;
-        bool rightRangeSide = position.rangeSide == PoolStorage.Side.SELL;
+        uint256 lower = p.lower;
+        uint256 upper = p.upper;
+
+        int256 phi = p.phi(l.minTickDistance()).toInt256();
+        bool leftRangeSide = p.rangeSide == PoolStorage.Side.BUY;
+        bool rightRangeSide = p.rangeSide == PoolStorage.Side.SELL;
 
         int256 lowerDelta = l.ticks[lower].delta;
         int256 upperDelta = l.ticks[upper].delta;
@@ -464,6 +460,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Side rangeSide,
         uint256 lower,
         uint256 upper,
+        uint256 left,
+        uint256 right,
         uint256 collateral,
         uint256 contracts
     ) internal {
@@ -506,7 +504,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.liquidityRate += position.phi(minTickDistance);
         }
 
-        // ToDo : Insert
+        _insertTick(position, left, right);
     }
 
     function _withdraw() internal {
