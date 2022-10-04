@@ -11,19 +11,15 @@ import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
+
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
-contract PoolInternal is ERC1155EnumerableInternal {
+contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
     using WadMath for uint256;
-
-    error PoolInternal__ZeroSize();
-    error PoolInternal__ExpiredOption();
-    error PoolInternal__InvalidTickWidth();
-    error PoolInternal__BuyPositionBelowMarketPrice();
-    error PoolInternal__SellPositionAboveMarketPrice();
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     // ToDo : Define final number
@@ -52,8 +48,8 @@ contract PoolInternal is ERC1155EnumerableInternal {
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (size == 0) revert PoolInternal__ZeroSize();
-        if (block.timestamp > l.maturity) revert PoolInternal__ExpiredOption();
+        if (size == 0) revert Pool__ZeroSize();
+        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
 
         bool isBuy = tradeSide == PoolStorage.Side.BUY;
 
@@ -306,7 +302,7 @@ contract PoolInternal is ERC1155EnumerableInternal {
         pure
     {
         if (price % minTickDistance != 0)
-            revert PoolInternal__InvalidTickWidth();
+            revert Pool__InvalidTickWidth();
     }
 
     function _deposit(
@@ -327,9 +323,9 @@ contract PoolInternal is ERC1155EnumerableInternal {
         bool isBuy = rangeSide == PoolStorage.Side.BUY;
 
         if (upper > l.marketPrice && isBuy)
-            revert PoolInternal__BuyPositionBelowMarketPrice();
+            revert Pool__BuyPositionBelowMarketPrice();
         if (lower > l.marketPrice && !isBuy)
-            revert PoolInternal__SellPositionAboveMarketPrice();
+            revert Pool__SellPositionAboveMarketPrice();
 
         // ToDo : Transfer token (Collateral or contract)
         //    agent.transfer_from(

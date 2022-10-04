@@ -7,6 +7,7 @@ import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABD
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 import {LinkedList} from "../libraries/LinkedList.sol";
+import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
 import {IPoolTicks} from "./IPoolTicks.sol";
@@ -53,6 +54,9 @@ library PoolStorage {
         uint256 liquidityRate;
         // Current tick normalized price
         uint256 tick;
+        // owner -> operator -> rangeSide -> lower -> upper
+        // mapping(address => mapping(address => mapping(Side => mapping(uint256 => mapping(uint256 => Position.Data))))) positions;
+        mapping(address => Position.Data[]) positions;
     }
 
     function layout() internal pure returns (Layout storage l) {
