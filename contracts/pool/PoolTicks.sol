@@ -221,26 +221,4 @@ contract PoolTicks is IPoolTicks {
             delete l.ticks[upper];
         }
     }
-
-    /**
-     * @notice Creates a Tick for a given price, or returns the existing tick.
-     * @param price The price of the Tick
-     * @return tick The Tick for a given price
-     */
-    function _getOrCreateTick(uint256 price)
-        internal
-        returns (Tick.Data memory tick)
-    {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
-
-        tick = Tick.Data(
-            price,
-            0,
-            price <= l.marketPrice ? l.globalFeeRate : 0
-        );
-
-        l.ticks[price] = tick;
-    }
 }

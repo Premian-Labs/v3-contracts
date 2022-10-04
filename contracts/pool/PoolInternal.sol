@@ -7,6 +7,7 @@ import {LinkedList} from "../libraries/LinkedList.sol";
 import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
 import {PricingCurve} from "../libraries/PricingCurve.sol";
+import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
@@ -20,6 +21,9 @@ contract PoolInternal is ERC1155EnumerableInternal {
 
     error PoolInternal__ZeroSize();
     error PoolInternal__ExpiredOption();
+    error PoolInternal__InvalidTickWidth();
+    error PoolInternal__BuyPositionBelowMarketPrice();
+    error PoolInternal__SellPositionAboveMarketPrice();
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     // ToDo : Define final number
@@ -258,7 +262,29 @@ contract PoolInternal is ERC1155EnumerableInternal {
         return globalFeeRate - lowerFeeRate - upperFeeRate;
     }
 
-    function _updatePosition()
+    /**
+     * @notice Creates a Tick for a given price, or returns the existing tick.
+     * @param price The price of the Tick
+     * @return tick The Tick for a given price
+     */
+    function _getOrCreateTick(uint256 price)
+        internal
+        returns (Tick.Data memory tick)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
+
+        tick = Tick.Data(
+            price,
+            0,
+            price <= l.marketPrice ? l.globalFeeRate : 0
+        );
+
+        l.ticks[price] = tick;
+    }
+
+    function _updatePosition(uint256 lower, uint256 upper)
         internal
         returns (
             uint256 collateral,
@@ -266,6 +292,8 @@ contract PoolInternal is ERC1155EnumerableInternal {
             uint256 short
         )
     {
+        Tick.Data memory lowerTick = _getOrCreateTick(lower);
+        Tick.Data memory upperTick = _getOrCreateTick(upper);
         // ToDo : Implement
     }
 
@@ -273,8 +301,63 @@ contract PoolInternal is ERC1155EnumerableInternal {
         // ToDo : Implement
     }
 
-    function _deposit() internal {
-        // ToDo : Implement
+    function _verifyTickWidth(uint256 price, uint256 minTickDistance)
+        internal
+        pure
+    {
+        if (price % minTickDistance != 0)
+            revert PoolInternal__InvalidTickWidth();
+    }
+
+    function _deposit(
+        address owner,
+        address operator,
+        PoolStorage.Side rangeSide,
+        uint256 lower,
+        uint256 upper,
+        uint256 collateral,
+        uint256 contracts
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 minTickDistance = l.minTickDistance();
+        _verifyTickWidth(lower, minTickDistance);
+        _verifyTickWidth(upper, minTickDistance);
+
+        bool isBuy = rangeSide == PoolStorage.Side.BUY;
+
+        if (upper > l.marketPrice && isBuy)
+            revert PoolInternal__BuyPositionBelowMarketPrice();
+        if (lower > l.marketPrice && !isBuy)
+            revert PoolInternal__SellPositionAboveMarketPrice();
+
+        // ToDo : Transfer token (Collateral or contract)
+        //    agent.transfer_from(
+        //    position.collateral,
+        //    position.contracts if position.side == RangeSide.SELL else Decimal('0'),
+        //    position.contracts if position.side == RangeSide.BUY else Decimal('0'),
+        //    self,
+        //    )
+
+        _updatePosition(lower, upper);
+
+        Position.Data memory position = Position.Data(
+            address(0),
+            address(0),
+            rangeSide,
+            lower,
+            upper,
+            collateral,
+            contracts,
+            0,
+            0
+        );
+
+        if ((isBuy && lower >= l.tick) || (!isBuy && upper > l.tick)) {
+            l.liquidityRate += position.phi(minTickDistance);
+        }
+
+        // ToDo : Insert
     }
 
     function _withdraw() internal {

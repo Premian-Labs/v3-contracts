@@ -28,6 +28,7 @@ library Position {
 
     error Position__NotEnoughCollateral();
 
+    // ToDo : Should we move owner / operator / lastFeeRate / claimableFees somewhere else as its not used in any of the library functions ?
     struct Data {
         // The Agent that owns the exposure change of the Position.
         address owner;
