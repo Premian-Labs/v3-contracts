@@ -3,6 +3,7 @@
 
 pragma solidity ^0.8.0;
 
+import {LinkedList} from "../libraries/LinkedList.sol";
 import {Math} from "./Math.sol";
 import {WadMath} from "./WadMath.sol";
 
@@ -17,6 +18,8 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
  *         computations for more complex price calculations.
  */
 library PricingCurve {
+    using LinkedList for LinkedList.List;
+    using PoolStorage for PoolStorage.Layout;
     using WadMath for uint256;
 
     error PricingCurve__InvalidQuantityArgs();
@@ -27,6 +30,23 @@ library PricingCurve {
         uint256 lower; // The normalized price of the lower bound of the range
         uint256 upper; // The normalized price of the upper bound of the range
         PoolStorage.Side tradeSide; // The direction of the trade
+    }
+
+    function fromPool(PoolStorage.Layout storage l, PoolStorage.Side tradeSide)
+        internal
+        view
+        returns (PricingCurve.Args memory)
+    {
+        uint256 currentTick = l.tick;
+
+        return
+            Args(
+                l.liquidityRate,
+                l.minTickDistance(),
+                currentTick,
+                l.tickIndex.getNextNode(currentTick),
+                tradeSide
+            );
     }
 
     function liquidityForRange(Args memory args)

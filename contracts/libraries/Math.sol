@@ -15,7 +15,7 @@ library Math {
         pure
         returns (uint256)
     {
-        return self - other.abs();
+        return other >= 0 ? self + uint256(other) : self - other.abs();
     }
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {

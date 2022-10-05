@@ -20,6 +20,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
+    using PricingCurve for PricingCurve.Args;
     using WadMath for uint256;
     using Tick for Tick.Data;
     using SafeCast for uint256;
@@ -73,8 +74,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             if (p.rangeSide == PoolStorage.Side.SELL) {
                 if (lower == l.marketPrice) {
+                    l.liquidityRate = l.liquidityRate.addInt256(
+                        l.ticks[lower].delta
+                    );
                     l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
-                    l.liquidityRate = l.liquidityRate.addInt256(delta);
 
                     if (l.tick < lower) l.tick = lower;
                 }
@@ -88,10 +91,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 revert Pool__TickInsertFailed();
 
             if (p.rangeSide == PoolStorage.Side.BUY) {
-                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
                 if (l.tick <= upper) {
-                    l.liquidityRate = l.liquidityRate.addInt256(delta);
+                    l.liquidityRate = l.liquidityRate.addInt256(
+                        l.ticks[upper].delta
+                    );
                 }
+                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
+
                 if (l.tick < lower) {
                     l.tick = lower;
                 }
@@ -535,7 +541,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
         if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
-            l.liquidityRate -= p.phi(minTickDistance);
+            l.liquidityRate -= p.phi(l.minTickDistance());
         }
 
         _removeTick(p, l.marketPrice);
@@ -544,8 +550,103 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         //    agent.transfer_to(liquidity.collateral, liquidity.long, liquidity.short, self)
     }
 
-    function _trade() internal {
-        // ToDo : Implement
+    /**
+     * @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+     * @param tradeSide Whether the taker is buying or selling
+     * @param size The number of contracts being traded
+     * @return The premium paid or received by the taker for the trade
+     */
+    function _trade(PoolStorage.Side tradeSide, uint256 size)
+        internal
+        returns (uint256)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (size == 0) revert Pool__ZeroSize();
+        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
+
+        bool isBuy = tradeSide == PoolStorage.Side.BUY;
+
+        PricingCurve.Args memory curve = PricingCurve.fromPool(l, tradeSide);
+
+        uint256 totalPremium;
+        while (size > 0) {
+            uint256 maxSize = curve.maxTradeSize(l.marketPrice);
+            uint256 tradeSize = Math.min(size, maxSize);
+
+            uint256 nextMarketPrice;
+            if (tradeSize != maxSize) {
+                nextMarketPrice = curve.nextPrice(l.marketPrice, tradeSize);
+            } else {
+                nextMarketPrice = isBuy ? curve.upper : curve.lower;
+            }
+
+            uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
+
+            uint256 premium = quotePrice.mulWad(tradeSize);
+            uint256 takerFee = _takerFee(tradeSize, premium);
+            uint256 takerPremium = premium + takerFee;
+
+            // Update price and liquidity variables
+            uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
+                INVERSE_BASIS_POINT;
+            uint256 makerRebate = takerFee - protocolFee;
+
+            l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
+            totalPremium += isBuy ? takerPremium : premium;
+
+            l.marketPrice = nextMarketPrice;
+            l.protocolFees += protocolFee;
+
+            size -= tradeSize;
+            if (size > 0) {
+                // The trade will require crossing into the next tick range
+                if (isBuy) {
+                    uint256 lower = curve.upper;
+                    l.tick = lower;
+                    curve.lower = curve.upper;
+                    curve.upper = l.tickIndex.getNextNode(lower);
+                }
+
+                Tick.Data memory currentTick = l.ticks[l.tick];
+                l.liquidityRate = l.liquidityRate.addInt256(currentTick.delta);
+                l.ticks[l.tick] = currentTick.cross(l.globalFeeRate);
+
+                if (!isBuy) {
+                    uint256 lower = l.tickIndex.getPreviousNode(curve.lower);
+                    l.tick = lower;
+                    curve.upper = curve.lower;
+                    curve.lower = lower;
+                }
+            }
+        }
+
+        //        existing_position = self.external_positions[(owner, operator)]
+        //
+        //        if is_buy:
+        //            operator.transfer_from(total_premium)
+        //
+        //            if existing_position.short < size:
+        //                operator.transfer_to(existing_position.short)
+        //                existing_position.long += size - existing_position.short
+        //                existing_position.short = 0
+        //            else:
+        //                operator.transfer_to(size)
+        //                existing_position.short -= size
+        //        else:
+        //            operator.transfer_to(total_premium)
+        //
+        //            if existing_position.long < size:
+        //                operator.transfer_from(size - existing_position.long)
+        //                existing_position.short += size - existing_position.long
+        //                existing_position.long = 0
+        //            else:
+        //                operator.transfer_from(size)
+        //                existing_position.long -= size
+
+        // ToDo : Finish to implement
+
+        return totalPremium;
     }
 
     function _annihilate() internal {

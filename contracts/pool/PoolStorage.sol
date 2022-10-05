@@ -50,6 +50,7 @@ library PoolStorage {
         uint256 currentTickId;
         uint256 marketPrice;
         uint256 globalFeeRate;
+        uint256 protocolFees;
         uint256 strike;
         uint256 liquidityRate;
         // Current tick normalized price
