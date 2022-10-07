@@ -16,6 +16,8 @@ library PoolStorage {
     using ABDKMath64x64 for int128;
     using PoolStorage for PoolStorage.Layout;
 
+    error Pool__OptionNotExpired();
+
     enum TokenType {
         FREE_LIQUIDITY,
         LONG,
@@ -55,9 +57,13 @@ library PoolStorage {
         uint256 liquidityRate;
         // Current tick normalized price
         uint256 tick;
+        // Spot price after maturity // ToDo : Save the spot price
+        uint256 spot;
         // owner -> operator -> rangeSide -> lower -> upper
         // mapping(address => mapping(address => mapping(Side => mapping(uint256 => mapping(uint256 => Position.Data))))) positions;
         mapping(address => Position.Data[]) positions;
+        // owner -> operator -> positionLiquidity
+        mapping(address => mapping(address => Position.Liquidity)) externalPositions;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -69,6 +75,16 @@ library PoolStorage {
 
     function minTickDistance(Layout storage l) internal view returns (uint256) {
         return l.isCallPool ? 1e14 : l.strike / 1e4;
+    }
+
+    function getSpotPrice(Layout storage l) internal view returns (uint256) {
+        if (l.spot == 0) {
+            if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+
+            // ToDo : Query price and save it if not yet saved
+        }
+
+        return l.spot;
     }
 
     /**

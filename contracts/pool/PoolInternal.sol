@@ -204,8 +204,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
+        // ToDo : Add internal function for those checks ?
         if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
         bool isBuy = tradeSide == PoolStorage.Side.BUY;
 
@@ -507,7 +508,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
         Position.Liquidity memory pLiq = _calculatePositionLiquidity(p);
 
@@ -556,14 +557,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param size The number of contracts being traded
      * @return The premium paid or received by the taker for the trade
      */
-    function _trade(PoolStorage.Side tradeSide, uint256 size)
-        internal
-        returns (uint256)
-    {
+    function _trade(
+        address owner,
+        address operator,
+        PoolStorage.Side tradeSide,
+        uint256 size
+    ) internal returns (uint256) {
+        // ToDo : Check operator is approved
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp > l.maturity) revert Pool__ExpiredOption();
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
         bool isBuy = tradeSide == PoolStorage.Side.BUY;
 
@@ -621,36 +625,49 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
         }
 
-        //        existing_position = self.external_positions[(owner, operator)]
-        //
-        //        if is_buy:
-        //            operator.transfer_from(total_premium)
-        //
-        //            if existing_position.short < size:
-        //                operator.transfer_to(existing_position.short)
-        //                existing_position.long += size - existing_position.short
-        //                existing_position.short = 0
-        //            else:
-        //                operator.transfer_to(size)
-        //                existing_position.short -= size
-        //        else:
-        //            operator.transfer_to(total_premium)
-        //
-        //            if existing_position.long < size:
-        //                operator.transfer_from(size - existing_position.long)
-        //                existing_position.short += size - existing_position.long
-        //                existing_position.long = 0
-        //            else:
-        //                operator.transfer_from(size)
-        //                existing_position.long -= size
+        Position.Liquidity storage existingPosition = l.externalPositions[
+            owner
+        ][operator];
+        if (isBuy) {
+            // ToDo : Transfer tokens
+            // operator.transfer_from(total_premium)
 
-        // ToDo : Finish to implement
+            if (existingPosition.short < size) {
+                // ToDo : Transfer tokens
+                // operator.transfer_to(existing_position.short)
+                existingPosition.long += size - existingPosition.short;
+                existingPosition.short = 0;
+            } else {
+                // ToDo : Transfer tokens
+                // operator.transfer_to(size)
+                existingPosition.short -= size;
+            }
+        } else {
+            // ToDo : Transfer tokens
+            // operator.transfer_to(total_premium)
+
+            if (existingPosition.long < size) {
+                // ToDo : Transfer tokens
+                // operator.transfer_from(size - existing_position.long)
+                existingPosition.short += size - existingPosition.long;
+                existingPosition.long = 0;
+            } else {
+                // ToDo : Transfer tokens
+                // operator.transfer_from(size)
+                existingPosition.long -= size;
+            }
+        }
 
         return totalPremium;
     }
 
-    function _annihilate() internal {
-        // ToDo : Implement
+    /**
+     * @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
+     *         NOTE: This function can be called post or prior to expiration.
+     */
+    function _annihilate(uint256 amount) internal {
+        // ToDo : Transfer long and short to pool
+        // ToDo : Transfer collateral to msg.sender
     }
 
     function _transferPosition() internal {
@@ -661,12 +678,62 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Implement
     }
 
-    function _exercise() internal {
-        // ToDo : Implement
+    function _calculateExerciseValue(PoolStorage.Layout storage l, uint256 size)
+        internal
+    {
+        if (size == 0) revert Pool__ZeroSize();
+        if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+
+        uint256 spot = l.getSpotPrice();
+
+        int256 w = 2 * (l.isCallPool ? int256(1) : int256(0)) - 1;
+        int256 wSpotStrike = w * (int256(spot) - int256(l.strike));
+
+        uint256 exerciseValue = wSpotStrike > 0
+            ? size.mulWad(uint256(wSpotStrike))
+            : 0;
+
+        if (l.isCallPool) {
+            exerciseValue = exerciseValue.divWad(spot);
+        }
+
+        return exerciseValue;
     }
 
-    function _settle() internal {
-        // ToDo : Implement
+    /**
+     * @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
+     * @param owner The owner of the external option contracts
+     * @param operator The operator of the position
+     */
+    function _exercise(address owner, address operator) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 size = l.externalPositions[owner].long;
+
+        uint256 exerciseValue = _calculateExerciseValue(l, size);
+
+        // ToDo : Transfer tokens
+        // operator.transfer_to(exercise_value)
+        l.externalPositions[owner][operator].long = 0;
+    }
+
+    /**
+     * @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
+     * @param owner The owner of the external option contracts
+     * @param operator The operator of the position
+     */
+    function _settle(address owner, address operator) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 size = l.externalPositions[owner].short;
+
+        uint256 exerciseValue = _calculateExerciseValue(l, size);
+
+        uint256 collateralValue = l.isCallPool
+            ? size - exerciseValue
+            : size.mulWad(l.strike) - exerciseValue;
+
+        // ToDo : Transfer tokens
+        // operator.transfer_to(collateral_value)
+        l.externalPositions[owner][operator].short = 0;
     }
 
     function _settlePosition() internal {
