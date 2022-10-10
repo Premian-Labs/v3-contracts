@@ -261,6 +261,26 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
+    function _getClaimableFees(
+        address owner,
+        address operator,
+        PoolStorage.Side rangeSide,
+        uint256 lower,
+        uint256 upper
+    ) internal returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage p = l.positions[owner][operator][rangeSide][
+            lower
+        ][upper];
+
+        uint256 feeGrowthRate = _calculatePositionGrowth(lower, upper);
+
+        // ToDo : Get lastFeeRate from wherever we store it
+        // return
+        //    (feeGrowthRate - p.lastFeeRate).mulWad(p.phi(l.minTickDistance()));
+        return 0;
+    }
+
     /**
      * @notice Calculates the current liquidity state for a position, given the initial state and current pool price.
      *             ▼    l                   u
@@ -433,7 +453,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.ticks[price] = tick;
     }
 
-    function _updatePosition(Position.Data memory p)
+    function _updatePosition(Position.Data storage p)
         internal
         returns (Position.Liquidity memory pLiq)
     {
@@ -680,6 +700,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _calculateExerciseValue(PoolStorage.Layout storage l, uint256 size)
         internal
+        returns (uint256)
     {
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
@@ -700,12 +721,26 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return exerciseValue;
     }
 
+    function _calculateCollateralValue(
+        PoolStorage.Layout storage l,
+        uint256 size,
+        uint256 exerciseValue
+    ) internal returns (uint256) {
+        return
+            l.isCallPool
+                ? size - exerciseValue
+                : size.mulWad(l.strike) - exerciseValue;
+    }
+
     /**
      * @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
      * @param owner The owner of the external option contracts
      * @param operator The operator of the position
      */
-    function _exercise(address owner, address operator) internal {
+    function _exercise(address owner, address operator)
+        internal
+        returns (uint256)
+    {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = l.externalPositions[owner].long;
 
@@ -714,6 +749,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Transfer tokens
         // operator.transfer_to(exercise_value)
         l.externalPositions[owner][operator].long = 0;
+
+        return exerciseValue;
     }
 
     /**
@@ -721,23 +758,70 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param owner The owner of the external option contracts
      * @param operator The operator of the position
      */
-    function _settle(address owner, address operator) internal {
+    function _settle(address owner, address operator)
+        internal
+        returns (uint256)
+    {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = l.externalPositions[owner].short;
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
-
-        uint256 collateralValue = l.isCallPool
-            ? size - exerciseValue
-            : size.mulWad(l.strike) - exerciseValue;
+        uint256 collateralValue = _calculateCollateralValue(
+            l,
+            size,
+            exerciseValue
+        );
 
         // ToDo : Transfer tokens
         // operator.transfer_to(collateral_value)
         l.externalPositions[owner][operator].short = 0;
+
+        return collateralValue;
     }
 
-    function _settlePosition() internal {
+    /**
+     * @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
+     * @param owner The owner of the external option contracts
+     * @param operator The operator of the position
+     */
+    function _settlePosition(
+        address owner,
+        address operator,
+        PoolStorage.Side rangeSide,
+        uint256 lower,
+        uint256 upper
+    ) internal returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage p = l.positions[owner][operator][rangeSide][
+            lower
+        ][upper];
+
+        lowerTick = _getOrCreateTick(p.lower);
+        upperTick = _getOrCreateTick(p.upper);
+
         // ToDo : Implement
+        _updatePosition(p);
+
+        uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
+        uint256 collateralAmount = _calculateCollateralValue(
+            l,
+            1e18,
+            exerciseValue
+        );
+
+        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p);
+        uint256 collateral = pLiq.collateral +
+            pLiq.long.mulWad(exerciseAmount) +
+            pLiq.short.mulWad(collateralAmount);
+
+        uint256 feeClaimer = operator == address(0) ? operator : owner;
+        // ToDo : Transfer token
+        // fee_claimer.transfer_to(collateral)
+
+        p.collateral = 0;
+        p.contracts = 0;
+
+        return collateral;
     }
 
     /////////////////////////////////////////////
