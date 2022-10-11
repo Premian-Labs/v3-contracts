@@ -267,7 +267,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Side rangeSide,
         uint256 lower,
         uint256 upper
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[owner][operator][rangeSide][
             lower
@@ -283,13 +283,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         uint256 feeGrowthRate = _calculatePositionGrowth(lower, upper);
 
-        // ToDo : Get lastFeeRate from wherever we store it
         return
             (feeGrowthRate - pData.lastFeeRate).mulWad(
                 p.phi(l.minTickDistance())
             );
-
-        return 0;
     }
 
     /**
@@ -743,6 +740,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _calculateExerciseValue(PoolStorage.Layout storage l, uint256 size)
         internal
+        view
         returns (uint256)
     {
         if (size == 0) revert Pool__ZeroSize();
@@ -768,7 +766,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         uint256 size,
         uint256 exerciseValue
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         return
             l.isCallPool
                 ? size - exerciseValue
