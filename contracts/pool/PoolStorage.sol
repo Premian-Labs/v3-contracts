@@ -72,6 +72,13 @@ library PoolStorage {
         }
     }
 
+    /**
+     * @notice Get the token used as options collateral and for payment of premium. (Base for PUT pools, underlying for CALL pools)
+     */
+    function getPoolToken(Layout storage l) internal view returns (address) {
+        return l.isCallPool ? l.underlying : l.base;
+    }
+
     function minTickDistance(Layout storage l) internal view returns (uint256) {
         return l.isCallPool ? 1e14 : l.strike / 1e4;
     }

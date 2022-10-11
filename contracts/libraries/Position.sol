@@ -38,9 +38,9 @@ library Position {
         PoolStorage.Side rangeSide;
         // ToDo : Probably can use uint64
         // The lower tick normalized price of the range order
-        uint256 lower;
+        uint256 lower; // ToDo : Do we need to keep this in the struct, as its already in the mapping key ?
         // The upper tick normalized price of the range order
-        uint256 upper;
+        uint256 upper; // ToDo : Do we need to keep this in the struct, as its already in the mapping key ?
         // The amount of ask (bid) collateral the LP provides
         uint256 collateral;
         // The amount of long (short) contracts the LP provides

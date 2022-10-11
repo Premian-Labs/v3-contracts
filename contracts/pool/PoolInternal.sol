@@ -453,13 +453,44 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.ticks[price] = tick;
     }
 
-    function _updatePosition(Position.Data storage p)
-        internal
-        returns (Position.Liquidity memory pLiq)
-    {
-        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
-        // ToDo : Implement
+    function _updatePosition(
+        address owner,
+        address operator,
+        PoolStorage.Side rangeSide,
+        uint256 lower,
+        uint256 upper,
+        Position.Data memory pUpdate,
+        Position.Liquidity memory pLiqUpdate
+    ) internal returns (Position.Data memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        Tick.Data memory lowerTick = _getOrCreateTick(lower);
+        Tick.Data memory upperTick = _getOrCreateTick(upper);
+
+        uint256 feeGrowthRate = _calculatePositionGrowth(lower, upper);
+        Position.Data storage p = l.positions[owner][operator][rangeSide][
+            lower
+        ][upper];
+
+        uint256 collateralUpdate = pUpdate.collateral + pLiqUpdate.collateral;
+        uint256 contractsUpdate = pUpdate.contracts +
+            pLiqUpdate.long +
+            pLiqUpdate.short;
+
+        // ToDo : Add assertion ?
+        // assert position.collateral >= Decimal('0') and position.contracts >= Decimal('0'), \
+        //    f"Removing more than position size: {position.collateral} | {position.contracts}"
+
+        p.collateral += collateralUpdate;
+        p.contracts += contractsUpdate;
+        // ToDo : Remove ?
+        p.lower = lower;
+        p.upper = upper;
+
+        // position.claimable_fees += (fee_growth_rate - position.last_fee_rate) * position.phi(self)
+        // position.last_fee_rate = fee_growth_rate
+
+        return p;
     }
 
     function _claim() internal {
