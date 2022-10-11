@@ -24,31 +24,34 @@ import {WadMath} from "./WadMath.sol";
 library Position {
     using Math for int256;
     using WadMath for uint256;
-    using Position for Position.Data;
+    using Position for Position.Args;
 
     error Position__NotEnoughCollateral();
 
-    // ToDo : Should we move owner / operator / lastFeeRate / claimableFees somewhere else as its not used in any of the library functions ?
+    // All the data required to be saved in storage
     struct Data {
-        // The Agent that owns the exposure change of the Position
-        //        address owner;
-        // The Agent that can control modifications to the Position
-        //        address operator;
-        // The direction of the range order
-        PoolStorage.Side rangeSide;
-        // ToDo : Probably can use uint64
-        // The lower tick normalized price of the range order
-        uint256 lower; // ToDo : Do we need to keep this in the struct, as its already in the mapping key ?
-        // The upper tick normalized price of the range order
-        uint256 upper; // ToDo : Do we need to keep this in the struct, as its already in the mapping key ?
         // The amount of ask (bid) collateral the LP provides
         uint256 collateral;
         // The amount of long (short) contracts the LP provides
         uint256 contracts;
         // Used to track claimable fees over time
-        //        uint256 lastFeeRate;
+        uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim
-        //        uint256 claimableFees;
+        uint256 claimableFees;
+    }
+
+    // All the args required for the internal functions of Position
+    struct Args {
+        PoolStorage.Side rangeSide;
+        // ToDo : Probably can use uint64
+        // The lower tick normalized price of the range order
+        uint256 lower;
+        // The upper tick normalized price of the range order
+        uint256 upper;
+        // The amount of ask (bid) collateral the LP provides
+        uint256 collateral;
+        // The amount of long (short) contracts the LP provides
+        uint256 contracts;
     }
 
     struct Liquidity {
@@ -57,7 +60,7 @@ library Position {
         uint256 short;
     }
 
-    function transitionPrice(Data memory self) internal pure returns (uint256) {
+    function transitionPrice(Args memory self) internal pure returns (uint256) {
         if (self.rangeSide == PoolStorage.Side.BUY) {
             return
                 self.upper -
@@ -71,15 +74,15 @@ library Position {
             self.lambdaAsk();
     }
 
-    function averagePrice(Data memory self) internal pure returns (uint256) {
+    function averagePrice(Args memory self) internal pure returns (uint256) {
         return (self.upper + self.lower) / 2;
     }
 
-    function bidAveragePrice(Data memory self) internal pure returns (uint256) {
+    function bidAveragePrice(Args memory self) internal pure returns (uint256) {
         return (self.transitionPrice() + self.lower) / 2;
     }
 
-    function shortAveragePrice(Data memory self)
+    function shortAveragePrice(Args memory self)
         internal
         pure
         returns (uint256)
@@ -90,7 +93,7 @@ library Position {
     /**
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
-    function lambdaBid(Data memory self) internal pure returns (uint256) {
+    function lambdaBid(Args memory self) internal pure returns (uint256) {
         uint256 additionalShortCollateralRequired = self.contracts.mulWad(
             self.shortAveragePrice()
         );
@@ -108,11 +111,11 @@ library Position {
     /**
      * @notice The total number of short contracts that must be sold to move through this Position's range.
      */
-    function lambdaAsk(Data memory self) internal pure returns (uint256) {
+    function lambdaAsk(Args memory self) internal pure returns (uint256) {
         return self.collateral + self.contracts;
     }
 
-    function _lambda(Data memory self) internal pure returns (uint256) {
+    function _lambda(Args memory self) internal pure returns (uint256) {
         return
             self.rangeSide == PoolStorage.Side.BUY
                 ? self.lambdaBid()
@@ -122,7 +125,7 @@ library Position {
     /**
      * @notice The per-tick liquidity delta for a specific position.
      */
-    function phi(Data memory self, uint256 minTickDistance)
+    function phi(Args memory self, uint256 minTickDistance)
         internal
         pure
         returns (uint256)

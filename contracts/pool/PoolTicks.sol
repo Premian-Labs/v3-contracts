@@ -16,7 +16,7 @@ import {PoolInternal} from "./PoolInternal.sol";
 
 contract PoolTicks is IPoolTicks, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
-    using Position for Position.Data;
+    using Position for Position.Args;
     using LinkedList for LinkedList.List;
     using Math for uint256;
     using Math for int256;
