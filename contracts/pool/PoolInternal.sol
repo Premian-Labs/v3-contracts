@@ -20,6 +20,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Args;
+    using Position for Position.Key;
     using PricingCurve for PricingCurve.Args;
     using WadMath for uint256;
     using Tick for Tick.Data;
@@ -261,27 +262,23 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
-    function _getClaimableFees(
-        address owner,
-        address operator,
-        PoolStorage.Side rangeSide,
-        uint256 lower,
-        uint256 upper
-    ) internal view returns (uint256) {
+    function _getClaimableFees(Position.Key memory k)
+        internal
+        view
+        returns (uint256)
+    {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        Position.Data storage pData = l.positions[owner][operator][rangeSide][
-            lower
-        ][upper];
+        Position.Data storage pData = l.positions[k.keyHash()];
 
         Position.Args memory p = Position.Args(
-            rangeSide,
-            lower,
-            upper,
+            k.rangeSide,
+            k.lower,
+            k.upper,
             pData.collateral,
             pData.contracts
         );
 
-        uint256 feeGrowthRate = _calculatePositionGrowth(lower, upper);
+        uint256 feeGrowthRate = _calculatePositionGrowth(k.lower, k.upper);
 
         return
             (feeGrowthRate - pData.lastFeeRate).mulWad(
@@ -308,7 +305,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * SELL (>= P_T): (D_l * mean(P_L, P_T), C_ask - (MP - P_T) / (P_U - P_T) * C_ask, 0, 0)
      * SELL (< P_T): (D_l * mean(P_L, MP), C_ask, D_l - (MP - P_L) / (P_T - P_L) * D_l, 0)
      */
-    function _calculatePositionLiquidity(Position.Args memory position)
+    function _calculatePositionLiquidity(Position.Args memory p)
         internal
         view
         returns (Position.Liquidity memory pLiq)
@@ -316,79 +313,73 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 marketPrice = l.marketPrice;
-        uint256 transitionPrice = position.transitionPrice();
+        uint256 transitionPrice = p.transitionPrice();
 
-        if (position.rangeSide == PoolStorage.Side.BUY) {
-            if (marketPrice <= position.lower) {
-                pLiq.collateral = position.contracts;
-                pLiq.long = (position.collateral -
-                    Math.mean(position.upper, transitionPrice).mulWad(
-                        position.contracts
-                    )).divWad(Math.mean(transitionPrice, position.lower));
-            } else if (marketPrice > position.upper) {
-                pLiq.collateral = position.collateral;
-                pLiq.short = position.contracts;
+        if (p.rangeSide == PoolStorage.Side.BUY) {
+            if (marketPrice <= p.lower) {
+                pLiq.collateral = p.contracts;
+                pLiq.long = (p.collateral -
+                    Math.mean(p.upper, transitionPrice).mulWad(p.contracts))
+                    .divWad(Math.mean(transitionPrice, p.lower));
+            } else if (marketPrice > p.upper) {
+                pLiq.collateral = p.collateral;
+                pLiq.short = p.contracts;
             } else {
-                if (marketPrice >= position.upper) {
+                if (marketPrice >= p.upper) {
                     pLiq.collateral +=
-                        position.collateral -
-                        position.contracts.mulWad(
-                            Math.mean(position.upper, marketPrice)
-                        );
+                        p.collateral -
+                        p.contracts.mulWad(Math.mean(p.upper, marketPrice));
 
                     pLiq.collateral +=
-                        ((position.upper - marketPrice) * position.contracts) /
-                        (position.upper - transitionPrice);
+                        ((p.upper - marketPrice) * p.contracts) /
+                        (p.upper - transitionPrice);
 
                     pLiq.short =
-                        position.contracts -
-                        ((position.upper - marketPrice) * position.contracts) /
-                        (position.upper - transitionPrice);
+                        p.contracts -
+                        ((p.upper - marketPrice) * p.contracts) /
+                        (p.upper - transitionPrice);
                 } else {
                     // ToDo : Make sure no value could be negative here
                     pLiq.collateral +=
-                        position.collateral -
-                        position.contracts.mulWad(
-                            Math.mean(position.upper, transitionPrice)
+                        p.collateral -
+                        p.contracts.mulWad(
+                            Math.mean(p.upper, transitionPrice)
                         ) -
-                        Math.mean(transitionPrice, position.lower).mulWad(
-                            position.collateral -
-                                position.contracts.mulWad(
-                                    Math.mean(position.upper, transitionPrice)
+                        Math.mean(transitionPrice, p.lower).mulWad(
+                            p.collateral -
+                                p.contracts.mulWad(
+                                    Math.mean(p.upper, transitionPrice)
                                 )
                         );
 
-                    pLiq.collateral += position.contracts;
+                    pLiq.collateral += p.contracts;
                 }
             }
         } else {
-            if (marketPrice <= position.lower) {
-                pLiq.collateral = position.collateral;
-                pLiq.long = position.contracts;
-            } else if (marketPrice >= position.upper) {
-                pLiq.collateral = position.contracts.mulWad(
-                    Math.mean(position.lower, transitionPrice)
+            if (marketPrice <= p.lower) {
+                pLiq.collateral = p.collateral;
+                pLiq.long = p.contracts;
+            } else if (marketPrice >= p.upper) {
+                pLiq.collateral = p.contracts.mulWad(
+                    Math.mean(p.lower, transitionPrice)
                 );
-                pLiq.short = position.collateral;
+                pLiq.short = p.collateral;
             } else {
-                pLiq.collateral += position.contracts.mulWad(
-                    Math.mean(
-                        position.lower,
-                        Math.max(marketPrice, transitionPrice)
-                    )
+                pLiq.collateral += p.contracts.mulWad(
+                    Math.mean(p.lower, Math.max(marketPrice, transitionPrice))
                 );
 
                 pLiq.collateral +=
-                    position.collateral -
+                    p.collateral -
                     ((marketPrice - Math.min(marketPrice, transitionPrice)) *
-                        position.collateral) /
-                    (position.upper - transitionPrice);
+                        p.collateral) /
+                    (p.upper - transitionPrice);
 
                 pLiq.long =
-                    position.contracts -
-                    ((Math.min(marketPrice, transitionPrice) - position.lower) *
-                        position.contracts) /
-                    (transitionPrice - position.lower);
+                    p.contracts -
+                    ((Math.min(marketPrice, transitionPrice) - p.lower) *
+                        p.contracts) /
+                    (transitionPrice - p.lower);
             }
         }
     }
@@ -463,9 +454,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     // ToDo : Is return value needed ?
     function _updatePosition(
-        address owner,
-        address operator,
-        Position.Args memory pUpdate,
+        Position.Key memory k,
+        Position.Args memory pUpdate, // ToDo : Remove pUpdate ?
         Position.Liquidity memory pLiqUpdate
     ) internal returns (Position.Data memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -474,9 +464,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             pUpdate.lower,
             pUpdate.upper
         );
-        Position.Data storage pData = l.positions[owner][operator][
-            pUpdate.rangeSide
-        ][pUpdate.lower][pUpdate.upper];
+        Position.Data storage pData = l.positions[k.keyHash()];
 
         uint256 collateralUpdate = pUpdate.collateral + pLiqUpdate.collateral;
         uint256 contractsUpdate = pUpdate.contracts +
@@ -524,7 +512,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _deposit(
         address owner,
         address operator,
-        Position.Args memory p,
+        Position.Args memory p, // ToDo : Use Position.Key
         uint256 left,
         uint256 right
     ) internal {
@@ -563,9 +551,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
      * @param p The LP position to withdraw
      */
-    function _withdraw(Position.Args memory p, Position.Liquidity memory liq)
-        internal
-    {
+    function _withdraw(
+        Position.Args memory p, // ToDo : Use Position.Key
+        Position.Liquidity memory liq
+    ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
@@ -822,24 +811,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /**
      * @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
-     * @param owner The owner of the external option contracts
-     * @param operator The operator of the position
+     * @param k The position key
      */
-    function _settlePosition(
-        address owner,
-        address operator,
-        PoolStorage.Side rangeSide,
-        uint256 lower,
-        uint256 upper
-    ) internal returns (uint256) {
+    function _settlePosition(Position.Key memory k) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        Position.Data storage pData = l.positions[owner][operator][rangeSide][
-            lower
-        ][upper];
+        Position.Data storage pData = l.positions[k.keyHash()];
         Position.Args memory p = Position.Args(
-            rangeSide,
-            lower,
-            upper,
+            k.rangeSide,
+            k.lower,
+            k.upper,
             pData.collateral,
             pData.contracts
         );
@@ -859,7 +839,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             pLiq.long.mulWad(exerciseAmount) +
             pLiq.short.mulWad(collateralAmount);
 
-        address feeClaimer = operator == address(0) ? operator : owner;
+        address feeClaimer = k.operator == address(0) ? k.operator : k.owner;
         // ToDo : Transfer token
         // fee_claimer.transfer_to(collateral)
 

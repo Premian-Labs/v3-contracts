@@ -25,8 +25,17 @@ library Position {
     using Math for int256;
     using WadMath for uint256;
     using Position for Position.Args;
+    using Position for Position.Key;
 
     error Position__NotEnoughCollateral();
+
+    struct Key {
+        address owner;
+        address operator;
+        PoolStorage.Side rangeSide;
+        uint256 lower;
+        uint256 upper;
+    }
 
     // All the data required to be saved in storage
     struct Data {
@@ -58,6 +67,10 @@ library Position {
         uint256 collateral;
         uint256 long;
         uint256 short;
+    }
+
+    function keyHash(Key memory self) internal pure returns (bytes32) {
+        return keccak256(abi.encode(self));
     }
 
     function transitionPrice(Args memory self) internal pure returns (uint256) {

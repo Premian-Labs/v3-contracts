@@ -59,8 +59,8 @@ library PoolStorage {
         uint256 tick;
         // Spot price after maturity // ToDo : Save the spot price
         uint256 spot;
-        // owner -> operator -> rangeSide -> lower -> upper
-        mapping(address => mapping(address => mapping(Side => mapping(uint256 => mapping(uint256 => Position.Data))))) positions;
+        // key -> positionData
+        mapping(bytes32 => Position.Data) positions;
         // owner -> operator -> positionLiquidity
         mapping(address => mapping(address => Position.Liquidity)) externalPositions;
     }
