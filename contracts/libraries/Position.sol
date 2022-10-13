@@ -24,18 +24,23 @@ import {WadMath} from "./WadMath.sol";
 library Position {
     using Math for int256;
     using WadMath for uint256;
-    using Position for Position.Args;
     using Position for Position.Key;
 
     error Position__NotEnoughCollateral();
 
     // ToDo : Refactor to only have Key and Data
 
+    // All the data used to calculate the key of the position
     struct Key {
+        // The Agent that owns the exposure change of the Position
         address owner;
+        // The Agent that can control modifications to the Position
         address operator;
+        // The direction of the range order
         PoolStorage.Side rangeSide;
+        // The lower tick normalized price of the range order
         uint256 lower;
+        // The upper tick normalized price of the range order
         uint256 upper;
     }
 
@@ -51,20 +56,6 @@ library Position {
         uint256 claimableFees;
     }
 
-    // All the args required for the internal functions of Position
-    struct Args {
-        // The direction of the range order
-        PoolStorage.Side rangeSide;
-        // The lower tick normalized price of the range order
-        uint256 lower;
-        // The upper tick normalized price of the range order
-        uint256 upper;
-        // The amount of ask (bid) collateral the LP provides
-        uint256 collateral;
-        // The amount of long (short) contracts the LP provides
-        uint256 contracts;
-    }
-
     struct Liquidity {
         uint256 collateral;
         uint256 long;
@@ -75,79 +66,99 @@ library Position {
         return keccak256(abi.encode(self));
     }
 
-    function transitionPrice(Args memory self) internal pure returns (uint256) {
+    function transitionPrice(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
         if (self.rangeSide == PoolStorage.Side.BUY) {
             return
                 self.upper -
-                ((self.averagePrice() * self.contracts) / self.collateral)
+                ((self.averagePrice() * data.contracts) / data.collateral)
                     .mulWad(self.upper - self.lower);
         }
 
         return
             self.lower +
-            (self.contracts * (self.upper - self.lower)) /
-            self.lambdaAsk();
+            (data.contracts * (self.upper - self.lower)) /
+            self.lambdaAsk(data);
     }
 
-    function averagePrice(Args memory self) internal pure returns (uint256) {
+    function averagePrice(Key memory self) internal pure returns (uint256) {
         return (self.upper + self.lower) / 2;
     }
 
-    function bidAveragePrice(Args memory self) internal pure returns (uint256) {
-        return (self.transitionPrice() + self.lower) / 2;
-    }
-
-    function shortAveragePrice(Args memory self)
+    function bidAveragePrice(Key memory self, Data memory data)
         internal
         pure
         returns (uint256)
     {
-        return (self.upper + self.transitionPrice()) / 2;
+        return (self.transitionPrice(data) + self.lower) / 2;
+    }
+
+    function shortAveragePrice(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (self.upper + self.transitionPrice(data)) / 2;
     }
 
     /**
      * @notice The total number of long contracts that must be bought to move through this Position's range.
      */
-    function lambdaBid(Args memory self) internal pure returns (uint256) {
-        uint256 additionalShortCollateralRequired = self.contracts.mulWad(
-            self.shortAveragePrice()
+    function lambdaBid(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 additionalShortCollateralRequired = data.contracts.mulWad(
+            self.shortAveragePrice(data)
         );
 
-        if (self.collateral < additionalShortCollateralRequired)
+        if (data.collateral < additionalShortCollateralRequired)
             revert Position__NotEnoughCollateral();
 
         return
-            self.contracts +
-            (self.collateral - additionalShortCollateralRequired).divWad(
-                self.bidAveragePrice()
+            data.contracts +
+            (data.collateral - additionalShortCollateralRequired).divWad(
+                self.bidAveragePrice(data)
             );
     }
 
     /**
      * @notice The total number of short contracts that must be sold to move through this Position's range.
      */
-    function lambdaAsk(Args memory self) internal pure returns (uint256) {
-        return self.collateral + self.contracts;
+    function lambdaAsk(Key memory, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
+        return data.collateral + data.contracts;
     }
 
-    function _lambda(Args memory self) internal pure returns (uint256) {
+    function _lambda(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
         return
             self.rangeSide == PoolStorage.Side.BUY
-                ? self.lambdaBid()
-                : self.lambdaAsk();
+                ? self.lambdaBid(data)
+                : self.lambdaAsk(data);
     }
 
     /**
      * @notice The per-tick liquidity delta for a specific position.
      */
-    function phi(Args memory self, uint256 minTickDistance)
-        internal
-        pure
-        returns (uint256)
-    {
+    function phi(
+        Key memory self,
+        Data memory data,
+        uint256 minTickDistance
+    ) internal pure returns (uint256) {
         // ToDo : Check if precision is enough
         return
-            self._lambda().divWad(
+            self._lambda(data).divWad(
                 (self.upper - self.lower) * (1e18 / minTickDistance)
             );
     }
