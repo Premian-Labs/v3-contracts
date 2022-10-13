@@ -454,7 +454,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _updatePosition(
         Position.Key memory k,
-        Position.Liquidity memory pLiqUpdate,
+        Position.Liquidity memory liqUpdate,
         bool subtract
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -462,19 +462,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 feeGrowthRate = _calculatePositionGrowth(k.lower, k.upper);
         Position.Data storage pData = l.positions[k.keyHash()];
 
-        uint256 contracts = pLiqUpdate.short + pLiqUpdate.long;
+        uint256 contracts = liqUpdate.short + liqUpdate.long;
 
-        if (pLiqUpdate.collateral > 0 || contracts > 0) {
+        if (liqUpdate.collateral > 0 || contracts > 0) {
             if (subtract) {
-                if (pData.collateral < pLiqUpdate.collateral)
+                if (pData.collateral < liqUpdate.collateral)
                     revert Pool__InsufficientCollateral();
                 if (pData.contracts < contracts)
                     revert Pool__InsufficientContracts();
 
-                pData.collateral -= pLiqUpdate.collateral;
+                pData.collateral -= liqUpdate.collateral;
                 pData.contracts -= contracts;
             } else {
-                pData.collateral += pLiqUpdate.collateral;
+                pData.collateral += liqUpdate.collateral;
                 pData.contracts += contracts;
             }
         }
@@ -507,13 +507,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
      * @param k The position key
-     * @param pLiqUpdate The liquidity update
+     * @param liqUpdate The liquidity amounts to add
      * @param left The normalized price of the tick at the left of the position
      * @param right The normalized price of the tick at th right of the position
      */
     function _deposit(
         Position.Key memory k,
-        Position.Liquidity memory pLiqUpdate,
+        Position.Liquidity memory liqUpdate,
         uint256 left,
         uint256 right
     ) internal {
@@ -538,7 +538,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         //    self,
         //    )
 
-        _updatePosition(k, pLiqUpdate, false);
+        _updatePosition(k, liqUpdate, false);
         Position.Data storage pData = l.positions[k.keyHash()];
         Position.Args memory p = Position.Args(
             k.rangeSide,
@@ -557,48 +557,44 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /**
      * @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
-     * @param p The LP position to withdraw
+     * @param k The position key
+     * @param liqUpdate The liquidity amounts to subtract
      */
     function _withdraw(
-        Position.Args memory p, // ToDo : Use Position.Key
-        Position.Liquidity memory liq
+        Position.Key memory k,
+        Position.Liquidity memory liqUpdate
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
+        Position.Data storage pData = l.positions[k.keyHash()];
+        Position.Args memory p = Position.Args(
+            k.rangeSide,
+            k.lower,
+            k.upper,
+            pData.collateral,
+            pData.contracts
+        );
         Position.Liquidity memory pLiq = _calculatePositionLiquidity(p);
 
         if (
-            pLiq.collateral < liq.collateral ||
-            pLiq.long < liq.long ||
-            pLiq.short < liq.short
+            pLiq.collateral < liqUpdate.collateral ||
+            pLiq.long < liqUpdate.long ||
+            pLiq.short < liqUpdate.short
         ) revert Pool__InsufficientWithdrawableBalance();
 
         // Ensure ticks exists
-        if (!l.tickIndex.nodeExists(p.lower)) revert Pool__TickNotFound();
-        if (!l.tickIndex.nodeExists(p.upper)) revert Pool__TickNotFound();
+        if (!l.tickIndex.nodeExists(k.lower)) revert Pool__TickNotFound();
+        if (!l.tickIndex.nodeExists(k.upper)) revert Pool__TickNotFound();
 
-        p.collateral = 0;
-        p.contracts = 0;
+        _updatePosition(k, pLiq, true);
 
-        // ToDo : Implement _updatePosition
-        //    self.update_position(
-        //    position.owner,
-        //    position.operator,
-        //    lower_tick,
-        //    upper_tick,
-        //    position,
-        //    -liquidity
-        //    )
-        //
-        //        _updatePosition(p);
+        p.collateral = pData.collateral;
+        p.contracts = pData.contracts;
 
-        p.collateral = liq.collateral;
-        p.contracts = liq.short + liq.long;
-
-        bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
-        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
+        bool isBuy = k.rangeSide == PoolStorage.Side.BUY;
+        if ((isBuy && k.lower >= l.tick) || (!isBuy && k.upper > l.tick)) {
             l.liquidityRate -= p.phi(l.minTickDistance());
         }
 
