@@ -28,8 +28,6 @@ library Position {
 
     error Position__NotEnoughCollateral();
 
-    // ToDo : Refactor to only have Key and Data
-
     // All the data used to calculate the key of the position
     struct Key {
         // The Agent that owns the exposure change of the Position
