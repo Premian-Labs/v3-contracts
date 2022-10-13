@@ -29,6 +29,8 @@ library Position {
 
     error Position__NotEnoughCollateral();
 
+    // ToDo : Refactor to only have Key and Data
+
     struct Key {
         address owner;
         address operator;

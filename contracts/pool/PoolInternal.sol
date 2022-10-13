@@ -452,42 +452,45 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.ticks[price] = tick;
     }
 
-    // ToDo : Is return value needed ?
     function _updatePosition(
         Position.Key memory k,
-        Position.Args memory pUpdate, // ToDo : Remove pUpdate ?
-        Position.Liquidity memory pLiqUpdate
-    ) internal returns (Position.Data memory) {
+        Position.Liquidity memory pLiqUpdate,
+        bool subtract
+    ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        uint256 feeGrowthRate = _calculatePositionGrowth(
-            pUpdate.lower,
-            pUpdate.upper
-        );
+        uint256 feeGrowthRate = _calculatePositionGrowth(k.lower, k.upper);
         Position.Data storage pData = l.positions[k.keyHash()];
 
-        uint256 collateralUpdate = pUpdate.collateral + pLiqUpdate.collateral;
-        uint256 contractsUpdate = pUpdate.contracts +
-            pLiqUpdate.long +
-            pLiqUpdate.short;
+        uint256 contracts = pLiqUpdate.short + pLiqUpdate.long;
 
-        // ToDo : Add assertion ?
-        // assert position.collateral >= Decimal('0') and position.contracts >= Decimal('0'), \
-        //    f"Removing more than position size: {position.collateral} | {position.contracts}"
+        if (pLiqUpdate.collateral > 0 || contracts > 0) {
+            if (subtract) {
+                if (pData.collateral < pLiqUpdate.collateral)
+                    revert Pool__InsufficientCollateral();
+                if (pData.contracts < contracts)
+                    revert Pool__InsufficientContracts();
 
-        pData.collateral += collateralUpdate;
-        pData.contracts += contractsUpdate;
+                pData.collateral -= pLiqUpdate.collateral;
+                pData.contracts -= contracts;
+            } else {
+                pData.collateral += pLiqUpdate.collateral;
+                pData.contracts += contracts;
+            }
+        }
 
-        // Update pUpdate to match data of Position, toa void allocating new variable to calculate phi
-        pUpdate.collateral = pData.collateral;
-        pUpdate.contracts = pData.contracts;
+        Position.Args memory p = Position.Args(
+            k.rangeSide,
+            k.lower,
+            k.upper,
+            pData.collateral,
+            pData.contracts
+        );
 
         pData.claimableFees +=
             (feeGrowthRate - pData.lastFeeRate) *
-            pUpdate.phi(l.minTickDistance());
+            p.phi(l.minTickDistance());
         pData.lastFeeRate = feeGrowthRate;
-
-        return pData;
     }
 
     function _claim() internal {
@@ -815,23 +818,26 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      */
     function _settlePosition(Position.Key memory k) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        Position.Data storage pData = l.positions[k.keyHash()];
-        Position.Args memory p = Position.Args(
-            k.rangeSide,
-            k.lower,
-            k.upper,
-            pData.collateral,
-            pData.contracts
-        );
 
-        // ToDo : Implement
-        // _updatePosition(p);
+        if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+
+        Position.Data storage pData = l.positions[k.keyHash()];
+
+        _updatePosition(k, Position.Liquidity(0, 0, 0), false);
 
         uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
         uint256 collateralAmount = _calculateCollateralValue(
             l,
             1e18,
             exerciseAmount
+        );
+
+        Position.Args memory p = Position.Args(
+            k.rangeSide,
+            k.lower,
+            k.upper,
+            pData.collateral,
+            pData.contracts
         );
 
         Position.Liquidity memory pLiq = _calculatePositionLiquidity(p);
