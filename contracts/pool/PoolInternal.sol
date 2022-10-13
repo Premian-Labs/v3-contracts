@@ -506,30 +506,28 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /**
      * @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
-     * @param owner The Agent that owns the exposure change of the Position
-     * @param operator The Agent that can control modifications to the Position
-     * @param p The LP position to insert
+     * @param k The position key
+     * @param pLiqUpdate The liquidity update
      * @param left The normalized price of the tick at the left of the position
      * @param right The normalized price of the tick at th right of the position
      */
     function _deposit(
-        address owner,
-        address operator,
-        Position.Args memory p, // ToDo : Use Position.Key
+        Position.Key memory k,
+        Position.Liquidity memory pLiqUpdate,
         uint256 left,
         uint256 right
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 minTickDistance = l.minTickDistance();
-        _verifyTickWidth(p.lower, minTickDistance);
-        _verifyTickWidth(p.upper, minTickDistance);
+        _verifyTickWidth(k.lower, minTickDistance);
+        _verifyTickWidth(k.upper, minTickDistance);
 
-        bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
+        bool isBuy = k.rangeSide == PoolStorage.Side.BUY;
 
-        if (p.upper > l.marketPrice && isBuy)
+        if (k.upper > l.marketPrice && isBuy)
             revert Pool__BuyPositionBelowMarketPrice();
-        if (p.lower > l.marketPrice && !isBuy)
+        if (k.lower > l.marketPrice && !isBuy)
             revert Pool__SellPositionAboveMarketPrice();
 
         // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
@@ -540,10 +538,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         //    self,
         //    )
 
-        // ToDo : Implement _updatePosition
-        //        _updatePosition(owner, operator, p);
+        _updatePosition(k, pLiqUpdate, false);
+        Position.Data storage pData = l.positions[k.keyHash()];
+        Position.Args memory p = Position.Args(
+            k.rangeSide,
+            k.lower,
+            k.upper,
+            pData.collateral,
+            pData.contracts
+        );
 
-        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
+        if ((isBuy && k.lower >= l.tick) || (!isBuy && k.upper > l.tick)) {
             l.liquidityRate += p.phi(minTickDistance);
         }
 

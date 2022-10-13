@@ -53,8 +53,8 @@ library Position {
 
     // All the args required for the internal functions of Position
     struct Args {
+        // The direction of the range order
         PoolStorage.Side rangeSide;
-        // ToDo : Probably can use uint64
         // The lower tick normalized price of the range order
         uint256 lower;
         // The upper tick normalized price of the range order
