@@ -28,6 +28,11 @@ library Position {
 
     error Position__NotEnoughCollateral();
 
+    enum Side {
+        BUY,
+        SELL
+    }
+
     // All the data used to calculate the key of the position
     struct Key {
         // The Agent that owns the exposure change of the Position
@@ -35,7 +40,7 @@ library Position {
         // The Agent that can control modifications to the Position
         address operator;
         // The direction of the range order
-        PoolStorage.Side rangeSide;
+        Side rangeSide;
         // The lower tick normalized price of the range order
         uint256 lower;
         // The upper tick normalized price of the range order
@@ -69,7 +74,7 @@ library Position {
         pure
         returns (uint256)
     {
-        if (self.rangeSide == PoolStorage.Side.BUY) {
+        if (self.rangeSide == Position.Side.BUY) {
             return
                 self.upper -
                 ((self.averagePrice() * data.contracts) / data.collateral)
@@ -141,7 +146,7 @@ library Position {
         returns (uint256)
     {
         return
-            self.rangeSide == PoolStorage.Side.BUY
+            self.rangeSide == Side.BUY
                 ? self.lambdaBid(data)
                 : self.lambdaAsk(data);
     }

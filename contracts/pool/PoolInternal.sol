@@ -61,7 +61,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         int256 delta = p.phi(pData, l.minTickDistance()).toInt256();
 
-        if (p.rangeSide == PoolStorage.Side.SELL) {
+        if (p.rangeSide == Position.Side.SELL) {
             l.ticks[lower].delta += delta;
             l.ticks[upper].delta -= delta;
         } else {
@@ -73,7 +73,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (l.tickIndex.insertAfter(left, lower) == false)
                 revert Pool__TickInsertFailed();
 
-            if (p.rangeSide == PoolStorage.Side.SELL) {
+            if (p.rangeSide == Position.Side.SELL) {
                 if (lower == l.marketPrice) {
                     l.liquidityRate = l.liquidityRate.addInt256(
                         l.ticks[lower].delta
@@ -91,7 +91,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (l.tickIndex.insertBefore(right, upper) == false)
                 revert Pool__TickInsertFailed();
 
-            if (p.rangeSide == PoolStorage.Side.BUY) {
+            if (p.rangeSide == Position.Side.BUY) {
                 if (l.tick <= upper) {
                     l.liquidityRate = l.liquidityRate.addInt256(
                         l.ticks[upper].delta
@@ -123,8 +123,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 upper = p.upper;
 
         int256 phi = p.phi(pData, l.minTickDistance()).toInt256();
-        bool leftRangeSide = p.rangeSide == PoolStorage.Side.BUY;
-        bool rightRangeSide = p.rangeSide == PoolStorage.Side.SELL;
+        bool leftRangeSide = p.rangeSide == Position.Side.BUY;
+        bool rightRangeSide = p.rangeSide == Position.Side.SELL;
 
         int256 lowerDelta = l.ticks[lower].delta;
         int256 upperDelta = l.ticks[upper].delta;
@@ -202,7 +202,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return Math.max(premiumFee, notionalFee);
     }
 
-    function _getQuote(uint256 size, PoolStorage.Side tradeSide)
+    function _getQuote(uint256 size, Position.Side tradeSide)
         internal
         view
         returns (uint256)
@@ -213,7 +213,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
-        bool isBuy = tradeSide == PoolStorage.Side.BUY;
+        bool isBuy = tradeSide == Position.Side.BUY;
 
         uint256 totalPremium = 0;
         uint256 marketPrice = l.marketPrice;
@@ -313,7 +313,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 marketPrice = l.marketPrice;
         uint256 transitionPrice = p.transitionPrice(pData);
 
-        if (p.rangeSide == PoolStorage.Side.BUY) {
+        if (p.rangeSide == Position.Side.BUY) {
             if (marketPrice <= p.lower) {
                 pLiq.collateral = pData.contracts;
                 pLiq.long = (pData.collateral -
@@ -513,7 +513,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _verifyTickWidth(p.lower, minTickDistance);
         _verifyTickWidth(p.upper, minTickDistance);
 
-        bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
+        bool isBuy = p.rangeSide == Position.Side.BUY;
 
         if (p.upper > l.marketPrice && isBuy)
             revert Pool__BuyPositionBelowMarketPrice();
@@ -566,7 +566,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         _updatePosition(p, liqUpdate, true);
 
-        bool isBuy = p.rangeSide == PoolStorage.Side.BUY;
+        bool isBuy = p.rangeSide == Position.Side.BUY;
         if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
             l.liquidityRate -= p.phi(pData, l.minTickDistance());
         }
@@ -586,7 +586,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _trade(
         address owner,
         address operator,
-        PoolStorage.Side tradeSide,
+        Position.Side tradeSide,
         uint256 size
     ) internal returns (uint256) {
         // ToDo : Check operator is approved
@@ -595,7 +595,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
-        bool isBuy = tradeSide == PoolStorage.Side.BUY;
+        bool isBuy = tradeSide == Position.Side.BUY;
 
         PricingCurve.Args memory curve = PricingCurve.fromPool(l, tradeSide);
 

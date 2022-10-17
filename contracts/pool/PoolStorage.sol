@@ -24,12 +24,6 @@ library PoolStorage {
         SHORT
     }
 
-    // ToDo : Move somewhere else ?
-    enum Side {
-        BUY,
-        SELL
-    }
-
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");
 

@@ -4,6 +4,8 @@
 pragma solidity ^0.8.0;
 
 import {LinkedList} from "../libraries/LinkedList.sol";
+import {Position} from "../libraries/Position.sol";
+
 import {Math} from "./Math.sol";
 import {WadMath} from "./WadMath.sol";
 
@@ -29,10 +31,10 @@ library PricingCurve {
         uint256 minTickDistance; // The minimum distance between two ticks
         uint256 lower; // The normalized price of the lower bound of the range
         uint256 upper; // The normalized price of the upper bound of the range
-        PoolStorage.Side tradeSide; // The direction of the trade
+        Position.Side tradeSide; // The direction of the trade
     }
 
-    function fromPool(PoolStorage.Layout storage l, PoolStorage.Side tradeSide)
+    function fromPool(PoolStorage.Layout storage l, Position.Side tradeSide)
         internal
         view
         returns (PricingCurve.Args memory)
@@ -83,7 +85,7 @@ library PricingCurve {
             args.lower == args.upper
         ) revert PricingCurve__InvalidQuantityArgs();
 
-        uint256 proportion = args.tradeSide == PoolStorage.Side.BUY
+        uint256 proportion = args.tradeSide == Position.Side.BUY
             ? (targetPrice - args.lower) / (args.upper - args.lower)
             : (args.upper - targetPrice) / (args.upper - args.lower);
 
@@ -101,7 +103,7 @@ library PricingCurve {
         pure
         returns (uint256)
     {
-        uint256 targetPrice = args.tradeSide == PoolStorage.Side.BUY
+        uint256 targetPrice = args.tradeSide == Position.Side.BUY
             ? args.upper
             : args.lower;
 
@@ -125,7 +127,7 @@ library PricingCurve {
         returns (uint256)
     {
         uint256 liquidity = liquidityForRange(args);
-        bool isBuy = args.tradeSide == PoolStorage.Side.BUY;
+        bool isBuy = args.tradeSide == Position.Side.BUY;
 
         // ToDo : Check for rounding errors which might make this condition always false
         if (liquidity == 0) return isBuy ? args.lower : args.upper;

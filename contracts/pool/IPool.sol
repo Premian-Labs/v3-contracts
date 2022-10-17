@@ -4,11 +4,10 @@ pragma solidity ^0.8.0;
 
 import {IPoolBase} from "./IPoolBase.sol";
 import {IPoolIO} from "./IPoolIO.sol";
-import {PoolStorage} from "./PoolStorage.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPool is IPoolBase, IPoolIO {
-    function getQuote(uint256 size, PoolStorage.Side tradeSide)
+    function getQuote(uint256 size, Position.Side tradeSide)
         external
         view
         returns (uint256);
@@ -30,7 +29,7 @@ interface IPool is IPoolBase, IPoolIO {
     function trade(
         address owner,
         address operator,
-        PoolStorage.Side tradeSide,
+        Position.Side tradeSide,
         uint256 size
     ) external returns (uint256);
 

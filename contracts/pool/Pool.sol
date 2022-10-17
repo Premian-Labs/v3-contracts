@@ -4,11 +4,10 @@
 pragma solidity ^0.8.0;
 
 import {PoolInternal} from "./PoolInternal.sol";
-import {PoolStorage} from "./PoolStorage.sol";
 import {Position} from "../libraries/Position.sol";
 
 contract Pool is PoolInternal {
-    function getQuote(uint256 size, PoolStorage.Side tradeSide)
+    function getQuote(uint256 size, Position.Side tradeSide)
         external
         view
         returns (uint256)
@@ -39,7 +38,7 @@ contract Pool is PoolInternal {
     function trade(
         address owner,
         address operator,
-        PoolStorage.Side tradeSide,
+        Position.Side tradeSide,
         uint256 size
     ) external returns (uint256) {
         return _trade(owner, operator, tradeSide, size);
