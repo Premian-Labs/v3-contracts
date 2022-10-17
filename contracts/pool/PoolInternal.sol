@@ -229,28 +229,31 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             );
 
             uint256 maxSize = PricingCurve.maxTradeSize(args, l.marketPrice);
-            uint256 tradeSize = Math.min(size, maxSize);
 
-            uint256 nextMarketPrice = PricingCurve.nextPrice(
-                args,
-                marketPrice,
-                tradeSize
-            );
-            uint256 quotePrice = Math.mean(marketPrice, nextMarketPrice);
-            uint256 premium = quotePrice.mulWad(tradeSize);
-            uint256 takerFee = _takerFee(tradeSize, premium);
-            uint256 takerPremium = premium + takerFee;
+            {
+                uint256 tradeSize = Math.min(size, maxSize);
+                uint256 nextMarketPrice = PricingCurve.nextPrice(
+                    args,
+                    marketPrice,
+                    tradeSize
+                );
 
-            // Update price and liquidity variables
-            uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
-                INVERSE_BASIS_POINT;
-            uint256 makerPremium = premium + (takerFee - protocolFee);
+                uint256 quotePrice = Math.mean(marketPrice, nextMarketPrice);
+                uint256 premium = quotePrice.mulWad(tradeSize);
+                uint256 takerFee = _takerFee(tradeSize, premium);
+                uint256 takerPremium = premium + takerFee;
 
-            // ToDo : Remove ?
-            // l.globalFeeRate += (makerRebate * 1e18) / l.liquidityRate;
-            totalPremium += isBuy ? takerPremium : makerPremium;
+                // Update price and liquidity variables
+                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
+                    INVERSE_BASIS_POINT;
+                uint256 makerPremium = premium + (takerFee - protocolFee);
 
-            marketPrice = nextMarketPrice;
+                // ToDo : Remove ?
+                // l.globalFeeRate += (makerRebate * 1e18) / l.liquidityRate;
+                totalPremium += isBuy ? takerPremium : makerPremium;
+
+                marketPrice = nextMarketPrice;
+            }
 
             // Check if a tick cross is required
             if (maxSize > size) {
@@ -599,33 +602,37 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 totalPremium;
         while (size > 0) {
             uint256 maxSize = curve.maxTradeSize(l.marketPrice);
-            uint256 tradeSize = Math.min(size, maxSize);
 
-            uint256 nextMarketPrice;
-            if (tradeSize != maxSize) {
-                nextMarketPrice = curve.nextPrice(l.marketPrice, tradeSize);
-            } else {
-                nextMarketPrice = isBuy ? curve.upper : curve.lower;
+            {
+                uint256 tradeSize = Math.min(size, maxSize);
+
+                uint256 nextMarketPrice;
+                if (tradeSize != maxSize) {
+                    nextMarketPrice = curve.nextPrice(l.marketPrice, tradeSize);
+                } else {
+                    nextMarketPrice = isBuy ? curve.upper : curve.lower;
+                }
+
+                uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
+
+                uint256 premium = quotePrice.mulWad(tradeSize);
+                uint256 takerFee = _takerFee(tradeSize, premium);
+                uint256 takerPremium = premium + takerFee;
+
+                // Update price and liquidity variables
+                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
+                    INVERSE_BASIS_POINT;
+                uint256 makerRebate = takerFee - protocolFee;
+
+                l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
+                totalPremium += isBuy ? takerPremium : premium;
+
+                l.marketPrice = nextMarketPrice;
+                l.protocolFees += protocolFee;
+
+                size -= tradeSize;
             }
 
-            uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
-
-            uint256 premium = quotePrice.mulWad(tradeSize);
-            uint256 takerFee = _takerFee(tradeSize, premium);
-            uint256 takerPremium = premium + takerFee;
-
-            // Update price and liquidity variables
-            uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
-                INVERSE_BASIS_POINT;
-            uint256 makerRebate = takerFee - protocolFee;
-
-            l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
-            totalPremium += isBuy ? takerPremium : premium;
-
-            l.marketPrice = nextMarketPrice;
-            l.protocolFees += protocolFee;
-
-            size -= tradeSize;
             if (size > 0) {
                 // The trade will require crossing into the next tick range
                 if (isBuy) {
