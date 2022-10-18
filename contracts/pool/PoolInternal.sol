@@ -710,7 +710,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      */
     function _transferPosition(
         Position.Key memory p,
-        Position.Liquidity liq,
+        Position.Liquidity memory liq,
         address newOwner,
         address newOperator
     ) internal {
@@ -719,7 +719,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         _updatePosition(p, liq, true);
         _updatePosition(
-            Position.Args(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
+            Position.Key(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
             liq,
             false
         );
