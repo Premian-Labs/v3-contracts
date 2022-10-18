@@ -700,12 +700,63 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Transfer collateral to msg.sender
     }
 
-    function _transferPosition() internal {
-        // ToDo : Implement
+    /**
+     * @notice Transfer an LP position to another owner.
+     *         NOTE: This function can be called post or prior to expiration.
+     * @param p The position key
+     * @param liq The amount of each type of liquidity to transfer
+     * @param newOwner The new owner of the transferred liquidity
+     * @param newOperator The new operator of the transferred liquidity
+     */
+    function _transferPosition(
+        Position.Key memory p,
+        Position.Liquidity liq,
+        address newOwner,
+        address newOperator
+    ) internal {
+        if (liq.long > 0 && liq.short > 0)
+            revert Pool__CantTransferLongAndShort();
+
+        _updatePosition(p, liq, true);
+        _updatePosition(
+            Position.Args(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
+            liq,
+            false
+        );
     }
 
-    function _transferTrade() internal {
-        // ToDo : Implement
+    /**
+     * @notice Transfer an external trade position to another user.
+     *         NOTE: This function can be called post or prior to expiration
+     * @param owner The current owner of the external option contracts
+     * @param operator The current operator of the external option contracts
+     * @param newOwner The new owner of the transferred liquidity
+     * @param newOperator The new operator of the transferred liquidity
+     * @param long The amount of long option contracts to transfer
+     * @param short The amount of short option contracts to transfer
+     */
+    function _transferTrade(
+        address owner,
+        address operator,
+        address newOwner,
+        address newOperator,
+        uint256 long,
+        uint256 short
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        Position.Liquidity storage existingPosition = l.externalPositions[
+            owner
+        ][operator];
+
+        if (existingPosition.long < long || existingPosition.short < short)
+            revert Pool__InsufficientContracts();
+
+        existingPosition.long -= long;
+        existingPosition.short -= short;
+
+        l.externalPositions[newOwner][newOperator].long += long;
+        l.externalPositions[newOwner][newOperator].short += short;
     }
 
     function _calculateExerciseValue(PoolStorage.Layout storage l, uint256 size)
