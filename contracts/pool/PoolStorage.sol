@@ -90,41 +90,47 @@ library PoolStorage {
     /**
      * @notice calculate ERC1155 token id for given option parameters
      * @param tokenType TokenType enum
-     * @param maturity timestamp of option maturity
-     * @param strike64x64 64x64 fixed point representation of strike price
+     * @param rangeSide The side of the range position
+     * @param lower The lower bound normalized option price
+     * @param upper The upper bound normalized option price
      * @return tokenId token id
      */
     function formatTokenId(
         TokenType tokenType,
-        uint64 maturity,
-        int128 strike64x64
+        Position.Side rangeSide,
+        uint64 lower,
+        uint64 upper
     ) internal pure returns (uint256 tokenId) {
         tokenId =
-            (uint256(tokenType) << 248) +
-            (uint256(maturity) << 128) +
-            uint256(int256(strike64x64));
+            (uint256(upper) << 70) +
+            (uint256(lower) << 6) +
+            (uint256(tokenType) << 2) +
+            uint256(rangeSide);
     }
 
     /**
      * @notice derive option maturity and strike price from ERC1155 token id
      * @param tokenId token id
      * @return tokenType TokenType enum
-     * @return maturity timestamp of option maturity
-     * @return strike64x64 option strike price
+     * @return rangeSide The side of the range position
+     * @return lower The lower bound normalized option price
+     * @return upper The upper bound normalized option price
      */
     function parseTokenId(uint256 tokenId)
         internal
         pure
         returns (
             TokenType tokenType,
-            uint64 maturity,
-            int128 strike64x64
+            Position.Side rangeSide,
+            uint64 lower,
+            uint64 upper
         )
     {
         assembly {
-            tokenType := shr(248, tokenId)
-            maturity := shr(128, tokenId)
-            strike64x64 := tokenId
+            upper := shr(70, tokenId)
+            lower := shr(6, tokenId)
+            tokenType := and(shr(2, tokenId), 15)
+            rangeSide := and(tokenId, 3)
         }
     }
 }
