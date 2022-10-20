@@ -15,20 +15,20 @@ contract PoolMock is Pool {
     using PoolStorage for PoolStorage.Layout;
 
     function formatTokenId(
-        PoolStorage.TokenType tokenType,
         Position.Side rangeSide,
+        PoolStorage.TokenType tokenType,
         uint64 lower,
         uint64 upper
     ) external pure returns (uint256 tokenId) {
-        return PoolStorage.formatTokenId(tokenType, rangeSide, lower, upper);
+        return PoolStorage.formatTokenId(rangeSide, tokenType, lower, upper);
     }
 
     function parseTokenId(uint256 tokenId)
         external
         pure
         returns (
-            PoolStorage.TokenType tokenType,
             Position.Side rangeSide,
+            PoolStorage.TokenType tokenType,
             uint64 lower,
             uint64 upper
         )

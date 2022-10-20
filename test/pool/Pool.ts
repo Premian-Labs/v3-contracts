@@ -53,8 +53,8 @@ describe('Pool', () => {
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const tokenId = await pool.formatTokenId(
-        2,
         1,
+        2,
         parseEther('0.1'),
         parseEther('0.2'),
       );
@@ -63,8 +63,6 @@ describe('Pool', () => {
       expect(tokenId.shr(2).mask(4)).to.eq(2);
       expect(tokenId.shr(6).mask(64)).to.eq(parseEther('0.1'));
       expect(tokenId.shr(70).mask(64)).to.eq(parseEther('0.2'));
-
-      console.log(tokenId);
     });
   });
 
@@ -74,8 +72,8 @@ describe('Pool', () => {
         BigNumber.from('0xb1a2bc2ec500000058d15e1762800009'),
       );
 
-      expect(r.tokenType).to.eq(2);
       expect(r.rangeSide).to.eq(1);
+      expect(r.tokenType).to.eq(2);
       expect(r.lower).to.eq(parseEther('0.1'));
       expect(r.upper).to.eq(parseEther('0.2'));
     });

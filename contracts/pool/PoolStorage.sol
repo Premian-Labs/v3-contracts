@@ -16,6 +16,7 @@ library PoolStorage {
     using ABDKMath64x64 for int128;
     using PoolStorage for PoolStorage.Layout;
 
+    // ToDo : Get rid of duplicate error def
     error Pool__OptionNotExpired();
 
     enum TokenType {
@@ -89,15 +90,15 @@ library PoolStorage {
 
     /**
      * @notice calculate ERC1155 token id for given option parameters
-     * @param tokenType TokenType enum
      * @param rangeSide The side of the range position
+     * @param tokenType TokenType enum
      * @param lower The lower bound normalized option price
      * @param upper The upper bound normalized option price
      * @return tokenId token id
      */
     function formatTokenId(
-        TokenType tokenType,
         Position.Side rangeSide,
+        TokenType tokenType,
         uint64 lower,
         uint64 upper
     ) internal pure returns (uint256 tokenId) {
@@ -111,8 +112,8 @@ library PoolStorage {
     /**
      * @notice derive option maturity and strike price from ERC1155 token id
      * @param tokenId token id
-     * @return tokenType TokenType enum
      * @return rangeSide The side of the range position
+     * @return tokenType TokenType enum
      * @return lower The lower bound normalized option price
      * @return upper The upper bound normalized option price
      */
@@ -120,8 +121,8 @@ library PoolStorage {
         internal
         pure
         returns (
-            TokenType tokenType,
             Position.Side rangeSide,
+            TokenType tokenType,
             uint64 lower,
             uint64 upper
         )
@@ -129,8 +130,8 @@ library PoolStorage {
         assembly {
             upper := shr(70, tokenId)
             lower := shr(6, tokenId)
-            tokenType := and(shr(2, tokenId), 15)
-            rangeSide := and(tokenId, 3)
+            tokenType := and(shr(2, tokenId), 15) // 4 bits mask
+            rangeSide := and(tokenId, 3) // 2 bits mask
         }
     }
 }
