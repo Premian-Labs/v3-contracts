@@ -3,9 +3,6 @@
 
 pragma solidity ^0.8.0;
 
-import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
-import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
-
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
@@ -13,7 +10,6 @@ import {Tick} from "../libraries/Tick.sol";
 import {IPoolTicks} from "./IPoolTicks.sol";
 
 library PoolStorage {
-    using ABDKMath64x64 for int128;
     using PoolStorage for PoolStorage.Layout;
 
     // ToDo : Get rid of duplicate error def
