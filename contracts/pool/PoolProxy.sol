@@ -8,8 +8,8 @@ import {ERC165Storage} from "@solidstate/contracts/introspection/ERC165Storage.s
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
-import {IERC1155} from "@solidstate/contracts/token/ERC1155/IERC1155.sol";
-import {IERC165} from "@solidstate/contracts/introspection/IERC165.sol";
+import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
+import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
