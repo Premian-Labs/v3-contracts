@@ -8,7 +8,7 @@ import {
   Premia__factory,
 } from '../../typechain';
 import { diamondCut } from '../../scripts/utils/diamond';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber } from 'ethers';
 
 describe('Pool', () => {
@@ -52,30 +52,33 @@ describe('Pool', () => {
 
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
+      const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await pool.formatTokenId(
+        operator,
         1,
-        2,
         parseEther('0.1'),
         parseEther('0.2'),
       );
 
       expect(tokenId.mask(2)).to.eq(1);
-      expect(tokenId.shr(2).mask(4)).to.eq(2);
-      expect(tokenId.shr(6).mask(64)).to.eq(parseEther('0.1'));
-      expect(tokenId.shr(70).mask(64)).to.eq(parseEther('0.2'));
+      expect(tokenId.shr(2).mask(47)).to.eq(parseUnits('0.1', 14));
+      expect(tokenId.shr(49).mask(47)).to.eq(parseUnits('0.2', 14));
+      expect(tokenId.shr(96).mask(160)).to.eq(operator);
     });
   });
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await pool.parseTokenId(
-        BigNumber.from('0xb1a2bc2ec500000058d15e1762800009'),
+        BigNumber.from(
+          '0x1000000000000000000000000000000000000001246139ca8000246139ca8001',
+        ),
       );
 
       expect(r.rangeSide).to.eq(1);
-      expect(r.tokenType).to.eq(2);
       expect(r.lower).to.eq(parseEther('0.1'));
       expect(r.upper).to.eq(parseEther('0.2'));
+      expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
     });
   });
 });

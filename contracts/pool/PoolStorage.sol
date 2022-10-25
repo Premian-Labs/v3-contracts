@@ -86,30 +86,31 @@ library PoolStorage {
 
     /**
      * @notice calculate ERC1155 token id for given option parameters
+     * @param operator The current operator of the position
      * @param rangeSide The side of the range position
-     * @param tokenType TokenType enum
      * @param lower The lower bound normalized option price
      * @param upper The upper bound normalized option price
      * @return tokenId token id
      */
     function formatTokenId(
+        address operator,
         Position.Side rangeSide,
-        TokenType tokenType,
         uint64 lower,
         uint64 upper
     ) internal pure returns (uint256 tokenId) {
+        // We convert upper and lower from 18 to 14 decimals, to be able to fit in 47 bits
         tokenId =
-            (uint256(upper) << 70) +
-            (uint256(lower) << 6) +
-            (uint256(tokenType) << 2) +
+            (uint256(uint160(operator)) << 96) +
+            (uint256(upper / 1e4) << 49) +
+            (uint256(lower / 1e4) << 2) +
             uint256(rangeSide);
     }
 
     /**
      * @notice derive option maturity and strike price from ERC1155 token id
      * @param tokenId token id
+     * @return operator The current operator of the position
      * @return rangeSide The side of the range position
-     * @return tokenType TokenType enum
      * @return lower The lower bound normalized option price
      * @return upper The upper bound normalized option price
      */
@@ -117,16 +118,16 @@ library PoolStorage {
         internal
         pure
         returns (
+            address operator,
             Position.Side rangeSide,
-            TokenType tokenType,
             uint64 lower,
             uint64 upper
         )
     {
         assembly {
-            upper := shr(70, tokenId)
-            lower := shr(6, tokenId)
-            tokenType := and(shr(2, tokenId), 15) // 4 bits mask
+            operator := shr(96, tokenId)
+            upper := mul(and(shr(49, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 14 decimals to 18
+            lower := mul(and(shr(2, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 18 decimals to 18
             rangeSide := and(tokenId, 3) // 2 bits mask
         }
     }
