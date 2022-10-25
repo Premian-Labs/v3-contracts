@@ -127,7 +127,7 @@ library PoolStorage {
         assembly {
             operator := shr(96, tokenId)
             upper := mul(and(shr(49, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 14 decimals to 18
-            lower := mul(and(shr(2, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 18 decimals to 18
+            lower := mul(and(shr(2, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 14 decimals to 18
             rangeSide := and(tokenId, 3) // 2 bits mask
         }
     }
