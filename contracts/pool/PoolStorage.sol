@@ -16,9 +16,8 @@ library PoolStorage {
     error Pool__OptionNotExpired();
 
     enum TokenType {
-        FREE_LIQUIDITY,
-        LONG,
-        SHORT
+        SHORT, // 0
+        LONG // 1
     }
 
     bytes32 internal constant STORAGE_SLOT =
