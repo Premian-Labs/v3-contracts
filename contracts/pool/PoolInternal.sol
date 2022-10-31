@@ -226,29 +226,26 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             tradeSide
         );
 
-        uint256 bidLiquidity = pricing.bidLiquidity();
-        uint256 askLiquidity = pricing.askLiquidity();
+        uint256 liquidity = pricing.liquidity();
+        uint256 maxSize = pricing.maxTradeSize();
 
         uint256 totalPremium = 0;
 
         while (size > 0) {
-            uint256 maxSize = isBuy ? askLiquidity : bidLiquidity;
             uint256 tradeSize = Math.min(size, maxSize);
 
             uint256 nextPrice;
             // Compute next price
-            if (bidLiquidity + askLiquidity == 0) {
-                nextPrice = isBuy ? pricing.lower : pricing.upper;
+            if (liquidity == 0) {
+                nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
-                uint256 shift = isBuy ? bidLiquidity : askLiquidity;
-                uint256 proportion = (shift + tradeSize).divWad(
-                    bidLiquidity + askLiquidity
+                uint256 priceDelta = (pricing.upper - pricing.lower).mulWad(
+                    tradeSize.divWad(liquidity)
                 );
+
                 nextPrice = isBuy
-                    ? pricing.lower +
-                        (pricing.upper - pricing.lower).mulWad(proportion)
-                    : pricing.upper -
-                        (pricing.upper - pricing.lower).mulWad(proportion);
+                    ? pricing.marketPrice + priceDelta
+                    : pricing.marketPrice - priceDelta;
             }
 
             {
@@ -280,8 +277,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pricing.upper = l.tickIndex.getNextNode(pricing.lower);
 
                 // Compute new liquidity
-                bidLiquidity = pricing.bidLiquidity();
-                askLiquidity = pricing.askLiquidity();
+                liquidity = pricing.liquidity();
+                maxSize = pricing.maxTradeSize();
             }
         }
 
