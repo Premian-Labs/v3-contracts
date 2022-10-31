@@ -6,6 +6,11 @@ pragma solidity ^0.8.0;
 import {ABDKMath64x64Token} from "@solidstate/abdk-math-extensions/contracts/ABDKMath64x64Token.sol";
 import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
 
+import {LinkedList} from "../libraries/LinkedList.sol";
+import {Tick} from "../libraries/Tick.sol";
+
+import {IPoolTicks} from "./IPoolTicks.sol";
+
 library PoolStorage {
     using ABDKMath64x64 for int128;
     using PoolStorage for PoolStorage.Layout;
@@ -14,6 +19,12 @@ library PoolStorage {
         FREE_LIQUIDITY,
         LONG,
         SHORT
+    }
+
+    // ToDo : Move somewhere else ?
+    enum Side {
+        BUY,
+        SELL
     }
 
     bytes32 internal constant STORAGE_SLOT =
@@ -31,6 +42,16 @@ library PoolStorage {
         uint8 baseDecimals;
         // Whether its a call or put pool
         bool isCallPool;
+        // Index of all existing ticks sorted
+        LinkedList.List tickIndex;
+        mapping(uint256 => Tick.Data) ticks;
+        uint256 currentTickId;
+        uint256 marketPrice;
+        uint256 globalFeeRate;
+        uint256 strike;
+        uint256 liquidityRate;
+        // Current tick normalized price
+        uint256 tick;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -38,6 +59,10 @@ library PoolStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function minTickDistance(Layout storage l) internal view returns (uint256) {
+        return l.isCallPool ? 1e14 : l.strike / 1e4;
     }
 
     /**
