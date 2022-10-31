@@ -3,11 +3,12 @@
 pragma solidity ^0.8.0;
 
 interface IPoolInternal {
-    error Pool__BuyPositionBelowMarketPrice();
     error Pool__CantTransferLongAndShort();
     error Pool__InsufficientCollateral();
     error Pool__InsufficientContracts();
     error Pool__InsufficientWithdrawableBalance();
+    error Pool__InvalidBuyOrder();
+    error Pool__InvalidSellOrder();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
     error Pool__SellPositionAboveMarketPrice();

@@ -45,65 +45,66 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 left,
         uint256 right
     ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        uint256 lower = p.lower;
-        uint256 upper = p.upper;
-
-        if (
-            left > lower ||
-            l.tickIndex.getNextNode(left) < lower ||
-            right < upper ||
-            l.tickIndex.getPreviousNode(right) > upper ||
-            left == right ||
-            lower == upper
-        ) revert Pool__TickInsertInvalid();
-
-        int256 delta = p.phi(pData, l.minTickDistance()).toInt256();
-
-        if (p.rangeSide == Position.Side.SELL) {
-            l.ticks[lower].delta += delta;
-            l.ticks[upper].delta -= delta;
-        } else {
-            l.ticks[lower].delta -= delta;
-            l.ticks[upper].delta += delta;
-        }
-
-        if (left != lower) {
-            if (l.tickIndex.insertAfter(left, lower) == false)
-                revert Pool__TickInsertFailed();
-
-            if (p.rangeSide == Position.Side.SELL) {
-                if (lower == l.marketPrice) {
-                    l.liquidityRate = l.liquidityRate.addInt256(
-                        l.ticks[lower].delta
-                    );
-                    l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
-
-                    if (l.tick < lower) l.tick = lower;
-                }
-            } else {
-                l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
-            }
-        }
-
-        if (right != upper) {
-            if (l.tickIndex.insertBefore(right, upper) == false)
-                revert Pool__TickInsertFailed();
-
-            if (p.rangeSide == Position.Side.BUY) {
-                if (l.tick <= upper) {
-                    l.liquidityRate = l.liquidityRate.addInt256(
-                        l.ticks[upper].delta
-                    );
-                }
-                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
-
-                if (l.tick < lower) {
-                    l.tick = lower;
-                }
-            }
-        }
+        // ToDo : Update
+        //        PoolStorage.Layout storage l = PoolStorage.layout();
+        //
+        //        uint256 lower = p.lower;
+        //        uint256 upper = p.upper;
+        //
+        //        if (
+        //            left > lower ||
+        //            l.tickIndex.getNextNode(left) < lower ||
+        //            right < upper ||
+        //            l.tickIndex.getPreviousNode(right) > upper ||
+        //            left == right ||
+        //            lower == upper
+        //        ) revert Pool__TickInsertInvalid();
+        //
+        //        int256 delta = p.phi(pData, l.minTickDistance()).toInt256();
+        //
+        //        if (p.rangeSide == Position.Side.SELL) {
+        //            l.ticks[lower].delta += delta;
+        //            l.ticks[upper].delta -= delta;
+        //        } else {
+        //            l.ticks[lower].delta -= delta;
+        //            l.ticks[upper].delta += delta;
+        //        }
+        //
+        //        if (left != lower) {
+        //            if (l.tickIndex.insertAfter(left, lower) == false)
+        //                revert Pool__TickInsertFailed();
+        //
+        //            if (p.rangeSide == Position.Side.SELL) {
+        //                if (lower == l.marketPrice) {
+        //                    l.liquidityRate = l.liquidityRate.addInt256(
+        //                        l.ticks[lower].delta
+        //                    );
+        //                    l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
+        //
+        //                    if (l.tick < lower) l.tick = lower;
+        //                }
+        //            } else {
+        //                l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
+        //            }
+        //        }
+        //
+        //        if (right != upper) {
+        //            if (l.tickIndex.insertBefore(right, upper) == false)
+        //                revert Pool__TickInsertFailed();
+        //
+        //            if (p.rangeSide == Position.Side.BUY) {
+        //                if (l.tick <= upper) {
+        //                    l.liquidityRate = l.liquidityRate.addInt256(
+        //                        l.ticks[upper].delta
+        //                    );
+        //                }
+        //                l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
+        //
+        //                if (l.tick < lower) {
+        //                    l.tick = lower;
+        //                }
+        //            }
+        //        }
     }
 
     /**
@@ -117,73 +118,74 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Position.Data memory pData,
         uint256 marketPrice
     ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        uint256 lower = p.lower;
-        uint256 upper = p.upper;
-
-        int256 phi = p.phi(pData, l.minTickDistance()).toInt256();
-        bool leftRangeSide = p.rangeSide == Position.Side.BUY;
-        bool rightRangeSide = p.rangeSide == Position.Side.SELL;
-
-        int256 lowerDelta = l.ticks[lower].delta;
-        int256 upperDelta = l.ticks[upper].delta;
-
-        // right-side original state:
-        //   lower_tick.delta += phi
-        //   upper_tick.delta -= phi
-
-        if (rightRangeSide) {
-            if (lower > marketPrice) {
-                // |---------p----l------------> original state
-                lowerDelta -= phi;
-            } else {
-                // |------------l---p---------> left-tick crossed
-                lowerDelta += phi;
-            }
-
-            if (upper > marketPrice) {
-                // |------------p----u--------> original state
-                upperDelta += phi;
-            } else {
-                // |----------------u----p----> right-tick crossed
-                upperDelta -= phi;
-            }
-        }
-
-        // left-side original state:
-        //   lower_tick.delta -= phi
-        //   upper_tick.delta += phi
-
-        if (leftRangeSide) {
-            if (upper < marketPrice) {
-                // <---------u----p-----------| original state
-                upperDelta -= phi;
-            } else {
-                // # <--------------p----u------| right-tick crossed
-                upperDelta += phi;
-            }
-
-            if (lower < marketPrice) {
-                // <-----l----p---------------| original state
-                lowerDelta += phi;
-            } else {
-                // <---------p---l------------| left-tick crossed
-                lowerDelta -= phi;
-            }
-        }
-
-        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
-        if (lowerDelta.abs() == 0) {
-            l.tickIndex.remove(lower);
-            delete l.ticks[lower];
-        }
-
-        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
-        if (upperDelta.abs() == 0) {
-            l.tickIndex.remove(upper);
-            delete l.ticks[upper];
-        }
+        // ToDo : Update
+        //        PoolStorage.Layout storage l = PoolStorage.layout();
+        //
+        //        uint256 lower = p.lower;
+        //        uint256 upper = p.upper;
+        //
+        //        int256 phi = p.phi(pData, l.minTickDistance()).toInt256();
+        //        bool leftRangeSide = p.rangeSide == Position.Side.BUY;
+        //        bool rightRangeSide = p.rangeSide == Position.Side.SELL;
+        //
+        //        int256 lowerDelta = l.ticks[lower].delta;
+        //        int256 upperDelta = l.ticks[upper].delta;
+        //
+        //        // right-side original state:
+        //        //   lower_tick.delta += phi
+        //        //   upper_tick.delta -= phi
+        //
+        //        if (rightRangeSide) {
+        //            if (lower > marketPrice) {
+        //                // |---------p----l------------> original state
+        //                lowerDelta -= phi;
+        //            } else {
+        //                // |------------l---p---------> left-tick crossed
+        //                lowerDelta += phi;
+        //            }
+        //
+        //            if (upper > marketPrice) {
+        //                // |------------p----u--------> original state
+        //                upperDelta += phi;
+        //            } else {
+        //                // |----------------u----p----> right-tick crossed
+        //                upperDelta -= phi;
+        //            }
+        //        }
+        //
+        //        // left-side original state:
+        //        //   lower_tick.delta -= phi
+        //        //   upper_tick.delta += phi
+        //
+        //        if (leftRangeSide) {
+        //            if (upper < marketPrice) {
+        //                // <---------u----p-----------| original state
+        //                upperDelta -= phi;
+        //            } else {
+        //                // # <--------------p----u------| right-tick crossed
+        //                upperDelta += phi;
+        //            }
+        //
+        //            if (lower < marketPrice) {
+        //                // <-----l----p---------------| original state
+        //                lowerDelta += phi;
+        //            } else {
+        //                // <---------p---l------------| left-tick crossed
+        //                lowerDelta -= phi;
+        //            }
+        //        }
+        //
+        //        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        //        if (lowerDelta.abs() == 0) {
+        //            l.tickIndex.remove(lower);
+        //            delete l.ticks[lower];
+        //        }
+        //
+        //        // ToDo : Test precision rounding errors and if we need to increase from 0 (Most likely yes)
+        //        if (upperDelta.abs() == 0) {
+        //            l.tickIndex.remove(upper);
+        //            delete l.ticks[upper];
+        //        }
     }
 
     /**
@@ -285,22 +287,24 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
-    function _getClaimableFees(Position.Key memory p)
-        internal
-        view
-        returns (uint256)
-    {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        Position.Data storage pData = l.positions[p.keyHash()];
+    // ToDo : Remove
+    //    function _getClaimableFees(Position.Key memory p)
+    //        internal
+    //        view
+    //        returns (uint256)
+    //    {
+    //        PoolStorage.Layout storage l = PoolStorage.layout();
+    //        Position.Data storage pData = l.positions[p.keyHash()];
+    //
+    //        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
+    //
+    //        return
+    //            (feeGrowthRate - pData.lastFeeRate).mulWad(
+    //                p.phi(pData, l.minTickDistance())
+    //            );
+    //    }
 
-        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
-
-        return
-            (feeGrowthRate - pData.lastFeeRate).mulWad(
-                p.phi(pData, l.minTickDistance())
-            );
-    }
-
+    // ToDo : Remove
     /**
      * @notice Calculates the current liquidity state for a position, given the initial state and current pool price.
      *             ▼    l                   u
@@ -398,6 +402,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
+    // ToDo : Remove
     /**
      * @notice Calculates the growth and exposure change between the lower and upper Ticks of a Position.
      *                  l         ▼         u
@@ -453,6 +458,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         internal
         returns (Tick.Data memory tick)
     {
+        // ToDo : Update
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.tickIndex.nodeExists(price)) return l.ticks[price];
@@ -469,34 +475,35 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _updatePosition(
         Position.Key memory p,
         Position.Liquidity memory liqUpdate,
-        bool subtract
+        bool withdraw
     ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
-        Position.Data storage pData = l.positions[p.keyHash()];
-
-        uint256 contracts = liqUpdate.short + liqUpdate.long;
-
-        if (liqUpdate.collateral > 0 || contracts > 0) {
-            if (subtract) {
-                if (pData.collateral < liqUpdate.collateral)
-                    revert Pool__InsufficientCollateral();
-                if (pData.contracts < contracts)
-                    revert Pool__InsufficientContracts();
-
-                pData.collateral -= liqUpdate.collateral;
-                pData.contracts -= contracts;
-            } else {
-                pData.collateral += liqUpdate.collateral;
-                pData.contracts += contracts;
-            }
-        }
-
-        pData.claimableFees +=
-            (feeGrowthRate - pData.lastFeeRate) *
-            p.phi(pData, l.minTickDistance());
-        pData.lastFeeRate = feeGrowthRate;
+        // ToDo : Update
+        //        PoolStorage.Layout storage l = PoolStorage.layout();
+        //
+        //        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
+        //        Position.Data storage pData = l.positions[p.keyHash()];
+        //
+        //        uint256 contracts = liqUpdate.short + liqUpdate.long;
+        //
+        //        if (liqUpdate.collateral > 0 || contracts > 0) {
+        //            if (subtract) {
+        //                if (pData.collateral < liqUpdate.collateral)
+        //                    revert Pool__InsufficientCollateral();
+        //                if (pData.contracts < contracts)
+        //                    revert Pool__InsufficientContracts();
+        //
+        //                pData.collateral -= liqUpdate.collateral;
+        //                pData.contracts -= contracts;
+        //            } else {
+        //                pData.collateral += liqUpdate.collateral;
+        //                pData.contracts += contracts;
+        //            }
+        //        }
+        //
+        //        pData.claimableFees +=
+        //            (feeGrowthRate - pData.lastFeeRate) *
+        //            p.phi(pData, l.minTickDistance());
+        //        pData.lastFeeRate = feeGrowthRate;
     }
 
     function _claim() internal {
@@ -513,45 +520,93 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
      * @param p The position key
-     * @param liqUpdate The liquidity amounts to add
+     * @param collateral The amount of collateral to be deposited
+     * @param contracts The amount of contracts to be deposited
      * @param left The normalized price of the tick at the left of the position
      * @param right The normalized price of the tick at th right of the position
      */
     function _deposit(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate,
+        uint256 collateral,
+        uint256 contracts,
         uint256 left,
         uint256 right
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+
         uint256 minTickDistance = l.minTickDistance();
         _verifyTickWidth(p.lower, minTickDistance);
         _verifyTickWidth(p.upper, minTickDistance);
 
+        // Check if market price is stranded
+        //        bool isMarketPriceStranded
+
         bool isBuy = p.rangeSide == Position.Side.BUY;
 
-        if (p.upper > l.marketPrice && isBuy)
-            revert Pool__BuyPositionBelowMarketPrice();
-        if (p.lower > l.marketPrice && !isBuy)
-            revert Pool__SellPositionAboveMarketPrice();
-
-        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
-        //    agent.transfer_from(
-        //    position.collateral,
-        //    position.contracts if position.side == RangeSide.SELL else Decimal('0'),
-        //    position.contracts if position.side == RangeSide.BUY else Decimal('0'),
-        //    self,
-        //    )
-
-        _updatePosition(p, liqUpdate, false);
-        Position.Data storage pData = l.positions[p.keyHash()];
-
-        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
-            l.liquidityRate += p.phi(pData, minTickDistance);
+        // Fix for if stranded market price
+        if (
+            l.liquidityRate == 0 &&
+            p.lower >= l.tick &&
+            p.upper <= l.tickIndex.getNextNode(l.tick)
+        ) {
+            l.marketPrice = isBuy ? p.upper : p.lower;
         }
 
-        _insertTick(p, pData, left, right);
+        if (isBuy) {
+            // Check if valid buy order
+            if (p.upper > l.marketPrice) revert Pool__InvalidBuyOrder();
+        } else {
+            // Check if valid sell order
+            if (p.lower < l.marketPrice) revert Pool__InvalidSellOrder();
+        }
+
+        // Transfer funds from the LP to the pool
+        /*
+        info.owner.transfer_from(
+            order.collateral,
+            order.contracts if side == TradeSide.SELL else Decimal("0"),
+            order.contracts if side == TradeSide.BUY else Decimal("0"),
+            self
+        )
+        */
+
+        // If ticks dont exist they are created and inserted into the linked list
+        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+
+        // Check if there is an existing position
+        Position.Data storage pData = l.positions[p.keyHash()];
+        // ToDo : Implement
+        //        fee_rate = self.tick_system.range_fee_rate(
+        //            lower_tick,
+        //            upper_tick
+        //        );
+
+        ///////////////////////////////////////////////
+
+        //        if (p.upper > l.marketPrice && isBuy)
+        //            revert Pool__BuyPositionBelowMarketPrice();
+        //        if (p.lower > l.marketPrice && !isBuy)
+        //            revert Pool__SellPositionAboveMarketPrice();
+        //
+        //        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
+        //        //    agent.transfer_from(
+        //        //    position.collateral,
+        //        //    position.contracts if position.side == RangeSide.SELL else Decimal('0'),
+        //        //    position.contracts if position.side == RangeSide.BUY else Decimal('0'),
+        //        //    self,
+        //        //    )
+        //
+        //        _updatePosition(p, liqUpdate, false);
+        //        Position.Data storage pData = l.positions[p.keyHash()];
+        //
+        //        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
+        //            l.liquidityRate += p.phi(pData, minTickDistance);
+        //        }
+        //
+        //        _insertTick(p, pData, left, right);
     }
 
     /**
@@ -563,34 +618,35 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Position.Key memory p,
         Position.Liquidity memory liqUpdate
     ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
-
-        Position.Data storage pData = l.positions[p.keyHash()];
-        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
-
-        if (
-            pLiq.collateral < liqUpdate.collateral ||
-            pLiq.long < liqUpdate.long ||
-            pLiq.short < liqUpdate.short
-        ) revert Pool__InsufficientWithdrawableBalance();
-
-        // Ensure ticks exists
-        if (!l.tickIndex.nodeExists(p.lower)) revert Pool__TickNotFound();
-        if (!l.tickIndex.nodeExists(p.upper)) revert Pool__TickNotFound();
-
-        _updatePosition(p, liqUpdate, true);
-
-        bool isBuy = p.rangeSide == Position.Side.BUY;
-        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
-            l.liquidityRate -= p.phi(pData, l.minTickDistance());
-        }
-
-        _removeTick(p, pData, l.marketPrice);
-
-        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
-        //    agent.transfer_to(liquidity.collateral, liquidity.long, liquidity.short, self)
+        // ToDo : Update
+        //        PoolStorage.Layout storage l = PoolStorage.layout();
+        //
+        //        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+        //
+        //        Position.Data storage pData = l.positions[p.keyHash()];
+        //        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
+        //
+        //        if (
+        //            pLiq.collateral < liqUpdate.collateral ||
+        //            pLiq.long < liqUpdate.long ||
+        //            pLiq.short < liqUpdate.short
+        //        ) revert Pool__InsufficientWithdrawableBalance();
+        //
+        //        // Ensure ticks exists
+        //        if (!l.tickIndex.nodeExists(p.lower)) revert Pool__TickNotFound();
+        //        if (!l.tickIndex.nodeExists(p.upper)) revert Pool__TickNotFound();
+        //
+        //        _updatePosition(p, liqUpdate, true);
+        //
+        //        bool isBuy = p.rangeSide == Position.Side.BUY;
+        //        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
+        //            l.liquidityRate -= p.phi(pData, l.minTickDistance());
+        //        }
+        //
+        //        _removeTick(p, pData, l.marketPrice);
+        //
+        //        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
+        //        //    agent.transfer_to(liquidity.collateral, liquidity.long, liquidity.short, self)
     }
 
     /**

@@ -6,12 +6,12 @@ pragma solidity ^0.8.0;
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {Math} from "./Math.sol";
+import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
 
 /**
  * @notice Keeps track of LP positions
- *         Stores the lower and upper Ticks of a user's range order, and tracks
- *         the pro-rata exposure of the order.
+ *         Stores the lower and upper Ticks of a user's range order, and tracks the pro-rata exposure of the order.
  */
 library Position {
     using Math for int256;
@@ -32,6 +32,7 @@ library Position {
         // The Agent that can control modifications to the Position
         address operator;
         // The direction of the range order
+        // ToDo : Rename to `side`
         Side rangeSide;
         // The lower tick normalized price of the range order
         uint256 lower;
@@ -61,100 +62,142 @@ library Position {
         return keccak256(abi.encode(self));
     }
 
+    function proportion(Key memory self, uint256 price)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (price < self.lower) return 0;
+        else if (self.lower <= price && price < self.upper)
+            return Pricing.proportion(self.lower, self.upper, price);
+        return 1e18;
+    }
+
+    function isBuy(Key memory self) internal pure returns (bool) {
+        return self.rangeSide == Side.BUY;
+    }
+
+    function averagePrice(Key memory self) internal pure returns (uint256) {
+        return Math.mean(self.lower, self.upper);
+    }
+
+    function liquidity(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            self.isBuy()
+                ? data.collateral + data.contracts
+                : data.collateral.divWad(self.averagePrice());
+    }
+
+    /**
+     * @notice Returns the per-tick liquidity phi (delta) for a specific position.
+     */
+    function liquidityPerTick(
+        Key memory self,
+        Data memory data,
+        uint256 minTickDistance
+    ) internal pure returns (uint256) {
+        uint256 amountOfTicks = Pricing.amountOfTicksBetween(
+            self.lower,
+            self.upper,
+            minTickDistance
+        );
+
+        return self.liquidity(data) / amountOfTicks;
+    }
+
     function transitionPrice(Key memory self, Data memory data)
         internal
         pure
         returns (uint256)
     {
-        if (self.rangeSide == Position.Side.BUY) {
-            return
-                self.upper -
-                ((self.averagePrice() * data.contracts) / data.collateral)
-                    .mulWad(self.upper - self.lower);
-        }
-
-        return
-            self.lower +
-            (data.contracts * (self.upper - self.lower)) /
-            self.lambdaAsk(data);
-    }
-
-    function averagePrice(Key memory self) internal pure returns (uint256) {
-        return (self.upper + self.lower) / 2;
-    }
-
-    function bidAveragePrice(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (self.transitionPrice(data) + self.lower) / 2;
-    }
-
-    function shortAveragePrice(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (self.upper + self.transitionPrice(data)) / 2;
-    }
-
-    /**
-     * @notice The total number of long contracts that must be bought to move through this Position's range.
-     */
-    function lambdaBid(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 additionalShortCollateralRequired = data.contracts.mulWad(
-            self.shortAveragePrice(data)
+        uint256 shift = data.contracts.divWad(self.liquidity(data)).mulWad(
+            self.upper - self.lower
         );
 
-        if (data.collateral < additionalShortCollateralRequired)
-            revert Position__NotEnoughCollateral();
-
-        return
-            data.contracts +
-            (data.collateral - additionalShortCollateralRequired).divWad(
-                self.bidAveragePrice(data)
-            );
+        return self.isBuy() ? self.lower + shift : self.upper - shift;
     }
 
-    /**
-     * @notice The total number of short contracts that must be sold to move through this Position's range.
-     */
-    function lambdaAsk(Key memory, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        return data.collateral + data.contracts;
-    }
-
-    function _lambda(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        return
-            self.rangeSide == Side.BUY
-                ? self.lambdaBid(data)
-                : self.lambdaAsk(data);
-    }
-
-    /**
-     * @notice The per-tick liquidity delta for a specific position.
-     */
-    function phi(
+    function bid(
         Key memory self,
         Data memory data,
-        uint256 minTickDistance
+        uint256 price
     ) internal pure returns (uint256) {
-        // ToDo : Check if precision is enough
-        return
-            self._lambda(data).divWad(
-                (self.upper - self.lower) * (1e18 / minTickDistance)
-            );
+        uint256 nu = self.proportion(price);
+
+        // Overworked to avoid numerical rounding errors
+        uint256 revenue = self.isBuy()
+            ? (data.collateral + data.contracts).mulWad(self.averagePrice())
+            : data.collateral;
+
+        return nu.mulWad(revenue);
+    }
+
+    function ask(
+        Key memory self,
+        Data memory data,
+        uint256 price
+    ) internal pure returns (uint256) {
+        uint256 nu = self.proportion(price);
+        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        return (1e18 - nu).mulWad(x);
+    }
+
+    function long(
+        Key memory self,
+        Data memory data,
+        uint256 price
+    ) internal pure returns (uint256) {
+        uint256 nu = self.proportion(price);
+        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        return (1e18 - nu).mulWad(self.liquidity(data) - x);
+    }
+
+    function short(
+        Key memory self,
+        Data memory data,
+        uint256 price
+    ) internal pure returns (uint256) {
+        uint256 nu = self.proportion(price);
+        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        return nu.mulWad(x);
+    }
+
+    /**
+     * @notice Represents the total amount of bid liquidity the position is holding
+     * at a particular price. In other words, it is the total amount of buying
+     * power the position has at the current price.
+     */
+    function bidLiquidity(
+        Key memory self,
+        Data memory data,
+        uint256 price
+    ) internal pure returns (uint256) {
+        uint256 nu = self.proportion(price);
+        return nu.mulWad(self.liquidity(data));
+    }
+
+    /**
+     * @notice Represents the total amount of ask liquidity the position is holding
+     * at a particular price. In other words, it is the total amount of
+     * selling power the position has at the current price.
+     *
+     * Can also be computed as,
+     *     total_bid(p) = ask(p) + long(p)
+     */
+    function askLiquidity(
+        Key memory self,
+        Data memory data,
+        uint256 price
+    ) internal pure returns (uint256) {
+        uint256 nu = self.proportion(price);
+        return (1e18 - nu).mulWad(self.liquidity(data));
+    }
+
+    function liquidityState() internal {
+        // ToDo : Implement ?
     }
 }

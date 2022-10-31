@@ -56,13 +56,20 @@ library Pricing {
             );
     }
 
-    function proportion(Args memory args) internal pure returns (uint256) {
-        if (args.lower >= args.upper)
-            revert Pricing__UpperNotGreaterThanLower();
-        if (args.lower > args.marketPrice || args.marketPrice > args.upper)
+    function proportion(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice
+    ) internal pure returns (uint256) {
+        if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
+        if (lower > marketPrice || marketPrice > upper)
             revert Pricing__PriceOutOfRange();
 
-        return (args.marketPrice - args.lower).divWad(args.upper - args.lower);
+        return (marketPrice - lower).divWad(upper - lower);
+    }
+
+    function proportion(Args memory args) internal pure returns (uint256) {
+        return proportion(args.lower, args.upper, args.marketPrice);
     }
 
     /**
@@ -79,19 +86,27 @@ library Pricing {
      *  range.
      *  num_ticks = 2
      */
-    function amountOfTicksBetween(Args memory args)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (args.lower >= args.upper)
-            revert Pricing__UpperNotGreaterThanLower();
+    function amountOfTicksBetween(
+        uint256 lower,
+        uint256 upper,
+        uint256 minTickDistance
+    ) internal pure returns (uint256) {
+        if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
         // ToDo : Do we need this assertion like in python ?
         //        assert (num_ticks % 1) == 0, \
         //            'The number of ticks within an active tick range has to be an integer.'
 
-        return (args.upper - args.lower).divWad(args.minTickDistance);
+        return (upper - lower).divWad(minTickDistance);
+    }
+
+    function amountOfTicksBetween(Args memory args)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            amountOfTicksBetween(args.lower, args.upper, args.minTickDistance);
     }
 
     function liquidity(Args memory args) internal pure returns (uint256) {
