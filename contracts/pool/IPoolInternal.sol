@@ -11,7 +11,6 @@ interface IPoolInternal {
     error Pool__InvalidSellOrder();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
-    error Pool__SellPositionAboveMarketPrice();
     error Pool__TickInsertFailed();
     error Pool__TickInsertInvalid();
     error Pool__TickInsertInvalidLocation();
