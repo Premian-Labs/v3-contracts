@@ -916,10 +916,10 @@
   resolved "https://registry.yarnpkg.com/@solidstate/abdk-math-extensions/-/abdk-math-extensions-1.0.0.tgz#89b346fd00d94b786463494522c3640fca32436a"
   integrity sha512-JxOhjY/h0OUm0PTElRt1bS3hhorY2rM07aCE5fJL/FDF16/a1+3pz1ivhftFyub0YS3ycD8dnuQQmykxMv03UQ==
 
-"@solidstate/contracts@^0.0.45":
-  version "0.0.45"
-  resolved "https://registry.yarnpkg.com/@solidstate/contracts/-/contracts-0.0.45.tgz#00443b308f449d598a440c019f5d072a6710e71b"
-  integrity sha512-+a9tF0dl+z7jJw5438oUMhCn3a2ONjDMK7lnxEX3HeN3hegatEJ7L5c2DkzxP39dM4gdyK+g3hxPsqP0saIr5Q==
+"@solidstate/contracts@^0.0.46":
+  version "0.0.46"
+  resolved "https://registry.yarnpkg.com/@solidstate/contracts/-/contracts-0.0.46.tgz#38a7c2d8b872c3612e002de28e9282c5ea9ab06f"
+  integrity sha512-UMJJCGDSFYnFCvqnZiszBbKiQWQJte9hGCTDkjbwnCMvJm/IroSBQkT21DfbX+ylqVOcM9sPUP7GxJxnXfN+fQ==
 
 "@solidstate/hardhat-4byte-uploader@^1.0.2":
   version "1.0.2"
@@ -933,20 +933,20 @@
   resolved "https://registry.yarnpkg.com/@solidstate/hardhat-test-short-circuit/-/hardhat-test-short-circuit-1.0.2.tgz#1c92532016de33e15665946c9746e4601432684b"
   integrity sha512-H5EgHqNiBuqxQMB+6fcOE+FiELZuf1SgbNwISNcNAJoW60i4gWx7eo4K6ss2AUWaG/Czx7pEpehbJJBjUmsF0Q==
 
-"@solidstate/library@^0.0.45":
-  version "0.0.45"
-  resolved "https://registry.yarnpkg.com/@solidstate/library/-/library-0.0.45.tgz#11de39aa1c41065bf712923f96b64b92df27011d"
-  integrity sha512-QU9liQ62l+uwXaNkI4baJHdKBj5bHpXzW9ILvcojTgczhPzt9JwutWAzWAYrSplKWFLf8y8vSKsxLeBNqFh4ow==
+"@solidstate/library@^0.0.46":
+  version "0.0.46"
+  resolved "https://registry.yarnpkg.com/@solidstate/library/-/library-0.0.46.tgz#11c2d821e70082446ffd14f9db2eeba4fc78b483"
+  integrity sha512-eeJW19KdXGcx0Okm/Ga9ILpb+UVcxjrA0nAjf3v9G6IEEiZP8NtWR8lqoCkNJq1IJ0rV/BDvymZad0zAP5Pohw==
   dependencies:
     eth-permit "^0.1.10"
 
-"@solidstate/spec@^0.0.45":
-  version "0.0.45"
-  resolved "https://registry.yarnpkg.com/@solidstate/spec/-/spec-0.0.45.tgz#3c1628ef68cf9772c6faa577369d4e14c9712219"
-  integrity sha512-i/MoUpgOUx9e8uA0tumQ5NHxMQd+0vaBjVrwhYJZaRNSX5u30z/5cYRCkSEzXcZj3dokAFRXRd0f+DWxDRaBpA==
+"@solidstate/spec@^0.0.46":
+  version "0.0.46"
+  resolved "https://registry.yarnpkg.com/@solidstate/spec/-/spec-0.0.46.tgz#c0a5ca2777d21a8306f06a632b8493309b123160"
+  integrity sha512-S0wK5hFwmyAX2U7yJrtryNk8FLAm2rnexyb76NcdGB1mZvabiQbHUJrjIjdlPMb/9oT0LBKoq5qHt1cG/7shSQ==
   dependencies:
     "@ethereum-waffle/mock-contract" "^3.4.4"
-    "@solidstate/library" "^0.0.45"
+    "@solidstate/library" "^0.0.46"
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
