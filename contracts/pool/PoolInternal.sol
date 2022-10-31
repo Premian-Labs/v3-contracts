@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
-import {PricingCurve} from "../libraries/PricingCurve.sol";
+import {Pricing} from "../libraries/Pricing.sol";
 import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
@@ -20,7 +20,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
-    using PricingCurve for PricingCurve.Args;
+    using Pricing for Pricing.Args;
     using WadMath for uint256;
     using Tick for Tick.Data;
     using SafeCast for uint256;
@@ -197,8 +197,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         pure
         returns (uint256)
     {
-        uint256 premiumFee = (premium * 300) / INVERSE_BASIS_POINT; // 3% of premium
-        uint256 notionalFee = (size * 30) / INVERSE_BASIS_POINT; // 0.3% of notional
+        uint256 premiumFee = (premium * 300) / INVERSE_BASIS_POINT;
+        // 3% of premium
+        uint256 notionalFee = (size * 30) / INVERSE_BASIS_POINT;
+        // 0.3% of notional
         return Math.max(premiumFee, notionalFee);
     }
 
@@ -215,54 +217,71 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         bool isBuy = tradeSide == Position.Side.BUY;
 
+        Pricing.Args memory pricing = Pricing.Args(
+            l.liquidityRate,
+            l.marketPrice,
+            l.minTickDistance(),
+            l.tick,
+            l.tickIndex.getNextNode(l.tick),
+            tradeSide
+        );
+
+        uint256 bidLiquidity = pricing.bidLiquidity();
+        uint256 askLiquidity = pricing.askLiquidity();
+
         uint256 totalPremium = 0;
-        uint256 marketPrice = l.marketPrice;
-        uint256 currentTick = l.tick;
 
         while (size > 0) {
-            PricingCurve.Args memory args = PricingCurve.Args(
-                l.liquidityRate,
-                l.minTickDistance(),
-                l.tickIndex.getPreviousNode(currentTick),
-                l.tickIndex.getNextNode(currentTick),
-                tradeSide
-            );
+            uint256 maxSize = isBuy ? askLiquidity : bidLiquidity;
+            uint256 tradeSize = Math.min(size, maxSize);
 
-            uint256 maxSize = PricingCurve.maxTradeSize(args, l.marketPrice);
-
-            {
-                uint256 tradeSize = Math.min(size, maxSize);
-                uint256 nextMarketPrice = PricingCurve.nextPrice(
-                    args,
-                    marketPrice,
-                    tradeSize
+            uint256 nextPrice;
+            // Compute next price
+            if (bidLiquidity + askLiquidity == 0) {
+                nextPrice = isBuy ? pricing.lower : pricing.upper;
+            } else {
+                uint256 shift = isBuy ? bidLiquidity : askLiquidity;
+                uint256 proportion = (shift + tradeSize).divWad(
+                    bidLiquidity + askLiquidity
                 );
-
-                uint256 quotePrice = Math.mean(marketPrice, nextMarketPrice);
-                uint256 premium = quotePrice.mulWad(tradeSize);
-                uint256 takerFee = _takerFee(tradeSize, premium);
-                uint256 takerPremium = premium + takerFee;
-
-                // Update price and liquidity variables
-                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
-                    INVERSE_BASIS_POINT;
-                uint256 makerPremium = premium + (takerFee - protocolFee);
-
-                // ToDo : Remove ?
-                // l.globalFeeRate += (makerRebate * 1e18) / l.liquidityRate;
-                totalPremium += isBuy ? takerPremium : makerPremium;
-
-                marketPrice = nextMarketPrice;
+                nextPrice = isBuy
+                    ? pricing.lower +
+                        (pricing.upper - pricing.lower).mulWad(proportion)
+                    : pricing.upper -
+                        (pricing.upper - pricing.lower).mulWad(proportion);
             }
 
-            // Check if a tick cross is required
-            if (maxSize > size) {
-                // The trade can be done within the current tick range
+            {
+                uint256 premium = Math
+                    .mean(pricing.marketPrice, nextPrice)
+                    .mulWad(tradeSize); // quotePrice * tradeSize
+                uint256 takerPremium = premium + _takerFee(size, premium);
+
+                totalPremium += isBuy ? takerPremium : premium;
+                pricing.marketPrice = nextPrice;
+            }
+
+            if (maxSize >= size) {
                 size = 0;
             } else {
-                // The trade will require crossing into the next tick range
+                // Cross tick
                 size -= maxSize;
-                currentTick = isBuy ? args.upper : args.lower;
+
+                // ToDo : Make sure this cant underflow
+                // Adjust liquidity rate
+                pricing.liquidityRate = pricing.liquidityRate.addInt256(
+                    l.ticks[isBuy ? pricing.upper : pricing.lower].delta
+                );
+
+                // Set new lower and upper bounds
+                pricing.lower = isBuy
+                    ? pricing.upper
+                    : l.tickIndex.getPreviousNode(pricing.lower);
+                pricing.upper = l.tickIndex.getNextNode(pricing.lower);
+
+                // Compute new liquidity
+                bidLiquidity = pricing.bidLiquidity();
+                askLiquidity = pricing.askLiquidity();
             }
         }
 
@@ -590,105 +609,106 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 size
     ) internal returns (uint256) {
         // ToDo : Check operator is approved
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
-
-        bool isBuy = tradeSide == Position.Side.BUY;
-
-        PricingCurve.Args memory curve = PricingCurve.fromPool(l, tradeSide);
-
-        uint256 totalPremium;
-        while (size > 0) {
-            uint256 maxSize = curve.maxTradeSize(l.marketPrice);
-
-            {
-                uint256 tradeSize = Math.min(size, maxSize);
-
-                uint256 nextMarketPrice;
-                if (tradeSize != maxSize) {
-                    nextMarketPrice = curve.nextPrice(l.marketPrice, tradeSize);
-                } else {
-                    nextMarketPrice = isBuy ? curve.upper : curve.lower;
-                }
-
-                uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
-
-                uint256 premium = quotePrice.mulWad(tradeSize);
-                uint256 takerFee = _takerFee(tradeSize, premium);
-                uint256 takerPremium = premium + takerFee;
-
-                // Update price and liquidity variables
-                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
-                    INVERSE_BASIS_POINT;
-                uint256 makerRebate = takerFee - protocolFee;
-
-                l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
-                totalPremium += isBuy ? takerPremium : premium;
-
-                l.marketPrice = nextMarketPrice;
-                l.protocolFees += protocolFee;
-
-                size -= tradeSize;
-            }
-
-            if (size > 0) {
-                // The trade will require crossing into the next tick range
-                if (isBuy) {
-                    uint256 lower = curve.upper;
-                    l.tick = lower;
-                    curve.lower = curve.upper;
-                    curve.upper = l.tickIndex.getNextNode(lower);
-                }
-
-                Tick.Data memory currentTick = l.ticks[l.tick];
-                l.liquidityRate = l.liquidityRate.addInt256(currentTick.delta);
-                l.ticks[l.tick] = currentTick.cross(l.globalFeeRate);
-
-                if (!isBuy) {
-                    uint256 lower = l.tickIndex.getPreviousNode(curve.lower);
-                    l.tick = lower;
-                    curve.upper = curve.lower;
-                    curve.lower = lower;
-                }
-            }
-        }
-
-        Position.Liquidity storage existingPosition = l.externalPositions[
-            owner
-        ][operator];
-        if (isBuy) {
-            // ToDo : Transfer tokens
-            // operator.transfer_from(total_premium)
-
-            if (existingPosition.short < size) {
-                // ToDo : Transfer tokens
-                // operator.transfer_to(existing_position.short)
-                existingPosition.long += size - existingPosition.short;
-                existingPosition.short = 0;
-            } else {
-                // ToDo : Transfer tokens
-                // operator.transfer_to(size)
-                existingPosition.short -= size;
-            }
-        } else {
-            // ToDo : Transfer tokens
-            // operator.transfer_to(total_premium)
-
-            if (existingPosition.long < size) {
-                // ToDo : Transfer tokens
-                // operator.transfer_from(size - existing_position.long)
-                existingPosition.short += size - existingPosition.long;
-                existingPosition.long = 0;
-            } else {
-                // ToDo : Transfer tokens
-                // operator.transfer_from(size)
-                existingPosition.long -= size;
-            }
-        }
-
-        return totalPremium;
+        //        PoolStorage.Layout storage l = PoolStorage.layout();
+        //
+        //        if (size == 0) revert Pool__ZeroSize();
+        //        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+        //
+        //        bool isBuy = tradeSide == Position.Side.BUY;
+        //
+        //        Pricing.Args memory curve = Pricing.fromPool(l, tradeSide);
+        //
+        //        uint256 totalPremium;
+        //        while (size > 0) {
+        //            uint256 maxSize = curve.maxTradeSize(l.marketPrice);
+        //
+        //            {
+        //                uint256 tradeSize = Math.min(size, maxSize);
+        //
+        //                uint256 nextMarketPrice;
+        //                if (tradeSize != maxSize) {
+        //                    nextMarketPrice = curve.nextPrice(l.marketPrice, tradeSize);
+        //                } else {
+        //                    nextMarketPrice = isBuy ? curve.upper : curve.lower;
+        //                }
+        //
+        //                uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
+        //
+        //                uint256 premium = quotePrice.mulWad(tradeSize);
+        //                uint256 takerFee = _takerFee(tradeSize, premium);
+        //                uint256 takerPremium = premium + takerFee;
+        //
+        //                // Update price and liquidity variables
+        //                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
+        //                    INVERSE_BASIS_POINT;
+        //                uint256 makerRebate = takerFee - protocolFee;
+        //
+        //                l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
+        //                totalPremium += isBuy ? takerPremium : premium;
+        //
+        //                l.marketPrice = nextMarketPrice;
+        //                l.protocolFees += protocolFee;
+        //
+        //                size -= tradeSize;
+        //            }
+        //
+        //            if (size > 0) {
+        //                // The trade will require crossing into the next tick range
+        //                if (isBuy) {
+        //                    uint256 lower = curve.upper;
+        //                    l.tick = lower;
+        //                    curve.lower = curve.upper;
+        //                    curve.upper = l.tickIndex.getNextNode(lower);
+        //                }
+        //
+        //                Tick.Data memory currentTick = l.ticks[l.tick];
+        //                l.liquidityRate = l.liquidityRate.addInt256(currentTick.delta);
+        //                l.ticks[l.tick] = currentTick.cross(l.globalFeeRate);
+        //
+        //                if (!isBuy) {
+        //                    uint256 lower = l.tickIndex.getPreviousNode(curve.lower);
+        //                    l.tick = lower;
+        //                    curve.upper = curve.lower;
+        //                    curve.lower = lower;
+        //                }
+        //            }
+        //        }
+        //
+        //        Position.Liquidity storage existingPosition = l.externalPositions[
+        //            owner
+        //        ][operator];
+        //        if (isBuy) {
+        //            // ToDo : Transfer tokens
+        //            // operator.transfer_from(total_premium)
+        //
+        //            if (existingPosition.short < size) {
+        //                // ToDo : Transfer tokens
+        //                // operator.transfer_to(existing_position.short)
+        //                existingPosition.long += size - existingPosition.short;
+        //                existingPosition.short = 0;
+        //            } else {
+        //                // ToDo : Transfer tokens
+        //                // operator.transfer_to(size)
+        //                existingPosition.short -= size;
+        //            }
+        //        } else {
+        //            // ToDo : Transfer tokens
+        //            // operator.transfer_to(total_premium)
+        //
+        //            if (existingPosition.long < size) {
+        //                // ToDo : Transfer tokens
+        //                // operator.transfer_from(size - existing_position.long)
+        //                existingPosition.short += size - existingPosition.long;
+        //                existingPosition.long = 0;
+        //            } else {
+        //                // ToDo : Transfer tokens
+        //                // operator.transfer_from(size)
+        //                existingPosition.long -= size;
+        //            }
+        //        }
+        //
+        //        return totalPremium;
+        return 0;
     }
 
     /**

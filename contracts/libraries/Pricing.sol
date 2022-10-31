@@ -60,7 +60,7 @@ library Pricing {
         if (args.lower >= args.upper)
             revert Pricing__UpperNotGreaterThanLower();
         if (args.lower > args.marketPrice || args.marketPrice > args.upper)
-            Pricing__PriceOutOfRange();
+            revert Pricing__PriceOutOfRange();
 
         return (args.marketPrice - args.lower).divWad(args.upper - args.lower);
     }
@@ -95,16 +95,15 @@ library Pricing {
     }
 
     function liquidity(Args memory args) internal pure returns (uint256) {
-        return args.liquidityRate.mulWad(amountOfTicksBetween(args));
+        return args.liquidityRate * amountOfTicksBetween(args);
     }
 
     function bidLiquidity(Args memory args) internal pure returns (uint256) {
-        return proportion(args, args.marketPrice).mulWad(liquidity(args));
+        return proportion(args).mulWad(liquidity(args));
     }
 
     function askLiquidity(Args memory args) internal pure returns (uint256) {
-        return
-            (1e18 - proportion(args, args.marketPrice)).mulWad(liquidity(args));
+        return (1e18 - proportion(args)).mulWad(liquidity(args));
     }
 
     /**
@@ -131,21 +130,25 @@ library Pricing {
         uint256 liq = liquidity(args);
         if (liq == 0) return isBuy ? args.upper : args.lower;
 
-        uint256 proportion = tradeSize.divWad(liq);
+        uint256 _proportion = tradeSize.divWad(liq);
 
-        if (proportion > 1)
+        if (_proportion > 1)
             revert Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             isBuy
-                ? args.lower + (args.upper - args.lower).mulWad(proportion)
-                : args.upper - (args.upper - args.lower).mulWad(proportion);
+                ? args.lower + (args.upper - args.lower).mulWad(_proportion)
+                : args.upper - (args.upper - args.lower).mulWad(_proportion);
     }
 
     /**
      * @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts.
      */
-    function nextPrice(uint256 tradeSize) internal pure returns (uint256) {
+    function nextPrice(Args memory args, uint256 tradeSize)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 offset = args.tradeSide == Position.Side.BUY
             ? bidLiquidity(args)
             : askLiquidity(args);

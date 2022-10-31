@@ -12,14 +12,6 @@ import {WadMath} from "./WadMath.sol";
  * @notice Keeps track of LP positions
  *         Stores the lower and upper Ticks of a user's range order, and tracks
  *         the pro-rata exposure of the order.
- *
- *         P_DL:= The price at which all long options are closed
- *         P_DS:= The price at which all short options are covered
- *
- *         C_B => DL:= C_B / P_bar(P_DL, T_lower)         (1 unit of bid collateral = (1 / P_bar) contracts of long options)
- *         C_A => DS:= C_A                                (1 unit of ask collateral = 1 contract of short options)
- *         DL => C_B:= DL * P_bar(T_lower, P_DL)          (1 unit of long options = P_bar units of bid collateral)
- *         DS => C_A:= DS * (1 - P_bar(T_upper, P_DS))    (1 contract of short options = (1 - P_bar) unit of ask collateral)
  */
 library Position {
     using Math for int256;
