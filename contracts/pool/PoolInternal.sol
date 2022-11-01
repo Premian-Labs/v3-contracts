@@ -333,7 +333,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 marketPrice = l.marketPrice;
         uint256 transitionPrice = p.transitionPrice(pData);
 
-        if (p.rangeSide == Position.Side.BUY) {
+        if (pData.side == Position.Side.BUY) {
             if (marketPrice <= p.lower) {
                 pLiq.collateral = pData.contracts;
                 pLiq.long = (pData.collateral -
@@ -527,6 +527,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      */
     function _deposit(
         Position.Key memory p,
+        Position.Side side,
         uint256 collateral,
         uint256 contracts,
         uint256 left,
@@ -543,7 +544,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Check if market price is stranded
         //        bool isMarketPriceStranded
 
-        bool isBuy = p.rangeSide == Position.Side.BUY;
+        bool isBuy = side == Position.Side.BUY;
 
         // Fix for if stranded market price
         if (
@@ -791,11 +792,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             revert Pool__CantTransferLongAndShort();
 
         _updatePosition(p, liq, true);
-        _updatePosition(
-            Position.Key(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
-            liq,
-            false
-        );
+        // ToDo : Update
+        //        _updatePosition(
+        //            Position.Key(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
+        //            liq,
+        //            false
+        //        );
     }
 
     /**

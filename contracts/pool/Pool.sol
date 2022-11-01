@@ -21,12 +21,13 @@ contract Pool is PoolInternal {
 
     function deposit(
         Position.Key memory p,
+        Position.Side side,
         uint256 collateral,
         uint256 contracts,
         uint256 left,
         uint256 right
     ) external {
-        _deposit(p, collateral, contracts, left, right);
+        _deposit(p, side, collateral, contracts, left, right);
     }
 
     function withdraw(

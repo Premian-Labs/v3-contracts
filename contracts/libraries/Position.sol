@@ -50,6 +50,7 @@ library Position {
         uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim
         uint256 claimableFees;
+        Side side;
     }
 
     struct Liquidity {
@@ -73,10 +74,6 @@ library Position {
         return 1e18;
     }
 
-    function isBuy(Key memory self) internal pure returns (bool) {
-        return self.rangeSide == Side.BUY;
-    }
-
     function averagePrice(Key memory self) internal pure returns (uint256) {
         return Math.mean(self.lower, self.upper);
     }
@@ -87,7 +84,7 @@ library Position {
         returns (uint256)
     {
         return
-            self.isBuy()
+            data.side == Side.BUY
                 ? data.collateral + data.contracts
                 : data.collateral.divWad(self.averagePrice());
     }
@@ -118,7 +115,7 @@ library Position {
             self.upper - self.lower
         );
 
-        return self.isBuy() ? self.lower + shift : self.upper - shift;
+        return data.side == Side.BUY ? self.lower + shift : self.upper - shift;
     }
 
     function bid(
@@ -129,7 +126,7 @@ library Position {
         uint256 nu = self.proportion(price);
 
         // Overworked to avoid numerical rounding errors
-        uint256 revenue = self.isBuy()
+        uint256 revenue = data.side == Side.BUY
             ? (data.collateral + data.contracts).mulWad(self.averagePrice())
             : data.collateral;
 
@@ -142,7 +139,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
         return (1e18 - nu).mulWad(x);
     }
 
@@ -152,7 +149,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
         return (1e18 - nu).mulWad(self.liquidity(data) - x);
     }
 
@@ -162,7 +159,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = self.isBuy() ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
         return nu.mulWad(x);
     }
 
