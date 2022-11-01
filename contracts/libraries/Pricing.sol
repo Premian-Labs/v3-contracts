@@ -6,7 +6,6 @@ pragma solidity ^0.8.0;
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 
-import {Math} from "./Math.sol";
 import {WadMath} from "./WadMath.sol";
 
 import {PoolStorage} from "../pool/PoolStorage.sol";
