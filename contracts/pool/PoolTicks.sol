@@ -3,25 +3,26 @@
 
 pragma solidity ^0.8.0;
 
+import {Math} from "@solidstate/contracts/utils/Math.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 import {IPoolTicks} from "./IPoolTicks.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
 import {LinkedList} from "../libraries/LinkedList.sol";
-import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
-
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 contract PoolTicks is IPoolTicks {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Data;
     using LinkedList for LinkedList.List;
     using Tick for Tick.Data;
-    using Math for uint256;
     using Math for int256;
     using SafeCast for uint256;
+    using UintUtils for uint256;
 
     error PoolTicks__InvalidInsertLocation();
     error PoolTicks__InvalidInsert();
@@ -118,7 +119,7 @@ contract PoolTicks is IPoolTicks {
             if (position.rangeSide == PoolStorage.Side.SELL) {
                 if (position.lower == l.marketPrice) {
                     l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
-                    l.liquidityRate = l.liquidityRate.addInt256(delta);
+                    l.liquidityRate = l.liquidityRate.add(delta);
 
                     if (l.tick < position.lower) l.tick = lower;
                 }
@@ -134,7 +135,7 @@ contract PoolTicks is IPoolTicks {
             if (position.rangeSide == PoolStorage.Side.BUY) {
                 l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
                 if (l.tick <= position.upper) {
-                    l.liquidityRate = l.liquidityRate.addInt256(delta);
+                    l.liquidityRate = l.liquidityRate.add(delta);
                 }
                 if (l.tick < position.lower) {
                     l.tick = lower;
