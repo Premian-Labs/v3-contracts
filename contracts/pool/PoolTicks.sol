@@ -20,7 +20,6 @@ contract PoolTicks is IPoolTicks {
     using Position for Position.Data;
     using LinkedList for LinkedList.List;
     using Tick for Tick.Data;
-    using Math for uint256;
     using Math for int256;
     using SafeCast for uint256;
     using UintUtils for uint256;
