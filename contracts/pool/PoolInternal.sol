@@ -3,15 +3,16 @@
 
 pragma solidity ^0.8.0;
 
+import {Math} from "@solidstate/contracts/utils/Math.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 import {LinkedList} from "../libraries/LinkedList.sol";
-import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
 import {PricingCurve} from "../libraries/PricingCurve.sol";
 import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
-
-import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
@@ -24,8 +25,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using WadMath for uint256;
     using Tick for Tick.Data;
     using SafeCast for uint256;
-    using Math for uint256;
     using Math for int256;
+    using UintUtils for uint256;
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     // ToDo : Define final number
@@ -75,9 +76,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             if (p.rangeSide == Position.Side.SELL) {
                 if (lower == l.marketPrice) {
-                    l.liquidityRate = l.liquidityRate.addInt256(
-                        l.ticks[lower].delta
-                    );
+                    l.liquidityRate = l.liquidityRate.add(l.ticks[lower].delta);
                     l.ticks[lower] = l.ticks[lower].cross(l.globalFeeRate);
 
                     if (l.tick < lower) l.tick = lower;
@@ -93,9 +92,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             if (p.rangeSide == Position.Side.BUY) {
                 if (l.tick <= upper) {
-                    l.liquidityRate = l.liquidityRate.addInt256(
-                        l.ticks[upper].delta
-                    );
+                    l.liquidityRate = l.liquidityRate.add(l.ticks[upper].delta);
                 }
                 l.ticks[upper] = l.ticks[upper].cross(l.globalFeeRate);
 
@@ -238,7 +235,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     tradeSize
                 );
 
-                uint256 quotePrice = Math.mean(marketPrice, nextMarketPrice);
+                uint256 quotePrice = Math.average(marketPrice, nextMarketPrice);
                 uint256 premium = quotePrice.mulWad(tradeSize);
                 uint256 takerFee = _takerFee(tradeSize, premium);
                 uint256 takerPremium = premium + takerFee;
@@ -317,8 +314,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (marketPrice <= p.lower) {
                 pLiq.collateral = pData.contracts;
                 pLiq.long = (pData.collateral -
-                    Math.mean(p.upper, transitionPrice).mulWad(pData.contracts))
-                    .divWad(Math.mean(transitionPrice, p.lower));
+                    Math.average(p.upper, transitionPrice).mulWad(
+                        pData.contracts
+                    )).divWad(Math.average(transitionPrice, p.lower));
             } else if (marketPrice > p.upper) {
                 pLiq.collateral = pData.collateral;
                 pLiq.short = pData.contracts;
@@ -326,7 +324,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 if (marketPrice >= p.upper) {
                     pLiq.collateral +=
                         pData.collateral -
-                        pData.contracts.mulWad(Math.mean(p.upper, marketPrice));
+                        pData.contracts.mulWad(
+                            Math.average(p.upper, marketPrice)
+                        );
 
                     pLiq.collateral +=
                         ((p.upper - marketPrice) * pData.contracts) /
@@ -341,12 +341,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     pLiq.collateral +=
                         pData.collateral -
                         pData.contracts.mulWad(
-                            Math.mean(p.upper, transitionPrice)
+                            Math.average(p.upper, transitionPrice)
                         ) -
-                        Math.mean(transitionPrice, p.lower).mulWad(
+                        Math.average(transitionPrice, p.lower).mulWad(
                             pData.collateral -
                                 pData.contracts.mulWad(
-                                    Math.mean(p.upper, transitionPrice)
+                                    Math.average(p.upper, transitionPrice)
                                 )
                         );
 
@@ -359,12 +359,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pLiq.long = pData.contracts;
             } else if (marketPrice >= p.upper) {
                 pLiq.collateral = pData.contracts.mulWad(
-                    Math.mean(p.lower, transitionPrice)
+                    Math.average(p.lower, transitionPrice)
                 );
                 pLiq.short = pData.collateral;
             } else {
                 pLiq.collateral += pData.contracts.mulWad(
-                    Math.mean(p.lower, Math.max(marketPrice, transitionPrice))
+                    Math.average(
+                        p.lower,
+                        Math.max(marketPrice, transitionPrice)
+                    )
                 );
 
                 pLiq.collateral +=
@@ -613,7 +616,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     nextMarketPrice = isBuy ? curve.upper : curve.lower;
                 }
 
-                uint256 quotePrice = Math.mean(l.marketPrice, nextMarketPrice);
+                uint256 quotePrice = Math.average(
+                    l.marketPrice,
+                    nextMarketPrice
+                );
 
                 uint256 premium = quotePrice.mulWad(tradeSize);
                 uint256 takerFee = _takerFee(tradeSize, premium);
@@ -643,7 +649,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 }
 
                 Tick.Data memory currentTick = l.ticks[l.tick];
-                l.liquidityRate = l.liquidityRate.addInt256(currentTick.delta);
+                l.liquidityRate = l.liquidityRate.add(currentTick.delta);
                 l.ticks[l.tick] = currentTick.cross(l.globalFeeRate);
 
                 if (!isBuy) {
