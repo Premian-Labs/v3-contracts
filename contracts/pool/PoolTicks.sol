@@ -3,12 +3,15 @@
 
 pragma solidity ^0.8.0;
 
+import {Math} from "@solidstate/contracts/utils/Math.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 import {IPoolTicks} from "./IPoolTicks.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
 import {LinkedList} from "../libraries/LinkedList.sol";
-import {Math} from "../libraries/Math.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
@@ -18,8 +21,14 @@ contract PoolTicks is IPoolTicks, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using LinkedList for LinkedList.List;
-    using Math for uint256;
+    using Tick for Tick.Data;
     using Math for int256;
+    using SafeCast for uint256;
+    using UintUtils for uint256;
+
+    error PoolTicks__InvalidInsertLocation();
+    error PoolTicks__InvalidInsert();
+    error PoolTicks__FailedInsert();
 
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
@@ -64,6 +73,6 @@ contract PoolTicks is IPoolTicks, PoolInternal {
             right == 0 ||
             left == MAX_UINT256 ||
             right == MAX_UINT256
-        ) revert Pool__TickInsertInvalidLocation();
+        ) revert PoolTicks__InvalidInsertLocation();
     }
 }

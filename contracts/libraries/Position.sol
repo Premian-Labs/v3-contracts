@@ -3,9 +3,9 @@
 
 pragma solidity ^0.8.0;
 
-import {PoolStorage} from "../pool/PoolStorage.sol";
+import {Math} from "@solidstate/contracts/utils/Math.sol";
 
-import {Math} from "./Math.sol";
+import {PoolStorage} from "../pool/PoolStorage.sol";
 import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
 
@@ -75,7 +75,7 @@ library Position {
     }
 
     function averagePrice(Key memory self) internal pure returns (uint256) {
-        return Math.mean(self.lower, self.upper);
+        return Math.average(self.lower, self.upper);
     }
 
     function liquidity(Key memory self, Data memory data)
