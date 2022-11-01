@@ -253,7 +253,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             {
                 uint256 premium = Math
                     .mean(pricing.marketPrice, nextPrice)
-                    .mulWad(tradeSize); // quotePrice * tradeSize
+                    .mulWad(tradeSize);
+                // quotePrice * tradeSize
                 uint256 takerPremium = premium + _takerFee(size, premium);
 
                 totalPremium += isBuy ? takerPremium : premium;
@@ -472,38 +473,106 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.ticks[price] = tick;
     }
 
+    /**
+     * @notice Updates the amount of fees an LP can claim for a position (without claiming).
+     */
+    function _updateClaimableFees(
+        Position.Data storage pData,
+        uint256 feeRate,
+        uint256 liquidityPerTick
+    ) internal {
+        // Compute the claimable fees
+        uint256 claimableFees = (feeRate - pData.lastFeeRate).mulWad(
+            liquidityPerTick
+        );
+        pData.claimableFees += claimableFees;
+
+        // Reset the initial range rate of the position
+        pData.lastFeeRate = feeRate;
+    }
+
+    /**
+     * @notice Update the collateral and contracts upon deposit / withdrawal.
+     *
+     * Withdrawals.
+     * While straddling the market price only full withdrawals are
+     * admissible. If the market price is outside of the tick range.
+     */
     function _updatePosition(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate,
+        Position.Data storage pData,
+        uint256 collateral,
+        uint256 contracts,
+        uint256 price,
         bool withdraw
     ) internal {
-        // ToDo : Update
-        //        PoolStorage.Layout storage l = PoolStorage.layout();
-        //
-        //        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
-        //        Position.Data storage pData = l.positions[p.keyHash()];
-        //
-        //        uint256 contracts = liqUpdate.short + liqUpdate.long;
-        //
-        //        if (liqUpdate.collateral > 0 || contracts > 0) {
-        //            if (subtract) {
-        //                if (pData.collateral < liqUpdate.collateral)
-        //                    revert Pool__InsufficientCollateral();
-        //                if (pData.contracts < contracts)
-        //                    revert Pool__InsufficientContracts();
-        //
-        //                pData.collateral -= liqUpdate.collateral;
-        //                pData.contracts -= contracts;
-        //            } else {
-        //                pData.collateral += liqUpdate.collateral;
-        //                pData.contracts += contracts;
-        //            }
-        //        }
-        //
-        //        pData.claimableFees +=
-        //            (feeGrowthRate - pData.lastFeeRate) *
-        //            p.phi(pData, l.minTickDistance());
-        //        pData.lastFeeRate = feeGrowthRate;
+        // Straddled price
+        if (withdraw && p.lower < price && price < p.upper) {
+            uint256 _collateral = p.bid(pData, price) + p.ask(pData, price);
+            uint256 _contracts = p.short(pData, price) + p.long(pData, price);
+
+            if (collateral != _collateral || contracts != _contracts)
+                revert Pool__FullWithdrawalExpected();
+
+            // Complete full withdrawal
+            pData.collateral = 0;
+            pData.contracts = 0;
+            return;
+        }
+
+        // Compute if the position is modifiable, then modify position
+        // A position is modifiable if its side does not need updating
+        bool isOrderLeft = p.upper <= price;
+
+        bool isBuy = pData.side == Position.Side.BUY;
+        if (!isBuy == isOrderLeft) {
+            if (!isBuy) {
+                uint256 _collateral = withdraw
+                    ? pData.collateral - collateral
+                    : pData.collateral + collateral;
+                uint256 _contracts = withdraw
+                    ? pData.contracts - contracts
+                    : pData.contracts + contracts;
+
+                if (_collateral < p.averagePrice().mulWad(_contracts))
+                    revert Pool__InsufficientCollateral();
+            }
+
+            if (withdraw) {
+                if (
+                    collateral > pData.collateral || contracts > pData.contracts
+                ) revert Pool__InsufficientFunds();
+
+                pData.collateral -= collateral;
+                pData.contracts -= contracts;
+            } else {
+                pData.collateral += collateral;
+                pData.contracts += contracts;
+            }
+
+            Position.Side newSide = isBuy
+                ? Position.Side.SELL
+                : Position.Side.BUY;
+
+            return;
+        }
+
+        // Convert position to opposite side to make it modifiable
+        uint256 _collateral;
+        uint256 _contracts;
+        if (!isBuy) {
+            _collateral = pData.contracts;
+            _contracts = p.liquidity(pData).mulWad(p.averagePrice());
+        } else {
+            _collateral = p.liquidity(pData).mulWad(p.averagePrice());
+            _contracts = pData.collateral;
+        }
+
+        pData.collateral = _collateral;
+        pData.contracts = _contracts;
+        pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
+
+        _updatePosition(p, pData, collateral, contracts, price, withdraw);
     }
 
     function _claim() internal {
@@ -574,16 +643,39 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         */
 
         // If ticks dont exist they are created and inserted into the linked list
-        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+        // ToDo : Do we need the vars ?
+        //        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+        //        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+        _getOrCreateTick(p.lower);
+        _getOrCreateTick(p.upper);
 
         // Check if there is an existing position
         Position.Data storage pData = l.positions[p.keyHash()];
         // ToDo : Implement
+        uint256 feeRate;
         //        fee_rate = self.tick_system.range_fee_rate(
         //            lower_tick,
         //            upper_tick
         //        );
+
+        uint256 liquidityPerTick;
+
+        if (pData.collateral + pData.contracts > 0) {
+            liquidityPerTick = p.liquidityPerTick(pData, minTickDistance);
+
+            _updateClaimableFees(pData, feeRate, liquidityPerTick);
+            _updatePosition(
+                p,
+                pData,
+                collateral,
+                contracts,
+                l.marketPrice,
+                false
+            );
+        }
+
+        // Adjust tick deltas
+        // ToDo : Implement
 
         ///////////////////////////////////////////////
 
@@ -790,8 +882,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ) internal {
         if (liq.long > 0 && liq.short > 0)
             revert Pool__CantTransferLongAndShort();
-
-        _updatePosition(p, liq, true);
+        // ToDo : Update
+        //        _updatePosition(p, liq, true);
         // ToDo : Update
         //        _updatePosition(
         //            Position.Key(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
@@ -927,7 +1019,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        _updatePosition(p, Position.Liquidity(0, 0, 0), false);
+        // ToDo : Update
+        //        _updatePosition(p, Position.Liquidity(0, 0, 0), false);
 
         uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
         uint256 collateralAmount = _calculateCollateralValue(
