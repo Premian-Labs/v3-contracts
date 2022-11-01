@@ -3,9 +3,9 @@
 
 pragma solidity ^0.8.0;
 
-import {PoolStorage} from "../pool/PoolStorage.sol";
+import {Math} from "@solidstate/contracts/utils/Math.sol";
 
-import {Math} from "./Math.sol";
+import {PoolStorage} from "../pool/PoolStorage.sol";
 import {WadMath} from "./WadMath.sol";
 
 /**
