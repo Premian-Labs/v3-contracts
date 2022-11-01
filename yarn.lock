@@ -916,10 +916,10 @@
   resolved "https://registry.yarnpkg.com/@solidstate/abdk-math-extensions/-/abdk-math-extensions-1.0.0.tgz#89b346fd00d94b786463494522c3640fca32436a"
   integrity sha512-JxOhjY/h0OUm0PTElRt1bS3hhorY2rM07aCE5fJL/FDF16/a1+3pz1ivhftFyub0YS3ycD8dnuQQmykxMv03UQ==
 
-"@solidstate/contracts@^0.0.46":
-  version "0.0.46"
-  resolved "https://registry.yarnpkg.com/@solidstate/contracts/-/contracts-0.0.46.tgz#38a7c2d8b872c3612e002de28e9282c5ea9ab06f"
-  integrity sha512-UMJJCGDSFYnFCvqnZiszBbKiQWQJte9hGCTDkjbwnCMvJm/IroSBQkT21DfbX+ylqVOcM9sPUP7GxJxnXfN+fQ==
+"@solidstate/contracts@^0.0.47":
+  version "0.0.47"
+  resolved "https://registry.yarnpkg.com/@solidstate/contracts/-/contracts-0.0.47.tgz#08db886ca279feef473d256b64c926e26777551e"
+  integrity sha512-uIjiX9kHldBP4vjNDbah1iqTgkJOwh12oJlxO5GbhZQWH185wRKtFH7f98yrt6lOVBQTfFg28szDGXiqWjHHVA==
 
 "@solidstate/hardhat-4byte-uploader@^1.0.2":
   version "1.0.2"
@@ -933,20 +933,20 @@
   resolved "https://registry.yarnpkg.com/@solidstate/hardhat-test-short-circuit/-/hardhat-test-short-circuit-1.0.2.tgz#1c92532016de33e15665946c9746e4601432684b"
   integrity sha512-H5EgHqNiBuqxQMB+6fcOE+FiELZuf1SgbNwISNcNAJoW60i4gWx7eo4K6ss2AUWaG/Czx7pEpehbJJBjUmsF0Q==
 
-"@solidstate/library@^0.0.46":
-  version "0.0.46"
-  resolved "https://registry.yarnpkg.com/@solidstate/library/-/library-0.0.46.tgz#11c2d821e70082446ffd14f9db2eeba4fc78b483"
-  integrity sha512-eeJW19KdXGcx0Okm/Ga9ILpb+UVcxjrA0nAjf3v9G6IEEiZP8NtWR8lqoCkNJq1IJ0rV/BDvymZad0zAP5Pohw==
+"@solidstate/library@^0.0.47":
+  version "0.0.47"
+  resolved "https://registry.yarnpkg.com/@solidstate/library/-/library-0.0.47.tgz#682d54a4e47c54c7a09d961994bacbdde6605830"
+  integrity sha512-EaXHI2tpnyNIQXmAcdHP/fPVJ+JLen/h5PmyVgpSWhBkKqlQ+NMSwbX+LG7pu07UbIbqUJtLCkhWlVcx/nG1KA==
   dependencies:
     eth-permit "^0.1.10"
 
-"@solidstate/spec@^0.0.46":
-  version "0.0.46"
-  resolved "https://registry.yarnpkg.com/@solidstate/spec/-/spec-0.0.46.tgz#c0a5ca2777d21a8306f06a632b8493309b123160"
-  integrity sha512-S0wK5hFwmyAX2U7yJrtryNk8FLAm2rnexyb76NcdGB1mZvabiQbHUJrjIjdlPMb/9oT0LBKoq5qHt1cG/7shSQ==
+"@solidstate/spec@^0.0.47":
+  version "0.0.47"
+  resolved "https://registry.yarnpkg.com/@solidstate/spec/-/spec-0.0.47.tgz#8735f987a125f849899d1bd7d91806111be6faac"
+  integrity sha512-SbE+dnlNQ9ad/RFuvNp1NyQy14YJbyqBNh+hy+0TGRlUz/yWTTqYAyxhwaFAjk1o0fDHtdTxp+Xya+/JglOyjg==
   dependencies:
     "@ethereum-waffle/mock-contract" "^3.4.4"
-    "@solidstate/library" "^0.0.46"
+    "@solidstate/library" "^0.0.47"
 
 "@szmarczak/http-timer@^1.1.2":
   version "1.1.2"
@@ -9603,9 +9603,9 @@ tslib@^1.9.3:
   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
 tslib@^2.0.3, tslib@^2.1.0:
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.4.0.tgz#7cecaa7f073ce680a05847aa77be941098f36dc3"
-  integrity sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==
+  version "2.4.1"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.4.1.tgz#0d0bfbaac2880b91e22df0768e55be9753a5b17e"
+  integrity sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==
 
 tsort@0.0.1:
   version "0.0.1"
