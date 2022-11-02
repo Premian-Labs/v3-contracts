@@ -223,7 +223,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Pricing.Args memory pricing = Pricing.Args(
             l.liquidityRate,
             l.marketPrice,
-            l.minTickDistance(),
             l.tick,
             l.tickIndex.getNextNode(l.tick),
             tradeSide
@@ -253,7 +252,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             {
                 uint256 premium = Math
-                .average(pricing.marketPrice, nextPrice).mulWad(tradeSize);
+                    .average(pricing.marketPrice, nextPrice)
+                    .mulWad(tradeSize);
                 // quotePrice * tradeSize
                 uint256 takerPremium = premium + _takerFee(size, premium);
 
@@ -585,11 +585,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Implement
     }
 
-    function _verifyTickWidth(uint256 price, uint256 minTickDistance)
-        internal
-        pure
-    {
-        if (price % minTickDistance != 0) revert Pool__TickWidthInvalid();
+    function _verifyTickWidth(uint256 price) internal pure {
+        if (price % Pricing.MIN_TICK_DISTANCE != 0)
+            revert Pool__TickWidthInvalid();
     }
 
     /**
@@ -612,9 +610,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
-        uint256 minTickDistance = l.minTickDistance();
-        _verifyTickWidth(p.lower, minTickDistance);
-        _verifyTickWidth(p.upper, minTickDistance);
+        _verifyTickWidth(p.lower);
+        _verifyTickWidth(p.upper);
 
         // Check if market price is stranded
         //        bool isMarketPriceStranded
@@ -667,7 +664,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 liquidityPerTick;
 
         if (pData.collateral + pData.contracts > 0) {
-            liquidityPerTick = p.liquidityPerTick(pData, minTickDistance);
+            liquidityPerTick = p.liquidityPerTick(pData);
 
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
             _updatePosition(

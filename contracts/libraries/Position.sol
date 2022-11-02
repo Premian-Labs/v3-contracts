@@ -92,15 +92,14 @@ library Position {
     /**
      * @notice Returns the per-tick liquidity phi (delta) for a specific position.
      */
-    function liquidityPerTick(
-        Key memory self,
-        Data memory data,
-        uint256 minTickDistance
-    ) internal pure returns (uint256) {
+    function liquidityPerTick(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 amountOfTicks = Pricing.amountOfTicksBetween(
             self.lower,
-            self.upper,
-            minTickDistance
+            self.upper
         );
 
         return self.liquidity(data) / amountOfTicks;

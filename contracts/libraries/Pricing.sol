@@ -28,10 +28,11 @@ library Pricing {
     error Pricing__PriceOutOfRange();
     error Pricing__UpperNotGreaterThanLower();
 
+    uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
+
     struct Args {
         uint256 liquidityRate; // Amount of liquidity
         uint256 marketPrice; // The current market price
-        uint256 minTickDistance; // The minimum distance between two ticks
         uint256 lower; // The normalized price of the lower bound of the range
         uint256 upper; // The normalized price of the upper bound of the range
         Position.Side tradeSide; // The direction of the trade
@@ -48,7 +49,6 @@ library Pricing {
             Args(
                 l.liquidityRate,
                 l.marketPrice,
-                l.minTickDistance(),
                 currentTick,
                 l.tickIndex.getNextNode(currentTick),
                 tradeSide
@@ -85,18 +85,18 @@ library Pricing {
      *  range.
      *  num_ticks = 2
      */
-    function amountOfTicksBetween(
-        uint256 lower,
-        uint256 upper,
-        uint256 minTickDistance
-    ) internal pure returns (uint256) {
+    function amountOfTicksBetween(uint256 lower, uint256 upper)
+        internal
+        pure
+        returns (uint256)
+    {
         if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
         // ToDo : Do we need this assertion like in python ?
         //        assert (num_ticks % 1) == 0, \
         //            'The number of ticks within an active tick range has to be an integer.'
 
-        return (upper - lower).divWad(minTickDistance);
+        return (upper - lower).divWad(MIN_TICK_DISTANCE);
     }
 
     function amountOfTicksBetween(Args memory args)
@@ -104,8 +104,7 @@ library Pricing {
         pure
         returns (uint256)
     {
-        return
-            amountOfTicksBetween(args.lower, args.upper, args.minTickDistance);
+        return amountOfTicksBetween(args.lower, args.upper);
     }
 
     function liquidity(Args memory args) internal pure returns (uint256) {

@@ -69,10 +69,6 @@ library PoolStorage {
         return l.isCallPool ? l.underlying : l.base;
     }
 
-    function minTickDistance(Layout storage l) internal view returns (uint256) {
-        return l.isCallPool ? 1e14 : l.strike / 1e4;
-    }
-
     function getSpotPrice(Layout storage l) internal view returns (uint256) {
         if (l.spot == 0) {
             if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
