@@ -612,6 +612,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (p.lower < l.marketPrice) revert Pool__InvalidSellOrder();
         }
 
+        // ToDo : implement
         // Transfer funds from the LP to the pool
         /*
         info.owner.transfer_from(
@@ -622,21 +623,22 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         )
         */
 
-        // If ticks dont exist they are created and inserted into the linked list
-        // ToDo : Do we need the vars ?
-        //        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        //        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
-        _getOrCreateTick(p.lower);
-        _getOrCreateTick(p.upper);
-
-        // Check if there is an existing position
         Position.Data storage pData = l.positions[p.keyHash()];
-        // ToDo : Implement
+
         uint256 feeRate;
-        //        fee_rate = self.tick_system.range_fee_rate(
-        //            lower_tick,
-        //            upper_tick
-        //        );
+        {
+            // If ticks dont exist they are created and inserted into the linked list
+            Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+            Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+
+            feeRate = _rangeFeeRate(
+                l,
+                p.lower,
+                p.upper,
+                lowerTick.externalFeeRate,
+                upperTick.externalFeeRate
+            );
+        }
 
         uint256 liquidityPerTick;
 
@@ -655,31 +657,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         // Adjust tick deltas
-        // ToDo : Implement
-
-        ///////////////////////////////////////////////
-
-        //        if (p.upper > l.marketPrice && isBuy)
-        //            revert Pool__BuyPositionBelowMarketPrice();
-        //        if (p.lower > l.marketPrice && !isBuy)
-        //            revert Pool__SellPositionAboveMarketPrice();
-        //
-        //        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
-        //        //    agent.transfer_from(
-        //        //    position.collateral,
-        //        //    position.contracts if position.side == RangeSide.SELL else Decimal('0'),
-        //        //    position.contracts if position.side == RangeSide.BUY else Decimal('0'),
-        //        //    self,
-        //        //    )
-        //
-        //        _updatePosition(p, liqUpdate, false);
-        //        Position.Data storage pData = l.positions[p.keyHash()];
-        //
-        //        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
-        //            l.liquidityRate += p.phi(pData, minTickDistance);
-        //        }
-        //
-        //        _insertTick(p, pData, left, right);
+        uint256 delta = p.liquidityPerTick(pData) - liquidityPerTick;
+        _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
     }
 
     /**
