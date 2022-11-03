@@ -45,7 +45,7 @@ library PoolStorage {
         uint256 strike;
         uint256 liquidityRate;
         // Current tick normalized price // ToDo : Rename to currentTick
-        uint256 tick;
+        uint256 currentTick;
         // Spot price after maturity // ToDo : Save the spot price
         uint256 spot;
         // key -> positionData

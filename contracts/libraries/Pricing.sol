@@ -45,7 +45,7 @@ library Pricing {
         view
         returns (Pricing.Args memory)
     {
-        uint256 currentTick = l.tick;
+        uint256 currentTick = l.currentTick;
 
         return
             Args(
