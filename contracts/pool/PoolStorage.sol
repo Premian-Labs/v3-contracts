@@ -39,13 +39,12 @@ library PoolStorage {
         // Index of all existing ticks sorted
         LinkedList.List tickIndex;
         mapping(uint256 => Tick.Data) ticks;
-        uint256 currentTickId;
         uint256 marketPrice;
         uint256 globalFeeRate;
         uint256 protocolFees;
         uint256 strike;
         uint256 liquidityRate;
-        // Current tick normalized price
+        // Current tick normalized price // ToDo : Rename to currentTick
         uint256 tick;
         // Spot price after maturity // ToDo : Save the spot price
         uint256 spot;

@@ -17,6 +17,7 @@ interface IPoolInternal {
     error Pool__TickInsertInvalid();
     error Pool__TickInsertInvalidLocation();
     error Pool__TickNotFound();
+    error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
     error Pool__ZeroSize();
 }

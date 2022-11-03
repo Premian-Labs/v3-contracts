@@ -29,6 +29,8 @@ library Pricing {
     error Pricing__UpperNotGreaterThanLower();
 
     uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
+    uint256 internal constant MIN_TICK_PRICE = 1e15; // 0.001
+    uint256 internal constant MAX_TICK_PRICE = 1e18; // 1
 
     struct Args {
         uint256 liquidityRate; // Amount of liquidity

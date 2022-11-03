@@ -457,29 +457,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     }
 
     /**
-     * @notice Creates a Tick for a given price, or returns the existing tick.
-     * @param price The price of the Tick
-     * @return tick The Tick for a given price
-     */
-    function _getOrCreateTick(uint256 price)
-        internal
-        returns (Tick.Data memory tick)
-    {
-        // ToDo : Update
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
-
-        tick = Tick.Data(
-            price,
-            0,
-            price <= l.marketPrice ? l.globalFeeRate : 0
-        );
-
-        l.ticks[price] = tick;
-    }
-
-    /**
      * @notice Updates the amount of fees an LP can claim for a position (without claiming).
      */
     function _updateClaimableFees(
@@ -1060,5 +1037,157 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _settlePositionAuto() internal {
         // ToDo : Implement
+    }
+
+    ////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////
+
+    ////////////////
+    // TickSystem //
+    ////////////////
+
+    /**
+     * @notice Gets the nearest tick that is less than or equal to `price`.
+     */
+    function _getNearestTickBelow(uint256 price) internal returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 left = l.tick;
+
+        while (left > 0 && left > price) {
+            left = l.tickIndex.getPreviousNode(left);
+        }
+
+        while (left < LinkedList.MAX_UINT256 && left <= price) {
+            left = l.tickIndex.getNextNode(left);
+        }
+
+        if (left == 0 || left == LinkedList.MAX_UINT256)
+            revert Pool__TickNotFound();
+
+        return left;
+    }
+
+    /**
+     * @notice Creates a Tick for a given price, or returns the existing tick.
+     * @param price The price of the Tick
+     * @return tick The Tick for a given price
+     */
+    function _getOrCreateTick(uint256 price)
+        internal
+        returns (Tick.Data memory tick)
+    {
+        _verifyTickWidth(price);
+
+        if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
+            revert Pool__TickOutOfRange();
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
+
+        tick = Tick.Data(
+            price,
+            0,
+            price <= l.marketPrice ? l.globalFeeRate : 0
+        );
+
+        l.ticks[price] = tick;
+    }
+
+    function _removeTickIfNotActive(uint256 price) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (!l.tickIndex.nodeExists(price)) return;
+
+        Tick.Data storage tick = l.ticks[price];
+
+        if (
+            price > Pricing.MIN_TICK_PRICE &&
+            price < Pricing.MAX_TICK_PRICE &&
+            tick.delta == 0
+        ) {
+            if (price == l.tick) {
+                uint256 newCurrentTick = l.tickIndex.getPreviousNode(price);
+
+                if (newCurrentTick < Pricing.MIN_TICK_PRICE)
+                    revert Pool__TickOutOfRange();
+
+                l.tick = newCurrentTick;
+            }
+
+            l.tickIndex.remove(price);
+            delete l.ticks[price];
+        }
+    }
+
+    function _updateTickDeltas(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice,
+        uint256 delta
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        Tick.Data storage lowerTick = l.ticks[lower];
+        Tick.Data storage upperTick = l.ticks[upper];
+
+        int256 _delta = int256(delta);
+        if (upper <= l.tick) {
+            lowerTick.delta -= _delta;
+            upperTick.delta += _delta;
+        } else if (lower > l.tick) {
+            lowerTick.delta += _delta;
+            upperTick.delta -= _delta;
+        } else {
+            lowerTick.delta -= _delta;
+            upperTick.delta -= _delta;
+            l.liquidityRate += delta;
+        }
+
+        // Reconcile current tick with system
+        // Check if deposit or withdrawal
+        if (delta > 0) {
+            while (l.tickIndex.getNextNode(l.tick) < marketPrice) {
+                _cross(Position.Side.BUY);
+            }
+        } else {
+            _removeTickIfNotActive(lower);
+            _removeTickIfNotActive(upper);
+        }
+    }
+
+    function _updateGlobalFeeRate(PoolStorage.Layout storage l, uint256 amount)
+        internal
+    {
+        if (l.liquidityRate == 0) return;
+        l.globalFeeRate += amount.divWad(l.liquidityRate);
+    }
+
+    function _cross(Position.Side side) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (side == Position.Side.BUY) {
+            uint256 right = l.tickIndex.getNextNode(l.tick);
+            if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange();
+            l.tick = right;
+        }
+
+        Tick.Data storage currentTick = l.ticks[l.tick];
+
+        l.liquidityRate = l.liquidityRate.add(currentTick.delta);
+
+        // Flip the tick
+        currentTick.delta = -currentTick.delta;
+
+        currentTick.externalFeeRate =
+            l.globalFeeRate -
+            currentTick.externalFeeRate;
+
+        if (side == Position.Side.SELL) {
+            if (l.tick <= Pricing.MIN_TICK_PRICE) revert Pool__TickOutOfRange();
+            l.tick = l.tickIndex.getPreviousNode(l.tick);
+        }
     }
 }
