@@ -1046,6 +1046,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ////////////////
     // TickSystem //
     ////////////////
+    // ToDo : Reorganize those functions ?
 
     /**
      * @notice Gets the nearest tick that is less than or equal to `price`.
@@ -1190,5 +1191,39 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 revert Pool__TickOutOfRange();
             l.currentTick = l.tickIndex.getPreviousNode(l.currentTick);
         }
+    }
+
+    /**
+     * @notice Calculates the growth and exposure change between the lower
+     *    and upper Ticks of a Position.
+     *
+     *                     l         ▼         u
+     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     *    => (global - external(l) - external(u))
+     *
+     *                ▼    l                   u
+     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     *    => (global - (global - external(l)) - external(u))
+     *
+     *                     l                   u    ▼
+     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+     *    => (global - external(l) - (global - external(u)))
+     */
+    function _rangeFeeRate(
+        PoolStorage.Layout storage l,
+        uint256 lower,
+        uint256 upper,
+        uint256 lowerTickExternalFeeRate,
+        uint256 upperTickExternalFeeRate
+    ) internal returns (uint256) {
+        uint256 aboveFeeRate = l.currentTick >= upper
+            ? l.globalFeeRate - upperTickExternalFeeRate
+            : upperTickExternalFeeRate;
+
+        uint256 belowFeeRate = l.currentTick >= lower
+            ? lowerTickExternalFeeRate
+            : l.globalFeeRate - lowerTickExternalFeeRate;
+
+        return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 }
