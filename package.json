@@ -14,7 +14,7 @@
     "buidler",
     "wow"
   ],
-  "license": "BUSL-1.1",
+  "license": "UNLICENSED",
   "main": "index.js",
   "repository": "https://github.com/Premian-Labs/premia-contracts-v3-private.git",
   "author": "Premia",
