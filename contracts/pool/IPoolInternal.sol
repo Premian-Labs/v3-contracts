@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 interface IPoolInternal {
     error Pool__CantTransferLongAndShort();
     error Pool__FullWithdrawalExpected();
+    error Pool__InsufficientAskLiquidity();
+    error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientCollateral();
     error Pool__InsufficientContracts();
     error Pool__InsufficientFunds();
