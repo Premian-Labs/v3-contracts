@@ -591,9 +591,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
 
-        // Check if market price is stranded
-        //        bool isMarketPriceStranded
-
         bool isBuy = side == Position.Side.BUY;
 
         // Fix for if stranded market price
@@ -665,41 +662,62 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
      * @param p The position key
-     * @param liqUpdate The liquidity amounts to subtract
+     * @param collateral The amount of collateral to be deposited
+     * @param contracts The amount of contracts to be deposited
      */
     function _withdraw(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate
+        uint256 collateral,
+        uint256 contracts
     ) internal {
-        // ToDo : Update
-        //        PoolStorage.Layout storage l = PoolStorage.layout();
-        //
-        //        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
-        //
-        //        Position.Data storage pData = l.positions[p.keyHash()];
-        //        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
-        //
-        //        if (
-        //            pLiq.collateral < liqUpdate.collateral ||
-        //            pLiq.long < liqUpdate.long ||
-        //            pLiq.short < liqUpdate.short
-        //        ) revert Pool__InsufficientWithdrawableBalance();
-        //
-        //        // Ensure ticks exists
-        //        if (!l.tickIndex.nodeExists(p.lower)) revert Pool__TickNotFound();
-        //        if (!l.tickIndex.nodeExists(p.upper)) revert Pool__TickNotFound();
-        //
-        //        _updatePosition(p, liqUpdate, true);
-        //
-        //        bool isBuy = p.rangeSide == Position.Side.BUY;
-        //        if ((isBuy && p.lower >= l.tick) || (!isBuy && p.upper > l.tick)) {
-        //            l.liquidityRate -= p.phi(pData, l.minTickDistance());
-        //        }
-        //
-        //        _removeTick(p, pData, l.marketPrice);
-        //
-        //        // ToDo : Transfer token (Collateral or contract) -> Need first to figure out token ids structure / decimals normalization
-        //        //    agent.transfer_to(liquidity.collateral, liquidity.long, liquidity.short, self)
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+
+        _verifyTickWidth(p.lower);
+        _verifyTickWidth(p.upper);
+
+        Position.Data storage pData = l.positions[p.keyHash()];
+
+        if (pData.contracts + pData.collateral == 0)
+            revert Pool__PositionDoesNotExist();
+
+        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+
+        // Initialize variables before position update
+        uint256 liquidityPerTick = p.liquidityPerTick(pData);
+        uint256 feeRate = _rangeFeeRate(
+            l,
+            p.lower,
+            p.upper,
+            lowerTick.externalFeeRate,
+            upperTick.externalFeeRate
+        );
+        uint256 short = p.short(pData, l.marketPrice);
+        uint256 long = p.long(pData, l.marketPrice);
+
+        // Update claimable fees
+        _updateClaimableFees(pData, feeRate, liquidityPerTick);
+
+        // Adjust position to correspond with the side of the order
+        _updatePosition(p, pData, collateral, contracts, l.marketPrice, true);
+
+        // ToDo : Implement
+        // Transfer funds from the pool back to the LP
+        /*
+                # Transfer funds from the pool back to the LP
+        info.owner.transfer_to(
+            collateral=order.collateral,
+            long=order.contracts if long > 0 else Decimal("0"),
+            short=order.contracts if short > 0 else Decimal("0"),
+            pool=self
+        )
+        */
+
+        // Adjust tick deltas (reverse of deposit)
+        uint256 delta = p.liquidityPerTick(pData) - liquidityPerTick;
+        _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
     }
 
     /**

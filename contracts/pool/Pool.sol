@@ -33,9 +33,10 @@ contract Pool is PoolInternal {
 
     function withdraw(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate
+        uint256 collateral,
+        uint256 contracts
     ) external {
-        _withdraw(p, liqUpdate);
+        _withdraw(p, collateral, contracts);
     }
 
     function trade(
