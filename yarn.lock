@@ -5292,10 +5292,10 @@ hardhat-gas-reporter@^1.0.9:
     eth-gas-reporter "^0.2.25"
     sha1 "^1.1.1"
 
-hardhat-spdx-license-identifier@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/hardhat-spdx-license-identifier/-/hardhat-spdx-license-identifier-2.0.3.tgz#6dd89a7e036ede4f7e86fb349eb23daaaad6890f"
-  integrity sha512-G4u4I1md0tWaitX6Os7Nq9sYZ/CFdR+ibm7clCksGJ4yrtdHEZxgLjWpJ0WiALF9SoFKt03PwCe9lczDQ/5ADA==
+hardhat-spdx-license-identifier@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/hardhat-spdx-license-identifier/-/hardhat-spdx-license-identifier-2.1.0.tgz#6eb3927df9f61bbcb1899a88b67ee6d28d13fb0e"
+  integrity sha512-Z3Avr/v6lfDfa7qkriF/h40X8wmuy8qZfS4HgbINkDdmCiKAxQUi5Y5TgsJBZFYN1MvYzLTIbD/fo1dxZ4gsng==
 
 hardhat@2.12.1:
   version "2.12.1"
