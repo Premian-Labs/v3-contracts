@@ -878,6 +878,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         existingPosition.long -= long;
         existingPosition.short -= short;
 
+        // ToDo : Mint tokens
+
         l.externalPositions[newOwner][newOperator].long += long;
         l.externalPositions[newOwner][newOperator].short += short;
     }
@@ -891,15 +893,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
 
         uint256 spot = l.getSpotPrice();
+        bool isCall = l.isCallPool;
 
-        int256 w = 2 * (l.isCallPool ? int256(1) : int256(0)) - 1;
-        int256 wSpotStrike = w * (int256(spot) - int256(l.strike));
+        uint256 intrinsicValue;
+        if (isCall && spot > strike) {
+            intrinsicValue = spot - strike;
+        } else if (!isCall && spot < strike) {
+            intrinsicValue = strike - spot;
+        } else {
+            return 0;
+        }
 
-        uint256 exerciseValue = wSpotStrike > 0
-            ? size.mulWad(uint256(wSpotStrike))
-            : 0;
+        uint256 exerciseValue = size.mulWad(intrinsicValue);
 
-        if (l.isCallPool) {
+        if (isCall) {
             exerciseValue = exerciseValue.divWad(spot);
         }
 
