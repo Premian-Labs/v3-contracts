@@ -288,23 +288,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     }
 
     // ToDo : Remove
-    //    function _getClaimableFees(Position.Key memory p)
-    //        internal
-    //        view
-    //        returns (uint256)
-    //    {
-    //        PoolStorage.Layout storage l = PoolStorage.layout();
-    //        Position.Data storage pData = l.positions[p.keyHash()];
-    //
-    //        uint256 feeGrowthRate = _calculatePositionGrowth(p.lower, p.upper);
-    //
-    //        return
-    //            (feeGrowthRate - pData.lastFeeRate).mulWad(
-    //                p.phi(pData, l.minTickDistance())
-    //            );
-    //    }
-
-    // ToDo : Remove
     /**
      * @notice Calculates the current liquidity state for a position, given the initial state and current pool price.
      *             ▼    l                   u
@@ -982,25 +965,62 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        // ToDo : Update
-        //        _updatePosition(p, Position.Liquidity(0, 0, 0), false);
+        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
 
-        uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
-        uint256 collateralAmount = _calculateCollateralValue(
+        // Update claimable fees
+        uint256 feeRate = _rangeFeeRate(
             l,
-            1e18,
-            exerciseAmount
+            p.lower,
+            p.upper,
+            lowerTick.externalFeeRate,
+            upperTick.externalFeeRate
         );
 
-        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
-        uint256 collateral = pLiq.collateral +
-            pLiq.long.mulWad(exerciseAmount) +
-            pLiq.short.mulWad(collateralAmount);
+        _updateClaimableFees(pData, feeRate, p.liquidityPerTick(pData));
 
-        address feeClaimer = p.operator == address(0) ? p.operator : p.owner;
-        // ToDo : Transfer token
-        // fee_claimer.transfer_to(collateral)
+        // ToDo : Update after python payoff fixes
+        /*
+        spot = self.spot.price(self.maturity)
+        payoff = get_normalised_payoff(spot, self.strike, self.is_call)
 
+        # using the market price here is okay as the market price cannot be
+        # changed through trades / deposits / withdrawals post-maturity.
+        # changes to the market price are halted. thus, the market price
+        # determines the amount of ask.
+        # obviously, if the market was still liquid, the market price at
+        # maturity should be close to the intrinsic value.
+        price = self.market_price
+        collateral = (
+                position.bid(price)
+                + position.ask(price)
+                + position.long(price) * payoff
+                + position.short(price) * (1 - payoff)
+                + position.claimable_fees
+        )
+
+        position.operator.transfer_to(collateral)
+
+        position.collateral = Decimal("0")
+        position.contracts = Decimal("0")
+        position.claimable_fees = Decimal("0")
+
+        return collateral
+        */
+
+        //        uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
+        //        uint256 collateralAmount = _calculateCollateralValue(
+        //            l,
+        //            1e18,
+        //            exerciseAmount
+        //        );
+
+        //        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
+        //        uint256 collateral = pLiq.collateral +
+        //            pLiq.long.mulWad(exerciseAmount) +
+        //            pLiq.short.mulWad(collateralAmount);
+
+        uint256 collateral;
         pData.collateral = 0;
         pData.contracts = 0;
 
