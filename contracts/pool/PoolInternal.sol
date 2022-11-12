@@ -568,6 +568,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
 
         uint256 spot = l.getSpotPrice();
+        uint256 strike = l.strike;
         bool isCall = l.isCallPool;
 
         uint256 intrinsicValue;
@@ -660,16 +661,18 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
         Tick.Data memory upperTick = _getOrCreateTick(p.upper);
 
-        // Update claimable fees
-        uint256 feeRate = _rangeFeeRate(
-            l,
-            p.lower,
-            p.upper,
-            lowerTick.externalFeeRate,
-            upperTick.externalFeeRate
-        );
+        {
+            // Update claimable fees
+            uint256 feeRate = _rangeFeeRate(
+                l,
+                p.lower,
+                p.upper,
+                lowerTick.externalFeeRate,
+                upperTick.externalFeeRate
+            );
 
-        _updateClaimableFees(pData, feeRate, p.liquidityPerTick(pData));
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(pData));
+        }
 
         // using the market price here is okay as the market price cannot be
         // changed through trades / deposits / withdrawals post-maturity.
@@ -684,7 +687,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 collateral = p.bid(pData, price) +
             p.ask(pData, price) +
             p.long(pData, price).mulWad(payoff) +
-            p.short(pData, price).mulWad((isCall ? 1e18 : l.strike) - payoff) +
+            p.short(pData, price).mulWad(
+                (l.isCallPool ? 1e18 : l.strike) - payoff
+            ) +
             pData.claimableFees;
 
         // ToDo : Implement
@@ -724,7 +729,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Gets the nearest tick that is less than or equal to `price`.
      */
-    function _getNearestTickBelow(uint256 price) internal returns (uint256) {
+    function _getNearestTickBelow(uint256 price)
+        internal
+        view
+        returns (uint256)
+    {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 left = l.currentTick;
@@ -890,7 +899,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 upper,
         uint256 lowerTickExternalFeeRate,
         uint256 upperTickExternalFeeRate
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 aboveFeeRate = l.currentTick >= upper
             ? l.globalFeeRate - upperTickExternalFeeRate
             : upperTickExternalFeeRate;
