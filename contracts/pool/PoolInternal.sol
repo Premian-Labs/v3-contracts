@@ -207,26 +207,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pData.contracts += contracts;
             }
 
-            Position.Side newSide = isBuy
-                ? Position.Side.SELL
-                : Position.Side.BUY;
-
             return;
         }
 
         // Convert position to opposite side to make it modifiable
-        uint256 _collateral;
-        uint256 _contracts;
-        if (!isBuy) {
-            _collateral = pData.contracts;
-            _contracts = p.liquidity(pData).mulWad(p.averagePrice());
-        } else {
-            _collateral = p.liquidity(pData).mulWad(p.averagePrice());
-            _contracts = pData.collateral;
-        }
-
-        pData.collateral = _collateral;
-        pData.contracts = _contracts;
+        pData.collateral = isBuy
+            ? p.liquidity(pData).mulWad(p.averagePrice())
+            : pData.contracts;
+        pData.contracts = isBuy
+            ? pData.collateral
+            : p.liquidity(pData).mulWad(p.averagePrice());
         pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
 
         _updatePosition(p, pData, collateral, contracts, price, withdraw);
@@ -437,7 +427,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
                 uint256 premium = quotePrice.mulWad(tradeSize);
                 uint256 takerFee = _takerFee(tradeSize, premium);
-                uint256 takerPremium = premium + takerFee;
 
                 // Update price and liquidity variables
                 uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
