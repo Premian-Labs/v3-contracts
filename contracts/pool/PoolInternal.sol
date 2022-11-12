@@ -671,50 +671,28 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         _updateClaimableFees(pData, feeRate, p.liquidityPerTick(pData));
 
-        // ToDo : Update after python payoff fixes
-        /*
-        spot = self.spot.price(self.maturity)
-        payoff = get_normalised_payoff(spot, self.strike, self.is_call)
+        // using the market price here is okay as the market price cannot be
+        // changed through trades / deposits / withdrawals post-maturity.
+        // changes to the market price are halted. thus, the market price
+        // determines the amount of ask.
+        // obviously, if the market was still liquid, the market price at
+        // maturity should be close to the intrinsic value.
 
-        # using the market price here is okay as the market price cannot be
-        # changed through trades / deposits / withdrawals post-maturity.
-        # changes to the market price are halted. thus, the market price
-        # determines the amount of ask.
-        # obviously, if the market was still liquid, the market price at
-        # maturity should be close to the intrinsic value.
-        price = self.market_price
-        collateral = (
-                position.bid(price)
-                + position.ask(price)
-                + position.long(price) * payoff
-                + position.short(price) * (1 - payoff)
-                + position.claimable_fees
-        )
+        uint256 price = l.marketPrice;
+        uint256 payoff = _calculateExerciseValue(l, 1e18);
 
-        position.operator.transfer_to(collateral)
+        uint256 collateral = p.bid(pData, price) +
+            p.ask(pData, price) +
+            p.long(pData, price).mulWad(payoff) +
+            p.short(pData, price).mulWad((isCall ? 1e18 : l.strike) - payoff) +
+            pData.claimableFees;
 
-        position.collateral = Decimal("0")
-        position.contracts = Decimal("0")
-        position.claimable_fees = Decimal("0")
+        // ToDo : Implement
+        // position.operator.transfer_to(collateral)
 
-        return collateral
-        */
-
-        //        uint256 exerciseAmount = _calculateExerciseValue(l, 1e18);
-        //        uint256 collateralAmount = _calculateCollateralValue(
-        //            l,
-        //            1e18,
-        //            exerciseAmount
-        //        );
-
-        //        Position.Liquidity memory pLiq = _calculatePositionLiquidity(p, pData);
-        //        uint256 collateral = pLiq.collateral +
-        //            pLiq.long.mulWad(exerciseAmount) +
-        //            pLiq.short.mulWad(collateralAmount);
-
-        uint256 collateral;
         pData.collateral = 0;
         pData.contracts = 0;
+        pData.claimableFees = 0;
 
         return collateral;
     }
