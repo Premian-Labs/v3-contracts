@@ -121,7 +121,7 @@ library Position {
             self.upper - self.lower
         );
 
-        return data.side == Side.BUY ? self.lower + shift : self.upper - shift;
+        return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
     }
 
     /**
@@ -180,8 +180,8 @@ library Position {
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         uint256 x = data.side == Side.BUY
-            ? data.collateral
-            : (isCall ? data.contracts : data.contracts.mulWad(strike));
+            ? (isCall ? data.contracts : data.contracts.mulWad(strike))
+            : data.collateral;
         return (1e18 - nu).mulWad(x);
     }
 
@@ -196,7 +196,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY ? data.contracts : data.collateral;
         return (1e18 - nu).mulWad(self.liquidity(data) - x);
     }
 
@@ -206,7 +206,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY ? data.contracts : data.collateral;
         return nu.mulWad(x);
     }
 

@@ -184,8 +184,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         bool isOrderLeft = p.upper <= price;
 
         bool isBuy = pData.side == Position.Side.BUY;
-        if (!isBuy == isOrderLeft) {
-            if (!isBuy) {
+        if (isBuy == isOrderLeft) {
+            if (isBuy) {
                 uint256 _collateral = withdraw
                     ? pData.collateral - collateral
                     : pData.collateral + collateral;
@@ -214,11 +214,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         // Convert position to opposite side to make it modifiable
         pData.collateral = isBuy
-            ? p.liquidity(pData).mulWad(p.averagePrice())
-            : pData.contracts;
-        pData.contracts = isBuy
-            ? pData.collateral
+            ? pData.contracts
             : p.liquidity(pData).mulWad(p.averagePrice());
+        pData.contracts = isBuy
+            ? p.liquidity(pData).mulWad(p.averagePrice())
+            : pData.collateral;
         pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
 
         _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
