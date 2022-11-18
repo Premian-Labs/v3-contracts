@@ -156,6 +156,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * admissible. If the market price is outside of the tick range.
      */
     function _updatePosition(
+        PoolStorage.Layout storage l,
         Position.Key memory p,
         Position.Data storage pData,
         uint256 collateral,
@@ -165,7 +166,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ) internal {
         // Straddled price
         if (withdraw && p.lower < price && price < p.upper) {
-            uint256 _collateral = p.bid(pData, price) + p.ask(pData, price);
+            uint256 _collateral = p.bid(pData, price, l.strike, l.isCallPool) +
+                p.ask(pData, price, l.strike, l.isCallPool);
             uint256 _contracts = p.short(pData, price) + p.long(pData, price);
 
             if (collateral != _collateral || contracts != _contracts)
@@ -219,7 +221,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             : p.liquidity(pData).mulWad(p.averagePrice());
         pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
 
-        _updatePosition(p, pData, collateral, contracts, price, withdraw);
+        _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
     }
 
     function _claim() internal {
@@ -308,6 +310,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
             _updatePosition(
+                l,
                 p,
                 pData,
                 collateral,
@@ -364,7 +367,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
         // Adjust position to correspond with the side of the order
-        _updatePosition(p, pData, collateral, contracts, l.marketPrice, true);
+        _updatePosition(
+            l,
+            p,
+            pData,
+            collateral,
+            contracts,
+            l.marketPrice,
+            true
+        );
 
         // ToDo : Implement
         // Transfer funds from the pool back to the LP
@@ -621,6 +632,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = l.externalPositions[owner][operator].short;
+        if (size == 0) revert Pool__ZeroSize();
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
         uint256 collateralValue = _calculateCollateralValue(
@@ -673,13 +685,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 price = l.marketPrice;
         uint256 payoff = _calculateExerciseValue(l, 1e18);
 
-        uint256 collateral = p.bid(pData, price) +
-            p.ask(pData, price) +
-            p.long(pData, price).mulWad(payoff) +
-            p.short(pData, price).mulWad(
-                (l.isCallPool ? 1e18 : l.strike) - payoff
-            ) +
-            pData.claimableFees;
+        uint256 collateral = p.bid(pData, price, l.strike, l.isCallPool);
+        collateral += p.ask(pData, price, l.strike, l.isCallPool);
+        collateral += p.long(pData, price).mulWad(payoff);
+        collateral += p.short(pData, price).mulWad(
+            (l.isCallPool ? 1e18 : l.strike) - payoff
+        );
+        collateral += pData.claimableFees;
 
         // ToDo : Implement
         // position.operator.transfer_to(collateral)

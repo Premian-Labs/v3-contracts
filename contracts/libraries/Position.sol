@@ -73,6 +73,14 @@ library Position {
         return 1e18;
     }
 
+    function normalizedCollateral(
+        uint256 collateral,
+        uint256 strike,
+        bool isCall
+    ) internal pure returns (uint256) {
+        return isCall ? collateral : collateral.divWad(strike);
+    }
+
     function averagePrice(Key memory self) internal pure returns (uint256) {
         return Math.average(self.lower, self.upper);
     }
@@ -116,31 +124,72 @@ library Position {
         return data.side == Side.BUY ? self.lower + shift : self.upper - shift;
     }
 
+    /**
+     * @notice  nu = proportion(p, p^*, p_upper)
+     *   Right-side:
+     *       Amount of bid-side collateral generated through underwriting
+     *       options (the revenue generated through premiums collected) and
+     *       closing long positions.
+     *
+     *           bid(p) = nu * (c + d) * mu(p_lower, p_upper)
+     *
+     *   Left-side:
+     *       The amount of bid-side collateral remaining.
+     *
+     *           bid(p) = nu * c
+     */
     function bid(
         Key memory self,
         Data memory data,
-        uint256 price
+        uint256 price,
+        uint256 strike,
+        bool isCall
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
 
         // Overworked to avoid numerical rounding errors
-        uint256 revenue = data.side == Side.BUY
-            ? (data.collateral + data.contracts).mulWad(self.averagePrice())
-            : data.collateral;
+        uint256 revenue;
+        if (data.side == Side.SELL) {
+            revenue = (data.collateral +
+                (isCall ? data.contracts : data.contracts.mulWad(strike)))
+                .mulWad(self.averagePrice());
+        } else {
+            revenue = data.collateral;
+        }
 
         return nu.mulWad(revenue);
     }
 
+    /**
+     * @notice
+     *    nu = proportion(p, p^*, p_upper)
+     *    Right-side:
+     *        Amount of ask-side collateral available when underwriting.
+     *        ask(p) = (1 - nu) *  c
+     *    Left-side:
+     *        Amount of ask-side collateral liberated through closing short
+     *        positions.
+     *        ask(p) = (1- nu) * d
+     */
     function ask(
         Key memory self,
         Data memory data,
-        uint256 price
+        uint256 price,
+        uint256 strike,
+        bool isCall
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY ? data.collateral : data.contracts;
+        uint256 x = data.side == Side.BUY
+            ? data.collateral
+            : (isCall ? data.contracts : data.contracts.mulWad(strike));
         return (1e18 - nu).mulWad(x);
     }
 
+    /**
+     * @notice nu = proportion(p, p_lower, p^*)
+     *    Right-side:     long(p) = (1 - nu) *  d
+     *    Left-side:      long(p) = (1 - nu) * (c/mu - d)
+     */
     function long(
         Key memory self,
         Data memory data,
