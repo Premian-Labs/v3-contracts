@@ -208,7 +208,9 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY ? data.contracts : data.collateral;
+        uint256 x = data.side == Side.BUY
+            ? data.contracts
+            : collateralToContracts(data.collateral, self.strike, self.isCall);
         return (1e18 - nu).mulWad(self.liquidity(data) - x);
     }
 
@@ -253,9 +255,5 @@ library Position {
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         return (1e18 - nu).mulWad(self.liquidity(data));
-    }
-
-    function liquidityState() internal {
-        // ToDo : Implement ?
     }
 }
