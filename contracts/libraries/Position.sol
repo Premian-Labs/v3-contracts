@@ -33,6 +33,9 @@ library Position {
         uint256 lower;
         // The upper tick normalized price of the range order
         uint256 upper;
+        // ---- Values under are not used to compute the key hash but are included in this struct to reduce stack depth
+        uint256 strike;
+        bool isCall;
     }
 
     // All the data required to be saved in storage
@@ -55,7 +58,10 @@ library Position {
     }
 
     function keyHash(Key memory self) internal pure returns (bytes32) {
-        return keccak256(abi.encode(self));
+        return
+            keccak256(
+                abi.encode(self.owner, self.operator, self.lower, self.upper)
+            );
     }
 
     function proportion(Key memory self, uint256 price)
@@ -89,46 +95,45 @@ library Position {
         return Math.average(self.lower, self.upper);
     }
 
-    function liquidity(
-        Key memory self,
-        Data memory data,
-        uint256 strike,
-        bool isCall
-    ) internal pure returns (uint256 contractsLiquidity) {
+    function liquidity(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256 contractsLiquidity)
+    {
         return
             data.side == Side.BUY
                 ? data.collateral.divWad(self.averagePrice())
-                : collateralToContracts(data.collateral, strike, isCall) +
-                    data.contracts;
+                : collateralToContracts(
+                    data.collateral,
+                    self.strike,
+                    self.isCall
+                ) + data.contracts;
     }
 
     /**
      * @notice Returns the per-tick liquidity phi (delta) for a specific position.
      */
-    function liquidityPerTick(
-        Key memory self,
-        Data memory data,
-        uint256 strike,
-        bool isCall
-    ) internal pure returns (uint256) {
+    function liquidityPerTick(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 amountOfTicks = Pricing.amountOfTicksBetween(
             self.lower,
             self.upper
         );
 
-        return self.liquidity(data, strike, isCall) / amountOfTicks;
+        return self.liquidity(data) / amountOfTicks;
     }
 
-    function transitionPrice(
-        Key memory self,
-        Data memory data,
-        uint256 strike,
-        bool isCall
-    ) internal pure returns (uint256) {
-        uint256 shift = data
-            .contracts
-            .divWad(self.liquidity(data, strike, isCall))
-            .mulWad(self.upper - self.lower);
+    function transitionPrice(Key memory self, Data memory data)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 shift = data.contracts.divWad(self.liquidity(data)).mulWad(
+            self.upper - self.lower
+        );
 
         return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
     }
@@ -150,9 +155,7 @@ library Position {
     function bid(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCall
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
 
@@ -166,11 +169,9 @@ library Position {
             quotePrice = self.averagePrice();
         }
 
-        uint256 result = nu.mulWad(self.liquidity(data, strike, isCall)).mulWad(
-            quotePrice
-        );
+        uint256 result = nu.mulWad(self.liquidity(data)).mulWad(quotePrice);
 
-        return contractsToCollateral(result, strike, isCall);
+        return contractsToCollateral(result, self.strike, self.isCall);
     }
 
     /**
@@ -187,13 +188,11 @@ library Position {
     function ask(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCall
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         uint256 x = data.side == Side.BUY
-            ? contractsToCollateral(data.contracts, strike, isCall)
+            ? contractsToCollateral(data.contracts, self.strike, self.isCall)
             : data.collateral;
         return (1e18 - nu).mulWad(x);
     }
@@ -206,26 +205,22 @@ library Position {
     function long(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCallPool
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         uint256 x = data.side == Side.BUY ? data.contracts : data.collateral;
-        return (1e18 - nu).mulWad(self.liquidity(data, strike, isCallPool) - x);
+        return (1e18 - nu).mulWad(self.liquidity(data) - x);
     }
 
     function short(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCallPool
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         uint256 x = data.side == Side.BUY
             ? data.contracts
-            : collateralToContracts(data.collateral, strike, isCallPool);
+            : collateralToContracts(data.collateral, self.strike, self.isCall);
         return nu.mulWad(x);
     }
 
@@ -237,12 +232,10 @@ library Position {
     function bidLiquidity(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCallPool
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        return nu.mulWad(self.liquidity(data, strike, isCallPool));
+        return nu.mulWad(self.liquidity(data));
     }
 
     /**
@@ -256,12 +249,10 @@ library Position {
     function askLiquidity(
         Key memory self,
         Data memory data,
-        uint256 price,
-        uint256 strike,
-        bool isCallPool
+        uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        return (1e18 - nu).mulWad(self.liquidity(data, strike, isCallPool));
+        return (1e18 - nu).mulWad(self.liquidity(data));
     }
 
     function liquidityState() internal {

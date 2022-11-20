@@ -166,10 +166,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ) internal {
         // Straddled price
         if (withdraw && p.lower < price && price < p.upper) {
-            uint256 _collateral = p.bid(pData, price, l.strike, l.isCallPool) +
-                p.ask(pData, price, l.strike, l.isCallPool);
-            uint256 _contracts = p.short(pData, price, l.strike, l.isCallPool) +
-                p.long(pData, price, l.strike, l.isCallPool);
+            uint256 _collateral = p.bid(pData, price) + p.ask(pData, price);
+            uint256 _contracts = p.short(pData, price) + p.long(pData, price);
 
             if (collateral != _collateral || contracts != _contracts)
                 revert Pool__FullWithdrawalExpected();
@@ -216,13 +214,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Convert position to opposite side to make it modifiable
         pData.collateral = isBuy
             ? pData.contracts
-            : p.liquidity(pData, l.strike, l.isCallPool).mulWad(
-                p.averagePrice()
-            );
+            : p.liquidity(pData).mulWad(p.averagePrice());
         pData.contracts = isBuy
-            ? p.liquidity(pData, l.strike, l.isCallPool).mulWad(
-                p.averagePrice()
-            )
+            ? p.liquidity(pData).mulWad(p.averagePrice())
             : pData.collateral;
         pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
 
@@ -251,6 +245,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 contracts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        p.strike = l.strike;
+        p.isCall = l.isCallPool;
 
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
@@ -305,11 +301,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
 
             if (pData.collateral + pData.contracts > 0) {
-                liquidityPerTick = p.liquidityPerTick(
-                    pData,
-                    l.strike,
-                    l.isCallPool
-                );
+                liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
                 _updatePosition(
@@ -330,7 +322,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             p.lower,
             p.upper,
             l.marketPrice,
-            p.liquidityPerTick(pData, l.strike, l.isCallPool) - liquidityPerTick
+            p.liquidityPerTick(pData) - liquidityPerTick
         );
     }
 
@@ -346,6 +338,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 contracts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        p.strike = l.strike;
+        p.isCall = l.isCallPool;
 
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
@@ -361,11 +355,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Tick.Data memory upperTick = _getOrCreateTick(p.upper);
 
         // Initialize variables before position update
-        uint256 liquidityPerTick = p.liquidityPerTick(
-            pData,
-            l.strike,
-            l.isCallPool
-        );
+        uint256 liquidityPerTick = p.liquidityPerTick(pData);
         uint256 feeRate = _rangeFeeRate(
             l,
             p.lower,
@@ -374,13 +364,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             upperTick.externalFeeRate
         );
         {
-            uint256 short = p.short(
-                pData,
-                l.marketPrice,
-                l.strike,
-                l.isCallPool
-            );
-            uint256 long = p.long(pData, l.marketPrice, l.strike, l.isCallPool);
+            uint256 short = p.short(pData, l.marketPrice);
+            uint256 long = p.long(pData, l.marketPrice);
 
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
@@ -410,8 +395,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         // Adjust tick deltas (reverse of deposit)
-        uint256 delta = p.liquidityPerTick(pData, l.strike, l.isCallPool) -
-            liquidityPerTick;
+        uint256 delta = p.liquidityPerTick(pData) - liquidityPerTick;
         _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
     }
 
@@ -532,6 +516,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         address newOwner,
         address newOperator
     ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        p.strike = l.strike;
+        p.isCall = l.isCallPool;
+
         if (liq.long > 0 && liq.short > 0)
             revert Pool__CantTransferLongAndShort();
         // ToDo : Update
@@ -675,6 +663,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      */
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        p.strike = l.strike;
+        p.isCall = l.isCallPool;
 
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
 
@@ -693,11 +683,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 upperTick.externalFeeRate
             );
 
-            _updateClaimableFees(
-                pData,
-                feeRate,
-                p.liquidityPerTick(pData, l.strike, l.isCallPool)
-            );
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(pData));
         }
 
         // using the market price here is okay as the market price cannot be
@@ -710,12 +696,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 price = l.marketPrice;
         uint256 payoff = _calculateExerciseValue(l, 1e18);
 
-        uint256 collateral = p.bid(pData, price, l.strike, l.isCallPool);
-        collateral += p.ask(pData, price, l.strike, l.isCallPool);
-        collateral += p.long(pData, price, l.strike, l.isCallPool).mulWad(
-            payoff
-        );
-        collateral += p.short(pData, price, l.strike, l.isCallPool).mulWad(
+        uint256 collateral = p.bid(pData, price);
+        collateral += p.ask(pData, price);
+        collateral += p.long(pData, price).mulWad(payoff);
+        collateral += p.short(pData, price).mulWad(
             (l.isCallPool ? 1e18 : l.strike) - payoff
         );
         collateral += pData.claimableFees;
