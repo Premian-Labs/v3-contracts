@@ -243,16 +243,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param p The position key
      * @param collateral The amount of collateral to be deposited
      * @param contracts The amount of contracts to be deposited
-     * @param left The normalized price of the tick at the left of the position
-     * @param right The normalized price of the tick at th right of the position
      */
     function _deposit(
         Position.Key memory p,
         Position.Side side,
         uint256 collateral,
-        uint256 contracts,
-        uint256 left,
-        uint256 right
+        uint256 contracts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
