@@ -29,9 +29,6 @@ library Position {
         address owner;
         // The Agent that can control modifications to the Position
         address operator;
-        // The direction of the range order
-        // ToDo : Rename to `side`
-        Side rangeSide;
         // The lower tick normalized price of the range order
         uint256 lower;
         // The upper tick normalized price of the range order
