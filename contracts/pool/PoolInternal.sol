@@ -310,7 +310,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 );
             }
 
-            if (pData.collateral + pData.contracts > 0) {
+            if (
+                pData.collateral +
+                    pData.contracts +
+                    pData.lastFeeRate +
+                    pData.claimableFees >
+                0
+            ) {
                 liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
@@ -328,9 +334,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pData.contracts = contracts;
                 pData.lastFeeRate = feeRate;
                 pData.side = side;
-
-                // ToDo : Should be able to remove this, but should check first
-                pData.claimableFees = 0;
             }
         }
 
@@ -508,6 +511,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         */
 
         return totalPremium;
+    }
+
+    function _fillQuote() internal {
+        // ToDo : Implement
     }
 
     /**
