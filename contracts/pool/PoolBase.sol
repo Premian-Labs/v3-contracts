@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {ERC165} from "@solidstate/contracts/introspection/ERC165.sol";

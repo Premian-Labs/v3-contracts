@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {LinkedList} from "../libraries/LinkedList.sol";
@@ -40,14 +38,13 @@ library PoolStorage {
         // Index of all existing ticks sorted
         LinkedList.List tickIndex;
         mapping(uint256 => Tick.Data) ticks;
-        uint256 currentTickId;
         uint256 marketPrice;
         uint256 globalFeeRate;
         uint256 protocolFees;
         uint256 strike;
         uint256 liquidityRate;
         // Current tick normalized price
-        uint256 tick;
+        uint256 currentTick;
         // Spot price after maturity // ToDo : Save the spot price
         uint256 spot;
         // key -> positionData
@@ -68,10 +65,6 @@ library PoolStorage {
      */
     function getPoolToken(Layout storage l) internal view returns (address) {
         return l.isCallPool ? l.underlying : l.base;
-    }
-
-    function minTickDistance(Layout storage l) internal view returns (uint256) {
-        return l.isCallPool ? 1e14 : l.strike / 1e4;
     }
 
     function getSpotPrice(Layout storage l) internal view returns (uint256) {

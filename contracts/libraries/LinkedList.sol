@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
 
@@ -10,7 +10,7 @@ library LinkedList {
     uint256 private constant NULL = 0;
     uint256 private constant HEAD = 0;
 
-    uint256 private constant MAX_UINT256 = type(uint256).max;
+    uint256 internal constant MAX_UINT256 = type(uint256).max;
 
     bool private constant PREV = false;
     bool private constant NEXT = true;

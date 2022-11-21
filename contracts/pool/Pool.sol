@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {PoolInternal} from "./PoolInternal.sol";
@@ -22,18 +20,19 @@ contract Pool is PoolInternal {
 
     function deposit(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate,
-        uint256 left,
-        uint256 right
+        Position.Side side,
+        uint256 collateral,
+        uint256 contracts
     ) external {
-        _deposit(p, liqUpdate, left, right);
+        _deposit(p, side, collateral, contracts);
     }
 
     function withdraw(
         Position.Key memory p,
-        Position.Liquidity memory liqUpdate
+        uint256 collateral,
+        uint256 contracts
     ) external {
-        _withdraw(p, liqUpdate);
+        _withdraw(p, collateral, contracts);
     }
 
     function trade(
