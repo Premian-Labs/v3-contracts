@@ -212,12 +212,22 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         // Convert position to opposite side to make it modifiable
-        pData.collateral = isBuy
-            ? pData.contracts
-            : p.liquidity(pData).mulWad(p.averagePrice());
-        pData.contracts = isBuy
-            ? p.liquidity(pData).mulWad(p.averagePrice())
-            : pData.collateral;
+        if (isBuy) {
+            pData.collateral = Position.contractsToCollateral(
+                pData.contracts,
+                p.strike,
+                p.isCall
+            );
+            pData.contracts = p.liquidity(pData) - pData.contracts;
+        } else {
+            pData.collateral = p.liquidity(pData).mulWad(p.averagePrice());
+            pData.contracts = Position.collateralToContracts(
+                pData.collateral,
+                p.strike,
+                p.isCall
+            );
+        }
+
         pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
 
         _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
@@ -313,10 +323,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     l.marketPrice,
                     false
                 );
+            } else {
+                pData.collateral = collateral;
+                pData.contracts = contracts;
+                pData.lastFeeRate = feeRate;
+                pData.side = side;
+
+                // ToDo : Should be able to remove this, but should check first
+                pData.claimableFees = 0;
             }
         }
 
-        // ToDo : Fix stack too deep
         // Adjust tick deltas
         _updateTickDeltas(
             p.lower,

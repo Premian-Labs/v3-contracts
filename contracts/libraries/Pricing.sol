@@ -141,7 +141,8 @@ library Pricing {
     {
         bool isBuy = args.tradeSide == Position.Side.BUY;
 
-        if (liquidity(args) == 0) return isBuy ? args.upper : args.lower;
+        uint256 liq = liquidity(args);
+        if (liq == 0) return isBuy ? args.upper : args.lower;
 
         uint256 _proportion = tradeSize.divWad(liq);
 
