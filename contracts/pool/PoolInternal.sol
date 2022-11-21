@@ -97,9 +97,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     .average(pricing.marketPrice, nextPrice)
                     .mulWad(tradeSize);
                 // quotePrice * tradeSize
-                uint256 takerPremium = premium + _takerFee(size, premium);
+                uint256 takerFee = _takerFee(size, premium);
 
-                totalPremium += isBuy ? takerPremium : premium;
+                totalPremium += isBuy ? premium + takerFee : premium - takerFee;
                 pricing.marketPrice = nextPrice;
             }
 
