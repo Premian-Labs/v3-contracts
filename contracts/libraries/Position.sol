@@ -131,9 +131,10 @@ library Position {
         pure
         returns (uint256)
     {
-        uint256 shift = data.contracts.divWad(self.liquidity(data)).mulWad(
-            self.upper - self.lower
-        );
+        uint256 liquidity = self.liquidity(data);
+        uint256 shift = liquidity == 0
+            ? 0
+            : data.contracts.divWad(liquidity).mulWad(self.upper - self.lower);
 
         return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
     }
