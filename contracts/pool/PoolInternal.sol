@@ -28,8 +28,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using UintUtils for uint256;
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
-    // ToDo : Define final number
-    uint256 private constant PROTOCOL_FEE_RATE = 5e3; // 50%
+
+    // ToDo : Define final values
+    uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
+    uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
+    uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
 
     /**
      * @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
@@ -42,9 +45,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         pure
         returns (uint256)
     {
-        uint256 premiumFee = (premium * 300) / INVERSE_BASIS_POINT;
+        uint256 premiumFee = (premium * PREMIUM_FEE_PERCENTAGE) /
+            INVERSE_BASIS_POINT;
         // 3% of premium
-        uint256 notionalFee = (size * 30) / INVERSE_BASIS_POINT;
+        uint256 notionalFee = (size * COLLATERAL_FEE_PERCENTAGE) /
+            INVERSE_BASIS_POINT;
         // 0.3% of notional
         return Math.max(premiumFee, notionalFee);
     }
@@ -465,7 +470,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 uint256 takerFee = _takerFee(tradeSize, premium);
 
                 // Update price and liquidity variables
-                uint256 protocolFee = (takerFee * PROTOCOL_FEE_RATE) /
+                uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
                     INVERSE_BASIS_POINT;
                 uint256 makerRebate = takerFee - protocolFee;
 
