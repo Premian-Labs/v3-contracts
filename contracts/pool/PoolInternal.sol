@@ -98,9 +98,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
 
             {
-                uint256 premium = Math
-                    .average(pricing.marketPrice, nextPrice)
-                    .mulWad(tradeSize);
+                uint256 premium = Position.contractsToCollateral(
+                    Math.average(pricing.marketPrice, nextPrice).mulWad(
+                        tradeSize
+                    ),
+                    l.strike,
+                    l.isCallPool
+                );
                 // quotePrice * tradeSize
                 uint256 takerFee = _takerFee(size, premium);
 
@@ -197,8 +201,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     ? pData.contracts - contracts
                     : pData.contracts + contracts;
 
-                if (_collateral < p.averagePrice().mulWad(_contracts))
-                    revert Pool__InsufficientCollateral();
+                if (
+                    _collateral <
+                    Position
+                        .contractsToCollateral(
+                            p.averagePrice(),
+                            l.strike,
+                            l.isCallPool
+                        )
+                        .mulWad(_contracts)
+                ) revert Pool__InsufficientCollateral();
             }
 
             if (withdraw) {
@@ -225,7 +237,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             );
             pData.contracts = p.liquidity(pData) - pData.contracts;
         } else {
-            pData.collateral = p.liquidity(pData).mulWad(p.averagePrice());
+            pData.collateral = p.liquidity(pData).mulWad(
+                Position.contractsToCollateral(
+                    p.averagePrice(),
+                    l.strike,
+                    l.isCallPool
+                )
+            );
             pData.contracts = Position.collateralToContracts(
                 pData.collateral,
                 p.strike,
@@ -466,7 +484,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     nextMarketPrice
                 );
 
-                uint256 premium = quotePrice.mulWad(tradeSize);
+                uint256 premium = Position.contractsToCollateral(
+                    quotePrice.mulWad(tradeSize),
+                    l.strike,
+                    l.isCallPool
+                );
                 uint256 takerFee = _takerFee(tradeSize, premium);
 
                 // Update price and liquidity variables

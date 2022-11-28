@@ -100,14 +100,16 @@ library Position {
         pure
         returns (uint256 contractsLiquidity)
     {
+        contractsLiquidity = collateralToContracts(
+            data.collateral,
+            self.strike,
+            self.isCall
+        );
+
         return
             data.side == Side.BUY
-                ? data.collateral.divWad(self.averagePrice())
-                : collateralToContracts(
-                    data.collateral,
-                    self.strike,
-                    self.isCall
-                ) + data.contracts;
+                ? contractsLiquidity.divWad(self.averagePrice())
+                : contractsLiquidity + data.contracts;
     }
 
     /**
