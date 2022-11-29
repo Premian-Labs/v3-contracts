@@ -14,10 +14,10 @@ library PoolStorage {
     // ToDo : Get rid of duplicate error def
     error Pool__OptionNotExpired();
 
-    enum TokenType {
-        SHORT, // 0
-        LONG // 1
-    }
+    // Token id for SHORT
+    uint256 internal constant SHORT = 0;
+    // Token id for LONG
+    uint256 internal constant LONG = 1;
 
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");
@@ -91,6 +91,7 @@ library PoolStorage {
         uint64 lower,
         uint64 upper
     ) internal pure returns (uint256 tokenId) {
+        // ToDo : Add safeguard to prevent SHORT / LONG token id to be used (0 / 1)
         // We convert upper and lower from 18 to 14 decimals, to be able to fit in 47 bits
         tokenId =
             (uint256(uint160(operator)) << 96) +

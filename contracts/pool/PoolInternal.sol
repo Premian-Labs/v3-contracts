@@ -6,6 +6,7 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
@@ -277,6 +278,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 collateral,
         uint256 contracts
     ) internal {
+        if (collateral + contracts == 0) revert Pool__ZeroSize();
+
         PoolStorage.Layout storage l = PoolStorage.layout();
         p.strike = l.strike;
         p.isCall = l.isCallPool;
@@ -303,16 +306,27 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             if (p.lower < l.marketPrice) revert Pool__InvalidSellOrder();
         }
 
-        // ToDo : implement
         // Transfer funds from the LP to the pool
-        /*
-        info.owner.transfer_from(
-            order.collateral,
-            order.contracts if side == TradeSide.SELL else Decimal("0"),
-            order.contracts if side == TradeSide.BUY else Decimal("0"),
-            self
-        )
-        */
+        if (collateral > 0) {
+            IERC20(l.getPoolToken()).transferFrom(
+                p.owner,
+                address(this),
+                collateral
+            );
+        }
+
+        if (contracts > 0) {
+            _safeTransfer(
+                address(this),
+                p.owner,
+                address(this),
+                side == Position.Side.SELL
+                    ? PoolStorage.LONG
+                    : PoolStorage.SHORT,
+                contracts,
+                ""
+            );
+        }
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -410,6 +424,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             uint256 short = p.short(pData, l.marketPrice);
             uint256 long = p.long(pData, l.marketPrice);
 
+            if (short > 0 && long > 0) revert Pool__InvalidWithdrawal();
+
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
@@ -424,22 +440,32 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 true
             );
 
-            // ToDo : Implement
             // Transfer funds from the pool back to the LP
-            /*
-                    # Transfer funds from the pool back to the LP
-            info.owner.transfer_to(
-                collateral=order.collateral,
-                long=order.contracts if long > 0 else Decimal("0"),
-                short=order.contracts if short > 0 else Decimal("0"),
-                pool=self
-            )
-            */
+            // Transfer funds from the LP to the pool
+            if (collateral > 0) {
+                IERC20(l.getPoolToken()).transfer(p.owner, collateral);
+            }
+
+            if (contracts > 0) {
+                if (long < contracts && short < contracts)
+                    revert Pool__InsufficientContracts();
+
+                _safeTransfer(
+                    address(this),
+                    address(this),
+                    p.owner,
+                    long > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
+                    contracts,
+                    ""
+                );
+            }
         }
 
         // Adjust tick deltas (reverse of deposit)
         uint256 delta = p.liquidityPerTick(pData) - liquidityPerTick;
         _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
+
+        // ToDo : Add return values ?
     }
 
     /**
