@@ -41,11 +41,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param premium The total cost of option(s) for a purchase
      * @return The taker fee for an option trade
      */
-    function _takerFee(uint256 size, uint256 premium)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _takerFee(
+        uint256 size,
+        uint256 premium
+    ) internal pure returns (uint256) {
         uint256 premiumFee = (premium * PREMIUM_FEE_PERCENTAGE) /
             INVERSE_BASIS_POINT;
         // 3% of premium
@@ -55,11 +54,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return Math.max(premiumFee, notionalFee);
     }
 
-    function _getQuote(uint256 size, Position.Side tradeSide)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getQuote(
+        uint256 size,
+        Position.Side tradeSide
+    ) internal view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // ToDo : Add internal function for those checks ?
@@ -566,6 +564,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
+    function _getTradeDelta(Position.Side side, uint256 size) internal {}
+
     function _fillQuote() internal {
         // ToDo : Implement
     }
@@ -645,11 +645,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.externalPositions[newOwner][newOperator].short += short;
     }
 
-    function _calculateExerciseValue(PoolStorage.Layout storage l, uint256 size)
-        internal
-        view
-        returns (uint256)
-    {
+    function _calculateExerciseValue(
+        PoolStorage.Layout storage l,
+        uint256 size
+    ) internal view returns (uint256) {
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
 
@@ -691,10 +690,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param owner The owner of the external option contracts
      * @param operator The operator of the position
      */
-    function _exercise(address owner, address operator)
-        internal
-        returns (uint256)
-    {
+    function _exercise(
+        address owner,
+        address operator
+    ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = l.externalPositions[owner][operator].long;
 
@@ -712,10 +711,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param owner The owner of the external option contracts
      * @param operator The operator of the position
      */
-    function _settle(address owner, address operator)
-        internal
-        returns (uint256)
-    {
+    function _settle(
+        address owner,
+        address operator
+    ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = l.externalPositions[owner][operator].short;
         if (size == 0) revert Pool__ZeroSize();
@@ -727,8 +726,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             exerciseValue
         );
 
-        // ToDo : Transfer tokens
-        // operator.transfer_to(collateral_value)
+        // Burn short and transfer collateral to operator
+        _burn(operator, PoolStorage.SHORT, size);
+        if (collateralValue > 0) {
+            IERC20(l.getPoolToken()).transfer(operator);
+        }
+
         l.externalPositions[owner][operator].short = 0;
 
         return collateralValue;
@@ -781,12 +784,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
         collateral += pData.claimableFees;
 
-        // ToDo : Implement
-        // position.operator.transfer_to(collateral)
-
         pData.collateral = 0;
         pData.contracts = 0;
         pData.claimableFees = 0;
+
+        if (collateral > 0) {
+            IERC20(l.getPoolToken()).transfer(p.operator, collateral);
+        }
 
         return collateral;
     }
@@ -818,11 +822,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Gets the nearest tick that is less than or equal to `price`.
      */
-    function _getNearestTickBelow(uint256 price)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getNearestTickBelow(
+        uint256 price
+    ) internal view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 left = l.currentTick;
@@ -846,10 +848,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @param price The price of the Tick
      * @return tick The Tick for a given price
      */
-    function _getOrCreateTick(uint256 price)
-        internal
-        returns (Tick.Data memory tick)
-    {
+    function _getOrCreateTick(
+        uint256 price
+    ) internal returns (Tick.Data memory tick) {
         _verifyTickWidth(price);
 
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
@@ -932,9 +933,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
-    function _updateGlobalFeeRate(PoolStorage.Layout storage l, uint256 amount)
-        internal
-    {
+    function _updateGlobalFeeRate(
+        PoolStorage.Layout storage l,
+        uint256 amount
+    ) internal {
         if (l.liquidityRate == 0) return;
         l.globalFeeRate += amount.divWad(l.liquidityRate);
     }

@@ -49,7 +49,7 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // owner -> operator -> positionLiquidity
+        // owner -> operator -> positionLiquidity // ToDo : Improve / Remove ?
         mapping(address => mapping(address => Position.Liquidity)) externalPositions;
     }
 
