@@ -574,9 +574,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
      * @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
      *         NOTE: This function can be called post or prior to expiration.
      */
-    function _annihilate(uint256 amount) internal {
-        // ToDo : Transfer long and short to pool
-        // ToDo : Transfer collateral to msg.sender
+    function _annihilate(address owner, uint256 size) internal {
+        if (size == 0) revert Pool__ZeroSize();
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _burn(owner, PoolStorage.SHORT, size);
+        _burn(owner, PoolStorage.LONG, size);
+        IERC20(l.getPoolToken()).transfer(
+            owner,
+            Position.contractsToCollateral(size, l.strike, l.isCallPool)
+        );
     }
 
     /**
@@ -699,8 +707,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
-        // ToDo : Transfer tokens
-        // operator.transfer_to(exercise_value)
+        if (size > 0) {
+            _burn(operator, PoolStorage.LONG, size);
+        }
+
+        if (exerciseValue > 0) {
+            IERC20(l.getPoolToken()).transfer(operator, exerciseValue);
+        }
+
+        // ToDo : Remove externalPositions ?
         l.externalPositions[owner][operator].long = 0;
 
         return exerciseValue;
@@ -729,7 +744,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Burn short and transfer collateral to operator
         _burn(operator, PoolStorage.SHORT, size);
         if (collateralValue > 0) {
-            IERC20(l.getPoolToken()).transfer(operator);
+            IERC20(l.getPoolToken()).transfer(operator, collateralValue);
         }
 
         l.externalPositions[owner][operator].short = 0;

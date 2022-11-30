@@ -6,11 +6,10 @@ import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
 contract Pool is PoolInternal {
-    function getQuote(uint256 size, Position.Side tradeSide)
-        external
-        view
-        returns (uint256)
-    {
+    function getQuote(
+        uint256 size,
+        Position.Side tradeSide
+    ) external view returns (uint256) {
         return _getQuote(size, tradeSide);
     }
 
@@ -44,21 +43,21 @@ contract Pool is PoolInternal {
         return _trade(owner, operator, tradeSide, size);
     }
 
-    function annihilate(uint256 amount) external {
-        _annihilate(amount);
+    function annihilate(uint256 size) external {
+        _annihilate(msg.sender, size);
     }
 
-    function exercise(address owner, address operator)
-        external
-        returns (uint256)
-    {
+    function exercise(
+        address owner,
+        address operator
+    ) external returns (uint256) {
         return _exercise(owner, operator);
     }
 
-    function settle(address owner, address operator)
-        external
-        returns (uint256)
-    {
+    function settle(
+        address owner,
+        address operator
+    ) external returns (uint256) {
         return _settle(owner, operator);
     }
 
