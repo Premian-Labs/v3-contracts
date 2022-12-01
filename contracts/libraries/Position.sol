@@ -64,11 +64,10 @@ library Position {
             );
     }
 
-    function proportion(Key memory self, uint256 price)
-        internal
-        pure
-        returns (uint256)
-    {
+    function proportion(
+        Key memory self,
+        uint256 price
+    ) internal pure returns (uint256) {
         if (price < self.lower) return 0;
         else if (self.lower <= price && price < self.upper)
             return Pricing.proportion(self.lower, self.upper, price);
@@ -95,11 +94,10 @@ library Position {
         return Math.average(self.lower, self.upper);
     }
 
-    function liquidity(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256 contractsLiquidity)
-    {
+    function liquidity(
+        Key memory self,
+        Data memory data
+    ) internal pure returns (uint256 contractsLiquidity) {
         contractsLiquidity = collateralToContracts(
             data.collateral,
             self.strike,
@@ -115,11 +113,10 @@ library Position {
     /**
      * @notice Returns the per-tick liquidity phi (delta) for a specific position.
      */
-    function liquidityPerTick(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
+    function liquidityPerTick(
+        Key memory self,
+        Data memory data
+    ) internal pure returns (uint256) {
         uint256 amountOfTicks = Pricing.amountOfTicksBetween(
             self.lower,
             self.upper
@@ -128,15 +125,14 @@ library Position {
         return self.liquidity(data) / amountOfTicks;
     }
 
-    function transitionPrice(Key memory self, Data memory data)
-        internal
-        pure
-        returns (uint256)
-    {
-        uint256 liquidity = self.liquidity(data);
-        uint256 shift = liquidity == 0
+    function transitionPrice(
+        Key memory self,
+        Data memory data
+    ) internal pure returns (uint256) {
+        uint256 _liquidity = self.liquidity(data);
+        uint256 shift = _liquidity == 0
             ? 0
-            : data.contracts.divWad(liquidity).mulWad(self.upper - self.lower);
+            : data.contracts.divWad(_liquidity).mulWad(self.upper - self.lower);
 
         return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
     }
@@ -258,5 +254,37 @@ library Position {
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
         return (1e18 - nu).mulWad(self.liquidity(data));
+    }
+
+    /**
+     * @notice Convert position to opposite side to make it modifiable. A position is
+     *    modifiable if it's side does not need updating.
+     */
+    function flipSide(Key memory self, Data storage data) internal {
+        // Convert position to opposite side to make it modifiable
+        bool isBuy = data.side == Position.Side.BUY;
+        if (isBuy) {
+            data.collateral = contractsToCollateral(
+                data.contracts,
+                self.strike,
+                self.isCall
+            );
+            data.contracts = self.liquidity(data) - data.contracts;
+        } else {
+            data.collateral = self.liquidity(data).mulWad(
+                contractsToCollateral(
+                    self.averagePrice(),
+                    self.strike,
+                    self.isCall
+                )
+            );
+            data.contracts = Position.collateralToContracts(
+                data.collateral,
+                self.strike,
+                self.isCall
+            );
+        }
+
+        data.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
     }
 }

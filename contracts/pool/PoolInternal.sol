@@ -227,30 +227,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             return;
         }
 
-        // Convert position to opposite side to make it modifiable
-        if (isBuy) {
-            pData.collateral = Position.contractsToCollateral(
-                pData.contracts,
-                p.strike,
-                p.isCall
-            );
-            pData.contracts = p.liquidity(pData) - pData.contracts;
-        } else {
-            pData.collateral = p.liquidity(pData).mulWad(
-                Position.contractsToCollateral(
-                    p.averagePrice(),
-                    l.strike,
-                    l.isCallPool
-                )
-            );
-            pData.contracts = Position.collateralToContracts(
-                pData.collateral,
-                p.strike,
-                p.isCall
-            );
-        }
-
-        pData.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
+        p.flipSide(pData);
 
         _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
     }
@@ -403,6 +380,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
+        // ToDo : Ensure this check is fine (other vars are expected to be 0 too)
         if (pData.contracts + pData.collateral == 0)
             revert Pool__PositionDoesNotExist();
 
@@ -590,20 +568,96 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /**
      * @notice Transfer an LP position to another owner.
      *         NOTE: This function can be called post or prior to expiration.
-     * @param p The position key
+     * @param srcP The position key
      * @param liq The amount of each type of liquidity to transfer
      * @param newOwner The new owner of the transferred liquidity
      * @param newOperator The new operator of the transferred liquidity
      */
     function _transferPosition(
-        Position.Key memory p,
+        Position.Key memory srcP,
         Position.Liquidity memory liq,
         address newOwner,
         address newOperator
     ) internal {
+        if (srcP.owner == newOwner && srcP.operator == newOperator)
+            revert Pool__InvalidTransfer();
+
         PoolStorage.Layout storage l = PoolStorage.layout();
-        p.strike = l.strike;
-        p.isCall = l.isCallPool;
+        srcP.strike = l.strike;
+        srcP.isCall = l.isCallPool;
+
+        Position.Key memory dstP = srcP;
+        dstP.owner = newOwner;
+        dstP.operator = newOwner;
+
+        bytes32 srcKey = srcP.keyHash();
+
+        Position.Data storage dstData = l.positions[dstP.keyHash()];
+
+        // ToDo : Ensure this check is fine (other vars are expected to be 0 too)
+        if (dstData.collateral + dstData.contracts > 0) {
+            Position.Data storage srcData = l.positions[srcKey];
+
+            Position.Side side = srcP.upper <= l.marketPrice
+                ? Position.Side.BUY
+                : Position.Side.SELL;
+
+            if (side != srcData.side) {
+                srcP.flipSide(srcData);
+            }
+
+            if (side != dstData.side) {
+                dstP.flipSide(dstData);
+            }
+
+            if (srcData.side != dstData.side) revert Pool__OppositeSides();
+
+            // call new function which only updates the claimable fees of a position without claiming them
+            {
+                Tick.Data memory lowerTick = _getOrCreateTick(srcP.lower);
+                Tick.Data memory upperTick = _getOrCreateTick(srcP.upper);
+                _updateClaimableFees(
+                    srcData,
+                    _rangeFeeRate(
+                        l,
+                        srcP.lower,
+                        srcP.upper,
+                        lowerTick.externalFeeRate,
+                        upperTick.externalFeeRate
+                    ),
+                    srcP.liquidityPerTick(srcData)
+                );
+            }
+
+            // update claimable fees to reset the fee range rate
+            {
+                Tick.Data memory lowerTick = _getOrCreateTick(dstP.lower);
+                Tick.Data memory upperTick = _getOrCreateTick(dstP.upper);
+                _updateClaimableFees(
+                    dstData,
+                    _rangeFeeRate(
+                        l,
+                        dstP.lower,
+                        dstP.upper,
+                        lowerTick.externalFeeRate,
+                        upperTick.externalFeeRate
+                    ),
+                    dstP.liquidityPerTick(dstData)
+                );
+            }
+
+            dstData.claimableFees = srcData.claimableFees;
+            dstData.collateral = srcData.collateral;
+            dstData.contracts = srcData.contracts;
+
+            delete l.positions[srcKey];
+        } else {
+            Position.Data memory srcData = l.positions[srcKey];
+            delete l.positions[srcKey];
+            l.positions[dstP.keyHash()] = srcData;
+
+            // ToDo : Transfer position token
+        }
 
         if (liq.long > 0 && liq.short > 0)
             revert Pool__CantTransferLongAndShort();

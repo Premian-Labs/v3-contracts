@@ -13,7 +13,9 @@ interface IPoolInternal {
     error Pool__InsufficientWithdrawableBalance();
     error Pool__InvalidBuyOrder();
     error Pool__InvalidSellOrder();
+    error Pool__InvalidTransfer();
     error Pool__InvalidWithdrawal();
+    error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
     error Pool__PositionDoesNotExist();
