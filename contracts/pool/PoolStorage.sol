@@ -49,8 +49,6 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // owner -> operator -> positionLiquidity // ToDo : Improve / Remove ?
-        mapping(address => mapping(address => Position.Liquidity)) externalPositions;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -108,7 +106,9 @@ library PoolStorage {
      * @return lower The lower bound normalized option price
      * @return upper The upper bound normalized option price
      */
-    function parseTokenId(uint256 tokenId)
+    function parseTokenId(
+        uint256 tokenId
+    )
         internal
         pure
         returns (

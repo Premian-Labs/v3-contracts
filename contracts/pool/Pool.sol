@@ -47,18 +47,12 @@ contract Pool is PoolInternal {
         _annihilate(msg.sender, size);
     }
 
-    function exercise(
-        address owner,
-        address operator
-    ) external returns (uint256) {
-        return _exercise(owner, operator);
+    function exercise() external returns (uint256) {
+        return _exercise(msg.sender);
     }
 
-    function settle(
-        address owner,
-        address operator
-    ) external returns (uint256) {
-        return _settle(owner, operator);
+    function settle() external returns (uint256) {
+        return _settle(msg.sender);
     }
 
     function settlePosition(Position.Key memory p) external returns (uint256) {

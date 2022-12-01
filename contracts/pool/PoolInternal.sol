@@ -523,10 +523,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             remaining -= tradeSize;
         }
 
-        Position.Liquidity storage externalPosition = l.externalPositions[
-            owner
-        ][operator];
-
         // ToDo : Implement
         /*
          # update the agent's liquidity state
@@ -612,6 +608,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             if (srcData.side != dstData.side) revert Pool__OppositeSides();
 
+            // ToDo : Move this into a separate function ?
             // call new function which only updates the claimable fees of a position without claiming them
             {
                 Tick.Data memory lowerTick = _getOrCreateTick(srcP.lower);
@@ -671,42 +668,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         //        );
     }
 
-    /**
-     * @notice Transfer an external trade position to another user.
-     *         NOTE: This function can be called post or prior to expiration
-     * @param owner The current owner of the external option contracts
-     * @param operator The current operator of the external option contracts
-     * @param newOwner The new owner of the transferred liquidity
-     * @param newOperator The new operator of the transferred liquidity
-     * @param long The amount of long option contracts to transfer
-     * @param short The amount of short option contracts to transfer
-     */
-    function _transferTrade(
-        address owner,
-        address operator,
-        address newOwner,
-        address newOperator,
-        uint256 long,
-        uint256 short
-    ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        Position.Liquidity storage existingPosition = l.externalPositions[
-            owner
-        ][operator];
-
-        if (existingPosition.long < long || existingPosition.short < short)
-            revert Pool__InsufficientContracts();
-
-        existingPosition.long -= long;
-        existingPosition.short -= short;
-
-        // ToDo : Mint tokens
-
-        l.externalPositions[newOwner][newOperator].long += long;
-        l.externalPositions[newOwner][newOperator].short += short;
-    }
-
     function _calculateExerciseValue(
         PoolStorage.Layout storage l,
         uint256 size
@@ -749,44 +710,30 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /**
      * @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
-     * @param owner The owner of the external option contracts
-     * @param operator The operator of the position
+     * @param holder The holder of the contracts
      */
-    function _exercise(
-        address owner,
-        address operator
-    ) internal returns (uint256) {
+    function _exercise(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 size = l.externalPositions[owner][operator].long;
-
+        uint256 size = _balanceOf(holder, PoolStorage.LONG);
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
-        if (size > 0) {
-            _burn(operator, PoolStorage.LONG, size);
-        }
+        // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
+        _burn(holder, PoolStorage.LONG, size);
 
         if (exerciseValue > 0) {
-            IERC20(l.getPoolToken()).transfer(operator, exerciseValue);
+            IERC20(l.getPoolToken()).transfer(holder, exerciseValue);
         }
-
-        // ToDo : Remove externalPositions ?
-        l.externalPositions[owner][operator].long = 0;
 
         return exerciseValue;
     }
 
     /**
      * @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
-     * @param owner The owner of the external option contracts
-     * @param operator The operator of the position
+     * @param holder The holder of the contracts
      */
-    function _settle(
-        address owner,
-        address operator
-    ) internal returns (uint256) {
+    function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 size = l.externalPositions[owner][operator].short;
-        if (size == 0) revert Pool__ZeroSize();
+        uint256 size = _balanceOf(holder, PoolStorage.SHORT);
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
         uint256 collateralValue = _calculateCollateralValue(
@@ -796,12 +743,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
 
         // Burn short and transfer collateral to operator
-        _burn(operator, PoolStorage.SHORT, size);
+        // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
+        _burn(holder, PoolStorage.SHORT, size);
         if (collateralValue > 0) {
-            IERC20(l.getPoolToken()).transfer(operator, collateralValue);
+            IERC20(l.getPoolToken()).transfer(holder, collateralValue);
         }
-
-        l.externalPositions[owner][operator].short = 0;
 
         return collateralValue;
     }
