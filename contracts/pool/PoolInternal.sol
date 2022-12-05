@@ -253,8 +253,21 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
     }
 
-    function _claim() internal {
-        // ToDo : Implement
+    /**
+     * @notice Updates the claimable fees of a position and transfers the claimed
+     *         fees to the operator of the position. Then resets the claimable fees to
+     *         zero.
+     */
+    function _claim(
+        Position.Key memory p
+    ) internal returns (uint256 claimedFees) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage pData = l.positions[p.keyHash()];
+        _updateClaimableFees(l, p, pData);
+        claimedFees = pData.claimableFees;
+
+        IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
+        pData.claimableFees = 0;
     }
 
     function _verifyTickWidth(uint256 price) internal pure {

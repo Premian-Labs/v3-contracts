@@ -13,8 +13,8 @@ contract Pool is PoolInternal {
         return _getQuote(size, tradeSide);
     }
 
-    function claim() external {
-        _claim();
+    function claim(Position.Key memory p) external {
+        _claim(p);
     }
 
     function deposit(
