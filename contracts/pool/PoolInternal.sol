@@ -156,6 +156,27 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         pData.lastFeeRate = feeRate;
     }
 
+    function _updateClaimableFees(
+        PoolStorage.Layout storage l,
+        Position.Key memory p,
+        Position.Data storage pData
+    ) internal {
+        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
+        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+
+        _updateClaimableFees(
+            pData,
+            _rangeFeeRate(
+                l,
+                p.lower,
+                p.upper,
+                lowerTick.externalFeeRate,
+                upperTick.externalFeeRate
+            ),
+            p.liquidityPerTick(pData)
+        );
+    }
+
     /**
      * @notice Update the collateral and contracts upon deposit / withdrawal.
      *
@@ -608,40 +629,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             if (srcData.side != dstData.side) revert Pool__OppositeSides();
 
-            // ToDo : Move this into a separate function ?
             // call new function which only updates the claimable fees of a position without claiming them
-            {
-                Tick.Data memory lowerTick = _getOrCreateTick(srcP.lower);
-                Tick.Data memory upperTick = _getOrCreateTick(srcP.upper);
-                _updateClaimableFees(
-                    srcData,
-                    _rangeFeeRate(
-                        l,
-                        srcP.lower,
-                        srcP.upper,
-                        lowerTick.externalFeeRate,
-                        upperTick.externalFeeRate
-                    ),
-                    srcP.liquidityPerTick(srcData)
-                );
-            }
-
+            _updateClaimableFees(l, srcP, srcData);
             // update claimable fees to reset the fee range rate
-            {
-                Tick.Data memory lowerTick = _getOrCreateTick(dstP.lower);
-                Tick.Data memory upperTick = _getOrCreateTick(dstP.upper);
-                _updateClaimableFees(
-                    dstData,
-                    _rangeFeeRate(
-                        l,
-                        dstP.lower,
-                        dstP.upper,
-                        lowerTick.externalFeeRate,
-                        upperTick.externalFeeRate
-                    ),
-                    dstP.liquidityPerTick(dstData)
-                );
-            }
+            _updateClaimableFees(l, dstP, dstData);
 
             dstData.claimableFees = srcData.claimableFees;
             dstData.collateral = srcData.collateral;
@@ -655,17 +646,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             // ToDo : Transfer position token
         }
-
-        if (liq.long > 0 && liq.short > 0)
-            revert Pool__CantTransferLongAndShort();
-        // ToDo : Update
-        //        _updatePosition(p, liq, true);
-        // ToDo : Update
-        //        _updatePosition(
-        //            Position.Key(newOwner, newOperator, p.rangeSide, p.lower, p.upper),
-        //            liq,
-        //            false
-        //        );
     }
 
     function _calculateExerciseValue(
