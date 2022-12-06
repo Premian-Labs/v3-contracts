@@ -266,8 +266,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updateClaimableFees(l, p, pData);
         claimedFees = pData.claimableFees;
 
-        IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
         pData.claimableFees = 0;
+        IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
     }
 
     function _verifyTickWidth(uint256 price) internal pure {
@@ -557,24 +557,122 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             remaining -= tradeSize;
         }
 
-        // ToDo : Implement
-        /*
-         # update the agent's liquidity state
-        update_liquidity_and_operator_post_trade(
-            operator=agent,
-            total_premium=total_premium,
-            pool=self,
-            side=side,
-            size=size
-        )
-        */
+        _updateUserAssets(l, operator, totalPremium, side, size);
 
         return totalPremium;
     }
 
-    function _getTradeDelta(Position.Side side, uint256 size) internal {}
+    /**
+     * @notice Compute the change in short / long option contracts of an agent in order to
+     *         transfer the contracts and execute a trade.
+     */
+    function _getTradeDelta(
+        address user,
+        Position.Side side,
+        uint256 size
+    ) internal view returns (int256 deltaLong, int256 deltaShort) {
+        uint256 longs = _balanceOf(user, PoolStorage.LONG);
+        uint256 shorts = _balanceOf(user, PoolStorage.SHORT);
 
-    function _fillQuote() internal {
+        if (side == Position.Side.BUY) {
+            deltaShort = -int256(Math.min(shorts, size));
+            deltaLong = int256(size) + deltaShort;
+        } else {
+            deltaLong = -int256(Math.min(longs, size));
+            deltaShort = int256(size) + deltaLong;
+        }
+    }
+
+    /**
+     * @notice Execute a trade by transferring the net change in short and long option
+     *         contracts and collateral to / from an agent.
+     */
+    function _updateUserAssets(
+        PoolStorage.Layout storage l,
+        address user,
+        uint256 totalPremium,
+        Position.Side side,
+        uint256 size
+    ) internal {
+        (int256 deltaLong, int256 deltaShort) = _getTradeDelta(
+            user,
+            side,
+            size
+        );
+
+        if (
+            deltaLong == deltaShort ||
+            (deltaLong > 0 && deltaShort > 0) ||
+            (deltaLong < 0 && deltaShort < 0)
+        ) revert Pool__InvalidAssetUpdate();
+
+        bool isBuy = deltaLong > 0 || deltaShort < 0;
+
+        uint256 deltaShortAbs = Math.abs(deltaShort);
+        uint256 shortCollateral = Position.contractsToCollateral(
+            deltaShortAbs,
+            l.strike,
+            l.isCallPool
+        );
+
+        int256 deltaCollateral;
+        if (deltaShort < 0) {
+            deltaCollateral = isBuy
+                ? int256(shortCollateral) - int256(totalPremium)
+                : int256(totalPremium);
+        } else {
+            deltaCollateral = isBuy
+                ? -int256(totalPremium)
+                : int256(totalPremium) - int256(shortCollateral);
+        }
+
+        // Transfer collateral
+        if (deltaCollateral < 0) {
+            IERC20(l.getPoolToken()).transferFrom(
+                user,
+                address(this),
+                uint256(-deltaCollateral)
+            );
+        } else if (deltaCollateral > 0) {
+            IERC20(l.getPoolToken()).transfer(user, uint256(deltaCollateral));
+        }
+
+        // Transfer long
+        if (deltaLong < 0) {
+            _burn(user, PoolStorage.LONG, uint256(-deltaLong));
+        } else if (deltaLong > 0) {
+            _mint(user, PoolStorage.LONG, uint256(deltaLong), "");
+        }
+
+        // Transfer short
+        if (deltaShort < 0) {
+            _burn(user, PoolStorage.SHORT, uint256(-deltaShort));
+        } else if (deltaShort > 0) {
+            _mint(user, PoolStorage.SHORT, uint256(deltaShort), "");
+        }
+    }
+
+    /**
+     * @notice Functionality to support the RFQ / OTC system.
+     *         An LP can create a quote for which he will do an OTC trade through
+     *         the exchange. Takers can buy from / sell to the LP then partially or
+     *         fully while having the price guaranteed.
+     */
+    function _fillQuote(
+        address owner,
+        address operator,
+        uint256 size,
+        TradeQuote memory quote
+    ) internal {
+        // ToDo : Implement checks to make sure quote is valid
+
+        if (size > quote.size) revert Pool__AboveQuoteSize();
+
+        if (
+            Pricing.MIN_TICK_PRICE > quote.price ||
+            quote.price > Pricing.MAX_TICK_PRICE
+        ) revert Pool__OutOfBoundsPrice();
+
         // ToDo : Implement
     }
 
