@@ -356,13 +356,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 );
             }
 
-            if (
-                pData.collateral +
-                    pData.contracts +
-                    pData.lastFeeRate +
-                    pData.claimableFees >
-                0
-            ) {
+            if (pData.collateral + pData.contracts > 0) {
                 liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
@@ -414,7 +408,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        // ToDo : Ensure this check is fine (other vars are expected to be 0 too)
         if (pData.contracts + pData.collateral == 0)
             revert Pool__PositionDoesNotExist();
 
@@ -423,18 +416,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         // Initialize variables before position update
         uint256 liquidityPerTick = p.liquidityPerTick(pData);
-        uint256 feeRate = _rangeFeeRate(
-            l,
-            p.lower,
-            p.upper,
-            lowerTick.externalFeeRate,
-            upperTick.externalFeeRate
-        );
         {
+            uint256 feeRate = _rangeFeeRate(
+                l,
+                p.lower,
+                p.upper,
+                lowerTick.externalFeeRate,
+                upperTick.externalFeeRate
+            );
             uint256 short = p.short(pData, l.marketPrice);
             uint256 long = p.long(pData, l.marketPrice);
-
-            if (short > 0 && long > 0) revert Pool__InvalidWithdrawal();
 
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
@@ -449,6 +440,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 l.marketPrice,
                 true
             );
+
+            uint256 collateralToTransfer = collateral;
+
+            // Full withdrawal -> We claim pending fees and reset claimableFees + lastFeeRate
+            if (
+                short + long == contracts &&
+                p.ask(pData, l.marketPrice) + p.bid(pData, l.marketPrice) ==
+                collateral
+            ) {
+                collateralToTransfer += pData.claimableFees;
+                // ToDo : Emit fee claiming event
+                pData.claimableFees = 0;
+                pData.lastFeeRate = 0;
+            }
 
             // Transfer funds from the pool back to the LP
             // Transfer funds from the LP to the pool
@@ -722,7 +727,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
 
-        // ToDo : Ensure this check is fine (other vars are expected to be 0 too)
         if (dstData.collateral + dstData.contracts > 0) {
             Position.Data storage srcData = l.positions[srcKey];
 
