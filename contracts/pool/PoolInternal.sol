@@ -95,15 +95,21 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
 
             {
-                uint256 premium = Position.contractsToCollateral(
-                    Math.average(pricing.marketPrice, nextPrice).mulWad(
-                        tradeSize
-                    ),
+                uint256 premium = Math
+                    .average(pricing.marketPrice, nextPrice)
+                    .mulWad(tradeSize);
+                uint256 takerFee = Position.contractsToCollateral(
+                    _takerFee(size, premium),
                     l.strike,
                     l.isCallPool
                 );
-                // quotePrice * tradeSize
-                uint256 takerFee = _takerFee(size, premium);
+
+                // Denormalize premium
+                premium = Position.contractsToCollateral(
+                    premium,
+                    l.strike,
+                    l.isCallPool
+                );
 
                 totalPremium += isBuy ? premium + takerFee : premium - takerFee;
                 pricing.marketPrice = nextPrice;
@@ -511,12 +517,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     nextMarketPrice
                 );
 
-                uint256 premium = Position.contractsToCollateral(
-                    quotePrice.mulWad(tradeSize),
+                uint256 premium = quotePrice.mulWad(tradeSize);
+                uint256 takerFee = Position.contractsToCollateral(
+                    _takerFee(tradeSize, premium),
                     l.strike,
                     l.isCallPool
                 );
-                uint256 takerFee = _takerFee(tradeSize, premium);
+
+                // Denormalize premium
+                premium = Position.contractsToCollateral(
+                    premium,
+                    l.strike,
+                    l.isCallPool
+                );
 
                 // Update price and liquidity variables
                 uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
@@ -672,6 +685,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
+        // Denormalize premium
         premium = Position.contractsToCollateral(
             premium,
             l.strike,
