@@ -482,12 +482,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @param size The number of contracts being traded
     /// @return The premium paid or received by the taker for the trade
     function _trade(
-        address owner,
-        address operator,
+        address user,
         Position.Side side,
         uint256 size
     ) internal returns (uint256) {
-        // ToDo : Check operator is approved
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (size == 0) revert Pool__ZeroSize();
@@ -561,7 +559,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             remaining -= tradeSize;
         }
 
-        _updateUserAssets(l, operator, totalPremium, side, size);
+        _updateUserAssets(l, user, totalPremium, side, size);
 
         return totalPremium;
     }
@@ -755,6 +753,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         address newOwner,
         address newOperator
     ) internal {
+        // ToDo : Add this logic into the ERC1155 transfer function
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 

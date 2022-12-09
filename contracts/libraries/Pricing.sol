@@ -87,10 +87,6 @@ library Pricing {
     ) internal pure returns (uint256) {
         if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
-        // ToDo : Do we need this assertion like in python ?
-        //        assert (num_ticks % 1) == 0, \
-        //            'The number of ticks within an active tick range has to be an integer.'
-
         return (upper - lower).divWad(MIN_TICK_DISTANCE);
     }
 
