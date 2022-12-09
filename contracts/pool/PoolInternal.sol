@@ -658,7 +658,60 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             quote.price > Pricing.MAX_TICK_PRICE
         ) revert Pool__OutOfBoundsPrice();
 
-        // ToDo : Implement
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        Position.Side takerSide = quote.side == Position.Side.BUY
+            ? Position.Side.SELL
+            : Position.Side.BUY;
+
+        bool isBuy = takerSide == Position.Side.BUY;
+        uint256 premium = quote.price.mulWad(size);
+        uint256 takerFee = Position.contractsToCollateral(
+            _takerFee(size, premium),
+            l.strike,
+            l.isCallPool
+        );
+
+        premium = Position.contractsToCollateral(
+            premium,
+            l.strike,
+            l.isCallPool
+        );
+
+        uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
+            INVERSE_BASIS_POINT;
+        uint256 makerRebate = takerFee - protocolFee;
+        l.protocolFees += protocolFee;
+
+        /////////////////////////
+        // Process trade taker //
+        /////////////////////////
+        uint256 premiumTaker = isBuy ? premium : premium - takerFee;
+
+        _updateUserAssets(l, operator, premiumTaker, takerSide, size);
+
+        /////////////////////////
+        // Process trade maker //
+        /////////////////////////
+        // if the maker is selling (is_buy is True) the protocol
+        // if the taker is buying (is_buy is False) the maker is paying the
+        // premium minus the maker fee, he will be charged the protocol fee.
+        // summary:
+        // is_buy:
+        //         quote.premium              quote.premium - PF
+        //   LT --------------------> Pool --------------------> LP
+        // ~is_buy:
+        //         quote.premium - TF         quote.premium - MF
+        //   LT <-------------------- Pool <-------------------- LP
+        //
+        // note that the logic is different from the trade logic, since the
+        // maker rebate gets directly transferred to the LP instead of
+        // incrementing the global rate
+        uint256 premiumMaker = isBuy
+            ? premium - protocolFee
+            : premium - makerRebate;
+
+        _updateUserAssets(l, quote.provider, premiumMaker, quote.side, size);
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
