@@ -16,11 +16,6 @@ library Position {
 
     error Position__NotEnoughCollateral();
 
-    enum Side {
-        BUY,
-        SELL
-    }
-
     // All the data used to calculate the key of the position
     struct Key {
         // The Agent that owns the exposure change of the Position
@@ -46,7 +41,8 @@ library Position {
         uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim
         uint256 claimableFees;
-        Side side;
+        // Whether side is BUY or SELL
+        bool isBuy;
     }
 
     struct Liquidity {
@@ -103,7 +99,7 @@ library Position {
         );
 
         return
-            data.side == Side.BUY
+            data.isBuy
                 ? contractsLiquidity.divWad(self.averagePrice())
                 : contractsLiquidity + data.contracts;
     }
@@ -130,7 +126,7 @@ library Position {
             ? 0
             : data.contracts.divWad(_liquidity).mulWad(self.upper - self.lower);
 
-        return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
+        return data.isBuy ? self.upper - shift : self.lower + shift;
     }
 
     /// @notice  nu = proportion(p, p^*, p_upper)
@@ -182,7 +178,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY
+        uint256 x = data.isBuy
             ? contractsToCollateral(data.contracts, self.strike, self.isCall)
             : data.collateral;
         return (1e18 - nu).mulWad(x);
@@ -197,7 +193,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY
+        uint256 x = data.isBuy
             ? data.contracts
             : collateralToContracts(data.collateral, self.strike, self.isCall);
         return (1e18 - nu).mulWad(self.liquidity(data) - x);
@@ -209,7 +205,7 @@ library Position {
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = self.proportion(price);
-        uint256 x = data.side == Side.BUY
+        uint256 x = data.isBuy
             ? data.contracts
             : collateralToContracts(data.collateral, self.strike, self.isCall);
         return nu.mulWad(x);
@@ -245,8 +241,7 @@ library Position {
     ///    modifiable if it's side does not need updating.
     function flipSide(Key memory self, Data storage data) internal {
         // Convert position to opposite side to make it modifiable
-        bool isBuy = data.side == Position.Side.BUY;
-        if (isBuy) {
+        if (data.isBuy) {
             data.collateral = contractsToCollateral(
                 data.contracts,
                 self.strike,
@@ -268,6 +263,6 @@ library Position {
             );
         }
 
-        data.side = isBuy ? Position.Side.SELL : Position.Side.BUY;
+        data.isBuy = !data.isBuy;
     }
 }

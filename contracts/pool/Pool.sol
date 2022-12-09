@@ -5,12 +5,15 @@ pragma solidity ^0.8.0;
 import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
+//import {IPool} from "./IPool.sol";
+
+// ToDo : Add IPool inheritance
 contract Pool is PoolInternal {
     function getQuote(
         uint256 size,
-        Position.Side tradeSide
+        bool isBuy
     ) external view returns (uint256) {
-        return _getQuote(size, tradeSide);
+        return _getQuote(size, isBuy);
     }
 
     function claim(Position.Key memory p) external {
@@ -19,11 +22,11 @@ contract Pool is PoolInternal {
 
     function deposit(
         Position.Key memory p,
-        Position.Side side,
+        bool isBuy,
         uint256 collateral,
         uint256 contracts
     ) external {
-        _deposit(p, side, collateral, contracts);
+        _deposit(p, isBuy, collateral, contracts);
     }
 
     function withdraw(
@@ -34,13 +37,8 @@ contract Pool is PoolInternal {
         _withdraw(p, collateral, contracts);
     }
 
-    function trade(
-        address owner,
-        address operator,
-        Position.Side tradeSide,
-        uint256 size
-    ) external returns (uint256) {
-        return _trade(owner, operator, tradeSide, size);
+    function trade(uint256 size, bool isBuy) external returns (uint256) {
+        return _trade(msg.sender, size, isBuy);
     }
 
     function annihilate(uint256 size) external {

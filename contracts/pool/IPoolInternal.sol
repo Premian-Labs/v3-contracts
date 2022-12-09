@@ -35,6 +35,6 @@ interface IPoolInternal {
         address provider;
         uint256 price;
         uint256 size;
-        Position.Side side;
+        bool isBuy;
     }
 }

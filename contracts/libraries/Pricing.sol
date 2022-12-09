@@ -34,12 +34,12 @@ library Pricing {
         uint256 marketPrice; // The current market price
         uint256 lower; // The normalized price of the lower bound of the range
         uint256 upper; // The normalized price of the upper bound of the range
-        Position.Side tradeSide; // The direction of the trade
+        bool isBuy; // The direction of the trade
     }
 
     function fromPool(
         PoolStorage.Layout storage l,
-        Position.Side tradeSide
+        bool isBuy
     ) internal view returns (Pricing.Args memory) {
         uint256 currentTick = l.currentTick;
 
@@ -49,7 +49,7 @@ library Pricing {
                 l.marketPrice,
                 currentTick,
                 l.tickIndex.getNextNode(currentTick),
-                tradeSide
+                isBuy
             );
     }
 
@@ -110,10 +110,7 @@ library Pricing {
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
     function maxTradeSize(Args memory args) internal pure returns (uint256) {
-        return
-            args.tradeSide == Position.Side.BUY
-                ? askLiquidity(args)
-                : bidLiquidity(args);
+        return args.isBuy ? askLiquidity(args) : bidLiquidity(args);
     }
 
     /// @notice         Computes price reached from the current lower/upper tick after
@@ -122,10 +119,8 @@ library Pricing {
         Args memory args,
         uint256 tradeSize
     ) internal pure returns (uint256) {
-        bool isBuy = args.tradeSide == Position.Side.BUY;
-
         uint256 liq = liquidity(args);
-        if (liq == 0) return isBuy ? args.upper : args.lower;
+        if (liq == 0) return args.isBuy ? args.upper : args.lower;
 
         uint256 _proportion = tradeSize.divWad(liq);
 
@@ -133,7 +128,7 @@ library Pricing {
             revert Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
-            isBuy
+            args.isBuy
                 ? args.lower + (args.upper - args.lower).mulWad(_proportion)
                 : args.upper - (args.upper - args.lower).mulWad(_proportion);
     }
@@ -143,9 +138,7 @@ library Pricing {
         Args memory args,
         uint256 tradeSize
     ) internal pure returns (uint256) {
-        uint256 offset = args.tradeSide == Position.Side.BUY
-            ? bidLiquidity(args)
-            : askLiquidity(args);
+        uint256 offset = args.isBuy ? bidLiquidity(args) : askLiquidity(args);
         return price(args, offset + tradeSize);
     }
 }

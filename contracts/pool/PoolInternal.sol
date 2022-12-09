@@ -54,7 +54,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _getQuote(
         uint256 size,
-        Position.Side tradeSide
+        bool isBuy
     ) internal view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -62,14 +62,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
-        bool isBuy = tradeSide == Position.Side.BUY;
-
         Pricing.Args memory pricing = Pricing.Args(
             l.liquidityRate,
             l.marketPrice,
             l.currentTick,
             l.tickIndex.getNextNode(l.currentTick),
-            tradeSide
+            isBuy
         );
 
         uint256 liquidity = pricing.liquidity();
@@ -211,9 +209,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // A position is modifiable if its side does not need updating
         bool isOrderLeft = p.upper <= price;
 
-        bool isBuy = pData.side == Position.Side.BUY;
-        if (isBuy == isOrderLeft) {
-            if (isBuy) {
+        if (pData.isBuy == isOrderLeft) {
+            if (pData.isBuy) {
                 uint256 _collateral = withdraw
                     ? pData.collateral - collateral
                     : pData.collateral + collateral;
@@ -279,7 +276,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @param contracts The amount of contracts to be deposited
     function _deposit(
         Position.Key memory p,
-        Position.Side side,
+        bool isBuy,
         uint256 collateral,
         uint256 contracts
     ) internal {
@@ -300,10 +297,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             p.lower >= l.currentTick &&
             p.upper <= l.tickIndex.getNextNode(l.currentTick)
         ) {
-            l.marketPrice = side == Position.Side.BUY ? p.upper : p.lower;
+            l.marketPrice = isBuy ? p.upper : p.lower;
         }
 
-        if (side == Position.Side.BUY) {
+        if (isBuy) {
             // Check if valid buy order
             if (p.upper > l.marketPrice) revert Pool__InvalidBuyOrder();
         } else {
@@ -325,9 +322,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 address(this),
                 p.owner,
                 address(this),
-                side == Position.Side.SELL
-                    ? PoolStorage.LONG
-                    : PoolStorage.SHORT,
+                isBuy ? PoolStorage.SHORT : PoolStorage.LONG,
                 contracts,
                 ""
             );
@@ -369,7 +364,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pData.collateral = collateral;
                 pData.contracts = contracts;
                 pData.lastFeeRate = feeRate;
-                pData.side = side;
+                pData.isBuy = isBuy;
             }
         }
 
@@ -478,22 +473,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     }
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
-    /// @param side Whether the taker is buying or selling
     /// @param size The number of contracts being traded
+    /// @param isBuy Whether the taker is buying or selling
     /// @return The premium paid or received by the taker for the trade
     function _trade(
         address user,
-        Position.Side side,
-        uint256 size
+        uint256 size,
+        bool isBuy
     ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (size == 0) revert Pool__ZeroSize();
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
-        bool isBuy = side == Position.Side.BUY;
-
-        Pricing.Args memory pricing = Pricing.fromPool(l, side);
+        Pricing.Args memory pricing = Pricing.fromPool(l, isBuy);
 
         uint256 totalPremium;
         uint256 remaining = size;
@@ -559,7 +552,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             remaining -= tradeSize;
         }
 
-        _updateUserAssets(l, user, totalPremium, side, size);
+        _updateUserAssets(l, user, totalPremium, size, isBuy);
 
         return totalPremium;
     }
@@ -568,13 +561,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ///         transfer the contracts and execute a trade.=
     function _getTradeDelta(
         address user,
-        Position.Side side,
-        uint256 size
+        uint256 size,
+        bool isBuy
     ) internal view returns (int256 deltaLong, int256 deltaShort) {
         uint256 longs = _balanceOf(user, PoolStorage.LONG);
         uint256 shorts = _balanceOf(user, PoolStorage.SHORT);
 
-        if (side == Position.Side.BUY) {
+        if (isBuy) {
             deltaShort = -int256(Math.min(shorts, size));
             deltaLong = int256(size) + deltaShort;
         } else {
@@ -589,13 +582,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         address user,
         uint256 totalPremium,
-        Position.Side side,
-        uint256 size
+        uint256 size,
+        bool isBuy
     ) internal {
         (int256 deltaLong, int256 deltaShort) = _getTradeDelta(
             user,
-            side,
-            size
+            size,
+            isBuy
         );
 
         if (
@@ -604,7 +597,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             (deltaLong < 0 && deltaShort < 0)
         ) revert Pool__InvalidAssetUpdate();
 
-        bool isBuy = deltaLong > 0 || deltaShort < 0;
+        bool _isBuy = deltaLong > 0 || deltaShort < 0;
 
         uint256 deltaShortAbs = Math.abs(deltaShort);
         uint256 shortCollateral = Position.contractsToCollateral(
@@ -615,11 +608,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         int256 deltaCollateral;
         if (deltaShort < 0) {
-            deltaCollateral = isBuy
+            deltaCollateral = _isBuy
                 ? int256(shortCollateral) - int256(totalPremium)
                 : int256(totalPremium);
         } else {
-            deltaCollateral = isBuy
+            deltaCollateral = _isBuy
                 ? -int256(totalPremium)
                 : int256(totalPremium) - int256(shortCollateral);
         }
@@ -655,8 +648,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
     function _fillQuote(
-        address owner,
-        address operator,
+        address user,
         uint256 size,
         TradeQuote memory quote
     ) internal {
@@ -671,11 +663,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        Position.Side takerSide = quote.side == Position.Side.BUY
-            ? Position.Side.SELL
-            : Position.Side.BUY;
-
-        bool isBuy = takerSide == Position.Side.BUY;
         uint256 premium = quote.price.mulWad(size);
         uint256 takerFee = Position.contractsToCollateral(
             _takerFee(size, premium),
@@ -698,9 +685,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         /////////////////////////
         // Process trade taker //
         /////////////////////////
-        uint256 premiumTaker = isBuy ? premium : premium - takerFee;
+        uint256 premiumTaker = !quote.isBuy
+            ? premium // Taker Buying
+            : premium - takerFee; // Taker selling
 
-        _updateUserAssets(l, operator, premiumTaker, takerSide, size);
+        _updateUserAssets(l, user, premiumTaker, size, !quote.isBuy);
 
         /////////////////////////
         // Process trade maker //
@@ -719,11 +708,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // note that the logic is different from the trade logic, since the
         // maker rebate gets directly transferred to the LP instead of
         // incrementing the global rate
-        uint256 premiumMaker = isBuy
-            ? premium - protocolFee
-            : premium - makerRebate;
+        uint256 premiumMaker = quote.isBuy
+            ? premium - makerRebate // Maker buying
+            : premium - protocolFee; // Maker selling
 
-        _updateUserAssets(l, quote.provider, premiumMaker, quote.side, size);
+        _updateUserAssets(l, quote.provider, premiumMaker, size, quote.isBuy);
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
@@ -772,19 +761,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (dstData.collateral + dstData.contracts > 0) {
             Position.Data storage srcData = l.positions[srcKey];
 
-            Position.Side side = srcP.upper <= l.marketPrice
-                ? Position.Side.BUY
-                : Position.Side.SELL;
+            bool isBuy = srcP.upper <= l.marketPrice;
 
-            if (side != srcData.side) {
+            if (isBuy != srcData.isBuy) {
                 srcP.flipSide(srcData);
             }
 
-            if (side != dstData.side) {
+            if (isBuy != dstData.isBuy) {
                 dstP.flipSide(dstData);
             }
 
-            if (srcData.side != dstData.side) revert Pool__OppositeSides();
+            if (srcData.isBuy != dstData.isBuy) revert Pool__OppositeSides();
 
             // call new function which only updates the claimable fees of a position without claiming them
             _updateClaimableFees(l, srcP, srcData);
@@ -1067,7 +1054,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Check if deposit or withdrawal
         if (delta > 0) {
             while (l.tickIndex.getNextNode(l.currentTick) < marketPrice) {
-                _cross(Position.Side.BUY);
+                _cross(true);
             }
         } else {
             _removeTickIfNotActive(lower);
@@ -1083,10 +1070,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         l.globalFeeRate += amount.divWad(l.liquidityRate);
     }
 
-    function _cross(Position.Side side) internal {
+    function _cross(bool isBuy) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (side == Position.Side.BUY) {
+        if (isBuy) {
             uint256 right = l.tickIndex.getNextNode(l.currentTick);
             if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange();
             l.currentTick = right;
@@ -1103,7 +1090,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.globalFeeRate -
             currentTick.externalFeeRate;
 
-        if (side == Position.Side.SELL) {
+        if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
                 revert Pool__TickOutOfRange();
             l.currentTick = l.tickIndex.getPreviousNode(l.currentTick);
