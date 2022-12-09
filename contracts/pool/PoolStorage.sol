@@ -58,9 +58,7 @@ library PoolStorage {
         }
     }
 
-    /**
-     * @notice Get the token used as options collateral and for payment of premium. (Base for PUT pools, underlying for CALL pools)
-     */
+    /// @notice Get the token used as options collateral and for payment of premium. (Base for PUT pools, underlying for CALL pools)
     function getPoolToken(Layout storage l) internal view returns (address) {
         return l.isCallPool ? l.underlying : l.base;
     }
@@ -75,14 +73,12 @@ library PoolStorage {
         return l.spot;
     }
 
-    /**
-     * @notice calculate ERC1155 token id for given option parameters
-     * @param operator The current operator of the position
-     * @param rangeSide The side of the range position
-     * @param lower The lower bound normalized option price
-     * @param upper The upper bound normalized option price
-     * @return tokenId token id
-     */
+    /// @notice calculate ERC1155 token id for given option parameters
+    /// @param operator The current operator of the position
+    /// @param rangeSide The side of the range position
+    /// @param lower The lower bound normalized option price
+    /// @param upper The upper bound normalized option price
+    /// @return tokenId token id
     function formatTokenId(
         address operator,
         Position.Side rangeSide,
@@ -98,14 +94,12 @@ library PoolStorage {
             uint256(rangeSide);
     }
 
-    /**
-     * @notice derive option maturity and strike price from ERC1155 token id
-     * @param tokenId token id
-     * @return operator The current operator of the position
-     * @return rangeSide The side of the range position
-     * @return lower The lower bound normalized option price
-     * @return upper The upper bound normalized option price
-     */
+    /// @notice derive option maturity and strike price from ERC1155 token id
+    /// @param tokenId token id
+    /// @return operator The current operator of the position
+    /// @return rangeSide The side of the range position
+    /// @return lower The lower bound normalized option price
+    /// @return upper The upper bound normalized option price
     function parseTokenId(
         uint256 tokenId
     )

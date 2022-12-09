@@ -9,14 +9,12 @@ import {WadMath} from "./WadMath.sol";
 
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
-/**
- * @notice This class implements the methods necessary for computing price movements within a tick range.
- *         Warnings
- *         --------
- *         This class should not be used for computations that span multiple ticks.
- *         Instead, the user should use the methods of this class to simplify
- *         computations for more complex price calculations.
- */
+/// @notice This class implements the methods necessary for computing price movements within a tick range.
+///         Warnings
+///         --------
+///         This class should not be used for computations that span multiple ticks.
+///         Instead, the user should use the methods of this class to simplify
+///         computations for more complex price calculations.
 library Pricing {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
@@ -39,11 +37,10 @@ library Pricing {
         Position.Side tradeSide; // The direction of the trade
     }
 
-    function fromPool(PoolStorage.Layout storage l, Position.Side tradeSide)
-        internal
-        view
-        returns (Pricing.Args memory)
-    {
+    function fromPool(
+        PoolStorage.Layout storage l,
+        Position.Side tradeSide
+    ) internal view returns (Pricing.Args memory) {
         uint256 currentTick = l.currentTick;
 
         return
@@ -72,25 +69,22 @@ library Pricing {
         return proportion(args.lower, args.upper, args.marketPrice);
     }
 
-    /**
-     *Find the number of ticks of an active tick range. Used to compute
-     *the aggregate, bid or ask liquidity either of the pool or the range order.
-     *
-     * Example:
-     *   min_tick_distance = 0.01
-     *   lower = 0.01
-     *   upper = 0.03
-     *   0.01                0.02               0.03
-     *      |xxxxxxxxxxxxxxxxxx|xxxxxxxxxxxxxxxxxx|
-     *  Then there are two active ticks, 0.01 and 0.02, within the active tick
-     *  range.
-     *  num_ticks = 2
-     */
-    function amountOfTicksBetween(uint256 lower, uint256 upper)
-        internal
-        pure
-        returns (uint256)
-    {
+    /// @notice Find the number of ticks of an active tick range. Used to compute
+    /// the aggregate, bid or ask liquidity either of the pool or the range order.
+    ///
+    /// Example:
+    ///   min_tick_distance = 0.01
+    ///   lower = 0.01
+    ///   upper = 0.03
+    ///   0.01                0.02               0.03
+    ///      |xxxxxxxxxxxxxxxxxx|xxxxxxxxxxxxxxxxxx|
+    ///  Then there are two active ticks, 0.01 and 0.02, within the active tick
+    ///  range.
+    ///  num_ticks = 2
+    function amountOfTicksBetween(
+        uint256 lower,
+        uint256 upper
+    ) internal pure returns (uint256) {
         if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
         // ToDo : Do we need this assertion like in python ?
@@ -100,11 +94,9 @@ library Pricing {
         return (upper - lower).divWad(MIN_TICK_DISTANCE);
     }
 
-    function amountOfTicksBetween(Args memory args)
-        internal
-        pure
-        returns (uint256)
-    {
+    function amountOfTicksBetween(
+        Args memory args
+    ) internal pure returns (uint256) {
         return amountOfTicksBetween(args.lower, args.upper);
     }
 
@@ -120,9 +112,7 @@ library Pricing {
         return (1e18 - proportion(args)).mulWad(liquidity(args));
     }
 
-    /**
-     * @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
-     */
+    /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
     function maxTradeSize(Args memory args) internal pure returns (uint256) {
         return
             args.tradeSide == Position.Side.BUY
@@ -130,15 +120,12 @@ library Pricing {
                 : bidLiquidity(args);
     }
 
-    /**
-     * @notice         Computes price reached from the current lower/upper tick after
-     *                 buying/selling `trade_size` amount of contracts.
-     */
-    function price(Args memory args, uint256 tradeSize)
-        internal
-        pure
-        returns (uint256)
-    {
+    /// @notice         Computes price reached from the current lower/upper tick after
+    ///                 buying/selling `trade_size` amount of contracts.
+    function price(
+        Args memory args,
+        uint256 tradeSize
+    ) internal pure returns (uint256) {
         bool isBuy = args.tradeSide == Position.Side.BUY;
 
         uint256 liq = liquidity(args);
@@ -155,14 +142,11 @@ library Pricing {
                 : args.upper - (args.upper - args.lower).mulWad(_proportion);
     }
 
-    /**
-     * @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts.
-     */
-    function nextPrice(Args memory args, uint256 tradeSize)
-        internal
-        pure
-        returns (uint256)
-    {
+    /// @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts.
+    function nextPrice(
+        Args memory args,
+        uint256 tradeSize
+    ) internal pure returns (uint256) {
         uint256 offset = args.tradeSide == Position.Side.BUY
             ? bidLiquidity(args)
             : askLiquidity(args);

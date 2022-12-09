@@ -35,12 +35,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
     uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
 
-    /**
-     * @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
-     * @param size The size of a trade (number of contracts)
-     * @param premium The total cost of option(s) for a purchase
-     * @return The taker fee for an option trade
-     */
+    /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param size The size of a trade (number of contracts)
+    /// @param premium The total cost of option(s) for a purchase
+    /// @return The taker fee for an option trade
     function _takerFee(
         uint256 size,
         uint256 premium
@@ -138,9 +136,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
-    /**
-     * @notice Updates the amount of fees an LP can claim for a position (without claiming).
-     */
+    /// @notice Updates the amount of fees an LP can claim for a position (without claiming).
     function _updateClaimableFees(
         Position.Data storage pData,
         uint256 feeRate,
@@ -177,13 +173,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
     }
 
-    /**
-     * @notice Update the collateral and contracts upon deposit / withdrawal.
-     *
-     * Withdrawals.
-     * While straddling the market price only full withdrawals are
-     * admissible. If the market price is outside of the tick range.
-     */
+    /// @notice Update the collateral and contracts upon deposit / withdrawal.
+    ///
+    /// Withdrawals.
+    /// While straddling the market price only full withdrawals are
+    /// admissible. If the market price is outside of the tick range.
     function _updatePosition(
         PoolStorage.Layout storage l,
         Position.Key memory p,
@@ -253,11 +247,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
     }
 
-    /**
-     * @notice Updates the claimable fees of a position and transfers the claimed
-     *         fees to the operator of the position. Then resets the claimable fees to
-     *         zero.
-     */
+    /// @notice Updates the claimable fees of a position and transfers the claimed
+    ///         fees to the operator of the position. Then resets the claimable fees to
+    ///         zero.
     function _claim(
         Position.Key memory p
     ) internal returns (uint256 claimedFees) {
@@ -275,12 +267,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             revert Pool__TickWidthInvalid();
     }
 
-    /**
-     * @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
-     * @param p The position key
-     * @param collateral The amount of collateral to be deposited
-     * @param contracts The amount of contracts to be deposited
-     */
+    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @param p The position key
+    /// @param collateral The amount of collateral to be deposited
+    /// @param contracts The amount of contracts to be deposited
     function _deposit(
         Position.Key memory p,
         Position.Side side,
@@ -386,12 +376,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
     }
 
-    /**
-     * @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
-     * @param p The position key
-     * @param collateral The amount of collateral to be deposited
-     * @param contracts The amount of contracts to be deposited
-     */
+    /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+    /// @param p The position key
+    /// @param collateral The amount of collateral to be deposited
+    /// @param contracts The amount of contracts to be deposited
     function _withdraw(
         Position.Key memory p,
         uint256 collateral,
@@ -483,12 +471,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Add return values ?
     }
 
-    /**
-     * @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
-     * @param side Whether the taker is buying or selling
-     * @param size The number of contracts being traded
-     * @return The premium paid or received by the taker for the trade
-     */
+    /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    /// @param side Whether the taker is buying or selling
+    /// @param size The number of contracts being traded
+    /// @return The premium paid or received by the taker for the trade
     function _trade(
         address owner,
         address operator,
@@ -567,10 +553,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
-    /**
-     * @notice Compute the change in short / long option contracts of an agent in order to
-     *         transfer the contracts and execute a trade.
-     */
+    /// @notice Compute the change in short / long option contracts of an agent in order to
+    ///         transfer the contracts and execute a trade.=
     function _getTradeDelta(
         address user,
         Position.Side side,
@@ -588,10 +572,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
-    /**
-     * @notice Execute a trade by transferring the net change in short and long option
-     *         contracts and collateral to / from an agent.
-     */
+    /// @notice Execute a trade by transferring the net change in short and long option
+    ///         contracts and collateral to / from an agent.
     function _updateUserAssets(
         PoolStorage.Layout storage l,
         address user,
@@ -657,12 +639,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
-    /**
-     * @notice Functionality to support the RFQ / OTC system.
-     *         An LP can create a quote for which he will do an OTC trade through
-     *         the exchange. Takers can buy from / sell to the LP then partially or
-     *         fully while having the price guaranteed.
-     */
+    /// @notice Functionality to support the RFQ / OTC system.
+    ///         An LP can create a quote for which he will do an OTC trade through
+    ///         the exchange. Takers can buy from / sell to the LP then partially or
+    ///         fully while having the price guaranteed.
     function _fillQuote(
         address owner,
         address operator,
@@ -681,10 +661,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // ToDo : Implement
     }
 
-    /**
-     * @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
-     *         NOTE: This function can be called post or prior to expiration.
-     */
+    /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
+    ///         NOTE: This function can be called post or prior to expiration.
     function _annihilate(address owner, uint256 size) internal {
         if (size == 0) revert Pool__ZeroSize();
 
@@ -698,14 +676,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
     }
 
-    /**
-     * @notice Transfer an LP position to another owner.
-     *         NOTE: This function can be called post or prior to expiration.
-     * @param srcP The position key
-     * @param liq The amount of each type of liquidity to transfer
-     * @param newOwner The new owner of the transferred liquidity
-     * @param newOperator The new operator of the transferred liquidity
-     */
+    /// @notice Transfer an LP position to another owner.
+    ///         NOTE: This function can be called post or prior to expiration.
+    /// @param srcP The position key
+    /// @param liq The amount of each type of liquidity to transfer
+    /// @param newOwner The new owner of the transferred liquidity
+    /// @param newOperator The new operator of the transferred liquidity
     function _transferPosition(
         Position.Key memory srcP,
         Position.Liquidity memory liq,
@@ -803,10 +779,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 : size.mulWad(l.strike) - exerciseValue;
     }
 
-    /**
-     * @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
-     * @param holder The holder of the contracts
-     */
+    /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
+    /// @param holder The holder of the contracts
     function _exercise(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
@@ -822,10 +796,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return exerciseValue;
     }
 
-    /**
-     * @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
-     * @param holder The holder of the contracts
-     */
+    /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
+    /// @param holder The holder of the contracts
     function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
@@ -847,10 +819,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return collateralValue;
     }
 
-    /**
-     * @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
-     * @param p The position key
-     */
+    /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
+    /// @param p The position key
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         p.strike = l.strike;
@@ -929,9 +899,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
-    /**
-     * @notice Gets the nearest tick that is less than or equal to `price`.
-     */
+    /// @notice Gets the nearest tick that is less than or equal to `price`.=
     function _getNearestTickBelow(
         uint256 price
     ) internal view returns (uint256) {
@@ -953,11 +921,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return left;
     }
 
-    /**
-     * @notice Creates a Tick for a given price, or returns the existing tick.
-     * @param price The price of the Tick
-     * @return tick The Tick for a given price
-     */
+    /// @notice Creates a Tick for a given price, or returns the existing tick.
+    /// @param price The price of the Tick
+    /// @return tick The Tick for a given price
     function _getOrCreateTick(
         uint256 price
     ) internal returns (Tick.Data memory tick) {
@@ -1078,22 +1044,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
-    /**
-     * @notice Calculates the growth and exposure change between the lower
-     *    and upper Ticks of a Position.
-     *
-     *                     l         ▼         u
-     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
-     *    => (global - external(l) - external(u))
-     *
-     *                ▼    l                   u
-     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
-     *    => (global - (global - external(l)) - external(u))
-     *
-     *                     l                   u    ▼
-     *    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
-     *    => (global - external(l) - (global - external(u)))
-     */
+    /// @notice Calculates the growth and exposure change between the lower
+    ///    and upper Ticks of a Position.
+    ///
+    ///                     l         ▼         u
+    ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+    ///    => (global - external(l) - external(u))
+    ///
+    ///                ▼    l                   u
+    ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+    ///    => (global - (global - external(l)) - external(u))
+    ///
+    ///                     l                   u    ▼
+    ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
+    ///    => (global - external(l) - (global - external(u)))
     function _rangeFeeRate(
         PoolStorage.Layout storage l,
         uint256 lower,

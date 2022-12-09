@@ -7,10 +7,8 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
 
-/**
- * @notice Keeps track of LP positions
- *         Stores the lower and upper Ticks of a user's range order, and tracks the pro-rata exposure of the order.
- */
+/// @notice Keeps track of LP positions
+///         Stores the lower and upper Ticks of a user's range order, and tracks the pro-rata exposure of the order.
 library Position {
     using Math for int256;
     using WadMath for uint256;
@@ -110,9 +108,7 @@ library Position {
                 : contractsLiquidity + data.contracts;
     }
 
-    /**
-     * @notice Returns the per-tick liquidity phi (delta) for a specific position.
-     */
+    /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
     function liquidityPerTick(
         Key memory self,
         Data memory data
@@ -137,20 +133,18 @@ library Position {
         return data.side == Side.BUY ? self.upper - shift : self.lower + shift;
     }
 
-    /**
-     * @notice  nu = proportion(p, p^*, p_upper)
-     *   Right-side:
-     *       Amount of bid-side collateral generated through underwriting
-     *       options (the revenue generated through premiums collected) and
-     *       closing long positions.
-     *
-     *           bid(p) = nu * (c + d) * mu(p_lower, p_upper)
-     *
-     *   Left-side:
-     *       The amount of bid-side collateral remaining.
-     *
-     *           bid(p) = nu * c
-     */
+    /// @notice  nu = proportion(p, p^*, p_upper)
+    ///   Right-side:
+    ///       Amount of bid-side collateral generated through underwriting
+    ///       options (the revenue generated through premiums collected) and
+    ///       closing long positions.
+    ///
+    ///           bid(p) = nu * (c + d) * mu(p_lower, p_upper)
+    ///
+    ///   Left-side:
+    ///       The amount of bid-side collateral remaining.
+    ///
+    ///           bid(p) = nu * c
     function bid(
         Key memory self,
         Data memory data,
@@ -173,17 +167,15 @@ library Position {
         return contractsToCollateral(result, self.strike, self.isCall);
     }
 
-    /**
-     * @notice
-     *    nu = proportion(p, p^*, p_upper)
-     *    Right-side:
-     *        Amount of ask-side collateral available when underwriting.
-     *        ask(p) = (1 - nu) *  c
-     *    Left-side:
-     *        Amount of ask-side collateral liberated through closing short
-     *        positions.
-     *        ask(p) = (1- nu) * d
-     */
+    /// @notice
+    ///    nu = proportion(p, p^*, p_upper)
+    ///    Right-side:
+    ///        Amount of ask-side collateral available when underwriting.
+    ///        ask(p) = (1 - nu) *  c
+    ///    Left-side:
+    ///        Amount of ask-side collateral liberated through closing short
+    ///        positions.
+    ///        ask(p) = (1- nu) * d
     function ask(
         Key memory self,
         Data memory data,
@@ -196,11 +188,9 @@ library Position {
         return (1e18 - nu).mulWad(x);
     }
 
-    /**
-     * @notice nu = proportion(p, p_lower, p^*)
-     *    Right-side:     long(p) = (1 - nu) *  d
-     *    Left-side:      long(p) = (1 - nu) * (c/mu - d)
-     */
+    /// @notice nu = proportion(p, p_lower, p^*)
+    ///    Right-side:     long(p) = (1 - nu) *  d
+    ///    Left-side:      long(p) = (1 - nu) * (c/mu - d)
     function long(
         Key memory self,
         Data memory data,
@@ -225,11 +215,9 @@ library Position {
         return nu.mulWad(x);
     }
 
-    /**
-     * @notice Represents the total amount of bid liquidity the position is holding
-     * at a particular price. In other words, it is the total amount of buying
-     * power the position has at the current price.
-     */
+    /// @notice Represents the total amount of bid liquidity the position is holding
+    /// at a particular price. In other words, it is the total amount of buying
+    /// power the position has at the current price.
     function bidLiquidity(
         Key memory self,
         Data memory data,
@@ -239,14 +227,11 @@ library Position {
         return nu.mulWad(self.liquidity(data));
     }
 
-    /**
-     * @notice Represents the total amount of ask liquidity the position is holding
-     * at a particular price. In other words, it is the total amount of
-     * selling power the position has at the current price.
-     *
-     * Can also be computed as,
-     *     total_bid(p) = ask(p) + long(p)
-     */
+    /// @notice Represents the total amount of ask liquidity the position is holding
+    /// at a particular price. In other words, it is the total amount of
+    /// selling power the position has at the current price.
+    /// Can also be computed as,
+    ///     total_bid(p) = ask(p) + long(p)
     function askLiquidity(
         Key memory self,
         Data memory data,
@@ -256,10 +241,8 @@ library Position {
         return (1e18 - nu).mulWad(self.liquidity(data));
     }
 
-    /**
-     * @notice Convert position to opposite side to make it modifiable. A position is
-     *    modifiable if it's side does not need updating.
-     */
+    /// @notice Convert position to opposite side to make it modifiable. A position is
+    ///    modifiable if it's side does not need updating.
     function flipSide(Key memory self, Data storage data) internal {
         // Convert position to opposite side to make it modifiable
         bool isBuy = data.side == Position.Side.BUY;

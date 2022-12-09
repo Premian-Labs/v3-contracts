@@ -12,9 +12,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {PoolStorage} from "./PoolStorage.sol";
 
-/**
- * @title Upgradeable proxy with centrally controlled Pool implementation
- */
+/// @title Upgradeable proxy with centrally controlled Pool implementation
 contract PoolProxy is Proxy {
     using PoolStorage for PoolStorage.Layout;
     using ERC165Storage for ERC165Storage.Layout;

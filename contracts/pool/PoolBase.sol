@@ -11,9 +11,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
 contract PoolBase is IPoolBase, ERC1155Enumerable, ERC165, Multicall {
-    /**
-     * @inheritdoc IPoolBase
-     */
+    /// @inheritdoc IPoolBase
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 

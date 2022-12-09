@@ -9,16 +9,13 @@ library Tick {
         uint256 externalFeeRate;
     }
 
-    /**
-     * @notice Crosses the active tick either to the left if the LT is selling
-     *         to the pool. A cross is only executed if no bid or ask liquidity is
-     *         remaining within the active tick range.
-     */
-    function cross(Data memory self, uint256 globalFeeRate)
-        internal
-        pure
-        returns (Data memory)
-    {
+    /// @notice Crosses the active tick either to the left if the LT is selling
+    ///         to the pool. A cross is only executed if no bid or ask liquidity is
+    ///         remaining within the active tick range.
+    function cross(
+        Data memory self,
+        uint256 globalFeeRate
+    ) internal pure returns (Data memory) {
         self.delta = -self.delta; // Flip the tick
         self.externalFeeRate = globalFeeRate - self.externalFeeRate;
         return self;

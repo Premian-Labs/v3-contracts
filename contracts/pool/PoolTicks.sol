@@ -31,17 +31,15 @@ contract PoolTicks is IPoolTicks, PoolInternal {
 
     uint256 private constant MAX_UINT256 = type(uint256).max;
 
-    /**
-     * @notice Get the left and right Tick to insert a new Tick between.
-     * @dev To be called from off-chain, then left and right points passed in
-     *      to deposit/withdraw (correctness of left/right points can be
-     *      verified much cheaper on-chain than finding on-chain)
-     * @param lower The normalized price of the lower-bound Tick for a new position.
-     * @param upper The normalized price the upper-bound Tick for a new position.
-     * @param current The Pool's current left tick normalized price.
-     * @return left The normalized price of the left Tick from the new position
-     * @return right The normalized price of the right Tick from the new position
-     */
+    /// @notice Get the left and right Tick to insert a new Tick between.
+    /// @dev To be called from off-chain, then left and right points passed in
+    ///      to deposit/withdraw (correctness of left/right points can be
+    ///      verified much cheaper on-chain than finding on-chain)
+    /// @param lower The normalized price of the lower-bound Tick for a new position.
+    /// @param upper The normalized price the upper-bound Tick for a new position.
+    /// @param current The Pool's current left tick normalized price.
+    /// @return left The normalized price of the left Tick from the new position
+    /// @return right The normalized price of the right Tick from the new position
     function getInsertTicks(
         uint256 lower,
         uint256 upper,
