@@ -240,7 +240,10 @@ library Position {
     /// @notice Convert position to opposite side to make it modifiable. A position is
     ///    modifiable if it's side does not need updating.
     function flipSide(Key memory self, Data storage data) internal {
-        // Convert position to opposite side to make it modifiable
+        bool isOrderLeft = self.upper <= price;
+
+        if (isOrderLeft != data.isBuy) return;
+
         if (data.isBuy) {
             data.collateral = contractsToCollateral(
                 data.contracts,
