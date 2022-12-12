@@ -14,6 +14,8 @@ library Position {
     using WadMath for uint256;
     using Position for Position.Key;
 
+    error Position__InsufficientBidLiquidity();
+    error Position__InsufficientFunds();
     error Position__NotEnoughCollateral();
 
     // All the data used to calculate the key of the position
@@ -237,9 +239,43 @@ library Position {
         return (1e18 - nu).mulWad(self.liquidity(data));
     }
 
+    function assertSufficientBidLiquidity(
+        Key memory self,
+        Data memory data,
+        uint256 collateral,
+        uint256 contracts,
+        bool withdrawal
+    ) internal {
+        collateral = withdrawal
+            ? data.collateral - collateral
+            : data.collateral + collateral;
+        contracts = withdrawal
+            ? data.contracts - contracts
+            : data.contracts + contracts;
+
+        if (
+            collateral <
+            contractsToCollateral(self.averagePrice(), self.strike, self.isCall)
+                .mulWad(contracts)
+        ) revert Position__InsufficientBidLiquidity();
+    }
+
+    function assertSufficientFunds(
+        Data memory data,
+        uint256 collateral,
+        uint256 contracts
+    ) internal {
+        if (collateral > data.collateral || contracts > data.contracts)
+            revert Position__InsufficientFunds();
+    }
+
     /// @notice Convert position to opposite side to make it modifiable. A position is
     ///    modifiable if it's side does not need updating.
-    function flipSide(Key memory self, Data storage data) internal {
+    function flipSide(
+        Key memory self,
+        Data storage data,
+        uint256 price
+    ) internal {
         bool isOrderLeft = self.upper <= price;
 
         if (isOrderLeft != data.isBuy) return;

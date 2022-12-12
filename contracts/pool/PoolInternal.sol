@@ -183,7 +183,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// While straddling the market price only full withdrawals are
     /// admissible. If the market price is outside of the tick range.
     function _updatePosition(
-        PoolStorage.Layout storage l,
         Position.Key memory p,
         Position.Data storage pData,
         uint256 collateral,
@@ -191,63 +190,25 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 price,
         bool withdraw
     ) internal {
-        // Straddled price
-        if (withdraw && p.lower < price && price < p.upper) {
-            uint256 _collateral = p.bid(pData, price) + p.ask(pData, price);
-            uint256 _contracts = p.short(pData, price) + p.long(pData, price);
-
-            if (collateral != _collateral || contracts != _contracts)
-                revert Pool__FullWithdrawalExpected();
-
-            // Complete full withdrawal
-            pData.collateral = 0;
-            pData.contracts = 0;
-            return;
+        p.flipSide(pData, price);
+        if (pData.isBuy) {
+            p.assertSufficientBidLiquidity(
+                pData,
+                collateral,
+                contracts,
+                withdraw
+            );
         }
 
-        // Compute if the position is modifiable, then modify position
-        // A position is modifiable if its side does not need updating
-        bool isOrderLeft = p.upper <= price;
+        Position.assertSufficientFunds(pData, collateral, contracts);
 
-        if (pData.isBuy == isOrderLeft) {
-            if (pData.isBuy) {
-                uint256 _collateral = withdraw
-                    ? pData.collateral - collateral
-                    : pData.collateral + collateral;
-                uint256 _contracts = withdraw
-                    ? pData.contracts - contracts
-                    : pData.contracts + contracts;
-
-                if (
-                    _collateral <
-                    Position
-                        .contractsToCollateral(
-                            p.averagePrice(),
-                            l.strike,
-                            l.isCallPool
-                        )
-                        .mulWad(_contracts)
-                ) revert Pool__InsufficientCollateral();
-            }
-
-            if (withdraw) {
-                if (
-                    collateral > pData.collateral || contracts > pData.contracts
-                ) revert Pool__InsufficientFunds();
-
-                pData.collateral -= collateral;
-                pData.contracts -= contracts;
-            } else {
-                pData.collateral += collateral;
-                pData.contracts += contracts;
-            }
-
-            return;
+        if (withdraw) {
+            pData.collateral += collateral;
+            pData.contracts += contracts;
+        } else {
+            pData.collateral -= collateral;
+            pData.contracts -= contracts;
         }
-
-        p.flipSide(pData);
-
-        _updatePosition(l, p, pData, collateral, contracts, price, withdraw);
     }
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
@@ -352,7 +313,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
                 _updatePosition(
-                    l,
                     p,
                     pData,
                     collateral,
@@ -413,46 +373,46 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 lowerTick.externalFeeRate,
                 upperTick.externalFeeRate
             );
-            uint256 short = p.short(pData, l.marketPrice);
-            uint256 long = p.long(pData, l.marketPrice);
 
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
-            // Adjust position to correspond with the side of the order
-            _updatePosition(
-                l,
-                p,
-                pData,
-                collateral,
-                contracts,
-                l.marketPrice,
-                true
-            );
+            // Check whether it's a full withdrawal before updating the position
+            uint256 price = l.marketPrice;
+            uint256 long = p.long(pData, price);
+            bool isFullWithdrawal = (p.bid(pData, price) +
+                p.ask(pData, price)) ==
+                collateral &&
+                (p.short(pData, price) + long) == contracts;
+
+            // Straddled price
+            if (p.lower < price && price < p.upper) {
+                if (!isFullWithdrawal) revert Pool__FullWithdrawalExpected();
+            }
 
             uint256 collateralToTransfer = collateral;
-
-            // Full withdrawal -> We claim pending fees and reset claimableFees + lastFeeRate
-            if (
-                short + long == contracts &&
-                p.ask(pData, l.marketPrice) + p.bid(pData, l.marketPrice) ==
-                collateral
-            ) {
+            if (isFullWithdrawal) {
                 collateralToTransfer += pData.claimableFees;
                 // ToDo : Emit fee claiming event
+
+                pData.collateral = 0;
+                pData.contracts = 0;
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
+            } else {
+                _updatePosition(p, pData, collateral, contracts, price, true);
             }
 
             // Transfer funds from the pool back to the LP
-            // Transfer funds from the LP to the pool
-            if (collateral > 0) {
-                IERC20(l.getPoolToken()).transfer(p.owner, collateral);
+            if (collateralToTransfer > 0) {
+                IERC20(l.getPoolToken()).transfer(
+                    p.owner,
+                    collateralToTransfer
+                );
             }
 
             if (contracts > 0) {
-                if (long < contracts && short < contracts)
-                    revert Pool__InsufficientContracts();
+                // ToDo : Check this is correct
 
                 _safeTransfer(
                     address(this),
@@ -764,11 +724,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             bool isBuy = srcP.upper <= l.marketPrice;
 
             if (isBuy != srcData.isBuy) {
-                srcP.flipSide(srcData);
+                srcP.flipSide(srcData, l.marketPrice);
             }
 
             if (isBuy != dstData.isBuy) {
-                dstP.flipSide(dstData);
+                dstP.flipSide(dstData, l.marketPrice);
             }
 
             if (srcData.isBuy != dstData.isBuy) revert Pool__OppositeSides();
