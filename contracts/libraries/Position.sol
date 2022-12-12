@@ -245,7 +245,7 @@ library Position {
         uint256 collateral,
         uint256 contracts,
         bool withdrawal
-    ) internal {
+    ) internal pure {
         collateral = withdrawal
             ? data.collateral - collateral
             : data.collateral + collateral;
@@ -264,7 +264,7 @@ library Position {
         Data memory data,
         uint256 collateral,
         uint256 contracts
-    ) internal {
+    ) internal pure {
         if (collateral > data.collateral || contracts > data.contracts)
             revert Position__InsufficientFunds();
     }
