@@ -5,9 +5,6 @@ pragma solidity ^0.8.0;
 import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
-//import {IPool} from "./IPool.sol";
-
-// ToDo : Add IPool inheritance
 contract Pool is PoolInternal {
     function getQuote(
         uint256 size,
