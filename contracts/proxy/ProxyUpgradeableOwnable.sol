@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
@@ -19,25 +17,19 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
 
     receive() external payable {}
 
-    /**
-     * @inheritdoc Proxy
-     */
+    /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return ProxyUpgradeableOwnableStorage.layout().implementation;
     }
 
-    /**
-     * @notice get address of implementation contract
-     * @return implementation address
-     */
+    /// @notice get address of implementation contract
+    /// @return implementation address
     function getImplementation() external view returns (address) {
         return _getImplementation();
     }
 
-    /**
-     * @notice set address of implementation contract
-     * @param implementation address of the new implementation
-     */
+    /// @notice set address of implementation contract
+    /// @param implementation address of the new implementation
     function setImplementation(address implementation) external onlyOwner {
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
     }

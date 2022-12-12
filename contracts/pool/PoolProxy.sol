@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
@@ -14,9 +12,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {PoolStorage} from "./PoolStorage.sol";
 
-/**
- * @title Upgradeable proxy with centrally controlled Pool implementation
- */
+/// @title Upgradeable proxy with centrally controlled Pool implementation
 contract PoolProxy is Proxy {
     using PoolStorage for PoolStorage.Layout;
     using ERC165Storage for ERC165Storage.Layout;

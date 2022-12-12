@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 library Tick {
@@ -11,16 +9,13 @@ library Tick {
         uint256 externalFeeRate;
     }
 
-    /**
-     * @notice Move the market price across a Tick from left-to-right (right-to-left) and
-     *         update both the Pool liquidity state and the Tick's external per liquidity
-     *         values to account for the change.
-     */
-    function cross(Data memory self, uint256 globalFeeRate)
-        internal
-        pure
-        returns (Data memory)
-    {
+    /// @notice Crosses the active tick either to the left if the LT is selling
+    ///         to the pool. A cross is only executed if no bid or ask liquidity is
+    ///         remaining within the active tick range.
+    function cross(
+        Data memory self,
+        uint256 globalFeeRate
+    ) internal pure returns (Data memory) {
         self.delta = -self.delta; // Flip the tick
         self.externalFeeRate = globalFeeRate - self.externalFeeRate;
         return self;

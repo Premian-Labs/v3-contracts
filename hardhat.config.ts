@@ -1,6 +1,7 @@
 import Dotenv from 'dotenv';
 // Hardhat plugins
-import '@nomiclabs/hardhat-waffle';
+import '@nomicfoundation/hardhat-chai-matchers';
+import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 import '@solidstate/hardhat-4byte-uploader';
 import '@solidstate/hardhat-test-short-circuit';
@@ -36,6 +37,7 @@ export default {
       {
         version: '0.8.17',
         settings: {
+          viaIR: true,
           optimizer: {
             enabled: true,
             runs: 200,

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// For further clarification please see https://license.premia.legal
-
 pragma solidity ^0.8.0;
 
 import {ERC165} from "@solidstate/contracts/introspection/ERC165.sol";
@@ -13,9 +11,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
 contract PoolBase is IPoolBase, ERC1155Enumerable, ERC165, Multicall {
-    /**
-     * @inheritdoc IPoolBase
-     */
+    /// @inheritdoc IPoolBase
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
