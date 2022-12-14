@@ -10,9 +10,7 @@ import {ILayerZeroEndpoint} from "../interfaces/ILayerZeroEndpoint.sol";
 import {LzAppStorage} from "./LzAppStorage.sol";
 import {BytesLib} from "../util/BytesLib.sol";
 
-/*
- * a generic LzReceiver implementation
- */
+// A generic LzReceiver implementation
 abstract contract LzApp is
     OwnableInternal,
     ILayerZeroReceiver,
@@ -34,9 +32,7 @@ abstract contract LzApp is
         lzEndpoint = ILayerZeroEndpoint(endpoint);
     }
 
-    /**
-     * @inheritdoc ILayerZeroReceiver
-     */
+    /// @inheritdoc ILayerZeroReceiver
     function lzReceive(
         uint16 srcChainId,
         bytes memory srcAddress,
@@ -95,9 +91,7 @@ abstract contract LzApp is
             lzEndpoint.getConfig(version, chainId, address(this), configType);
     }
 
-    /**
-     * @inheritdoc ILayerZeroUserApplicationConfig
-     */
+    /// @inheritdoc ILayerZeroUserApplicationConfig
     function setConfig(
         uint16 version,
         uint16 chainId,
@@ -107,23 +101,17 @@ abstract contract LzApp is
         lzEndpoint.setConfig(version, chainId, configType, config);
     }
 
-    /**
-     * @inheritdoc ILayerZeroUserApplicationConfig
-     */
+    /// @inheritdoc ILayerZeroUserApplicationConfig
     function setSendVersion(uint16 version) external onlyOwner {
         lzEndpoint.setSendVersion(version);
     }
 
-    /**
-     * @inheritdoc ILayerZeroUserApplicationConfig
-     */
+    /// @inheritdoc ILayerZeroUserApplicationConfig
     function setReceiveVersion(uint16 version) external onlyOwner {
         lzEndpoint.setReceiveVersion(version);
     }
 
-    /**
-     * @inheritdoc ILayerZeroUserApplicationConfig
-     */
+    /// @inheritdoc ILayerZeroUserApplicationConfig
     function forceResumeReceive(
         uint16 srcChainId,
         bytes calldata srcAddress

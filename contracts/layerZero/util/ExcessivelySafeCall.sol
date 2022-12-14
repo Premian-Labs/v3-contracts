@@ -108,15 +108,13 @@ library ExcessivelySafeCall {
         return (_success, _returnData);
     }
 
-    /**
-     * @notice Swaps function selectors in encoded contract calls
-     * @dev Allows reuse of encoded calldata for functions with identical
-     * argument types but different names. It simply swaps out the first 4 bytes
-     * for the new selector. This function modifies memory in place, and should
-     * only be used with caution.
-     * @param _newSelector The new 4-byte selector
-     * @param _buf The encoded contract args
-     */
+    /// @notice Swaps function selectors in encoded contract calls
+    /// @dev Allows reuse of encoded calldata for functions with identical
+    /// argument types but different names. It simply swaps out the first 4 bytes
+    /// for the new selector. This function modifies memory in place, and should
+    /// only be used with caution.
+    /// @param _newSelector The new 4-byte selector
+    /// @param _buf The encoded contract args
     function swapSelector(
         bytes4 _newSelector,
         bytes memory _buf
