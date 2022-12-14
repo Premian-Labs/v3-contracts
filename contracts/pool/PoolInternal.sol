@@ -58,9 +58,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ) internal view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        // ToDo : Add internal function for those checks ?
-        if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+        _ensureNonZeroSize(size);
+        _ensureNotExpired(l);
 
         Pricing.Args memory pricing = Pricing.Args(
             l.liquidityRate,
@@ -241,13 +240,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 collateral,
         uint256 contracts
     ) internal {
-        if (collateral + contracts == 0) revert Pool__ZeroSize();
-
         PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _ensureNonZeroSize(collateral + contracts);
+        _ensureNotExpired(l);
+
         p.strike = l.strike;
         p.isCall = l.isCallPool;
-
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
 
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
@@ -347,13 +346,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 contracts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        p.strike = l.strike;
-        p.isCall = l.isCallPool;
-
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
-
+        _ensureExpired(l);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
+
+        p.strike = l.strike;
+        p.isCall = l.isCallPool;
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -443,8 +441,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+        _ensureNonZeroSize(size);
+        _ensureNotExpired(l);
 
         Pricing.Args memory pricing = Pricing.fromPool(l, isBuy);
 
@@ -678,7 +676,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.
     function _annihilate(address owner, uint256 size) internal {
-        if (size == 0) revert Pool__ZeroSize();
+        _ensureNonZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -756,8 +754,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         uint256 size
     ) internal view returns (uint256) {
-        if (size == 0) revert Pool__ZeroSize();
-        if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+        _ensureNonZeroSize(size);
+        _ensureExpired(l);
 
         uint256 spot = l.getSpotPrice();
         uint256 strike = l.strike;
@@ -836,10 +834,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @param p The position key
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureNotExpired(l);
+
         p.strike = l.strike;
         p.isCall = l.isCallPool;
-
-        if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -1083,5 +1081,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             : l.globalFeeRate - lowerTickExternalFeeRate;
 
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
+    }
+
+    function _ensureNonZeroSize(uint256 size) internal {
+        if (size == 0) revert Pool__ZeroSize();
+    }
+
+    function _ensureExpired(PoolStorage.Layout storage l) internal {
+        if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+    }
+
+    function _ensureNotExpired(PoolStorage.Layout storage l) internal {
+        if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
     }
 }
