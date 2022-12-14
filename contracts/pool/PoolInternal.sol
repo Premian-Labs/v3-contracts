@@ -949,11 +949,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         if (l.tickIndex.nodeExists(price)) return l.ticks[price];
 
-        tick = Tick.Data(
-            price,
-            0,
-            price <= l.marketPrice ? l.globalFeeRate : 0
-        );
+        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0);
 
         uint256 left = _getNearestTickBelow(price);
         l.tickIndex.insertAfter(left, price);

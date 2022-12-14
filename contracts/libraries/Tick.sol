@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 library Tick {
     struct Data {
-        uint256 price; // ToDo : Should not be required as we use price to index in the mapping
         int256 delta;
         uint256 externalFeeRate;
     }
