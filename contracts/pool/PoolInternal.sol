@@ -1083,15 +1083,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    function _ensureNonZeroSize(uint256 size) internal {
+    function _ensureNonZeroSize(uint256 size) internal pure {
         if (size == 0) revert Pool__ZeroSize();
     }
 
-    function _ensureExpired(PoolStorage.Layout storage l) internal {
+    function _ensureExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
     }
 
-    function _ensureNotExpired(PoolStorage.Layout storage l) internal {
+    function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
     }
 }
