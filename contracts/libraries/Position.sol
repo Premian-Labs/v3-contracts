@@ -17,6 +17,8 @@ library Position {
     error Position__InsufficientBidLiquidity();
     error Position__InsufficientFunds();
     error Position__NotEnoughCollateral();
+    error Position__WrongOrderType();
+    error Position__WrongContractsToCollateralRatio();
 
     // All the data used to calculate the key of the position
     struct Key {
@@ -84,7 +86,7 @@ library Position {
             return OrderType.SELL_WITH_COLLATERAL;
         else if (orderType == OrderType.SELL_WITH_COLLATERAL)
             return OrderType.BUY_WITH_SHORTS;
-        else revert();
+        else revert Position__WrongOrderType();
     }
 
     function isLeft(OrderType orderType) internal pure returns (bool) {
@@ -154,7 +156,7 @@ library Position {
             return data.initialAmount;
         }
 
-        revert();
+        revert Position__WrongOrderType();
     }
 
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
@@ -274,7 +276,7 @@ library Position {
         ) {
             _collateral = self.bid(data, price);
         } else {
-            revert();
+            revert Position__WrongOrderType();
         }
     }
 
@@ -312,7 +314,7 @@ library Position {
         ) {
             return self.contracts(data, price);
         } else {
-            revert();
+            revert Position__WrongOrderType();
         }
     }
 
@@ -333,7 +335,7 @@ library Position {
         ) {
             return 0;
         } else {
-            revert();
+            revert Position__WrongOrderType();
         }
     }
 
@@ -402,5 +404,103 @@ library Position {
         }
 
         data.isBuy = !data.isBuy;
+    }
+
+    // ToDo : Should we move this ?
+    function assertSatisfiesRatio(
+        Key memory self,
+        Data memory data,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _contracts
+    ) internal pure {
+        uint256 pCollateral = self.collateral(data, price);
+        uint256 pContracts = self.contracts(data, price);
+
+        if (pCollateral == 0 && _collateral > 0)
+            revert Position__WrongContractsToCollateralRatio();
+        if (pContracts == 0 && _contracts > 0)
+            revert Position__WrongContractsToCollateralRatio();
+
+        uint256 depositRatio = _contracts.divWad(_collateral);
+        uint256 positionRatio = pContracts.divWad(pCollateral);
+        if (depositRatio != positionRatio)
+            revert Position__WrongContractsToCollateralRatio();
+    }
+
+    function calculateAssetChange(
+        Key memory self,
+        Data memory data,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _longs,
+        uint256 _shorts
+    ) internal pure returns (uint256) {
+        uint256 _contracts = Math.max(_longs, _shorts);
+        self.assertSatisfiesRatio(data, price, _collateral, _contracts);
+
+        uint256 nu = self.pieceWiseLinear(price);
+        uint256 size;
+        if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
+            if (_longs > 0) revert(); // ToDo : Add custom error
+            if (price > self.lower) {
+                uint256 _liquidity = _shorts.divWad(nu);
+                size = contractsToCollateral(
+                    _liquidity.mulWad(1e18 - self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+            } else {
+                size = _collateral;
+                if (_shorts > 0) revert(); // ToDo : Add custom error
+            }
+        } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
+            if (_shorts > 0) revert(); // ToDo : Add custom error
+            if (self.lower < price && price < self.upper) {
+                uint256 _liquidity = _longs.divWad(1e18 - nu);
+                size = contractsToCollateral(
+                    _liquidity.mulWad(self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+            } else if (price <= self.lower) {
+                size = contractsToCollateral(
+                    _longs.mulWad(self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+            } else {
+                size = _collateral;
+                if (_longs > 0) revert(); // ToDo : Add custom error
+            }
+        } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
+            if (_shorts > 0) revert(); // ToDo : Add custom error
+            if (price < self.upper) {
+                size = _longs.divWad(1e18 - nu);
+            } else {
+                size = collateralToContracts(
+                    _collateral.divWad(self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+                if (_longs > 0) revert(); // ToDo : Add custom error
+            }
+        } else if (self.orderType == OrderType.BUY_WITH_SHORTS) {
+            if (_longs > 0) revert(); // ToDo : Add custom error
+            if (price > self.lower) {
+                size = _shorts.divWad(nu);
+            } else {
+                size = collateralToContracts(
+                    _collateral.divWad(1e18 - self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+                if (_shorts > 0) revert(); // ToDo : Add custom error
+            }
+        } else {
+            revert Position__WrongOrderType();
+        }
+
+        return size;
     }
 }
