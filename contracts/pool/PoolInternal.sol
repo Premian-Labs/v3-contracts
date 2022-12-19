@@ -511,7 +511,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 l.protocolFees += protocolFee;
             }
 
-            if (tradeSize < remaining) {
+            // ToDo : Deal with rounding error
+            if (maxSize >= remaining - (WAD / 10)) {
+                remaining = 0;
+            } else {
                 // The trade will require crossing into the next tick range
                 if (
                     isBuy &&
@@ -521,9 +524,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
                 if (!isBuy && l.currentTick <= Pricing.MIN_TICK_PRICE)
                     revert Pool__InsufficientBidLiquidity();
-            }
 
-            remaining -= tradeSize;
+                remaining -= tradeSize;
+
+                // ToDo : Cross tick
+            }
         }
 
         _updateUserAssets(l, user, totalPremium, size, isBuy);
@@ -883,17 +888,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 price = l.marketPrice;
         uint256 payoff = _calculateExerciseValue(l, WAD);
 
-        uint256 collateral = p.bid(pData, price);
-        collateral += p.ask(pData, price);
+        uint256 collateral = p.collateral(pData, price);
         collateral += p.long(pData, price).mulWad(payoff);
         collateral += p.short(pData, price).mulWad(
             (l.isCallPool ? WAD : l.strike) - payoff
         );
         collateral += pData.claimableFees;
 
-        pData.collateral = 0;
-        pData.contracts = 0;
+        pData.initialAmount = 0;
         pData.claimableFees = 0;
+        pData.lastFeeRate = 0;
 
         if (collateral > 0) {
             IERC20(l.getPoolToken()).transfer(p.operator, collateral);
