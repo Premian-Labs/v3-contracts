@@ -40,7 +40,7 @@ library Position {
 
     // All the data required to be saved in storage
     struct Data {
-        uint256 initialAmount;
+        uint256 size;
         // Used to track claimable fees over time
         uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim
@@ -150,14 +150,14 @@ library Position {
         Data memory data
     ) internal pure returns (uint256 contractsLiquidity) {
         if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
-            return data.initialAmount.divWad(WAD - self.averagePrice());
+            return data.size.divWad(WAD - self.averagePrice());
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
-            return data.initialAmount.divWad(self.averagePrice());
+            return data.size.divWad(self.averagePrice());
         } else if (
             self.orderType == OrderType.SELL_WITH_LONGS ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            return data.initialAmount;
+            return data.size;
         }
 
         revert Position__WrongOrderType();

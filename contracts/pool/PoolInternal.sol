@@ -282,12 +282,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 );
             }
 
-            if (pData.initialAmount > 0) {
+            if (pData.size > 0) {
                 liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
-                pData.initialAmount += p.calculateAssetChange(
+                pData.size += p.calculateAssetChange(
                     pData,
                     l.marketPrice,
                     collateral,
@@ -295,7 +295,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     shorts
                 );
             } else {
-                pData.initialAmount = collateral + longs + shorts;
+                pData.size = collateral + longs + shorts;
                 pData.lastFeeRate = feeRate;
             }
         }
@@ -330,7 +330,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        if (pData.initialAmount == 0) revert Pool__PositionDoesNotExist();
+        if (pData.size == 0) revert Pool__PositionDoesNotExist();
 
         Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
         Tick.Data memory upperTick = _getOrCreateTick(p.upper);
@@ -366,12 +366,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 collateralToTransfer += pData.claimableFees;
                 // ToDo : Emit fee claiming event
 
-                pData.initialAmount = 0;
+                pData.size = 0;
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
             }
 
-            pData.initialAmount -= p.calculateAssetChange(
+            pData.size -= p.calculateAssetChange(
                 pData,
                 price,
                 collateral,
@@ -698,7 +698,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
 
-        if (dstData.initialAmount > 0) {
+        if (dstData.size > 0) {
             Position.Data storage srcData = l.positions[srcKey];
 
             if (srcP.isLeft() != dstP.isLeft()) revert Pool__OppositeSides();
@@ -711,8 +711,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             dstData.claimableFees += srcData.claimableFees;
             srcData.claimableFees = 0;
 
-            dstData.initialAmount += srcData.initialAmount;
-            dstData.initialAmount = 0;
+            dstData.size += srcData.size;
+            dstData.size = 0;
 
             delete l.positions[srcKey];
         } else {
@@ -848,7 +848,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
         collateral += pData.claimableFees;
 
-        pData.initialAmount = 0;
+        pData.size = 0;
         pData.claimableFees = 0;
         pData.lastFeeRate = 0;
 
