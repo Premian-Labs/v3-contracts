@@ -346,12 +346,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     /// @param p The position key
-    /// @param collateral The amount of collateral to be deposited
-    /// @param contracts The amount of contracts to be deposited
+    /// @param collateral The amount of collateral to be withdrawn
+    /// @param longs The amount of longs to be withdrawn
+    /// @param shorts The amount of shorts to be withdrawn
     function _withdraw(
         Position.Key memory p,
         uint256 collateral,
-        uint256 contracts
+        uint256 longs,
+        uint256 shorts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
@@ -386,46 +388,52 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             // Check whether it's a full withdrawal before updating the position
             uint256 price = l.marketPrice;
             uint256 long = p.long(pData, price);
-            bool isFullWithdrawal = (p.bid(pData, price) +
-                p.ask(pData, price)) ==
-                collateral &&
-                (p.short(pData, price) + long) == contracts;
+            bool isFullWithdrawal = p.collateral(pData, price) == collateral &&
+                p.long(pData, price) == longs &&
+                p.short(pData, price) == shorts;
 
             // Straddled price
-            if (p.lower < price && price < p.upper) {
-                if (!isFullWithdrawal) revert Pool__FullWithdrawalExpected();
-            }
+            // if (p.lower < price && price < p.upper) {
+            //     if (!isFullWithdrawal) revert Pool__FullWithdrawalExpected();
+            // }
 
             uint256 collateralToTransfer = collateral;
             if (isFullWithdrawal) {
+                // Claim all fees and remove the position completely
                 collateralToTransfer += pData.claimableFees;
                 // ToDo : Emit fee claiming event
 
-                pData.collateral = 0;
-                pData.contracts = 0;
+                pData.initialAmount = 0;
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
-            } else {
-                _updatePosition(p, pData, collateral, contracts, price, true);
             }
 
-            // Transfer funds from the pool back to the LP
-            if (collateralToTransfer > 0) {
+            pData.initialAmount -= p.calculateAssetChange(
+                pData,
+                price,
+                collateral,
+                longs,
+                shorts
+            );
+
+            if (
+                collateralToTransfer > 0
+            ) // Transfer funds from the pool back to the LP
+            {
                 IERC20(l.getPoolToken()).transfer(
                     p.owner,
                     collateralToTransfer
                 );
             }
 
-            if (contracts > 0) {
-                // ToDo : Check this is correct
-
+            if (longs + shorts > 0) {
+                if (longs > 0 && shorts > 0) revert(); // ToDo : Add custom error
                 _safeTransfer(
                     address(this),
                     address(this),
                     p.owner,
-                    long > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
-                    contracts,
+                    shorts > 0 ? PoolStorage.SHORT : PoolStorage.LONG,
+                    shorts > 0 ? shorts : longs,
                     ""
                 );
             }
