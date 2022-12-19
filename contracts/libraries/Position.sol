@@ -14,6 +14,8 @@ library Position {
     using WadMath for uint256;
     using Position for Position.Key;
 
+    uint256 private constant WAD = 1e18;
+
     error Position__InsufficientBidLiquidity();
     error Position__InsufficientFunds();
     error Position__NotEnoughCollateral();
@@ -108,7 +110,7 @@ library Position {
         if (price < self.lower) return 0;
         else if (self.lower <= price && price < self.upper)
             return Pricing.proportion(self.lower, self.upper, price);
-        return 1e18;
+        return WAD;
     }
 
     function pieceWiseLinear(
@@ -118,7 +120,7 @@ library Position {
         if (price < self.lower) return 0;
         else if (self.lower <= price && price < self.upper)
             return self.proportion(price);
-        else return 1e18;
+        else return WAD;
     }
 
     function collateralToContracts(
@@ -146,7 +148,7 @@ library Position {
         Data memory data
     ) internal pure returns (uint256 contractsLiquidity) {
         if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
-            return data.initialAmount.divWad(1e18 - self.averagePrice());
+            return data.initialAmount.divWad(WAD - self.averagePrice());
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
             return data.initialAmount.divWad(self.averagePrice());
         } else if (
@@ -205,8 +207,7 @@ library Position {
         Data memory data,
         uint256 price
     ) internal pure returns (uint256) {
-        return
-            (1e18 - self.pieceWiseLinear(price)).mulWad(self.liquidity(data));
+        return (WAD - self.pieceWiseLinear(price)).mulWad(self.liquidity(data));
     }
 
     /// @notice Bid collateral either used to buy back options or revenue /
@@ -252,7 +253,7 @@ library Position {
         uint256 x = data.isBuy
             ? contractsToCollateral(data.contracts, self.strike, self.isCall)
             : data.collateral;
-        return (1e18 - nu).mulWad(x);
+        return (WAD - nu).mulWad(x);
     }
 
     /// @notice Total collateral held by the position. Note that here we do not
@@ -269,7 +270,7 @@ library Position {
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            _collateral = (1e18 - nu).mulWad(self.liquidity(data));
+            _collateral = (WAD - nu).mulWad(self.liquidity(data));
         } else if (
             self.orderType == OrderType.BUY_WITH_COLLATERAL ||
             self.orderType == OrderType.SELL_WITH_LONGS
@@ -291,7 +292,7 @@ library Position {
             self.orderType == OrderType.SELL_WITH_LONGS ||
             self.orderType == OrderType.BUY_WITH_COLLATERAL
         ) {
-            return (1e18 - nu).mulWad(self.liquidity(data));
+            return (WAD - nu).mulWad(self.liquidity(data));
         }
 
         return nu.mulWad(self.liquidity(data));
@@ -446,7 +447,7 @@ library Position {
             if (price > self.lower) {
                 uint256 _liquidity = _shorts.divWad(nu);
                 size = contractsToCollateral(
-                    _liquidity.mulWad(1e18 - self.averagePrice()),
+                    _liquidity.mulWad(WAD - self.averagePrice()),
                     self.strike,
                     self.isCall
                 );
@@ -457,7 +458,7 @@ library Position {
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
             if (_shorts > 0) revert(); // ToDo : Add custom error
             if (self.lower < price && price < self.upper) {
-                uint256 _liquidity = _longs.divWad(1e18 - nu);
+                uint256 _liquidity = _longs.divWad(WAD - nu);
                 size = contractsToCollateral(
                     _liquidity.mulWad(self.averagePrice()),
                     self.strike,
@@ -476,7 +477,7 @@ library Position {
         } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
             if (_shorts > 0) revert(); // ToDo : Add custom error
             if (price < self.upper) {
-                size = _longs.divWad(1e18 - nu);
+                size = _longs.divWad(WAD - nu);
             } else {
                 size = collateralToContracts(
                     _collateral.divWad(self.averagePrice()),
@@ -491,7 +492,7 @@ library Position {
                 size = _shorts.divWad(nu);
             } else {
                 size = collateralToContracts(
-                    _collateral.divWad(1e18 - self.averagePrice()),
+                    _collateral.divWad(WAD - self.averagePrice()),
                     self.strike,
                     self.isCall
                 );

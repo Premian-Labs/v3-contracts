@@ -29,6 +29,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using UintUtils for uint256;
 
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
+    uint256 private constant WAD = 1e18;
 
     // ToDo : Define final values
     uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
@@ -865,13 +866,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // maturity should be close to the intrinsic value.
 
         uint256 price = l.marketPrice;
-        uint256 payoff = _calculateExerciseValue(l, 1e18);
+        uint256 payoff = _calculateExerciseValue(l, WAD);
 
         uint256 collateral = p.bid(pData, price);
         collateral += p.ask(pData, price);
         collateral += p.long(pData, price).mulWad(payoff);
         collateral += p.short(pData, price).mulWad(
-            (l.isCallPool ? 1e18 : l.strike) - payoff
+            (l.isCallPool ? WAD : l.strike) - payoff
         );
         collateral += pData.claimableFees;
 
