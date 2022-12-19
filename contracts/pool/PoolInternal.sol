@@ -297,7 +297,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             } else {
                 pData.initialAmount = collateral + longs + shorts;
                 pData.lastFeeRate = feeRate;
-                pData.isBuy = isBuy;
             }
         }
 
