@@ -370,7 +370,7 @@ library Position {
             revert Position__InsufficientFunds();
     }
 
-    // ToDo : Update
+    // ToDo : Remove
     /// @notice Convert position to opposite side to make it modifiable. A position is
     ///    modifiable if it's side does not need updating.
     function flipSide(

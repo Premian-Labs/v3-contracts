@@ -21,6 +21,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using LinkedList for LinkedList.List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
+    using Position for Position.OrderType;
     using Pricing for Pricing.Args;
     using WadMath for uint256;
     using Tick for Tick.Data;
@@ -113,7 +114,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pricing.marketPrice = nextPrice;
             }
 
-            if (maxSize >= size) {
+            // ToDo : Deal with rounding error
+            if (maxSize >= size - (WAD / 10)) {
                 size = 0;
             } else {
                 // Cross tick
@@ -233,17 +235,22 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
+    /// @param orderType The order type
     /// @param collateral The amount of collateral to be deposited
-    /// @param contracts The amount of contracts to be deposited
+    /// @param longs The amount of longs to be deposited
+    /// @param shorts The amount of shorts to be deposited
     function _deposit(
         Position.Key memory p,
-        bool isBuy,
+        Position.OrderType orderType,
         uint256 collateral,
-        uint256 contracts
+        uint256 longs,
+        uint256 shorts
     ) internal {
+        bool isBuy = orderType.isLeft();
+
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureNonZeroSize(collateral + contracts);
+        _ensureNonZeroSize(collateral + longs + shorts);
         _ensureNotExpired(l);
 
         p.strike = l.strike;
@@ -278,13 +285,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             );
         }
 
-        if (contracts > 0) {
+        if (longs + shorts > 0) {
+            if (longs > 0 && shorts > 0) revert(); // ToDo : Add custom error
             _safeTransfer(
                 address(this),
                 p.owner,
                 address(this),
-                isBuy ? PoolStorage.SHORT : PoolStorage.LONG,
-                contracts,
+                shorts > 0 ? PoolStorage.SHORT : PoolStorage.LONG,
+                shorts > 0 ? shorts : longs,
                 ""
             );
         }
@@ -308,21 +316,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 );
             }
 
-            if (pData.collateral + pData.contracts > 0) {
+            if (pData.initialAmount > 0) {
                 liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
-                _updatePosition(
-                    p,
+
+                pData.initialAmount += p.calculateAssetChange(
                     pData,
-                    collateral,
-                    contracts,
                     l.marketPrice,
-                    false
+                    collateral,
+                    longs,
+                    shorts
                 );
             } else {
-                pData.collateral = collateral;
-                pData.contracts = contracts;
+                pData.initialAmount = collateral + longs + shorts;
                 pData.lastFeeRate = feeRate;
                 pData.isBuy = isBuy;
             }

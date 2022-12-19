@@ -126,7 +126,7 @@ library Pricing {
 
         uint256 _proportion = tradeSize.divWad(liq);
 
-        if (_proportion > 1)
+        if (_proportion == 0 || _proportion > 1)
             revert Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
