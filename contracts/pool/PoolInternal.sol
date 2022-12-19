@@ -179,40 +179,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
     }
 
-    /// @notice Update the collateral and contracts upon deposit / withdrawal.
-    ///
-    /// Withdrawals.
-    /// While straddling the market price only full withdrawals are
-    /// admissible. If the market price is outside of the tick range.
-    function _updatePosition(
-        Position.Key memory p,
-        Position.Data storage pData,
-        uint256 collateral,
-        uint256 contracts,
-        uint256 price,
-        bool withdraw
-    ) internal {
-        p.flipSide(pData, price);
-        if (pData.isBuy) {
-            p.assertSufficientBidLiquidity(
-                pData,
-                collateral,
-                contracts,
-                withdraw
-            );
-        }
-
-        Position.assertSufficientFunds(pData, collateral, contracts);
-
-        if (withdraw) {
-            pData.collateral += collateral;
-            pData.contracts += contracts;
-        } else {
-            pData.collateral -= collateral;
-            pData.contracts -= contracts;
-        }
-    }
-
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.
@@ -365,8 +331,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        if (pData.contracts + pData.collateral == 0)
-            revert Pool__PositionDoesNotExist();
+        if (pData.initialAmount == 0) revert Pool__PositionDoesNotExist();
 
         Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
         Tick.Data memory upperTick = _getOrCreateTick(p.upper);
@@ -387,7 +352,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             // Check whether it's a full withdrawal before updating the position
             uint256 price = l.marketPrice;
-            uint256 long = p.long(pData, price);
             bool isFullWithdrawal = p.collateral(pData, price) == collateral &&
                 p.long(pData, price) == longs &&
                 p.short(pData, price) == shorts;
@@ -712,12 +676,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @notice Transfer an LP position to another owner.
     ///         NOTE: This function can be called post or prior to expiration.
     /// @param srcP The position key
-    /// @param liq The amount of each type of liquidity to transfer
     /// @param newOwner The new owner of the transferred liquidity
     /// @param newOperator The new operator of the transferred liquidity
     function _transferPosition(
         Position.Key memory srcP,
-        Position.Liquidity memory liq,
         address newOwner,
         address newOperator
     ) internal {
@@ -737,29 +699,21 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
 
-        if (dstData.collateral + dstData.contracts > 0) {
+        if (dstData.initialAmount > 0) {
             Position.Data storage srcData = l.positions[srcKey];
 
-            bool isBuy = srcP.upper <= l.marketPrice;
-
-            if (isBuy != srcData.isBuy) {
-                srcP.flipSide(srcData, l.marketPrice);
-            }
-
-            if (isBuy != dstData.isBuy) {
-                dstP.flipSide(dstData, l.marketPrice);
-            }
-
-            if (srcData.isBuy != dstData.isBuy) revert Pool__OppositeSides();
+            if (srcP.isLeft() != dstP.isLeft()) revert Pool__OppositeSides();
 
             // call new function which only updates the claimable fees of a position without claiming them
             _updateClaimableFees(l, srcP, srcData);
             // update claimable fees to reset the fee range rate
             _updateClaimableFees(l, dstP, dstData);
 
-            dstData.claimableFees = srcData.claimableFees;
-            dstData.collateral = srcData.collateral;
-            dstData.contracts = srcData.contracts;
+            dstData.claimableFees += srcData.claimableFees;
+            srcData.claimableFees = 0;
+
+            dstData.initialAmount += srcData.initialAmount;
+            dstData.initialAmount = 0;
 
             delete l.positions[srcKey];
         } else {

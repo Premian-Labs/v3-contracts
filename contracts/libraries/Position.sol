@@ -103,6 +103,14 @@ library Position {
             orderType == OrderType.SELL_WITH_LONGS;
     }
 
+    function isLeft(Key memory self) internal pure returns (bool) {
+        return isLeft(self.orderType);
+    }
+
+    function isRight(Key memory self) internal pure returns (bool) {
+        return isRight(self.orderType);
+    }
+
     function proportion(
         Key memory self,
         uint256 price
