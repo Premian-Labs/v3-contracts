@@ -53,25 +53,27 @@ describe('Pool', () => {
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
-      const tokenId = await pool.formatTokenId(operator, 100, 10000);
+      const tokenId = await pool.formatTokenId(operator, 100, 10000, 3);
 
       console.log(tokenId.toHexString());
 
       expect(tokenId.mask(14)).to.eq(100);
       expect(tokenId.shr(14).mask(14)).to.eq(10000);
       expect(tokenId.shr(28).mask(160)).to.eq(operator);
+      expect(tokenId.shr(188).mask(4)).to.eq(3);
     });
   });
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await pool.parseTokenId(
-        BigNumber.from('0x010000000000000000000000000000000000000019c40064'),
+        BigNumber.from('0x310000000000000000000000000000000000000019c40064'),
       );
 
       expect(r.lower).to.eq(100);
       expect(r.upper).to.eq(10000);
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
+      expect(r.orderType).to.eq(3);
     });
   });
 });

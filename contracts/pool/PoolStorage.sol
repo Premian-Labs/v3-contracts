@@ -81,10 +81,12 @@ library PoolStorage {
     function formatTokenId(
         address operator,
         uint16 lower,
-        uint16 upper
+        uint16 upper,
+        Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
         // ToDo : Add safeguard to prevent SHORT / LONG token id to be used (0 / 1)
         tokenId =
+            (uint256(orderType) << 188) +
             (uint256(uint160(operator)) << 28) +
             (uint256(upper) << 14) +
             uint256(lower);
@@ -97,9 +99,22 @@ library PoolStorage {
     /// @return upper The upper bound normalized option price
     function parseTokenId(
         uint256 tokenId
-    ) internal pure returns (address operator, uint16 lower, uint16 upper) {
+    )
+        internal
+        pure
+        returns (
+            address operator,
+            uint16 lower,
+            uint16 upper,
+            Position.OrderType orderType
+        )
+    {
         assembly {
-            operator := shr(28, tokenId)
+            orderType := shr(188, tokenId)
+            operator := and(
+                shr(28, tokenId),
+                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF // 160 bits mask
+            )
             upper := and(shr(14, tokenId), 0x3FFF) // 14 bits mask
             lower := and(tokenId, 0x3FFF) // 14 bits mask
         }

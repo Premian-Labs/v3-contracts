@@ -305,7 +305,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             _mint(
                 p.owner,
-                PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+                PoolStorage.formatTokenId(
+                    p.operator,
+                    p.lower,
+                    p.upper,
+                    p.orderType
+                ),
                 size,
                 ""
             );
@@ -397,7 +402,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             _burn(
                 p.owner,
-                PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+                PoolStorage.formatTokenId(
+                    p.operator,
+                    p.lower,
+                    p.upper,
+                    p.orderType
+                ),
                 size
             );
 
@@ -741,7 +751,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     PoolStorage.formatTokenId(
                         newOperator,
                         srcP.lower,
-                        srcP.upper
+                        srcP.upper,
+                        srcP.orderType
                     ),
                     srcData.size,
                     ""
@@ -752,7 +763,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     PoolStorage.formatTokenId(
                         srcP.operator,
                         srcP.lower,
-                        srcP.upper
+                        srcP.upper,
+                        srcP.orderType
                     ),
                     srcData.size
                 );
@@ -762,7 +774,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     PoolStorage.formatTokenId(
                         newOperator,
                         srcP.lower,
-                        srcP.upper
+                        srcP.upper,
+                        srcP.orderType
                     ),
                     srcData.size,
                     ""
@@ -908,7 +921,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         _burn(
             p.owner,
-            PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+            PoolStorage.formatTokenId(
+                p.operator,
+                p.lower,
+                p.upper,
+                p.orderType
+            ),
             pData.size
         );
 
