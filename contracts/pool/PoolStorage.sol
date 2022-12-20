@@ -80,15 +80,15 @@ library PoolStorage {
     /// @return tokenId token id
     function formatTokenId(
         address operator,
-        uint64 lower,
-        uint64 upper
+        uint256 lower,
+        uint256 upper
     ) internal pure returns (uint256 tokenId) {
         // ToDo : Add safeguard to prevent SHORT / LONG token id to be used (0 / 1)
         // We convert upper and lower from 18 to 14 decimals, to be able to fit in 47 bits
         tokenId =
             (uint256(uint160(operator)) << 94) +
-            (uint256(upper / 1e4) << 47) +
-            uint256(lower / 1e4);
+            ((upper / 1e4) << 47) +
+            (lower / 1e4);
     }
 
     /// @notice derive option maturity and strike price from ERC1155 token id
@@ -98,7 +98,7 @@ library PoolStorage {
     /// @return upper The upper bound normalized option price
     function parseTokenId(
         uint256 tokenId
-    ) internal pure returns (address operator, uint64 lower, uint64 upper) {
+    ) internal pure returns (address operator, uint256 lower, uint256 upper) {
         assembly {
             operator := shr(94, tokenId)
             upper := mul(and(shr(47, tokenId), 0x7FFFFFFFFFFF), 10000) // 47 bits mask + convert from 14 decimals to 18

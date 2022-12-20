@@ -282,22 +282,33 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 );
             }
 
+            uint256 size;
             if (pData.size > 0) {
                 liquidityPerTick = p.liquidityPerTick(pData);
 
                 _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
-                pData.size += p.calculateAssetChange(
+                size = p.calculateAssetChange(
                     pData,
                     l.marketPrice,
                     collateral,
                     longs,
                     shorts
                 );
+
+                pData.size += size;
             } else {
-                pData.size = collateral + longs + shorts;
+                size = collateral + longs + shorts;
+                pData.size = size;
                 pData.lastFeeRate = feeRate;
             }
+
+            _mint(
+                p.owner,
+                PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+                size,
+                ""
+            );
         }
 
         // Adjust tick deltas
@@ -361,22 +372,33 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             // }
 
             uint256 collateralToTransfer = collateral;
+
+            uint256 size;
             if (isFullWithdrawal) {
                 // Claim all fees and remove the position completely
                 collateralToTransfer += pData.claimableFees;
                 // ToDo : Emit fee claiming event
 
+                size = pData.size;
+
                 pData.size = 0;
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
+            } else {
+                size = p.calculateAssetChange(
+                    pData,
+                    price,
+                    collateral,
+                    longs,
+                    shorts
+                );
+                pData.size -= size;
             }
 
-            pData.size -= p.calculateAssetChange(
-                pData,
-                price,
-                collateral,
-                longs,
-                shorts
+            _burn(
+                p.owner,
+                PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+                size
             );
 
             if (
@@ -711,8 +733,44 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             dstData.claimableFees += srcData.claimableFees;
             srcData.claimableFees = 0;
 
+            if (srcP.operator == newOperator) {
+                _safeTransfer(
+                    address(this),
+                    srcP.owner,
+                    newOwner,
+                    PoolStorage.formatTokenId(
+                        newOperator,
+                        srcP.lower,
+                        srcP.upper
+                    ),
+                    srcData.size,
+                    ""
+                );
+            } else {
+                _burn(
+                    srcP.owner,
+                    PoolStorage.formatTokenId(
+                        srcP.operator,
+                        srcP.lower,
+                        srcP.upper
+                    ),
+                    srcData.size
+                );
+
+                _mint(
+                    srcP.owner,
+                    PoolStorage.formatTokenId(
+                        newOperator,
+                        srcP.lower,
+                        srcP.upper
+                    ),
+                    srcData.size,
+                    ""
+                );
+            }
+
             dstData.size += srcData.size;
-            dstData.size = 0;
+            srcData.size = 0;
 
             delete l.positions[srcKey];
         } else {
@@ -847,6 +905,12 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             (l.isCallPool ? WAD : l.strike) - payoff
         );
         collateral += pData.claimableFees;
+
+        _burn(
+            p.owner,
+            PoolStorage.formatTokenId(p.operator, p.lower, p.upper),
+            pData.size
+        );
 
         pData.size = 0;
         pData.claimableFees = 0;

@@ -40,6 +40,7 @@ library Position {
 
     // All the data required to be saved in storage
     struct Data {
+        // ToDo : Remove size and use balance instead ?
         uint256 size;
         // Used to track claimable fees over time
         uint256 lastFeeRate;
