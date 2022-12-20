@@ -16,15 +16,15 @@ contract PoolMock is Pool {
 
     function formatTokenId(
         address operator,
-        uint256 lower,
-        uint256 upper
+        uint16 lower,
+        uint16 upper
     ) external pure returns (uint256 tokenId) {
         return PoolStorage.formatTokenId(operator, lower, upper);
     }
 
     function parseTokenId(
         uint256 tokenId
-    ) external pure returns (address operator, uint256 lower, uint256 upper) {
+    ) external pure returns (address operator, uint16 lower, uint16 upper) {
         return PoolStorage.parseTokenId(tokenId);
     }
 }

@@ -53,31 +53,24 @@ describe('Pool', () => {
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
-      const tokenId = await pool.formatTokenId(
-        operator,
-        1,
-        parseEther('0.1'),
-        parseEther('0.2'),
-      );
+      const tokenId = await pool.formatTokenId(operator, 100, 10000);
 
-      expect(tokenId.mask(2)).to.eq(1);
-      expect(tokenId.shr(2).mask(47)).to.eq(parseUnits('0.1', 14));
-      expect(tokenId.shr(49).mask(47)).to.eq(parseUnits('0.2', 14));
-      expect(tokenId.shr(96).mask(160)).to.eq(operator);
+      console.log(tokenId.toHexString());
+
+      expect(tokenId.mask(14)).to.eq(100);
+      expect(tokenId.shr(14).mask(14)).to.eq(10000);
+      expect(tokenId.shr(28).mask(160)).to.eq(operator);
     });
   });
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await pool.parseTokenId(
-        BigNumber.from(
-          '0x1000000000000000000000000000000000000001246139ca8000246139ca8001',
-        ),
+        BigNumber.from('0x010000000000000000000000000000000000000019c40064'),
       );
 
-      expect(r.rangeSide).to.eq(1);
-      expect(r.lower).to.eq(parseEther('0.1'));
-      expect(r.upper).to.eq(parseEther('0.2'));
+      expect(r.lower).to.eq(100);
+      expect(r.upper).to.eq(10000);
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
     });
   });

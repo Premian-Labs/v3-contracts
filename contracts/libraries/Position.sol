@@ -29,13 +29,13 @@ library Position {
         // The Agent that can control modifications to the Position
         address operator;
         // The lower tick normalized price of the range order
-        uint256 lower;
+        uint16 lower;
         // The upper tick normalized price of the range order
-        uint256 upper;
+        uint16 upper;
         OrderType orderType;
         // ---- Values under are not used to compute the key hash but are included in this struct to reduce stack depth
-        uint256 strike;
         bool isCall;
+        uint256 strike;
     }
 
     // All the data required to be saved in storage
