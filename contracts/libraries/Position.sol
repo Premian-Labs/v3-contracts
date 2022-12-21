@@ -16,9 +16,6 @@ library Position {
 
     uint256 private constant WAD = 1e18;
 
-    error Position__InsufficientBidLiquidity();
-    error Position__InsufficientFunds();
-    error Position__NotEnoughCollateral();
     error Position__WrongOrderType();
     error Position__WrongContractsToCollateralRatio();
 
@@ -178,28 +175,22 @@ library Position {
     }
 
     // ToDo : Remove ?
-    //    /// @notice Represents the total amount of bid liquidity the position is holding
-    //    /// at a particular price. In other words, it is the total amount of buying
-    //    /// power the position has at the current price.
-    //    function bidLiquidity(
+    //    function tokenAmount(
     //        Key memory self,
-    //        Data memory data,
-    //        uint256 price
+    //        Data memory data
     //    ) internal pure returns (uint256) {
-    //        return self.pieceWiseLinear(price).mulWad(self.liquidity(data));
-    //    }
-    //
-    //    /// @notice Represents the total amount of ask liquidity the position is holding
-    //    /// at a particular price. In other words, it is the total amount of
-    //    /// selling power the position has at the current price.
-    //    /// Can also be computed as,
-    //    ///     total_bid(p) = ask(p) + long(p)
-    //    function askLiquidity(
-    //        Key memory self,
-    //        Data memory data,
-    //        uint256 price
-    //    ) internal pure returns (uint256) {
-    //        return (WAD - self.pieceWiseLinear(price)).mulWad(self.liquidity(data));
+    //        if (
+    //            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
+    //            self.orderType == OrderType.BUY_WITH_COLLATERAL
+    //        ) {
+    //            return data.size;
+    //        } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
+    //            return data.size.mulWad(self.averagePrice());
+    //        } else if (self.orderType == OrderType.BUY_WITH_SHORTS) {
+    //            return data.size.mulWad(WAD - self.averagePrice());
+    //        } else {
+    //            revert Position__WrongOrderType();
+    //        }
     //    }
 
     /// @notice Bid collateral either used to buy back options or revenue /
