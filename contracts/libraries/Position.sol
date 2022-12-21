@@ -16,6 +16,7 @@ library Position {
 
     uint256 private constant WAD = 1e18;
 
+    error Position__LowerGreaterOrEqualUpper();
     error Position__WrongOrderType();
     error Position__WrongContractsToCollateralRatio();
 
@@ -117,10 +118,37 @@ library Position {
         Key memory self,
         uint256 price
     ) internal pure returns (uint256) {
+        // ToDo : Move check somewhere else ?
+        if (self.lower >= self.upper)
+            revert Position__LowerGreaterOrEqualUpper();
         if (price < self.lower) return 0;
         else if (self.lower <= price && price < self.upper)
             return self.proportion(price);
         else return WAD;
+    }
+
+    function pieceWiseQuadratic(
+        Key memory self,
+        uint256 price
+    ) internal pure returns (uint256) {
+        // ToDo : Move check somewhere else ?
+        if (self.lower >= self.upper)
+            revert Position__LowerGreaterOrEqualUpper();
+
+        uint256 a;
+        if (price < self.lower) {
+            a = self.lower;
+        } else if (self.lower <= price && price < self.upper) {
+            a = price;
+        } else {
+            a = self.upper;
+        }
+
+        // ToDo : Fix multiplication with normalized price
+        uint256 numerator = (a.mulWad(a) - self.lower * self.lower);
+        uint256 denominator = (2 * WAD) * (self.upper - self.lower);
+
+        return numerator.divWad(denominator);
     }
 
     function collateralToContracts(
@@ -183,38 +211,37 @@ library Position {
     //            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
     //            self.orderType == OrderType.BUY_WITH_COLLATERAL
     //        ) {
+    //            // Collateral amount (ETH / USDC) locked in the contract
     //            return data.size;
     //        } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
+    //            // Collateral amount deposited to buy longs
     //            return data.size.mulWad(self.averagePrice());
     //        } else if (self.orderType == OrderType.BUY_WITH_SHORTS) {
+    //            // Collateral amount received after full traversal
     //            return data.size.mulWad(WAD - self.averagePrice());
     //        } else {
+    //            // Collateral amount unlocked after full traversal
     //            revert Position__WrongOrderType();
     //        }
     //    }
 
     /// @notice Bid collateral either used to buy back options or revenue /
     ///         income generated from underwriting / selling options.
+    ///         For a <= p <= b we have:
+    ///
+    ///         bid(p; a, b) = [ (p - a) / (b - a) ] * [ (a + p)  / 2 ]
+    ///                      = (p^2 - a^2) / [2 * (b - a)]
     function bid(
         Key memory self,
         Data memory data,
         uint256 price
     ) internal pure returns (uint256) {
-        uint256 nu = self.pieceWiseLinear(price);
-
-        // overworked to avoid numerical rounding errors
-        uint256 quotePrice;
-        if (price < self.lower) {
-            quotePrice = self.lower;
-        } else if (self.lower <= price && price < self.upper) {
-            quotePrice = Math.average(price, self.lower);
-        } else {
-            quotePrice = self.averagePrice();
-        }
-
-        uint256 result = nu.mulWad(self.liquidity(data)).mulWad(quotePrice);
-
-        return contractsToCollateral(result, self.strike, self.isCall);
+        return
+            contractsToCollateral(
+                pieceWiseQuadratic(self, price).mulWad(self.liquidity(data)),
+                self.strike,
+                self.isCall
+            );
     }
 
     /// @notice Total collateral held by the position. Note that here we do not

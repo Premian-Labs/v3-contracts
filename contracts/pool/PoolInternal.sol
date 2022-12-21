@@ -733,11 +733,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (dstData.size > 0) {
             Position.Data storage srcData = l.positions[srcKey];
 
-            if (srcP.isLeft() != dstP.isLeft()) revert Pool__OppositeSides();
-
-            // call new function which only updates the claimable fees of a position without claiming them
+            // Call function to update claimable fees, but do not claim them
             _updateClaimableFees(l, srcP, srcData);
-            // update claimable fees to reset the fee range rate
+            // Update claimable fees to reset the fee range rate
             _updateClaimableFees(l, dstP, dstData);
 
             dstData.claimableFees += srcData.claimableFees;
