@@ -39,8 +39,6 @@ library Position {
 
     // All the data required to be saved in storage
     struct Data {
-        // ToDo : Remove size and use balance instead ?
-        uint256 size;
         // Used to track claimable fees over time
         uint256 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim
@@ -174,17 +172,17 @@ library Position {
 
     function liquidity(
         Key memory self,
-        Data memory data
+        uint256 size
     ) internal pure returns (uint256 contractsLiquidity) {
         if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
-            return data.size.divWad(WAD - self.averagePrice());
+            return size.divWad(WAD - self.averagePrice());
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
-            return data.size.divWad(self.averagePrice());
+            return size.divWad(self.averagePrice());
         } else if (
             self.orderType == OrderType.SELL_WITH_LONGS ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            return data.size;
+            return size;
         }
 
         revert Position__InvalidOrderType();
@@ -193,14 +191,14 @@ library Position {
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
     function liquidityPerTick(
         Key memory self,
-        Data memory data
+        uint256 size
     ) internal pure returns (uint256) {
         uint256 amountOfTicks = Pricing.amountOfTicksBetween(
             self.lower,
             self.upper
         );
 
-        return self.liquidity(data) / amountOfTicks;
+        return self.liquidity(size) / amountOfTicks;
     }
 
     // ToDo : Remove ?
@@ -234,12 +232,12 @@ library Position {
     ///                      = (p^2 - a^2) / [2 * (b - a)]
     function bid(
         Key memory self,
-        Data memory data,
+        uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
         return
             contractsToCollateral(
-                pieceWiseQuadratic(self, price).mulWad(self.liquidity(data)),
+                pieceWiseQuadratic(self, price).mulWad(self.liquidity(size)),
                 self.strike,
                 self.isCall
             );
@@ -250,7 +248,7 @@ library Position {
     ///         capital efficiency of the range order.
     function collateral(
         Key memory self,
-        Data memory data,
+        uint256 size,
         uint256 price
     ) internal pure returns (uint256 _collateral) {
         uint256 nu = pieceWiseLinear(self, price);
@@ -259,12 +257,12 @@ library Position {
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            _collateral = (WAD - nu).mulWad(self.liquidity(data));
+            _collateral = (WAD - nu).mulWad(self.liquidity(size));
         } else if (
             self.orderType == OrderType.BUY_WITH_COLLATERAL ||
             self.orderType == OrderType.SELL_WITH_LONGS
         ) {
-            _collateral = self.bid(data, price);
+            _collateral = self.bid(size, price);
         } else {
             revert Position__InvalidOrderType();
         }
@@ -272,7 +270,7 @@ library Position {
 
     function contracts(
         Key memory self,
-        Data memory data,
+        uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
         uint256 nu = pieceWiseLinear(self, price);
@@ -281,16 +279,16 @@ library Position {
             self.orderType == OrderType.SELL_WITH_LONGS ||
             self.orderType == OrderType.BUY_WITH_COLLATERAL
         ) {
-            return (WAD - nu).mulWad(self.liquidity(data));
+            return (WAD - nu).mulWad(self.liquidity(size));
         }
 
-        return nu.mulWad(self.liquidity(data));
+        return nu.mulWad(self.liquidity(size));
     }
 
     /// @notice Number of long contracts held in position at current price
     function long(
         Key memory self,
-        Data memory data,
+        uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
         if (
@@ -302,7 +300,7 @@ library Position {
             self.orderType == OrderType.BUY_WITH_COLLATERAL ||
             self.orderType == OrderType.SELL_WITH_LONGS
         ) {
-            return self.contracts(data, price);
+            return self.contracts(size, price);
         } else {
             revert Position__InvalidOrderType();
         }
@@ -311,14 +309,14 @@ library Position {
     /// @notice Number of short contracts held in position at current price
     function short(
         Key memory self,
-        Data memory data,
+        uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
         if (
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            return self.contracts(data, price);
+            return self.contracts(size, price);
         } else if (
             self.orderType == OrderType.BUY_WITH_COLLATERAL ||
             self.orderType == OrderType.SELL_WITH_LONGS
@@ -332,13 +330,13 @@ library Position {
     // ToDo : Should we move this ?
     function assertSatisfiesRatio(
         Key memory self,
-        Data memory data,
+        uint256 currentSize,
         uint256 price,
         uint256 _collateral,
         uint256 _contracts
     ) internal pure {
-        uint256 pCollateral = self.collateral(data, price);
-        uint256 pContracts = self.contracts(data, price);
+        uint256 pCollateral = self.collateral(currentSize, price);
+        uint256 pContracts = self.contracts(currentSize, price);
 
         if (pCollateral == 0 && _collateral > 0)
             revert Position__InvalidContractsToCollateralRatio();
@@ -353,14 +351,14 @@ library Position {
 
     function calculateAssetChange(
         Key memory self,
-        Data memory data,
+        uint256 currentSize,
         uint256 price,
         uint256 _collateral,
         uint256 _longs,
         uint256 _shorts
     ) internal pure returns (uint256) {
         uint256 _contracts = Math.max(_longs, _shorts);
-        self.assertSatisfiesRatio(data, price, _collateral, _contracts);
+        self.assertSatisfiesRatio(currentSize, price, _collateral, _contracts);
 
         uint256 nu = self.pieceWiseLinear(price);
         uint256 size;
