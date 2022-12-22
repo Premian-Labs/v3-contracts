@@ -217,6 +217,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(collateral + longs + shorts);
+        if (longs > 0 && shorts > 0) revert Pool__LongOrShortMustBeZero();
         _ensureNotExpired(l);
 
         p.strike = l.strike;
@@ -252,7 +253,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         if (longs + shorts > 0) {
-            if (longs > 0 && shorts > 0) revert(); // ToDo : Add custom error
             _safeTransfer(
                 address(this),
                 p.owner,
@@ -337,6 +337,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         uint256 shorts
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        if (longs > 0 && shorts > 0) revert Pool__LongOrShortMustBeZero();
         _ensureExpired(l);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
@@ -422,7 +423,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
 
             if (longs + shorts > 0) {
-                if (longs > 0 && shorts > 0) revert(); // ToDo : Add custom error
                 _safeTransfer(
                     address(this),
                     address(this),

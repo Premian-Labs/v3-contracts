@@ -12,6 +12,7 @@ interface IPoolInternal {
     error Pool__InvalidBuyOrder();
     error Pool__InvalidSellOrder();
     error Pool__InvalidTransfer();
+    error Pool__LongOrShortMustBeZero();
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
