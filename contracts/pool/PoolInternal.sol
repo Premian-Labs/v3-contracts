@@ -537,8 +537,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                     revert Pool__InsufficientBidLiquidity();
 
                 remaining -= tradeSize;
-
-                // ToDo : Cross tick
+                _cross(isBuy);
             }
         }
 
