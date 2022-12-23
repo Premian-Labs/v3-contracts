@@ -25,6 +25,8 @@ library Pricing {
     error Pricing__PriceOutOfRange();
     error Pricing__UpperNotGreaterThanLower();
 
+    uint256 private constant WAD = 1e18;
+
     uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
     uint256 internal constant MIN_TICK_PRICE = 1e15; // 0.001
     uint256 internal constant MAX_TICK_PRICE = 1e18; // 1
@@ -105,7 +107,7 @@ library Pricing {
     }
 
     function askLiquidity(Args memory args) internal pure returns (uint256) {
-        return (1e18 - proportion(args)).mulWad(liquidity(args));
+        return (WAD - proportion(args)).mulWad(liquidity(args));
     }
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
@@ -124,7 +126,7 @@ library Pricing {
 
         uint256 _proportion = tradeSize.divWad(liq);
 
-        if (_proportion > 1)
+        if (_proportion == 0 || _proportion > 1)
             revert Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
