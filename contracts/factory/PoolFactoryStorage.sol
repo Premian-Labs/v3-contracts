@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+// ToDo : Remove ?
 library PoolFactoryStorage {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
@@ -10,10 +11,9 @@ library PoolFactoryStorage {
 
     struct Layout {
         address feeRecipient;
-        // base => underlying => baseOracle => underlyingOracle => isCallPool => pool
-        mapping(address => mapping(address => mapping(address => mapping(address => mapping(bool => address))))) pools;
-        address[] poolList;
-        mapping(address => bool) isPool;
+        //        mapping(address => mapping(address => mapping(address => mapping(address => mapping(bool => address))))) pools;
+        //        address[] poolList;
+        //        mapping(address => bool) isPool;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -9,93 +9,168 @@ import {PoolProxy} from "../pool/PoolProxy.sol";
 contract PoolFactory is IPoolFactory {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
-    error PoolFactory__ZeroAddress();
-    error PoolFactory__IdenticalAddresses();
-    error PoolFactory__PoolExists();
+    function getDeploymentAddress(
+        address base,
+        address underlying,
+        address baseOracle,
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) external view returns (address) {
+        return
+            _getDeploymentAddress(
+                base,
+                underlying,
+                baseOracle,
+                underlyingOracle,
+                strike,
+                maturity,
+                isCallPool
+            );
+    }
 
-    // ToDo : See if we deploy one per strike / maturity or if we can group into one contract
+    function _getDeploymentAddress(
+        address base,
+        address underlying,
+        address baseOracle,
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) internal view returns (address) {
+        bytes memory args = abi.encode(
+            base,
+            underlying,
+            baseOracle,
+            underlyingOracle,
+            strike,
+            maturity,
+            isCallPool
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff), // 0
+                address(this), // address of factory contract
+                keccak256(args), // salt
+                // The contract bytecode
+                keccak256(abi.encodePacked(type(PoolProxy).creationCode, args))
+            )
+        );
+
+        // Cast last 20 bytes of hash to address
+        return address(uint160(uint256(hash)));
+    }
+
+    function isPoolDeployed(
+        address base,
+        address underlying,
+        address baseOracle,
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) external view returns (bool) {
+        return
+            _isPoolDeployed(
+                base,
+                underlying,
+                baseOracle,
+                underlyingOracle,
+                strike,
+                maturity,
+                isCallPool
+            );
+    }
+
+    function _isPoolDeployed(
+        address base,
+        address underlying,
+        address baseOracle,
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) internal view returns (bool) {
+        return
+            _getDeploymentAddress(
+                base,
+                underlying,
+                baseOracle,
+                underlyingOracle,
+                strike,
+                maturity,
+                isCallPool
+            ).code.length > 0;
+    }
+
     function deployPool(
         address base,
         address underlying,
         address baseOracle,
-        address underlyingOracle
-    ) external returns (address callPool, address putPool) {
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) external returns (address poolAddress) {
+        if (base == underlying || baseOracle == underlyingOracle)
+            revert PoolFactory__IdenticalAddresses();
 
-        if (base == underlying) revert PoolFactory__IdenticalAddresses();
+        // ToDo : Enforce some maturity increment ?
+        if (maturity <= block.timestamp) revert PoolFactory__InvalidMaturity();
+        // ToDo : Enforce some strike increment ?
+        if (strike == 0) revert PoolFactory__InvalidStrike();
 
         if (base == address(0) || underlying == address(0))
             revert PoolFactory__ZeroAddress();
 
         if (
-            l.pools[base][underlying][baseOracle][underlyingOracle][true] !=
-            address(0)
-        ) revert PoolFactory__PoolExists();
+            _isPoolDeployed(
+                base,
+                underlying,
+                baseOracle,
+                underlyingOracle,
+                strike,
+                maturity,
+                isCallPool
+            )
+        ) revert PoolFactory__PoolAlreadyDeployed();
 
         // Deterministic pool addresses
-        bytes32 callSalt = keccak256(
-            abi.encodePacked(
+        bytes32 salt = keccak256(
+            abi.encode(
                 base,
                 underlying,
                 baseOracle,
                 underlyingOracle,
-                true
-            )
-        );
-        bytes32 putSalt = keccak256(
-            abi.encodePacked(
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                false
+                strike,
+                maturity,
+                isCallPool
             )
         );
 
-        callPool = address(
-            new PoolProxy{salt: callSalt}(
+        poolAddress = address(
+            new PoolProxy{salt: salt}(
                 address(this),
                 base,
                 underlying,
                 baseOracle,
                 underlyingOracle,
-                true
+                strike,
+                maturity,
+                isCallPool
             )
         );
 
-        putPool = address(
-            new PoolProxy{salt: putSalt}(
-                address(this),
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                false
-            )
-        );
-
-        l.pools[base][underlying][baseOracle][underlyingOracle][
-            true
-        ] = callPool;
-        l.pools[base][underlying][baseOracle][underlyingOracle][
-            false
-        ] = putPool;
-
-        // ToDo : See if we really need `l.poolList`
-        l.poolList.push(callPool);
-        l.poolList.push(putPool);
-
-        // ToDo : See if we really need `l.isPool`
-        l.isPool[callPool] = true;
-        l.isPool[putPool] = true;
-
-        emit PairCreated(
+        emit PoolDeployed(
             base,
             underlying,
             baseOracle,
             underlyingOracle,
-            callPool,
-            putPool
+            strike,
+            maturity,
+            poolAddress
         );
     }
 }

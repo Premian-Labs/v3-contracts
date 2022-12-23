@@ -25,6 +25,8 @@ contract PoolProxy is Proxy {
         address underlying,
         address baseOracle,
         address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
         bool isCallPool
     ) {
         DIAMOND = diamond;
@@ -39,6 +41,9 @@ contract PoolProxy is Proxy {
             // ToDo : Add checks for oracle
             l.baseOracle = baseOracle;
             l.underlyingOracle = underlyingOracle;
+
+            l.strike = strike;
+            l.maturity = maturity;
 
             uint8 baseDecimals = IERC20Metadata(base).decimals();
             uint8 underlyingDecimals = IERC20Metadata(underlying).decimals();
