@@ -156,7 +156,6 @@ export default {
   spdxLicenseIdentifier: {
     overwrite: true,
     runOnCompile: true,
-    except: ['LinkedList.sol'],
   },
 
   typechain: {
