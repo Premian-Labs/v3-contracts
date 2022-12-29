@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {LinkedList} from "../libraries/LinkedList.sol";
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
@@ -36,7 +36,7 @@ library PoolStorage {
         // Whether its a call or put pool
         bool isCallPool;
         // Index of all existing ticks sorted
-        LinkedList.List tickIndex;
+        DoublyLinkedList.Uint256List tickIndex;
         mapping(uint256 => Tick.Data) ticks;
         uint256 marketPrice;
         uint256 globalFeeRate;
