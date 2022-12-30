@@ -2,11 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import {LinkedList} from "../libraries/LinkedList.sol";
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+
 import {Position} from "../libraries/Position.sol";
-
 import {WadMath} from "./WadMath.sol";
-
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 /// @notice This class implements the methods necessary for computing price movements within a tick range.
@@ -16,7 +15,7 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
 ///         Instead, the user should use the methods of this class to simplify
 ///         computations for more complex price calculations.
 library Pricing {
-    using LinkedList for LinkedList.List;
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
     using WadMath for uint256;
 
@@ -50,7 +49,7 @@ library Pricing {
                 l.liquidityRate,
                 l.marketPrice,
                 currentTick,
-                l.tickIndex.getNextNode(currentTick),
+                l.tickIndex.next(currentTick),
                 isBuy
             );
     }

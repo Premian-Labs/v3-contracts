@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC165} from "@solidstate/contracts/introspection/ERC165.sol";
+import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 import {ERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
@@ -10,7 +10,7 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
-contract PoolBase is IPoolBase, ERC1155Enumerable, ERC165, Multicall {
+contract PoolBase is IPoolBase, ERC1155Enumerable, ERC165Base, Multicall {
     /// @inheritdoc IPoolBase
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();

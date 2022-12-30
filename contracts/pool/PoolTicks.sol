@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -10,7 +11,6 @@ import {IPoolTicks} from "./IPoolTicks.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
-import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
@@ -19,7 +19,7 @@ import {PoolInternal} from "./PoolInternal.sol";
 contract PoolTicks is IPoolTicks, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
-    using LinkedList for LinkedList.List;
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using Tick for Tick.Data;
     using Math for int256;
     using SafeCast for uint256;
@@ -28,8 +28,6 @@ contract PoolTicks is IPoolTicks, PoolInternal {
     error PoolTicks__InvalidInsertLocation();
     error PoolTicks__InvalidInsert();
     error PoolTicks__FailedInsert();
-
-    uint256 private constant MAX_UINT256 = type(uint256).max;
 
     /// @notice Get the left and right Tick to insert a new Tick between.
     /// @dev To be called from off-chain, then left and right points passed in
@@ -48,28 +46,23 @@ contract PoolTicks is IPoolTicks, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         left = current;
-        while (left > 0 && left > lower) {
-            left = l.tickIndex.getPreviousNode(left);
+        while (left != 0 && left > lower) {
+            left = l.tickIndex.prev(left);
         }
 
-        while (left < MAX_UINT256 && l.tickIndex.getNextNode(left) <= lower) {
-            left = l.tickIndex.getNextNode(left);
+        while (left != 0 && l.tickIndex.next(left) <= lower) {
+            left = l.tickIndex.next(left);
         }
 
         right = current;
-        while (right < MAX_UINT256 && right < upper) {
-            right = l.tickIndex.getNextNode(right);
+        while (right != 0 && right < upper) {
+            right = l.tickIndex.next(right);
         }
 
-        while (right > 0 && l.tickIndex.getPreviousNode(right) >= upper) {
-            right = l.tickIndex.getPreviousNode(right);
+        while (right != 0 && l.tickIndex.prev(right) >= upper) {
+            right = l.tickIndex.prev(right);
         }
 
-        if (
-            left == 0 ||
-            right == 0 ||
-            left == MAX_UINT256 ||
-            right == MAX_UINT256
-        ) revert PoolTicks__InvalidInsertLocation();
+        if (left == 0 || right == 0) revert PoolTicks__InvalidInsertLocation();
     }
 }

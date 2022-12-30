@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.0;
 
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {LinkedList} from "../libraries/LinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Tick} from "../libraries/Tick.sol";
@@ -18,7 +18,7 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
 contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
-    using LinkedList for LinkedList.List;
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using Position for Position.OrderType;
@@ -67,7 +67,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.liquidityRate,
             l.marketPrice,
             l.currentTick,
-            l.tickIndex.getNextNode(l.currentTick),
+            l.tickIndex.next(l.currentTick),
             isBuy
         );
 
@@ -130,8 +130,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 // Set new lower and upper bounds
                 pricing.lower = isBuy
                     ? pricing.upper
-                    : l.tickIndex.getPreviousNode(pricing.lower);
-                pricing.upper = l.tickIndex.getNextNode(pricing.lower);
+                    : l.tickIndex.prev(pricing.lower);
+                pricing.upper = l.tickIndex.next(pricing.lower);
 
                 // Compute new liquidity
                 liquidity = pricing.liquidity();
@@ -240,7 +240,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (
             l.liquidityRate == 0 &&
             p.lower >= l.currentTick &&
-            p.upper <= l.tickIndex.getNextNode(l.currentTick)
+            p.upper <= l.tickIndex.next(l.currentTick)
         ) {
             l.marketPrice = isBuy ? p.upper : p.lower;
         }
@@ -529,8 +529,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 // The trade will require crossing into the next tick range
                 if (
                     isBuy &&
-                    l.tickIndex.getNextNode(l.currentTick) >=
-                    Pricing.MAX_TICK_PRICE
+                    l.tickIndex.next(l.currentTick) >= Pricing.MAX_TICK_PRICE
                 ) revert Pool__InsufficientAskLiquidity();
 
                 if (!isBuy && l.currentTick <= Pricing.MIN_TICK_PRICE)
@@ -972,16 +971,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         uint256 left = l.currentTick;
 
-        while (left > 0 && left > price) {
-            left = l.tickIndex.getPreviousNode(left);
+        while (left != 0 && left > price) {
+            left = l.tickIndex.prev(left);
         }
 
-        while (left < LinkedList.MAX_UINT256 && left <= price) {
-            left = l.tickIndex.getNextNode(left);
+        while (left != 0 && left <= price) {
+            left = l.tickIndex.next(left);
         }
 
-        if (left == 0 || left == LinkedList.MAX_UINT256)
-            revert Pool__TickNotFound();
+        if (left == 0) revert Pool__TickNotFound();
 
         return left;
     }
@@ -999,7 +997,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (l.tickIndex.nodeExists(price)) return l.ticks[price];
+        if (l.tickIndex.contains(price)) return l.ticks[price];
 
         tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0);
 
@@ -1011,7 +1009,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _removeTickIfNotActive(uint256 price) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (!l.tickIndex.nodeExists(price)) return;
+        if (!l.tickIndex.contains(price)) return;
 
         Tick.Data storage tick = l.ticks[price];
 
@@ -1021,7 +1019,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             tick.delta == 0
         ) {
             if (price == l.currentTick) {
-                uint256 newCurrentTick = l.tickIndex.getPreviousNode(price);
+                uint256 newCurrentTick = l.tickIndex.prev(price);
 
                 if (newCurrentTick < Pricing.MIN_TICK_PRICE)
                     revert Pool__TickOutOfRange();
@@ -1061,7 +1059,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Reconcile current tick with system
         // Check if deposit or withdrawal
         if (delta > 0) {
-            while (l.tickIndex.getNextNode(l.currentTick) < marketPrice) {
+            while (l.tickIndex.next(l.currentTick) < marketPrice) {
                 _cross(true);
             }
         } else {
@@ -1082,7 +1080,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (isBuy) {
-            uint256 right = l.tickIndex.getNextNode(l.currentTick);
+            uint256 right = l.tickIndex.next(l.currentTick);
             if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange();
             l.currentTick = right;
         }
@@ -1101,7 +1099,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
                 revert Pool__TickOutOfRange();
-            l.currentTick = l.tickIndex.getPreviousNode(l.currentTick);
+            l.currentTick = l.tickIndex.prev(l.currentTick);
         }
     }
 
