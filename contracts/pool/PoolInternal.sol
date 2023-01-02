@@ -163,8 +163,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Position.Key memory p,
         Position.Data storage pData
     ) internal {
-        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+        Tick.Data memory lowerTick = _getTick(p.lower);
+        Tick.Data memory upperTick = _getTick(p.upper);
 
         _updateClaimableFees(
             pData,
@@ -212,12 +212,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param orderType The order type
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param collateral The amount of collateral to be deposited
     /// @param longs The amount of longs to be deposited
     /// @param shorts The amount of shorts to be deposited
     function _deposit(
         Position.Key memory p,
         Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
         uint256 collateral,
         uint256 longs,
         uint256 shorts
@@ -287,8 +291,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             uint256 feeRate;
             {
                 // If ticks dont exist they are created and inserted into the linked list
-                Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-                Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+                Tick.Data memory lowerTick = _getOrCreateTick(
+                    p.lower,
+                    belowLower
+                );
+                Tick.Data memory upperTick = _getOrCreateTick(
+                    p.upper,
+                    belowUpper
+                );
 
                 feeRate = _rangeFeeRate(
                     l,
@@ -374,8 +384,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         if (initialSize == 0) revert Pool__PositionDoesNotExist();
 
-        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+        Tick.Data memory lowerTick = _getTick(p.lower);
+        Tick.Data memory upperTick = _getTick(p.upper);
 
         // Initialize variables before position update
         uint256 liquidityPerTick = p.liquidityPerTick(initialSize);
@@ -886,8 +896,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        Tick.Data memory lowerTick = _getOrCreateTick(p.lower);
-        Tick.Data memory upperTick = _getOrCreateTick(p.upper);
+        Tick.Data memory lowerTick = _getTick(p.lower);
+        Tick.Data memory upperTick = _getTick(p.upper);
 
         uint256 tokenId = PoolStorage.formatTokenId(
             p.operator,
@@ -975,8 +985,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             left = l.tickIndex.prev(left);
         }
 
-        while (left != 0 && left <= price) {
-            left = l.tickIndex.next(left);
+        uint256 next = l.tickIndex.next(left);
+        while (left != 0 && next <= price) {
+            left = next;
+            next = l.tickIndex.next(left);
         }
 
         if (left == 0) revert Pool__TickNotFound();
@@ -984,12 +996,18 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return left;
     }
 
-    /// @notice Creates a Tick for a given price, or returns the existing tick.
-    /// @param price The price of the Tick
-    /// @return tick The Tick for a given price
-    function _getOrCreateTick(
+    /// @notice Get a tick, reverts if tick is not found
+    function _getTick(uint256 price) internal view returns (Tick.Data memory) {
+        (Tick.Data memory tick, bool tickFound) = _tryGetTick(price);
+        if (!tickFound) revert Pool__TickNotFound();
+
+        return tick;
+    }
+
+    /// @notice Try to get tick, does not revert if tick is not found
+    function _tryGetTick(
         uint256 price
-    ) internal returns (Tick.Data memory tick) {
+    ) internal view returns (Tick.Data memory tick, bool tickFound) {
         _verifyTickWidth(price);
 
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
@@ -997,13 +1015,36 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (l.tickIndex.contains(price)) return l.ticks[price];
+        if (l.tickIndex.contains(price)) return (l.ticks[price], true);
+
+        return (Tick.Data(0, 0), false);
+    }
+
+    /// @notice Creates a Tick for a given price, or returns the existing tick.
+    /// @param price The price of the Tick
+    /// @param priceBelow The price of the nearest Tick below
+    /// @return tick The Tick for a given price
+    function _getOrCreateTick(
+        uint256 price,
+        uint256 priceBelow
+    ) internal returns (Tick.Data memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        (Tick.Data memory tick, bool tickFound) = _tryGetTick(price);
+
+        if (tickFound) return tick;
+
+        if (
+            !l.tickIndex.contains(priceBelow) ||
+            l.tickIndex.next(priceBelow) <= price
+        ) revert Pool__InvalidBelowPrice();
 
         tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0);
 
-        uint256 left = _getNearestTickBelow(price);
-        l.tickIndex.insertAfter(left, price);
+        l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
+
+        return tick;
     }
 
     function _removeTickIfNotActive(uint256 price) internal {

@@ -13,15 +13,19 @@ interface IPool is IPoolBase, IPoolIO {
 
     function deposit(
         Position.Key memory p,
-        bool isBuy,
+        Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
         uint256 collateral,
-        uint256 contracts
+        uint256 longs,
+        uint256 shorts
     ) external;
 
     function withdraw(
         Position.Key memory p,
         uint256 collateral,
-        uint256 contracts
+        uint256 longs,
+        uint256 shorts
     ) external;
 
     function trade(uint256 size, bool isBuy) external returns (uint256);
@@ -33,4 +37,6 @@ interface IPool is IPoolBase, IPoolIO {
     function settle() external returns (uint256);
 
     function settlePosition(Position.Key memory p) external returns (uint256);
+
+    function getNearestTickBelow(uint256 price) external view returns (uint256);
 }

@@ -9,6 +9,7 @@ interface IPoolInternal {
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InvalidAssetUpdate();
+    error Pool__InvalidBelowPrice();
     error Pool__InvalidBuyOrder();
     error Pool__InvalidSellOrder();
     error Pool__InvalidTransfer();

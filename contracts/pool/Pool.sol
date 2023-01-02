@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
+// ToDo : Add IPool inheritance
 contract Pool is PoolInternal {
     function getQuote(
         uint256 size,
@@ -20,11 +21,21 @@ contract Pool is PoolInternal {
     function deposit(
         Position.Key memory p,
         Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
         uint256 collateral,
         uint256 longs,
         uint256 shorts
     ) external {
-        _deposit(p, orderType, collateral, longs, shorts);
+        _deposit(
+            p,
+            orderType,
+            belowLower,
+            belowUpper,
+            collateral,
+            longs,
+            shorts
+        );
     }
 
     function withdraw(
@@ -54,5 +65,11 @@ contract Pool is PoolInternal {
 
     function settlePosition(Position.Key memory p) external returns (uint256) {
         return _settlePosition(p);
+    }
+
+    function getNearestTickBelow(
+        uint256 price
+    ) external view returns (uint256) {
+        return _getNearestTickBelow(price);
     }
 }
