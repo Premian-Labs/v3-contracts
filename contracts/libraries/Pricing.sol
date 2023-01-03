@@ -26,10 +26,8 @@ library Pricing {
 
     uint256 private constant WAD = 1e18;
 
-    // We 10x what we are currently using, to make it easier to increase granularity later on if needed
-    uint256 internal constant MIN_TICK_DISTANCE = 10; // 0.001
-    uint256 internal constant MIN_TICK_PRICE = 10; // 0.001
-    uint256 internal constant MAX_TICK_PRICE = 10000; // 1
+    uint256 internal constant MIN_TICK_PRICE = 1; // 0.001
+    uint256 internal constant MAX_TICK_PRICE = 1000; // 1
 
     struct Args {
         uint256 liquidityRate; // Amount of liquidity
@@ -89,7 +87,7 @@ library Pricing {
     ) internal pure returns (uint256) {
         if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
-        return (upper - lower).divWad(MIN_TICK_DISTANCE);
+        return upper - lower;
     }
 
     function amountOfTicksBetween(

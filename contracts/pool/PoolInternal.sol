@@ -204,11 +204,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
     }
 
-    function _verifyTickWidth(uint256 price) internal pure {
-        if (price % Pricing.MIN_TICK_DISTANCE != 0)
-            revert Pool__TickWidthInvalid();
-    }
-
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param orderType The order type
@@ -230,15 +225,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
+        _ensureValidRange(p.lower, p.upper);
         _ensureNonZeroSize(collateral + longs + shorts);
         if (longs > 0 && shorts > 0) revert Pool__LongOrShortMustBeZero();
         _ensureNotExpired(l);
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;
-
-        _verifyTickWidth(p.lower);
-        _verifyTickWidth(p.upper);
 
         // Fix for if stranded market price
         if (
@@ -365,8 +358,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         if (longs > 0 && shorts > 0) revert Pool__LongOrShortMustBeZero();
         _ensureExpired(l);
-        _verifyTickWidth(p.lower);
-        _verifyTickWidth(p.upper);
+        _ensureValidRange(p.lower, p.upper);
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;
@@ -1008,8 +1000,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _tryGetTick(
         uint256 price
     ) internal view returns (Tick.Data memory tick, bool tickFound) {
-        _verifyTickWidth(price);
-
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
             revert Pool__TickOutOfRange();
 
@@ -1174,6 +1164,15 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             : l.globalFeeRate - lowerTickExternalFeeRate;
 
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
+    }
+
+    function _ensureValidRange(uint256 lower, uint256 upper) internal pure {
+        if (
+            lower == 0 ||
+            upper == 0 ||
+            lower >= upper ||
+            upper > Pricing.MAX_TICK_PRICE
+        ) revert Pool__InvalidRange();
     }
 
     function _ensureNonZeroSize(uint256 size) internal pure {
