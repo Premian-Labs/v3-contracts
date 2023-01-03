@@ -3,7 +3,9 @@
 pragma solidity ^0.8.0;
 
 import {IPoolBase} from "./IPoolBase.sol";
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {IPoolIO} from "./IPoolIO.sol";
+
 import {Position} from "../libraries/Position.sol";
 
 interface IPool is IPoolBase, IPoolIO {
@@ -21,6 +23,17 @@ interface IPool is IPoolBase, IPoolIO {
         uint256 shorts
     ) external;
 
+    function swapAndDeposit(
+        IPoolInternal.SwapArgs memory s,
+        Position.Key memory p,
+        Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 collateral,
+        uint256 longs,
+        uint256 shorts
+    ) external;
+
     function withdraw(
         Position.Key memory p,
         uint256 collateral,
@@ -29,6 +42,12 @@ interface IPool is IPoolBase, IPoolIO {
     ) external;
 
     function trade(uint256 size, bool isBuy) external returns (uint256);
+
+    function swapAndTrade(
+        IPoolInternal.SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256);
 
     function annihilate(uint256 size) external;
 

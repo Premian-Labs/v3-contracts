@@ -351,6 +351,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
     }
 
+    function swapAndDeposit(
+        SwapArgs memory s,
+        Position.Key memory p,
+        Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 collateral,
+        uint256 longs,
+        uint256 shorts
+    ) external {
+        // ToDo : Implement
+    }
+
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     /// @param p The position key
     /// @param collateral The amount of collateral to be withdrawn
@@ -553,6 +566,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updateUserAssets(l, user, totalPremium, size, isBuy);
 
         return totalPremium;
+    }
+
+    function swapAndTrade(
+        SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256) {
+        // ToDo : Implement
     }
 
     /// @notice Compute the change in short / long option contracts of an agent in order to
