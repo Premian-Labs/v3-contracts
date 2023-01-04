@@ -15,8 +15,8 @@ contract PoolMock is Pool {
 
     function formatTokenId(
         address operator,
-        uint16 lower,
-        uint16 upper,
+        uint256 lower,
+        uint256 upper,
         Position.OrderType orderType
     ) external pure returns (uint256 tokenId) {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
@@ -28,9 +28,10 @@ contract PoolMock is Pool {
         external
         pure
         returns (
+            uint8 version,
             address operator,
-            uint16 lower,
-            uint16 upper,
+            uint256 lower,
+            uint256 upper,
             Position.OrderType orderType
         )
     {

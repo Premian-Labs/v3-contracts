@@ -19,6 +19,11 @@ library PoolStorage {
     // Token id for LONG
     uint256 internal constant LONG = 1;
 
+    // The version of LP token, used to know how to decode it, if upgrades are made
+    uint8 internal constant TOKEN_VERSION = 1;
+
+    uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
+
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");
 
@@ -80,20 +85,21 @@ library PoolStorage {
     /// @return tokenId token id
     function formatTokenId(
         address operator,
-        uint16 lower,
-        uint16 upper,
+        uint256 lower,
+        uint256 upper,
         Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
-        // ToDo : Add safeguard to prevent SHORT / LONG token id to be used (0 / 1)
         tokenId =
-            (uint256(orderType) << 188) +
-            (uint256(uint160(operator)) << 28) +
-            (uint256(upper) << 14) +
-            uint256(lower);
+            (uint256(TOKEN_VERSION) << 184) +
+            (uint256(orderType) << 180) +
+            (uint256(uint160(operator)) << 20) +
+            (uint256(upper / MIN_TICK_DISTANCE) << 10) +
+            uint256(lower / MIN_TICK_DISTANCE);
     }
 
     /// @notice derive option maturity and strike price from ERC1155 token id
     /// @param tokenId token id
+    /// @return version The version of LP token, used to know how to decode it, if upgrades are made
     /// @return operator The current operator of the position
     /// @return lower The lower bound normalized option price
     /// @return upper The upper bound normalized option price
@@ -103,20 +109,28 @@ library PoolStorage {
         internal
         pure
         returns (
+            uint8 version,
             address operator,
-            uint16 lower,
-            uint16 upper,
+            uint256 lower,
+            uint256 upper,
             Position.OrderType orderType
         )
     {
         assembly {
-            orderType := shr(188, tokenId)
+            version := shr(184, tokenId)
+            orderType := and(shr(180, tokenId), 0xF) // 4 bits mask
             operator := and(
-                shr(28, tokenId),
+                shr(20, tokenId),
                 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF // 160 bits mask
             )
-            upper := and(shr(14, tokenId), 0x3FFF) // 14 bits mask
-            lower := and(tokenId, 0x3FFF) // 14 bits mask
+            upper := mul(
+                and(shr(10, tokenId), 0x3FF), // 10 bits mask
+                MIN_TICK_DISTANCE
+            )
+            lower := mul(
+                and(tokenId, 0x3FF), // 10 bits mask
+                MIN_TICK_DISTANCE
+            )
         }
     }
 }
