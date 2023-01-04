@@ -8,8 +8,8 @@ import {
   Premia__factory,
 } from '../../typechain';
 import { diamondCut } from '../../scripts/utils/diamond';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 
 describe('Pool', () => {
   let admin: SignerWithAddress;
@@ -53,27 +53,60 @@ describe('Pool', () => {
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
-      const tokenId = await pool.formatTokenId(operator, 100, 10000, 3);
+      const tokenId = await pool.formatTokenId(
+        operator,
+        parseEther('0.001'),
+        parseEther('1'),
+        3,
+      );
 
       console.log(tokenId.toHexString());
 
-      expect(tokenId.mask(14)).to.eq(100);
-      expect(tokenId.shr(14).mask(14)).to.eq(10000);
-      expect(tokenId.shr(28).mask(160)).to.eq(operator);
-      expect(tokenId.shr(188).mask(4)).to.eq(3);
+      expect(tokenId.mask(10)).to.eq(1);
+      expect(tokenId.shr(10).mask(10)).to.eq(1000);
+      expect(tokenId.shr(20).mask(160)).to.eq(operator);
+      expect(tokenId.shr(180).mask(4)).to.eq(3);
+      expect(tokenId.shr(252).mask(4)).to.eq(1);
     });
   });
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await pool.parseTokenId(
-        BigNumber.from('0x310000000000000000000000000000000000000019c40064'),
+        BigNumber.from(
+          '0x10000000000000000031000000000000000000000000000000000000001fa001',
+        ),
       );
 
-      expect(r.lower).to.eq(100);
-      expect(r.upper).to.eq(10000);
+      expect(r.lower).to.eq(parseEther('0.001'));
+      expect(r.upper).to.eq(parseEther('1'));
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
       expect(r.orderType).to.eq(3);
+      expect(r.version).to.eq(1);
+    });
+  });
+
+  describe('#amountOfTicksBetween', () => {
+    it('should correctly calculate amount of ticks between two values', async () => {
+      for (const el of [
+        [parseEther('0.001'), parseEther('1'), 999],
+        [parseEther('0.05'), parseEther('0.95'), 900],
+        [parseEther('0.49'), parseEther('0.491'), 1],
+      ])
+        expect(await pool.amountOfTicksBetween(el[0], el[1])).to.eq(el[2]);
+    });
+
+    it('should revert if lower >= upper', async () => {
+      for (const el of [
+        [parseEther('0.2'), parseEther('0.01')],
+        [parseEther('0.1'), parseEther('0.1')],
+      ])
+        await expect(
+          pool.amountOfTicksBetween(el[0], el[1]),
+        ).to.be.revertedWithCustomError(
+          pool,
+          'Pricing__UpperNotGreaterThanLower',
+        );
     });
   });
 });
