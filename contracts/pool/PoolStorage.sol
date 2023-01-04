@@ -93,8 +93,8 @@ library PoolStorage {
             (uint256(TOKEN_VERSION) << 184) +
             (uint256(orderType) << 180) +
             (uint256(uint160(operator)) << 20) +
-            (uint256(upper / MIN_TICK_DISTANCE) << 10) +
-            uint256(lower / MIN_TICK_DISTANCE);
+            ((upper / MIN_TICK_DISTANCE) << 10) +
+            (lower / MIN_TICK_DISTANCE);
     }
 
     /// @notice derive option maturity and strike price from ERC1155 token id

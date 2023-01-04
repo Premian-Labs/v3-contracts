@@ -83,4 +83,10 @@ describe('Pool', () => {
       expect(r.version).to.eq(1);
     });
   });
+
+  describe('#amountOfTicksBetween', () => {
+    it('should correctly calculate amount of ticks between two values', async () => {
+      expect(await )
+    })
+  })
 });
