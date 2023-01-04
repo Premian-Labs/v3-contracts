@@ -119,10 +119,7 @@ library PoolStorage {
         assembly {
             version := shr(252, tokenId)
             orderType := and(shr(180, tokenId), 0xF) // 4 bits mask
-            operator := and(
-                shr(20, tokenId),
-                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF // 160 bits mask
-            )
+            operator := shr(20, tokenId)
             upper := mul(
                 and(shr(10, tokenId), 0x3FF), // 10 bits mask
                 MIN_TICK_DISTANCE
