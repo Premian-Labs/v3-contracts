@@ -7,6 +7,8 @@ import {SolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20
 import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
 
 import {Position} from "../libraries/Position.sol";
+import {Pricing} from "../libraries/Pricing.sol";
+
 import {Pool} from "../pool/Pool.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
@@ -36,5 +38,13 @@ contract PoolMock is Pool {
         )
     {
         return PoolStorage.parseTokenId(tokenId);
+    }
+
+    // ToDo : Move to PricingMock ?
+    function amountOfTicksBetween(
+        uint256 lower,
+        uint256 upper
+    ) external pure returns (uint256) {
+        return Pricing.amountOfTicksBetween(lower, upper);
     }
 }

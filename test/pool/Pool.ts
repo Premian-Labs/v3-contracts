@@ -86,7 +86,25 @@ describe('Pool', () => {
 
   describe('#amountOfTicksBetween', () => {
     it('should correctly calculate amount of ticks between two values', async () => {
-      expect(await )
-    })
-  })
+      for (const el of [
+        [parseEther('0.001'), parseEther('1'), 999],
+        [parseEther('0.05'), parseEther('0.95'), 900],
+        [parseEther('0.49'), parseEther('0.491'), 1],
+      ])
+        expect(await pool.amountOfTicksBetween(el[0], el[1])).to.eq(el[2]);
+    });
+
+    it('should revert if lower >= upper', async () => {
+      for (const el of [
+        [parseEther('0.2'), parseEther('0.01')],
+        [parseEther('0.1'), parseEther('0.1')],
+      ])
+        await expect(
+          pool.amountOfTicksBetween(el[0], el[1]),
+        ).to.be.revertedWithCustomError(
+          pool,
+          'Pricing__UpperNotGreaterThanLower',
+        );
+    });
+  });
 });
