@@ -66,14 +66,16 @@ describe('Pool', () => {
       expect(tokenId.shr(10).mask(10)).to.eq(1000);
       expect(tokenId.shr(20).mask(160)).to.eq(operator);
       expect(tokenId.shr(180).mask(4)).to.eq(3);
-      expect(tokenId.shr(184).mask(4)).to.eq(1);
+      expect(tokenId.shr(252).mask(4)).to.eq(1);
     });
   });
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await pool.parseTokenId(
-        BigNumber.from('0x0131000000000000000000000000000000000000001fa001'),
+        BigNumber.from(
+          '0x10000000000000000031000000000000000000000000000000000000001fa001',
+        ),
       );
 
       expect(r.lower).to.eq(parseEther('0.001'));

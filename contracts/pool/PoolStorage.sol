@@ -90,7 +90,7 @@ library PoolStorage {
         Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
         tokenId =
-            (uint256(TOKEN_VERSION) << 184) +
+            (uint256(TOKEN_VERSION) << 252) +
             (uint256(orderType) << 180) +
             (uint256(uint160(operator)) << 20) +
             ((upper / MIN_TICK_DISTANCE) << 10) +
@@ -117,7 +117,7 @@ library PoolStorage {
         )
     {
         assembly {
-            version := shr(184, tokenId)
+            version := shr(252, tokenId)
             orderType := and(shr(180, tokenId), 0xF) // 4 bits mask
             operator := and(
                 shr(20, tokenId),
