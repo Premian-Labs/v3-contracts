@@ -11,7 +11,6 @@ interface IPoolInternal {
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
     error Pool__InvalidBuyOrder();
-    error Pool__InvalidRange();
     error Pool__InvalidSellOrder();
     error Pool__InvalidTransfer();
     error Pool__LongOrShortMustBeZero();
