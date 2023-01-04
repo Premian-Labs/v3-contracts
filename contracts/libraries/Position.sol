@@ -28,9 +28,9 @@ library Position {
         // The Agent that can control modifications to the Position
         address operator;
         // The lower tick normalized price of the range order
-        uint16 lower;
+        uint256 lower;
         // The upper tick normalized price of the range order
-        uint16 upper;
+        uint256 upper;
         OrderType orderType;
         // ---- Values under are not used to compute the key hash but are included in this struct to reduce stack depth
         bool isCall;
@@ -143,8 +143,7 @@ library Position {
             a = self.upper;
         }
 
-        // ToDo : Fix multiplication with normalized price
-        uint256 numerator = (a.mulWad(a) - self.lower * self.lower);
+        uint256 numerator = (a.mulWad(a) - self.lower.mulWad(self.lower));
         uint256 denominator = (2 * WAD) * (self.upper - self.lower);
 
         return numerator.divWad(denominator);
