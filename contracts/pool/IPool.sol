@@ -3,10 +3,9 @@
 pragma solidity ^0.8.0;
 
 import {IPoolBase} from "./IPoolBase.sol";
-import {IPoolIO} from "./IPoolIO.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPool is IPoolBase, IPoolIO {
+interface IPool is IPoolBase {
     function getQuote(uint256 size, bool isBuy) external view returns (uint256);
 
     function claim(Position.Key memory p) external;
