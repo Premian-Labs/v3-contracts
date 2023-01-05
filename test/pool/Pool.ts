@@ -2,44 +2,76 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import {
-  PoolMock,
-  PoolMock__factory,
-  Premia,
-  Premia__factory,
+  ERC20Mock,
+  ERC20Mock__factory,
+  IPoolMock,
+  IPoolMock__factory,
+  Pricing__factory,
 } from '../../typechain';
-import { diamondCut } from '../../scripts/utils/diamond';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
+import { PoolUtil } from '../../utils/PoolUtil';
+import {
+  deployMockContract,
+  MockContract,
+} from '@ethereum-waffle/mock-contract';
+import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
+import { ONE_MONTH } from '../../utils/constants';
 
 describe('Pool', () => {
-  let admin: SignerWithAddress;
-  let poolDiamond: Premia;
-  let pool: PoolMock;
+  let deployer: SignerWithAddress;
+  let callPool: IPoolMock;
+  let putPool: IPoolMock;
+  let p: PoolUtil;
+
+  let base: ERC20Mock;
+  let underlying: ERC20Mock;
+  let baseOracle: MockContract;
+  let underlyingOracle: MockContract;
+
+  let strike = 1000;
+  let maturity = getCurrentTimestamp() + ONE_MONTH;
 
   let snapshotId: number;
 
   before(async () => {
-    [admin] = await ethers.getSigners();
+    [deployer] = await ethers.getSigners();
 
-    poolDiamond = await new Premia__factory(admin).deploy();
+    p = await PoolUtil.deploy(deployer, true, true);
 
-    const poolFactory = new PoolMock__factory(admin);
-    const poolImpl = await poolFactory.deploy();
+    underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    let registeredSelectors = [
-      poolDiamond.interface.getSighash('supportsInterface(bytes4)'),
-    ];
+    baseOracle = await deployMockContract(deployer as any, [
+      'function latestAnswer () external view returns (int)',
+      'function decimals () external view returns (uint8)',
+    ]);
 
-    registeredSelectors = registeredSelectors.concat(
-      await diamondCut(
-        poolDiamond,
-        poolImpl.address,
-        poolFactory,
-        registeredSelectors,
-      ),
-    );
+    underlyingOracle = await deployMockContract(deployer as any, [
+      'function latestAnswer () external view returns (int)',
+      'function decimals () external view returns (uint8)',
+    ]);
 
-    pool = PoolMock__factory.connect(poolDiamond.address, admin);
+    for (const isCall of [true, false]) {
+      const tx = await p.poolFactory.deployPool(
+        base.address,
+        underlying.address,
+        baseOracle.address,
+        underlyingOracle.address,
+        strike,
+        maturity,
+        isCall,
+      );
+
+      const r = await tx.wait(1);
+      const poolAddress = (r as any).events[0].args.poolAddress;
+
+      if (isCall) {
+        callPool = IPoolMock__factory.connect(poolAddress, deployer);
+      } else {
+        putPool = IPoolMock__factory.connect(poolAddress, deployer);
+      }
+    }
   });
 
   beforeEach(async () => {
@@ -53,7 +85,7 @@ describe('Pool', () => {
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
-      const tokenId = await pool.formatTokenId(
+      const tokenId = await callPool.formatTokenId(
         operator,
         parseEther('0.001'),
         parseEther('1'),
@@ -72,7 +104,7 @@ describe('Pool', () => {
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
-      const r = await pool.parseTokenId(
+      const r = await callPool.parseTokenId(
         BigNumber.from(
           '0x10000000000000000031000000000000000000000000000000000000001fa001',
         ),
@@ -93,7 +125,7 @@ describe('Pool', () => {
         [parseEther('0.05'), parseEther('0.95'), 900],
         [parseEther('0.49'), parseEther('0.491'), 1],
       ])
-        expect(await pool.amountOfTicksBetween(el[0], el[1])).to.eq(el[2]);
+        expect(await callPool.amountOfTicksBetween(el[0], el[1])).to.eq(el[2]);
     });
 
     it('should revert if lower >= upper', async () => {
@@ -102,9 +134,9 @@ describe('Pool', () => {
         [parseEther('0.1'), parseEther('0.1')],
       ])
         await expect(
-          pool.amountOfTicksBetween(el[0], el[1]),
+          callPool.amountOfTicksBetween(el[0], el[1]),
         ).to.be.revertedWithCustomError(
-          pool,
+          { interface: Pricing__factory.createInterface() },
           'Pricing__UpperNotGreaterThanLower',
         );
     });
