@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { PoolUtil } from '../PoolUtil';
+import { PoolUtil } from '../../utils/PoolUtil';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

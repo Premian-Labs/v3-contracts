@@ -4,11 +4,12 @@ import {
   PoolFactory,
   PoolFactory__factory,
   PoolFactoryProxy__factory,
+  PoolMock__factory,
   Premia,
   Premia__factory,
 } from '../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { diamondCut } from './utils/diamond';
+import { diamondCut } from '../scripts/utils/diamond';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -24,7 +25,11 @@ export class PoolUtil {
     this.poolFactory = args.poolFactory;
   }
 
-  static async deploy(deployer: SignerWithAddress, log = true) {
+  static async deploy(
+    deployer: SignerWithAddress,
+    log = true,
+    isDevMode = false,
+  ) {
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
     await premiaDiamond.deployed();
@@ -37,11 +42,21 @@ export class PoolUtil {
 
     if (log) console.log(`PoolBase : ${poolBaseImpl.address}`);
 
-    const poolCoreFactory = new PoolCore__factory(deployer);
+    let poolCoreFactory: PoolCore__factory | PoolMock__factory;
+
+    if (isDevMode) {
+      poolCoreFactory = new PoolMock__factory(deployer);
+    } else {
+      poolCoreFactory = new PoolCore__factory(deployer);
+    }
+
     const poolCoreImpl = await poolCoreFactory.deploy();
     await poolCoreImpl.deployed();
 
-    if (log) console.log(`PoolCore : ${poolCoreImpl.address}`);
+    if (log)
+      console.log(
+        `${isDevMode ? 'PoolMock' : 'PoolCore'} : ${poolCoreImpl.address}`,
+      );
 
     let registeredSelectors = [
       premiaDiamond.interface.getSighash('supportsInterface(bytes4)'),
@@ -71,7 +86,9 @@ export class PoolUtil {
     // PoolFactory //
     /////////////////
 
-    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy();
+    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
+      premiaDiamond.address,
+    );
     await poolFactoryImpl.deployed();
 
     if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);
