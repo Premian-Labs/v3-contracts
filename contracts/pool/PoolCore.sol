@@ -15,7 +15,6 @@ import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 import {IPoolCore} from "./IPoolCore.sol";
 
-// ToDo : Add IPool inheritance
 contract PoolCore is
     IPoolCore,
     PoolInternal,
