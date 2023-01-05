@@ -11,8 +11,9 @@ import {Pricing} from "../libraries/Pricing.sol";
 
 import {PoolCore} from "../pool/PoolCore.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
+import {_IPoolMock} from "./_IPoolMock.sol";
 
-contract PoolMock is PoolCore {
+contract PoolMock is _IPoolMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
     function formatTokenId(
