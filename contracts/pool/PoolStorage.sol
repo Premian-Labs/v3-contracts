@@ -6,8 +6,6 @@ import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol"
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
-import {IPoolTicks} from "./IPoolTicks.sol";
-
 library PoolStorage {
     using PoolStorage for PoolStorage.Layout;
 

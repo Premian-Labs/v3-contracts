@@ -9,10 +9,10 @@ import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/E
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 
-import {Pool} from "../pool/Pool.sol";
+import {PoolCore} from "../pool/PoolCore.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
-contract PoolMock is Pool {
+contract PoolMock is PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
     function formatTokenId(
