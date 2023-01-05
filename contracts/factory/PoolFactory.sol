@@ -9,6 +9,12 @@ import {PoolProxy} from "../pool/PoolProxy.sol";
 contract PoolFactory is IPoolFactory {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
+    address internal immutable DIAMOND;
+
+    constructor(address diamond) {
+        DIAMOND = diamond;
+    }
+
     function getDeploymentAddress(
         address base,
         address underlying,
@@ -40,6 +46,7 @@ contract PoolFactory is IPoolFactory {
         bool isCallPool
     ) internal view returns (address) {
         bytes memory args = abi.encode(
+            DIAMOND,
             base,
             underlying,
             baseOracle,
@@ -140,6 +147,7 @@ contract PoolFactory is IPoolFactory {
         // Deterministic pool addresses
         bytes32 salt = keccak256(
             abi.encode(
+                DIAMOND,
                 base,
                 underlying,
                 baseOracle,
@@ -152,7 +160,7 @@ contract PoolFactory is IPoolFactory {
 
         poolAddress = address(
             new PoolProxy{salt: salt}(
-                address(this),
+                DIAMOND,
                 base,
                 underlying,
                 baseOracle,
