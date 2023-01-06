@@ -12,7 +12,6 @@ interface IPoolCore {
 
     function deposit(
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 collateral,
