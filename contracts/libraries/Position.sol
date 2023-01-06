@@ -48,7 +48,9 @@ library Position {
     enum OrderType {
         BUY_WITH_COLLATERAL,
         BUY_WITH_SHORTS,
+        BUY_WITH_SHORTS_USE_PREMIUMS,
         SELL_WITH_COLLATERAL,
+        SELL_WITH_COLLATERAL_USE_PREMIUMS,
         SELL_WITH_LONGS
     }
 
@@ -78,20 +80,26 @@ library Position {
             return OrderType.BUY_WITH_COLLATERAL;
         else if (orderType == OrderType.BUY_WITH_SHORTS)
             return OrderType.SELL_WITH_COLLATERAL;
+        else if (orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS)
+            return OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS;
         else if (orderType == OrderType.SELL_WITH_COLLATERAL)
             return OrderType.BUY_WITH_SHORTS;
+        else if (orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS)
+            return OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
         else revert Position__InvalidOrderType();
     }
 
     function isLeft(OrderType orderType) internal pure returns (bool) {
         return
             orderType == OrderType.BUY_WITH_SHORTS ||
+            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
             orderType == OrderType.BUY_WITH_COLLATERAL;
     }
 
     function isRight(OrderType orderType) internal pure returns (bool) {
         return
             orderType == OrderType.SELL_WITH_COLLATERAL ||
+            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
             orderType == OrderType.SELL_WITH_LONGS;
     }
 
@@ -173,13 +181,15 @@ library Position {
         Key memory self,
         uint256 size
     ) internal pure returns (uint256 contractsLiquidity) {
-        if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
+        if (self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS) {
             return size.divWad(WAD - self.averagePrice());
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
             return size.divWad(self.averagePrice());
         } else if (
             self.orderType == OrderType.SELL_WITH_LONGS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS
+            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
+            self.orderType == OrderType.BUY_WITH_SHORTS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
         ) {
             return size;
         }
@@ -199,29 +209,6 @@ library Position {
 
         return self.liquidity(size) / amountOfTicks;
     }
-
-    // ToDo : Remove ?
-    //    function tokenAmount(
-    //        Key memory self,
-    //        Data memory data
-    //    ) internal pure returns (uint256) {
-    //        if (
-    //            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-    //            self.orderType == OrderType.BUY_WITH_COLLATERAL
-    //        ) {
-    //            // Collateral amount (ETH / USDC) locked in the contract
-    //            return data.size;
-    //        } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
-    //            // Collateral amount deposited to buy longs
-    //            return data.size.mulWad(self.averagePrice());
-    //        } else if (self.orderType == OrderType.BUY_WITH_SHORTS) {
-    //            // Collateral amount received after full traversal
-    //            return data.size.mulWad(WAD - self.averagePrice());
-    //        } else {
-    //            // Collateral amount unlocked after full traversal
-    //            revert Position__WrongOrderType();
-    //        }
-    //    }
 
     /// @notice Bid collateral either used to buy back options or revenue /
     ///         income generated from underwriting / selling options.
@@ -253,10 +240,26 @@ library Position {
         uint256 nu = pieceWiseLinear(self, price);
 
         if (
+            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            _collateral = (WAD - nu).mulWad(self.liquidity(size));
+            _collateral = contractsToCollateral(
+                (WAD - nu).mulWad(self.liquidity(size)),
+                self.strike,
+                self.isCall
+            );
+
+            if (
+                self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+                self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
+            ) {
+                _collateral -= (self.bid(size, self.upper) -
+                    self.bid(size, price));
+            } else {
+                _collateral += self.bid(size, price);
+            }
         } else if (
             self.orderType == OrderType.BUY_WITH_COLLATERAL ||
             self.orderType == OrderType.SELL_WITH_LONGS
@@ -292,7 +295,9 @@ library Position {
     ) internal pure returns (uint256) {
         if (
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-            self.orderType == OrderType.BUY_WITH_SHORTS
+            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
         ) {
             return 0;
         } else if (
@@ -313,7 +318,9 @@ library Position {
     ) internal pure returns (uint256) {
         if (
             self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-            self.orderType == OrderType.BUY_WITH_SHORTS
+            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
         ) {
             return self.contracts(size, price);
         } else if (
@@ -361,12 +368,18 @@ library Position {
 
         uint256 nu = self.pieceWiseLinear(price);
         uint256 size;
-        if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
+        if (
+            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            self.orderType == OrderType.SELL_WITH_COLLATERAL
+        ) {
             if (_longs > 0) revert Position__InvalidAssetChange();
             if (price > self.lower) {
                 uint256 _liquidity = _shorts.divWad(nu);
                 size = contractsToCollateral(
-                    _liquidity.mulWad(WAD - self.averagePrice()),
+                    self.orderType ==
+                        OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS
+                        ? _liquidity.mulWad(WAD - self.averagePrice())
+                        : _liquidity,
                     self.strike,
                     self.isCall
                 );
@@ -405,13 +418,18 @@ library Position {
                 );
                 if (_longs > 0) revert Position__InvalidAssetChange();
             }
-        } else if (self.orderType == OrderType.BUY_WITH_SHORTS) {
+        } else if (
+            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
+            self.orderType == OrderType.BUY_WITH_SHORTS
+        ) {
             if (_longs > 0) revert Position__InvalidAssetChange();
             if (price > self.lower) {
                 size = _shorts.divWad(nu);
             } else {
                 size = collateralToContracts(
-                    _collateral.divWad(WAD - self.averagePrice()),
+                    self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
+                        ? _collateral.divWad(WAD - self.averagePrice())
+                        : _collateral,
                     self.strike,
                     self.isCall
                 );
