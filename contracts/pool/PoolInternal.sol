@@ -285,13 +285,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             uint256 feeRate;
             {
                 // If ticks dont exist they are created and inserted into the linked list
-                Tick.Data memory lowerTick = _getOrCreateTick(
-                    p.lower,
-                    belowLower
-                );
                 Tick.Data memory upperTick = _getOrCreateTick(
                     p.upper,
                     belowUpper
+                );
+
+                Tick.Data memory lowerTick = _getOrCreateTick(
+                    p.lower,
+                    belowLower
                 );
 
                 feeRate = _rangeFeeRate(
