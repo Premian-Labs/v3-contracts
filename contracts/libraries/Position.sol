@@ -355,6 +355,109 @@ library Position {
             revert Position__InvalidContractsToCollateralRatio();
     }
 
+    function calculateAssetChangeSellWithCollateral(
+        Key memory self,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _longs,
+        uint256 _shorts,
+        uint256 nu
+    ) internal pure returns (uint256 size) {
+        if (_longs > 0) revert Position__InvalidAssetChange();
+
+        if (price > self.lower) {
+            uint256 _liquidity = _shorts.divWad(nu);
+            size = contractsToCollateral(
+                self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS
+                    ? _liquidity.mulWad(WAD - self.averagePrice())
+                    : _liquidity,
+                self.strike,
+                self.isCall
+            );
+        } else {
+            size = _collateral;
+
+            if (_shorts > 0) revert Position__InvalidAssetChange();
+        }
+    }
+
+    function calculateAssetChangeBuyWithCollateral(
+        Key memory self,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _longs,
+        uint256 _shorts,
+        uint256 nu
+    ) internal pure returns (uint256 size) {
+        if (_shorts > 0) revert Position__InvalidAssetChange();
+
+        if (self.lower < price && price < self.upper) {
+            size = contractsToCollateral(
+                _longs.divWad(WAD - nu).mulWad(self.averagePrice()),
+                self.strike,
+                self.isCall
+            );
+        } else if (price <= self.lower) {
+            size = contractsToCollateral(
+                _longs.mulWad(self.averagePrice()),
+                self.strike,
+                self.isCall
+            );
+        } else {
+            size = _collateral;
+
+            if (_longs > 0) revert Position__InvalidAssetChange();
+        }
+    }
+
+    function calculateAssetChangeSellWithLongs(
+        Key memory self,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _longs,
+        uint256 _shorts,
+        uint256 nu
+    ) internal pure returns (uint256 size) {
+        if (_shorts > 0) revert Position__InvalidAssetChange();
+
+        if (price < self.upper) {
+            size = _longs.divWad(WAD - nu);
+        } else {
+            size = collateralToContracts(
+                _collateral.divWad(self.averagePrice()),
+                self.strike,
+                self.isCall
+            );
+
+            if (_longs > 0) revert Position__InvalidAssetChange();
+        }
+    }
+
+    function calculateAssetChangeSellWithShorts(
+        Key memory self,
+        uint256 price,
+        uint256 _collateral,
+        uint256 _longs,
+        uint256 _shorts,
+        uint256 nu
+    ) internal pure returns (uint256 size) {
+        if (_longs > 0) revert Position__InvalidAssetChange();
+
+        if (price > self.lower) {
+            size = _shorts.divWad(nu);
+        } else {
+            size = collateralToContracts(
+                self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
+                    ? _collateral.divWad(WAD - self.averagePrice())
+                    : _collateral,
+                self.strike,
+                self.isCall
+            );
+
+            if (_shorts > 0) revert Position__InvalidAssetChange();
+        }
+    }
+
     function calculateAssetChange(
         Key memory self,
         uint256 currentSize,
@@ -372,69 +475,44 @@ library Position {
             self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
             self.orderType == OrderType.SELL_WITH_COLLATERAL
         ) {
-            if (_longs > 0) revert Position__InvalidAssetChange();
-            if (price > self.lower) {
-                uint256 _liquidity = _shorts.divWad(nu);
-                size = contractsToCollateral(
-                    self.orderType ==
-                        OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS
-                        ? _liquidity.mulWad(WAD - self.averagePrice())
-                        : _liquidity,
-                    self.strike,
-                    self.isCall
-                );
-            } else {
-                size = _collateral;
-                if (_shorts > 0) revert Position__InvalidAssetChange();
-            }
+            size = calculateAssetChangeSellWithCollateral(
+                self,
+                price,
+                _collateral,
+                _longs,
+                _shorts,
+                nu
+            );
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
-            if (_shorts > 0) revert Position__InvalidAssetChange();
-            if (self.lower < price && price < self.upper) {
-                uint256 _liquidity = _longs.divWad(WAD - nu);
-                size = contractsToCollateral(
-                    _liquidity.mulWad(self.averagePrice()),
-                    self.strike,
-                    self.isCall
-                );
-            } else if (price <= self.lower) {
-                size = contractsToCollateral(
-                    _longs.mulWad(self.averagePrice()),
-                    self.strike,
-                    self.isCall
-                );
-            } else {
-                size = _collateral;
-                if (_longs > 0) revert Position__InvalidAssetChange();
-            }
+            size = calculateAssetChangeBuyWithCollateral(
+                self,
+                price,
+                _collateral,
+                _longs,
+                _shorts,
+                nu
+            );
         } else if (self.orderType == OrderType.SELL_WITH_LONGS) {
-            if (_shorts > 0) revert Position__InvalidAssetChange();
-            if (price < self.upper) {
-                size = _longs.divWad(WAD - nu);
-            } else {
-                size = collateralToContracts(
-                    _collateral.divWad(self.averagePrice()),
-                    self.strike,
-                    self.isCall
-                );
-                if (_longs > 0) revert Position__InvalidAssetChange();
-            }
+            size = calculateAssetChangeSellWithLongs(
+                self,
+                price,
+                _collateral,
+                _longs,
+                _shorts,
+                nu
+            );
         } else if (
             self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            if (_longs > 0) revert Position__InvalidAssetChange();
-            if (price > self.lower) {
-                size = _shorts.divWad(nu);
-            } else {
-                size = collateralToContracts(
-                    self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
-                        ? _collateral.divWad(WAD - self.averagePrice())
-                        : _collateral,
-                    self.strike,
-                    self.isCall
-                );
-                if (_shorts > 0) revert Position__InvalidAssetChange();
-            }
+            size = calculateAssetChangeSellWithShorts(
+                self,
+                price,
+                _collateral,
+                _longs,
+                _shorts,
+                nu
+            );
         } else {
             revert Position__InvalidOrderType();
         }
