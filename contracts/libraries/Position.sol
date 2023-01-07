@@ -433,7 +433,7 @@ library Position {
         }
     }
 
-    function calculateAssetChangeSellWithShorts(
+    function calculateAssetChangeBuyWithShorts(
         Key memory self,
         uint256 price,
         uint256 _collateral,
@@ -505,7 +505,7 @@ library Position {
             self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
             self.orderType == OrderType.BUY_WITH_SHORTS
         ) {
-            size = calculateAssetChangeSellWithShorts(
+            size = calculateAssetChangeBuyWithShorts(
                 self,
                 price,
                 _collateral,
