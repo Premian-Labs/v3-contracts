@@ -46,12 +46,12 @@ library Position {
     }
 
     enum OrderType {
-        BUY_WITH_COLLATERAL,
-        BUY_WITH_SHORTS,
-        BUY_WITH_SHORTS_USE_PREMIUMS,
-        SELL_WITH_COLLATERAL,
-        SELL_WITH_COLLATERAL_USE_PREMIUMS,
-        SELL_WITH_LONGS
+        BUY_WITH_COLLATERAL, // Buy options using deposited collateral
+        BUY_WITH_SHORTS, // Buy options using deposited shorts (Premiums are NOT used)
+        BUY_WITH_SHORTS_USE_PREMIUMS, // Buy options using deposited shorts (Premiums are used)
+        SELL_WITH_COLLATERAL, // Sell options using deposited collateral (Premiums are NOT used)
+        SELL_WITH_COLLATERAL_USE_PREMIUMS, // Sell options using deposited collateral (Premiums are used)
+        SELL_WITH_LONGS // Sell options using deposited longs
     }
 
     struct Liquidity {
