@@ -970,7 +970,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
-    /// @notice Gets the nearest tick that is less than or equal to `price`.=
+    /// @notice Gets the nearest tick that is less than or equal to `price`.
     function _getNearestTickBelow(
         uint256 price
     ) internal view returns (uint256) {
