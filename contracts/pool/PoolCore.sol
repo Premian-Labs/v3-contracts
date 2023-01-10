@@ -30,6 +30,19 @@ contract PoolCore is IPoolCore, PoolInternal {
         _deposit(p, belowLower, belowUpper, collateral, longs, shorts);
     }
 
+    function swapAndDeposit(
+        SwapArgs memory s,
+        Position.Key memory p,
+        Position.OrderType orderType,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 collateral,
+        uint256 longs,
+        uint256 shorts
+    ) external {
+        // ToDo : Implement
+    }
+
     function withdraw(
         Position.Key memory p,
         uint256 collateral,
@@ -41,6 +54,14 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     function trade(uint256 size, bool isBuy) external returns (uint256) {
         return _trade(msg.sender, size, isBuy);
+    }
+
+    function swapAndTrade(
+        SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256) {
+        // ToDo : Implement
     }
 
     function annihilate(uint256 size) external {
