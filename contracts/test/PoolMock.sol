@@ -16,6 +16,11 @@ import {_IPoolMock} from "./_IPoolMock.sol";
 contract PoolMock is _IPoolMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
+    constructor(
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) PoolCore(exchangeHelper, wrappedNativeToken) {}
+
     function formatTokenId(
         address operator,
         uint256 lower,

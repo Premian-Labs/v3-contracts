@@ -8,6 +8,13 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
+    using PoolStorage for PoolStorage.Layout;
+
+    constructor(
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
+
     function getQuote(
         uint256 size,
         bool isBuy
@@ -33,14 +40,17 @@ contract PoolCore is IPoolCore, PoolInternal {
     function swapAndDeposit(
         SwapArgs memory s,
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
-        uint256 belowUpper,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 belowUpper
     ) external {
-        // ToDo : Implement
+        // ToDo : Add orderType check ?
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        address tokenOut = l.getPoolToken();
+        uint256 creditAmount = _swapForPoolTokens(s, tokenOut);
+
+        _deposit(p, belowUpper, belowUpper, creditAmount, 0, 0);
     }
 
     function withdraw(

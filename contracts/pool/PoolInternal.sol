@@ -8,6 +8,8 @@ import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
@@ -15,9 +17,11 @@ import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
 contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
+    using SafeERC20 for IERC20;
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
@@ -29,6 +33,9 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using Math for int256;
     using UintUtils for uint256;
 
+    address internal immutable EXCHANGE_HELPER;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
+
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     uint256 private constant WAD = 1e18;
 
@@ -36,6 +43,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
     uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
+
+    constructor(address exchangeHelper, address wrappedNativeToken) {
+        EXCHANGE_HELPER = exchangeHelper;
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+    }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
@@ -943,6 +955,42 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         return collateral;
+    }
+
+    /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper
+    /// @param s swap arguments
+    /// @param tokenOut token to swap for. should always equal to the pool token.
+    /// @return amountCredited amount of tokenOut we got from the trade.
+    function _swapForPoolTokens(
+        IPoolInternal.SwapArgs memory s,
+        address tokenOut
+    ) internal returns (uint256 amountCredited) {
+        if (msg.value > 0) {
+            require(s.tokenIn == WRAPPED_NATIVE_TOKEN, "wrong tokenIn");
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
+        }
+        if (s.amountInMax > 0) {
+            IERC20(s.tokenIn).safeTransferFrom(
+                msg.sender,
+                EXCHANGE_HELPER,
+                s.amountInMax
+            );
+        }
+
+        amountCredited = IExchangeHelper(EXCHANGE_HELPER).swapWithToken(
+            s.tokenIn,
+            tokenOut,
+            s.amountInMax + msg.value,
+            s.callee,
+            s.allowanceTarget,
+            s.data,
+            s.refundAddress
+        );
+        require(
+            amountCredited >= s.amountOutMin,
+            "not enough output from trade"
+        );
     }
 
     /////////////////////////////////////////////

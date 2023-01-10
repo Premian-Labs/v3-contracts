@@ -23,12 +23,8 @@ interface IPoolCore {
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
-        uint256 belowUpper,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 belowUpper
     ) external;
 
     function withdraw(

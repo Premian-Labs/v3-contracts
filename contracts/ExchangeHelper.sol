@@ -8,17 +8,13 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {IExchangeHelper} from "./IExchangeHelper.sol";
 
-/**
- * @title Premia Exchange Helper
- * @dev deployed standalone and referenced by ExchangeProxy
- * @dev do NOT set additional approval to this contract!
- */
+/// @title Premia Exchange Helper
+/// @dev deployed standalone and referenced by ExchangeProxy
+/// @dev do NOT set additional approval to this contract!
 contract ExchangeHelper is IExchangeHelper {
     using SafeERC20 for IERC20;
 
-    /**
-     * @inheritdoc IExchangeHelper
-     */
+    /// @inheritdoc IExchangeHelper
     function swapWithToken(
         address sourceToken,
         address targetToken,
