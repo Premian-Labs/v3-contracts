@@ -4,7 +4,7 @@ import {
   PoolFactory,
   PoolFactory__factory,
   PoolFactoryProxy__factory,
-  PoolMock__factory,
+  PoolCoreMock__factory,
   Premia,
   Premia__factory,
 } from '../typechain';
@@ -42,10 +42,10 @@ export class PoolUtil {
 
     if (log) console.log(`PoolBase : ${poolBaseImpl.address}`);
 
-    let poolCoreFactory: PoolCore__factory | PoolMock__factory;
+    let poolCoreFactory: PoolCore__factory | PoolCoreMock__factory;
 
     if (isDevMode) {
-      poolCoreFactory = new PoolMock__factory(deployer);
+      poolCoreFactory = new PoolCoreMock__factory(deployer);
     } else {
       poolCoreFactory = new PoolCore__factory(deployer);
     }
@@ -55,7 +55,7 @@ export class PoolUtil {
 
     if (log)
       console.log(
-        `${isDevMode ? 'PoolMock' : 'PoolCore'} : ${poolCoreImpl.address}`,
+        `${isDevMode ? 'PoolCoreMock' : 'PoolCore'} : ${poolCoreImpl.address}`,
       );
 
     let registeredSelectors = [

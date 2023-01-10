@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import {Position} from "../libraries/Position.sol";
+import {Pricing} from "../libraries/Pricing.sol";
 
-interface _IPoolMock {
+interface IPoolCoreMock {
     function formatTokenId(
         address operator,
         uint256 lower,
@@ -24,8 +25,19 @@ interface _IPoolMock {
             Position.OrderType orderType
         );
 
+    // TODO : Move to PricingMock
+    function proportion(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice
+    ) external pure returns (uint256);
+
     function amountOfTicksBetween(
         uint256 lower,
         uint256 upper
+    ) external pure returns (uint256);
+
+    function liquidity(
+        Pricing.Args memory args
     ) external pure returns (uint256);
 }

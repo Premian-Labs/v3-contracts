@@ -11,9 +11,10 @@ import {Pricing} from "../libraries/Pricing.sol";
 
 import {PoolCore} from "../pool/PoolCore.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
-import {_IPoolMock} from "./_IPoolMock.sol";
 
-contract PoolMock is _IPoolMock, PoolCore {
+import {IPoolCoreMock} from "./IPoolCoreMock.sol";
+
+contract PoolCoreMock is IPoolCoreMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
     function formatTokenId(
@@ -41,11 +42,25 @@ contract PoolMock is _IPoolMock, PoolCore {
         return PoolStorage.parseTokenId(tokenId);
     }
 
-    // ToDo : Move to PricingMock ?
+    // TODO : Move to PricingMock
+    function proportion(
+        uint256 lower,
+        uint256 upper,
+        uint256 marketPrice
+    ) external pure returns (uint256) {
+        return Pricing.proportion(lower, upper, marketPrice);
+    }
+
     function amountOfTicksBetween(
         uint256 lower,
         uint256 upper
     ) external pure returns (uint256) {
         return Pricing.amountOfTicksBetween(lower, upper);
+    }
+
+    function liquidity(
+        Pricing.Args memory args
+    ) external pure returns (uint256) {
+        return Pricing.amountOfTicksBetween(args);
     }
 }
