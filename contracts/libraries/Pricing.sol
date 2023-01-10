@@ -88,7 +88,7 @@ library Pricing {
     ) internal pure returns (uint256) {
         if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
 
-        return (upper - lower).divWad(MIN_TICK_DISTANCE);
+        return (upper - lower) / MIN_TICK_DISTANCE;
     }
 
     function amountOfTicksBetween(

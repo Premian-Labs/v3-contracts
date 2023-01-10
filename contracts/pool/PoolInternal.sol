@@ -204,14 +204,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
     }
 
-    function _verifyTickWidth(uint256 price) internal pure {
-        if (price % Pricing.MIN_TICK_DISTANCE != 0)
-            revert Pool__TickWidthInvalid();
-    }
-
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
-    /// @param orderType The order type
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param collateral The amount of collateral to be deposited
@@ -219,14 +213,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @param shorts The amount of shorts to be deposited
     function _deposit(
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 collateral,
         uint256 longs,
         uint256 shorts
     ) internal {
-        bool isBuy = orderType.isLeft();
+        bool isBuy = p.orderType.isLeft();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -237,6 +230,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         p.strike = l.strike;
         p.isCall = l.isCallPool;
 
+        _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
 
@@ -378,6 +372,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         if (longs > 0 && shorts > 0) revert Pool__LongOrShortMustBeZero();
         _ensureExpired(l);
+
+        _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
 
@@ -1195,6 +1191,20 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             : l.globalFeeRate - lowerTickExternalFeeRate;
 
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
+    }
+
+    function _verifyTickWidth(uint256 price) internal pure {
+        if (price % Pricing.MIN_TICK_DISTANCE != 0)
+            revert Pool__TickWidthInvalid();
+    }
+
+    function _ensureValidRange(uint256 lower, uint256 upper) internal pure {
+        if (
+            lower == 0 ||
+            upper == 0 ||
+            lower >= upper ||
+            upper > Pricing.MAX_TICK_PRICE
+        ) revert Pool__InvalidRange();
     }
 
     function _ensureNonZeroSize(uint256 size) internal pure {

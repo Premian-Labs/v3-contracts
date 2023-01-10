@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.0;
 
+import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
+import {IPoolCore} from "./IPoolCore.sol";
 
-// ToDo : Add IPool inheritance
-contract Pool is PoolInternal {
+contract PoolCore is IPoolCore, PoolInternal {
     function getQuote(
         uint256 size,
         bool isBuy
@@ -20,22 +21,13 @@ contract Pool is PoolInternal {
 
     function deposit(
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 collateral,
         uint256 longs,
         uint256 shorts
     ) external {
-        _deposit(
-            p,
-            orderType,
-            belowLower,
-            belowUpper,
-            collateral,
-            longs,
-            shorts
-        );
+        _deposit(p, belowLower, belowUpper, collateral, longs, shorts);
     }
 
     function withdraw(

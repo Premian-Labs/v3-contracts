@@ -154,7 +154,7 @@ export default {
   },
 
   spdxLicenseIdentifier: {
-    overwrite: true,
+    overwrite: false,
     runOnCompile: true,
   },
 
