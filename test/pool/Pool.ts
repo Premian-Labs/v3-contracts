@@ -78,11 +78,7 @@ describe('Pool', () => {
     snapshotId = await ethers.provider.send('evm_snapshot', []);
   });
 
-  afterEach(async () => {
-    await ethers.provider.send('evm_revert', [snapshotId]);
-  });
-
-  describe('#formatTokenId', () => {
+  describe('#formatTokenId(address,uint256,uint256,Position.OrderType)', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await callPool.formatTokenId(
@@ -102,7 +98,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#parseTokenId', () => {
+  describe('#parseTokenId(uint256)', () => {
     it('should properly parse token id', async () => {
       const r = await callPool.parseTokenId(
         BigNumber.from(
