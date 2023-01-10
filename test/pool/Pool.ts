@@ -15,8 +15,8 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 import { ONE_MONTH } from '../../utils/constants';
+import { now, revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -30,7 +30,7 @@ describe('Pool', () => {
   let underlyingOracle: MockContract;
 
   let strike = 1000;
-  let maturity = getCurrentTimestamp() + ONE_MONTH;
+  let maturity: number;
 
   let snapshotId: number;
 
@@ -52,7 +52,9 @@ describe('Pool', () => {
       'function decimals () external view returns (uint8)',
     ]);
 
-    for (const isCall of [true, false]) {
+    maturity = (await now()) + ONE_MONTH;
+
+    for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
         base.address,
         underlying.address,
@@ -74,9 +76,7 @@ describe('Pool', () => {
     }
   });
 
-  beforeEach(async () => {
-    snapshotId = await ethers.provider.send('evm_snapshot', []);
-  });
+  revertToSnapshotAfterEach(async () => {});
 
   describe('#formatTokenId(address,uint256,uint256,Position.OrderType)', () => {
     it('should properly format token id', async () => {
