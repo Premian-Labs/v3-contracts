@@ -123,9 +123,10 @@ library Pricing {
         uint256 liq = liquidity(args);
         if (liq == 0) return args.isBuy ? args.upper : args.lower;
 
-        uint256 _proportion = tradeSize.divWad(liq);
+        uint256 _proportion;
+        if (tradeSize > 0) _proportion = tradeSize.divWad(liq);
 
-        if (_proportion == 0 || _proportion > 1)
+        if (_proportion > WAD)
             revert Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
