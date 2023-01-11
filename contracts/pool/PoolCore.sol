@@ -42,7 +42,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper
-    ) external {
+    ) external payable {
         // ToDo : Add orderType check ?
 
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -70,7 +70,15 @@ contract PoolCore is IPoolCore, PoolInternal {
         SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external returns (uint256) {
+    ) external payable returns (uint256) {
+        // ToDo : Implement
+    }
+
+    function tradeAndSwap(
+        IPoolInternal.SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    ) external {
         // ToDo : Implement
     }
 

@@ -25,7 +25,7 @@ interface IPoolCore {
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper
-    ) external;
+    ) external payable;
 
     function withdraw(
         Position.Key memory p,
@@ -40,7 +40,13 @@ interface IPoolCore {
         IPoolInternal.SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external returns (uint256);
+    ) external payable returns (uint256);
+
+    function tradeAndSwap(
+        IPoolInternal.SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    ) external;
 
     function annihilate(uint256 size) external;
 
