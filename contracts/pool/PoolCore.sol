@@ -75,7 +75,7 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     function tradeAndSwap(
-        IPoolInternal.SwapArgs memory s,
+        SwapArgs memory s,
         uint256 size,
         bool isBuy
     ) external {
