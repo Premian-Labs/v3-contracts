@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 
+import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
 
@@ -15,11 +16,6 @@ library Position {
     using Position for Position.Key;
 
     uint256 private constant WAD = 1e18;
-
-    error Position__InvalidAssetChange();
-    error Position__InvalidContractsToCollateralRatio();
-    error Position__InvalidOrderType();
-    error Position__LowerGreaterOrEqualUpper();
 
     // All the data used to calculate the key of the position
     struct Key {
@@ -86,7 +82,7 @@ library Position {
             return OrderType.BUY_WITH_SHORTS;
         else if (orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS)
             return OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
-        else revert Position__InvalidOrderType();
+        else revert IPosition.Position__InvalidOrderType();
     }
 
     function isLeft(OrderType orderType) internal pure returns (bool) {
@@ -127,7 +123,7 @@ library Position {
     ) internal pure returns (uint256) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper();
         if (price < self.lower) return 0;
         else if (self.lower <= price && price < self.upper)
             return self.proportion(price);
@@ -140,7 +136,7 @@ library Position {
     ) internal pure returns (uint256) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper();
 
         uint256 a;
         if (price < self.lower) {
@@ -194,7 +190,7 @@ library Position {
             return size;
         }
 
-        revert Position__InvalidOrderType();
+        revert IPosition.Position__InvalidOrderType();
     }
 
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
@@ -266,7 +262,7 @@ library Position {
         ) {
             _collateral = self.bid(size, price);
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 
@@ -306,7 +302,7 @@ library Position {
         ) {
             return self.contracts(size, price);
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 
@@ -329,7 +325,7 @@ library Position {
         ) {
             return 0;
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 
@@ -345,14 +341,14 @@ library Position {
         uint256 pContracts = self.contracts(currentSize, price);
 
         if (pCollateral == 0 && _collateral > 0)
-            revert Position__InvalidContractsToCollateralRatio();
+            revert IPosition.Position__InvalidContractsToCollateralRatio();
         if (pContracts == 0 && _contracts > 0)
-            revert Position__InvalidContractsToCollateralRatio();
+            revert IPosition.Position__InvalidContractsToCollateralRatio();
 
         uint256 depositRatio = _contracts.divWad(_collateral);
         uint256 positionRatio = pContracts.divWad(pCollateral);
         if (depositRatio != positionRatio)
-            revert Position__InvalidContractsToCollateralRatio();
+            revert IPosition.Position__InvalidContractsToCollateralRatio();
     }
 
     function calculateAssetChangeSellWithCollateral(
@@ -363,7 +359,7 @@ library Position {
         uint256 _shorts,
         uint256 nu
     ) internal pure returns (uint256 size) {
-        if (_longs > 0) revert Position__InvalidAssetChange();
+        if (_longs > 0) revert IPosition.Position__InvalidAssetChange();
 
         if (price > self.lower) {
             uint256 _liquidity = _shorts.divWad(nu);
@@ -377,7 +373,7 @@ library Position {
         } else {
             size = _collateral;
 
-            if (_shorts > 0) revert Position__InvalidAssetChange();
+            if (_shorts > 0) revert IPosition.Position__InvalidAssetChange();
         }
     }
 
@@ -389,7 +385,7 @@ library Position {
         uint256 _shorts,
         uint256 nu
     ) internal pure returns (uint256 size) {
-        if (_shorts > 0) revert Position__InvalidAssetChange();
+        if (_shorts > 0) revert IPosition.Position__InvalidAssetChange();
 
         if (self.lower < price && price < self.upper) {
             size = contractsToCollateral(
@@ -406,7 +402,7 @@ library Position {
         } else {
             size = _collateral;
 
-            if (_longs > 0) revert Position__InvalidAssetChange();
+            if (_longs > 0) revert IPosition.Position__InvalidAssetChange();
         }
     }
 
@@ -418,7 +414,7 @@ library Position {
         uint256 _shorts,
         uint256 nu
     ) internal pure returns (uint256 size) {
-        if (_shorts > 0) revert Position__InvalidAssetChange();
+        if (_shorts > 0) revert IPosition.Position__InvalidAssetChange();
 
         if (price < self.upper) {
             size = _longs.divWad(WAD - nu);
@@ -429,7 +425,7 @@ library Position {
                 self.isCall
             );
 
-            if (_longs > 0) revert Position__InvalidAssetChange();
+            if (_longs > 0) revert IPosition.Position__InvalidAssetChange();
         }
     }
 
@@ -441,7 +437,7 @@ library Position {
         uint256 _shorts,
         uint256 nu
     ) internal pure returns (uint256 size) {
-        if (_longs > 0) revert Position__InvalidAssetChange();
+        if (_longs > 0) revert IPosition.Position__InvalidAssetChange();
 
         if (price > self.lower) {
             size = _shorts.divWad(nu);
@@ -454,7 +450,7 @@ library Position {
                 self.isCall
             );
 
-            if (_shorts > 0) revert Position__InvalidAssetChange();
+            if (_shorts > 0) revert IPosition.Position__InvalidAssetChange();
         }
     }
 
@@ -514,7 +510,7 @@ library Position {
                 nu
             );
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
 
         return size;
