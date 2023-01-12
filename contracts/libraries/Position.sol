@@ -382,20 +382,18 @@ library Position {
         pure
         returns (int256 deltaCollateral, int256 deltaLongs, int256 deltaShorts)
     {
-        uint256 collateralHeld = self.collateral(currentBalance, price);
-        uint256 longsHeld = self.long(currentBalance, price);
-        uint256 shortsHeld = self.short(currentBalance, price);
+        int256 collateralHeld = self
+            .collateral(currentBalance, price)
+            .toInt256();
+        int256 longsHeld = self.long(currentBalance, price).toInt256();
+        int256 shortsHeld = self.short(currentBalance, price).toInt256();
 
         uint256 newBalance = currentBalance.add(amount);
 
         deltaCollateral =
             (self.collateral(newBalance, price)).toInt256() -
-            collateralHeld.toInt256();
-        deltaLongs =
-            (self.long(newBalance, price)).toInt256() -
-            longsHeld.toInt256();
-        deltaShorts =
-            (self.short(newBalance, price)).toInt256() -
-            shortsHeld.toInt256();
+            collateralHeld;
+        deltaLongs = (self.long(newBalance, price)).toInt256() - longsHeld;
+        deltaShorts = (self.short(newBalance, price)).toInt256() - shortsHeld;
     }
 }
