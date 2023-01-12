@@ -177,17 +177,29 @@ library Position {
         return Math.average(self.lower, self.upper);
     }
 
+    /// @notice Liquidity of position in terms of contracts.
     function liquidity(
         Key memory self,
         uint256 size
     ) internal pure returns (uint256 contractsLiquidity) {
         if (self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS) {
-            return size.divWad(WAD - self.averagePrice());
+            return
+                collateralToContracts(
+                    size.divWad(WAD - self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
         } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
-            return size.divWad(self.averagePrice());
+            return
+                collateralToContracts(
+                    size.divWad(self.averagePrice()),
+                    self.strike,
+                    self.isCall
+                );
+        } else if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
+            return collateralToContracts(size, self.strike, self.isCall);
         } else if (
             self.orderType == OrderType.SELL_WITH_LONGS ||
-            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
             self.orderType == OrderType.BUY_WITH_SHORTS ||
             self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
         ) {
