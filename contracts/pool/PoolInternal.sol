@@ -732,11 +732,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     function _transferPosition(
         Position.Key memory srcP,
         address newOwner,
-        address newOperator
+        address newOperator,
+        uint256 size
     ) internal {
         // ToDo : Add this logic into the ERC1155 transfer function
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
+
+        if (size == 0) revert Pool__ZeroSize();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
         srcP.strike = l.strike;
@@ -764,27 +767,29 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 srcP.orderType
             );
 
-        Position.Data storage dstData = l.positions[dstP.keyHash()];
-
         uint256 srcSize = _balanceOf(srcP.owner, srcTokenId);
+        if (size > srcSize) revert Pool__NotEnoughTokens();
+
+        uint256 proportionTransferred = size.divWad(srcSize);
+
+        Position.Data storage dstData = l.positions[dstP.keyHash()];
+        Position.Data storage srcData = l.positions[srcKey];
+
+        // Call function to update claimable fees, but do not claim them
+        _updateClaimableFees(l, srcP, srcData);
 
         if (_balanceOf(newOwner, dstTokenId) > 0) {
-            Position.Data storage srcData = l.positions[srcKey];
-
-            // Call function to update claimable fees, but do not claim them
-            _updateClaimableFees(l, srcP, srcData);
             // Update claimable fees to reset the fee range rate
             _updateClaimableFees(l, dstP, dstData);
-
-            dstData.claimableFees += srcData.claimableFees;
-            srcData.claimableFees = 0;
-
-            delete l.positions[srcKey];
         } else {
-            Position.Data memory srcData = l.positions[srcKey];
-            delete l.positions[srcKey];
-            l.positions[dstP.keyHash()] = srcData;
+            dstData.lastFeeRate = srcData.lastFeeRate;
         }
+
+        uint256 feesTransferred = (proportionTransferred).mulWad(
+            srcData.claimableFees
+        );
+        dstData.claimableFees += feesTransferred;
+        srcData.claimableFees -= feesTransferred;
 
         if (srcTokenId == dstTokenId) {
             _safeTransfer(
@@ -799,6 +804,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             _burn(srcP.owner, srcTokenId, srcSize);
             _mint(srcP.owner, dstTokenId, srcSize, "");
         }
+
+        if (size == srcSize) delete l.positions[srcKey];
     }
 
     function _calculateExerciseValue(
