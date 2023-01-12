@@ -26,6 +26,8 @@ interface IPoolCoreMock {
         );
 
     // TODO : Move to PricingMock
+    function fromPool(bool isBuy) external view returns (Pricing.Args memory);
+
     function proportion(
         uint256 lower,
         uint256 upper,

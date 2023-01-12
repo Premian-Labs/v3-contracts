@@ -43,6 +43,11 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
     }
 
     // TODO : Move to PricingMock
+    function fromPool(bool isBuy) external view returns (Pricing.Args memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return Pricing.fromPool(l, isBuy);
+    }
+
     function proportion(
         uint256 lower,
         uint256 upper,
