@@ -40,4 +40,26 @@ interface IPoolCoreMock {
     function liquidity(
         Pricing.Args memory args
     ) external pure returns (uint256);
+
+    function bidLiquidity(
+        Pricing.Args memory args
+    ) external pure returns (uint256);
+
+    function askLiquidity(
+        Pricing.Args memory args
+    ) external pure returns (uint256);
+
+    function maxTradeSize(
+        Pricing.Args memory args
+    ) external pure returns (uint256);
+
+    function price(
+        Pricing.Args memory args,
+        uint256 tradeSize
+    ) external view returns (uint256);
+
+    function nextPrice(
+        Pricing.Args memory args,
+        uint256 tradeSize
+    ) external view returns (uint256);
 }

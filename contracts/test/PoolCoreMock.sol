@@ -61,6 +61,38 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
     function liquidity(
         Pricing.Args memory args
     ) external pure returns (uint256) {
-        return Pricing.amountOfTicksBetween(args);
+        return Pricing.liquidity(args);
+    }
+
+    function bidLiquidity(
+        Pricing.Args memory args
+    ) external pure returns (uint256) {
+        return Pricing.bidLiquidity(args);
+    }
+
+    function askLiquidity(
+        Pricing.Args memory args
+    ) external pure returns (uint256) {
+        return Pricing.askLiquidity(args);
+    }
+
+    function maxTradeSize(
+        Pricing.Args memory args
+    ) external pure returns (uint256) {
+        return Pricing.maxTradeSize(args);
+    }
+
+    function price(
+        Pricing.Args memory args,
+        uint256 tradeSize
+    ) external pure returns (uint256) {
+        return Pricing.price(args, tradeSize);
+    }
+
+    function nextPrice(
+        Pricing.Args memory args,
+        uint256 tradeSize
+    ) external pure returns (uint256) {
+        return Pricing.nextPrice(args, tradeSize);
     }
 }
