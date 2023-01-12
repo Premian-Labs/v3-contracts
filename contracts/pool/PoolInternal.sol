@@ -438,7 +438,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             ) // Transfer funds from the pool back to the LP
             {
                 IERC20(l.getPoolToken()).transfer(
-                    p.owner,
+                    p.operator,
                     collateralToTransfer
                 );
             }
@@ -447,7 +447,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 _safeTransfer(
                     address(this),
                     address(this),
-                    p.owner,
+                    p.operator,
                     shorts > 0 ? PoolStorage.SHORT : PoolStorage.LONG,
                     shorts > 0 ? shorts : longs,
                     ""
