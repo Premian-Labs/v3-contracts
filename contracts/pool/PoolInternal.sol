@@ -1170,7 +1170,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    // ToDo : Move somewhere else ?
     /// @notice Given a new range order that is supposed to be deposited, a market
     ///         price is considered to be stranded if within the range order' range
     ///         there's no liquidity provided, and the lower and upper ticks are between
@@ -1199,7 +1198,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             p.upper <= l.tickIndex.next(l.currentTick);
     }
 
-    // ToDo : Move somewhere else ?
     /// @notice In case the market price is stranded the market price needs to be
     ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
     ///         isMarketPriceStranded.
