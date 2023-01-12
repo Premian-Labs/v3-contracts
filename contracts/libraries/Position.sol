@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
@@ -13,6 +15,9 @@ library Position {
     using Math for int256;
     using WadMath for uint256;
     using Position for Position.Key;
+    using Position for Position.OrderType;
+    using UintUtils for uint256;
+    using SafeCast for uint256;
 
     uint256 private constant WAD = 1e18;
 
@@ -73,6 +78,48 @@ library Position {
             );
     }
 
+    function isCollateral(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.BUY_WITH_COLLATERAL ||
+            orderType == OrderType.SELL_WITH_COLLATERAL ||
+            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS;
+    }
+
+    function isContracts(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
+            orderType == OrderType.BUY_WITH_SHORTS ||
+            orderType == OrderType.SELL_WITH_LONGS;
+    }
+
+    function isAsk(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.SELL_WITH_LONGS ||
+            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            orderType == OrderType.SELL_WITH_COLLATERAL;
+    }
+
+    function isBid(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.BUY_WITH_COLLATERAL ||
+            orderType == OrderType.BUY_WITH_SHORTS ||
+            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
+    }
+
+    function isShort(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.SELL_WITH_COLLATERAL ||
+            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
+            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
+            orderType == OrderType.BUY_WITH_SHORTS;
+    }
+
+    function isLong(OrderType orderType) internal pure returns (bool) {
+        return
+            orderType == OrderType.BUY_WITH_COLLATERAL ||
+            orderType == OrderType.SELL_WITH_LONGS;
+    }
+
     function opposite(OrderType orderType) internal pure returns (OrderType) {
         if (orderType == OrderType.BUY_WITH_COLLATERAL)
             return OrderType.SELL_WITH_LONGS;
@@ -90,17 +137,11 @@ library Position {
     }
 
     function isLeft(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.BUY_WITH_SHORTS ||
-            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
-            orderType == OrderType.BUY_WITH_COLLATERAL;
+        return orderType.isBid();
     }
 
     function isRight(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.SELL_WITH_COLLATERAL ||
-            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            orderType == OrderType.SELL_WITH_LONGS;
+        return orderType.isAsk();
     }
 
     function isLeft(Key memory self) internal pure returns (bool) {
@@ -198,11 +239,7 @@ library Position {
                 );
         } else if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
             return collateralToContracts(size, self.strike, self.isCall);
-        } else if (
-            self.orderType == OrderType.SELL_WITH_LONGS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
-        ) {
+        } else if (self.orderType.isContracts()) {
             return size;
         }
 
@@ -250,15 +287,15 @@ library Position {
         uint256 price
     ) internal pure returns (uint256 _collateral) {
         uint256 nu = pieceWiseLinear(self, price);
+        uint256 _liquidity = contractsToCollateral(
+            self.liquidity(size),
+            self.strike,
+            self.isCall
+        );
 
-        if (
-            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
-            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-            self.orderType == OrderType.BUY_WITH_SHORTS
-        ) {
+        if (self.orderType.isShort()) {
             _collateral = contractsToCollateral(
-                (WAD - nu).mulWad(self.liquidity(size)),
+                (WAD - nu).mulWad(_liquidity),
                 self.strike,
                 self.isCall
             );
@@ -272,10 +309,7 @@ library Position {
             } else {
                 _collateral += self.bid(size, price);
             }
-        } else if (
-            self.orderType == OrderType.BUY_WITH_COLLATERAL ||
-            self.orderType == OrderType.SELL_WITH_LONGS
-        ) {
+        } else if (self.orderType.isLong()) {
             _collateral = self.bid(size, price);
         } else {
             revert Position__InvalidOrderType();
@@ -289,10 +323,7 @@ library Position {
     ) internal pure returns (uint256) {
         uint256 nu = pieceWiseLinear(self, price);
 
-        if (
-            self.orderType == OrderType.SELL_WITH_LONGS ||
-            self.orderType == OrderType.BUY_WITH_COLLATERAL
-        ) {
+        if (self.orderType.isLong()) {
             return (WAD - nu).mulWad(self.liquidity(size));
         }
 
@@ -305,17 +336,9 @@ library Position {
         uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
-        if (
-            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
-        ) {
+        if (self.orderType.isShort()) {
             return 0;
-        } else if (
-            self.orderType == OrderType.BUY_WITH_COLLATERAL ||
-            self.orderType == OrderType.SELL_WITH_LONGS
-        ) {
+        } else if (self.orderType.isLong()) {
             return self.contracts(size, price);
         } else {
             revert Position__InvalidOrderType();
@@ -328,17 +351,9 @@ library Position {
         uint256 size,
         uint256 price
     ) internal pure returns (uint256) {
-        if (
-            self.orderType == OrderType.SELL_WITH_COLLATERAL ||
-            self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS ||
-            self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
-        ) {
+        if (self.orderType.isShort()) {
             return self.contracts(size, price);
-        } else if (
-            self.orderType == OrderType.BUY_WITH_COLLATERAL ||
-            self.orderType == OrderType.SELL_WITH_LONGS
-        ) {
+        } else if (self.orderType.isLong()) {
             return 0;
         } else {
             revert Position__InvalidOrderType();
@@ -530,5 +545,44 @@ library Position {
         }
 
         return size;
+    }
+
+    /// @notice Calculate the update for the Position. Either increments them in case
+    ///         withdraw is False (i.e. in case there is a deposit) and otherwise
+    ///         decreases them. Returns the change in collateral, longs, shorts.
+    ///         These are transferred to (withdrawal) or transferred from (deposit)
+    ///         the Agent (Position.operator).
+    /// @param currentBalance The current balance of tokens
+    /// @param amount The number of tokens deposited or withdrawn
+    /// @param price The current market price, used to compute the change in
+    ///              collateral, long and shorts due to the change in tokens
+    /// @return deltaCollateral Absolute change in collateral due to change in tokens
+    /// @return deltaLongs Absolute change in longs due to change in tokens
+    /// @return deltaShorts Absolute change in shorts due to change in tokens
+    function calculatePositionUpdate(
+        Key memory self,
+        uint256 currentBalance,
+        int256 amount,
+        uint256 price
+    )
+        internal
+        pure
+        returns (int256 deltaCollateral, int256 deltaLongs, int256 deltaShorts)
+    {
+        uint256 collateralHeld = self.collateral(currentBalance, price);
+        uint256 longsHeld = self.long(currentBalance, price);
+        uint256 shortsHeld = self.short(currentBalance, price);
+
+        uint256 newBalance = currentBalance.add(amount);
+
+        deltaCollateral =
+            (self.collateral(newBalance, price)).toInt256() -
+            collateralHeld.toInt256();
+        deltaLongs =
+            (self.long(newBalance, price)).toInt256() -
+            longsHeld.toInt256();
+        deltaShorts =
+            (self.short(newBalance, price)).toInt256() -
+            shortsHeld.toInt256();
     }
 }
