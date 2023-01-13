@@ -258,24 +258,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             );
         }
 
-        if (longsDelta > 0) {
-            _safeTransfer(
-                address(this),
-                p.owner,
-                address(this),
-                PoolStorage.LONG,
-                uint256(longsDelta),
-                ""
-            );
-        }
+        if (longsDelta + shortsDelta > 0) {
+            // Safeguard, should never happen
+            if (longsDelta > 0 && shortsDelta > 0)
+                revert Pool__PositionCantHoldLongAndShort();
 
-        if (shortsDelta > 0) {
             _safeTransfer(
                 address(this),
                 p.owner,
                 address(this),
-                PoolStorage.SHORT,
-                uint256(shortsDelta),
+                longsDelta > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
+                longsDelta > 0 ? uint256(longsDelta) : uint256(shortsDelta),
                 ""
             );
         }
@@ -422,25 +415,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             }
 
             uint256 longs = Math.abs(longsDelta);
-            if (longs > 0) {
-                _safeTransfer(
-                    address(this),
-                    address(this),
-                    p.operator,
-                    PoolStorage.LONG,
-                    longs,
-                    ""
-                );
-            }
-
             uint256 shorts = Math.abs(shortsDelta);
-            if (shorts > 0) {
+
+            if (longs + shorts > 0) {
+                // Safeguard, should never happen
+                if (longs > 0 && shorts > 0)
+                    revert Pool__PositionCantHoldLongAndShort();
+
                 _safeTransfer(
                     address(this),
                     address(this),
                     p.operator,
-                    PoolStorage.SHORT,
-                    shorts,
+                    longs > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
+                    longs > 0 ? longs : shorts,
                     ""
                 );
             }
