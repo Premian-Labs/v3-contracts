@@ -308,17 +308,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 pData.lastFeeRate = feeRate;
             }
 
-            _mint(
-                p.owner,
-                PoolStorage.formatTokenId(
-                    p.operator,
-                    p.lower,
-                    p.upper,
-                    p.orderType
-                ),
-                size,
-                ""
-            );
+            _mint(p.owner, tokenId, size, "");
         }
 
         // Adjust tick deltas
