@@ -16,6 +16,7 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import { ONE_MONTH } from '../../utils/constants';
 import { now, revertToSnapshotAfterEach } from '../../utils/time';
+import { average } from '../../utils/math';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -308,7 +309,7 @@ describe('Pool', () => {
 
       expect(await callPool.bidLiquidity(args)).to.eq(0);
 
-      args.marketPrice = mean(args.lower, args.upper); // price == mean(lower, upper)
+      args.marketPrice = average(args.lower, args.upper); // price == average(lower, upper)
 
       expect(await callPool.bidLiquidity(args)).to.eq(
         (await callPool.liquidity(args)).div(2),
@@ -336,7 +337,7 @@ describe('Pool', () => {
         await callPool.liquidity(args),
       );
 
-      args.marketPrice = mean(args.lower, args.upper); // price == mean(lower, upper)
+      args.marketPrice = average(args.lower, args.upper); // price == average(lower, upper)
 
       expect(await callPool.askLiquidity(args)).to.eq(
         (await callPool.liquidity(args)).div(2),
@@ -458,22 +459,22 @@ describe('Pool', () => {
       expect(await callPool.price(args, askLiq)).to.eq(args.upper);
       expect(await callPool.price(args, bidLiq)).to.eq(args.lower);
 
-      let _mean = mean(args.lower, args.upper);
-      args.marketPrice = _mean;
+      let _average = average(args.lower, args.upper);
+      args.marketPrice = _average;
 
       liq = await callPool.liquidity(args);
       askLiq = await callPool.askLiquidity(args);
       bidLiq = await callPool.bidLiquidity(args);
 
-      // price == mean(lower, upper)
+      // price == average(lower, upper)
       // ask side liquidity == liquidity/2
       // bid side liquidity == liquidity/2
 
       expect(askLiq).to.eq(liq.div(2));
       expect(bidLiq).to.eq(liq.div(2));
 
-      expect(await callPool.price(args, askLiq)).to.eq(_mean);
-      expect(await callPool.price(args, bidLiq)).to.eq(_mean);
+      expect(await callPool.price(args, askLiq)).to.eq(_average);
+      expect(await callPool.price(args, bidLiq)).to.eq(_average);
     });
 
     it('should return the price for sell order when liquidity > 0 && trade size > 0', async () => {
@@ -515,22 +516,22 @@ describe('Pool', () => {
       expect(await callPool.price(args, askLiq)).to.eq(args.lower);
       expect(await callPool.price(args, bidLiq)).to.eq(args.upper);
 
-      let _mean = mean(args.lower, args.upper);
-      args.marketPrice = _mean;
+      let _average = average(args.lower, args.upper);
+      args.marketPrice = _average;
 
       liq = await callPool.liquidity(args);
       askLiq = await callPool.askLiquidity(args);
       bidLiq = await callPool.bidLiquidity(args);
 
-      // price == mean(lower, upper)
+      // price == average(lower, upper)
       // ask side liquidity == liquidity/2
       // bid side liquidity == liquidity/2
 
       expect(askLiq).to.eq(liq.div(2));
       expect(bidLiq).to.eq(liq.div(2));
 
-      expect(await callPool.price(args, askLiq)).to.eq(_mean);
-      expect(await callPool.price(args, bidLiq)).to.eq(_mean);
+      expect(await callPool.price(args, askLiq)).to.eq(_average);
+      expect(await callPool.price(args, bidLiq)).to.eq(_average);
     });
 
     it('should revert if price is out of range', async () => {
@@ -625,20 +626,20 @@ describe('Pool', () => {
 
       expect(await callPool.nextPrice(args, askLiq)).to.eq(args.upper);
 
-      let _mean = mean(args.lower, args.upper); // parseEther('0.5')
-      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_mean);
+      let _average = average(args.lower, args.upper); // parseEther('0.5')
+      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_average);
 
-      _mean = mean(args.lower, _mean); // parseEther('0.375')
-      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_mean);
+      _average = average(args.lower, _average); // parseEther('0.375')
+      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_average);
 
-      _mean = mean(args.lower, args.upper); // parseEther('0.5')
-      args.marketPrice = _mean;
+      _average = average(args.lower, args.upper); // parseEther('0.5')
+      args.marketPrice = _average;
 
       liq = await callPool.liquidity(args);
       askLiq = await callPool.askLiquidity(args);
       bidLiq = await callPool.bidLiquidity(args);
 
-      // price == mean(lower, upper)
+      // price == average(lower, upper)
       // ask side liquidity == liquidity/2
       // bid side liquidity == liquidity/2
 
@@ -648,13 +649,13 @@ describe('Pool', () => {
       expect(await callPool.nextPrice(args, askLiq)).to.eq(args.upper);
       expect(await callPool.nextPrice(args, bidLiq)).to.eq(args.upper);
 
-      _mean = mean(args.marketPrice, args.upper); // parseEther('0.625')
-      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_mean);
-      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_mean);
+      _average = average(args.marketPrice, args.upper); // parseEther('0.625')
+      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_average);
+      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_average);
 
-      _mean = mean(args.marketPrice, _mean); // parseEther('0.5625')
-      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_mean);
-      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_mean);
+      _average = average(args.marketPrice, _average); // parseEther('0.5625')
+      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_average);
+      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_average);
     });
 
     it('should return the next price for sell order when liquidity > 0 && trade size > 0', async () => {
@@ -679,20 +680,20 @@ describe('Pool', () => {
 
       expect(await callPool.nextPrice(args, bidLiq)).to.eq(args.lower);
 
-      let _mean = mean(args.lower, args.upper); // parseEther('0.5')
-      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_mean);
+      let _average = average(args.lower, args.upper); // parseEther('0.5')
+      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_average);
 
-      _mean = mean(_mean, args.upper); // parseEther('0.625')
-      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_mean);
+      _average = average(_average, args.upper); // parseEther('0.625')
+      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_average);
 
-      _mean = mean(args.lower, args.upper); // parseEther('0.5')
-      args.marketPrice = _mean;
+      _average = average(args.lower, args.upper); // parseEther('0.5')
+      args.marketPrice = _average;
 
       liq = await callPool.liquidity(args);
       askLiq = await callPool.askLiquidity(args);
       bidLiq = await callPool.bidLiquidity(args);
 
-      // price == mean(lower, upper)
+      // price == average(lower, upper)
       // ask side liquidity == liquidity/2
       // bid side liquidity == liquidity/2
 
@@ -702,13 +703,13 @@ describe('Pool', () => {
       expect(await callPool.nextPrice(args, askLiq)).to.eq(args.lower);
       expect(await callPool.nextPrice(args, bidLiq)).to.eq(args.lower);
 
-      _mean = mean(args.lower, args.marketPrice); // parseEther('0.375')
-      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_mean);
-      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_mean);
+      _average = average(args.lower, args.marketPrice); // parseEther('0.375')
+      expect(await callPool.nextPrice(args, askLiq.div(2))).to.eq(_average);
+      expect(await callPool.nextPrice(args, bidLiq.div(2))).to.eq(_average);
 
-      _mean = mean(_mean, args.marketPrice); // parseEther('0.4375')
-      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_mean);
-      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_mean);
+      _average = average(_average, args.marketPrice); // parseEther('0.4375')
+      expect(await callPool.nextPrice(args, askLiq.div(4))).to.eq(_average);
+      expect(await callPool.nextPrice(args, bidLiq.div(4))).to.eq(_average);
     });
 
     it('should revert if price is out of range', async () => {
@@ -941,11 +942,11 @@ describe('Pool', () => {
 
     it('should return average price if price > upper', async () => {
       expect(await callPool.pieceWiseQuadratic(key, key.upper)).to.eq(
-        mean(key.lower, key.upper),
+        average(key.lower, key.upper),
       );
 
       expect(await callPool.pieceWiseQuadratic(key, key.upper.add(1))).to.eq(
-        mean(key.lower, key.upper),
+        average(key.lower, key.upper),
       );
     });
 
@@ -970,7 +971,3 @@ describe('Pool', () => {
     });
   });
 });
-
-function mean(a: BigNumber, b: BigNumber): BigNumber {
-  return a.add(b).div(2);
-}
