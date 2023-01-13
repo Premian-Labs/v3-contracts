@@ -192,7 +192,7 @@ describe('Pool', () => {
         [parseEther('0.5'), parseEther('0.5')],
       ]) {
         expect(
-          await callPool.proportion(
+          await callPool['proportion(uint256,uint256,uint256)'](
             parseEther('0.25'),
             parseEther('0.75'),
             t[0],
@@ -203,7 +203,11 @@ describe('Pool', () => {
 
     it('should revert if lower >= upper', async () => {
       await expect(
-        callPool.proportion(parseEther('0.75'), parseEther('0.25'), 0),
+        callPool['proportion(uint256,uint256,uint256)'](
+          parseEther('0.75'),
+          parseEther('0.25'),
+          0,
+        ),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pricing__UpperNotGreaterThanLower',
@@ -212,7 +216,7 @@ describe('Pool', () => {
 
     it('should revert if lower > market || market > upper', async () => {
       await expect(
-        callPool.proportion(
+        callPool['proportion(uint256,uint256,uint256)'](
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.2'),
@@ -220,7 +224,7 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pricing__PriceOutOfRange');
 
       await expect(
-        callPool.proportion(
+        callPool['proportion(uint256,uint256,uint256)'](
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.8'),
