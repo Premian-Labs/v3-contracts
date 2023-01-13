@@ -21,8 +21,6 @@ library Position {
 
     uint256 private constant WAD = 1e18;
 
-    error Position__InvalidAssetChange();
-    error Position__InvalidContractsToCollateralRatio();
     error Position__InvalidOrderType();
     error Position__LowerGreaterOrEqualUpper();
 
