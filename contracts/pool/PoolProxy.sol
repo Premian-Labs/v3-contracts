@@ -12,7 +12,6 @@ import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDi
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
 import {Pricing} from "../libraries/Pricing.sol";
-import {Tick} from "../libraries/Tick.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
