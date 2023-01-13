@@ -100,4 +100,46 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
     ) external pure returns (uint256) {
         return Pricing.nextPrice(args, tradeSize);
     }
+
+    // TODO : Move to PositionMock
+    function keyHash(Position.Key memory self) external pure returns (bytes32) {
+        return Position.keyHash(self);
+    }
+
+    function opposite(
+        Position.OrderType orderType
+    ) external pure returns (Position.OrderType) {
+        return Position.opposite(orderType);
+    }
+
+    function isLeft(Position.OrderType orderType) external pure returns (bool) {
+        return Position.isLeft(orderType);
+    }
+
+    function isRight(
+        Position.OrderType orderType
+    ) external pure returns (bool) {
+        return Position.isRight(orderType);
+    }
+
+    function proportion(
+        Position.Key memory self,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.proportion(self, price);
+    }
+
+    function pieceWiseLinear(
+        Position.Key memory self,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.pieceWiseLinear(self, price);
+    }
+
+    function pieceWiseQuadratic(
+        Position.Key memory self,
+        uint256 price
+    ) external view returns (uint256) {
+        return Position.pieceWiseQuadratic(self, price);
+    }
 }

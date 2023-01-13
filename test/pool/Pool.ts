@@ -36,6 +36,8 @@ describe('Pool', () => {
   let isCall: boolean;
   let collateral: BigNumber;
 
+  let WAD = parseEther('1');
+
   before(async () => {
     [deployer, lp] = await ethers.getSigners();
 
@@ -734,6 +736,236 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(
         callPool,
         'Pricing__PriceCannotBeComputedWithinTickRange',
+      );
+    });
+  });
+
+  describe('#keyHash(Position.Key,uint256)', () => {
+    it('should return key hash', async () => {
+      const key = {
+        owner: deployer.address,
+        operator: deployer.address,
+        lower: parseEther('0.25'),
+        upper: parseEther('0.75'),
+        orderType: 0,
+        isCall: isCall,
+        strike: strike,
+      };
+
+      const keyHash = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+          ['address', 'address', 'uint256', 'uint256', 'uint8'],
+          [key.owner, key.operator, key.lower, key.upper, key.orderType],
+        ),
+      );
+
+      expect(await callPool.keyHash(key)).to.eq(keyHash);
+    });
+  });
+
+  describe('#opposite(Position.OrderType)', () => {
+    it('should return opposite order type', async () => {
+      expect(await callPool.opposite(0)).to.eq(5);
+      expect(await callPool.opposite(5)).to.eq(0);
+      expect(await callPool.opposite(1)).to.eq(3);
+      expect(await callPool.opposite(3)).to.eq(1);
+      expect(await callPool.opposite(2)).to.eq(4);
+      expect(await callPool.opposite(4)).to.eq(2);
+    });
+  });
+
+  describe('#isLeft(Position.OrderType)', () => {
+    it('should return true if order type is bid side', async () => {
+      expect(await callPool.isLeft(0)).to.be.true;
+      expect(await callPool.isLeft(1)).to.be.true;
+      expect(await callPool.isLeft(2)).to.be.true;
+      expect(await callPool.isLeft(3)).to.be.false;
+      expect(await callPool.isLeft(4)).to.be.false;
+      expect(await callPool.isLeft(5)).to.be.false;
+    });
+  });
+
+  describe('#isRight(Position.OrderType)', () => {
+    it('should return true if order type is bid side', async () => {
+      expect(await callPool.isRight(0)).to.be.false;
+      expect(await callPool.isRight(1)).to.be.false;
+      expect(await callPool.isRight(2)).to.be.false;
+      expect(await callPool.isRight(3)).to.be.true;
+      expect(await callPool.isRight(4)).to.be.true;
+      expect(await callPool.isRight(5)).to.be.true;
+    });
+  });
+
+  describe('#proportion(Position.Key,uint256)', () => {
+    let key: any;
+
+    before(async () => {
+      key = {
+        owner: deployer.address,
+        operator: deployer.address,
+        lower: parseEther('0.25'),
+        upper: parseEther('0.75'),
+        orderType: 0,
+        isCall: isCall,
+        strike: strike,
+      };
+    });
+
+    it('should return 0 if lower >= price', async () => {
+      expect(
+        await callPool[
+          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
+        ](key, key.lower),
+      ).to.eq(0);
+      expect(
+        await callPool[
+          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
+        ](key, key.lower.sub(1)),
+      ).to.eq(0);
+    });
+
+    it('should return the proportional amount if lower < price && price < upper', async () => {
+      for (const t of [
+        [parseEther('0.3'), parseEther('0.1')],
+        [parseEther('0.5'), parseEther('0.5')],
+        [parseEther('0.7'), parseEther('0.9')],
+      ]) {
+        expect(
+          await callPool[
+            'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
+          ](key, t[0]),
+        ).to.eq(t[1]);
+      }
+    });
+
+    it('should return WAD if price > upper', async () => {
+      expect(
+        await callPool[
+          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
+        ](key, key.upper),
+      ).to.eq(WAD);
+
+      expect(
+        await callPool[
+          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
+        ](key, key.upper.add(1)),
+      ).to.eq(WAD);
+    });
+  });
+
+  describe('#pieceWiseLinear(Position.Key,uint256)', () => {
+    let key: any;
+
+    before(async () => {
+      key = {
+        owner: deployer.address,
+        operator: deployer.address,
+        lower: parseEther('0.25'),
+        upper: parseEther('0.75'),
+        orderType: 0,
+        isCall: isCall,
+        strike: strike,
+      };
+    });
+
+    it('should return 0 if lower >= price', async () => {
+      expect(await callPool.pieceWiseLinear(key, key.lower)).to.eq(0);
+      expect(await callPool.pieceWiseLinear(key, key.lower.sub(1))).to.eq(0);
+    });
+
+    it('should return the price if lower < price && price < upper', async () => {
+      for (const t of [
+        [parseEther('0.3'), parseEther('0.1')],
+        [parseEther('0.5'), parseEther('0.5')],
+        [parseEther('0.7'), parseEther('0.9')],
+      ]) {
+        expect(await callPool.pieceWiseLinear(key, t[0])).to.eq(t[1]);
+      }
+    });
+
+    it('should return WAD if price > upper', async () => {
+      expect(await callPool.pieceWiseLinear(key, key.upper)).to.eq(WAD);
+      expect(await callPool.pieceWiseLinear(key, key.upper.add(1))).to.eq(WAD);
+    });
+
+    it('should revert if lower >= upper', async () => {
+      key.lower = key.upper;
+
+      await expect(
+        callPool.pieceWiseLinear(key, 0),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Position__LowerGreaterOrEqualUpper',
+      );
+
+      key.lower = key.upper.add(1);
+
+      await expect(
+        callPool.pieceWiseLinear(key, 0),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Position__LowerGreaterOrEqualUpper',
+      );
+    });
+  });
+
+  describe('#pieceWiseQuadratic(Position.Key,uint256)', () => {
+    let key: any;
+
+    before(async () => {
+      key = {
+        owner: deployer.address,
+        operator: deployer.address,
+        lower: parseEther('0.25'),
+        upper: parseEther('0.75'),
+        orderType: 0,
+        isCall: isCall,
+        strike: strike,
+      };
+    });
+
+    it('should return 0 if lower >= price', async () => {
+      expect(await callPool.pieceWiseQuadratic(key, key.lower)).to.eq(0);
+      expect(await callPool.pieceWiseQuadratic(key, key.lower.sub(1))).to.eq(0);
+    });
+
+    it('should return the price if lower < price && price < upper', async () => {
+      for (const t of [
+        [parseEther('0.3'), parseEther('0.0275')],
+        [parseEther('0.5'), parseEther('0.1875')],
+        [parseEther('0.7'), parseEther('0.4275')],
+      ]) {
+        expect(await callPool.pieceWiseQuadratic(key, t[0])).to.eq(t[1]);
+      }
+    });
+
+    it('should return average price if price > upper', async () => {
+      expect(await callPool.pieceWiseQuadratic(key, key.upper)).to.eq(
+        mean(key.lower, key.upper),
+      );
+
+      expect(await callPool.pieceWiseQuadratic(key, key.upper.add(1))).to.eq(
+        mean(key.lower, key.upper),
+      );
+    });
+
+    it('should revert if lower >= upper', async () => {
+      key.lower = key.upper;
+
+      await expect(
+        callPool.pieceWiseQuadratic(key, 0),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Position__LowerGreaterOrEqualUpper',
+      );
+
+      key.lower = key.upper.add(1);
+
+      await expect(
+        callPool.pieceWiseQuadratic(key, 0),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Position__LowerGreaterOrEqualUpper',
       );
     });
   });

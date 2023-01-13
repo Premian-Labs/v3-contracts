@@ -64,4 +64,30 @@ interface IPoolCoreMock {
         Pricing.Args memory args,
         uint256 tradeSize
     ) external view returns (uint256);
+
+    // TODO : Move to PositionMock
+    function keyHash(Position.Key memory self) external pure returns (bytes32);
+
+    function opposite(
+        Position.OrderType orderType
+    ) external pure returns (Position.OrderType);
+
+    function isLeft(Position.OrderType orderType) external pure returns (bool);
+
+    function isRight(Position.OrderType orderType) external pure returns (bool);
+
+    function proportion(
+        Position.Key memory self,
+        uint256 price
+    ) external pure returns (uint256);
+
+    function pieceWiseLinear(
+        Position.Key memory self,
+        uint256 price
+    ) external pure returns (uint256);
+
+    function pieceWiseQuadratic(
+        Position.Key memory self,
+        uint256 price
+    ) external view returns (uint256);
 }
