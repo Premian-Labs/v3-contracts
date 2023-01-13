@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Position} from "../libraries/Position.sol";
-import {Pricing} from "../libraries/Pricing.sol";
+import {Position} from "../../libraries/Position.sol";
+import {Pricing} from "../../libraries/Pricing.sol";
 
 interface IPoolCoreMock {
     function formatTokenId(
