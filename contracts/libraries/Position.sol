@@ -111,8 +111,8 @@ library Position {
         Key memory self,
         uint256 price
     ) internal pure returns (uint256) {
-        if (price < self.lower) return 0;
-        else if (self.lower <= price && price < self.upper)
+        if (price <= self.lower) return 0;
+        else if (self.lower < price && price < self.upper)
             return Pricing.proportion(self.lower, self.upper, price);
         return WAD;
     }
@@ -124,8 +124,8 @@ library Position {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
             revert IPosition.Position__LowerGreaterOrEqualUpper();
-        if (price < self.lower) return 0;
-        else if (self.lower <= price && price < self.upper)
+        if (price <= self.lower) return 0;
+        else if (self.lower < price && price < self.upper)
             return self.proportion(price);
         else return WAD;
     }
@@ -139,16 +139,16 @@ library Position {
             revert IPosition.Position__LowerGreaterOrEqualUpper();
 
         uint256 a;
-        if (price < self.lower) {
-            a = self.lower;
-        } else if (self.lower <= price && price < self.upper) {
+        if (price <= self.lower) {
+            return 0;
+        } else if (self.lower < price && price < self.upper) {
             a = price;
         } else {
             a = self.upper;
         }
 
         uint256 numerator = (a.mulWad(a) - self.lower.mulWad(self.lower));
-        uint256 denominator = (2 * WAD) * (self.upper - self.lower);
+        uint256 denominator = 2 * (self.upper - self.lower);
 
         return numerator.divWad(denominator);
     }
