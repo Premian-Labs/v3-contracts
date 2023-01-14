@@ -26,6 +26,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     using WadMath for uint256;
     using Tick for Tick.Data;
     using SafeCast for uint256;
+    using SafeCast for int256;
     using Math for int256;
     using UintUtils for uint256;
 
@@ -249,29 +250,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
-        // Transfer funds from the LP to the pool
-        if (collateralDelta > 0) {
-            IERC20(l.getPoolToken()).transferFrom(
-                p.owner,
-                address(this),
-                uint256(collateralDelta)
-            );
-        }
-
-        if (longsDelta + shortsDelta > 0) {
-            // Safeguard, should never happen
-            if (longsDelta > 0 && shortsDelta > 0)
-                revert Pool__PositionCantHoldLongAndShort();
-
-            _safeTransfer(
-                address(this),
-                p.owner,
-                address(this),
-                longsDelta > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
-                longsDelta > 0 ? uint256(longsDelta) : uint256(shortsDelta),
-                ""
-            );
-        }
+        _transferTokens(
+            l,
+            p.owner,
+            address(this),
+            collateralDelta.toUint256(),
+            longsDelta.toUint256(),
+            shortsDelta.toUint256()
+        );
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -394,33 +380,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
             _burn(p.owner, tokenId, size);
 
-            if (
-                collateralToTransfer > 0
-            ) // Transfer funds from the pool back to the LP
-            {
-                IERC20(l.getPoolToken()).transfer(
-                    p.operator,
-                    collateralToTransfer
-                );
-            }
-
-            uint256 longs = Math.abs(longsDelta);
-            uint256 shorts = Math.abs(shortsDelta);
-
-            if (longs + shorts > 0) {
-                // Safeguard, should never happen
-                if (longs > 0 && shorts > 0)
-                    revert Pool__PositionCantHoldLongAndShort();
-
-                _safeTransfer(
-                    address(this),
-                    address(this),
-                    p.operator,
-                    longs > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
-                    longs > 0 ? longs : shorts,
-                    ""
-                );
-            }
+            _transferTokens(
+                l,
+                address(this),
+                p.operator,
+                collateralToTransfer,
+                Math.abs(longsDelta),
+                Math.abs(shortsDelta)
+            );
         }
 
         // Adjust tick deltas (reverse of deposit)
@@ -429,6 +396,35 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
 
         // ToDo : Add return values ?
+    }
+
+    /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
+    function _transferTokens(
+        PoolStorage.Layout storage l,
+        address from,
+        address to,
+        uint256 collateral,
+        uint256 longs,
+        uint256 shorts
+    ) internal {
+        // Safeguard, should never happen
+        if (longs > 0 && shorts > 0)
+            revert Pool__PositionCantHoldLongAndShort();
+
+        if (collateral > 0) {
+            IERC20(l.getPoolToken()).transferFrom(from, to, collateral);
+        }
+
+        if (longs + shorts > 0) {
+            _safeTransfer(
+                address(this),
+                from,
+                to,
+                longs > 0 ? PoolStorage.LONG : PoolStorage.SHORT,
+                longs > 0 ? longs : shorts,
+                ""
+            );
+        }
     }
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
