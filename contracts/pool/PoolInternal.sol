@@ -206,7 +206,6 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
-    /// @param orderType The order type
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param collateral The amount of collateral to be deposited
@@ -214,14 +213,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     /// @param shorts The amount of shorts to be deposited
     function _deposit(
         Position.Key memory p,
-        Position.OrderType orderType,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 collateral,
         uint256 longs,
         uint256 shorts
     ) internal {
-        bool isBuy = orderType.isLeft();
+        bool isBuy = p.orderType.isLeft();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
