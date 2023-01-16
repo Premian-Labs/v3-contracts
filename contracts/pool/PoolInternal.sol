@@ -1012,9 +1012,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _burn(p.owner, tokenId, size);
 
-        pData.claimableFees = 0;
-        pData.lastFeeRate = 0;
-
         if (collateral > 0) {
             IERC20(l.getPoolToken()).transfer(p.operator, collateral);
         }
