@@ -1002,15 +1002,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // maturity should be close to the intrinsic value.
         uint256 price = l.marketPrice;
         uint256 payoff = _calculateExerciseValue(l, WAD);
+        uint256 claimableFees = pData.claimableFees;
 
         uint256 collateral = p.collateral(size, price);
         collateral += p.long(size, price).mulWad(payoff);
         collateral += p.short(size, price).mulWad(
             (l.isCallPool ? WAD : l.strike) - payoff
         );
-        collateral += pData.claimableFees;
+        collateral += claimableFees;
 
         _burn(p.owner, tokenId, size);
+
+        pData.claimableFees = 0;
+        pData.lastFeeRate = 0;
 
         if (collateral > 0) {
             IERC20(l.getPoolToken()).transfer(p.operator, collateral);
@@ -1020,9 +1024,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.owner,
             tokenId,
             size,
-            collateral - pData.claimableFees,
+            collateral - claimableFees,
             payoff,
-            pData.claimableFees,
+            claimableFees,
             l.spot,
             0
         );
