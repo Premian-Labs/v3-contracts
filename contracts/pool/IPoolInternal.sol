@@ -14,6 +14,7 @@ interface IPoolInternal {
     error Pool__InvalidRange();
     error Pool__InvalidTransfer();
     error Pool__LongOrShortMustBeZero();
+    error Pool__NotAuthorized();
     error Pool__NotEnoughTokens();
     error Pool__OppositeSides();
     error Pool__OptionExpired();

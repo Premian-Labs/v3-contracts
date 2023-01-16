@@ -26,6 +26,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         uint256 slippage
     ) external {
+        if (p.operator != msg.sender) revert Pool__NotAuthorized();
         _deposit(p, belowLower, belowUpper, size, slippage);
     }
 
@@ -34,6 +35,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         uint256 slippage
     ) external {
+        if (p.operator != msg.sender) revert Pool__NotAuthorized();
         _withdraw(p, size, slippage);
     }
 
