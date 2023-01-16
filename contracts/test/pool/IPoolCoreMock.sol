@@ -5,6 +5,8 @@ import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
 interface IPoolCoreMock {
+    function fromPool(bool isBuy) external view returns (Pricing.Args memory);
+
     function formatTokenId(
         address operator,
         uint256 lower,

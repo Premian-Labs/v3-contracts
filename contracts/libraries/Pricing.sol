@@ -35,22 +35,6 @@ library Pricing {
         bool isBuy; // The direction of the trade
     }
 
-    function fromPool(
-        PoolStorage.Layout storage l,
-        bool isBuy
-    ) internal view returns (Pricing.Args memory) {
-        uint256 currentTick = l.currentTick;
-
-        return
-            Args(
-                l.liquidityRate,
-                l.marketPrice,
-                currentTick,
-                l.tickIndex.next(currentTick),
-                isBuy
-            );
-    }
-
     function proportion(
         uint256 lower,
         uint256 upper,

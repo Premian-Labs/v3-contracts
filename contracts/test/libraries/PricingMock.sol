@@ -5,12 +5,6 @@ pragma solidity ^0.8.0;
 import {Pricing} from "../../libraries/Pricing.sol";
 
 contract PricingMock {
-    // TODO:
-    // function fromPool(bool isBuy) external view returns (Pricing.Args memory) {
-    //     PoolStorage.Layout storage l = PoolStorage.layout();
-    //     return Pricing.fromPool(l, isBuy);
-    // }
-
     function proportion(
         uint256 lower,
         uint256 upper,

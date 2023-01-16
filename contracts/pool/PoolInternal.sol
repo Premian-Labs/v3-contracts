@@ -478,7 +478,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _ensureNonZeroSize(size);
         _ensureNotExpired(l);
 
-        Pricing.Args memory pricing = Pricing.fromPool(l, isBuy);
+        Pricing.Args memory pricing = fromPool(l, isBuy);
 
         uint256 totalPremium;
         uint256 remaining = size;
@@ -1197,5 +1197,21 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
     function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+    }
+
+    function fromPool(
+        PoolStorage.Layout storage l,
+        bool isBuy
+    ) internal view returns (Pricing.Args memory) {
+        uint256 currentTick = l.currentTick;
+
+        return
+            Pricing.Args(
+                l.liquidityRate,
+                l.marketPrice,
+                currentTick,
+                l.tickIndex.next(currentTick),
+                isBuy
+            );
     }
 }

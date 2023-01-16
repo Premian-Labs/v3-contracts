@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Position} from "../../libraries/Position.sol";
+import {Pricing} from "../../libraries/Pricing.sol";
 
 import {PoolCore} from "../../pool/PoolCore.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
@@ -11,6 +12,11 @@ import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
 contract PoolCoreMock is IPoolCoreMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
+
+    function fromPool(bool isBuy) external view returns (Pricing.Args memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return fromPool(l, isBuy);
+    }
 
     function formatTokenId(
         address operator,
