@@ -550,7 +550,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         );
 
         if (
-            deltaLong == deltaShort ||
+            (deltaLong == 0 && deltaShort == 0) ||
             (deltaLong > 0 && deltaShort > 0) ||
             (deltaLong < 0 && deltaShort < 0)
         ) revert Pool__InvalidAssetUpdate();
@@ -586,16 +586,31 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             IERC20(l.getPoolToken()).transfer(user, uint256(deltaCollateral));
         }
 
+        // ToDo : See with research to fix this
         // Transfer long
         if (deltaLong < 0) {
-            _burn(user, PoolStorage.LONG, uint256(-deltaLong));
+            _safeTransfer(
+                address(this),
+                user,
+                address(this),
+                PoolStorage.LONG,
+                uint256(-deltaLong),
+                ""
+            );
         } else if (deltaLong > 0) {
             _mint(user, PoolStorage.LONG, uint256(deltaLong), "");
         }
 
         // Transfer short
         if (deltaShort < 0) {
-            _burn(user, PoolStorage.SHORT, uint256(-deltaShort));
+            _safeTransfer(
+                address(this),
+                user,
+                address(this),
+                PoolStorage.SHORT,
+                uint256(-deltaShort),
+                ""
+            );
         } else if (deltaShort > 0) {
             _mint(user, PoolStorage.SHORT, uint256(deltaShort), "");
         }
