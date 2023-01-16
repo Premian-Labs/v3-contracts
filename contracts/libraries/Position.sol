@@ -107,16 +107,6 @@ library Position {
         return isRight(self.orderType);
     }
 
-    function proportion(
-        Key memory self,
-        uint256 price
-    ) internal pure returns (uint256) {
-        if (price <= self.lower) return 0;
-        else if (self.lower < price && price < self.upper)
-            return Pricing.proportion(self.lower, self.upper, price);
-        return WAD;
-    }
-
     function pieceWiseLinear(
         Key memory self,
         uint256 price
@@ -126,7 +116,7 @@ library Position {
             revert IPosition.Position__LowerGreaterOrEqualUpper();
         if (price <= self.lower) return 0;
         else if (self.lower < price && price < self.upper)
-            return self.proportion(price);
+            return Pricing.proportion(self.lower, self.upper, price);
         else return WAD;
     }
 

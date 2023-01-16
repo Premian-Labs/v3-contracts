@@ -25,13 +25,6 @@ contract PositionMock {
         return Position.isRight(orderType);
     }
 
-    function proportion(
-        Position.Key memory self,
-        uint256 price
-    ) external pure returns (uint256) {
-        return Position.proportion(self, price);
-    }
-
     function pieceWiseLinear(
         Position.Key memory self,
         uint256 price

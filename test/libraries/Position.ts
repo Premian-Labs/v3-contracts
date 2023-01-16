@@ -78,63 +78,6 @@ describe('Position', () => {
     });
   });
 
-  describe('#proportion(Position.Key,uint256)', () => {
-    let key: any;
-
-    before(async () => {
-      key = {
-        owner: deployer.address,
-        operator: deployer.address,
-        lower: parseEther('0.25'),
-        upper: parseEther('0.75'),
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
-    });
-
-    it('should return 0 if lower >= price', async () => {
-      expect(
-        await instance[
-          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
-        ](key, key.lower),
-      ).to.eq(0);
-      expect(
-        await instance[
-          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
-        ](key, key.lower.sub(1)),
-      ).to.eq(0);
-    });
-
-    it('should return the proportional amount if lower < price && price < upper', async () => {
-      for (const t of [
-        [parseEther('0.3'), parseEther('0.1')],
-        [parseEther('0.5'), parseEther('0.5')],
-        [parseEther('0.7'), parseEther('0.9')],
-      ]) {
-        expect(
-          await instance[
-            'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
-          ](key, t[0]),
-        ).to.eq(t[1]);
-      }
-    });
-
-    it('should return WAD if price > upper', async () => {
-      expect(
-        await instance[
-          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
-        ](key, key.upper),
-      ).to.eq(WAD);
-
-      expect(
-        await instance[
-          'proportion((address,address,uint256,uint256,uint8,bool,uint256),uint256)'
-        ](key, key.upper.add(1)),
-      ).to.eq(WAD);
-    });
-  });
-
   describe('#pieceWiseLinear(Position.Key,uint256)', () => {
     let key: any;
 
