@@ -1277,10 +1277,23 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         Position.Key memory p
     ) internal view returns (bool) {
-        return
-            l.liquidityRate == 0 &&
+        uint256 right = l.tickIndex.next(l.currentTick);
+
+        bool isStranded = l.liquidityRate == 0 &&
             p.lower >= l.currentTick &&
-            p.upper <= l.tickIndex.next(l.currentTick);
+            p.upper <= right;
+
+        if (isStranded) return true;
+        if (right == Pricing.MAX_TICK_PRICE) return isStranded;
+
+        uint256 rightRight = l.tickIndex.next(right);
+
+        return (l.ticks[right].delta < 0 &&
+            l.liquidityRate == uint256(-l.ticks[right].delta) &&
+            p.orderType.isBid() &&
+            l.marketPrice == right &&
+            p.lower >= right &&
+            p.upper <= rightRight);
     }
 
     /// @notice In case the market price is stranded the market price needs to be
