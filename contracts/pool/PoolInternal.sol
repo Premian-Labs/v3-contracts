@@ -252,7 +252,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         _transferTokens(
             l,
-            p.owner,
+            p.operator,
             address(this),
             collateralDelta.toUint256(),
             longsDelta.toUint256(),
