@@ -262,40 +262,32 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Position.Data storage pData = l.positions[p.keyHash()];
 
         uint256 liquidityPerTick;
+        uint256 feeRate;
         {
-            uint256 feeRate;
-            {
-                // If ticks dont exist they are created and inserted into the linked list
-                Tick.Data memory lowerTick = _getOrCreateTick(
-                    p.lower,
-                    belowLower
-                );
-                Tick.Data memory upperTick = _getOrCreateTick(
-                    p.upper,
-                    belowUpper
-                );
+            // If ticks dont exist they are created and inserted into the linked list
+            Tick.Data memory lowerTick = _getOrCreateTick(p.lower, belowLower);
+            Tick.Data memory upperTick = _getOrCreateTick(p.upper, belowUpper);
 
-                feeRate = _rangeFeeRate(
-                    l,
-                    p.lower,
-                    p.upper,
-                    lowerTick.externalFeeRate,
-                    upperTick.externalFeeRate
-                );
-            }
-
-            uint256 initialSize = _balanceOf(p.owner, tokenId);
-
-            if (initialSize > 0) {
-                liquidityPerTick = p.liquidityPerTick(initialSize);
-
-                _updateClaimableFees(pData, feeRate, liquidityPerTick);
-            } else {
-                pData.lastFeeRate = feeRate;
-            }
-
-            _mint(p.owner, tokenId, size, "");
+            feeRate = _rangeFeeRate(
+                l,
+                p.lower,
+                p.upper,
+                lowerTick.externalFeeRate,
+                upperTick.externalFeeRate
+            );
         }
+
+        uint256 initialSize = _balanceOf(p.owner, tokenId);
+
+        if (initialSize > 0) {
+            liquidityPerTick = p.liquidityPerTick(initialSize);
+
+            _updateClaimableFees(pData, feeRate, liquidityPerTick);
+        } else {
+            pData.lastFeeRate = feeRate;
+        }
+
+        _mint(p.owner, tokenId, size, "");
 
         // Adjust tick deltas
         _updateTicks(
@@ -346,51 +338,49 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         // Initialize variables before position update
         uint256 liquidityPerTick = p.liquidityPerTick(initialSize);
-        {
-            uint256 feeRate = _rangeFeeRate(
-                l,
-                p.lower,
-                p.upper,
-                lowerTick.externalFeeRate,
-                upperTick.externalFeeRate
-            );
+        uint256 feeRate = _rangeFeeRate(
+            l,
+            p.lower,
+            p.upper,
+            lowerTick.externalFeeRate,
+            upperTick.externalFeeRate
+        );
 
-            // Update claimable fees
-            _updateClaimableFees(pData, feeRate, liquidityPerTick);
+        // Update claimable fees
+        _updateClaimableFees(pData, feeRate, liquidityPerTick);
 
-            // Check whether it's a full withdrawal before updating the position
-            bool isFullWithdrawal = initialSize == size;
+        // Check whether it's a full withdrawal before updating the position
+        bool isFullWithdrawal = initialSize == size;
 
-            uint256 collateralToTransfer;
-            if (isFullWithdrawal) {
-                // Claim all fees and remove the position completely
-                collateralToTransfer += pData.claimableFees;
-                // ToDo : Emit fee claiming event
+        uint256 collateralToTransfer;
+        if (isFullWithdrawal) {
+            // Claim all fees and remove the position completely
+            collateralToTransfer += pData.claimableFees;
+            // ToDo : Emit fee claiming event
 
-                pData.claimableFees = 0;
-                pData.lastFeeRate = 0;
-            }
-
-            (int256 collateralDelta, int256 longsDelta, int256 shortsDelta) = p
-                .calculatePositionUpdate(
-                    initialSize,
-                    -size.toInt256(),
-                    l.marketPrice
-                );
-
-            collateralToTransfer += Math.abs(collateralDelta);
-
-            _burn(p.owner, tokenId, size);
-
-            _transferTokens(
-                l,
-                address(this),
-                p.operator,
-                collateralToTransfer,
-                Math.abs(longsDelta),
-                Math.abs(shortsDelta)
-            );
+            pData.claimableFees = 0;
+            pData.lastFeeRate = 0;
         }
+
+        (int256 collateralDelta, int256 longsDelta, int256 shortsDelta) = p
+            .calculatePositionUpdate(
+                initialSize,
+                -size.toInt256(),
+                l.marketPrice
+            );
+
+        collateralToTransfer += Math.abs(collateralDelta);
+
+        _burn(p.owner, tokenId, size);
+
+        _transferTokens(
+            l,
+            address(this),
+            p.operator,
+            collateralToTransfer,
+            Math.abs(longsDelta),
+            Math.abs(shortsDelta)
+        );
 
         // Adjust tick deltas (reverse of deposit)
         uint256 delta = p.liquidityPerTick(_balanceOf(p.owner, tokenId)) -
@@ -1008,7 +998,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         if (l.tickIndex.contains(price)) return (l.ticks[price], true);
 
-        return (Tick.Data(0, 0), false);
+        return (Tick.Data(0, 0, 0), false);
     }
 
     /// @notice Creates a Tick for a given price, or returns the existing tick.
@@ -1030,7 +1020,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.tickIndex.next(priceBelow) <= price
         ) revert Pool__InvalidBelowPrice();
 
-        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0);
+        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0, 0);
 
         l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
