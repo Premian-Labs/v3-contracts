@@ -586,7 +586,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             IERC20(l.getPoolToken()).transfer(user, uint256(deltaCollateral));
         }
 
-        // ToDo : See with research to fix this
+        // ToDo : See with research to fix this (Currently we wouldnt have at all time same supply for SHORT and LONG, as they arent minted for the pool)
         // Transfer long
         if (deltaLong < 0) {
             _safeTransfer(
