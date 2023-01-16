@@ -298,11 +298,13 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         // Adjust tick deltas
-        _updateTickDeltas(
+        _updateTicks(
             p.lower,
             p.upper,
             l.marketPrice,
-            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick
+            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick,
+            initialSize == 0,
+            false
         );
     }
 
@@ -393,7 +395,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // Adjust tick deltas (reverse of deposit)
         uint256 delta = p.liquidityPerTick(_balanceOf(p.owner, tokenId)) -
             liquidityPerTick;
-        _updateTickDeltas(p.lower, p.upper, l.marketPrice, delta);
+        _updateTicks(
+            p.lower,
+            p.upper,
+            l.marketPrice,
+            delta,
+            false,
+            isFullWithdrawal
+        );
 
         // ToDo : Add return values ?
     }
@@ -1029,6 +1038,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         return tick;
     }
 
+    /// @notice Removes a tick if it does not mark the beginning or the end of a range order.
     function _removeTickIfNotActive(uint256 price) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1039,8 +1049,10 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (
             price > Pricing.MIN_TICK_PRICE &&
             price < Pricing.MAX_TICK_PRICE &&
-            tick.delta == 0
+            tick.counter == 0 // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
         ) {
+            if (tick.delta != 0) revert Pool__TickDeltaNotZero();
+
             if (price == l.currentTick) {
                 uint256 newCurrentTick = l.tickIndex.prev(price);
 
@@ -1055,16 +1067,64 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
     }
 
-    function _updateTickDeltas(
+    function _updateTicks(
         uint256 lower,
         uint256 upper,
         uint256 marketPrice,
-        uint256 delta
+        uint256 delta,
+        bool isNewDeposit,
+        bool isFullWithdrawal
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         Tick.Data storage lowerTick = l.ticks[lower];
         Tick.Data storage upperTick = l.ticks[upper];
+
+        if (isNewDeposit) {
+            lowerTick.counter += 1;
+            upperTick.counter += 1;
+        }
+
+        if (isFullWithdrawal) {
+            lowerTick.counter -= 1;
+            upperTick.counter -= 1;
+        }
+
+        // Update the deltas, i.e. the net change in per tick liquidity, of the
+        // referenced lower and upper tick, dependent on the current tick.
+        //
+        // Three cases need to be covered.
+        //
+        // Case 1: current tick is above the upper tick. Upper has not been
+        // crossed, thus, upon a crossing, liquidity has to be injected at the
+        // upper tick and withdrawn at the lower. The bar below the range shows the
+        // possible current ticks that cover case 1.
+        //
+        //     0   lower                upper       1
+        //     |    [---------------------]         |
+        //                                [---------]
+        //                                  current
+        //
+        // Case 2: current tick is below is lower. Lower has not benn crossed yet,
+        // thus, upon a crossing, liquidity has to be injected at the lower tick
+        // and withdrawn at the upper.
+        //
+        //     0        lower                 upper 1
+        //     |          [---------------------]   |
+        //     [---------)
+        //           current
+        //
+        // Case 3: current tick is greater or equal to lower and below upper. Thus,
+        // liquidity has already entered. Therefore, if the price crosses the
+        // lower, it needs to be withdrawn. Furthermore, if it crosses the above
+        // tick it also needs to be withdrawn. Note that since the current tick lies
+        // within the lower and upper range the liquidity has to be adjusted by the
+        // delta.
+        //
+        //     0        lower                 upper 1
+        //     |          [---------------------]   |
+        //                [---------------------)
+        //                         current
 
         int256 _delta = int256(delta);
         if (upper <= l.currentTick) {
@@ -1079,8 +1139,55 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             l.liquidityRate += delta;
         }
 
-        // Reconcile current tick with system
-        // Check if deposit or withdrawal
+        // After deposit / full withdrawal the current tick needs be reconciled. We
+        // need cover two cases.
+        //
+        // Case 1. Deposit. Depositing liquidity in case the market price is
+        // stranded shifts the market price to the upper tick in case of a bid-side
+        // order or to the lower tick in case of an ask-side order.
+        //
+        // Ask-side order:
+        //      current
+        //     0   v                               1
+        //     |   [-bid-]               [-ask-]   |
+        //               ^
+        //           market price
+        //                 new current
+        //                    v
+        //                    [-new-ask-]
+        //                    ^
+        //             new market price
+        //
+        // Bid-side order:
+        //      current
+        //     0   v                               1
+        //     |   [-bid-]               [-ask-]   |
+        //               ^
+        //           market price
+        //                 new current
+        //                    v
+        //                    [new-bid]
+        //                            ^
+        //                     new market price
+        //
+        // Case 2. Full withdrawal of [R2] where the lower tick of [R2] is the
+        // current tick causes the lower and upper tick of [R2] to be removed and
+        // thus shifts the current tick to the lower of [R1]. Note that the market
+        // price does not change. However, around the market price zero liquidity
+        // is provided. Therefore, a buy / sell trade will result in the market
+        // price snapping to the upper tick of [R1] or the lower tick of [R3] and a
+        // crossing of the relevant tick.
+        //
+        //               current
+        //     0            v                      1
+        //     |   [R1]     [R2]    [R3]           |
+        //                   ^
+        //              market price
+        //     new current
+        //         v
+        //     |   [R1]             [R3]           |
+        //                   ^
+        //              market price
         if (delta > 0) {
             while (l.tickIndex.next(l.currentTick) < marketPrice) {
                 _cross(true);
