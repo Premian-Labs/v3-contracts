@@ -6,7 +6,6 @@ import {
   ERC20Mock__factory,
   IPoolMock,
   IPoolMock__factory,
-  Pricing__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
@@ -15,11 +14,13 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 import { ONE_MONTH } from '../../utils/constants';
+import { now, revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
+  let lp: SignerWithAddress;
+
   let callPool: IPoolMock;
   let putPool: IPoolMock;
   let p: PoolUtil;
@@ -30,17 +31,21 @@ describe('Pool', () => {
   let underlyingOracle: MockContract;
 
   let strike = 1000;
-  let maturity = getCurrentTimestamp() + ONE_MONTH;
+  let maturity: number;
 
-  let snapshotId: number;
+  let isCall: boolean;
+  let collateral: BigNumber;
 
   before(async () => {
-    [deployer] = await ethers.getSigners();
+    [deployer, lp] = await ethers.getSigners();
 
     p = await PoolUtil.deploy(deployer, true, true);
 
     underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+
+    await underlying.mint(lp.address, parseEther('1000000'));
+    await base.mint(lp.address, parseEther('1000'));
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer () external view returns (int)',
@@ -52,7 +57,9 @@ describe('Pool', () => {
       'function decimals () external view returns (uint8)',
     ]);
 
-    for (const isCall of [true, false]) {
+    maturity = (await now()) + ONE_MONTH;
+
+    for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
         base.address,
         underlying.address,
@@ -68,21 +75,82 @@ describe('Pool', () => {
 
       if (isCall) {
         callPool = IPoolMock__factory.connect(poolAddress, deployer);
+        collateral = parseEther('10');
       } else {
         putPool = IPoolMock__factory.connect(poolAddress, deployer);
+        collateral = parseEther('1000');
       }
     }
   });
 
-  beforeEach(async () => {
-    snapshotId = await ethers.provider.send('evm_snapshot', []);
+  revertToSnapshotAfterEach(async () => {});
+
+  describe('__internal', function () {
+    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
+      it('should return pool state', async () => {
+        let isBuy = true;
+        let args = await callPool._getPricing(isBuy);
+
+        expect(args.liquidityRate).to.eq(0);
+        expect(args.marketPrice).to.eq(0);
+        expect(args.lower).to.eq(parseEther('0.001'));
+        expect(args.upper).to.eq(parseEther('1'));
+        expect(args.isBuy).to.eq(isBuy);
+
+        args = await callPool._getPricing(!isBuy);
+
+        expect(args.liquidityRate).to.eq(0);
+        expect(args.marketPrice).to.eq(0);
+        expect(args.lower).to.eq(parseEther('0.001'));
+        expect(args.upper).to.eq(parseEther('1'));
+        expect(args.isBuy).to.eq(!isBuy);
+
+        let lower = parseEther('0.25');
+        let upper = parseEther('0.75');
+
+        let position = {
+          lower: lower,
+          upper: upper,
+          operator: lp.address,
+          owner: lp.address,
+          orderType: 0,
+          isCall: isCall,
+          strike: strike,
+        };
+
+        await underlying.connect(lp).approve(callPool.address, collateral);
+
+        await callPool
+          .connect(lp)
+          .deposit(
+            position,
+            await callPool.getNearestTickBelow(lower),
+            await callPool.getNearestTickBelow(upper),
+            collateral,
+            0,
+            0,
+          );
+
+        args = await callPool._getPricing(isBuy);
+
+        expect(args.liquidityRate).to.eq(parseEther('4'));
+        expect(args.marketPrice).to.eq(upper);
+        expect(args.lower).to.eq(lower);
+        expect(args.upper).to.eq(upper);
+        expect(args.isBuy).to.eq(isBuy);
+
+        args = await callPool._getPricing(!isBuy);
+
+        expect(args.liquidityRate).to.eq(parseEther('4'));
+        expect(args.marketPrice).to.eq(upper);
+        expect(args.lower).to.eq(lower);
+        expect(args.upper).to.eq(upper);
+        expect(args.isBuy).to.eq(!isBuy);
+      });
+    });
   });
 
-  afterEach(async () => {
-    await ethers.provider.send('evm_revert', [snapshotId]);
-  });
-
-  describe('#formatTokenId', () => {
+  describe('#formatTokenId(address,uint256,uint256,Position.OrderType)', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await callPool.formatTokenId(
@@ -102,7 +170,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#parseTokenId', () => {
+  describe('#parseTokenId(uint256)', () => {
     it('should properly parse token id', async () => {
       const r = await callPool.parseTokenId(
         BigNumber.from(
@@ -115,30 +183,6 @@ describe('Pool', () => {
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
       expect(r.orderType).to.eq(3);
       expect(r.version).to.eq(1);
-    });
-  });
-
-  describe('#amountOfTicksBetween', () => {
-    it('should correctly calculate amount of ticks between two values', async () => {
-      for (const el of [
-        [parseEther('0.001'), parseEther('1'), 999],
-        [parseEther('0.05'), parseEther('0.95'), 900],
-        [parseEther('0.49'), parseEther('0.491'), 1],
-      ])
-        expect(await callPool.amountOfTicksBetween(el[0], el[1])).to.eq(el[2]);
-    });
-
-    it('should revert if lower >= upper', async () => {
-      for (const el of [
-        [parseEther('0.2'), parseEther('0.01')],
-        [parseEther('0.1'), parseEther('0.1')],
-      ])
-        await expect(
-          callPool.amountOfTicksBetween(el[0], el[1]),
-        ).to.be.revertedWithCustomError(
-          { interface: Pricing__factory.createInterface() },
-          'Pricing__UpperNotGreaterThanLower',
-        );
     });
   });
 });

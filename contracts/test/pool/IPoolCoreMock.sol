@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {Position} from "../libraries/Position.sol";
+import {Position} from "../../libraries/Position.sol";
+import {Pricing} from "../../libraries/Pricing.sol";
 
-interface _IPoolMock {
+interface IPoolCoreMock {
+    function _getPricing(
+        bool isBuy
+    ) external view returns (Pricing.Args memory);
+
     function formatTokenId(
         address operator,
         uint256 lower,
@@ -23,9 +28,4 @@ interface _IPoolMock {
             uint256 upper,
             Position.OrderType orderType
         );
-
-    function amountOfTicksBetween(
-        uint256 lower,
-        uint256 upper
-    ) external pure returns (uint256);
 }
