@@ -85,66 +85,68 @@ describe('Pool', () => {
 
   revertToSnapshotAfterEach(async () => {});
 
-  describe('#fromPool(PoolStorage.Layout,bool)', () => {
-    it('should return pool state', async () => {
-      let isBuy = true;
-      let args = await callPool.fromPool(isBuy);
+  describe('__internal', function () {
+    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
+      it('should return pool state', async () => {
+        let isBuy = true;
+        let args = await callPool._getPricing(isBuy);
 
-      expect(args.liquidityRate).to.eq(0);
-      expect(args.marketPrice).to.eq(0);
-      expect(args.lower).to.eq(parseEther('0.001'));
-      expect(args.upper).to.eq(parseEther('1'));
-      expect(args.isBuy).to.eq(isBuy);
+        expect(args.liquidityRate).to.eq(0);
+        expect(args.marketPrice).to.eq(0);
+        expect(args.lower).to.eq(parseEther('0.001'));
+        expect(args.upper).to.eq(parseEther('1'));
+        expect(args.isBuy).to.eq(isBuy);
 
-      args = await callPool.fromPool(!isBuy);
+        args = await callPool._getPricing(!isBuy);
 
-      expect(args.liquidityRate).to.eq(0);
-      expect(args.marketPrice).to.eq(0);
-      expect(args.lower).to.eq(parseEther('0.001'));
-      expect(args.upper).to.eq(parseEther('1'));
-      expect(args.isBuy).to.eq(!isBuy);
+        expect(args.liquidityRate).to.eq(0);
+        expect(args.marketPrice).to.eq(0);
+        expect(args.lower).to.eq(parseEther('0.001'));
+        expect(args.upper).to.eq(parseEther('1'));
+        expect(args.isBuy).to.eq(!isBuy);
 
-      let lower = parseEther('0.25');
-      let upper = parseEther('0.75');
+        let lower = parseEther('0.25');
+        let upper = parseEther('0.75');
 
-      let position = {
-        lower: lower,
-        upper: upper,
-        operator: lp.address,
-        owner: lp.address,
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
+        let position = {
+          lower: lower,
+          upper: upper,
+          operator: lp.address,
+          owner: lp.address,
+          orderType: 0,
+          isCall: isCall,
+          strike: strike,
+        };
 
-      await underlying.connect(lp).approve(callPool.address, collateral);
+        await underlying.connect(lp).approve(callPool.address, collateral);
 
-      await callPool
-        .connect(lp)
-        .deposit(
-          position,
-          await callPool.getNearestTickBelow(lower),
-          await callPool.getNearestTickBelow(upper),
-          collateral,
-          0,
-          0,
-        );
+        await callPool
+          .connect(lp)
+          .deposit(
+            position,
+            await callPool.getNearestTickBelow(lower),
+            await callPool.getNearestTickBelow(upper),
+            collateral,
+            0,
+            0,
+          );
 
-      args = await callPool.fromPool(isBuy);
+        args = await callPool._getPricing(isBuy);
 
-      expect(args.liquidityRate).to.eq(parseEther('4'));
-      expect(args.marketPrice).to.eq(upper);
-      expect(args.lower).to.eq(lower);
-      expect(args.upper).to.eq(upper);
-      expect(args.isBuy).to.eq(isBuy);
+        expect(args.liquidityRate).to.eq(parseEther('4'));
+        expect(args.marketPrice).to.eq(upper);
+        expect(args.lower).to.eq(lower);
+        expect(args.upper).to.eq(upper);
+        expect(args.isBuy).to.eq(isBuy);
 
-      args = await callPool.fromPool(!isBuy);
+        args = await callPool._getPricing(!isBuy);
 
-      expect(args.liquidityRate).to.eq(parseEther('4'));
-      expect(args.marketPrice).to.eq(upper);
-      expect(args.lower).to.eq(lower);
-      expect(args.upper).to.eq(upper);
-      expect(args.isBuy).to.eq(!isBuy);
+        expect(args.liquidityRate).to.eq(parseEther('4'));
+        expect(args.marketPrice).to.eq(upper);
+        expect(args.lower).to.eq(lower);
+        expect(args.upper).to.eq(upper);
+        expect(args.isBuy).to.eq(!isBuy);
+      });
     });
   });
 

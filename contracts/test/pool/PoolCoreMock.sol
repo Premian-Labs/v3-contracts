@@ -13,9 +13,11 @@ import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 contract PoolCoreMock is IPoolCoreMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
-    function fromPool(bool isBuy) external view returns (Pricing.Args memory) {
+    function _getPricing(
+        bool isBuy
+    ) external view returns (Pricing.Args memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return fromPool(l, isBuy);
+        return _getPricing(l, isBuy);
     }
 
     function formatTokenId(
