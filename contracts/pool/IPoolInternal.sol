@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.0;
 
+import {IPosition} from "../libraries/IPosition.sol";
+import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPoolInternal {
+interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
     error Pool__InsufficientAskLiquidity();

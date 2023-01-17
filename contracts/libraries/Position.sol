@@ -6,6 +6,7 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 import {WadMath} from "./WadMath.sol";
 
@@ -20,9 +21,6 @@ library Position {
     using SafeCast for uint256;
 
     uint256 private constant WAD = 1e18;
-
-    error Position__InvalidOrderType();
-    error Position__LowerGreaterOrEqualUpper();
 
     // All the data used to calculate the key of the position
     struct Key {
@@ -131,7 +129,7 @@ library Position {
             return OrderType.BUY_WITH_SHORTS;
         else if (orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS)
             return OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
-        else revert Position__InvalidOrderType();
+        else revert IPosition.Position__InvalidOrderType();
     }
 
     function isLeft(OrderType orderType) internal pure returns (bool) {
@@ -150,26 +148,16 @@ library Position {
         return isRight(self.orderType);
     }
 
-    function proportion(
-        Key memory self,
-        uint256 price
-    ) internal pure returns (uint256) {
-        if (price < self.lower) return 0;
-        else if (self.lower <= price && price < self.upper)
-            return Pricing.proportion(self.lower, self.upper, price);
-        return WAD;
-    }
-
     function pieceWiseLinear(
         Key memory self,
         uint256 price
     ) internal pure returns (uint256) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert Position__LowerGreaterOrEqualUpper();
-        if (price < self.lower) return 0;
-        else if (self.lower <= price && price < self.upper)
-            return self.proportion(price);
+            revert IPosition.Position__LowerGreaterOrEqualUpper();
+        if (price <= self.lower) return 0;
+        else if (self.lower < price && price < self.upper)
+            return Pricing.proportion(self.lower, self.upper, price);
         else return WAD;
     }
 
@@ -179,19 +167,19 @@ library Position {
     ) internal pure returns (uint256) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper();
 
         uint256 a;
-        if (price < self.lower) {
-            a = self.lower;
-        } else if (self.lower <= price && price < self.upper) {
+        if (price <= self.lower) {
+            return 0;
+        } else if (self.lower < price && price < self.upper) {
             a = price;
         } else {
             a = self.upper;
         }
 
         uint256 numerator = (a.mulWad(a) - self.lower.mulWad(self.lower));
-        uint256 denominator = (2 * WAD) * (self.upper - self.lower);
+        uint256 denominator = 2 * (self.upper - self.lower);
 
         return numerator.divWad(denominator);
     }
@@ -241,7 +229,7 @@ library Position {
             return size;
         }
 
-        revert Position__InvalidOrderType();
+        revert IPosition.Position__InvalidOrderType();
     }
 
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
@@ -310,7 +298,7 @@ library Position {
         } else if (self.orderType.isLong()) {
             _collateral = self.bid(size, price);
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 
@@ -339,7 +327,7 @@ library Position {
         } else if (self.orderType.isLong()) {
             return self.contracts(size, price);
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 
@@ -354,7 +342,7 @@ library Position {
         } else if (self.orderType.isLong()) {
             return 0;
         } else {
-            revert Position__InvalidOrderType();
+            revert IPosition.Position__InvalidOrderType();
         }
     }
 

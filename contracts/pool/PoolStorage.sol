@@ -6,11 +6,10 @@ import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol"
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
+import {IPoolInternal} from "./IPoolInternal.sol";
+
 library PoolStorage {
     using PoolStorage for PoolStorage.Layout;
-
-    // ToDo : Get rid of duplicate error def
-    error Pool__OptionNotExpired();
 
     // Token id for SHORT
     uint256 internal constant SHORT = 0;
@@ -68,7 +67,8 @@ library PoolStorage {
 
     function getSpotPrice(Layout storage l) internal view returns (uint256) {
         if (l.spot == 0) {
-            if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
+            if (block.timestamp < l.maturity)
+                revert IPoolInternal.Pool__OptionNotExpired();
 
             // ToDo : Query price and save it if not yet saved
         }

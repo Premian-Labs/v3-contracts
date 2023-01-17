@@ -440,7 +440,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _ensureNonZeroSize(size);
         _ensureNotExpired(l);
 
-        Pricing.Args memory pricing = Pricing.fromPool(l, isBuy);
+        Pricing.Args memory pricing = _getPricing(l, isBuy);
 
         uint256 totalPremium;
         uint256 remaining = size;
@@ -512,6 +512,22 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         _updateUserAssets(l, user, totalPremium, size, isBuy);
 
         return totalPremium;
+    }
+
+    function _getPricing(
+        PoolStorage.Layout storage l,
+        bool isBuy
+    ) internal view returns (Pricing.Args memory) {
+        uint256 currentTick = l.currentTick;
+
+        return
+            Pricing.Args(
+                l.liquidityRate,
+                l.marketPrice,
+                currentTick,
+                l.tickIndex.next(currentTick),
+                isBuy
+            );
     }
 
     /// @notice Compute the change in short / long option contracts of an agent in order to
@@ -954,7 +970,7 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
-    /// @notice Gets the nearest tick that is less than or equal to `price`.=
+    /// @notice Gets the nearest tick that is less than or equal to `price`.
     function _getNearestTickBelow(
         uint256 price
     ) internal view returns (uint256) {
