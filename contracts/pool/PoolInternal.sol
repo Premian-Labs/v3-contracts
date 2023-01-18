@@ -263,13 +263,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
+        uint256 collateral = collateralDelta.toUint256();
+        uint256 longs = longsDelta.toUint256();
+        uint256 shorts = shortsDelta.toUint256();
+
         _transferTokens(
             l,
             p.operator,
             address(this),
-            collateralDelta.toUint256(),
-            longsDelta.toUint256(),
-            shortsDelta.toUint256()
+            collateral,
+            longs,
+            shorts
         );
 
         Position.Data storage pData = l.positions[p.keyHash()];
@@ -397,7 +401,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
-        collateralToTransfer += Math.abs(collateralDelta);
+        uint256 collateral = Math.abs(collateralDelta);
+        uint256 longs = Math.abs(longsDelta);
+        uint256 shorts = Math.abs(shortsDelta);
+
+        collateralToTransfer += collateral;
 
         _burn(p.owner, tokenId, size);
 
@@ -406,8 +414,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             address(this),
             p.operator,
             collateralToTransfer,
-            Math.abs(longsDelta),
-            Math.abs(shortsDelta)
+            longs,
+            shorts
         );
 
         // Adjust tick deltas (reverse of deposit)
@@ -436,7 +444,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         // ToDo : Add return values ?
-
     }
 
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
