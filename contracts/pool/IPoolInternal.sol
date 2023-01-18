@@ -8,20 +8,23 @@ import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
+    error Pool__AboveMaxSlippage();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
-    error Pool__InvalidBuyOrder();
     error Pool__InvalidRange();
-    error Pool__InvalidSellOrder();
     error Pool__InvalidTransfer();
     error Pool__LongOrShortMustBeZero();
+    error Pool__NotAuthorized();
+    error Pool__NotEnoughTokens();
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
+    error Pool__PositionCantHoldLongAndShort();
+    error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
