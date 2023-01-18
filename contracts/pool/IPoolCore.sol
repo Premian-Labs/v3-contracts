@@ -16,16 +16,14 @@ interface IPoolCore is IPoolInternal {
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 size,
+        uint256 slippage
     ) external;
 
     function withdraw(
         Position.Key memory p,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 size,
+        uint256 slippage
     ) external;
 
     function trade(uint256 size, bool isBuy) external returns (uint256);
