@@ -298,13 +298,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             uint256 feeRate;
             {
                 // If ticks dont exist they are created and inserted into the linked list
-                Tick.Data memory lowerTick = _getOrCreateTick(
-                    p.lower,
-                    belowLower
-                );
                 Tick.Data memory upperTick = _getOrCreateTick(
                     p.upper,
                     belowUpper
+                );
+
+                Tick.Data memory lowerTick = _getOrCreateTick(
+                    p.lower,
+                    belowLower
                 );
 
                 feeRate = _rangeFeeRate(
@@ -520,7 +521,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureNonZeroSize(size);
         _ensureNotExpired(l);
 
-        Pricing.Args memory pricing = Pricing.fromPool(l, isBuy);
+        Pricing.Args memory pricing = _getPricing(l, isBuy);
 
         uint256 totalPremium;
         uint256 totalTakerFees;
@@ -608,6 +609,22 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         return totalPremium;
+    }
+
+    function _getPricing(
+        PoolStorage.Layout storage l,
+        bool isBuy
+    ) internal view returns (Pricing.Args memory) {
+        uint256 currentTick = l.currentTick;
+
+        return
+            Pricing.Args(
+                l.liquidityRate,
+                l.marketPrice,
+                currentTick,
+                l.tickIndex.next(currentTick),
+                isBuy
+            );
     }
 
     /// @notice Compute the change in short / long option contracts of an agent in order to
@@ -1058,7 +1075,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
-    /// @notice Gets the nearest tick that is less than or equal to `price`.=
+    /// @notice Gets the nearest tick that is less than or equal to `price`.
     function _getNearestTickBelow(
         uint256 price
     ) internal view returns (uint256) {
