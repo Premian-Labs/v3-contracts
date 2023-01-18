@@ -15,9 +15,10 @@ import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
-contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
+contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
@@ -203,6 +204,18 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         pData.claimableFees = 0;
         IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
+
+        emit ClaimFees(
+            p.owner,
+            PoolStorage.formatTokenId(
+                p.operator,
+                p.lower,
+                p.upper,
+                p.orderType
+            ),
+            claimedFees,
+            pData.lastFeeRate
+        );
     }
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -250,13 +263,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
+        uint256 collateral = collateralDelta.toUint256();
+        uint256 longs = longsDelta.toUint256();
+        uint256 shorts = shortsDelta.toUint256();
+
         _transferTokens(
             l,
             p.operator,
             address(this),
-            collateralDelta.toUint256(),
-            longsDelta.toUint256(),
-            shortsDelta.toUint256()
+            collateral,
+            longs,
+            shorts
         );
 
         Position.Data storage pData = l.positions[p.keyHash()];
@@ -297,6 +314,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick,
             initialSize == 0,
             false
+        );
+
+        emit Deposit(
+            p.owner,
+            tokenId,
+            collateral,
+            longs,
+            shorts,
+            pData.lastFeeRate,
+            pData.claimableFees,
+            l.marketPrice,
+            l.liquidityRate,
+            l.currentTick
         );
     }
 
@@ -354,12 +384,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
 
         uint256 collateralToTransfer;
         if (isFullWithdrawal) {
+            uint256 feesClaimed = pData.claimableFees;
             // Claim all fees and remove the position completely
-            collateralToTransfer += pData.claimableFees;
-            // ToDo : Emit fee claiming event
+            collateralToTransfer += feesClaimed;
 
             pData.claimableFees = 0;
             pData.lastFeeRate = 0;
+
+            emit ClaimFees(p.owner, tokenId, feesClaimed, 0);
         }
 
         (int256 collateralDelta, int256 longsDelta, int256 shortsDelta) = p
@@ -369,7 +401,11 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
-        collateralToTransfer += Math.abs(collateralDelta);
+        uint256 collateral = Math.abs(collateralDelta);
+        uint256 longs = Math.abs(longsDelta);
+        uint256 shorts = Math.abs(shortsDelta);
+
+        collateralToTransfer += collateral;
 
         _burn(p.owner, tokenId, size);
 
@@ -378,8 +414,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             address(this),
             p.operator,
             collateralToTransfer,
-            Math.abs(longsDelta),
-            Math.abs(shortsDelta)
+            longs,
+            shorts
         );
 
         // Adjust tick deltas (reverse of deposit)
@@ -392,6 +428,19 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             delta,
             false,
             isFullWithdrawal
+        );
+
+        emit Withdrawal(
+            p.owner,
+            tokenId,
+            collateral,
+            longs,
+            shorts,
+            pData.lastFeeRate,
+            pData.claimableFees,
+            l.marketPrice,
+            l.liquidityRate,
+            l.currentTick
         );
 
         // ToDo : Add return values ?
@@ -443,6 +492,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         Pricing.Args memory pricing = _getPricing(l, isBuy);
 
         uint256 totalPremium;
+        uint256 totalTakerFees;
+        uint256 totalProtocolFees;
         uint256 remaining = size;
 
         while (remaining > 0) {
@@ -486,6 +537,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
                 // is_buy: taker has to pay premium + fees
                 // ~is_buy: taker receives premium - fees
                 totalPremium += isBuy ? premium + takerFee : premium - takerFee;
+                totalTakerFees += takerFee;
+                totalProtocolFees += protocolFee;
 
                 l.marketPrice = nextMarketPrice;
                 l.protocolFees += protocolFee;
@@ -510,6 +563,18 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         _updateUserAssets(l, user, totalPremium, size, isBuy);
+
+        emit Trade(
+            user,
+            size,
+            isBuy ? totalPremium - totalTakerFees : totalPremium,
+            totalTakerFees,
+            totalProtocolFees,
+            l.marketPrice,
+            l.liquidityRate,
+            l.currentTick,
+            isBuy
+        );
 
         return totalPremium;
     }
@@ -701,6 +766,16 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             : premium - protocolFee; // Maker selling
 
         _updateUserAssets(l, quote.provider, premiumMaker, size, quote.isBuy);
+
+        emit FillQuote(
+            user,
+            quote.provider,
+            size,
+            premium,
+            takerFee,
+            protocolFee,
+            !quote.isBuy
+        );
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
@@ -716,6 +791,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             owner,
             Position.contractsToCollateral(size, l.strike, l.isCallPool)
         );
+
+        emit Annihilate(owner, size, 0);
     }
 
     /// @notice Transfer an LP position to another owner.
@@ -800,6 +877,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         }
 
         if (size == srcSize) delete l.positions[srcKey];
+
+        emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
 
     function _calculateExerciseValue(
@@ -856,6 +935,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
             IERC20(l.getPoolToken()).transfer(holder, exerciseValue);
         }
 
+        emit Exercise(holder, size, exerciseValue, l.spot, 0);
+
         return exerciseValue;
     }
 
@@ -878,6 +959,8 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (collateralValue > 0) {
             IERC20(l.getPoolToken()).transfer(holder, collateralValue);
         }
+
+        emit Settle(holder, size, exerciseValue, l.spot, 0);
 
         return collateralValue;
     }
@@ -926,13 +1009,14 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         // maturity should be close to the intrinsic value.
         uint256 price = l.marketPrice;
         uint256 payoff = _calculateExerciseValue(l, WAD);
+        uint256 claimableFees = pData.claimableFees;
 
         uint256 collateral = p.collateral(size, price);
         collateral += p.long(size, price).mulWad(payoff);
         collateral += p.short(size, price).mulWad(
             (l.isCallPool ? WAD : l.strike) - payoff
         );
-        collateral += pData.claimableFees;
+        collateral += claimableFees;
 
         _burn(p.owner, tokenId, size);
 
@@ -942,6 +1026,17 @@ contract PoolInternal is IPoolInternal, ERC1155EnumerableInternal {
         if (collateral > 0) {
             IERC20(l.getPoolToken()).transfer(p.operator, collateral);
         }
+
+        emit SettlePosition(
+            p.owner,
+            tokenId,
+            size,
+            collateral - claimableFees,
+            payoff,
+            claimableFees,
+            l.spot,
+            0
+        );
 
         return collateral;
     }
