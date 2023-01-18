@@ -6,7 +6,9 @@ import {IPoolBase} from "./IPoolBase.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPoolCore {
+import {IPoolInternal} from "./IPoolInternal.sol";
+
+interface IPoolCore is IPoolInternal {
     function getQuote(uint256 size, bool isBuy) external view returns (uint256);
 
     function claim(Position.Key memory p) external;
@@ -15,9 +17,8 @@ interface IPoolCore {
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 size,
+        uint256 slippage
     ) external;
 
     function swapAndDeposit(
@@ -29,9 +30,8 @@ interface IPoolCore {
 
     function withdraw(
         Position.Key memory p,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts
+        uint256 size,
+        uint256 slippage
     ) external;
 
     function trade(uint256 size, bool isBuy) external returns (uint256);

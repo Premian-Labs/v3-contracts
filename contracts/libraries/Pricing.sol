@@ -5,8 +5,10 @@ pragma solidity ^0.8.0;
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
 import {Position} from "../libraries/Position.sol";
-import {WadMath} from "./WadMath.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
+
+import {IPricing} from "./IPricing.sol";
+import {WadMath} from "./WadMath.sol";
 
 /// @notice This class implements the methods necessary for computing price movements within a tick range.
 ///         Warnings
@@ -18,11 +20,6 @@ library Pricing {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
     using WadMath for uint256;
-
-    error Pricing__InvalidQuantityArgs();
-    error Pricing__PriceCannotBeComputedWithinTickRange();
-    error Pricing__PriceOutOfRange();
-    error Pricing__UpperNotGreaterThanLower();
 
     uint256 private constant WAD = 1e18;
 
@@ -38,30 +35,14 @@ library Pricing {
         bool isBuy; // The direction of the trade
     }
 
-    function fromPool(
-        PoolStorage.Layout storage l,
-        bool isBuy
-    ) internal view returns (Pricing.Args memory) {
-        uint256 currentTick = l.currentTick;
-
-        return
-            Args(
-                l.liquidityRate,
-                l.marketPrice,
-                currentTick,
-                l.tickIndex.next(currentTick),
-                isBuy
-            );
-    }
-
     function proportion(
         uint256 lower,
         uint256 upper,
         uint256 marketPrice
     ) internal pure returns (uint256) {
-        if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
         if (lower > marketPrice || marketPrice > upper)
-            revert Pricing__PriceOutOfRange();
+            revert IPricing.Pricing__PriceOutOfRange();
 
         return (marketPrice - lower).divWad(upper - lower);
     }
@@ -86,7 +67,7 @@ library Pricing {
         uint256 lower,
         uint256 upper
     ) internal pure returns (uint256) {
-        if (lower >= upper) revert Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
 
         return (upper - lower) / MIN_TICK_DISTANCE;
     }
@@ -123,10 +104,11 @@ library Pricing {
         uint256 liq = liquidity(args);
         if (liq == 0) return args.isBuy ? args.upper : args.lower;
 
-        uint256 _proportion = tradeSize.divWad(liq);
+        uint256 _proportion;
+        if (tradeSize > 0) _proportion = tradeSize.divWad(liq);
 
-        if (_proportion == 0 || _proportion > 1)
-            revert Pricing__PriceCannotBeComputedWithinTickRange();
+        if (_proportion > WAD)
+            revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             args.isBuy
