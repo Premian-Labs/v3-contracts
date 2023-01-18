@@ -25,7 +25,9 @@ interface IPoolCore is IPoolInternal {
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
         uint256 belowLower,
-        uint256 belowUpper
+        uint256 belowUpper,
+        uint256 size,
+        uint256 slippage
     ) external payable;
 
     function withdraw(

@@ -41,7 +41,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         SwapArgs memory s,
         Position.Key memory p,
         uint256 belowLower,
-        uint256 belowUpper
+        uint256 belowUpper,
+        uint256 size,
+        uint256 slippage
     ) external payable {
         // ToDo : Add orderType check ?
 
@@ -50,7 +52,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         address tokenOut = l.getPoolToken();
         uint256 creditAmount = _swapForPoolTokens(s, tokenOut);
 
-        _deposit(p, belowUpper, belowUpper, creditAmount, 0, 0);
+        // ToDo : Finish to implement
+
+        _deposit(p, belowLower, belowUpper, size, slippage);
     }
 
     function withdraw(
