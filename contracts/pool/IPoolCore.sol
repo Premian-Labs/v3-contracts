@@ -8,7 +8,7 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolCore is IPoolInternal {
-    /// Gives a quote for a trade
+    /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
     /// @param The premium which has to be paid to complete the trade
