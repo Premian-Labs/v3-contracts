@@ -224,18 +224,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
     /// @param slippage Max slippage
+    /// @param isBid Whether this is a bid or ask order (This value only matters in case of stranded market price)
     function _deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 slippage,
+        bool isBid
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
-        if (isMarketPriceStranded(l, p)) {
-            l.marketPrice = getStrandedMarketPriceUpdate(p);
+        if (isMarketPriceStranded(l, p, isBid)) {
+            l.marketPrice = getStrandedMarketPriceUpdate(p, isBid);
         }
 
         _ensureBelowMaxSlippage(l, slippage);
@@ -1386,7 +1388,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///                               ^
     function isMarketPriceStranded(
         PoolStorage.Layout storage l,
-        Position.Key memory p
+        Position.Key memory p,
+        bool isBid
     ) internal view returns (bool) {
         uint256 right = l.tickIndex.next(l.currentTick);
 
@@ -1401,7 +1404,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         return (l.ticks[right].delta < 0 &&
             l.liquidityRate == uint256(-l.ticks[right].delta) &&
-            p.orderType.isBid() &&
+            isBid &&
             l.marketPrice == right &&
             p.lower >= right &&
             p.upper <= rightRight);
@@ -1411,9 +1414,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
     ///         isMarketPriceStranded.
     function getStrandedMarketPriceUpdate(
-        Position.Key memory p
+        Position.Key memory p,
+        bool isBid
     ) internal pure returns (uint256) {
-        return p.orderType.isBid() ? p.upper : p.lower;
+        return isBid ? p.upper : p.lower;
     }
 
     function _verifyTickWidth(uint256 price) internal pure {

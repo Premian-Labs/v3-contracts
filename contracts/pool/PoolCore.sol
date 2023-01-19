@@ -24,10 +24,11 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 slippage,
+        bool isBid
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage);
+        _deposit(p, belowLower, belowUpper, size, slippage, isBid);
     }
 
     function withdraw(

@@ -9,22 +9,6 @@ contract PositionMock {
         return Position.keyHash(self);
     }
 
-    function opposite(
-        Position.OrderType orderType
-    ) external pure returns (Position.OrderType) {
-        return Position.opposite(orderType);
-    }
-
-    function isLeft(Position.OrderType orderType) external pure returns (bool) {
-        return Position.isLeft(orderType);
-    }
-
-    function isRight(
-        Position.OrderType orderType
-    ) external pure returns (bool) {
-        return Position.isRight(orderType);
-    }
-
     function pieceWiseLinear(
         Position.Key memory self,
         uint256 price

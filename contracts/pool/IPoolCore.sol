@@ -17,7 +17,8 @@ interface IPoolCore is IPoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 slippage,
+        bool isBid
     ) external;
 
     function withdraw(
