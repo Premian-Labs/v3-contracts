@@ -45,39 +45,6 @@ describe('Position', () => {
     });
   });
 
-  describe('#opposite(Position.OrderType)', () => {
-    it('should return opposite order type', async () => {
-      expect(await instance.opposite(0)).to.eq(5);
-      expect(await instance.opposite(5)).to.eq(0);
-      expect(await instance.opposite(1)).to.eq(3);
-      expect(await instance.opposite(3)).to.eq(1);
-      expect(await instance.opposite(2)).to.eq(4);
-      expect(await instance.opposite(4)).to.eq(2);
-    });
-  });
-
-  describe('#isLeft(Position.OrderType)', () => {
-    it('should return true if order type is bid side', async () => {
-      expect(await instance.isLeft(0)).to.be.true;
-      expect(await instance.isLeft(1)).to.be.true;
-      expect(await instance.isLeft(2)).to.be.true;
-      expect(await instance.isLeft(3)).to.be.false;
-      expect(await instance.isLeft(4)).to.be.false;
-      expect(await instance.isLeft(5)).to.be.false;
-    });
-  });
-
-  describe('#isRight(Position.OrderType)', () => {
-    it('should return true if order type is bid side', async () => {
-      expect(await instance.isRight(0)).to.be.false;
-      expect(await instance.isRight(1)).to.be.false;
-      expect(await instance.isRight(2)).to.be.false;
-      expect(await instance.isRight(3)).to.be.true;
-      expect(await instance.isRight(4)).to.be.true;
-      expect(await instance.isRight(5)).to.be.true;
-    });
-  });
-
   describe('#pieceWiseLinear(Position.Key,uint256)', () => {
     let key: any;
 

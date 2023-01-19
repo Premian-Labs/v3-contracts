@@ -1067,6 +1067,25 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
+    function _getNearestTicksBelow(
+        uint256 lower,
+        uint256 upper
+    )
+        internal
+        view
+        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
+    {
+        if (lower >= upper) revert Position__LowerGreaterOrEqualUpper();
+
+        nearestBelowLower = _getNearestTickBelow(lower);
+        nearestBelowUpper = _getNearestTickBelow(upper);
+
+        // If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
+        if (nearestBelowUpper == nearestBelowLower) {
+            nearestBelowUpper = lower;
+        }
+    }
+
     /// @notice Gets the nearest tick that is less than or equal to `price`.
     function _getNearestTickBelow(
         uint256 price

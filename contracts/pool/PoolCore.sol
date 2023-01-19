@@ -60,9 +60,14 @@ contract PoolCore is IPoolCore, PoolInternal {
         return _settlePosition(p);
     }
 
-    function getNearestTickBelow(
-        uint256 price
-    ) external view returns (uint256) {
-        return _getNearestTickBelow(price);
+    function getNearestTicksBelow(
+        uint256 lower,
+        uint256 upper
+    )
+        external
+        view
+        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
+    {
+        return _getNearestTicksBelow(lower, upper);
     }
 }

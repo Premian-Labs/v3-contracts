@@ -37,5 +37,11 @@ interface IPoolCore is IPoolInternal {
 
     function settlePosition(Position.Key memory p) external returns (uint256);
 
-    function getNearestTickBelow(uint256 price) external view returns (uint256);
+    function getNearestTicksBelow(
+        uint256 lower,
+        uint256 upper
+    )
+        external
+        view
+        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
 }

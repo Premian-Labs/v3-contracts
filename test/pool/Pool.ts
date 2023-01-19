@@ -30,7 +30,7 @@ describe('Pool', () => {
   let baseOracle: MockContract;
   let underlyingOracle: MockContract;
 
-  let strike = 1000;
+  let strike = parseEther('1000');
   let maturity: number;
 
   let isCall: boolean;
@@ -113,22 +113,24 @@ describe('Pool', () => {
           upper: upper,
           operator: lp.address,
           owner: lp.address,
-          orderType: 0,
+          orderType: 2,
           isCall: isCall,
           strike: strike,
         };
 
         await underlying.connect(lp).approve(callPool.address, collateral);
 
+        const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
+
         await callPool
           .connect(lp)
           .deposit(
             position,
-            await callPool.getNearestTickBelow(lower),
-            await callPool.getNearestTickBelow(upper),
-            collateral,
+            nearestBelow.nearestBelowLower,
+            nearestBelow.nearestBelowUpper,
+            parseEther('2000'),
             0,
-            0,
+            true,
           );
 
         args = await callPool._getPricing(isBuy);
@@ -157,7 +159,7 @@ describe('Pool', () => {
         operator,
         parseEther('0.001'),
         parseEther('1'),
-        3,
+        2,
       );
 
       console.log(tokenId.toHexString());
@@ -165,7 +167,7 @@ describe('Pool', () => {
       expect(tokenId.mask(10)).to.eq(1);
       expect(tokenId.shr(10).mask(10)).to.eq(1000);
       expect(tokenId.shr(20).mask(160)).to.eq(operator);
-      expect(tokenId.shr(180).mask(4)).to.eq(3);
+      expect(tokenId.shr(180).mask(4)).to.eq(2);
       expect(tokenId.shr(252).mask(4)).to.eq(1);
     });
   });
@@ -174,14 +176,14 @@ describe('Pool', () => {
     it('should properly parse token id', async () => {
       const r = await callPool.parseTokenId(
         BigNumber.from(
-          '0x10000000000000000031000000000000000000000000000000000000001fa001',
+          '0x10000000000000000021000000000000000000000000000000000000001fa001',
         ),
       );
 
       expect(r.lower).to.eq(parseEther('0.001'));
       expect(r.upper).to.eq(parseEther('1'));
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
-      expect(r.orderType).to.eq(3);
+      expect(r.orderType).to.eq(2);
       expect(r.version).to.eq(1);
     });
   });
