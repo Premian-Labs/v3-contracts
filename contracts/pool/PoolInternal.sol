@@ -224,20 +224,46 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
     /// @param slippage Max slippage
-    /// @param isBid Whether this is a bid or ask order (This value only matters in case of stranded market price)
+    function _deposit(
+        Position.Key memory p,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 size,
+        uint256 slippage
+    ) internal {
+        _deposit(
+            p,
+            belowUpper,
+            belowUpper,
+            size,
+            slippage,
+            p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
+        );
+    }
+
+    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @param p The position key
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param size The position size to deposit
+    /// @param slippage Max slippage
+    /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function _deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
         uint256 slippage,
-        bool isBid
+        bool isBidIfStrandedMarketPrice
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
-        if (isMarketPriceStranded(l, p, isBid)) {
-            l.marketPrice = getStrandedMarketPriceUpdate(p, isBid);
+        if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
+            l.marketPrice = _getStrandedMarketPriceUpdate(
+                p,
+                isBidIfStrandedMarketPrice
+            );
         }
 
         _ensureBelowMaxSlippage(l, slippage);
@@ -1405,7 +1431,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///                                 ^
     ///                     |---bid---|
     ///                               ^
-    function isMarketPriceStranded(
+    function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
         Position.Key memory p,
         bool isBid
@@ -1432,7 +1458,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice In case the market price is stranded the market price needs to be
     ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
     ///         isMarketPriceStranded.
-    function getStrandedMarketPriceUpdate(
+    function _getStrandedMarketPriceUpdate(
         Position.Key memory p,
         bool isBid
     ) internal pure returns (uint256) {
