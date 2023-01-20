@@ -11,7 +11,7 @@ interface IPoolCore is IPoolInternal {
     /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
-    /// @param The premium which has to be paid to complete the trade
+    /// @return The premium which has to be paid to complete the trade
     function getQuote(uint256 size, bool isBuy) external view returns (uint256);
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
