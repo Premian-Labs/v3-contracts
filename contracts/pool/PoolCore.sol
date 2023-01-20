@@ -43,7 +43,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         bool isBidIfStrandedMarketPrice
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage, isBid);
+        _deposit(p, belowLower, belowUpper, size, slippage, isBidIfStrandedMarketPrice);
     }
 
     /// @inheritdoc IPoolCore
