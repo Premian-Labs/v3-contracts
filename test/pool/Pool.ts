@@ -124,13 +124,14 @@ describe('Pool', () => {
 
         await callPool
           .connect(lp)
-          .deposit(
+          [
+            'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)'
+          ](
             position,
             nearestBelow.nearestBelowLower,
             nearestBelow.nearestBelowUpper,
             parseEther('2000'),
             0,
-            true,
           );
 
         args = await callPool._getPricing(isBuy);
