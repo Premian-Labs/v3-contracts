@@ -233,7 +233,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         _deposit(
             p,
-            belowUpper,
+            belowLower,
             belowUpper,
             size,
             slippage,
