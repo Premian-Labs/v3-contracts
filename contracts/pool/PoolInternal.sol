@@ -1069,21 +1069,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return collateral;
     }
 
-    /////////////////////////////////////////////
-    // ToDo : Move somewhere else auto functions ?
-
-    function _exerciseAuto() internal {
-        // ToDo : Implement
-    }
-
-    function _settleAuto() internal {
-        // ToDo : Implement
-    }
-
-    function _settlePositionAuto() internal {
-        // ToDo : Implement
-    }
-
     ////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////
