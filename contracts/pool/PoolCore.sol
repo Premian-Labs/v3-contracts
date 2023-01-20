@@ -43,7 +43,14 @@ contract PoolCore is IPoolCore, PoolInternal {
         bool isBidIfStrandedMarketPrice
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage, isBidIfStrandedMarketPrice);
+        _deposit(
+            p,
+            belowLower,
+            belowUpper,
+            size,
+            slippage,
+            isBidIfStrandedMarketPrice
+        );
     }
 
     /// @inheritdoc IPoolCore
@@ -67,13 +74,13 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise() external returns (uint256) {
-        return _exercise(msg.sender);
+    function exercise(address holder) external returns (uint256) {
+        return _exercise(holder);
     }
 
     /// @inheritdoc IPoolCore
-    function settle() external returns (uint256) {
-        return _settle(msg.sender);
+    function settle(address holder) external returns (uint256) {
+        return _settle(holder);
     }
 
     /// @inheritdoc IPoolCore

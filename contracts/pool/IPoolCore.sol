@@ -73,11 +73,11 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
-    function exercise() external returns (uint256);
+    function exercise(address holder) external returns (uint256);
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
-    function settle() external returns (uint256);
+    function settle(address holder) external returns (uint256);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
