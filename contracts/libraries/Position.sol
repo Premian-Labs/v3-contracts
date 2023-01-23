@@ -47,12 +47,9 @@ library Position {
     }
 
     enum OrderType {
-        BUY_WITH_COLLATERAL, // Buy options using deposited collateral
-        BUY_WITH_SHORTS, // Buy options using deposited shorts (Premiums are NOT used)
-        BUY_WITH_SHORTS_USE_PREMIUMS, // Buy options using deposited shorts (Premiums are used)
-        SELL_WITH_COLLATERAL, // Sell options using deposited collateral (Premiums are NOT used)
-        SELL_WITH_COLLATERAL_USE_PREMIUMS, // Sell options using deposited collateral (Premiums are used)
-        SELL_WITH_LONGS // Sell options using deposited longs
+        CSUP, // Collateral <-> Short - Use Premiums
+        CS, // Collateral <-> Short
+        LC // Long <-> Collateral
     }
 
     struct Liquidity {
@@ -74,78 +71,12 @@ library Position {
             );
     }
 
-    function isCollateral(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.BUY_WITH_COLLATERAL ||
-            orderType == OrderType.SELL_WITH_COLLATERAL ||
-            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS;
-    }
-
-    function isContracts(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
-            orderType == OrderType.BUY_WITH_SHORTS ||
-            orderType == OrderType.SELL_WITH_LONGS;
-    }
-
-    function isAsk(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.SELL_WITH_LONGS ||
-            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            orderType == OrderType.SELL_WITH_COLLATERAL;
-    }
-
-    function isBid(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.BUY_WITH_COLLATERAL ||
-            orderType == OrderType.BUY_WITH_SHORTS ||
-            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
-    }
-
     function isShort(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.SELL_WITH_COLLATERAL ||
-            orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-            orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS ||
-            orderType == OrderType.BUY_WITH_SHORTS;
+        return orderType == OrderType.CS || orderType == OrderType.CSUP;
     }
 
     function isLong(OrderType orderType) internal pure returns (bool) {
-        return
-            orderType == OrderType.BUY_WITH_COLLATERAL ||
-            orderType == OrderType.SELL_WITH_LONGS;
-    }
-
-    function opposite(OrderType orderType) internal pure returns (OrderType) {
-        if (orderType == OrderType.BUY_WITH_COLLATERAL)
-            return OrderType.SELL_WITH_LONGS;
-        else if (orderType == OrderType.SELL_WITH_LONGS)
-            return OrderType.BUY_WITH_COLLATERAL;
-        else if (orderType == OrderType.BUY_WITH_SHORTS)
-            return OrderType.SELL_WITH_COLLATERAL;
-        else if (orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS)
-            return OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS;
-        else if (orderType == OrderType.SELL_WITH_COLLATERAL)
-            return OrderType.BUY_WITH_SHORTS;
-        else if (orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS)
-            return OrderType.BUY_WITH_SHORTS_USE_PREMIUMS;
-        else revert IPosition.Position__InvalidOrderType();
-    }
-
-    function isLeft(OrderType orderType) internal pure returns (bool) {
-        return orderType.isBid();
-    }
-
-    function isRight(OrderType orderType) internal pure returns (bool) {
-        return orderType.isAsk();
-    }
-
-    function isLeft(Key memory self) internal pure returns (bool) {
-        return isLeft(self.orderType);
-    }
-
-    function isRight(Key memory self) internal pure returns (bool) {
-        return isRight(self.orderType);
+        return orderType == OrderType.LC;
     }
 
     function pieceWiseLinear(
@@ -200,38 +131,6 @@ library Position {
         return isCall ? _contracts : _contracts.mulWad(strike);
     }
 
-    function averagePrice(Key memory self) internal pure returns (uint256) {
-        return Math.average(self.lower, self.upper);
-    }
-
-    /// @notice Liquidity of position in terms of contracts.
-    function liquidity(
-        Key memory self,
-        uint256 size
-    ) internal pure returns (uint256 contractsLiquidity) {
-        if (self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS) {
-            return
-                collateralToContracts(
-                    size.divWad(WAD - self.averagePrice()),
-                    self.strike,
-                    self.isCall
-                );
-        } else if (self.orderType == OrderType.BUY_WITH_COLLATERAL) {
-            return
-                collateralToContracts(
-                    size.divWad(self.averagePrice()),
-                    self.strike,
-                    self.isCall
-                );
-        } else if (self.orderType == OrderType.SELL_WITH_COLLATERAL) {
-            return collateralToContracts(size, self.strike, self.isCall);
-        } else if (self.orderType.isContracts()) {
-            return size;
-        }
-
-        revert IPosition.Position__InvalidOrderType();
-    }
-
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
     function liquidityPerTick(
         Key memory self,
@@ -242,7 +141,7 @@ library Position {
             self.upper
         );
 
-        return self.liquidity(size) / amountOfTicks;
+        return size / amountOfTicks;
     }
 
     /// @notice Bid collateral either used to buy back options or revenue /
@@ -258,7 +157,7 @@ library Position {
     ) internal pure returns (uint256) {
         return
             contractsToCollateral(
-                pieceWiseQuadratic(self, price).mulWad(self.liquidity(size)),
+                pieceWiseQuadratic(self, price).mulWad(size),
                 self.strike,
                 self.isCall
             );
@@ -273,23 +172,15 @@ library Position {
         uint256 price
     ) internal pure returns (uint256 _collateral) {
         uint256 nu = pieceWiseLinear(self, price);
-        uint256 _liquidity = contractsToCollateral(
-            self.liquidity(size),
-            self.strike,
-            self.isCall
-        );
 
         if (self.orderType.isShort()) {
             _collateral = contractsToCollateral(
-                (WAD - nu).mulWad(_liquidity),
+                (WAD - nu).mulWad(size),
                 self.strike,
                 self.isCall
             );
 
-            if (
-                self.orderType == OrderType.SELL_WITH_COLLATERAL_USE_PREMIUMS ||
-                self.orderType == OrderType.BUY_WITH_SHORTS_USE_PREMIUMS
-            ) {
+            if (self.orderType == OrderType.CSUP) {
                 _collateral -= (self.bid(size, self.upper) -
                     self.bid(size, price));
             } else {
@@ -310,10 +201,10 @@ library Position {
         uint256 nu = pieceWiseLinear(self, price);
 
         if (self.orderType.isLong()) {
-            return (WAD - nu).mulWad(self.liquidity(size));
+            return (WAD - nu).mulWad(size);
         }
 
-        return nu.mulWad(self.liquidity(size));
+        return nu.mulWad(size);
     }
 
     /// @notice Number of long contracts held in position at current price
