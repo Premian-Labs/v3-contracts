@@ -641,6 +641,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit Trade(
             user,
             size,
+            delta.collateral,
+            delta.longs,
+            delta.shorts,
             isBuy ? totalPremium - totalTakerFees : totalPremium,
             totalTakerFees,
             totalProtocolFees,

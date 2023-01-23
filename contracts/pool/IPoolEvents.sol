@@ -49,6 +49,9 @@ interface IPoolEvents {
     event Trade(
         address indexed user,
         uint256 contractSize,
+        int256 deltaCollateral,
+        int256 deltaLongs,
+        int256 deltasShorts,
         uint256 premium,
         uint256 takerFee,
         uint256 protocolFee,
