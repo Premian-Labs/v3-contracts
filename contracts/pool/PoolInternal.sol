@@ -537,9 +537,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    /// @param user The account doing the trade
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
-    /// @param creditAmount Whether the taker is buying or selling
     /// @param creditAmount Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
     /// @return totalPremium The premium paid or received by the taker for the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
