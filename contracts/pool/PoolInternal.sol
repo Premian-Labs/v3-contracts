@@ -231,11 +231,39 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size,
         uint256 slippage
     ) internal {
+        _deposit(
+            p,
+            belowLower,
+            belowUpper,
+            size,
+            slippage,
+            p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
+        );
+    }
+
+    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @param p The position key
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param size The position size to deposit
+    /// @param slippage Max slippage
+    /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
+    function _deposit(
+        Position.Key memory p,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 size,
+        uint256 slippage,
+        bool isBidIfStrandedMarketPrice
+    ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
-        if (isMarketPriceStranded(l, p)) {
-            l.marketPrice = getStrandedMarketPriceUpdate(p);
+        if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
+            l.marketPrice = _getStrandedMarketPriceUpdate(
+                p,
+                isBidIfStrandedMarketPrice
+            );
         }
 
         _ensureBelowMaxSlippage(l, slippage);
@@ -1041,21 +1069,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return collateral;
     }
 
-    /////////////////////////////////////////////
-    // ToDo : Move somewhere else auto functions ?
-
-    function _exerciseAuto() internal {
-        // ToDo : Implement
-    }
-
-    function _settleAuto() internal {
-        // ToDo : Implement
-    }
-
-    function _settlePositionAuto() internal {
-        // ToDo : Implement
-    }
-
     ////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////
@@ -1064,6 +1077,25 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     // TickSystem //
     ////////////////
     // ToDo : Reorganize those functions ?
+
+    function _getNearestTicksBelow(
+        uint256 lower,
+        uint256 upper
+    )
+        internal
+        view
+        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
+    {
+        if (lower >= upper) revert Position__LowerGreaterOrEqualUpper();
+
+        nearestBelowLower = _getNearestTickBelow(lower);
+        nearestBelowUpper = _getNearestTickBelow(upper);
+
+        // If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
+        if (nearestBelowUpper == nearestBelowLower) {
+            nearestBelowUpper = lower;
+        }
+    }
 
     /// @notice Gets the nearest tick that is less than or equal to `price`.
     function _getNearestTickBelow(
@@ -1384,9 +1416,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///                                 ^
     ///                     |---bid---|
     ///                               ^
-    function isMarketPriceStranded(
+    function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
-        Position.Key memory p
+        Position.Key memory p,
+        bool isBid
     ) internal view returns (bool) {
         uint256 right = l.tickIndex.next(l.currentTick);
 
@@ -1401,7 +1434,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         return (l.ticks[right].delta < 0 &&
             l.liquidityRate == uint256(-l.ticks[right].delta) &&
-            p.orderType.isBid() &&
+            isBid &&
             l.marketPrice == right &&
             p.lower >= right &&
             p.upper <= rightRight);
@@ -1410,10 +1443,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice In case the market price is stranded the market price needs to be
     ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
     ///         isMarketPriceStranded.
-    function getStrandedMarketPriceUpdate(
-        Position.Key memory p
+    function _getStrandedMarketPriceUpdate(
+        Position.Key memory p,
+        bool isBid
     ) internal pure returns (uint256) {
-        return p.orderType.isBid() ? p.upper : p.lower;
+        return isBid ? p.upper : p.lower;
     }
 
     function _verifyTickWidth(uint256 price) internal pure {
