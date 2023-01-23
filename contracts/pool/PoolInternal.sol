@@ -548,7 +548,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size,
         bool isBuy,
         uint256 creditAmount
-    ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
+    ) internal returns (uint256 totalPremium, Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(size);
@@ -670,7 +670,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         uint256 size,
         bool isBuy
-    ) internal view returns (Position.Delta memory delta) {
+    ) internal view returns (Delta memory delta) {
         uint256 longs = _balanceOf(user, PoolStorage.LONG);
         uint256 shorts = _balanceOf(user, PoolStorage.SHORT);
 
@@ -692,7 +692,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 creditAmount,
         uint256 size,
         bool isBuy
-    ) internal returns (Position.Delta memory delta) {
+    ) internal returns (Delta memory delta) {
         delta = _getTradeDelta(user, size, isBuy);
 
         if (

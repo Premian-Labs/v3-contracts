@@ -58,4 +58,10 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 size;
         bool isBuy;
     }
+
+    struct Delta {
+        int256 collateral;
+        int256 longs;
+        int256 shorts;
+    }
 }

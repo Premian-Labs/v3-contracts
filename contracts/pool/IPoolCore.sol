@@ -84,7 +84,7 @@ interface IPoolCore is IPoolInternal {
     function trade(
         uint256 size,
         bool isBuy
-    ) external returns (uint256 totalPremium, Position.Delta memory delta);
+    ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param s The swap arguments
@@ -102,7 +102,7 @@ interface IPoolCore is IPoolInternal {
         payable
         returns (
             uint256 totalPremium,
-            Position.Delta memory delta,
+            Delta memory delta,
             uint256 swapOutAmount
         );
 
@@ -120,7 +120,7 @@ interface IPoolCore is IPoolInternal {
         external
         returns (
             uint256 totalPremium,
-            Position.Delta memory delta,
+            Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
         );
