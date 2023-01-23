@@ -23,7 +23,7 @@ contract ExchangeHelper is IExchangeHelper {
         address allowanceTarget,
         bytes calldata data,
         address refundAddress
-    ) external returns (uint256 amountOut) {
+    ) external returns (uint256 amountOut, uint256 sourceLeft) {
         IERC20(sourceToken).approve(allowanceTarget, sourceTokenAmount);
 
         (bool success, ) = callee.call(data);
@@ -35,7 +35,7 @@ contract ExchangeHelper is IExchangeHelper {
         }
 
         // refund unused sourceToken
-        uint256 sourceLeft = IERC20(sourceToken).balanceOf(address(this));
+        sourceLeft = IERC20(sourceToken).balanceOf(address(this));
         if (sourceLeft > 0)
             IERC20(sourceToken).safeTransfer(refundAddress, sourceLeft);
 

@@ -16,6 +16,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidRange();
     error Pool__InvalidTransfer();
     error Pool__InvalidSwapTokenIn();
+    error Pool__InvalidSwapTokenOut();
     error Pool__LongOrShortMustBeZero();
     error Pool__NotAuthorized();
     error Pool__NotEnoughSwapOutput();
@@ -33,8 +34,10 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__ZeroSize();
 
     struct SwapArgs {
-        // token to pass in to swap
+        // token to pass in to swap (Must be poolToken for `tradeAndSwap`)
         address tokenIn;
+        // Token result from the swap (Must be poolToken for `swapAndDeposit` / `swapAndTrade`)
+        address tokenOut;
         // amount of tokenIn to trade
         uint256 amountInMax;
         //min amount out to be used to purchase

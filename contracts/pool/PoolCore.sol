@@ -40,26 +40,6 @@ contract PoolCore is IPoolCore, PoolInternal {
         _deposit(p, belowLower, belowUpper, size, slippage, 0);
     }
 
-    function swapAndDeposit(
-        SwapArgs memory s,
-        Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 slippage
-    ) external payable {
-        // ToDo : Add orderType check ?
-
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        address tokenOut = l.getPoolToken();
-        uint256 creditAmount = _swapForPoolTokens(s, tokenOut);
-
-        // ToDo : Finish to implement
-
-        _deposit(p, belowLower, belowUpper, size, slippage, creditAmount);
-    }
-
     /// @inheritdoc IPoolCore
     function deposit(
         Position.Key memory p,
@@ -82,6 +62,23 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
+    function swapAndDeposit(
+        SwapArgs memory s,
+        Position.Key memory p,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 size,
+        uint256 slippage
+    ) external payable {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        (uint256 creditAmount, ) = _swap(s);
+
+        _deposit(p, belowLower, belowUpper, size, slippage, creditAmount);
+    }
+
+    /// @inheritdoc IPoolCore
     function withdraw(
         Position.Key memory p,
         uint256 size,
@@ -92,24 +89,62 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function trade(uint256 size, bool isBuy) external returns (uint256) {
-        return _trade(msg.sender, size, isBuy);
+    function trade(
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256 totalPremium, Position.Delta memory delta) {
+        return _trade(msg.sender, size, isBuy, 0);
     }
 
+    /// @inheritdoc IPoolCore
     function swapAndTrade(
         SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external payable returns (uint256) {
-        // ToDo : Implement
+    )
+        external
+        payable
+        returns (
+            uint256 totalPremium,
+            Position.Delta memory delta,
+            uint256 swapOutAmount
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        (swapOutAmount, ) = _swap(s);
+
+        (totalPremium, delta) = _trade(msg.sender, size, isBuy, swapOutAmount);
+
+        return (totalPremium, delta, swapOutAmount);
     }
 
+    /// @inheritdoc IPoolCore
     function tradeAndSwap(
         SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external {
-        // ToDo : Implement
+    )
+        external
+        returns (
+            uint256 totalPremium,
+            Position.Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0);
+
+        if (delta.collateral < 0) return (totalPremium, delta, 0, 0);
+
+        s.amountInMax = uint256(delta.collateral);
+
+        if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(s);
+
+        return (totalPremium, delta, collateralReceived, tokenOutReceived);
     }
 
     /// @inheritdoc IPoolCore

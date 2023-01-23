@@ -236,6 +236,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
     /// @param slippage Max slippage
+    /// @param collateralCredit Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
     function _deposit(
         Position.Key memory p,
         uint256 belowLower,
@@ -538,12 +539,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium paid or received by the taker for the trade
+    /// @param creditAmount Whether the taker is buying or selling
+    /// @param creditAmount Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         address user,
         uint256 size,
-        bool isBuy
-    ) internal returns (uint256) {
+        bool isBuy,
+        uint256 creditAmount
+    ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(size);
@@ -551,7 +556,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Pricing.Args memory pricing = _getPricing(l, isBuy);
 
-        uint256 totalPremium;
         uint256 totalTakerFees;
         uint256 totalProtocolFees;
         uint256 remaining = size;
@@ -622,7 +626,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        _updateUserAssets(l, user, totalPremium, size, isBuy);
+        delta = _updateUserAssets(
+            l,
+            user,
+            totalPremium,
+            creditAmount,
+            size,
+            isBuy
+        );
 
         emit Trade(
             user,
@@ -635,8 +646,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.currentTick,
             isBuy
         );
-
-        return totalPremium;
     }
 
     function _getPricing(
@@ -661,16 +670,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         uint256 size,
         bool isBuy
-    ) internal view returns (int256 deltaLong, int256 deltaShort) {
+    ) internal view returns (Position.Delta memory delta) {
         uint256 longs = _balanceOf(user, PoolStorage.LONG);
         uint256 shorts = _balanceOf(user, PoolStorage.SHORT);
 
         if (isBuy) {
-            deltaShort = -int256(Math.min(shorts, size));
-            deltaLong = int256(size) + deltaShort;
+            delta.shorts = -int256(Math.min(shorts, size));
+            delta.longs = int256(size) + delta.shorts;
         } else {
-            deltaLong = -int256(Math.min(longs, size));
-            deltaShort = int256(size) + deltaLong;
+            delta.longs = -int256(Math.min(longs, size));
+            delta.shorts = int256(size) + delta.longs;
         }
     }
 
@@ -680,79 +689,82 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         address user,
         uint256 totalPremium,
+        uint256 creditAmount,
         uint256 size,
         bool isBuy
-    ) internal {
-        (int256 deltaLong, int256 deltaShort) = _getTradeDelta(
-            user,
-            size,
-            isBuy
-        );
+    ) internal returns (Position.Delta memory delta) {
+        delta = _getTradeDelta(user, size, isBuy);
 
         if (
-            (deltaLong == 0 && deltaShort == 0) ||
-            (deltaLong > 0 && deltaShort > 0) ||
-            (deltaLong < 0 && deltaShort < 0)
+            (delta.longs == 0 && delta.shorts == 0) ||
+            (delta.longs > 0 && delta.shorts > 0) ||
+            (delta.longs < 0 && delta.shorts < 0)
         ) revert Pool__InvalidAssetUpdate();
 
-        bool _isBuy = deltaLong > 0 || deltaShort < 0;
+        bool _isBuy = delta.longs > 0 || delta.shorts < 0;
 
-        uint256 deltaShortAbs = Math.abs(deltaShort);
+        uint256 deltaShortAbs = Math.abs(delta.shorts);
         uint256 shortCollateral = Position.contractsToCollateral(
             deltaShortAbs,
             l.strike,
             l.isCallPool
         );
 
-        int256 deltaCollateral;
-        if (deltaShort < 0) {
-            deltaCollateral = _isBuy
+        if (delta.shorts < 0) {
+            delta.collateral = _isBuy
                 ? int256(shortCollateral) - int256(totalPremium)
                 : int256(totalPremium);
         } else {
-            deltaCollateral = _isBuy
+            delta.collateral = _isBuy
                 ? -int256(totalPremium)
                 : int256(totalPremium) - int256(shortCollateral);
         }
 
+        // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
+        // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
+        int256 _deltaCollateral = delta.collateral;
+        if (creditAmount > 0) {
+            _deltaCollateral += creditAmount.toInt256();
+        }
+
         // Transfer collateral
-        if (deltaCollateral < 0) {
+        if (_deltaCollateral < 0) {
             IERC20(l.getPoolToken()).transferFrom(
                 user,
                 address(this),
-                uint256(-deltaCollateral)
+                uint256(-_deltaCollateral)
             );
-        } else if (deltaCollateral > 0) {
-            IERC20(l.getPoolToken()).transfer(user, uint256(deltaCollateral));
+        } else if (_deltaCollateral > 0) {
+            IERC20(l.getPoolToken()).transfer(user, uint256(_deltaCollateral));
         }
 
         // ToDo : See with research to fix this (Currently we wouldnt have at all time same supply for SHORT and LONG, as they arent minted for the pool)
         // Transfer long
-        if (deltaLong < 0) {
+        if (delta.longs < 0) {
             _safeTransfer(
                 address(this),
                 user,
                 address(this),
                 PoolStorage.LONG,
-                uint256(-deltaLong),
+                uint256(-delta.longs),
                 ""
             );
-        } else if (deltaLong > 0) {
-            _mint(user, PoolStorage.LONG, uint256(deltaLong), "");
+        } else if (delta.longs > 0) {
+            _mint(user, PoolStorage.LONG, uint256(delta.longs), "");
         }
 
         // Transfer short
-        if (deltaShort < 0) {
+        if (delta.shorts < 0) {
             _safeTransfer(
                 address(this),
                 user,
                 address(this),
                 PoolStorage.SHORT,
-                uint256(-deltaShort),
+                uint256(-delta.shorts),
                 ""
             );
-        } else if (deltaShort > 0) {
-            _mint(user, PoolStorage.SHORT, uint256(deltaShort), "");
+        } else if (delta.shorts > 0) {
+            _mint(user, PoolStorage.SHORT, uint256(delta.shorts), "");
         }
     }
 
@@ -802,7 +814,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? premium // Taker Buying
             : premium - takerFee; // Taker selling
 
-        _updateUserAssets(l, user, premiumTaker, size, !quote.isBuy);
+        _updateUserAssets(l, user, premiumTaker, 0, size, !quote.isBuy);
 
         /////////////////////////
         // Process trade maker //
@@ -825,7 +837,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? premium - makerRebate // Maker buying
             : premium - protocolFee; // Maker selling
 
-        _updateUserAssets(l, quote.provider, premiumMaker, size, quote.isBuy);
+        _updateUserAssets(
+            l,
+            quote.provider,
+            premiumMaker,
+            0,
+            size,
+            quote.isBuy
+        );
 
         emit FillQuote(
             user,
@@ -1103,12 +1122,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper
     /// @param s swap arguments
-    /// @param tokenOut token to swap for. should always equal to the pool token.
     /// @return amountCredited amount of tokenOut we got from the trade.
-    function _swapForPoolTokens(
-        IPoolInternal.SwapArgs memory s,
-        address tokenOut
-    ) internal returns (uint256 amountCredited) {
+    /// @return tokenInRefunded amount of tokenIn left and refunded to refundAddress
+    function _swap(
+        IPoolInternal.SwapArgs memory s
+    ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
         if (msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
                 revert Pool__InvalidSwapTokenIn();
@@ -1123,16 +1141,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        amountCredited = IExchangeHelper(EXCHANGE_HELPER).swapWithToken(
-            s.tokenIn,
-            tokenOut,
-            s.amountInMax + msg.value,
-            s.callee,
-            s.allowanceTarget,
-            s.data,
-            s.refundAddress
-        );
+        (uint256 _amountCredited, uint256 _tokenInRefunded) = IExchangeHelper(
+            EXCHANGE_HELPER
+        ).swapWithToken(
+                s.tokenIn,
+                s.tokenOut,
+                s.amountInMax + msg.value,
+                s.callee,
+                s.allowanceTarget,
+                s.data,
+                s.refundAddress
+            );
         if (amountCredited < s.amountOutMin) revert Pool__NotEnoughSwapOutput();
+
+        return (_amountCredited, _tokenInRefunded);
     }
 
     ////////////////////////////////////////////////////////////////

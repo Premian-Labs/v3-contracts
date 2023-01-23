@@ -51,6 +51,12 @@ interface IPoolCore is IPoolInternal {
         bool isBidIfStrandedMarketPrice
     ) external;
 
+    /// @notice Swap tokens and deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @param p The position key
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param size The position size to deposit
+    /// @param slippage Max slippage
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
@@ -73,20 +79,51 @@ interface IPoolCore is IPoolInternal {
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium paid or received by the taker for the trade
-    function trade(uint256 size, bool isBuy) external returns (uint256);
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    function trade(
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
+    /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    /// @param s The swap arguments
+    /// @param size The number of contracts being traded
+    /// @param isBuy Whether the taker is buying or selling
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap
     function swapAndTrade(
         IPoolInternal.SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external payable returns (uint256);
+    )
+        external
+        payable
+        returns (
+            uint256 totalPremium,
+            Position.Delta memory delta,
+            uint256 swapOutAmount
+        );
 
+    /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
+    /// @param s The swap arguments
+    /// @param size The number of contracts being traded
+    /// @param isBuy Whether the taker is buying or selling
+    /// @return totalPremium The premium received by the taker of the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
         uint256 size,
         bool isBuy
-    ) external;
+    )
+        external
+        returns (
+            uint256 totalPremium,
+            Position.Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        );
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.

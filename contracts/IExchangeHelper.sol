@@ -15,6 +15,7 @@ interface IExchangeHelper {
     /// @param data calldata to execute the trade
     /// @param refundAddress address that un-used source token goes to
     /// @return amountOut quantity of targetToken yielded by swap
+    /// @return sourceLeft quantity of sourceToken left and refunded to refundAddress
     function swapWithToken(
         address sourceToken,
         address targetToken,
@@ -23,5 +24,5 @@ interface IExchangeHelper {
         address allowanceTarget,
         bytes calldata data,
         address refundAddress
-    ) external returns (uint256 amountOut);
+    ) external returns (uint256 amountOut, uint256 sourceLeft);
 }
