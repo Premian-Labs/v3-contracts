@@ -93,7 +93,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         bool isBuy
     ) external returns (uint256 totalPremium, Delta memory delta) {
-        return _trade(msg.sender, size, isBuy, 0);
+        return _trade(msg.sender, size, isBuy, 0, true);
     }
 
     /// @inheritdoc IPoolCore
@@ -115,7 +115,13 @@ contract PoolCore is IPoolCore, PoolInternal {
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (swapOutAmount, ) = _swap(s);
 
-        (totalPremium, delta) = _trade(msg.sender, size, isBuy, swapOutAmount);
+        (totalPremium, delta) = _trade(
+            msg.sender,
+            size,
+            isBuy,
+            swapOutAmount,
+            true
+        );
 
         return (totalPremium, delta, swapOutAmount);
     }
@@ -135,7 +141,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         )
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0);
+        (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0, false);
 
         if (delta.collateral < 0) return (totalPremium, delta, 0, 0);
 

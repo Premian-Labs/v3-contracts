@@ -541,13 +541,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
     /// @param creditAmount Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
+    /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap.
     /// @return totalPremium The premium paid or received by the taker for the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         address user,
         uint256 size,
         bool isBuy,
-        uint256 creditAmount
+        uint256 creditAmount,
+        bool transferCollateralToUser
     ) internal returns (uint256 totalPremium, Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -632,7 +634,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             totalPremium,
             creditAmount,
             size,
-            isBuy
+            isBuy,
+            transferCollateralToUser
         );
 
         emit Trade(
@@ -691,7 +694,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 totalPremium,
         uint256 creditAmount,
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        bool transferCollateralToUser
     ) internal returns (Delta memory delta) {
         delta = _getTradeDelta(user, size, isBuy);
 
@@ -734,7 +738,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 address(this),
                 uint256(-_deltaCollateral)
             );
-        } else if (_deltaCollateral > 0) {
+        } else if (_deltaCollateral > 0 && transferCollateralToUser) {
             IERC20(l.getPoolToken()).transfer(user, uint256(_deltaCollateral));
         }
 
@@ -814,7 +818,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? premium // Taker Buying
             : premium - takerFee; // Taker selling
 
-        _updateUserAssets(l, user, premiumTaker, 0, size, !quote.isBuy);
+        _updateUserAssets(l, user, premiumTaker, 0, size, !quote.isBuy, true);
 
         /////////////////////////
         // Process trade maker //
@@ -843,7 +847,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             premiumMaker,
             0,
             size,
-            quote.isBuy
+            quote.isBuy,
+            true
         );
 
         emit FillQuote(
