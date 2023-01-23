@@ -15,8 +15,10 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidBelowPrice();
     error Pool__InvalidRange();
     error Pool__InvalidTransfer();
+    error Pool__InvalidSwapTokenIn();
     error Pool__LongOrShortMustBeZero();
     error Pool__NotAuthorized();
+    error Pool__NotEnoughSwapOutput();
     error Pool__NotEnoughTokens();
     error Pool__OppositeSides();
     error Pool__OptionExpired();

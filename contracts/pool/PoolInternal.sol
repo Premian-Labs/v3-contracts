@@ -241,7 +241,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 slippage,
+        uint256 collateralCredit
     ) internal {
         _deposit(
             p,
@@ -249,6 +250,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             belowUpper,
             size,
             slippage,
+            collateralCredit,
             p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
         );
     }
@@ -259,13 +261,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
     /// @param slippage Max slippage
+    /// @param collateralCredit Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
+
     function _deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
         uint256 slippage,
+        uint256 collateralCredit,
         bool isBidIfStrandedMarketPrice
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -312,6 +317,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.operator,
             address(this),
             collateral,
+            collateralCredit,
             longs,
             shorts
         );
@@ -454,6 +460,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             address(this),
             p.operator,
             collateralToTransfer,
+            0,
             longs,
             shorts
         );
@@ -492,6 +499,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address from,
         address to,
         uint256 collateral,
+        uint256 collateralCredit,
         uint256 longs,
         uint256 shorts
     ) internal {
@@ -499,8 +507,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (longs > 0 && shorts > 0)
             revert Pool__PositionCantHoldLongAndShort();
 
-        if (collateral > 0) {
-            IERC20(l.getPoolToken()).transferFrom(from, to, collateral);
+        address poolToken = l.getPoolToken();
+        if (collateral > collateralCredit) {
+            IERC20(poolToken).transferFrom(
+                from,
+                to,
+                collateral - collateralCredit
+            );
+        } else if (collateralCredit > collateral) {
+            // If there was too much collateral credit, we refund the excess
+            IERC20(poolToken).transferFrom(
+                to,
+                from,
+                collateralCredit - collateral
+            );
         }
 
         if (longs + shorts > 0) {
@@ -1090,7 +1110,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address tokenOut
     ) internal returns (uint256 amountCredited) {
         if (msg.value > 0) {
-            require(s.tokenIn == WRAPPED_NATIVE_TOKEN, "wrong tokenIn");
+            if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
+                revert Pool__InvalidSwapTokenIn();
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
         }
@@ -1111,10 +1132,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             s.data,
             s.refundAddress
         );
-        require(
-            amountCredited >= s.amountOutMin,
-            "not enough output from trade"
-        );
+        if (amountCredited < s.amountOutMin) revert Pool__NotEnoughSwapOutput();
     }
 
     ////////////////////////////////////////////////////////////////

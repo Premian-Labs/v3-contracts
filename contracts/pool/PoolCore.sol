@@ -37,7 +37,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 slippage
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage);
+        _deposit(p, belowLower, belowUpper, size, slippage, 0);
     }
 
     function swapAndDeposit(
@@ -57,7 +57,7 @@ contract PoolCore is IPoolCore, PoolInternal {
 
         // ToDo : Finish to implement
 
-        _deposit(p, belowLower, belowUpper, size, slippage);
+        _deposit(p, belowLower, belowUpper, size, slippage, creditAmount);
     }
 
     /// @inheritdoc IPoolCore
@@ -76,6 +76,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             belowUpper,
             size,
             slippage,
+            0,
             isBidIfStrandedMarketPrice
         );
     }
