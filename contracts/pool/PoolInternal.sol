@@ -301,16 +301,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.orderType
         );
 
-        (int256 collateralDelta, int256 longsDelta, int256 shortsDelta) = p
-            .calculatePositionUpdate(
-                _balanceOf(p.owner, tokenId),
-                size.toInt256(),
-                l.marketPrice
-            );
+        Position.Delta memory delta = p.calculatePositionUpdate(
+            _balanceOf(p.owner, tokenId),
+            size.toInt256(),
+            l.marketPrice
+        );
 
-        uint256 collateral = collateralDelta.toUint256();
-        uint256 longs = longsDelta.toUint256();
-        uint256 shorts = shortsDelta.toUint256();
+        uint256 collateral = delta.collateral.toUint256();
+        uint256 longs = delta.longs.toUint256();
+        uint256 shorts = delta.shorts.toUint256();
 
         _transferTokens(
             l,
@@ -440,16 +439,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             emit ClaimFees(p.owner, tokenId, feesClaimed, 0);
         }
 
-        (int256 collateralDelta, int256 longsDelta, int256 shortsDelta) = p
-            .calculatePositionUpdate(
-                initialSize,
-                -size.toInt256(),
-                l.marketPrice
-            );
+        Position.Delta memory delta = p.calculatePositionUpdate(
+            initialSize,
+            -size.toInt256(),
+            l.marketPrice
+        );
 
-        uint256 collateral = Math.abs(collateralDelta);
-        uint256 longs = Math.abs(longsDelta);
-        uint256 shorts = Math.abs(shortsDelta);
+        uint256 collateral = Math.abs(delta.collateral);
+        uint256 longs = Math.abs(delta.longs);
+        uint256 shorts = Math.abs(delta.shorts);
 
         collateralToTransfer += collateral;
 
@@ -466,13 +464,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         // Adjust tick deltas (reverse of deposit)
-        uint256 delta = p.liquidityPerTick(_balanceOf(p.owner, tokenId)) -
-            liquidityPerTick;
+        uint256 liquidityDelta = p.liquidityPerTick(
+            _balanceOf(p.owner, tokenId)
+        ) - liquidityPerTick;
+
         _updateTicks(
             p.lower,
             p.upper,
             l.marketPrice,
-            delta,
+            liquidityDelta,
             false,
             isFullWithdrawal
         );
