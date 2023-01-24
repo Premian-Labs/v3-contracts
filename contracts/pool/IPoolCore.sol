@@ -112,6 +112,8 @@ interface IPoolCore is IPoolInternal {
     /// @param isBuy Whether the taker is buying or selling
     /// @return totalPremium The premium received by the taker of the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return collateralReceived The amount of un-swapped collateral received from the trade.
+    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap.
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
         uint256 size,
