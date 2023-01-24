@@ -39,10 +39,10 @@ describe('Pool', () => {
   before(async () => {
     [deployer, lp] = await ethers.getSigners();
 
-    p = await PoolUtil.deploy(deployer, true, true);
-
     underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+
+    p = await PoolUtil.deploy(deployer, underlying.address, true, true);
 
     await underlying.mint(lp.address, parseEther('1000000'));
     await base.mint(lp.address, parseEther('1000'));
