@@ -34,10 +34,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage, 0);
+        _deposit(p, belowLower, belowUpper, size, maxSlippage, 0);
     }
 
     /// @inheritdoc IPoolCore
@@ -46,7 +46,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage,
+        uint256 maxSlippage,
         bool isBidIfStrandedMarketPrice
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
@@ -55,7 +55,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             belowLower,
             belowUpper,
             size,
-            slippage,
+            maxSlippage,
             0,
             isBidIfStrandedMarketPrice
         );
@@ -68,24 +68,24 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external payable {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (uint256 creditAmount, ) = _swap(s);
 
-        _deposit(p, belowLower, belowUpper, size, slippage, creditAmount);
+        _deposit(p, belowLower, belowUpper, size, maxSlippage, creditAmount);
     }
 
     /// @inheritdoc IPoolCore
     function withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _withdraw(p, size, slippage);
+        _withdraw(p, size, maxSlippage);
     }
 
     /// @inheritdoc IPoolCore

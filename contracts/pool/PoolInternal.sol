@@ -235,14 +235,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     /// @param collateralCredit Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
     function _deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage,
+        uint256 maxSlippage,
         uint256 collateralCredit
     ) internal {
         _deposit(
@@ -250,7 +250,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             belowLower,
             belowUpper,
             size,
-            slippage,
+            maxSlippage,
             collateralCredit,
             p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
         );
@@ -261,7 +261,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     /// @param collateralCredit Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
 
@@ -270,7 +270,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage,
+        uint256 maxSlippage,
         uint256 collateralCredit,
         bool isBidIfStrandedMarketPrice
     ) internal {
@@ -284,7 +284,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        _ensureBelowMaxSlippage(l, slippage);
+        _ensureBelowMaxSlippage(l, maxSlippage);
         _ensureNonZeroSize(size);
         _ensureNotExpired(l);
 
@@ -379,16 +379,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     /// @param p The position key
     /// @param size The position size to withdraw
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     function _withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
 
-        _ensureBelowMaxSlippage(l, slippage);
+        _ensureBelowMaxSlippage(l, maxSlippage);
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
@@ -1574,10 +1574,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureBelowMaxSlippage(
         PoolStorage.Layout storage l,
-        uint256 slippage
+        uint256 maxSlippage
     ) internal view {
-        uint256 lowerBound = (WAD - slippage).mulWad(l.marketPrice);
-        uint256 upperBound = (WAD + slippage).mulWad(l.marketPrice);
+        uint256 lowerBound = (WAD - maxSlippage).mulWad(l.marketPrice);
+        uint256 upperBound = (WAD + maxSlippage).mulWad(l.marketPrice);
 
         if (lowerBound > l.marketPrice || l.marketPrice > upperBound)
             revert Pool__AboveMaxSlippage();
