@@ -130,8 +130,12 @@ contract PoolFactory is IPoolFactory {
         if (base == underlying || baseOracle == underlyingOracle)
             revert PoolFactory__IdenticalAddresses();
 
-        if (base == address(0) || underlying == address(0))
-            revert PoolFactory__ZeroAddress();
+        if (
+            base == address(0) ||
+            baseOracle == address(0) ||
+            underlying == address(0) ||
+            underlyingOracle == address(0)
+        ) revert PoolFactory__ZeroAddress();
 
         _ensureOptionStrikeIsValid(strike, baseOracle, underlyingOracle);
         _ensureOptionMaturityIsValid(maturity);
