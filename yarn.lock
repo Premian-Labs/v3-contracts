@@ -695,6 +695,11 @@
     table "^6.8.0"
     undici "^5.4.0"
 
+"@prb/math@^3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@prb/math/-/math-3.1.0.tgz#b123b7933d26343206cb2a35df2dccbfa53cf830"
+  integrity sha512-1R2yisZDydh5vFHN5KdTFRs2hiCMApnLlPdcApzfwbbzpHixCRzaAIVH4KHSguP6XGiSFWgG5iGDmkztSYepPA==
+
 "@scure/base@~1.1.0":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@scure/base/-/base-1.1.1.tgz#ebb651ee52ff84f420097055f4bf46cfba403938"
@@ -3120,10 +3125,10 @@ hardhat-spdx-license-identifier@^2.1.0:
   resolved "https://registry.yarnpkg.com/hardhat-spdx-license-identifier/-/hardhat-spdx-license-identifier-2.1.0.tgz#6eb3927df9f61bbcb1899a88b67ee6d28d13fb0e"
   integrity sha512-Z3Avr/v6lfDfa7qkriF/h40X8wmuy8qZfS4HgbINkDdmCiKAxQUi5Y5TgsJBZFYN1MvYzLTIbD/fo1dxZ4gsng==
 
-hardhat@2.12.5:
-  version "2.12.5"
-  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.12.5.tgz#e3cd4d6dae35cb9505055967bd7e15e6adf3aa03"
-  integrity sha512-f/t7+hLlhsnQZ6LDXyV+8rHGRZFZY1sgFvgrwr9fBjMdGp1Bu6hHq1KXS4/VFZfZcVdL1DAWWEkryinZhqce+A==
+hardhat@^2.12.1-ir.0:
+  version "2.12.1-ir.0"
+  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.12.1-ir.0.tgz#4972a0777e5806cce6b54cf258c52570c58d141a"
+  integrity sha512-z5TGBaf3tpY92zcDmifPyYdQa1EGuLAcOlmqQUd0wR93Yua8UCdNyZHk+P2PNBJK4sm/DYt5d3DJbaFMN24sog==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@metamask/eth-sig-util" "^4.0.0"
