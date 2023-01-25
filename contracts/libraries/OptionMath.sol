@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 
 import {SD59x18, ceil, floor, log10, mul, pow, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 
-import {IPoolInternal} from "../pool/IPoolInternal.sol";
-
 import {DateTime} from "./DateTime.sol";
 
 library OptionMath {

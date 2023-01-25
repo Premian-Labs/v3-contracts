@@ -10,12 +10,9 @@ import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/bas
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {OptionMath} from "../libraries/OptionMath.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 
-import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
 /// @title Upgradeable proxy with centrally controlled Pool implementation
