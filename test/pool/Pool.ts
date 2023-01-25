@@ -86,7 +86,7 @@ describe('Pool', () => {
   revertToSnapshotAfterEach(async () => {});
 
   describe('__internal', function () {
-    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
+    describe('#_getPricing', () => {
       it('should return pool state', async () => {
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
@@ -153,7 +153,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#formatTokenId(address,uint256,uint256,Position.OrderType)', () => {
+  describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await callPool.formatTokenId(
@@ -173,7 +173,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#parseTokenId(uint256)', () => {
+  describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await callPool.parseTokenId(
         BigNumber.from(

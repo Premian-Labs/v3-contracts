@@ -22,7 +22,7 @@ describe('Position', () => {
     }
   });
 
-  describe('#keyHash(Position.Key,uint256)', () => {
+  describe('#keyHash', () => {
     it('should return key hash', async () => {
       const key = {
         owner: deployer.address,
@@ -45,7 +45,7 @@ describe('Position', () => {
     });
   });
 
-  describe('#pieceWiseLinear(Position.Key,uint256)', () => {
+  describe('#pieceWiseLinear', () => {
     let key: any;
 
     before(async () => {
@@ -101,7 +101,7 @@ describe('Position', () => {
     });
   });
 
-  describe('#pieceWiseQuadratic(Position.Key,uint256)', () => {
+  describe('#pieceWiseQuadratic', () => {
     let key: any;
 
     before(async () => {
