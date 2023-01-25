@@ -1,6 +1,8 @@
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 
+import moment from 'moment-timezone';
+moment.tz.setDefault('UTC');
 
 export const ONE_DAY = 24 * 3600;
 export const ONE_WEEK = 7 * ONE_DAY;
