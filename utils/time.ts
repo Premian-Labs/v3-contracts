@@ -1,6 +1,13 @@
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 
+
+export const ONE_DAY = 24 * 3600;
+export const ONE_WEEK = 7 * ONE_DAY;
+export const ONE_MONTH = 30 * ONE_DAY;
+export const ONE_YEAR = 365 * ONE_DAY;
+
+// returns the current timestamp
 // Increases ganache time by the passed duration in seconds
 export async function increase(duration: number | BigNumber) {
   if (!BigNumber.isBigNumber(duration)) {
