@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {SD59x18, ceil, floor, log10, mul, pow, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
+import {SD59x18, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
 
@@ -36,13 +36,14 @@ library OptionMath {
 
         SD59x18 SPOT_59X18 = wrap(spot);
 
-        SD59x18 o = floor(log10(SPOT_59X18));
+        SD59x18 o = SPOT_59X18.log10().floor();
+
         SD59x18 x = SPOT_59X18.mul(
-            pow(TEN_59X18, o.mul(NEG_ONE_59X18).sub(ONE_59X18))
+            TEN_59X18.pow(o.mul(NEG_ONE_59X18).sub(ONE_59X18))
         );
 
-        SD59x18 f = pow(TEN_59X18, o.sub(ONE_59X18));
-        SD59x18 y = x.lt(wrap(0.5e18)) ? mul(ONE_59X18, f) : mul(FIVE_59X18, f);
-        return unwrap(SPOT_59X18.lt(wrap(1000e18)) ? y : ceil(y));
+        SD59x18 f = TEN_59X18.pow(o.sub(ONE_59X18));
+        SD59x18 y = x.lt(wrap(0.5e18)) ? ONE_59X18.mul(f) : FIVE_59X18.mul(f);
+        return unwrap(SPOT_59X18.lt(wrap(1000e18)) ? y : y.ceil());
     }
 }
