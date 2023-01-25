@@ -66,7 +66,7 @@ contract PoolFactory is IPoolFactory {
             base,
             underlying,
             baseOracle,
-            underlying,
+            underlyingOracle,
             strike,
             maturity,
             isCallPool
