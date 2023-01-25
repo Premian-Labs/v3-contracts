@@ -16,7 +16,7 @@ describe('OptionMath', () => {
 
   describe('isFriday', () => {
     describe('should return false', () => {
-      it('if maturity is Mon', async () => {
+      it('if maturity is Mon (08:00:00)', async () => {
         // Mon Jan 23 2023 08:00:00 GMT+0000
         expect(await instance.isFriday(1674460800)).is.false;
       });
