@@ -226,7 +226,6 @@ contract PoolFactory is IPoolFactory {
                 revert PoolFactory__OptionMaturityNotLastFriday();
         }
 
-        // TODO: Check if leap year?
         if (ttm > 365 days) revert PoolFactory__OptionMaturityExceedsMax();
     }
 }
