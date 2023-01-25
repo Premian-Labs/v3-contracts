@@ -151,27 +151,87 @@ describe('OptionMath', () => {
   });
 
   describe('calculateStrikeInterval', () => {
-    it('should return correct strike interval between 1E18 and 9999E18', async () => {
-      let strike = parseEther('1');
-      let increment = strike;
+    it('should return 1 between 10 and 49', async () => {
+      for (let x of [
+        [10, 1],
+        [11, 1],
+        [33, 1],
+        [49, 1],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
 
-      let interval = strike.div(10);
-      let limit = parseEther('9999');
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
 
-      while (strike.lte(limit)) {
-        let y = await instance.calculateStrikeInterval(strike);
+    it('should return 5 between 50 and 99', async () => {
+      for (let x of [
+        [50, 5],
+        [51, 5],
+        [74, 5],
+        [99, 5],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
 
-        if (strike.lt(interval.mul(50))) {
-          expect(y).to.eq(interval);
-        } else {
-          expect(y).to.eq(interval.mul(5));
-        }
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
 
-        strike = strike.add(increment);
+    it('should return 10 between 100 and 499', async () => {
+      for (let x of [
+        [100, 10],
+        [101, 10],
+        [434, 10],
+        [499, 10],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
 
-        if (strike.eq(interval.mul(100))) {
-          interval = interval.mul(10);
-        }
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 50 between 500 and 999', async () => {
+      for (let x of [
+        [500, 50],
+        [501, 50],
+        [871, 50],
+        [999, 50],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 100 between 1000 and 4999', async () => {
+      for (let x of [
+        [1000, 100],
+        [1001, 100],
+        [4356, 100],
+        [4999, 100],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 500 between 5000 and 9999', async () => {
+      for (let x of [
+        [5000, 500],
+        [5001, 500],
+        [5643, 500],
+        [9999, 500],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
       }
     });
 
