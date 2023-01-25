@@ -12,7 +12,8 @@ interface IPoolFactory {
     error PoolFactory__OptionMaturityNot8UTC();
     error PoolFactory__OptionMaturityNotFriday();
     error PoolFactory__OptionMaturityNotLastFriday();
-    error PoolFactory__OptionStrikeIntervalInvalid();
+    error PoolFactory__OptionStrikeEqualsZero();
+    error PoolFactory__OptionStrikeInvalid();
     error PoolFactory__PoolAlreadyDeployed();
 
     event PoolDeployed(

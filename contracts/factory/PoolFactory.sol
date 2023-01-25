@@ -191,6 +191,9 @@ contract PoolFactory is IPoolFactory {
         address baseOracle,
         address underlyingOracle
     ) internal view {
+        if (strike.toInt256() == 0)
+            revert PoolFactory__OptionStrikeEqualsZero();
+
         int256 basePrice = PoolStorage.getSpotPrice(baseOracle);
         int256 underlyingPrice = PoolStorage.getSpotPrice(underlyingOracle);
 
@@ -198,7 +201,7 @@ contract PoolFactory is IPoolFactory {
         int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike.toInt256() % strikeInterval != 0)
-            revert PoolFactory__OptionStrikeIntervalInvalid();
+            revert PoolFactory__OptionStrikeInvalid();
     }
 
     function _ensureOptionMaturityIsValid(uint64 maturity) internal view {
