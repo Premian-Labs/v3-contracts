@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -84,33 +84,10 @@ library PoolStorage {
     }
 
     function getSpotPrice(address oracle) internal view returns (int256) {
-        (
-            uint80 roundID,
-            int256 price,
-            ,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        ) = AggregatorV3Interface(oracle).latestRoundData();
+        // TODO: Add spot price validation
 
-        ensureSpotPriceValid(roundID, price, updatedAt, answeredInRound);
-
+        int256 price = AggregatorInterface(oracle).latestAnswer();
         return price;
-    }
-
-    function ensureSpotPriceValid(
-        uint80 roundId,
-        int256 price,
-        uint256 updatedAt,
-        uint80 answeredInRound
-    ) internal view {
-        // TODO: Remove hardcoded heartbeat
-        if (block.timestamp - updatedAt > 25 hours)
-            revert IPoolInternal.Pool__OraclePriceStale();
-
-        if (roundId > answeredInRound)
-            revert IPoolInternal.Pool__OracleRoundStale();
-
-        if (0 >= price) revert IPoolInternal.Pool__OraclePriceLTEZero();
     }
 
     /// @notice calculate ERC1155 token id for given option parameters

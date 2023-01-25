@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
@@ -46,13 +45,14 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.base = base;
             l.underlying = underlying;
 
+            // TODO : Add checks for oracle
             l.baseOracle = baseOracle;
             l.underlyingOracle = underlyingOracle;
 
             l.strike = strike;
             l.maturity = maturity;
 
-            _ensureOracleDecimalsMatch(l);
+            _ensureOptionStrikeIsValid(l);
             _ensureOptionStrikeInterval(l);
 
             uint8 baseDecimals = IERC20Metadata(base).decimals();
@@ -77,18 +77,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
     }
 
-    function _ensureOracleDecimalsMatch(
-        PoolStorage.Layout storage l
-    ) internal view {
-        uint8 baseDecimals = AggregatorV3Interface(l.baseOracle).decimals();
-        uint8 underlyingDecimals = AggregatorV3Interface(l.underlyingOracle)
-            .decimals();
-
-        if (baseDecimals != underlyingDecimals)
-            revert IPoolInternal.Pool__OracleDecimalsNotEqual();
-    }
-
-    function _ensureOptionStrikeInterval(
+    function _ensureOptionStrikeIsValid(
         PoolStorage.Layout storage l
     ) internal view {
         int256 basePrice = PoolStorage.getSpotPrice(l.baseOracle);
