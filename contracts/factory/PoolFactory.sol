@@ -113,8 +113,7 @@ contract PoolFactory is IPoolFactory {
         address baseOracle,
         address underlyingOracle
     ) internal view {
-        if (strike.toInt256() == 0)
-            revert PoolFactory__OptionStrikeEqualsZero();
+        if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
         int256 basePrice = PoolStorage.getSpotPrice(baseOracle);
         int256 underlyingPrice = PoolStorage.getSpotPrice(underlyingOracle);
