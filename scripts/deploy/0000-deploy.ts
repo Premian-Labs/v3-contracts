@@ -4,7 +4,9 @@ import { PoolUtil } from '../../utils/PoolUtil';
 async function main() {
   const [deployer] = await ethers.getSigners();
 
-  await PoolUtil.deploy(deployer, true);
+  const weth = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
+
+  await PoolUtil.deploy(deployer, weth, true);
 }
 
 main()

@@ -52,10 +52,10 @@ library Position {
         LC // Long <-> Collateral
     }
 
-    struct Liquidity {
-        uint256 collateral;
-        uint256 long;
-        uint256 short;
+    struct Delta {
+        int256 collateral;
+        int256 longs;
+        int256 shorts;
     }
 
     function keyHash(Key memory self) internal pure returns (bytes32) {
@@ -246,19 +246,13 @@ library Position {
     /// @param amount The number of tokens deposited or withdrawn
     /// @param price The current market price, used to compute the change in
     ///              collateral, long and shorts due to the change in tokens
-    /// @return deltaCollateral Absolute change in collateral due to change in tokens
-    /// @return deltaLongs Absolute change in longs due to change in tokens
-    /// @return deltaShorts Absolute change in shorts due to change in tokens
+    /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         Key memory self,
         uint256 currentBalance,
         int256 amount,
         uint256 price
-    )
-        internal
-        pure
-        returns (int256 deltaCollateral, int256 deltaLongs, int256 deltaShorts)
-    {
+    ) internal pure returns (Delta memory delta) {
         int256 collateralHeld = self
             .collateral(currentBalance, price)
             .toInt256();
@@ -267,10 +261,10 @@ library Position {
 
         uint256 newBalance = currentBalance.add(amount);
 
-        deltaCollateral =
+        delta.collateral =
             (self.collateral(newBalance, price)).toInt256() -
             collateralHeld;
-        deltaLongs = (self.long(newBalance, price)).toInt256() - longsHeld;
-        deltaShorts = (self.short(newBalance, price)).toInt256() - shortsHeld;
+        delta.longs = (self.long(newBalance, price)).toInt256() - longsHeld;
+        delta.shorts = (self.short(newBalance, price)).toInt256() - shortsHeld;
     }
 }

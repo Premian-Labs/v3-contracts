@@ -8,6 +8,13 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
+    using PoolStorage for PoolStorage.Layout;
+
+    constructor(
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
+
     /// @inheritdoc IPoolCore
     function getQuote(
         uint256 size,
@@ -27,10 +34,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _deposit(p, belowLower, belowUpper, size, slippage);
+        _deposit(p, belowLower, belowUpper, size, maxSlippage, 0);
     }
 
     /// @inheritdoc IPoolCore
@@ -39,7 +46,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage,
+        uint256 maxSlippage,
         bool isBidIfStrandedMarketPrice
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
@@ -48,24 +55,102 @@ contract PoolCore is IPoolCore, PoolInternal {
             belowLower,
             belowUpper,
             size,
-            slippage,
+            maxSlippage,
+            0,
             isBidIfStrandedMarketPrice
         );
+    }
+
+    /// @inheritdoc IPoolCore
+    function swapAndDeposit(
+        SwapArgs memory s,
+        Position.Key memory p,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 size,
+        uint256 maxSlippage
+    ) external payable {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        (uint256 creditAmount, ) = _swap(s);
+
+        _deposit(p, belowLower, belowUpper, size, maxSlippage, creditAmount);
     }
 
     /// @inheritdoc IPoolCore
     function withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
-        _withdraw(p, size, slippage);
+        _withdraw(p, size, maxSlippage);
     }
 
     /// @inheritdoc IPoolCore
-    function trade(uint256 size, bool isBuy) external returns (uint256) {
-        return _trade(msg.sender, size, isBuy);
+    function trade(
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256 totalPremium, Delta memory delta) {
+        return _trade(msg.sender, size, isBuy, 0, true);
+    }
+
+    /// @inheritdoc IPoolCore
+    function swapAndTrade(
+        SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    )
+        external
+        payable
+        returns (
+            uint256 totalPremium,
+            Delta memory delta,
+            uint256 swapOutAmount
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        (swapOutAmount, ) = _swap(s);
+
+        (totalPremium, delta) = _trade(
+            msg.sender,
+            size,
+            isBuy,
+            swapOutAmount,
+            true
+        );
+
+        return (totalPremium, delta, swapOutAmount);
+    }
+
+    /// @inheritdoc IPoolCore
+    function tradeAndSwap(
+        SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    )
+        external
+        returns (
+            uint256 totalPremium,
+            Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0, false);
+
+        if (delta.collateral <= 0) return (totalPremium, delta, 0, 0);
+
+        s.amountInMax = uint256(delta.collateral);
+
+        if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(s);
+
+        return (totalPremium, delta, collateralReceived, tokenOutReceived);
     }
 
     /// @inheritdoc IPoolCore
