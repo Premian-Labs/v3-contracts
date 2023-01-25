@@ -8,7 +8,17 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { now, revertToSnapshotAfterEach } from '../../utils/time';
+import {
+  ONE_DAY,
+  ONE_WEEK,
+  now,
+  getLastFridayOfMonth,
+  getValidMaturity,
+  revertToSnapshotAfterEach,
+} from '../../utils/time';
+
+import moment from 'moment-timezone';
+moment.tz.setDefault('UTC');
 
 describe('PoolFactory', () => {
   let deployer: SignerWithAddress;
@@ -22,7 +32,7 @@ describe('PoolFactory', () => {
 
   let isCall = true;
   let strike = parseEther('1000'); // ATM
-  let maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
+  let maturity: number;
   let blockTimestamp: number;
 
   before(async () => {
@@ -49,7 +59,8 @@ describe('PoolFactory', () => {
     await underlyingOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
     await underlyingOracle.mock.decimals.returns(8);
 
-    blockTimestamp = await now(); // Tue Dec 28 2021 15:17:14 GMT+0000
+    maturity = await getValidMaturity(10, 'months');
+    blockTimestamp = await now();
   });
 
   revertToSnapshotAfterEach(async () => {});
@@ -321,7 +332,7 @@ describe('PoolFactory', () => {
           baseOracle.address,
           underlyingOracle.address,
           strike,
-          1640764801, // Wed Dec 29 2021 08:00:01 GMT+0000
+          (await getValidMaturity(2, 'days')) + 1,
           isCall,
         ),
       ).to.be.revertedWithCustomError(
@@ -338,7 +349,7 @@ describe('PoolFactory', () => {
           baseOracle.address,
           underlyingOracle.address,
           strike,
-          1641110400, // Sun Jan 02 2022 08:00:00 GMT+0000
+          (await getValidMaturity(2, 'weeks')) - ONE_DAY,
           isCall,
         ),
       ).to.be.revertedWithCustomError(
@@ -355,7 +366,7 @@ describe('PoolFactory', () => {
           baseOracle.address,
           underlyingOracle.address,
           strike,
-          1645171200, // Fri Feb 18 2022 08:00:00 GMT+0000
+          (await getValidMaturity(2, 'months')) - ONE_WEEK,
           isCall,
         ),
       ).to.be.revertedWithCustomError(
@@ -372,7 +383,7 @@ describe('PoolFactory', () => {
           baseOracle.address,
           underlyingOracle.address,
           strike,
-          1672387200, // Fri Dec 30 2022 08:00:00 GMT+0000
+          await getLastFridayOfMonth(await now(), 13),
           isCall,
         ),
       ).to.be.revertedWithCustomError(
