@@ -19,16 +19,6 @@ interface IPoolFactory {
         address poolAddress
     );
 
-    function getDeploymentAddress(
-        address base,
-        address underlying,
-        address baseOracle,
-        address underlyingOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (address);
-
     function isPoolDeployed(
         address base,
         address underlying,
