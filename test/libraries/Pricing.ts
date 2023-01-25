@@ -22,7 +22,7 @@ describe('Pricing', () => {
         [parseEther('0.5'), parseEther('0.5')],
       ]) {
         expect(
-          await instance['proportion(uint256,uint256,uint256)'](
+          await instance.proportion(
             parseEther('0.25'),
             parseEther('0.75'),
             t[0],
@@ -33,11 +33,7 @@ describe('Pricing', () => {
 
     it('should revert if lower >= upper', async () => {
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
-          parseEther('0.75'),
-          parseEther('0.25'),
-          0,
-        ),
+        instance.proportion(parseEther('0.75'), parseEther('0.25'), 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Pricing__UpperNotGreaterThanLower',
@@ -46,7 +42,7 @@ describe('Pricing', () => {
 
     it('should revert if lower > market || market > upper', async () => {
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
+        instance.proportion(
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.2'),
@@ -54,7 +50,7 @@ describe('Pricing', () => {
       ).to.be.revertedWithCustomError(instance, 'Pricing__PriceOutOfRange');
 
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
+        instance.proportion(
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.8'),
