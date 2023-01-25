@@ -14,8 +14,7 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { ONE_MONTH } from '../../utils/constants';
-import { now, revertToSnapshotAfterEach } from '../../utils/time';
+import { revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -30,7 +29,7 @@ describe('Pool', () => {
   let baseOracle: MockContract;
   let underlyingOracle: MockContract;
 
-  let strike = parseEther('1000');
+  let strike = parseEther('1000'); // ATM
   let maturity: number;
 
   let isCall: boolean;
@@ -63,6 +62,7 @@ describe('Pool', () => {
     await underlyingOracle.mock.latestAnswer.returns(100000000000);
     await underlyingOracle.mock.decimals.returns(8);
 
+    maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
 
     for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
@@ -91,7 +91,7 @@ describe('Pool', () => {
   revertToSnapshotAfterEach(async () => {});
 
   describe('__internal', function () {
-    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
+    describe.only('#_getPricing(PoolStorage.Layout,bool)', () => {
       it('should return pool state', async () => {
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
