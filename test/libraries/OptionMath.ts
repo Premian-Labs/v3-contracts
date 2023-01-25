@@ -14,7 +14,7 @@ describe('OptionMath', () => {
     instance = await new OptionMathMock__factory(deployer).deploy();
   });
 
-  describe('isFriday(uint64)', () => {
+  describe('isFriday', () => {
     describe('should return false', () => {
       it(' if maturity is Mon', async () => {
         // Mon Jan 23 2023 08:00:00 GMT+0000
@@ -74,7 +74,7 @@ describe('OptionMath', () => {
     });
   });
 
-  describe('isLastFriday(uint64)', () => {
+  describe('isLastFriday', () => {
     describe('should return false', () => {
       it('if first week of month', async () => {
         // Thu Feb 02 2023 08:00:00 GMT+0000
@@ -143,14 +143,14 @@ describe('OptionMath', () => {
     });
   });
 
-  describe('calculateTimeToMaturity(uint64)', () => {
+  describe('calculateTimeToMaturity', () => {
     it('should return the time until maturity', async () => {
       const _now = await now();
       expect(await instance.calculateTimeToMaturity(_now + 86400)).to.eq(86400);
     });
   });
 
-  describe('calculateStrikeInterval(int256)', () => {
+  describe('calculateStrikeInterval', () => {
     it('should return correct strike interval between 1E18 and 9999E18', async () => {
       let strike = parseEther('1');
       let increment = strike;
