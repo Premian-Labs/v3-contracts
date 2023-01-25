@@ -27,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
+    error Pool__OptionStrikeIntervalInvalid();
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();

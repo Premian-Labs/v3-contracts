@@ -10,15 +10,19 @@ import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/bas
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {OptionMath} from "../libraries/OptionMath.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
 /// @title Upgradeable proxy with centrally controlled Pool implementation
 contract PoolProxy is Proxy, ERC165BaseInternal {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
+    using SafeCast for uint256;
 
     address private immutable DIAMOND;
 
@@ -45,6 +49,8 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.baseOracle = baseOracle;
             l.underlyingOracle = underlyingOracle;
 
+            _ensureOptionStrikeInterval(l, strike);
+
             l.strike = strike;
             l.maturity = maturity;
 
@@ -68,5 +74,19 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
 
     function _getImplementation() internal view override returns (address) {
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
+    }
+
+    function _ensureOptionStrikeInterval(
+        PoolStorage.Layout storage l,
+        uint256 strike
+    ) internal view {
+        int256 basePrice = PoolStorage.getSpotPrice(l.baseOracle);
+        int256 underlyingPrice = PoolStorage.getSpotPrice(l.underlyingOracle);
+
+        int256 spot = (underlyingPrice * 1e18) / basePrice;
+        int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
+
+        if (strike.toInt256() % strikeInterval != 0)
+            revert IPoolInternal.Pool__OptionStrikeIntervalInvalid();
     }
 }
