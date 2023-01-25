@@ -4,7 +4,29 @@ pragma solidity ^0.8.0;
 
 import {SD59x18, ceil, floor, log10, mul, pow, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 
+import {IPoolInternal} from "../pool/IPoolInternal.sol";
+
+import {DateTime} from "./DateTime.sol";
+
 library OptionMath {
+    function isFriday(uint64 maturity) internal pure returns (bool) {
+        return DateTime.getDayOfWeek(maturity) == DateTime.DOW_FRI;
+    }
+
+    function isLastFriday(uint64 maturity) internal pure returns (bool) {
+        uint256 dayOfMonth = DateTime.getDay(maturity);
+        uint256 lastDayOfMonth = DateTime.getDaysInMonth(maturity);
+
+        if (lastDayOfMonth - dayOfMonth > 7) return false;
+        return isFriday(maturity);
+    }
+
+    function calculateTimeToMaturity(
+        uint64 maturity
+    ) internal view returns (uint256) {
+        return maturity - block.timestamp;
+    }
+
     function calculateStrikeInterval(
         int256 spot
     ) internal pure returns (int256) {
