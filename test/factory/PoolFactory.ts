@@ -13,7 +13,6 @@ import { now, revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('PoolFactory', () => {
   let deployer: SignerWithAddress;
-  let lp: SignerWithAddress;
 
   let p: PoolUtil;
 
@@ -26,15 +25,12 @@ describe('PoolFactory', () => {
   let maturity: number;
 
   before(async () => {
-    [deployer, lp] = await ethers.getSigners();
+    [deployer] = await ethers.getSigners();
 
     underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
     p = await PoolUtil.deploy(deployer, underlying.address, true, true);
-
-    await underlying.mint(lp.address, parseEther('1000000'));
-    await base.mint(lp.address, parseEther('1000'));
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer () external view returns (int)',
