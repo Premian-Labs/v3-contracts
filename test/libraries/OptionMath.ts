@@ -15,59 +15,62 @@ describe('OptionMath', () => {
   });
 
   describe('isFriday(uint64)', () => {
-    it('should return false if maturity is Mon', async () => {
-      // Mon Jan 23 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674460800)).is.false;
-    });
+    describe('should return false', () => {
+      it(' if maturity is Mon', async () => {
+        // Mon Jan 23 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674460800)).is.false;
+      });
 
-    it('should return false if maturity is Tue (08:00:00)', async () => {
-      // Tue Jan 24 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674547200)).is.false;
-    });
+      it('if maturity is Tue (08:00:00)', async () => {
+        // Tue Jan 24 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674547200)).is.false;
+      });
 
-    it('should return false if maturity is Wed (08:00:00)', async () => {
-      // Wed Jan 25 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674720000)).is.false;
-    });
+      it('if maturity is Wed (08:00:00)', async () => {
+        // Wed Jan 25 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674720000)).is.false;
+      });
 
-    it('should return false if maturity is Thu (08:00:00)', async () => {
-      // Thu Jan 26 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674633600)).is.false;
-    });
+      it('if maturity is Thu (08:00:00)', async () => {
+        // Thu Jan 26 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674633600)).is.false;
+      });
 
-    it('should return false if maturity is Thu (23:59:59)', async () => {
-      // Thu Jan 26 2023 23:59:59 GMT+0000
-      expect(await instance.isFriday(1674777599)).is.false;
-    });
+      it('if maturity is Thu (23:59:59)', async () => {
+        // Thu Jan 26 2023 23:59:59 GMT+0000
+        expect(await instance.isFriday(1674777599)).is.false;
+      });
 
-    it('should return false if maturity is Fri (00:00:00)', async () => {
-      // Fri Jan 27 2023 00:00:00 GMT+0000
-      expect(await instance.isFriday(1674777600)).is.true;
-    });
+      it('if maturity is Sat (00:00:00)', async () => {
+        // Sat Jan 28 2023 00:00:00 GMT+0000
+        expect(await instance.isFriday(1674864000)).is.false;
+      });
 
-    it('should return false if maturity is Fri (08:00:00)', async () => {
-      // Fri Jan 27 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674806400)).is.true;
-    });
+      it('if maturity is Sat (08:00:00)', async () => {
+        // Sat Jan 28 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674892800)).is.false;
+      });
 
-    it('should return false if maturity is Fri (23:59:59)', async () => {
-      // Fri Jan 27 2023 23:59:59 GMT+0000
-      expect(await instance.isFriday(1674863999)).is.true;
+      it('if maturity is Sun (08:00:00)', async () => {
+        // Sun Jan 29 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674979200)).is.false;
+      });
     });
+    describe('should return true', () => {
+      it('if maturity is Fri (00:00:00)', async () => {
+        // Fri Jan 27 2023 00:00:00 GMT+0000
+        expect(await instance.isFriday(1674777600)).is.true;
+      });
 
-    it('should return false if maturity is Sat (00:00:00)', async () => {
-      // Sat Jan 28 2023 00:00:00 GMT+0000
-      expect(await instance.isFriday(1674864000)).is.false;
-    });
+      it('if maturity is Fri (08:00:00)', async () => {
+        // Fri Jan 27 2023 08:00:00 GMT+0000
+        expect(await instance.isFriday(1674806400)).is.true;
+      });
 
-    it('should return false if maturity is Sat (08:00:00)', async () => {
-      // Sat Jan 28 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674892800)).is.false;
-    });
-
-    it('should return false if maturity is Sun (08:00:00)', async () => {
-      // Sun Jan 29 2023 08:00:00 GMT+0000
-      expect(await instance.isFriday(1674979200)).is.false;
+      it('if maturity is Fri (23:59:59)', async () => {
+        // Fri Jan 27 2023 23:59:59 GMT+0000
+        expect(await instance.isFriday(1674863999)).is.true;
+      });
     });
   });
 

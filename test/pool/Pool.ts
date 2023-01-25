@@ -30,7 +30,7 @@ describe('Pool', () => {
   let underlyingOracle: MockContract;
 
   let strike = parseEther('1000'); // ATM
-  let maturity: number;
+  let maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
 
   let isCall: boolean;
   let collateral: BigNumber;
@@ -62,8 +62,6 @@ describe('Pool', () => {
     await underlyingOracle.mock.latestAnswer.returns(100000000000);
     await underlyingOracle.mock.decimals.returns(8);
 
-    maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
-
     for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
         base.address,
@@ -91,7 +89,7 @@ describe('Pool', () => {
   revertToSnapshotAfterEach(async () => {});
 
   describe('__internal', function () {
-    describe.only('#_getPricing(PoolStorage.Layout,bool)', () => {
+    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
       it('should return pool state', async () => {
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);

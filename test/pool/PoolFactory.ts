@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import {
   ERC20Mock,
@@ -27,21 +26,22 @@ describe('PoolFactory', () => {
   let baseOracle: MockContract;
   let underlyingOracle: MockContract;
 
-  let strike: BigNumber;
+  let strike = parseEther('1000'); // ATM
+  let maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
   let blockTimestamp: number;
-  let maturity: number;
 
   before(async () => {
     [deployer] = await ethers.getSigners();
 
-    p = await PoolUtil.deploy(deployer, true, true);
+    underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+
+    p = await PoolUtil.deploy(deployer, underlying.address, true, true);
+
     poolFactoryInterface = IPoolFactory__factory.connect(
       ethers.constants.AddressZero,
       deployer,
     );
-
-    underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
@@ -59,9 +59,7 @@ describe('PoolFactory', () => {
     await underlyingOracle.mock.latestAnswer.returns(100000000000);
     await underlyingOracle.mock.decimals.returns(8);
 
-    strike = parseEther('1000'); // ATM
     blockTimestamp = await now(); // Tue Dec 28 2021 15:17:14 GMT+0000
-    maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
   });
 
   revertToSnapshotAfterEach(async () => {});
