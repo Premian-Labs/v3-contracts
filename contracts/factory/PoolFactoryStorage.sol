@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-// ToDo : Remove ?
 library PoolFactoryStorage {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
@@ -10,10 +9,8 @@ library PoolFactoryStorage {
         keccak256("premia.contracts.storage.PoolFactory");
 
     struct Layout {
-        address feeRecipient;
-        //        mapping(address => mapping(address => mapping(address => mapping(address => mapping(bool => address))))) pools;
-        //        address[] poolList;
-        //        mapping(address => bool) isPool;
+        // Pool Key -> Address
+        mapping(bytes32 => address) pools;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -21,5 +18,28 @@ library PoolFactoryStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function poolKey(
+        address base,
+        address underlying,
+        address baseOracle,
+        address underlyingOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    base,
+                    underlying,
+                    baseOracle,
+                    underlyingOracle,
+                    strike,
+                    maturity,
+                    isCallPool
+                )
+            );
     }
 }

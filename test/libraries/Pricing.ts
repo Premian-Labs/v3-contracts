@@ -14,7 +14,7 @@ describe('Pricing', () => {
     instance = await new PricingMock__factory(deployer).deploy();
   });
 
-  describe('#proportion(uint256,uint256,uint256)', () => {
+  describe('#proportion', () => {
     it('should return the proportional amount', async () => {
       for (const t of [
         [parseEther('0.25'), 0],
@@ -22,7 +22,7 @@ describe('Pricing', () => {
         [parseEther('0.5'), parseEther('0.5')],
       ]) {
         expect(
-          await instance['proportion(uint256,uint256,uint256)'](
+          await instance.proportion(
             parseEther('0.25'),
             parseEther('0.75'),
             t[0],
@@ -33,11 +33,7 @@ describe('Pricing', () => {
 
     it('should revert if lower >= upper', async () => {
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
-          parseEther('0.75'),
-          parseEther('0.25'),
-          0,
-        ),
+        instance.proportion(parseEther('0.75'), parseEther('0.25'), 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Pricing__UpperNotGreaterThanLower',
@@ -46,7 +42,7 @@ describe('Pricing', () => {
 
     it('should revert if lower > market || market > upper', async () => {
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
+        instance.proportion(
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.2'),
@@ -54,7 +50,7 @@ describe('Pricing', () => {
       ).to.be.revertedWithCustomError(instance, 'Pricing__PriceOutOfRange');
 
       await expect(
-        instance['proportion(uint256,uint256,uint256)'](
+        instance.proportion(
           parseEther('0.25'),
           parseEther('0.75'),
           parseEther('0.8'),
@@ -63,7 +59,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#amountOfTicksBetween(uint256,uint256)', () => {
+  describe('#amountOfTicksBetween', () => {
     it('should correctly calculate amount of ticks between two values', async () => {
       for (const t of [
         [parseEther('0.001'), parseEther('1'), 999],
@@ -89,7 +85,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#liquidity(Pricing.Args)', () => {
+  describe('#liquidity', () => {
     it('should return the liquidity', async () => {
       for (const t of [
         [
@@ -124,7 +120,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#bidLiquidity(Pricing.Args)', () => {
+  describe('#bidLiquidity', () => {
     it('should return the bid liquidity', async () => {
       let args = {
         liquidityRate: parseEther('1'),
@@ -150,7 +146,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#askLiquidity(Pricing.Args)', () => {
+  describe('#askLiquidity', () => {
     it('should return the ask liquidity', async () => {
       let args = {
         liquidityRate: parseEther('1'),
@@ -176,7 +172,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#maxTradeSize(Pricing.Args)', () => {
+  describe('#maxTradeSize', () => {
     it('should return the max trade size for buy order', async () => {
       let args = {
         liquidityRate: parseEther('1'),
@@ -206,7 +202,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#price(Pricing.Args,uint256)', () => {
+  describe('#price', () => {
     it('should return upper tick for buy order if liquidity == 0', async () => {
       let args = {
         liquidityRate: 0,
@@ -390,7 +386,7 @@ describe('Pricing', () => {
     });
   });
 
-  describe('#nextPrice(Pricing.Args,uint256)', () => {
+  describe('#nextPrice', () => {
     it('should return upper tick for buy order if liquidity == 0', async () => {
       let args = {
         liquidityRate: 0,
