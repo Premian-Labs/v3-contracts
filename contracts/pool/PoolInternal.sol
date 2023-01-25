@@ -1149,9 +1149,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        (uint256 _amountCredited, uint256 _tokenInRefunded) = IExchangeHelper(
-            EXCHANGE_HELPER
-        ).swapWithToken(
+        (amountCredited, tokenInRefunded) = IExchangeHelper(EXCHANGE_HELPER)
+            .swapWithToken(
                 s.tokenIn,
                 s.tokenOut,
                 s.amountInMax + msg.value,
@@ -1161,8 +1160,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 s.refundAddress
             );
         if (amountCredited < s.amountOutMin) revert Pool__NotEnoughSwapOutput();
-
-        return (_amountCredited, _tokenInRefunded);
     }
 
     ////////////////////////////////////////////////////////////////

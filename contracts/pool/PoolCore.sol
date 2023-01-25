@@ -143,7 +143,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0, false);
 
-        if (delta.collateral < 0) return (totalPremium, delta, 0, 0);
+        if (delta.collateral <= 0) return (totalPremium, delta, 0, 0);
 
         s.amountInMax = uint256(delta.collateral);
 
