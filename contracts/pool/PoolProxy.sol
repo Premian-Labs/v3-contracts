@@ -22,7 +22,6 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolProxy is Proxy, ERC165BaseInternal {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
-    using SafeCast for uint256;
 
     address private immutable DIAMOND;
 
@@ -52,9 +51,6 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.strike = strike;
             l.maturity = maturity;
 
-            _ensureOptionStrikeIsValid(l);
-            _ensureOptionStrikeInterval(l);
-
             uint8 baseDecimals = IERC20Metadata(base).decimals();
             uint8 underlyingDecimals = IERC20Metadata(underlying).decimals();
 
@@ -75,18 +71,5 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
 
     function _getImplementation() internal view override returns (address) {
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
-    }
-
-    function _ensureOptionStrikeIsValid(
-        PoolStorage.Layout storage l
-    ) internal view {
-        int256 basePrice = PoolStorage.getSpotPrice(l.baseOracle);
-        int256 underlyingPrice = PoolStorage.getSpotPrice(l.underlyingOracle);
-
-        int256 spot = (underlyingPrice * 1e18) / basePrice;
-        int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
-
-        if (l.strike.toInt256() % strikeInterval != 0)
-            revert IPoolInternal.Pool__OptionStrikeIntervalInvalid();
     }
 }
