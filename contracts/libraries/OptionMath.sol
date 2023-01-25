@@ -2,30 +2,27 @@
 
 pragma solidity ^0.8.0;
 
-import {SD59x18, ceil, log10, mul, pow, sd} from "@prb/math/src/SD59x18.sol";
-
-// TODO: Beta setter should check if newBeta is divisible by 0.25 and between 0.25 and 1
+import {SD59x18, ceil, floor, log10, mul, pow, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 
 library OptionMath {
-    function strikeInterval(
-        SD59x18 beta,
-        SD59x18 spot
-    ) internal pure returns (SD59x18) {
-        SD59x18 ALPHA_59X18 = sd(2e18);
-        SD59x18 TEN_59X18 = sd(10e18);
+    function calculateStrikeInterval(
+        int256 spot
+    ) internal pure returns (int256) {
+        SD59x18 NEG_ONE_59X18 = wrap(-1e18);
+        SD59x18 ONE_59X18 = wrap(1e18);
 
-        // x = ceil(log10(spot)) + alpha
-        // y = beta * 10^x
-        // where alpha = -2, beta = [0.25, 0.5, 0.75, 1]
+        SD59x18 FIVE_59X18 = wrap(5e18);
+        SD59x18 TEN_59X18 = wrap(10e18);
 
-        SD59x18 x = ceil(log10(spot)).sub(ALPHA_59X18);
-        SD59x18 y = beta.mul(TEN_59X18.pow(x));
+        SD59x18 SPOT_59X18 = wrap(spot);
 
-        if (spot.gt(sd(1000e18))) {
-            // spot > 1000E18, strike interval will always have a small rounding error
-            return ceil(y);
-        }
+        SD59x18 o = floor(log10(SPOT_59X18));
+        SD59x18 x = SPOT_59X18.mul(
+            pow(TEN_59X18, o.mul(NEG_ONE_59X18).sub(ONE_59X18))
+        );
 
-        return y;
+        SD59x18 f = pow(TEN_59X18, o.sub(ONE_59X18));
+        SD59x18 y = x.lt(wrap(0.5e18)) ? mul(ONE_59X18, f) : mul(FIVE_59X18, f);
+        return unwrap(SPOT_59X18.lt(wrap(1000e18)) ? y : ceil(y));
     }
 }

@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { OptionMathMock, OptionMathMock__factory } from '../../typechain';
 import { parseEther } from 'ethers/lib/utils';
@@ -14,317 +13,113 @@ describe('OptionMath', () => {
     instance = await new OptionMathMock__factory(deployer).deploy();
   });
 
-  describe('beta = 0.25', () => {
-    let beta = parseEther('0.25');
+  describe('calculateStrikeInterval(int256)', () => {
+    it('should return correct strike interval between 1E18 and 9999E18', async () => {
+      let strike = parseEther('1');
+      let increment = strike;
 
-    it('', async () => {
-      await testStrikeIntervalRange(parseEther('0.0025'), beta);
-    });
+      let interval = strike.div(10);
+      let limit = parseEther('9999');
 
-    // it('should return 0.0025 for 1', async () => {
-    //   let interval = BigNumber.from('2500000000000000');
-    //   let x = BigNumber.from('1000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
+      while (strike.lte(limit)) {
+        let y = await instance.calculateStrikeInterval(strike);
 
-    // it('should return 0.025 for 3', async () => {
-    //   let interval = BigNumber.from('25000000000000000');
-    //   let x = BigNumber.from('3000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
+        if (strike.lt(interval.mul(50))) {
+          expect(y).to.eq(interval);
+        } else {
+          expect(y).to.eq(interval.mul(5));
+        }
 
-    // it('should return 0.025 for 4', async () => {
-    //   let interval = BigNumber.from('25000000000000000');
-    //   let x = BigNumber.from('4000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
+        strike = strike.add(increment);
 
-    // it('should return 0.025 for 5', async () => {
-    //   let interval = BigNumber.from('25000000000000000');
-    //   let x = BigNumber.from('5000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.025 for 9', async () => {
-    //   let interval = BigNumber.from('25000000000000000');
-    //   let x = BigNumber.from('9000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.025 for 10', async () => {
-    //   let interval = BigNumber.from('25000000000000000');
-    //   let x = BigNumber.from('10000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.25 for 11', async () => {
-    //   let interval = BigNumber.from('250000000000000000');
-    //   let x = BigNumber.from('11000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.25 for 36', async () => {
-    //   let interval = BigNumber.from('250000000000000000');
-    //   let x = BigNumber.from('36000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.25 for 87', async () => {
-    //   let interval = BigNumber.from('250000000000000000');
-    //   let x = BigNumber.from('87000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.25 for 999', async () => {
-    //   let interval = BigNumber.from('250000000000000000');
-    //   let x = BigNumber.from('99900000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 0.25 for 100', async () => {
-    //   let interval = BigNumber.from('250000000000000000');
-    //   let x = BigNumber.from('100000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 101', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('101000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 117', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('117000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 153', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('153000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 199', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('199000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 667', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('667000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 709', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('709000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 816', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('816000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 999', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('1000000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 2.5 for 1000', async () => {
-    //   let interval = BigNumber.from('2500000000000000000');
-    //   let x = BigNumber.from('1000000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 25 for 1001', async () => {
-    //   let interval = BigNumber.from('25000000000000000000');
-    //   let x = BigNumber.from('1001000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 25 for 5298', async () => {
-    //   let interval = BigNumber.from('25000000000000000000');
-    //   let x = BigNumber.from('5298000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 25 for 9999', async () => {
-    //   let interval = BigNumber.from('25000000000000000000');
-    //   let x = BigNumber.from('9999000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 25 for 10000', async () => {
-    //   let interval = BigNumber.from('25000000000000000000');
-    //   let x = BigNumber.from('10000000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 10001', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('10001000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 15336', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('15336000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 15802', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('15802000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 22508', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('22508000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 32693', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('32693000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 38858', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('38858000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 43442', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('43442000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-
-    // it('should return 250 for 48183', async () => {
-    //   let interval = BigNumber.from('250000000000000000000');
-    //   let x = BigNumber.from('48183000000000000000000');
-    //   let y = await instance.strikeInterval(beta, x);
-    //   console.log(`x: ${x}, y: ${y}`);
-    //   expect(y).to.eq(interval);
-    // });
-  });
-
-  describe('beta = 0.5', async () => {
-    let beta = parseEther('0.5');
-
-    it('', async () => {
-      await testStrikeIntervalRange(parseEther('0.005'), beta);
-    });
-  });
-
-  describe('beta = 0.75', async () => {
-    let beta = parseEther('0.75');
-
-    it('', async () => {
-      await testStrikeIntervalRange(parseEther('0.0075'), beta);
-    });
-  });
-
-  describe('beta = 1.0', async () => {
-    let beta = parseEther('1');
-
-    it('', async () => {
-      await testStrikeIntervalRange(parseEther('0.01'), beta);
-    });
-  });
-
-  async function testStrikeIntervalRange(interval: BigNumber, beta: BigNumber) {
-    let x = parseEther('1');
-    let limit = parseEther('10000');
-
-    let counter = 0;
-    let ruler = 1;
-
-    while (x.lte(limit)) {
-      let y = await instance.strikeInterval(beta, x);
-      x = x.add(parseEther('1'));
-
-      expect(y).to.eq(interval);
-
-      counter++;
-
-      if (counter % ruler == 0) {
-        // increase interval proportionally with counter
-        // e.g.
-        //      counter  -> 1       -> 10
-        //      interval -> 0.01ETH -> 0.1ETH
-        interval = interval.mul(10);
-        ruler = ruler * 10;
+        if (strike.eq(interval.mul(100))) {
+          interval = interval.mul(10);
+        }
       }
-    }
-  }
+    });
+
+    it('should return 1000 between 10000 and 49999', async () => {
+      for (let x of [
+        [10000, 1000],
+        [10001, 1000],
+        [35321, 1000],
+        [49999, 1000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 5000 between 50000 and 99999', async () => {
+      for (let x of [
+        [50000, 5000],
+        [50001, 5000],
+        [64312, 5000],
+        [99999, 5000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 10000 between 100000 and 499999', async () => {
+      for (let x of [
+        [100000, 10000],
+        [100001, 10000],
+        [256110, 10000],
+        [499999, 10000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 50000 between 500000 and 999999', async () => {
+      for (let x of [
+        [500000, 50000],
+        [500001, 50000],
+        [862841, 50000],
+        [999999, 50000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 100000 between 1000000 and 4999999', async () => {
+      for (let x of [
+        [1000000, 100000],
+        [1000001, 100000],
+        [4321854, 100000],
+        [4999999, 100000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 500000 between 5000000 and 9999999', async () => {
+      for (let x of [
+        [5000000, 500000],
+        [5000001, 500000],
+        [9418355, 500000],
+        [9999999, 500000],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+  });
 });
