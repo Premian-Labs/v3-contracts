@@ -2,13 +2,12 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { ERC20Mock, ERC20Mock__factory, IPool__factory } from '../../typechain';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { ONE_MONTH } from '../../utils/constants';
 import { now, revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('PoolFactory', () => {
@@ -21,8 +20,10 @@ describe('PoolFactory', () => {
   let baseOracle: MockContract;
   let underlyingOracle: MockContract;
 
-  let strike = parseEther('1000');
-  let maturity: number;
+  let isCall = true;
+  let strike = parseEther('1000'); // ATM
+  let maturity = 1645776000; // Fri Feb 25 2022 08:00:00 GMT+0000
+  let blockTimestamp: number;
 
   before(async () => {
     [deployer] = await ethers.getSigners();
@@ -33,16 +34,22 @@ describe('PoolFactory', () => {
     p = await PoolUtil.deploy(deployer, underlying.address, true, true);
 
     baseOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer () external view returns (int)',
+      'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
+
+    await baseOracle.mock.latestAnswer.returns(parseUnits('1', 8));
+    await baseOracle.mock.decimals.returns(8);
 
     underlyingOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer () external view returns (int)',
+      'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    maturity = (await now()) + ONE_MONTH;
+    await underlyingOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
+    await underlyingOracle.mock.decimals.returns(8);
+
+    blockTimestamp = await now(); // Tue Dec 28 2021 15:17:14 GMT+0000
   });
 
   revertToSnapshotAfterEach(async () => {});
@@ -57,7 +64,7 @@ describe('PoolFactory', () => {
           underlyingOracle.address,
           strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.false;
     });
@@ -70,7 +77,7 @@ describe('PoolFactory', () => {
         underlyingOracle.address,
         strike,
         maturity,
-        true,
+        isCall,
       );
 
       expect(
@@ -81,7 +88,7 @@ describe('PoolFactory', () => {
           underlyingOracle.address,
           strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.true;
     });
@@ -96,7 +103,7 @@ describe('PoolFactory', () => {
         underlyingOracle.address,
         strike,
         maturity,
-        true,
+        isCall,
       );
 
       const r = await tx.wait(1);
@@ -120,7 +127,7 @@ describe('PoolFactory', () => {
         underlyingOracle.address,
         strike,
         maturity,
-        true,
+        isCall,
       ]);
     });
 
@@ -133,7 +140,7 @@ describe('PoolFactory', () => {
           underlyingOracle.address,
           strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -150,7 +157,7 @@ describe('PoolFactory', () => {
           baseOracle.address,
           strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -158,42 +165,66 @@ describe('PoolFactory', () => {
       );
     });
 
-    it('should revert if maturity is invalid', async () => {
+    it('should revert if base, underlying, baseOracle, or underlyingOracle are zero address', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
+          ethers.constants.AddressZero,
           underlying.address,
           baseOracle.address,
           underlyingOracle.address,
           strike,
-          (await now()) - 1,
-          true,
+          maturity,
+          isCall,
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
-        'PoolFactory__InvalidMaturity',
+        'PoolFactory__ZeroAddress',
       );
 
-      // ToDo : Check maturity increments
-    });
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          ethers.constants.AddressZero,
+          underlyingOracle.address,
+          strike,
+          maturity,
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__ZeroAddress',
+      );
 
-    it('should revert if strike is invalid', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          ethers.constants.AddressZero,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          maturity,
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__ZeroAddress',
+      );
+
       await expect(
         p.poolFactory.deployPool(
           base.address,
           underlying.address,
           baseOracle.address,
-          underlyingOracle.address,
-          0,
+          ethers.constants.AddressZero,
+          strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
-        'PoolFactory__InvalidStrike',
+        'PoolFactory__ZeroAddress',
       );
-
-      // ToDo : Check strike increments
     });
 
     it('should revert if pool has already been deployed', async () => {
@@ -204,7 +235,7 @@ describe('PoolFactory', () => {
         underlyingOracle.address,
         strike,
         maturity,
-        true,
+        isCall,
       );
 
       await expect(
@@ -215,11 +246,138 @@ describe('PoolFactory', () => {
           underlyingOracle.address,
           strike,
           maturity,
-          true,
+          isCall,
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__PoolAlreadyDeployed',
+      );
+    });
+
+    it('should revert if strike is zero', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          0,
+          maturity,
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionStrikeEqualsZero',
+      );
+    });
+
+    it('should revert if strike price is not within strike interval', async () => {
+      // strike interval: 100
+      for (let strike of [
+        parseEther('99990'),
+        parseEther('1050'),
+        parseEther('950'),
+        parseEther('11'),
+      ]) {
+        await expect(
+          p.poolFactory.deployPool(
+            base.address,
+            underlying.address,
+            baseOracle.address,
+            underlyingOracle.address,
+            strike,
+            maturity,
+            isCall,
+          ),
+        ).to.be.revertedWithCustomError(
+          p.poolFactory,
+          'PoolFactory__OptionStrikeInvalid',
+        );
+      }
+    });
+
+    it('should revert if daily option maturity has expired', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          blockTimestamp,
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionExpired',
+      );
+    });
+
+    it('should revert if daily option maturity is not at 8AM UTC', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          1640764801, // Wed Dec 29 2021 08:00:01 GMT+0000
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionMaturityNot8UTC',
+      );
+    });
+
+    it('should revert if weekly option maturity not on Friday', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          1641110400, // Sun Jan 02 2022 08:00:00 GMT+0000
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionMaturityNotFriday',
+      );
+    });
+
+    it('should revert if monthly option maturity not on last Friday', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          1645171200, // Fri Feb 18 2022 08:00:00 GMT+0000
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionMaturityNotLastFriday',
+      );
+    });
+
+    it('should revert if monthly option maturity exceeds 365 days', async () => {
+      await expect(
+        p.poolFactory.deployPool(
+          base.address,
+          underlying.address,
+          baseOracle.address,
+          underlyingOracle.address,
+          strike,
+          1672387200, // Fri Dec 30 2022 08:00:00 GMT+0000
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__OptionMaturityExceedsMax',
       );
     });
   });
