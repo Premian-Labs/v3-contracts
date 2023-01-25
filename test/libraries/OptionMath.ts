@@ -151,6 +151,34 @@ describe('OptionMath', () => {
   });
 
   describe('calculateStrikeInterval', () => {
+    it('should return 0.1 between 1 and 4', async () => {
+      for (let x of [
+        [1, 0.1],
+        [2, 0.1],
+        [3, 0.1],
+        [4, 0.1],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
+    it('should return 0.5 between 5 and 9', async () => {
+      for (let x of [
+        [5, 0.5],
+        [6, 0.5],
+        [7, 0.5],
+        [9, 0.5],
+      ]) {
+        let strike = parseEther(x[0].toString());
+        let interval = await instance.calculateStrikeInterval(strike);
+
+        expect(interval).to.eq(parseEther(x[1].toString()));
+      }
+    });
+
     it('should return 1 between 10 and 49', async () => {
       for (let x of [
         [10, 1],
