@@ -21,6 +21,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__NotAuthorized();
     error Pool__NotEnoughSwapOutput();
     error Pool__NotEnoughTokens();
+    error Pool__OraclePriceLTEZero();
+    error Pool__OraclePriceStale();
+    error Pool__OracleRoundStale();
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
