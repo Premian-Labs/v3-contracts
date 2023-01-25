@@ -21,6 +21,7 @@ contract PoolFactory is IPoolFactory {
         DIAMOND = diamond;
     }
 
+    /// @inheritdoc IPoolFactory
     function isPoolDeployed(
         address base,
         address underlying,
@@ -46,6 +47,7 @@ contract PoolFactory is IPoolFactory {
         return PoolFactoryStorage.layout().pools[poolKey] != address(0);
     }
 
+    /// @inheritdoc IPoolFactory
     function deployPool(
         address base,
         address underlying,

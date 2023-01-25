@@ -16,6 +16,32 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function getPoolSettings()
+        external
+        view
+        returns (
+            address base,
+            address underlying,
+            address baseOracle,
+            address underlyingOracle,
+            uint256 strike,
+            uint64 maturity,
+            bool isCallPool
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return (
+            l.base,
+            l.underlying,
+            l.baseOracle,
+            l.underlyingOracle,
+            l.strike,
+            l.maturity,
+            l.isCallPool
+        );
+    }
+
+    /// @inheritdoc IPoolCore
     function getQuote(
         uint256 size,
         bool isBuy

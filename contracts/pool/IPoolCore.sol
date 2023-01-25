@@ -9,6 +9,27 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolCore is IPoolInternal {
+    /// @notice Returns all pool parameters used for deployment
+    /// @return base Address of base token
+    /// @return underlying Address of underlying token
+    /// @return baseOracle Address of base token price feed
+    /// @return underlyingOracle Address of underlying token price feed
+    /// @return strike The strike of the option
+    /// @return maturity The maturity timestamp of the option
+    /// @return isCallPool Whether the pool is for call or put options
+    function getPoolSettings()
+        external
+        view
+        returns (
+            address base,
+            address underlying,
+            address baseOracle,
+            address underlyingOracle,
+            uint256 strike,
+            uint64 maturity,
+            bool isCallPool
+        );
+
     /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
