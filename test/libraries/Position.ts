@@ -9,8 +9,10 @@ describe('Position', () => {
   let deployer: SignerWithAddress;
   let instance: PositionMock;
 
-  let strike = 1000;
-  let isCall: boolean;
+  let strike = parseEther('1000');
+  let isCall = true;
+
+  let key: any;
 
   let WAD = parseEther('1');
 
@@ -20,26 +22,25 @@ describe('Position', () => {
     LC,
   }
 
-  before(async function () {
+  before(async () => {
     [deployer] = await ethers.getSigners();
     instance = await new PositionMock__factory(deployer).deploy();
+  });
 
-    for (isCall of [true, false]) {
-    }
+  beforeEach(async () => {
+    key = {
+      owner: deployer.address,
+      operator: deployer.address,
+      lower: parseEther('0.25'),
+      upper: parseEther('0.75'),
+      orderType: 0,
+      isCall: isCall,
+      strike: strike,
+    };
   });
 
   describe('#keyHash', () => {
     it('should return key hash', async () => {
-      const key = {
-        owner: deployer.address,
-        operator: deployer.address,
-        lower: parseEther('0.25'),
-        upper: parseEther('0.75'),
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
-
       const keyHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
           ['address', 'address', 'uint256', 'uint256', 'uint8'],
@@ -74,20 +75,6 @@ describe('Position', () => {
   });
 
   describe('#pieceWiseLinear', () => {
-    let key: any;
-
-    before(async () => {
-      key = {
-        owner: deployer.address,
-        operator: deployer.address,
-        lower: parseEther('0.25'),
-        upper: parseEther('0.75'),
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
-    });
-
     it('should return 0 if lower >= price', async () => {
       expect(await instance.pieceWiseLinear(key, key.lower)).to.eq(0);
       expect(await instance.pieceWiseLinear(key, key.lower.sub(1))).to.eq(0);
@@ -129,21 +116,7 @@ describe('Position', () => {
     });
   });
 
-  describe('#pieceWiseQuadratic', () => {
-    let key: any;
-
-    before(async () => {
-      key = {
-        owner: deployer.address,
-        operator: deployer.address,
-        lower: parseEther('0.25'),
-        upper: parseEther('0.75'),
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
-    });
-
+  describe('#pieceWiseQuadratic', async () => {
     it('should return 0 if lower >= price', async () => {
       expect(await instance.pieceWiseQuadratic(key, key.lower)).to.eq(0);
       expect(await instance.pieceWiseQuadratic(key, key.lower.sub(1))).to.eq(0);
@@ -191,7 +164,7 @@ describe('Position', () => {
   });
 
   describe('#collateralToContracts', () => {
-    const amounts = [
+    const cases = [
       ['1', '0.001'],
       ['77', '0.77'],
       ['344', '0.344'],
@@ -200,33 +173,35 @@ describe('Position', () => {
     ];
 
     describe('#call options', () => {
-      for (let c of amounts) {
+      for (let c of cases) {
         let collateral = parseEther(c[0]);
+        let contracts = collateral;
 
         it(`should return ${c[0]} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
           expect(
-            await instance.collateralToContracts(collateral, strike, true),
-          ).to.eq(collateral);
+            await instance.collateralToContracts(collateral, strike, isCall),
+          ).to.eq(contracts);
         });
       }
     });
 
     describe('#put options', () => {
-      for (let c of amounts) {
+      for (let c of cases) {
         let collateral = parseEther(c[0]);
-        let contracts = collateral.div(strike);
+        let contracts = collateral.mul(parseEther('1')).div(strike);
+        let formattedContracts = formatEther(contracts);
 
-        it(`should return ${c[1]} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
+        it(`should return ${formattedContracts} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
           expect(
-            await instance.collateralToContracts(collateral, strike, false),
-          ).to.eq(contracts.mul(parseEther('1')));
+            await instance.collateralToContracts(collateral, strike, !isCall),
+          ).to.eq(contracts);
         });
       }
     });
   });
 
   describe('#contractsToCollateral', () => {
-    const amounts = [
+    const cases = [
       ['1', '0.001'],
       ['77', '0.77'],
       ['344', '0.344'],
@@ -235,12 +210,32 @@ describe('Position', () => {
     ];
 
     describe('#call options', () => {
-      for (let c of amounts) {
-        let collateral = parseEther(c[0]);
+      for (let c of cases) {
+        let contracts = parseEther(c[0]);
+        let collateral = contracts;
 
         it(`should return ${c[0]} unit(s) of collateral for ${c[0]} contract(s)`, async () => {
           expect(
-            await instance.contractsToCollateral(collateral, strike, true),
+            await instance.contractsToCollateral(contracts, strike, isCall),
+          ).to.eq(collateral);
+        });
+      }
+    });
+
+    describe('#put options', () => {
+      for (let c of cases) {
+        let contracts = parseEther(c[0]);
+        let collateral = contracts.mul(strike).div(parseEther('1'));
+        let formattedCollateral = formatEther(collateral);
+
+        it(`should return ${formattedCollateral} unit(s) of collateral for ${c[0]} contract(s)`, async () => {
+          expect(
+            await instance.contractsToCollateral(contracts, strike, !isCall),
+          ).to.eq(collateral);
+        });
+      }
+    });
+  });
           ).to.eq(collateral);
         });
       }
@@ -253,7 +248,7 @@ describe('Position', () => {
 
         it(`should return ${c[0]} unit(s) of collateral for ${c[1]} contract(s)`, async () => {
           expect(
-            await instance.contractsToCollateral(collateral, strike, false),
+            await instance.contractsToCollateral(collateral, strike, !isCall),
           ).to.eq(contracts);
         });
       }
