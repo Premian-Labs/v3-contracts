@@ -236,6 +236,27 @@ describe('Position', () => {
       }
     });
   });
+
+  describe('#liquidityPerTick', () => {
+    const cases = [
+      ['0.25', '0.75', '250', '0.5'],
+      ['0.25', '0.75', '500', '1'],
+      ['0.25', '0.75', '1000', '2'],
+    ];
+
+    for (let c of cases) {
+      beforeEach(async () => {
+        key.lower = parseEther(c[0]);
+        key.upper = parseEther(c[1]);
+      });
+
+      it(`should return ${c[3]} for size ${c[2]} and range ${c[0]} - ${c[1]}`, async () => {
+        expect(await instance.liquidityPerTick(key, parseEther(c[2]))).to.eq(
+          parseEther(c[3]),
+        );
+      });
+    }
+  });
           ).to.eq(collateral);
         });
       }

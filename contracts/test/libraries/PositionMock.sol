@@ -48,4 +48,12 @@ contract PositionMock {
     ) external pure returns (uint256) {
         return Position.contractsToCollateral(_collateral, strike, isCall);
     }
+
+    function liquidityPerTick(
+        Position.Key memory self,
+        uint256 size
+    ) external pure returns (uint256) {
+        return Position.liquidityPerTick(self, size);
+    }
+
 }
