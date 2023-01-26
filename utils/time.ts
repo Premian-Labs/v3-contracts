@@ -1,6 +1,19 @@
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 
+import moment from 'moment-timezone';
+moment.tz.setDefault('UTC');
+
+export const ONE_DAY = 24 * 3600;
+export const ONE_WEEK = 7 * ONE_DAY;
+export const ONE_MONTH = 30 * ONE_DAY;
+export const ONE_YEAR = 365 * ONE_DAY;
+
+// returns the current timestamp
+export async function now() {
+  return (await ethers.provider.getBlock('latest')).timestamp;
+}
+
 // Increases ganache time by the passed duration in seconds
 export async function increase(duration: number | BigNumber) {
   if (!BigNumber.isBigNumber(duration)) {
@@ -12,11 +25,6 @@ export async function increase(duration: number | BigNumber) {
 
   await ethers.provider.send('evm_increaseTime', [duration.toNumber()]);
   await ethers.provider.send('evm_mine', []);
-}
-
-// returns the current timestamp
-export async function now() {
-  return (await ethers.provider.getBlock('latest')).timestamp;
 }
 
 /**
@@ -42,6 +50,46 @@ export async function increaseTo(target: number | BigNumber) {
 
   const diff = target.sub(now);
   return increase(diff);
+}
+
+export async function getLastFridayOfMonth(timestamp: number, interval: any) {
+  const currentTime = moment.unix(timestamp);
+
+  const lastDayOfMonth = moment(currentTime.add(interval, 'months'))
+    .endOf('month')
+    .startOf('day');
+
+  let friday;
+
+  if (lastDayOfMonth.day() == 6) {
+    friday = lastDayOfMonth.subtract(1, 'days');
+  } else {
+    friday = lastDayOfMonth.subtract(lastDayOfMonth.day() + 2, 'days');
+  }
+
+  return friday.hour(8).unix();
+}
+
+export async function getValidMaturity(interval: any, period: string) {
+  const timestamp = await now();
+  const currentTime = moment.unix(timestamp);
+
+  if (period === 'days' && interval < 3) {
+    return moment(currentTime.add(interval, 'days'))
+      .startOf('day')
+      .hour(8)
+      .unix();
+  } else if (period === 'weeks' && interval <= 4) {
+    return moment(currentTime.add(interval, 'weeks'))
+      .startOf('isoWeek')
+      .day('friday')
+      .hour(8)
+      .unix();
+  } else if (period === 'months' && interval <= 12) {
+    return await getLastFridayOfMonth(timestamp, interval);
+  }
+
+  throw new Error('Invalid Maturity Parameters');
 }
 
 export async function takeSnapshot() {
