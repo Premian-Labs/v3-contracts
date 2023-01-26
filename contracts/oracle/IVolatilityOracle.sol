@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
-contract IVolatilityOracle {
+interface IVolatilityOracle {
     /**
      * @notice Pack IV model parameters into a single bytes32
      * @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`
