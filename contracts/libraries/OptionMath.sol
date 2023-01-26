@@ -2,73 +2,71 @@
 
 pragma solidity ^0.8.0;
 
-import {SD59x18, ceil, floor, log10, mul, pow, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
+import {SD59x18, add, ceil, div, exp, floor, ln, mul, pow, sqrt, sub, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 
 library OptionMath {
 
-    // 64x64 fixed point integer constants
-    int128 internal constant ONE = 1e18;
-    int128 internal constant THREE = 3e18;
-
-    // 64x64 fixed point constants used in Choudhury’s approximation of the Normal CDF
-    int128 private constant CDF_CONST_0 = 0x09109f285df452394; // 2260 / 3989
-    int128 private constant CDF_CONST_1 = 0x19abac0ea1da65036; // 6400 / 3989
-    int128 private constant CDF_CONST_2 = 0x0d3c84b78b749bd6b; // 3300 / 3989
+    // 59x18 fixed point integer constants
+    SD59x18 internal constant ONE = SD59x18.wrap(1e18);
+    SD59x18 internal constant TWO = SD59x18.wrap(2e18);
+    SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
+    SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
+    SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);
+    SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
+    SD59x18 internal constant LOG2 = ln(TWO);
 
     /**
-     * @notice calculate Choudhury’s approximation of the Black-Scholes CDF
-     * @param input64x64 64x64 fixed point representation of random variable
-     * @return 64x64 fixed point representation of the approximated CDF of x
+     * @notice Helper function to evaluate used to compute the normal CDF approximation
+     * @param x 59x18 fixed point representation of the input to the normal CDF
+     * @return 59x18 fixed point representation of the value of the evaluated helper function
      */
-    function _N(int128 input64x64) internal pure returns (int128) {
-        // squaring via mul is cheaper than via pow
-        int128 inputSquared64x64 = input64x64.mul(input64x64);
-
-        int128 value64x64 = (-inputSquared64x64 >> 1).exp().div(
-            CDF_CONST_0.add(CDF_CONST_1.mul(input64x64.abs())).add(
-                CDF_CONST_2.mul(inputSquared64x64.add(THREE_64x64).sqrt())
-            )
-        );
-
-        return input64x64 > 0 ? ONE_64x64.sub(value64x64) : value64x64;
+    function _g(SD59x18 x) internal pure returns (SD59x18 result) {
+        SD59x18 a = mul(div(ALPHA, LAMBDA), S1);
+        SD59x18 b = pow(add(mul(S1, x), ONE), div(LAMBDA, S1));
+        result = exp(mul(-LOG2, exp(add(mul(a, b), mul(S2, x)))));
+    }
+    /**
+     * @notice Approximation of the normal CDF
+     * @dev The approximation implemented is based on the paper
+     * 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
+     * by Haim Shore
+     * @param x input value to evaluate the normal CDF on, F(Z<=x)
+     * @return SD59x18 fixed point representation of the normal CDF evaluated at x
+     */
+    function _normal_cdf(SD59x18 x) internal pure returns (SD59x18 result) {
+        result = div(sub(add(ONE, _g(-x)), _g(x)), TWO);
     }
 
     /**
      * @notice calculate the price of an option using the Black-Scholes model
-     * @param varianceAnnualized64x64 64x64 fixed point representation of annualized variance
-     * @param strike64x64 64x64 fixed point representation of strike price
-     * @param spot64x64 64x64 fixed point representation of spot price
-     * @param timeToMaturity64x64 64x64 fixed point representation of duration of option contract (in years)
+     * @param spot59x18 59x18 fixed point representation of spot price
+     * @param strike59x18 59x18 fixed point representation of strike price
+     * @param timeToMaturity59x18 59x18 fixed point representation of duration of option contract (in years)
+     * @param varAnnualized59x18 59x18 fixed point representation of annualized variance
      * @param isCall whether to price "call" or "put" option
-     * @return 64x64 fixed point representation of Black-Scholes option price
+     * @return 59x18 fixed point representation of Black-Scholes option price
      */
     function _blackScholesPrice(
-        int128 varianceAnnualized64x64,
-        int128 strike64x64,
-        int128 spot64x64,
-        int128 timeToMaturity64x64,
+        SD59x18 spot59x18,
+        SD59x18 strike59x18,
+        SD59x18 timeToMaturity59x18,
+        SD59x18 varAnnualized59x18,
         bool isCall
-    ) internal pure returns (int128) {
-        int128 cumulativeVariance64x64 = timeToMaturity64x64.mul(
-            varianceAnnualized64x64
-        );
-        int128 cumulativeVarianceSqrt64x64 = cumulativeVariance64x64.sqrt();
+    ) internal pure returns (SD59x18 price) {
+        SD59x18 cumVar59x18 = mul(timeToMaturity59x18, varAnnualized59x18);
+        SD59x18 cumVol59x18 = sqrt(cumVar59x18);
 
-        int128 d1_64x64 = spot64x64
-        .div(strike64x64)
-        .ln()
-        .add(cumulativeVariance64x64 >> 1)
-        .div(cumulativeVarianceSqrt64x64);
-        int128 d2_64x64 = d1_64x64.sub(cumulativeVarianceSqrt64x64);
+        SD59x18 d1_59x18 = div(add(ln(div(spot59x18, strike59x18)), div(cumVar59x18, TWO)), cumVol59x18);
+        SD59x18 d2_59x18 = sub(d1_59x18, cumVol59x18);
 
         if (isCall) {
-            return
-            spot64x64.mul(_N(d1_64x64)).sub(strike64x64.mul(_N(d2_64x64)));
+            SD59x18 a = mul(spot59x18, _normal_cdf(d1_59x18));
+            SD59x18 b = mul(strike59x18, _normal_cdf(d2_59x18));
+            price = sub(a, b);
         } else {
-            return
-            -spot64x64.mul(_N(-d1_64x64)).sub(
-                strike64x64.mul(_N(-d2_64x64))
-            );
+            SD59x18 a = mul(-spot59x18, _normal_cdf(-d1_59x18));
+            SD59x18 b = mul(strike59x18, _normal_cdf(-d2_59x18));
+            price = sub(a, b);
         }
     }
 }
