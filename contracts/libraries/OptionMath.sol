@@ -30,7 +30,7 @@ library OptionMath {
      * @dev The approximation implemented is based on the paper
      * 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
      * by Haim Shore
-     * @param SD59x18 x input value to evaluate the normal CDF on, F(Z<=x)
+     * @param x input value to evaluate the normal CDF on, F(Z<=x)
      * @return SD59x18 fixed point representation of the normal CDF evaluated at x
      */
     function _normal_cdf(SD59x18 x) internal pure returns (SD59x18 result) {
