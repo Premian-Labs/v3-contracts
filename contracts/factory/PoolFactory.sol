@@ -108,6 +108,7 @@ contract PoolFactory is IPoolFactory {
         );
     }
 
+    /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
     function _ensureOptionStrikeIsValid(
         uint256 strike,
         address baseOracle,
@@ -125,6 +126,7 @@ contract PoolFactory is IPoolFactory {
             revert PoolFactory__OptionStrikeInvalid();
     }
 
+    /// @notice Ensure that the maturity is a valid option maturity, revert otherwise
     function _ensureOptionMaturityIsValid(uint64 maturity) internal view {
         if (maturity <= block.timestamp) revert PoolFactory__OptionExpired();
 

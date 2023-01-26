@@ -7,10 +7,16 @@ import {SD59x18, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
 import {DateTime} from "./DateTime.sol";
 
 library OptionMath {
+    /// @notice Returns true if the maturity day is Friday
+    /// @param maturity The maturity timestamp of the option
+    /// @return True if the maturity day is Friday, false otherwise
     function isFriday(uint64 maturity) internal pure returns (bool) {
         return DateTime.getDayOfWeek(maturity) == DateTime.DOW_FRI;
     }
 
+    /// @notice Returns true if the maturity day is the last Friday of the month
+    /// @param maturity The maturity timestamp of the option
+    /// @return True if the maturity day is the last Friday of the month, false otherwise
     function isLastFriday(uint64 maturity) internal pure returns (bool) {
         uint256 dayOfMonth = DateTime.getDay(maturity);
         uint256 lastDayOfMonth = DateTime.getDaysInMonth(maturity);
@@ -19,12 +25,18 @@ library OptionMath {
         return isFriday(maturity);
     }
 
+    /// @notice Calculates the time to maturity in seconds
+    /// @param maturity The maturity timestamp of the option
+    /// @return Time to maturity in seconds
     function calculateTimeToMaturity(
         uint64 maturity
     ) internal view returns (uint256) {
         return maturity - block.timestamp;
     }
 
+    /// @notice Calculates the strike interval for the given spot price
+    /// @param spot The spot price of the underlying asset
+    /// @return The strike interval
     function calculateStrikeInterval(
         int256 spot
     ) internal pure returns (int256) {
