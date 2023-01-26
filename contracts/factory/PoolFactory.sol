@@ -15,61 +15,7 @@ contract PoolFactory is IPoolFactory {
         DIAMOND = diamond;
     }
 
-    function getDeploymentAddress(
-        address base,
-        address underlying,
-        address baseOracle,
-        address underlyingOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (address) {
-        return
-            _getDeploymentAddress(
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                strike,
-                maturity,
-                isCallPool
-            );
-    }
-
-    function _getDeploymentAddress(
-        address base,
-        address underlying,
-        address baseOracle,
-        address underlyingOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) internal view returns (address) {
-        bytes memory args = abi.encode(
-            DIAMOND,
-            base,
-            underlying,
-            baseOracle,
-            underlyingOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff), // 0
-                address(this), // address of factory contract
-                keccak256(args), // salt
-                // The contract bytecode
-                keccak256(abi.encodePacked(type(PoolProxy).creationCode, args))
-            )
-        );
-
-        // Cast last 20 bytes of hash to address
-        return address(uint160(uint256(hash)));
-    }
-
+    /// @inheritdoc IPoolFactory
     function isPoolDeployed(
         address base,
         address underlying,
@@ -79,39 +25,23 @@ contract PoolFactory is IPoolFactory {
         uint64 maturity,
         bool isCallPool
     ) external view returns (bool) {
-        return
-            _isPoolDeployed(
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                strike,
-                maturity,
-                isCallPool
-            );
+        bytes32 poolKey = PoolFactoryStorage.poolKey(
+            base,
+            underlying,
+            baseOracle,
+            underlyingOracle,
+            strike,
+            maturity,
+            isCallPool
+        );
+        return _isPoolDeployed(poolKey);
     }
 
-    function _isPoolDeployed(
-        address base,
-        address underlying,
-        address baseOracle,
-        address underlyingOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) internal view returns (bool) {
-        return
-            _getDeploymentAddress(
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                strike,
-                maturity,
-                isCallPool
-            ).code.length > 0;
+    function _isPoolDeployed(bytes32 poolKey) internal view returns (bool) {
+        return PoolFactoryStorage.layout().pools[poolKey] != address(0);
     }
 
+    /// @inheritdoc IPoolFactory
     function deployPool(
         address base,
         address underlying,
@@ -132,34 +62,20 @@ contract PoolFactory is IPoolFactory {
         if (base == address(0) || underlying == address(0))
             revert PoolFactory__ZeroAddress();
 
-        if (
-            _isPoolDeployed(
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                strike,
-                maturity,
-                isCallPool
-            )
-        ) revert PoolFactory__PoolAlreadyDeployed();
-
-        // Deterministic pool addresses
-        bytes32 salt = keccak256(
-            abi.encode(
-                DIAMOND,
-                base,
-                underlying,
-                baseOracle,
-                underlyingOracle,
-                strike,
-                maturity,
-                isCallPool
-            )
+        bytes32 poolKey = PoolFactoryStorage.poolKey(
+            base,
+            underlying,
+            baseOracle,
+            underlyingOracle,
+            strike,
+            maturity,
+            isCallPool
         );
+
+        if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
 
         poolAddress = address(
-            new PoolProxy{salt: salt}(
+            new PoolProxy(
                 DIAMOND,
                 base,
                 underlying,
@@ -170,6 +86,8 @@ contract PoolFactory is IPoolFactory {
                 isCallPool
             )
         );
+
+        PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
 
         emit PoolDeployed(
             base,

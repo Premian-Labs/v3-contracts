@@ -13,6 +13,11 @@ import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 contract PoolCoreMock is IPoolCoreMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
+    constructor(
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) PoolCore(exchangeHelper, wrappedNativeToken) {}
+
     function _getPricing(
         bool isBuy
     ) external view returns (Pricing.Args memory) {

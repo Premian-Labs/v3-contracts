@@ -19,16 +19,15 @@ interface IPoolFactory {
         address poolAddress
     );
 
-    function getDeploymentAddress(
-        address base,
-        address underlying,
-        address baseOracle,
-        address underlyingOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (address);
-
+    /// @notice Returns whether a pool has been deployed with those parameters or not
+    /// @param base Address of base token
+    /// @param underlying Address of underlying token
+    /// @param baseOracle Address of base token price feed
+    /// @param underlyingOracle Address of underlying token price feed
+    /// @param strike The strike of the option
+    /// @param maturity The maturity timestamp of the option
+    /// @param isCallPool Whether the pool is for call or put options
+    /// @return Whether a pool has already been deployed with those parameters or not
     function isPoolDeployed(
         address base,
         address underlying,
@@ -39,6 +38,15 @@ interface IPoolFactory {
         bool isCallPool
     ) external view returns (bool);
 
+    /// @notice Deploy a new option pool
+    /// @param base Address of base token
+    /// @param underlying Address of underlying token
+    /// @param baseOracle Address of base token price feed
+    /// @param underlyingOracle Address of underlying token price feed
+    /// @param strike The strike of the option
+    /// @param maturity The maturity timestamp of the option
+    /// @param isCallPool Whether the pool is for call or put options
+    /// @return poolAddress The address of the deployed pool
     function deployPool(
         address base,
         address underlying,

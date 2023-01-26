@@ -7,6 +7,7 @@ import {
   PoolCoreMock__factory,
   Premia,
   Premia__factory,
+  ExchangeHelper__factory,
 } from '../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
@@ -27,6 +28,7 @@ export class PoolUtil {
 
   static async deploy(
     deployer: SignerWithAddress,
+    wrappedNativeToken: string,
     log = true,
     isDevMode = false,
   ) {
@@ -50,7 +52,12 @@ export class PoolUtil {
       poolCoreFactory = new PoolCore__factory(deployer);
     }
 
-    const poolCoreImpl = await poolCoreFactory.deploy();
+    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
+
+    const poolCoreImpl = await poolCoreFactory.deploy(
+      exchangeHelper.address,
+      wrappedNativeToken,
+    );
     await poolCoreImpl.deployed();
 
     if (log)

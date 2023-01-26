@@ -39,10 +39,10 @@ describe('Pool', () => {
   before(async () => {
     [deployer, lp] = await ethers.getSigners();
 
-    p = await PoolUtil.deploy(deployer, true, true);
-
     underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+
+    p = await PoolUtil.deploy(deployer, underlying.address, true, true);
 
     await underlying.mint(lp.address, parseEther('1000000'));
     await base.mint(lp.address, parseEther('1000'));
@@ -86,7 +86,7 @@ describe('Pool', () => {
   revertToSnapshotAfterEach(async () => {});
 
   describe('__internal', function () {
-    describe('#_getPricing(PoolStorage.Layout,bool)', () => {
+    describe('#_getPricing', () => {
       it('should return pool state', async () => {
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
@@ -153,7 +153,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#formatTokenId(address,uint256,uint256,Position.OrderType)', () => {
+  describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await callPool.formatTokenId(
@@ -173,7 +173,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#parseTokenId(uint256)', () => {
+  describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
       const r = await callPool.parseTokenId(
         BigNumber.from(

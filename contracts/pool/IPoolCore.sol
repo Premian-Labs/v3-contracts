@@ -3,11 +3,33 @@
 pragma solidity ^0.8.0;
 
 import {IPoolBase} from "./IPoolBase.sol";
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolCore is IPoolInternal {
+    /// @notice Returns all pool parameters used for deployment
+    /// @return base Address of base token
+    /// @return underlying Address of underlying token
+    /// @return baseOracle Address of base token price feed
+    /// @return underlyingOracle Address of underlying token price feed
+    /// @return strike The strike of the option
+    /// @return maturity The maturity timestamp of the option
+    /// @return isCallPool Whether the pool is for call or put options
+    function getPoolSettings()
+        external
+        view
+        returns (
+            address base,
+            address underlying,
+            address baseOracle,
+            address underlyingOracle,
+            uint256 strike,
+            uint64 maturity,
+            bool isCallPool
+        );
+
     /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
@@ -25,13 +47,13 @@ interface IPoolCore is IPoolInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     function deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -39,32 +61,93 @@ interface IPoolCore is IPoolInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 slippage,
+        uint256 maxSlippage,
         bool isBidIfStrandedMarketPrice
     ) external;
+
+    /// @notice Swap tokens and deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @param s The swap arguments
+    /// @param p The position key
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+    /// @param size The position size to deposit
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    function swapAndDeposit(
+        IPoolInternal.SwapArgs memory s,
+        Position.Key memory p,
+        uint256 belowLower,
+        uint256 belowUpper,
+        uint256 size,
+        uint256 maxSlippage
+    ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     /// @param p The position key
     /// @param size The position size to withdraw
-    /// @param slippage Max slippage
+    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
     function withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 slippage
+        uint256 maxSlippage
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium paid or received by the taker for the trade
-    function trade(uint256 size, bool isBuy) external returns (uint256);
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    function trade(
+        uint256 size,
+        bool isBuy
+    ) external returns (uint256 totalPremium, Delta memory delta);
+
+    /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    /// @param s The swap arguments
+    /// @param size The number of contracts being traded
+    /// @param isBuy Whether the taker is buying or selling
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap
+    function swapAndTrade(
+        IPoolInternal.SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    )
+        external
+        payable
+        returns (
+            uint256 totalPremium,
+            Delta memory delta,
+            uint256 swapOutAmount
+        );
+
+    /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
+    /// @param s The swap arguments
+    /// @param size The number of contracts being traded
+    /// @param isBuy Whether the taker is buying or selling
+    /// @return totalPremium The premium received by the taker of the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return collateralReceived The amount of un-swapped collateral received from the trade.
+    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap.
+    function tradeAndSwap(
+        IPoolInternal.SwapArgs memory s,
+        uint256 size,
+        bool isBuy
+    )
+        external
+        returns (
+            uint256 totalPremium,
+            Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        );
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.
