@@ -27,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
+    error Pool__QuoteExpired();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
@@ -57,6 +58,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 price;
         uint256 size;
         bool isBuy;
+        uint64 deadline;
     }
 
     struct Delta {

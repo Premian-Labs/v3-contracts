@@ -786,6 +786,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         // ToDo : Implement checks to make sure quote is valid
 
+        if (block.timestamp > quote.deadline) revert Pool__QuoteExpired();
+
         if (size > quote.size) revert Pool__AboveQuoteSize();
 
         if (
@@ -821,7 +823,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? premium // Taker Buying
             : premium - takerFee; // Taker selling
 
-        _updateUserAssets(l, user, premiumTaker, 0, size, !quote.isBuy, true);
+        Delta memory deltaTaker = _updateUserAssets(
+            l,
+            user,
+            premiumTaker,
+            0,
+            size,
+            !quote.isBuy,
+            true
+        );
 
         /////////////////////////
         // Process trade maker //
@@ -844,7 +854,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? premium - makerRebate // Maker buying
             : premium - protocolFee; // Maker selling
 
-        _updateUserAssets(
+        Delta memory deltaMaker = _updateUserAssets(
             l,
             quote.provider,
             premiumMaker,
@@ -858,6 +868,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             user,
             quote.provider,
             size,
+            deltaMaker.collateral,
+            deltaMaker.longs,
+            deltaMaker.shorts,
+            deltaTaker.collateral,
+            deltaTaker.longs,
+            deltaTaker.shorts,
             premium,
             takerFee,
             protocolFee,
