@@ -987,7 +987,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _calculateExerciseValue(
         PoolStorage.Layout storage l,
         uint256 size
-    ) internal view returns (uint256) {
+    ) internal returns (uint256) {
         _ensureNonZeroSize(size);
         _ensureExpired(l);
 

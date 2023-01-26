@@ -41,7 +41,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.base = base;
             l.underlying = underlying;
 
-            // ToDo : Add checks for oracle
+            // TODO : Add checks for oracle
             l.baseOracle = baseOracle;
             l.underlyingOracle = underlyingOracle;
 
