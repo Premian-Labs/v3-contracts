@@ -32,4 +32,12 @@ contract PositionMock {
     ) external pure returns (uint256) {
         return Position.pieceWiseQuadratic(self, price);
     }
+
+    function collateralToContracts(
+        uint256 _collateral,
+        uint256 strike,
+        bool isCall
+    ) external pure returns (uint256) {
+        return Position.collateralToContracts(_collateral, strike, isCall);
+    }
 }

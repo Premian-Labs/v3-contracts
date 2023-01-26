@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { PositionMock, PositionMock__factory } from '../../typechain';
-import { parseEther } from 'ethers/lib/utils';
+import { formatEther, parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/math';
 
 describe('Position', () => {
@@ -187,6 +187,41 @@ describe('Position', () => {
         instance,
         'Position__LowerGreaterOrEqualUpper',
       );
+    });
+  });
+
+  describe('#collateralToContracts', () => {
+    const amounts = [
+      ['1', '0.001'],
+      ['77', '0.77'],
+      ['344', '0.344'],
+      ['5235', '5.235'],
+      ['99999', '99.999'],
+    ];
+
+    describe('#call options', () => {
+      for (let c of amounts) {
+        let collateral = parseEther(c[0]);
+
+        it(`should return ${c[0]} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
+          expect(
+            await instance.collateralToContracts(collateral, strike, true),
+          ).to.eq(collateral);
+        });
+      }
+    });
+
+    describe('#put options', () => {
+      for (let c of amounts) {
+        let collateral = parseEther(c[0]);
+        let contracts = collateral.div(strike);
+
+        it(`should return ${c[1]} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
+          expect(
+            await instance.collateralToContracts(collateral, strike, false),
+          ).to.eq(contracts.mul(parseEther('1')));
+        });
+      }
     });
   });
 });
