@@ -14,6 +14,12 @@ describe('Position', () => {
 
   let WAD = parseEther('1');
 
+  enum OrderType {
+    CSUP,
+    CS,
+    LC,
+  }
+
   before(async function () {
     [deployer] = await ethers.getSigners();
     instance = await new PositionMock__factory(deployer).deploy();
@@ -42,6 +48,17 @@ describe('Position', () => {
       );
 
       expect(await instance.keyHash(key)).to.eq(keyHash);
+    });
+  });
+
+  describe('#isShort', () => {
+    it('should return true if orderType is short', async () => {
+      expect(await instance.isShort(OrderType.CS)).is.true;
+      expect(await instance.isShort(OrderType.CSUP)).is.true;
+    });
+
+    it('should return false if orderType is not short', async () => {
+      expect(await instance.isShort(OrderType.LC)).is.false;
     });
   });
 
