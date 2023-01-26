@@ -62,6 +62,17 @@ describe('Position', () => {
     });
   });
 
+  describe('#isLong', () => {
+    it('should return true if orderType is long', async () => {
+      expect(await instance.isLong(OrderType.LC)).is.true;
+    });
+
+    it('should return true if orderType is not long', async () => {
+      expect(await instance.isLong(OrderType.CS)).is.false;
+      expect(await instance.isLong(OrderType.CSUP)).is.false;
+    });
+  });
+
   describe('#pieceWiseLinear', () => {
     let key: any;
 

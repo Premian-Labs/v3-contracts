@@ -15,6 +15,10 @@ contract PositionMock {
         return Position.isShort(orderType);
     }
 
+    function isLong(Position.OrderType orderType) external pure returns (bool) {
+        return Position.isLong(orderType);
+    }
+
     function pieceWiseLinear(
         Position.Key memory self,
         uint256 price
