@@ -40,4 +40,12 @@ contract PositionMock {
     ) external pure returns (uint256) {
         return Position.collateralToContracts(_collateral, strike, isCall);
     }
+
+    function contractsToCollateral(
+        uint256 _collateral,
+        uint256 strike,
+        bool isCall
+    ) external pure returns (uint256) {
+        return Position.contractsToCollateral(_collateral, strike, isCall);
+    }
 }

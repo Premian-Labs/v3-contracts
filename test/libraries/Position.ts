@@ -224,4 +224,39 @@ describe('Position', () => {
       }
     });
   });
+
+  describe('#contractsToCollateral', () => {
+    const amounts = [
+      ['1', '0.001'],
+      ['77', '0.77'],
+      ['344', '0.344'],
+      ['5235', '5.235'],
+      ['99999', '99.999'],
+    ];
+
+    describe('#call options', () => {
+      for (let c of amounts) {
+        let collateral = parseEther(c[0]);
+
+        it(`should return ${c[0]} unit(s) of collateral for ${c[0]} contract(s)`, async () => {
+          expect(
+            await instance.contractsToCollateral(collateral, strike, true),
+          ).to.eq(collateral);
+        });
+      }
+    });
+
+    describe('#put options', () => {
+      for (let c of amounts) {
+        let collateral = parseEther(c[0]);
+        let contracts = collateral.mul(strike).div(parseEther('1'));
+
+        it(`should return ${c[0]} unit(s) of collateral for ${c[1]} contract(s)`, async () => {
+          expect(
+            await instance.contractsToCollateral(collateral, strike, false),
+          ).to.eq(contracts);
+        });
+      }
+    });
+  });
 });
