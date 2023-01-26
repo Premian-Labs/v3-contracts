@@ -257,20 +257,39 @@ describe('Position', () => {
       });
     }
   });
+
+  describe('#bid', () => {
+    const cases = [
+      ['0.5', '0.3', '0.01375'],
+      ['1', '0.5', '0.1875'],
+      ['2', '0.7', '0.855'],
+    ];
+
+    describe('#call options', () => {
+      for (let c of cases) {
+        let collateral = parseEther(c[2]);
+
+        it(`should return ${c[2]} unit(s) of collateral for size ${c[0]} and price ${c[1]}`, async () => {
+          expect(
+            await instance.bid(key, parseEther(c[0]), parseEther(c[1])),
           ).to.eq(collateral);
         });
       }
     });
 
     describe('#put options', () => {
-      for (let c of amounts) {
-        let collateral = parseEther(c[0]);
-        let contracts = collateral.mul(strike).div(parseEther('1'));
+      for (let c of cases) {
+        let collateral = parseEther(c[2]).mul(strike).div(parseEther('1'));
+        let formattedCollateral = formatEther(collateral);
 
-        it(`should return ${c[0]} unit(s) of collateral for ${c[1]} contract(s)`, async () => {
+        beforeEach(async () => {
+          key.isCall = !isCall;
+        });
+
+        it(`should return ${formattedCollateral} unit(s) of collateral for size ${c[0]} and price ${c[1]}`, async () => {
           expect(
-            await instance.contractsToCollateral(collateral, strike, !isCall),
-          ).to.eq(contracts);
+            await instance.bid(key, parseEther(c[0]), parseEther(c[1])),
+          ).to.eq(collateral);
         });
       }
     });

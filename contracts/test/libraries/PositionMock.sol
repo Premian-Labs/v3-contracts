@@ -56,4 +56,12 @@ contract PositionMock {
         return Position.liquidityPerTick(self, size);
     }
 
+    function bid(
+        Position.Key memory self,
+        uint256 size,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.bid(self, size, price);
+    }
+
 }
