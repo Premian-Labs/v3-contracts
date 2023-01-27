@@ -13,8 +13,7 @@ library OptionMath {
     SD59x18 internal constant ALPHA = SD59x18.wrap(- 6.37309208e18);
     SD59x18 internal constant LAMBDA = SD59x18.wrap(- 0.61228883e18);
     SD59x18 internal constant S1 = SD59x18.wrap(- 0.11105481e18);
-    SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
-    SD59x18 internal constant LOG2 = SD59x18.wrap(2e18);
+    SD59x18 internal constant S2 = SD59x18.wrap( 0.44334159e18);
 
     function _neg(SD59x18 x) internal pure returns (SD59x18 result) {
         return mul(x, negONE);
@@ -25,10 +24,10 @@ library OptionMath {
      * @param x 59x18 fixed point representation of the input to the normal CDF
      * @return result 59x18 fixed point representation of the value of the evaluated helper function
      */
-    function _g(SD59x18 x) internal pure returns (SD59x18 result) {
+    function _helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = ALPHA.div(LAMBDA).mul(S1);
-        SD59x18 b = S1.mul(x).add(ONE).pow(LAMBDA.div(S1));
-        result = a.mul(b).add(S2.mul(x)).exp().mul(_neg(LOG2)).exp();
+        SD59x18 b = S1.mul(x).add(ONE).pow(LAMBDA.div(S1)).sub(ONE);
+        result = a.mul(b).add(S2.mul(x)).exp().mul(_neg(ln(TWO))).exp();
     }
 
     /**
@@ -39,8 +38,8 @@ library OptionMath {
      * @param x input value to evaluate the normal CDF on, F(Z<=x)
      * @return result SD59x18 fixed point representation of the normal CDF evaluated at x
      */
-    function _normal_cdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        result = ONE.add(_g(_neg(x))).sub(_g(x)).div(TWO);
+    function _normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
+        result = ONE.add(_helperNormal(_neg(x))).sub(_helperNormal(x)).div(TWO);
     }
 
     /**
@@ -66,12 +65,12 @@ library OptionMath {
         SD59x18 d2_59x18 = d1_59x18.sub(cumVol59x18);
 
         if (isCall) {
-            SD59x18 a = spot59x18.mul(_normal_cdf(_neg(d1_59x18)));
-            SD59x18 b = strike59x18.mul(_normal_cdf(d2_59x18));
+            SD59x18 a = spot59x18.mul(_normalCdf(_neg(d1_59x18)));
+            SD59x18 b = strike59x18.mul(_normalCdf(d2_59x18));
             price = sub(a, b);
         } else {
-            SD59x18 a = _neg(spot59x18).mul(_normal_cdf(_neg(d1_59x18)));
-            SD59x18 b = strike59x18.mul(_normal_cdf(_neg(d2_59x18)));
+            SD59x18 a = _neg(spot59x18).mul(_normalCdf(_neg(d1_59x18)));
+            SD59x18 b = strike59x18.mul(_normalCdf(_neg(d2_59x18)));
             price = sub(a, b);
         }
     }
