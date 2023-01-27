@@ -64,7 +64,7 @@ interface IVolatilityOracle {
 
     /**
      * @notice calculate the annualized volatility for given set of parameters
-     * @param token
+     * @param token int256
      * @param spot int256 The spot price of the token
      * @param strike int256 The strike price of the option
      * @param timeToMaturity int256 fixed point representation of time to maturity (denominated in years)
