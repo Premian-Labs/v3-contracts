@@ -793,14 +793,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 r,
         bytes32 s
     ) internal {
-        if (block.timestamp > quote.deadline) revert Pool__QuoteExpired();
-
         if (size > quote.size) revert Pool__AboveQuoteSize();
-
-        if (
-            Pricing.MIN_TICK_PRICE > quote.price ||
-            quote.price > Pricing.MAX_TICK_PRICE
-        ) revert Pool__OutOfBoundsPrice();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1616,6 +1609,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 r,
         bytes32 s
     ) internal view {
+        if (block.timestamp > quote.deadline) revert Pool__QuoteExpired();
+
+        if (
+            Pricing.MIN_TICK_PRICE > quote.price ||
+            quote.price > Pricing.MAX_TICK_PRICE
+        ) revert Pool__OutOfBoundsPrice();
+
         if (user != quote.taker) revert Pool__InvalidQuoteTaker();
         if (l.quoteNonce[user] != quote.nonce) revert Pool__InvalidQuoteNonce();
 
