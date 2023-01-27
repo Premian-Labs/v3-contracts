@@ -115,6 +115,17 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
+    function fillQuote(
+        TradeQuote memory quote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        _fillQuote(msg.sender, quote, size, v, r, s);
+    }
+
+    /// @inheritdoc IPoolCore
     function trade(
         uint256 size,
         bool isBuy

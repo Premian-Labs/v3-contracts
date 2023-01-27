@@ -98,6 +98,23 @@ interface IPoolCore is IPoolInternal {
         uint256 maxSlippage
     ) external;
 
+    /// @notice Functionality to support the RFQ / OTC system.
+    ///         An LP can create a quote for which he will do an OTC trade through
+    ///         the exchange. Takers can buy from / sell to the LP then partially or
+    ///         fully while having the price guaranteed.
+    /// @param quote The quote given by the provider
+    /// @param size The size to fill from the quote
+    /// @param v secp256k1 'v' value
+    /// @param r secp256k1 'r' value
+    /// @param s secp256k1 's' value
+    function fillQuote(
+        TradeQuote memory quote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling

@@ -10,7 +10,9 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
+import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Tick} from "../libraries/Tick.sol";
@@ -34,6 +36,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeCast for int256;
     using Math for int256;
     using UintUtils for uint256;
+    using ECDSA for bytes32;
 
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
@@ -45,6 +48,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
     uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
+
+    bytes32 private constant FILL_QUOTE_TYPE_HASH =
+        keccak256("fillQuote(uint256 size,TradeQuote memory quote)");
 
     constructor(address exchangeHelper, address wrappedNativeToken) {
         EXCHANGE_HELPER = exchangeHelper;
@@ -781,11 +787,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         fully while having the price guaranteed.
     function _fillQuote(
         address user,
+        TradeQuote memory quote,
         uint256 size,
-        TradeQuote memory quote
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) internal {
-        // ToDo : Implement checks to make sure quote is valid
-
         if (block.timestamp > quote.deadline) revert Pool__QuoteExpired();
 
         if (size > quote.size) revert Pool__AboveQuoteSize();
@@ -796,6 +803,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         ) revert Pool__OutOfBoundsPrice();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _ensureQuoteIsValid(l, user, quote, v, r, s);
+
+        // Increment nonce so that quote cannot be replayed
+        l.quoteNonce[user] += 1;
 
         uint256 premium = quote.price.mulWad(size);
         uint256 takerFee = Position.contractsToCollateral(
@@ -1594,5 +1606,33 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (lowerBound > l.marketPrice || l.marketPrice > upperBound)
             revert Pool__AboveMaxSlippage();
+    }
+
+    function _ensureQuoteIsValid(
+        PoolStorage.Layout storage l,
+        address user,
+        TradeQuote memory quote,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view {
+        if (user != quote.taker) revert Pool__InvalidQuoteTaker();
+        if (l.quoteNonce[user] != quote.nonce) revert Pool__InvalidQuoteNonce();
+
+        bytes32 structHash = keccak256(abi.encode(FILL_QUOTE_TYPE_HASH, quote));
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                EIP712.calculateDomainSeparator(
+                    keccak256("Premia"),
+                    keccak256("1")
+                ),
+                structHash
+            )
+        );
+
+        address signer = ECDSA.recover(hash, v, r, s);
+        if (signer != quote.provider) revert Pool__InvalidQuoteSignature();
     }
 }

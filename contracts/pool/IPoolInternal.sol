@@ -13,6 +13,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientBidLiquidity();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
+    error Pool__InvalidQuoteNonce();
+    error Pool__InvalidQuoteSignature();
+    error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
     error Pool__InvalidTransfer();
     error Pool__InvalidSwapTokenIn();
@@ -55,6 +58,8 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct TradeQuote {
         address provider;
+        address taker;
+        uint256 nonce;
         uint256 price;
         uint256 size;
         bool isBuy;
