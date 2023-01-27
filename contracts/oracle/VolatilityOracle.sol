@@ -34,7 +34,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18[] rho;
     }
 
-    struct TotalImpliedVarInfo {
+    struct SliceInfo {
         SD59x18 theta;
         SD59x18 psi;
         SD59x18 rho;
@@ -231,14 +231,14 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         while ((high - low) > 1) {
             m = (uint256)((low + high) / 2);
 
-            if (unwrap(arr[m]) <= unwrap(value)) {
+            if (arr[m].lte(value)) {
                 low = m;
             } else {
                 high = m;
             }
         }
 
-        if (unwrap(arr[low]) <= unwrap(value)) {
+        if (arr[low].lte(value)) {
             return low;
         }
     }
@@ -259,6 +259,13 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             tgt[i] = wrap(src[i] * 1e6);
         }
         return tgt;
+    }
+
+    function weightedAvg(SD59x18 lam, SD59x18 value1, SD59x18 value2)
+    private
+    pure
+    returns (SD59x18) {
+        return (wrap(1e18).sub(lam).mul(value1)).add(lam.mul(value2));
     }
 
     /**
@@ -294,47 +301,48 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 k = strike59x18.div(spot59x18).ln();
 
         // Compute total implied variance
-        TotalImpliedVarInfo memory info;
+        SliceInfo memory info;
         SD59x18 lam;
         SD59x18 one = wrap(1e18);
         SD59x18 two = wrap(2e18);
 
         // Short-Term Extrapolation
-        if (unwrap(timeToMaturity59x18) < unwrap(params.maturities[0])) {
+        if (timeToMaturity59x18.lt(params.maturities[0])) {
             lam = timeToMaturity59x18.div(params.maturities[0]);
 
-            info = TotalImpliedVarInfo({
+            info = SliceInfo({
                 theta: lam.mul(params.theta[0]),
                 psi: lam.mul(params.psi[0]),
                 rho: params.rho[0]
             });
         }
         // Long-term extrapolation
-        else if (unwrap(timeToMaturity59x18) >= unwrap(params.maturities[n - 1])) {
-            SD59x18 u = wrap(2e18).div(wrap(3e18));
-            u = u.mul(timeToMaturity59x18.sub(params.maturities[n - 1]));
+        else if (timeToMaturity59x18.gte(params.maturities[n - 1])) {
+            SD59x18 u = timeToMaturity59x18.sub(params.maturities[n - 1]);
+            u = u.mul(params.theta[n - 1].sub(params.theta[n - 2]));
+            u = u.div(params.maturities[n - 1].sub(params.maturities[n - 2]));
 
-            info = TotalImpliedVarInfo({
+            info = SliceInfo({
                 theta: params.theta[n - 1].add(u),
                 psi: params.psi[n - 1],
                 rho: params.rho[n - 1]
             });
         } else {
             uint256 i = findInterval(params.maturities, timeToMaturity59x18);
-            SD59x18 rho_psi;
 
             lam = timeToMaturity59x18.sub(params.maturities[i]);
             lam = lam.div(params.maturities[i + 1].sub(params.maturities[i]));
 
-            info = TotalImpliedVarInfo({
-                theta: ((one.sub(lam)).mul(params.theta[i])).add(lam.mul(params.theta[i + 1])),
-                psi: (one.sub(lam)).mul(params.psi[i]).add(lam.mul(params.psi[i + 1])),
+            info = SliceInfo({
+                theta: weightedAvg(lam, params.theta[i], params.theta[i + 1]),
+                psi: weightedAvg(lam, params.psi[i], params.psi[i + 1]),
                 rho: wrap(0)
             });
-
-            rho_psi = (one.sub(lam)).mul(params.rho[i]).mul(params.psi[i]);
-            rho_psi = rho_psi.add(lam.mul(params.rho[i + 1]).mul(params.psi[i + 1]));
-            info.rho = rho_psi.div(info.psi);
+            info.rho = weightedAvg(
+                lam,
+                params.rho[i].mul(params.psi[i]),
+                params.rho[i + 1].mul(params.psi[i + 1])
+            ).div(info.psi);
         }
 
         SD59x18 phi = info.psi.div(info.theta);
