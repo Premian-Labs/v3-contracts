@@ -2,7 +2,10 @@
 
 pragma solidity ^0.8.0;
 
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 import {Position} from "../libraries/Position.sol";
 import {Tick} from "../libraries/Tick.sol";
 
@@ -10,6 +13,7 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
     using PoolStorage for PoolStorage.Layout;
+    using SafeCast for int256;
 
     // Token id for SHORT
     uint256 internal constant SHORT = 0;
@@ -65,15 +69,25 @@ library PoolStorage {
         return l.isCallPool ? l.underlying : l.base;
     }
 
-    function getSpotPrice(Layout storage l) internal view returns (uint256) {
+    function getSpotPrice(Layout storage l) internal returns (uint256 price) {
         if (l.spot == 0) {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
-            // ToDo : Query price and save it if not yet saved
+            int256 basePrice = getSpotPrice(l.baseOracle);
+            int256 underlyingPrice = getSpotPrice(l.underlyingOracle);
+
+            l.spot = ((underlyingPrice * 1e18) / basePrice).toUint256();
         }
 
         return l.spot;
+    }
+
+    function getSpotPrice(address oracle) internal view returns (int256) {
+        // TODO: Add spot price validation
+
+        int256 price = AggregatorInterface(oracle).latestAnswer();
+        return price;
     }
 
     /// @notice calculate ERC1155 token id for given option parameters

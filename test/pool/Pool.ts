@@ -14,8 +14,7 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { ONE_MONTH } from '../../utils/constants';
-import { now, revertToSnapshotAfterEach } from '../../utils/time';
+import { getValidMaturity, revertToSnapshotAfterEach } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -30,7 +29,7 @@ describe('Pool', () => {
   let baseOracle: MockContract;
   let underlyingOracle: MockContract;
 
-  let strike = parseEther('1000');
+  let strike = parseEther('1000'); // ATM
   let maturity: number;
 
   let isCall: boolean;
@@ -48,16 +47,22 @@ describe('Pool', () => {
     await base.mint(lp.address, parseEther('1000'));
 
     baseOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer () external view returns (int)',
+      'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
+
+    await baseOracle.mock.latestAnswer.returns(100000000);
+    await baseOracle.mock.decimals.returns(8);
 
     underlyingOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer () external view returns (int)',
+      'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    maturity = (await now()) + ONE_MONTH;
+    await underlyingOracle.mock.latestAnswer.returns(100000000000);
+    await underlyingOracle.mock.decimals.returns(8);
+
+    maturity = await getValidMaturity(10, 'months');
 
     for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(

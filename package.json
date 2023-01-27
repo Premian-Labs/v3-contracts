@@ -34,9 +34,11 @@
     ]
   },
   "devDependencies": {
+    "@chainlink/contracts": "^0.6.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
     "@nomiclabs/hardhat-ethers": "^2.2.1",
     "@nomiclabs/hardhat-etherscan": "^3.1.4",
+    "@prb/math": "^3.1.0",
     "@solidstate/contracts": "^0.0.52",
     "@solidstate/hardhat-4byte-uploader": "^1.0.2",
     "@solidstate/hardhat-test-short-circuit": "^1.0.2",
@@ -50,7 +52,7 @@
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "ethers": "5.7.2",
-    "hardhat": "2.12.5",
+    "hardhat": "^2.12.1-ir.0",
     "hardhat-abi-exporter": "^2.10.1",
     "hardhat-artifactor": "^0.2.0",
     "hardhat-contract-sizer": "^2.6.1",
@@ -60,6 +62,7 @@
     "hardhat-spdx-license-identifier": "^2.1.0",
     "husky": "^8.0.2",
     "lint-staged": "^13.1.0",
+    "moment-timezone": "^0.5.40",
     "prettier": "^2.8.1",
     "prettier-plugin-solidity": "^1.1.1",
     "solidity-coverage": "^0.8.2",
