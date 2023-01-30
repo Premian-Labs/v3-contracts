@@ -6,7 +6,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 library VolatilityOracleStorage {
     bytes32 internal constant STORAGE_SLOT =
-    keccak256("premia.contracts.storage.VolatilityOracle");
+        keccak256("premia.contracts.storage.VolatilityOracle");
 
     uint256 internal constant PARAM_BITS = 51;
     uint256 internal constant PARAM_BITS_MINUS_ONE = 50;
@@ -50,11 +50,9 @@ library VolatilityOracleStorage {
         return l.parameters[token];
     }
 
-    function parseParams(bytes32 input)
-        internal
-        pure
-        returns (int256[] memory params)
-    {
+    function parseParams(
+        bytes32 input
+    ) internal pure returns (int256[] memory params) {
         params = new int256[](PARAM_AMOUNT);
 
         // Value to add to negative numbers to cast them to int256
@@ -96,11 +94,9 @@ library VolatilityOracleStorage {
         }
     }
 
-    function formatParams(int256[5] memory params)
-        internal
-        pure
-        returns (bytes32 result)
-    {
+    function formatParams(
+        int256[5] memory params
+    ) internal pure returns (bytes32 result) {
         int256 max = int256(1 << PARAM_BITS_MINUS_ONE);
 
         unchecked {

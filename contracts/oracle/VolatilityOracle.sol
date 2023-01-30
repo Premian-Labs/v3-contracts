@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-
 import {SD59x18, wrap, unwrap} from "@prb/math/src/SD59x18.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
@@ -43,22 +42,18 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function formatParams(int256[5] memory params)
-    external
-    pure
-    returns (bytes32 result)
-    {
+    function formatParams(
+        int256[5] memory params
+    ) external pure returns (bytes32 result) {
         return VolatilityOracleStorage.formatParams(params);
     }
 
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function parseParams(bytes32 input)
-    external
-    pure
-    returns (int256[] memory params)
-    {
+    function parseParams(
+        bytes32 input
+    ) external pure returns (int256[] memory params) {
         return VolatilityOracleStorage.parseParams(input);
     }
 
@@ -66,7 +61,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
      * @inheritdoc IVolatilityOracle
      */
     function getWhitelistedRelayers() external view returns (address[] memory) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
 
         uint256 length = l.whitelistedRelayers.length();
         address[] memory result = new address[](length);
@@ -81,41 +77,37 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function getParams(address token)
-    external
-    view
-    returns (VolatilityOracleStorage.Update memory)
-    {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+    function getParams(
+        address token
+    ) external view returns (VolatilityOracleStorage.Update memory) {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
         return l.parameters[token];
     }
 
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function getParamsUnpacked(address token)
-    external
-    view
-    returns (VolatilityOracleStorage.Params memory)
-    {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+    function getParamsUnpacked(
+        address token
+    ) external view returns (VolatilityOracleStorage.Params memory) {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
-        VolatilityOracleStorage.Params memory params = VolatilityOracleStorage.Params({
-            tau: VolatilityOracleStorage.parseParams(packed.tau),
-            theta: VolatilityOracleStorage.parseParams(packed.theta),
-            psi: VolatilityOracleStorage.parseParams(packed.psi),
-            rho: VolatilityOracleStorage.parseParams(packed.rho)
-        });
+        VolatilityOracleStorage.Params memory params = VolatilityOracleStorage
+            .Params({
+                tau: VolatilityOracleStorage.parseParams(packed.tau),
+                theta: VolatilityOracleStorage.parseParams(packed.theta),
+                psi: VolatilityOracleStorage.parseParams(packed.psi),
+                rho: VolatilityOracleStorage.parseParams(packed.rho)
+            });
         return params;
     }
 
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function getTimeToMaturity(uint64 maturity)
-    external
-    view
-    returns (int256) {
+    function getTimeToMaturity(uint64 maturity) external view returns (int256) {
         SD59x18 tau = wrap(int256(maturity - block.timestamp));
         SD59x18 year = wrap(365 days);
         return unwrap(tau.div(year));
@@ -142,11 +134,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function addWhitelistedRelayers(address[] memory accounts)
-    external
-    onlyOwner
-    {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+    function addWhitelistedRelayers(
+        address[] memory accounts
+    ) external onlyOwner {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.add(accounts[i]);
@@ -156,11 +148,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /**
      * @inheritdoc IVolatilityOracle
      */
-    function removeWhitelistedRelayers(address[] memory accounts)
-    external
-    onlyOwner
-    {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+    function removeWhitelistedRelayers(
+        address[] memory accounts
+    ) external onlyOwner {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.remove(accounts[i]);
@@ -180,14 +172,15 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 length = tokens.length;
         require(
             length == tokens.length &&
-            length == tau.length &&
-            length == theta.length &&
-            length == psi.length &&
-            length == rho.length,
+                length == tau.length &&
+                length == theta.length &&
+                length == psi.length &&
+                length == rho.length,
             "Wrong array length"
         );
 
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
 
         require(
             l.whitelistedRelayers.contains(msg.sender),
@@ -203,13 +196,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
                 rho: rho[i]
             });
 
-            emit UpdateParameters(
-                tokens[i],
-                tau[i],
-                theta[i],
-                psi[i],
-                rho[i]
-            );
+            emit UpdateParameters(tokens[i], tau[i], theta[i], psi[i], rho[i]);
         }
     }
 
@@ -219,11 +206,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
      * @param value SD59x18 The value to find the interval for
      * @return uint256 The interval index that corresponds the value
      */
-    function findInterval(SD59x18[] memory arr, SD59x18 value)
-    public
-    pure
-    returns (uint256)
-    {
+    function findInterval(
+        SD59x18[] memory arr,
+        SD59x18 value
+    ) public pure returns (uint256) {
         uint256 low = 0;
         uint256 high = arr.length;
         uint256 m;
@@ -248,11 +234,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
      * @param src The int256[] array to be converted
      * @return SD59x18[] The input array converted to a SD59x18[] array
      */
-    function toArray59x18(int256[] memory src)
-    private
-    pure
-    returns (SD59x18[] memory)
-    {
+    function toArray59x18(
+        int256[] memory src
+    ) private pure returns (SD59x18[] memory) {
         SD59x18[] memory tgt = new SD59x18[](src.length);
         for (uint256 i = 0; i < src.length; i++) {
             // Covert parameters in DECIMALS to an SD59x18
@@ -261,10 +245,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return tgt;
     }
 
-    function weightedAvg(SD59x18 lam, SD59x18 value1, SD59x18 value2)
-    private
-    pure
-    returns (SD59x18) {
+    function weightedAvg(
+        SD59x18 lam,
+        SD59x18 value1,
+        SD59x18 value2
+    ) private pure returns (SD59x18) {
         return (wrap(1e18).sub(lam).mul(value1)).add(lam.mul(value2));
     }
 
@@ -282,14 +267,15 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 strike59x18,
         SD59x18 timeToMaturity59x18
     ) private view returns (SD59x18) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
 
         Params59x18 memory params = Params59x18({
-            tau: toArray59x18(
-                    VolatilityOracleStorage.parseParams(packed.tau)
-                ),
-            theta: toArray59x18(VolatilityOracleStorage.parseParams(packed.theta)),
+            tau: toArray59x18(VolatilityOracleStorage.parseParams(packed.tau)),
+            theta: toArray59x18(
+                VolatilityOracleStorage.parseParams(packed.theta)
+            ),
             psi: toArray59x18(VolatilityOracleStorage.parseParams(packed.psi)),
             rho: toArray59x18(VolatilityOracleStorage.parseParams(packed.rho))
         });
@@ -348,11 +334,12 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
 
         SD59x18 phi = info.psi.div(info.theta);
-        SD59x18 term = (phi.mul(k).add(info.rho)).pow(two).add(one.sub(info.rho.pow(two)));
+        SD59x18 term = (phi.mul(k).add(info.rho)).pow(two).add(
+            one.sub(info.rho.pow(two))
+        );
         SD59x18 w = info.theta.div(two);
         w = w.mul(one.add(info.rho.mul(phi).mul(k)).add(term.sqrt()));
 
         return w.div(timeToMaturity59x18).sqrt();
     }
-
 }

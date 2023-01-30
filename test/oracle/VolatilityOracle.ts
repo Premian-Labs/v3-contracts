@@ -67,7 +67,7 @@ describe('VolatilityOracle', () => {
 
   describe('#findInterval', () => {
     const maturities = [
-      0.002739726027397260, 0.03561643835616438, 0.09315068493150686,
+      0.00273972602739726, 0.03561643835616438, 0.09315068493150686,
       0.16986301369863013, 0.4191780821917808,
     ].map((el) => parseEther(el.toString()));
 
@@ -120,13 +120,7 @@ describe('VolatilityOracle', () => {
 
       await oracle
         .connect(relayer)
-        .updateParams(
-          [token],
-          [tauHex],
-          [thetaHex],
-          [psiHex],
-          [rhoHex],
-        );
+        .updateParams([token], [tauHex], [thetaHex], [psiHex], [rhoHex]);
     };
 
     it('should correctly perform short-term extrapolation', async () => {
@@ -136,9 +130,12 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('3500');
       const timeToMaturity = parseEther('0.001');
 
-      const iv = await oracle[
-        'getVolatility(address,int256,int256,int256)'
-      ](token, spot, strike, timeToMaturity);
+      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+        token,
+        spot,
+        strike,
+        timeToMaturity,
+      );
       const result = formatEther(iv);
 
       const expected = 1.3682433159664105;
@@ -153,9 +150,12 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('3500');
       const timeToMaturity = parseEther('0.02');
 
-      const iv = await oracle[
-        'getVolatility(address,int256,int256,int256)'
-      ](token, spot, strike, timeToMaturity);
+      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+        token,
+        spot,
+        strike,
+        timeToMaturity,
+      );
       const result = formatEther(iv);
 
       const expected = 0.8541332587538256;
@@ -170,9 +170,12 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('5000');
       const timeToMaturity = parseEther('0.3');
 
-      const iv = await oracle[
-        'getVolatility(address,int256,int256,int256)'
-      ](token, spot, strike, timeToMaturity);
+      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+        token,
+        spot,
+        strike,
+        timeToMaturity,
+      );
       const result = formatEther(iv);
 
       const expected = 0.8715627609068288;
@@ -187,9 +190,12 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('7000');
       const timeToMaturity = parseEther('0.5');
 
-      const iv = await oracle[
-        'getVolatility(address,int256,int256,int256)'
-      ](token, spot, strike, timeToMaturity);
+      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+        token,
+        spot,
+        strike,
+        timeToMaturity,
+      );
       const result = formatEther(iv);
 
       const expected = 0.88798013;

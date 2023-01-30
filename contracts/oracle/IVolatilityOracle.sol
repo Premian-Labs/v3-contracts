@@ -11,20 +11,18 @@ interface IVolatilityOracle {
      * @param params Parameters of IV model to pack
      * @return result The packed parameters of IV model
      */
-    function formatParams(int256[5] memory params)
-    external
-    pure
-    returns (bytes32 result);
+    function formatParams(
+        int256[5] memory params
+    ) external pure returns (bytes32 result);
 
     /**
      * @notice Unpack IV model parameters from a bytes32
      * @param input Packed IV model parameters to unpack
      * @return params The unpacked parameters of the IV model
      */
-    function parseParams(bytes32 input)
-    external
-    pure
-    returns (int256[] memory params);
+    function parseParams(
+        bytes32 input
+    ) external pure returns (int256[] memory params);
 
     /**
      * @notice Get the list of whitelisted relayers
@@ -37,30 +35,25 @@ interface IVolatilityOracle {
      * @param token The base token of the pair
      * @return The IV model parameters
      */
-    function getParams(address token)
-    external
-    view
-    returns (VolatilityOracleStorage.Update memory);
+    function getParams(
+        address token
+    ) external view returns (VolatilityOracleStorage.Update memory);
 
     /**
      * @notice Get unpacked IV model parameters
      * @param token The token
      * @return The unpacked IV model parameters
      */
-    function getParamsUnpacked(address token)
-    external
-    view
-    returns (VolatilityOracleStorage.Params memory);
+    function getParamsUnpacked(
+        address token
+    ) external view returns (VolatilityOracleStorage.Params memory);
 
     /**
      * @notice Get time to maturity in years
      * @param maturity Maturity timestamp
      * @return Time to maturity (in years)
      */
-    function getTimeToMaturity(uint64 maturity)
-    external
-    view
-    returns (int256);
+    function getTimeToMaturity(uint64 maturity) external view returns (int256);
 
     /**
      * @notice calculate the annualized volatility for given set of parameters
