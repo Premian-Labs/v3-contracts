@@ -14,6 +14,10 @@ contract OptionMathMock {
         return OptionMath._normalCdf(x);
     }
 
+    function relu(SD59x18 x) external pure returns (SD59x18) {
+        return OptionMath._relu(x);
+    }
+
     function blackScholesPrice(
         SD59x18 spot59x18,
         SD59x18 strike59x18,
