@@ -92,7 +92,7 @@ describe('VolatilityOracle', () => {
 
   describe('#getVolatility', () => {
     const token = '0x0000000000000000000000000000000000000001';
-    const maturities = [
+    const tau = [
       0.0027397260273972603, 0.03561643835616438, 0.09315068493150686,
       0.16986301369863013, 0.4191780821917808,
     ].map((el) => Math.floor(el * 10 ** 12));
@@ -113,7 +113,7 @@ describe('VolatilityOracle', () => {
     ].map((el) => Math.floor(el * 10 ** 12));
 
     const prepareContractEnv = async () => {
-      const maturitiesHex = await oracle.formatParams(maturities as any);
+      const tauHex = await oracle.formatParams(tau as any);
       const thetaHex = await oracle.formatParams(theta as any);
       const psiHex = await oracle.formatParams(psi as any);
       const rhoHex = await oracle.formatParams(rho as any);
@@ -122,7 +122,7 @@ describe('VolatilityOracle', () => {
         .connect(relayer)
         .updateParams(
           [token],
-          [maturitiesHex],
+          [tauHex],
           [thetaHex],
           [psiHex],
           [rhoHex],

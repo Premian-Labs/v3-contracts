@@ -16,14 +16,14 @@ library VolatilityOracleStorage {
 
     struct Update {
         uint256 updatedAt;
-        bytes32 maturities;
+        bytes32 tau;
         bytes32 theta;
         bytes32 psi;
         bytes32 rho;
     }
 
     struct Params {
-        int256[] maturities;
+        int256[] tau;
         int256[] theta;
         int256[] psi;
         int256[] rho;

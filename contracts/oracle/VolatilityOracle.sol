@@ -21,14 +21,14 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     event UpdateParameters(
         address indexed token,
-        bytes32 maturities,
+        bytes32 tau,
         bytes32 theta,
         bytes32 psi,
         bytes32 rho
     );
 
     struct Params59x18 {
-        SD59x18[] maturities;
+        SD59x18[] tau;
         SD59x18[] theta;
         SD59x18[] psi;
         SD59x18[] rho;
@@ -101,7 +101,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
         VolatilityOracleStorage.Params memory params = VolatilityOracleStorage.Params({
-            maturities: VolatilityOracleStorage.parseParams(packed.maturities),
+            tau: VolatilityOracleStorage.parseParams(packed.tau),
             theta: VolatilityOracleStorage.parseParams(packed.theta),
             psi: VolatilityOracleStorage.parseParams(packed.psi),
             rho: VolatilityOracleStorage.parseParams(packed.rho)
@@ -172,7 +172,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
      */
     function updateParams(
         address[] memory tokens,
-        bytes32[] memory maturities,
+        bytes32[] memory tau,
         bytes32[] memory theta,
         bytes32[] memory psi,
         bytes32[] memory rho
@@ -180,7 +180,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 length = tokens.length;
         require(
             length == tokens.length &&
-            length == maturities.length &&
+            length == tau.length &&
             length == theta.length &&
             length == psi.length &&
             length == rho.length,
@@ -197,7 +197,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         for (uint256 i = 0; i < length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({
                 updatedAt: block.timestamp,
-                maturities: maturities[i],
+                tau: tau[i],
                 theta: theta[i],
                 psi: psi[i],
                 rho: rho[i]
@@ -205,7 +205,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
             emit UpdateParameters(
                 tokens[i],
-                maturities[i],
+                tau[i],
                 theta[i],
                 psi[i],
                 rho[i]
@@ -215,8 +215,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /**
      * @notice Finds the interval a particular value is located in.
-     * @param arr The array of cutoff points that define the intervals
-     * @param value The value to find the interval for
+     * @param arr SD59x18[] The array of cutoff points that define the intervals
+     * @param value SD59x18 The value to find the interval for
      * @return uint256 The interval index that corresponds the value
      */
     function findInterval(SD59x18[] memory arr, SD59x18 value)
@@ -286,16 +286,16 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
 
         Params59x18 memory params = Params59x18({
-            maturities: toArray59x18(
-                    VolatilityOracleStorage.parseParams(packed.maturities)
+            tau: toArray59x18(
+                    VolatilityOracleStorage.parseParams(packed.tau)
                 ),
             theta: toArray59x18(VolatilityOracleStorage.parseParams(packed.theta)),
             psi: toArray59x18(VolatilityOracleStorage.parseParams(packed.psi)),
             rho: toArray59x18(VolatilityOracleStorage.parseParams(packed.rho))
         });
 
-        // Number of maturities
-        uint256 n = params.maturities.length;
+        // Number of tau
+        uint256 n = params.tau.length;
 
         // Log Moneyness
         SD59x18 k = strike59x18.div(spot59x18).ln();
@@ -307,8 +307,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 two = wrap(2e18);
 
         // Short-Term Extrapolation
-        if (timeToMaturity59x18.lt(params.maturities[0])) {
-            lam = timeToMaturity59x18.div(params.maturities[0]);
+        if (timeToMaturity59x18.lt(params.tau[0])) {
+            lam = timeToMaturity59x18.div(params.tau[0]);
 
             info = SliceInfo({
                 theta: lam.mul(params.theta[0]),
@@ -317,21 +317,23 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             });
         }
         // Long-term extrapolation
-        else if (timeToMaturity59x18.gte(params.maturities[n - 1])) {
-            SD59x18 u = timeToMaturity59x18.sub(params.maturities[n - 1]);
+        else if (timeToMaturity59x18.gte(params.tau[n - 1])) {
+            SD59x18 u = timeToMaturity59x18.sub(params.tau[n - 1]);
             u = u.mul(params.theta[n - 1].sub(params.theta[n - 2]));
-            u = u.div(params.maturities[n - 1].sub(params.maturities[n - 2]));
+            u = u.div(params.tau[n - 1].sub(params.tau[n - 2]));
 
             info = SliceInfo({
                 theta: params.theta[n - 1].add(u),
                 psi: params.psi[n - 1],
                 rho: params.rho[n - 1]
             });
-        } else {
-            uint256 i = findInterval(params.maturities, timeToMaturity59x18);
+        }
+        // Interpolation between tau[0] to tau[n - 1]
+        else {
+            uint256 i = findInterval(params.tau, timeToMaturity59x18);
 
-            lam = timeToMaturity59x18.sub(params.maturities[i]);
-            lam = lam.div(params.maturities[i + 1].sub(params.maturities[i]));
+            lam = timeToMaturity59x18.sub(params.tau[i]);
+            lam = lam.div(params.tau[i + 1].sub(params.tau[i]));
 
             info = SliceInfo({
                 theta: weightedAvg(lam, params.theta[i], params.theta[i + 1]),

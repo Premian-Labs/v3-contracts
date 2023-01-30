@@ -92,14 +92,14 @@ interface IVolatilityOracle {
     /**
      * @notice Update a list of Anchored eSSVI model parameters
      * @param tokens List of the underlying tokens
-     * @param maturities List of maturities
+     * @param tau List of maturities
      * @param theta List of ATM total implied variance curves
      * @param psi List of ATM skew curves
      * @param rho List of rho curves
      */
     function updateParams(
         address[] memory tokens,
-        bytes32[] memory maturities,
+        bytes32[] memory tau,
         bytes32[] memory theta,
         bytes32[] memory psi,
         bytes32[] memory rho
