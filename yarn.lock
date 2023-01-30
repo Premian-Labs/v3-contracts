@@ -715,15 +715,15 @@
     "@nomicfoundation/solidity-analyzer-win32-ia32-msvc" "0.1.0"
     "@nomicfoundation/solidity-analyzer-win32-x64-msvc" "0.1.0"
 
-"@nomiclabs/hardhat-ethers@^2.2.1":
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.2.1.tgz#8057b43566a0e41abeb8142064a3c0d3f23dca86"
-  integrity sha512-RHWYwnxryWR8hzRmU4Jm/q4gzvXpetUOJ4OPlwH2YARcDB+j79+yAYCwO0lN1SUOb4++oOTJEe6AWLEc42LIvg==
+"@nomiclabs/hardhat-ethers@^2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.2.2.tgz#812d48929c3bf8fe840ec29eab4b613693467679"
+  integrity sha512-NLDlDFL2us07C0jB/9wzvR0kuLivChJWCXTKcj3yqjZqMoYp7g7wwS157F70VHx/+9gHIBGzak5pKDwG8gEefA==
 
-"@nomiclabs/hardhat-etherscan@^3.1.4":
-  version "3.1.4"
-  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-etherscan/-/hardhat-etherscan-3.1.4.tgz#970e57fabc6060489c93b3f646ca790db36ffee0"
-  integrity sha512-fw8JCfukf6MdIGoySRmSftlM2wBgoaSbWQZgiYfD/KTeaSFEWCdMpuPZcLSBXtwtnQyyWDs07Lo7fL8HSqtD2Q==
+"@nomiclabs/hardhat-etherscan@^3.1.5":
+  version "3.1.5"
+  resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-etherscan/-/hardhat-etherscan-3.1.5.tgz#24f3f3272d3c79acdc933b557810ca85caef0fee"
+  integrity sha512-PxPX28AGBAlxgXLU27NB3oiMsklxbNhM75SDC4v1QPCyPeAxGm4xV0WpYbR10W7sxY2WF3Ek7u7GhjbQWa2Fcg==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@ethersproject/address" "^5.0.2"
@@ -734,7 +734,7 @@
     lodash "^4.17.11"
     semver "^6.3.0"
     table "^6.8.0"
-    undici "^5.4.0"
+    undici "^5.14.0"
 
 "@openzeppelin/contracts-upgradeable@^4.7.3":
   version "4.8.1"
@@ -3133,10 +3133,10 @@ hardhat-artifactor@^0.2.0:
   resolved "https://registry.yarnpkg.com/hardhat-artifactor/-/hardhat-artifactor-0.2.0.tgz#940c82500653a2623ed89f7dd24dc3bd76de6bb9"
   integrity sha512-034c0Ye3PjnPbBz6Adz7bNZ7T4LdPTSkjnzsBxToJKiqU4f4CwowFOqwSS0RqO2t9A7w/aWR49pLwbNzpVuDgQ==
 
-hardhat-contract-sizer@^2.6.1:
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/hardhat-contract-sizer/-/hardhat-contract-sizer-2.6.1.tgz#2b0046a55fa1ec96f19fdab7fde372377401c874"
-  integrity sha512-b8wS7DBvyo22kmVwpzstAQTdDCThpl/ySBqZh5ga9Yxjf61/uTL12TEg5nl7lDeWy73ntEUzxMwY6XxbQEc2wA==
+hardhat-contract-sizer@^2.7.0:
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/hardhat-contract-sizer/-/hardhat-contract-sizer-2.7.0.tgz#d892a741135628a77d25709a29ae164f2750b7eb"
+  integrity sha512-QcncKiEku9TInKH++frfCPaYaVvw6OR5C5dNUcb05WozeVOJGspbWbHOkOlfiaZUbEKTvHA6OY9LtMMvja9nzQ==
   dependencies:
     chalk "^4.0.0"
     cli-table3 "^0.6.0"
@@ -3173,10 +3173,10 @@ hardhat-spdx-license-identifier@^2.1.0:
   resolved "https://registry.yarnpkg.com/hardhat-spdx-license-identifier/-/hardhat-spdx-license-identifier-2.1.0.tgz#6eb3927df9f61bbcb1899a88b67ee6d28d13fb0e"
   integrity sha512-Z3Avr/v6lfDfa7qkriF/h40X8wmuy8qZfS4HgbINkDdmCiKAxQUi5Y5TgsJBZFYN1MvYzLTIbD/fo1dxZ4gsng==
 
-hardhat@^2.12.1-ir.0:
-  version "2.12.1-ir.0"
-  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.12.1-ir.0.tgz#4972a0777e5806cce6b54cf258c52570c58d141a"
-  integrity sha512-z5TGBaf3tpY92zcDmifPyYdQa1EGuLAcOlmqQUd0wR93Yua8UCdNyZHk+P2PNBJK4sm/DYt5d3DJbaFMN24sog==
+hardhat@^2.12.6:
+  version "2.12.6"
+  resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.12.6.tgz#ea3c058bbd81850867389d10f76037cfa52a0019"
+  integrity sha512-0Ent1O5DsPgvaVb5sxEgsQ3bJRt/Ex92tsoO+xjoNH2Qc4bFmhI5/CHVlFikulalxOPjNmw5XQ2vJFuVQFESAA==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@metamask/eth-sig-util" "^4.0.0"
@@ -3225,7 +3225,7 @@ hardhat@^2.12.1-ir.0:
     source-map-support "^0.5.13"
     stacktrace-parser "^0.1.10"
     tsort "0.0.1"
-    undici "^5.4.0"
+    undici "^5.14.0"
     uuid "^8.3.2"
     ws "^7.4.6"
 
@@ -3408,10 +3408,10 @@ human-signals@^1.1.1:
   resolved "https://registry.yarnpkg.com/human-signals/-/human-signals-1.1.1.tgz#c5b1cd14f50aeae09ab6c59fe63ba3395fe4dfa3"
   integrity sha512-SEQu7vl8KjNL2eoGBLF3+wAjpsNfA9XMlXAYj/3EdaNfAlxKthD1xjEQfGOUhllCGGJVNY34bRr6lPINhNjyZw==
 
-husky@^8.0.2:
-  version "8.0.2"
-  resolved "https://registry.yarnpkg.com/husky/-/husky-8.0.2.tgz#5816a60db02650f1f22c8b69b928fd6bcd77a236"
-  integrity sha512-Tkv80jtvbnkK3mYWxPZePGFpQ/tT3HNSs/sasF9P2YfkMezDl3ON37YN6jUUI4eTg5LcyVynlb6r4eyvOmspvg==
+husky@^8.0.3:
+  version "8.0.3"
+  resolved "https://registry.yarnpkg.com/husky/-/husky-8.0.3.tgz#4936d7212e46d1dea28fef29bb3a108872cd9184"
+  integrity sha512-+dQSyqPh4x1hlO1swXBiNb2HzTDN1I2IGLQx1GrBuiqFJfoMrnZWwVmatvSiO+Iz8fBUnf+lekwNo4c2LlXItg==
 
 iconv-lite@0.4.24:
   version "0.4.24"
@@ -4627,10 +4627,15 @@ prettier-plugin-solidity@^1.1.1:
     semver "^7.3.8"
     solidity-comments-extractor "^0.0.7"
 
-"prettier@^1.18.2 || ^2.0.0", prettier@^2.3.1, prettier@^2.8.1:
+"prettier@^1.18.2 || ^2.0.0", prettier@^2.3.1:
   version "2.8.1"
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.8.1.tgz#4e1fd11c34e2421bc1da9aea9bd8127cd0a35efc"
   integrity sha512-lqGoSJBQNJidqCHE80vqZJHWHRFoNYsSpP9AjFhlhi9ODCJA541svILes/+/1GM3VaL/abZi7cpFzOpdR9UPKg==
+
+prettier@^2.8.3:
+  version "2.8.3"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.8.3.tgz#ab697b1d3dd46fb4626fbe2f543afe0cc98d8632"
+  integrity sha512-tJ/oJ4amDihPoufT5sM0Z1SKEuKay8LfVAMlbbhnnkvt6BUserZylqo2PN+p9KeljLr0OHa2rXHU1T8reeoTrw==
 
 pretty-error@^4.0.0:
   version "4.0.0"
@@ -5635,10 +5640,10 @@ unbox-primitive@^1.0.2:
     has-symbols "^1.0.3"
     which-boxed-primitive "^1.0.2"
 
-undici@^5.4.0:
-  version "5.14.0"
-  resolved "https://registry.yarnpkg.com/undici/-/undici-5.14.0.tgz#1169d0cdee06a4ffdd30810f6228d57998884d00"
-  integrity sha512-yJlHYw6yXPPsuOH0x2Ib1Km61vu4hLiRRQoafs+WUgX1vO64vgnxiCEN9dpIrhZyHFsai3F0AEj4P9zy19enEQ==
+undici@^5.14.0:
+  version "5.16.0"
+  resolved "https://registry.yarnpkg.com/undici/-/undici-5.16.0.tgz#6b64f9b890de85489ac6332bd45ca67e4f7d9943"
+  integrity sha512-KWBOXNv6VX+oJQhchXieUznEmnJMqgXMbs0xxH2t8q/FUAWSJvOSr/rMaZKnX5RIVq7JDn0JbP4BOnKG2SGXLQ==
   dependencies:
     busboy "^1.6.0"
 
