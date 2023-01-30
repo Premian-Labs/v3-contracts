@@ -61,7 +61,8 @@ library OptionMath {
      * @param spot59x18 59x18 fixed point representation of spot price
      * @param strike59x18 59x18 fixed point representation of strike price
      * @param timeToMaturity59x18 59x18 fixed point representation of duration of option contract (in years)
-     * @param varAnnualized59x18 59x18 fixed point representation of annualized variance
+     * @param volAnnualized59x18 59x18 fixed point representation of annualized volatility
+     * @param riskFreeRate59x18 59x18 fixed point representation the risk-free frate
      * @param isCall whether to price "call" or "put" option
      * @return price 59x18 fixed point representation of Black-Scholes option price
      */
@@ -69,10 +70,11 @@ library OptionMath {
         SD59x18 spot59x18,
         SD59x18 strike59x18,
         SD59x18 timeToMaturity59x18,
-        SD59x18 varAnnualized59x18,
+        SD59x18 volAnnualized59x18,
+        SD59x18 riskFreeRate59x18,
         bool isCall
     ) internal pure returns (SD59x18 price) {
-        if (timeToMaturity59x18.eq(ZERO) || varAnnualized59x18.eq(ZERO)) {
+        if (timeToMaturity59x18.eq(ZERO)) {
             if (isCall) {
                 price = _relu(spot59x18.sub(strike59x18));
             } else {
@@ -80,16 +82,35 @@ library OptionMath {
             }
             return price;
         }
-        SD59x18 cumVar59x18 = timeToMaturity59x18.mul(varAnnualized59x18);
-        SD59x18 cumVol59x18 = cumVar59x18.sqrt();
 
-        SD59x18 d1_59x18 = spot59x18.div(strike59x18).ln().add(cumVar59x18.div(TWO)).div(cumVol59x18);
-        SD59x18 d2_59x18 = d1_59x18.sub(cumVol59x18);
+        SD59x18 discountFactor59x18 = riskFreeRate59x18.mul(timeToMaturity59x18).exp();
+        if (volAnnualized59x18.eq(ZERO)) {
+            if (isCall) {
+                price = _relu(spot59x18.sub(strike59x18.div(discountFactor59x18)));
+            } else {
+                price = _relu(strike59x18.div(discountFactor59x18).sub(spot59x18));
+            }
+            return price;
+        }
+
+        SD59x18 timeScaledVol59x18 = timeToMaturity59x18.mul(volAnnualized59x18);
+        SD59x18 timeScaledVar59x18 = timeScaledVol59x18.pow(TWO);
+        SD59x18 timeScaledRiskFreeRate59x18 = timeToMaturity59x18.mul(riskFreeRate59x18);
+
+        SD59x18 d1_59x18 = spot59x18
+            .div(strike59x18)
+            .ln()
+            .add(timeScaledVar59x18.div(TWO))
+            .add(timeScaledRiskFreeRate59x18)
+            .div(timeScaledVol59x18);
+        SD59x18 d2_59x18 = d1_59x18.sub(timeScaledVol59x18);
 
         SD59x18 sign;
         if (isCall) {sign = ONE;} else {sign = negONE;}
         SD59x18 a = spot59x18.mul(_normalCdf(d1_59x18.mul(sign)));
-        SD59x18 b = strike59x18.mul(_normalCdf(d2_59x18.mul(sign)));
+        SD59x18 b = strike59x18
+            .div(discountFactor59x18)
+            .mul(_normalCdf(d2_59x18.mul(sign)));
         price = a.sub(b).mul(sign);
         return price;
     }

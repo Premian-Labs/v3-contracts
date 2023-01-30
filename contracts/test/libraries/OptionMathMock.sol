@@ -22,14 +22,16 @@ contract OptionMathMock {
         SD59x18 spot59x18,
         SD59x18 strike59x18,
         SD59x18 timeToMaturity59x18,
-        SD59x18 varAnnualized59x18,
+        SD59x18 volAnnualized59x18,
+        SD59x18 riskFreeRate59x18,
         bool isCall
     ) external pure returns (SD59x18) {
         return OptionMath._blackScholesPrice(
             spot59x18,
             strike59x18,
             timeToMaturity59x18,
-            varAnnualized59x18,
+            volAnnualized59x18,
+            riskFreeRate59x18,
             isCall
         );
     }

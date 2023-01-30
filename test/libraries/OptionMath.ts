@@ -66,6 +66,7 @@ describe('OptionMath', () => {
             const strike59x18 = parseEther('1.');
             const timeToMaturity59x18 = parseEther('1.');
             const varAnnualized59x18 = parseEther('0.');
+            const riskFreeRate59x18 = parseEther('0.');
 
             for (const t of [
                 [parseEther('0.5'), true, '0.0'],
@@ -87,6 +88,7 @@ describe('OptionMath', () => {
                         strike59x18,
                         timeToMaturity59x18,
                         varAnnualized59x18,
+                        riskFreeRate59x18,
                         t[1]
                     )
                 );
@@ -98,19 +100,20 @@ describe('OptionMath', () => {
             const strike59x18 = parseEther('1.');
             const timeToMaturity59x18 = parseEther('1.');
             const varAnnualized59x18 = parseEther('1.');
+            const riskFreeRate59x18 = parseEther('0.1');
 
             for (const t of [
-                [parseEther('0.5'), true, '0.095304896963412747'],
-                [parseEther('0.8'), true, '0.2524480186054652'],
-                [parseEther('1.0'), true, '0.38292492254802624'],
-                [parseEther('1.2'), true, '0.5276141806389698'],
-                [parseEther('2.2'), true, '1.3691528498675376'],
+                [parseEther('0.5'), true, '0.10733500381254471'],
+                [parseEther('0.8'), true, '0.27626266618753637'],
+                [parseEther('1.0'), true, '0.4139595806172845'],
+                [parseEther('1.2'), true, '0.5651268636770026'],
+                [parseEther('2.2'), true, '1.4293073801560254'],
 
-                [parseEther('0.5'), false, '0.5953050576183792'],
-                [parseEther('0.8'), false, '0.45244801860546513'],
-                [parseEther('1.0'), false, '0.38292492254802624'],
-                [parseEther('1.2'), false, '0.3276141806389699'],
-                [parseEther('2.2'), false, '0.16915284986753754'],
+                [parseEther('0.5'), false, '0.5121724218485042'],
+                [parseEther('0.8'), false, '0.3811000842234958'],
+                [parseEther('1.0'), false, '0.3187969986532439'],
+                [parseEther('1.2'), false, '0.26996428171296216'],
+                [parseEther('2.2'), false, '0.13414479819198477'],
             ]) {
                 const result = formatEther(
                     await instance.blackScholesPrice(
@@ -118,6 +121,7 @@ describe('OptionMath', () => {
                         strike59x18,
                         timeToMaturity59x18,
                         varAnnualized59x18,
+                        riskFreeRate59x18,
                         t[1]
                     )
                 );
