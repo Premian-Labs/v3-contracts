@@ -80,15 +80,17 @@ describe('Position', () => {
       expect(await instance.pieceWiseLinear(key, key.lower.sub(1))).to.eq(0);
     });
 
-    it('should return the price if lower < price && price < upper', async () => {
-      for (const t of [
-        [parseEther('0.3'), parseEther('0.1')],
-        [parseEther('0.5'), parseEther('0.5')],
-        [parseEther('0.7'), parseEther('0.9')],
-      ]) {
-        expect(await instance.pieceWiseLinear(key, t[0])).to.eq(t[1]);
-      }
-    });
+    for (const c of [
+      ['0.3', '0.1'],
+      ['0.5', '0.5'],
+      ['0.7', '0.9'],
+    ]) {
+      it(`should return ${c[1]} for price ${c[0]} if lower < price && price < upper`, async () => {
+        expect(await instance.pieceWiseLinear(key, parseEther(c[0]))).to.eq(
+          parseEther(c[1]),
+        );
+      });
+    }
 
     it('should return WAD if price > upper', async () => {
       expect(await instance.pieceWiseLinear(key, key.upper)).to.eq(WAD);
@@ -122,17 +124,19 @@ describe('Position', () => {
       expect(await instance.pieceWiseQuadratic(key, key.lower.sub(1))).to.eq(0);
     });
 
-    it('should return the price if lower < price && price < upper', async () => {
-      for (const t of [
-        [parseEther('0.3'), parseEther('0.0275')],
-        [parseEther('0.5'), parseEther('0.1875')],
-        [parseEther('0.7'), parseEther('0.4275')],
-      ]) {
-        expect(await instance.pieceWiseQuadratic(key, t[0])).to.eq(t[1]);
-      }
-    });
+    for (let c of [
+      ['0.3', '0.0275'],
+      ['0.5', '0.1875'],
+      ['0.7', '0.4275'],
+    ]) {
+      it(`should return ${c[1]} for price ${c[0]} if lower < price && price < upper`, async () => {
+        expect(await instance.pieceWiseQuadratic(key, parseEther(c[0]))).to.eq(
+          parseEther(c[1]),
+        );
+      });
+    }
 
-    it('should return average price if price > upper', async () => {
+    it('should return average price if price >= upper', async () => {
       expect(await instance.pieceWiseQuadratic(key, key.upper)).to.eq(
         average(key.lower, key.upper),
       );
@@ -238,13 +242,11 @@ describe('Position', () => {
   });
 
   describe('#liquidityPerTick', () => {
-    const cases = [
+    for (let c of [
       ['0.25', '0.75', '250', '0.5'],
       ['0.25', '0.75', '500', '1'],
       ['0.25', '0.75', '1000', '2'],
-    ];
-
-    for (let c of cases) {
+    ]) {
       beforeEach(async () => {
         key.lower = parseEther(c[0]);
         key.upper = parseEther(c[1]);
