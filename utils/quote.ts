@@ -1,4 +1,5 @@
-import { signData } from './rpc';
+import { getChainId, signData } from './rpc';
+import { Provider } from '@ethersproject/providers';
 
 export interface TradeQuote {
   provider: string;
@@ -25,7 +26,7 @@ const EIP712Domain = [
 ];
 
 export async function signQuote(
-  w3Provider: any,
+  w3Provider: Provider,
   poolAddress: string,
   provider: string,
   taker: string,
@@ -38,7 +39,7 @@ export async function signQuote(
   const domain: Domain = {
     name: 'Premia',
     version: '1',
-    chainId: 1,
+    chainId: (await w3Provider.getNetwork()).chainId,
     verifyingContract: poolAddress,
   };
 
