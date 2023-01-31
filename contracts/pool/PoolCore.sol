@@ -221,4 +221,9 @@ contract PoolCore is IPoolCore, PoolInternal {
     {
         return _getNearestTicksBelow(lower, upper);
     }
+
+    /// @inheritdoc IPoolCore
+    function getQuoteNonce(address user) external view returns (uint256) {
+        return PoolStorage.layout().quoteNonce[user];
+    }
 }

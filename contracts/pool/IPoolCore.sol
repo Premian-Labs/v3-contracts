@@ -196,4 +196,9 @@ interface IPoolCore is IPoolInternal {
         external
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
+
+    /// @notice Get the current quote nonce for the given user
+    /// @param user User for which to return the current quote nonce
+    /// @return The current quote nonce
+    function getQuoteNonce(address user) external view returns (uint256);
 }

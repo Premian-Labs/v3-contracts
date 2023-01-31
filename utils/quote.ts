@@ -1,14 +1,22 @@
 import { getChainId, signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
+import { IPool__factory } from '../typechain';
 
-export interface TradeQuote {
+interface TradeQuoteBase {
   provider: string;
   taker: string;
   price: number | string;
   size: number | string;
   isBuy: boolean;
-  nonce: number;
   deadline: number;
+}
+
+export interface TradeQuote extends TradeQuoteBase {
+  nonce: number;
+}
+
+export interface TradeQuoteNonceOptional extends TradeQuoteBase {
+  nonce?: number;
 }
 
 interface Domain {
@@ -28,13 +36,7 @@ const EIP712Domain = [
 export async function signQuote(
   w3Provider: Provider,
   poolAddress: string,
-  provider: string,
-  taker: string,
-  price: string | number,
-  size: string | number,
-  isBuy: boolean,
-  deadline: number,
-  nonce: number, // ToDo : Allow for it to be undefined and query directly from contract
+  quote: TradeQuoteNonceOptional,
 ) {
   const domain: Domain = {
     name: 'Premia',
@@ -43,14 +45,17 @@ export async function signQuote(
     verifyingContract: poolAddress,
   };
 
+  // Query current nonce for taker from contract, if nonce is not specified
+  if (quote.nonce === undefined) {
+    quote.nonce = (
+      await IPool__factory.connect(poolAddress, w3Provider).getQuoteNonce(
+        quote.taker,
+      )
+    ).toNumber();
+  }
+
   const message: TradeQuote = {
-    provider,
-    taker,
-    price,
-    size,
-    isBuy,
-    nonce,
-    deadline,
+    ...(quote as TradeQuote),
   };
 
   const typedData = {
@@ -70,7 +75,7 @@ export async function signQuote(
     domain,
     message,
   };
-  const sig = await signData(w3Provider, provider, typedData);
+  const sig = await signData(w3Provider, quote.provider, typedData);
 
   return { ...sig, ...message };
 }

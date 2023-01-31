@@ -14,11 +14,18 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
-import { getValidMaturity, revertToSnapshotAfterEach } from '../../utils/time';
+import {
+  getValidMaturity,
+  ONE_HOUR,
+  revertToSnapshotAfterEach,
+} from '../../utils/time';
+import { signQuote, TradeQuote } from '../../utils/quote';
+import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
   let lp: SignerWithAddress;
+  let trader: SignerWithAddress;
 
   let callPool: IPoolMock;
   let putPool: IPoolMock;
@@ -36,7 +43,7 @@ describe('Pool', () => {
   let collateral: BigNumber;
 
   before(async () => {
-    [deployer, lp] = await ethers.getSigners();
+    [deployer, lp, trader] = await ethers.getSigners();
 
     underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
@@ -155,6 +162,60 @@ describe('Pool', () => {
         expect(args.upper).to.eq(upper);
         expect(args.isBuy).to.eq(!isBuy);
       });
+    });
+  });
+
+  describe('#fillQuote', () => {
+    it('should successfully fill a valid quote', async () => {
+      const quote: TradeQuote = {
+        provider: lp.address,
+        taker: trader.address,
+        price: parseEther('1').toString(),
+        size: parseEther('1').toString(),
+        isBuy: true,
+        deadline: getCurrentTimestamp() + ONE_HOUR,
+        nonce: 0,
+      };
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool
+        .connect(trader)
+        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+      console.log(sig);
+    });
+
+    it('should revert if nonce is not the current one', async () => {
+      const quote: TradeQuote = {
+        provider: lp.address,
+        taker: trader.address,
+        price: parseEther('1').toString(),
+        size: parseEther('1').toString(),
+        isBuy: true,
+        deadline: getCurrentTimestamp() + ONE_HOUR,
+        nonce: 0,
+      };
+
+      await callPool.setNonce(trader.address, 2);
+
+      let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteNonce');
+
+      sig = await signQuote(lp.provider!, callPool.address, {
+        ...quote,
+        nonce: 10,
+      });
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteNonce');
     });
   });
 
