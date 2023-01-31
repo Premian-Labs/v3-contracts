@@ -6,15 +6,15 @@ import {OptionMath, SD59x18} from "../../libraries/OptionMath.sol";
 
 contract OptionMathMock {
     function helperNormal(SD59x18 x) external pure returns (SD59x18) {
-        return OptionMath._helperNormal(x);
+        return OptionMath.helperNormal(x);
     }
 
     function normalCdf(SD59x18 x) external pure returns (SD59x18) {
-        return OptionMath._normalCdf(x);
+        return OptionMath.normalCdf(x);
     }
 
     function relu(SD59x18 x) external pure returns (SD59x18) {
-        return OptionMath._relu(x);
+        return OptionMath.relu(x);
     }
 
     function blackScholesPrice(
@@ -26,7 +26,7 @@ contract OptionMathMock {
         bool isCall
     ) external pure returns (SD59x18) {
         return
-            OptionMath._blackScholesPrice(
+            OptionMath.blackScholesPrice(
                 spot59x18,
                 strike59x18,
                 timeToMaturity59x18,
