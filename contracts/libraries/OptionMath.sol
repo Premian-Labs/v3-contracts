@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {SD59x18, add, ceil, div, exp, floor, ln, mul, pow, sqrt, sub, unwrap, wrap} from "@prb/math/src/SD59x18.sol";
+import {SD59x18, wrap, unwrap} from "@prb/math/src/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
 
@@ -18,7 +18,7 @@ library OptionMath {
     SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
 
     function _neg(SD59x18 x) internal pure returns (SD59x18 result) {
-        return mul(x, negONE);
+        return x.mul(negONE);
     }
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
@@ -27,7 +27,7 @@ library OptionMath {
     function _helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = ALPHA.div(LAMBDA).mul(S1);
         SD59x18 b = S1.mul(x).add(ONE).pow(LAMBDA.div(S1)).sub(ONE);
-        result = a.mul(b).add(S2.mul(x)).exp().mul(_neg(ln(TWO))).exp();
+        result = a.mul(b).add(S2.mul(x)).exp().mul(_neg(TWO.ln())).exp();
     }
 
     /// @notice Approximation of the normal CDF
