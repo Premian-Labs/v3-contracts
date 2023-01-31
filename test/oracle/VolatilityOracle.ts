@@ -4,22 +4,19 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
-  VolatilityOracle,
-  VolatilityOracle__factory,
+  VolatilityOracleMock,
+  VolatilityOracleMock__factory,
 } from '../../typechain';
-//import chaiAlmost from 'chai-almost';
+
 import { BigNumber } from 'ethers';
 import { parseEther, formatEther } from 'ethers/lib/utils';
-//import { fixedFromFloat } from '@premia/utils';
-//import { bnToNumber } from '../utils/math';
 
-//chai.use(chaiAlmost(0.01));
 
 describe('VolatilityOracle', () => {
   let owner: SignerWithAddress;
   let relayer: SignerWithAddress;
   let user: SignerWithAddress;
-  let oracle: VolatilityOracle;
+  let oracle: VolatilityOracleMock;
   let proxy: ProxyUpgradeableOwnable;
 
   const paramsFormatted =
@@ -32,11 +29,11 @@ describe('VolatilityOracle', () => {
   beforeEach(async () => {
     [owner, relayer, user] = await ethers.getSigners();
 
-    const impl = await new VolatilityOracle__factory(owner).deploy();
+    const impl = await new VolatilityOracleMock__factory(owner).deploy();
     proxy = await new ProxyUpgradeableOwnable__factory(owner).deploy(
       impl.address,
     );
-    oracle = VolatilityOracle__factory.connect(proxy.address, owner);
+    oracle = VolatilityOracleMock__factory.connect(proxy.address, owner);
 
     await oracle.connect(owner).addWhitelistedRelayers([relayer.address]);
   });
@@ -130,13 +127,13 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('3500');
       const timeToMaturity = parseEther('0.001');
 
-      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+      const iv = await oracle['getVolatility(address,uint256,uint256,uint256)'](
         token,
         spot,
         strike,
         timeToMaturity,
       );
-      const result = formatEther(iv);
+      const result = parseFloat(formatEther(iv));
 
       const expected = 1.3682433159664105;
 
@@ -150,13 +147,13 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('3500');
       const timeToMaturity = parseEther('0.02');
 
-      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+      const iv = await oracle['getVolatility(address,uint256,uint256,uint256)'](
         token,
         spot,
         strike,
         timeToMaturity,
       );
-      const result = formatEther(iv);
+      const result = parseFloat(formatEther(iv));
 
       const expected = 0.8541332587538256;
 
@@ -170,13 +167,13 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('5000');
       const timeToMaturity = parseEther('0.3');
 
-      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+      const iv = await oracle['getVolatility(address,uint256,uint256,uint256)'](
         token,
         spot,
         strike,
         timeToMaturity,
       );
-      const result = formatEther(iv);
+      const result = parseFloat(formatEther(iv));
 
       const expected = 0.8715627609068288;
 
@@ -190,13 +187,13 @@ describe('VolatilityOracle', () => {
       const strike = parseEther('7000');
       const timeToMaturity = parseEther('0.5');
 
-      const iv = await oracle['getVolatility(address,int256,int256,int256)'](
+      const iv = await oracle['getVolatility(address,uint256,uint256,uint256)'](
         token,
         spot,
         strike,
         timeToMaturity,
       );
-      const result = formatEther(iv);
+      const result = parseFloat(formatEther(iv));
 
       const expected = 0.88798013;
 
