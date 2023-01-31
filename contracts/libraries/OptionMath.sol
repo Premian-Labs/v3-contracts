@@ -21,29 +21,28 @@ library OptionMath {
         return mul(x, negONE);
     }
 
-    /**
-     * @notice Helper function to evaluate used to compute the normal CDF approximation
-     * @param x 59x18 fixed point representation of the input to the normal CDF
-     * @return result 59x18 fixed point representation of the value of the evaluated helper function
-     */
+    /// @notice Helper function to evaluate used to compute the normal CDF approximation
+    /// @param x 59x18 fixed point representation of the input to the normal CDF
+    /// @return result 59x18 fixed point representation of the value of the evaluated helper function
     function _helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = ALPHA.div(LAMBDA).mul(S1);
         SD59x18 b = S1.mul(x).add(ONE).pow(LAMBDA.div(S1)).sub(ONE);
         result = a.mul(b).add(S2.mul(x)).exp().mul(_neg(ln(TWO))).exp();
     }
 
-    /**
-     * @notice Approximation of the normal CDF
-     * @dev The approximation implemented is based on the paper
-     * 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
-     * by Haim Shore
-     * @param x input value to evaluate the normal CDF on, F(Z<=x)
-     * @return result SD59x18 fixed point representation of the normal CDF evaluated at x
-     */
+    /// @notice Approximation of the normal CDF
+    /// @dev The approximation implemented is based on the paper
+    /// 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
+    /// by Haim Shore
+    /// @param x input value to evaluate the normal CDF on, F(Z<=x)
+    /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
     function _normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
         result = ONE.add(_helperNormal(_neg(x))).sub(_helperNormal(x)).div(TWO);
     }
 
+    /// @notice Implementation of the ReLu function f(x)=(x)^+ to compute call / put payoffs
+    /// @param x SD59x18 input value to evaluate the
+    /// @return result SD59x18 output of the relu function
     function _relu(SD59x18 x) internal pure returns (SD59x18 result) {
         if (x.gte(ZERO)) {
             result = x;
@@ -52,17 +51,15 @@ library OptionMath {
         }
     }
 
-    /**
-     * @notice calculate the price of an option using the Black-Scholes model
-     * @dev this implementation assumes zero interest
-     * @param spot59x18 59x18 fixed point representation of spot price
-     * @param strike59x18 59x18 fixed point representation of strike price
-     * @param timeToMaturity59x18 59x18 fixed point representation of duration of option contract (in years)
-     * @param volAnnualized59x18 59x18 fixed point representation of annualized volatility
-     * @param riskFreeRate59x18 59x18 fixed point representation the risk-free frate
-     * @param isCall whether to price "call" or "put" option
-     * @return price 59x18 fixed point representation of Black-Scholes option price
-     */
+    /// @notice Calculate the price of an option using the Black-Scholes model
+    /// @dev this implementation assumes zero interest
+    /// @param spot 59x18 fixed point representation of spot price
+    /// @param strike 59x18 fixed point representation of strike price
+    /// @param timeToMaturity 59x18 fixed point representation of duration of option contract (in years)
+    /// @param volAnnualized 59x18 fixed point representation of annualized volatility
+    /// @param riskFreeRate 59x18 fixed point representation the risk-free frate
+    /// @param isCall whether to price "call" or "put" option
+    /// @return price 59x18 fixed point representation of Black-Scholes option price
     function _blackScholesPrice(
         SD59x18 spot59x18,
         SD59x18 strike59x18,
