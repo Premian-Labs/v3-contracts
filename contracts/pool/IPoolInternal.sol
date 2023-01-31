@@ -59,11 +59,11 @@ interface IPoolInternal is IPosition, IPricing {
     struct TradeQuote {
         address provider;
         address taker;
-        uint256 nonce;
         uint256 price;
         uint256 size;
         bool isBuy;
-        uint64 deadline;
+        uint256 nonce;
+        uint256 deadline;
     }
 
     struct Delta {

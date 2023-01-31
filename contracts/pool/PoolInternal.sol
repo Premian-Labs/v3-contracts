@@ -50,7 +50,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
-        keccak256("fillQuote(uint256 size,TradeQuote memory quote)");
+        keccak256(
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 nonce,uint256 deadline)"
+        );
 
     constructor(address exchangeHelper, address wrappedNativeToken) {
         EXCHANGE_HELPER = exchangeHelper;
@@ -1619,7 +1621,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (user != quote.taker) revert Pool__InvalidQuoteTaker();
         if (l.quoteNonce[user] != quote.nonce) revert Pool__InvalidQuoteNonce();
 
-        bytes32 structHash = keccak256(abi.encode(FILL_QUOTE_TYPE_HASH, quote));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                FILL_QUOTE_TYPE_HASH,
+                quote.provider,
+                quote.taker,
+                quote.price,
+                quote.size,
+                quote.isBuy,
+                quote.nonce,
+                quote.deadline
+            )
+        );
 
         bytes32 hash = keccak256(
             abi.encodePacked(
