@@ -296,4 +296,25 @@ describe('Position', () => {
       }
     });
   });
+
+  // TODO
+  describe.skip('#collateral', () => {
+    const cases = [
+      ['0.5', '0.3', '0.01375'],
+      ['1', '0.5', '0.1875'],
+      ['2', '0.7', '0.855'],
+    ];
+
+    describe('#collateral <-> short - use premiums', () => {
+      it(``, async () => {});
+    });
+
+    describe('#collateral <-> short', () => {
+      it(``, async () => {});
+    });
+
+    describe('#long <-> collateral', () => {
+      it(``, async () => {});
+    });
+  });
 });
