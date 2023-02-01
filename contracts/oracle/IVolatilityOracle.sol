@@ -5,6 +5,9 @@ pragma solidity ^0.8.0;
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
+    error VolatilityOracle__ArrayLengthMismatch();
+    error VolatilityOracle__RelayerNotWhitelisted();
+
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
     function addWhitelistedRelayers(address[] memory accounts) external;
@@ -72,8 +75,4 @@ interface IVolatilityOracle {
         uint256 strike,
         uint256 timeToMaturity
     ) external view returns (int256);
-
-    // Errors
-    error VolatilityOracle__ArrayLengthMismatch();
-    error VolatilityOracle__RelayerNotWhitelisted();
 }
