@@ -597,7 +597,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     INVERSE_BASIS_POINT;
                 uint256 makerRebate = takerFee - protocolFee;
 
-                _updateGlobalFeeRate(l, makerRebate, tradeSize, isBuy);
+                _updateGlobalFeeRate(l, makerRebate);
 
                 // is_buy: taker has to pay premium + fees
                 // ~is_buy: taker receives premium - fees
@@ -1445,9 +1445,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _updateGlobalFeeRate(
         PoolStorage.Layout storage l,
-        uint256 makerRebate,
-        uint256 tradeSize,
-        bool isBuy
+        uint256 makerRebate
     ) internal {
         if (l.liquidityRate == 0) return;
         l.globalFeeRate += makerRebate.divWad(l.liquidityRate);
