@@ -1,4 +1,4 @@
-import { getChainId, signData } from './rpc';
+import { signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
 import { IPool__factory } from '../typechain';
 
