@@ -101,7 +101,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 length = tokens.length;
 
         if (
-            length != tokens.length ||
             length != tau.length ||
             length != theta.length ||
             length != psi.length ||
@@ -183,7 +182,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return result;
     }
 
-    /// @notice convert an int256[] array to a SD59x18[] array
+    /// @notice Convert an int256[] array to a SD59x18[] array
     /// @param src The array to be converted
     /// @return The input array converted to a SD59x18[] array
     function _toArray59x18(
@@ -191,7 +190,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     ) internal pure returns (SD59x18[] memory) {
         SD59x18[] memory tgt = new SD59x18[](src.length);
         for (uint256 i = 0; i < src.length; i++) {
-            // Covert parameters in DECIMALS to an SD59x18
+            // Convert parameters in DECIMALS to an SD59x18
             tgt[i] = wrap(src[i] * 1e6);
         }
         return tgt;
@@ -216,7 +215,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 spot,
         SD59x18 strike,
         SD59x18 timeToMaturity
-    ) private view returns (SD59x18) {
+    ) internal view returns (SD59x18) {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
