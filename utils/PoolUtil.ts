@@ -12,6 +12,11 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
 
+export enum TokenType {
+  SHORT = 0,
+  LONG = 1,
+}
+
 interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;

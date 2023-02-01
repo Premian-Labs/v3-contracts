@@ -44,6 +44,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     uint256 private constant INVERSE_BASIS_POINT = 1e4;
     uint256 private constant WAD = 1e18;
 
+    // ToDo : Add getter for fee values
     // ToDo : Define final values
     uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%

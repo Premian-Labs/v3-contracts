@@ -16,6 +16,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256) {
+        return _takerFee(size, premium);
+    }
+
+    /// @inheritdoc IPoolCore
     function getPoolSettings()
         external
         view
