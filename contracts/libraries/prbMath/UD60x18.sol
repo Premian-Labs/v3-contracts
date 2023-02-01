@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.13;
+pragma solidity ^0.8.0;
 
 import {msb, mulDiv, mulDiv18, prbExp2, prbSqrt} from "./Core.sol";
 
 library UD60x18 {
-    /*//////////////////////////////////////////////////////////////////////////
-                                CUSTOM ERRORS
-//////////////////////////////////////////////////////////////////////////*/
-
     /// @notice Emitted when adding two numbers overflows UD60x18.
     error PRBMathUD60x18__AddOverflow(uint256 x, uint256 y);
 
@@ -35,14 +31,9 @@ library UD60x18 {
     /// @notice Emitted when converting a basic integer to the fixed-point format overflows UD60x18.
     error PRBMathUD60x18__ToUD60x18Overflow(uint256 x);
 
-    /*//////////////////////////////////////////////////////////////////////////
-                                    CONSTANTS
-//////////////////////////////////////////////////////////////////////////*/
-
-    /// NOTICE: the "u" prefix stands for "unwrapped".
-
-    /// @dev Euler's number as an UD60x18 number.
-    uint256 constant E = 2_718281828459045235;
+    //////////////////
+    //////////////////
+    //////////////////
 
     /// @dev Half the UNIT number.
     uint256 constant HALF_UNIT = 0.5e18;
@@ -61,14 +52,12 @@ library UD60x18 {
     uint256 constant MAX_WHOLE_UD60x18 =
         115792089237316195423570985008687907853269984665640564039457_000000000000000000;
 
-    /// @dev PI as an UD60x18 number.
-    uint256 constant PI = 3_141592653589793238;
-
     /// @dev The unit amount which implies how many trailing decimals can be represented.
     uint256 constant UNIT = 1e18;
 
-    /// @dev Zero as an UD60x18 number.
-    uint256 constant ZERO = 0;
+    //////////////////
+    //////////////////
+    //////////////////
 
     /// @notice Calculates the arithmetic average of x and y, rounding down.
     ///
@@ -222,7 +211,7 @@ library UD60x18 {
     /// @return result The result as an UD60x18 number.
     function gm(uint256 x, uint256 y) internal pure returns (uint256 result) {
         if (x == 0 || y == 0) {
-            return ZERO;
+            return 0;
         }
 
         unchecked {
@@ -476,7 +465,7 @@ library UD60x18 {
     /// @return result x raised to power y, as an UD60x18 number.
     function pow(uint256 x, uint256 y) internal pure returns (uint256 result) {
         if (x == 0) {
-            result = y == 0 ? UNIT : ZERO;
+            result = y == 0 ? UNIT : 0;
         } else {
             if (y == UNIT) {
                 result = x;
