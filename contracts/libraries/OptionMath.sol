@@ -2,32 +2,28 @@
 
 pragma solidity ^0.8.0;
 
-import {SD59x18, wrap, unwrap} from "@prb/math/src/SD59x18.sol";
+import {SD59x18} from "./prbMath/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
 
 library OptionMath {
-    // 59x18 fixed point integer constants
-    SD59x18 internal constant ZERO = SD59x18.wrap(0e18);
-    SD59x18 internal constant ONE = SD59x18.wrap(1e18);
-    SD59x18 internal constant NEG_ONE = SD59x18.wrap(-1e18);
-    SD59x18 internal constant TWO = SD59x18.wrap(2e18);
-    SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
-    SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
-    SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);
-    SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
+    using SD59x18 for int256;
 
-    function neg(SD59x18 x) internal pure returns (SD59x18 result) {
-        return x.mul(NEG_ONE);
-    }
+    int256 internal constant ONE = 1e18;
+    int256 internal constant NEG_ONE = -1e18;
+    int256 internal constant TWO = 2e18;
+    int256 internal constant ALPHA = -6.37309208e18;
+    int256 internal constant LAMBDA = -0.61228883e18;
+    int256 internal constant S1 = -0.11105481e18;
+    int256 internal constant S2 = 0.44334159e18;
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x 59x18 fixed point representation of the input to the normal CDF
     /// @return result 59x18 fixed point representation of the value of the evaluated helper function
-    function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
-        SD59x18 a = ALPHA.div(LAMBDA).mul(S1);
-        SD59x18 b = S1.mul(x).add(ONE).pow(LAMBDA.div(S1)).sub(ONE);
-        result = a.mul(b).add(S2.mul(x)).exp().mul(neg(TWO.ln())).exp();
+    function helperNormal(int256 x) internal pure returns (int256 result) {
+        int256 a = ALPHA.div(LAMBDA).mul(S1);
+        int256 b = (S1.mul(x) + ONE).pow(LAMBDA.div(S1)) - ONE;
+        result = (a.mul(b) + S2.mul(x)).exp().mul(-(TWO.ln())).exp();
     }
 
     /// @notice Approximation of the normal CDF
@@ -36,18 +32,18 @@ library OptionMath {
     /// by Haim Shore
     /// @param x input value to evaluate the normal CDF on, F(Z<=x)
     /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
-    function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        result = ONE.add(helperNormal(neg(x))).sub(helperNormal(x)).div(TWO);
+    function normalCdf(int256 x) internal pure returns (int256 result) {
+        result = ((ONE + helperNormal(-x)) - helperNormal(x)).div(TWO);
     }
 
     /// @notice Implementation of the ReLu function f(x)=(x)^+ to compute call / put payoffs
     /// @param x SD59x18 input value to evaluate the
     /// @return result SD59x18 output of the relu function
-    function relu(SD59x18 x) internal pure returns (SD59x18 result) {
-        if (x.gte(ZERO)) {
+    function relu(int256 x) internal pure returns (int256 result) {
+        if (x >= 0) {
             result = x;
         } else {
-            result = ZERO;
+            result = 0;
         }
     }
 
@@ -61,53 +57,50 @@ library OptionMath {
     /// @param isCall whether to price "call" or "put" option
     /// @return price 59x18 fixed point representation of Black-Scholes option price
     function blackScholesPrice(
-        SD59x18 spot,
-        SD59x18 strike,
-        SD59x18 timeToMaturity,
-        SD59x18 volAnnualized,
-        SD59x18 riskFreeRate,
+        int256 spot,
+        int256 strike,
+        int256 timeToMaturity,
+        int256 volAnnualized,
+        int256 riskFreeRate,
         bool isCall
-    ) internal pure returns (SD59x18 price) {
-        if (timeToMaturity.eq(ZERO)) {
+    ) internal pure returns (int256 price) {
+        if (timeToMaturity == 0) {
             if (isCall) {
-                price = relu(spot.sub(strike));
+                price = relu(spot - strike);
             } else {
-                price = relu(strike.sub(spot));
+                price = relu(strike - spot);
             }
             return price;
         }
 
-        SD59x18 discountFactor = riskFreeRate.mul(timeToMaturity).exp();
-        if (volAnnualized.eq(ZERO)) {
+        int256 discountFactor = riskFreeRate.mul(timeToMaturity).exp();
+        if (volAnnualized == 0) {
             if (isCall) {
-                price = relu(spot.sub(strike.div(discountFactor)));
+                price = relu(spot - strike.div(discountFactor));
             } else {
-                price = relu(strike.div(discountFactor).sub(spot));
+                price = relu(strike.div(discountFactor) - spot);
             }
             return price;
         }
 
-        SD59x18 timeScaledVol = timeToMaturity.mul(volAnnualized);
-        SD59x18 timeScaledVar = timeScaledVol.pow(TWO);
-        SD59x18 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
+        int256 timeScaledVol = timeToMaturity.mul(volAnnualized);
+        int256 timeScaledVar = timeScaledVol.pow(TWO);
+        int256 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
 
-        SD59x18 d1 = spot
-            .div(strike)
-            .ln()
-            .add(timeScaledVar.div(TWO))
-            .add(timeScaledRiskFreeRate)
-            .div(timeScaledVol);
-        SD59x18 d2 = d1.sub(timeScaledVol);
+        int256 d1 = (spot.div(strike).ln() +
+            timeScaledVar.div(TWO) +
+            timeScaledRiskFreeRate).div(timeScaledVol);
+        int256 d2 = d1 - timeScaledVol;
 
-        SD59x18 sign;
+        int256 sign;
         if (isCall) {
             sign = ONE;
         } else {
             sign = NEG_ONE;
         }
-        SD59x18 a = spot.mul(normalCdf(d1.mul(sign)));
-        SD59x18 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
-        price = a.sub(b).mul(sign);
+        int256 a = spot.mul(normalCdf(d1.mul(sign)));
+        int256 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
+        price = (a - b).mul(sign);
         return price;
     }
 
@@ -144,17 +137,15 @@ library OptionMath {
     function calculateStrikeInterval(
         int256 spot
     ) internal pure returns (int256) {
-        SD59x18 FIVE = wrap(5e18);
-        SD59x18 TEN = wrap(10e18);
+        int256 FIVE = 5e18;
+        int256 TEN = 10e18;
 
-        SD59x18 SPOT = wrap(spot);
+        int256 o = spot.log10().floor();
 
-        SD59x18 o = SPOT.log10().floor();
+        int256 x = spot.mul(TEN.pow(o.mul(NEG_ONE) - ONE));
 
-        SD59x18 x = SPOT.mul(TEN.pow(o.mul(NEG_ONE).sub(ONE)));
-
-        SD59x18 f = TEN.pow(o.sub(ONE));
-        SD59x18 y = x.lt(wrap(0.5e18)) ? ONE.mul(f) : FIVE.mul(f);
-        return unwrap(SPOT.lt(wrap(1000e18)) ? y : y.ceil());
+        int256 f = TEN.pow(o - ONE);
+        int256 y = x < 0.5e18 ? ONE.mul(f) : FIVE.mul(f);
+        return spot < 1000e18 ? y : y.ceil();
     }
 }
