@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { OptionMathMock, OptionMathMock__factory } from '../../typechain';
-import { parseEther } from 'ethers/lib/utils';
+import { formatEther, parseEther } from 'ethers/lib/utils';
 import { now } from '../../utils/time';
 
 describe('OptionMath', () => {
@@ -14,6 +14,125 @@ describe('OptionMath', () => {
     instance = await new OptionMathMock__factory(deployer).deploy();
   });
 
+  describe('#helperNormal', function () {
+    it('test of the normal CDF approximation helper. should equal the expected value', async () => {
+      for (const t of [
+        [parseEther('-3.0'), '0.997937931253017293'],
+        [parseEther('-2.'), '0.972787315787072559'],
+        [parseEther('-1.'), '0.836009939237039072'],
+        [parseEther('0.'), '0.5'],
+        [parseEther('1.'), '0.153320858106603138'],
+        [parseEther('2.'), '0.018287098844188538'],
+        [parseEther('3.'), '0.000638104717830912'],
+      ]) {
+        expect(formatEther(await instance.helperNormal(t[0]))).to.eq(t[1]);
+      }
+    });
+  });
+
+  describe('#normalCDF', function () {
+    it('test of the normal CDF approximation. should equal the expected value', async () => {
+      for (const t of [
+        [parseEther('-3.0'), '0.001350086732406809'],
+        [parseEther('-2.'), '0.022749891528557989'],
+        [parseEther('-1.'), '0.158655459434782033'],
+        [parseEther('0.'), '0.5'],
+        [parseEther('1.'), '0.841344540565217967'],
+        [parseEther('2.'), '0.97725010847144201'],
+        [parseEther('3.'), '0.99864991326759319'],
+      ]) {
+        expect(formatEther(await instance.normalCdf(t[0]))).to.eq(t[1]);
+      }
+    });
+  });
+
+  describe('#relu', function () {
+    it('test of the relu function. should equal the expected value', async () => {
+      for (const t of [
+        [parseEther('-3.6'), '0.'],
+        [parseEther('-2.2'), '0.'],
+        [parseEther('-1.1'), '0.'],
+        [parseEther('0.'), '0.'],
+        [parseEther('1.1'), '1.1'],
+        [parseEther('2.1'), '2.1'],
+        [parseEther('3.6'), '3.6'],
+      ]) {
+        expect(parseFloat(formatEther(await instance.relu(t[0])))).to.eq(
+          parseFloat(t[1]),
+        );
+      }
+    });
+  });
+  describe('#blackScholesPrice', function () {
+    it('test of the Black-Scholes formula when variance is zero', async () => {
+      const strike59x18 = parseEther('1.');
+      const timeToMaturity59x18 = parseEther('1.');
+      const varAnnualized59x18 = parseEther('0.');
+      const riskFreeRate59x18 = parseEther('0.');
+
+      for (const t of [
+        [parseEther('0.5'), true, '0.0'],
+        [parseEther('0.8'), true, '0.0'],
+        [parseEther('1.0'), true, '0.0'],
+        [parseEther('1.2'), true, '0.2'],
+        [parseEther('2.2'), true, '1.2'],
+
+        [parseEther('0.5'), false, '0.5'],
+        [parseEther('0.8'), false, '0.2'],
+        [parseEther('1.0'), false, '0.0'],
+        [parseEther('1.2'), false, '0.0'],
+        [parseEther('2.2'), false, '0.0'],
+      ]) {
+        const result = formatEther(
+          await instance.blackScholesPrice(
+            t[0],
+            strike59x18,
+            timeToMaturity59x18,
+            varAnnualized59x18,
+            riskFreeRate59x18,
+            t[1],
+          ),
+        );
+        expect(parseFloat(result)).to.eq(parseFloat(t[2]));
+      }
+    });
+
+    it('test of the Black-Scholes formula', async () => {
+      const strike59x18 = parseEther('1.');
+      const timeToMaturity59x18 = parseEther('1.');
+      const varAnnualized59x18 = parseEther('1.');
+      const riskFreeRate59x18 = parseEther('0.1');
+
+      for (const t of [
+        [parseEther('0.5'), true, '0.10733500381254471'],
+        [parseEther('0.8'), true, '0.27626266618753637'],
+        [parseEther('1.0'), true, '0.4139595806172845'],
+        [parseEther('1.2'), true, '0.5651268636770026'],
+        [parseEther('2.2'), true, '1.4293073801560254'],
+
+        [parseEther('0.5'), false, '0.5121724218485042'],
+        [parseEther('0.8'), false, '0.3811000842234958'],
+        [parseEther('1.0'), false, '0.3187969986532439'],
+        [parseEther('1.2'), false, '0.26996428171296216'],
+        [parseEther('2.2'), false, '0.13414479819198477'],
+      ]) {
+        const result = formatEther(
+          await instance.blackScholesPrice(
+            t[0],
+            strike59x18,
+            timeToMaturity59x18,
+            varAnnualized59x18,
+            riskFreeRate59x18,
+            t[1],
+          ),
+        );
+        expect(parseFloat(result) - parseFloat(t[2])).to.be.closeTo(
+          0,
+          0.000001,
+        );
+      }
+    });
+  });
   describe('isFriday', () => {
     describe('should return false', () => {
       it('if maturity is Mon (08:00:00)', async () => {
