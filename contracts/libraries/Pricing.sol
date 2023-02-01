@@ -127,9 +127,9 @@ library Pricing {
         Args memory args,
         uint256 tradeSize
     ) internal pure returns (uint256) {
-        uint256 offset = UD60x18.unwrap(
-            args.isBuy ? bidLiquidity(args) : askLiquidity(args)
-        );
+        uint256 offset = args.isBuy
+            ? bidLiquidity(args).uw()
+            : askLiquidity(args).uw();
         return price(args, offset + tradeSize).uw();
     }
 }
