@@ -9,5 +9,6 @@ library Tick {
         uint256 externalFeeRate;
         int256 longDelta;
         int256 shortDelta;
+        uint256 counter;
     }
 }

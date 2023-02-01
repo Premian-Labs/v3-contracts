@@ -388,7 +388,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.lower,
             p.upper,
             l.marketPrice,
-            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick
+            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick,
+            initialSize == 0,
+            false
         );
     }
 
@@ -485,7 +487,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _balanceOf(p.owner, tokenId)
         ) - liquidityPerTick;
 
-        _updateTicks(p.lower, p.upper, l.marketPrice, liquidityDelta);
+        _updateTicks(p.lower, p.upper, l.marketPrice, liquidityDelta,
+            false,
+            isFullWithdrawal);
 
         emit Withdrawal(
             p.owner,
@@ -1266,7 +1270,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.tickIndex.contains(price)) return (l.ticks[price], true);
 
-        return (Tick.Data(0, 0, 0, 0), false);
+        return (Tick.Data(0, 0, 0, 0, 0), false);
     }
 
     /// @notice Creates a Tick for a given price, or returns the existing tick.
@@ -1288,7 +1292,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.tickIndex.next(priceBelow) <= price
         ) revert Pool__InvalidBelowPrice();
 
-        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0, 0, 0);
+        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0, 0, 0, 0);
 
         l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
@@ -1307,8 +1311,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             price > Pricing.MIN_TICK_PRICE &&
             price < Pricing.MAX_TICK_PRICE &&
-            tick.longDelta == 0 && // Can only remove an active tick if no active range order
-            tick.shortDelta == 0 // marks a starting / ending tick on this tick.
+            tick.counter == 0 // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
         ) {
             if (tick.delta != 0) revert Pool__TickDeltaNotZero();
 
@@ -1330,12 +1333,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 lower,
         uint256 upper,
         uint256 marketPrice,
-        uint256 delta
+        uint256 delta,
+        bool isNewDeposit,
+        bool isFullWithdrawal
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         Tick.Data storage lowerTick = l.ticks[lower];
         Tick.Data storage upperTick = l.ticks[upper];
+
+        if (isNewDeposit) {
+            lowerTick.counter += 1;
+            upperTick.counter += 1;
+        }
+
+        if (isFullWithdrawal) {
+            lowerTick.counter -= 1;
+            upperTick.counter -= 1;
+        }
 
         // Update the deltas, i.e. the net change in per tick liquidity, of the
         // referenced lower and upper tick, dependent on the current tick.
