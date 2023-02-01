@@ -2,13 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
-
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {PRBMathExtended} from "../libraries/PRBMathExtended.sol";
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
@@ -23,7 +21,7 @@ library Position {
     using Position for Position.OrderType;
     using UintUtils for uint256;
     using SafeCast for uint256;
-    using PRBMathExtended for UD60x18;
+    using UD60x18 for uint256;
 
     uint256 private constant WAD = 1e18;
 
@@ -93,7 +91,7 @@ library Position {
             revert IPosition.Position__LowerGreaterOrEqualUpper();
         if (price <= self.lower) return 0;
         else if (self.lower < price && price < self.upper)
-            return Pricing.proportion(self.lower, self.upper, price).uw();
+            return Pricing.proportion(self.lower, self.upper, price);
         else return WAD;
     }
 
