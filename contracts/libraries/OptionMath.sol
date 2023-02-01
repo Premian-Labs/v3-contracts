@@ -77,29 +77,19 @@ library OptionMath {
             return price;
         }
 
-        SD59x18 discountFactor = riskFreeRate
-            .mul(timeToMaturity)
-            .exp();
+        SD59x18 discountFactor = riskFreeRate.mul(timeToMaturity).exp();
         if (volAnnualized.eq(ZERO)) {
             if (isCall) {
-                price = relu(
-                    spot.sub(strike.div(discountFactor))
-                );
+                price = relu(spot.sub(strike.div(discountFactor)));
             } else {
-                price = relu(
-                    strike.div(discountFactor).sub(spot)
-                );
+                price = relu(strike.div(discountFactor).sub(spot));
             }
             return price;
         }
 
-        SD59x18 timeScaledVol = timeToMaturity.mul(
-            volAnnualized
-        );
+        SD59x18 timeScaledVol = timeToMaturity.mul(volAnnualized);
         SD59x18 timeScaledVar = timeScaledVol.pow(TWO);
-        SD59x18 timeScaledRiskFreeRate = timeToMaturity.mul(
-            riskFreeRate
-        );
+        SD59x18 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
 
         SD59x18 d1 = spot
             .div(strike)
@@ -116,9 +106,7 @@ library OptionMath {
             sign = NEG_ONE;
         }
         SD59x18 a = spot.mul(normalCdf(d1.mul(sign)));
-        SD59x18 b = strike.div(discountFactor).mul(
-            normalCdf(d2.mul(sign))
-        );
+        SD59x18 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
         price = a.sub(b).mul(sign);
         return price;
     }
@@ -163,9 +151,7 @@ library OptionMath {
 
         SD59x18 o = SPOT.log10().floor();
 
-        SD59x18 x = SPOT.mul(
-            TEN.pow(o.mul(NEG_ONE).sub(ONE))
-        );
+        SD59x18 x = SPOT.mul(TEN.pow(o.mul(NEG_ONE).sub(ONE)));
 
         SD59x18 f = TEN.pow(o.sub(ONE));
         SD59x18 y = x.lt(wrap(0.5e18)) ? ONE.mul(f) : FIVE.mul(f);

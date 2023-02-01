@@ -9,7 +9,6 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
-
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
@@ -43,7 +42,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         address[] memory accounts
     ) external onlyOwner {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
-        .layout();
+            .layout();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.add(accounts[i]);
@@ -55,7 +54,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         address[] memory accounts
     ) external onlyOwner {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
-        .layout();
+            .layout();
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.remove(accounts[i]);
@@ -101,26 +100,27 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     ) external {
         uint256 length = tokens.length;
 
-        if (length != tokens.length ||
-        length != tau.length ||
-        length != theta.length ||
-        length != psi.length ||
-            length != rho.length)
-            revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
+        if (
+            length != tokens.length ||
+            length != tau.length ||
+            length != theta.length ||
+            length != psi.length ||
+            length != rho.length
+        ) revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
-        .layout();
+            .layout();
 
         if (!l.whitelistedRelayers.contains(msg.sender))
             revert IVolatilityOracle.VolatilityOracle__RelayerNotWhitelisted();
 
         for (uint256 i = 0; i < length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({
-            updatedAt: block.timestamp,
-            tau: tau[i],
-            theta: theta[i],
-            psi: psi[i],
-            rho: rho[i]
+                updatedAt: block.timestamp,
+                tau: tau[i],
+                theta: theta[i],
+                psi: psi[i],
+                rho: rho[i]
             });
 
             emit UpdateParameters(tokens[i], tau[i], theta[i], psi[i], rho[i]);
@@ -153,10 +153,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return params;
     }
 
-     /// @notice Finds the interval a particular value is located in.
-     /// @param arr The array of cutoff points that define the intervals
-     /// @param value The value to find the interval for
-     /// @return The interval index that corresponds the value
+    /// @notice Finds the interval a particular value is located in.
+    /// @param arr The array of cutoff points that define the intervals
+    /// @param value The value to find the interval for
+    /// @return The interval index that corresponds the value
     function _findInterval(
         SD59x18[] memory arr,
         SD59x18 value
@@ -183,9 +183,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return result;
     }
 
-     /// @notice convert an int256[] array to a SD59x18[] array
-     /// @param src The array to be converted
-     /// @return The input array converted to a SD59x18[] array
+    /// @notice convert an int256[] array to a SD59x18[] array
+    /// @param src The array to be converted
+    /// @return The input array converted to a SD59x18[] array
     function _toArray59x18(
         int256[] memory src
     ) internal pure returns (SD59x18[] memory) {

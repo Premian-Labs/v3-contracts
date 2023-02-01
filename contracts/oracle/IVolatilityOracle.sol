@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
-
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
     function addWhitelistedRelayers(address[] memory accounts) external;
@@ -18,17 +17,17 @@ interface IVolatilityOracle {
     /// @return The list of whitelisted relayers
     function getWhitelistedRelayers() external view returns (address[] memory);
 
-     /// @notice Pack IV model parameters into a single bytes32
-     /// @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`
-     /// @param params Parameters of IV model to pack
-     /// @return result The packed parameters of IV model
+    /// @notice Pack IV model parameters into a single bytes32
+    /// @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`
+    /// @param params Parameters of IV model to pack
+    /// @return result The packed parameters of IV model
     function formatParams(
         int256[5] memory params
     ) external pure returns (bytes32 result);
 
-     /// @notice Unpack IV model parameters from a bytes32
-     /// @param input Packed IV model parameters to unpack
-     /// @return params The unpacked parameters of the IV model
+    /// @notice Unpack IV model parameters from a bytes32
+    /// @param input Packed IV model parameters to unpack
+    /// @return params The unpacked parameters of the IV model
     function parseParams(
         bytes32 input
     ) external pure returns (int256[] memory params);

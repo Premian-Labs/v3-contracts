@@ -11,7 +11,6 @@ import {
 import { BigNumber } from 'ethers';
 import { parseEther, formatEther } from 'ethers/lib/utils';
 
-
 describe('VolatilityOracle', () => {
   let owner: SignerWithAddress;
   let relayer: SignerWithAddress;
