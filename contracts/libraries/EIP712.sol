@@ -2,10 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-/**
- * @title EIP-712 typed structured data hashing and signing
- * @dev see https://eips.ethereum.org/EIPS/eip-712
- */
+/// @title EIP-712 typed structured data hashing and signing
+/// @dev see https://eips.ethereum.org/EIPS/eip-712
 library EIP712 {
     // ToDo : Remove when merged in solidstate ( https://github.com/solidstate-network/solidstate-solidity/pull/188/files )
     bytes32 internal constant EIP712_TYPE_HASH =
@@ -13,12 +11,10 @@ library EIP712 {
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
         );
 
-    /**
-     * @notice calculate unique EIP-712 domain separator
-     * @param nameHash hash of ERC20Metadata token name
-     * @param versionHash hash of signing domain version
-     * @return domainSeparator domain separator
-     */
+    /// @notice calculate unique EIP-712 domain separator
+    /// @param nameHash hash of ERC20Metadata token name
+    /// @param versionHash hash of signing domain version
+    /// @return domainSeparator domain separator
     function calculateDomainSeparator(
         bytes32 nameHash,
         bytes32 versionHash
