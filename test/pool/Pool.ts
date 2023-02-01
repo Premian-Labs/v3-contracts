@@ -146,6 +146,8 @@ describe('Pool', () => {
 
         const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
 
+        await underlying.mint(lp.address, parseEther('2000'));
+
         await callPool
           .connect(lp)
           [
