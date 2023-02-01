@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
 contract PricingMock {
@@ -9,7 +10,7 @@ contract PricingMock {
         uint256 lower,
         uint256 upper,
         uint256 marketPrice
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.proportion(lower, upper, marketPrice);
     }
 
@@ -22,32 +23,32 @@ contract PricingMock {
 
     function liquidity(
         Pricing.Args memory args
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.liquidity(args);
     }
 
     function bidLiquidity(
         Pricing.Args memory args
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.bidLiquidity(args);
     }
 
     function askLiquidity(
         Pricing.Args memory args
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.askLiquidity(args);
     }
 
     function maxTradeSize(
         Pricing.Args memory args
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.maxTradeSize(args);
     }
 
     function price(
         Pricing.Args memory args,
         uint256 tradeSize
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return Pricing.price(args, tradeSize);
     }
 

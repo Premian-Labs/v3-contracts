@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
+
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
@@ -12,6 +14,7 @@ import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {Position} from "../libraries/Position.sol";
+import {PRBMathExtended} from "../libraries/PRBMathExtended.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Tick} from "../libraries/Tick.sol";
 import {WadMath} from "../libraries/WadMath.sol";
@@ -34,6 +37,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeCast for int256;
     using Math for int256;
     using UintUtils for uint256;
+    using PRBMathExtended for UD60x18;
 
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
@@ -85,22 +89,22 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isBuy
         );
 
-        uint256 liquidity = pricing.liquidity();
-        uint256 maxSize = pricing.maxTradeSize();
+        UD60x18 liquidity = pricing.liquidity();
+        UD60x18 maxSize = pricing.maxTradeSize();
 
         uint256 totalPremium = 0;
 
         while (size > 0) {
-            uint256 tradeSize = Math.min(size, maxSize);
+            uint256 tradeSize = Math.min(size, maxSize.uw());
 
             uint256 nextPrice;
             // Compute next price
-            if (liquidity == 0) {
+            if (liquidity.eq(ud(0))) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
-                uint256 priceDelta = (pricing.upper - pricing.lower).mulWad(
-                    tradeSize.divWad(liquidity)
-                );
+                uint256 priceDelta = ud(pricing.upper - pricing.lower)
+                    .mul(ud(tradeSize).div(liquidity))
+                    .uw();
 
                 nextPrice = isBuy
                     ? pricing.marketPrice + priceDelta
@@ -129,11 +133,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             // ToDo : Deal with rounding error
-            if (maxSize >= size - (WAD / 10)) {
+            if (maxSize.uw() >= size - (WAD / 10)) {
                 size = 0;
             } else {
                 // Cross tick
-                size -= maxSize;
+                size -= maxSize.uw();
 
                 // ToDo : Make sure this cant underflow
                 // Adjust liquidity rate
@@ -563,12 +567,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 remaining = size;
 
         while (remaining > 0) {
-            uint256 maxSize = pricing.maxTradeSize();
-            uint256 tradeSize = Math.min(remaining, maxSize);
+            UD60x18 maxSize = pricing.maxTradeSize();
+            uint256 tradeSize = Math.min(remaining, maxSize.uw());
 
             {
                 uint256 nextMarketPrice;
-                if (tradeSize != maxSize) {
+                if (tradeSize != maxSize.uw()) {
                     nextMarketPrice = pricing.nextPrice(tradeSize);
                 } else {
                     nextMarketPrice = isBuy ? pricing.upper : pricing.lower;
@@ -611,7 +615,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             // ToDo : Deal with rounding error
-            if (maxSize >= remaining - (WAD / 10)) {
+            if (maxSize.uw() >= remaining - (WAD / 10)) {
                 remaining = 0;
             } else {
                 // The trade will require crossing into the next tick range
