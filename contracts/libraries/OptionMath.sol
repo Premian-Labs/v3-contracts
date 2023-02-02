@@ -10,7 +10,6 @@ library OptionMath {
     using SD59x18 for int256;
 
     int256 internal constant ONE = 1e18;
-    int256 internal constant NEG_ONE = -1e18;
     int256 internal constant TWO = 2e18;
     int256 internal constant ALPHA = -6.37309208e18;
     int256 internal constant LAMBDA = -0.61228883e18;
@@ -96,7 +95,7 @@ library OptionMath {
         if (isCall) {
             sign = ONE;
         } else {
-            sign = NEG_ONE;
+            sign = -ONE;
         }
         int256 a = spot.mul(normalCdf(d1.mul(sign)));
         int256 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
@@ -137,15 +136,15 @@ library OptionMath {
     function calculateStrikeInterval(
         int256 spot
     ) internal pure returns (int256) {
-        int256 FIVE = 5e18;
-        int256 TEN = 10e18;
+        int256 five = 5e18;
+        int256 ten = 10e18;
 
         int256 o = spot.log10().floor();
 
-        int256 x = spot.mul(TEN.pow(o.mul(NEG_ONE) - ONE));
+        int256 x = spot.mul(ten.pow(o.mul(-ONE) - ONE));
 
-        int256 f = TEN.pow(o - ONE);
-        int256 y = x < 0.5e18 ? ONE.mul(f) : FIVE.mul(f);
+        int256 f = ten.pow(o - ONE);
+        int256 y = x < 0.5e18 ? ONE.mul(f) : five.mul(f);
         return spot < 1000e18 ? y : y.ceil();
     }
 }

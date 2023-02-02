@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
 contract PricingMock {
