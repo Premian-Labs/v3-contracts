@@ -16,6 +16,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256) {
+        return _takerFee(size, premium);
+    }
+
+    /// @inheritdoc IPoolCore
     function getPoolSettings()
         external
         view
@@ -115,6 +123,17 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
+    function fillQuote(
+        TradeQuote memory quote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        _fillQuote(msg.sender, quote, size, v, r, s);
+    }
+
+    /// @inheritdoc IPoolCore
     function trade(
         uint256 size,
         bool isBuy
@@ -209,5 +228,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
     {
         return _getNearestTicksBelow(lower, upper);
+    }
+
+    /// @inheritdoc IPoolCore
+    function getQuoteNonce(address user) external view returns (uint256) {
+        return PoolStorage.layout().quoteNonce[user];
     }
 }

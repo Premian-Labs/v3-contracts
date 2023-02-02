@@ -9,6 +9,15 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolCore is IPoolInternal {
+    /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param size The size of a trade (number of contracts)
+    /// @param premium The total cost of option(s) for a purchase
+    /// @return The taker fee for an option trade
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256);
+
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
     /// @return underlying Address of underlying token
@@ -98,6 +107,23 @@ interface IPoolCore is IPoolInternal {
         uint256 maxSlippage
     ) external;
 
+    /// @notice Functionality to support the RFQ / OTC system.
+    ///         An LP can create a quote for which he will do an OTC trade through
+    ///         the exchange. Takers can buy from / sell to the LP then partially or
+    ///         fully while having the price guaranteed.
+    /// @param quote The quote given by the provider
+    /// @param size The size to fill from the quote
+    /// @param v secp256k1 'v' value
+    /// @param r secp256k1 'r' value
+    /// @param s secp256k1 's' value
+    function fillQuote(
+        TradeQuote memory quote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
@@ -179,4 +205,9 @@ interface IPoolCore is IPoolInternal {
         external
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
+
+    /// @notice Get the current quote nonce for the given user
+    /// @param user User for which to return the current quote nonce
+    /// @return The current quote nonce
+    function getQuoteNonce(address user) external view returns (uint256);
 }
