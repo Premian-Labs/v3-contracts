@@ -390,7 +390,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.marketPrice,
             p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick,
             initialSize == 0,
-            false
+            false,
+            p.orderType
         );
     }
 
@@ -489,7 +490,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _updateTicks(p.lower, p.upper, l.marketPrice, liquidityDelta,
             false,
-            isFullWithdrawal);
+            isFullWithdrawal,
+            p.orderType);
 
         emit Withdrawal(
             p.owner,
@@ -1335,7 +1337,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 marketPrice,
         uint256 delta,
         bool isNewDeposit,
-        bool isFullWithdrawal
+        bool isFullWithdrawal,
+        Position.OrderType orderType
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1391,32 +1394,37 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         int256 _delta = int256(delta);
         if (upper <= l.currentTick) {
             lowerTick.delta -= _delta;
-            lowerTick.longDelta -= _delta;
             upperTick.delta += _delta;
-            upperTick.longDelta += _delta;
+            if (orderType.isLong()){
+                lowerTick.longDelta -= _delta;
+                upperTick.longDelta += _delta;
+            } else {
+                lowerTick.shortDelta -= _delta;
+                upperTick.shortDelta += _delta;
+            }
         } else if (lower > l.currentTick) {
             lowerTick.delta += _delta;
-            lowerTick.shortDelta += _delta;
             upperTick.delta -= _delta;
-            upperTick.shortDelta -= _delta;
+            if (orderType.isLong()){
+                lowerTick.longDelta += _delta;
+                upperTick.longDelta -= _delta;
+            } else {
+                lowerTick.shortDelta += _delta;
+                upperTick.shortDelta -= _delta;
+            }
         } else {
-            int256 _longDelta = int256(
-                (upper - l.marketPrice).divWad(upper - lower)
-            ).mulWad(_delta);
-            int256 _shortDelta = int256(
-                (l.marketPrice - lower).divWad(upper - lower)
-            ).mulWad(_delta);
-
             lowerTick.delta -= _delta;
-            lowerTick.longDelta += _longDelta;
-            lowerTick.shortDelta += _shortDelta;
             upperTick.delta -= _delta;
-            upperTick.longDelta += _longDelta;
-            upperTick.shortDelta += _shortDelta;
-
             l.liquidityRate += delta;
-            l.longRate = uint256(int256(l.longRate) + _longDelta);
-            l.shortRate = uint256(int256(l.shortRate) + _shortDelta);
+            if (orderType.isLong()){
+                lowerTick.longDelta -= _delta;
+                upperTick.longDelta -= _delta;
+                l.longRate = uint256(int256(l.longRate) + _delta);
+            } else {
+                lowerTick.shortDelta -= _delta;
+                upperTick.shortDelta -= _delta;
+                l.shortRate = uint256(int256(l.shortRate) + _delta);
+            }
         }
 
         // After deposit / full withdrawal the current tick needs be reconciled. We
