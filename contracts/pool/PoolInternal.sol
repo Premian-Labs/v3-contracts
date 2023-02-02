@@ -575,13 +575,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         uint256 totalTakerFees;
         uint256 totalProtocolFees;
-        int256 longDelta;
-        int256 shortDelta;
+        uint256 longDelta;
+        uint256 shortDelta;
         uint256 remaining = size;
 
         while (remaining > 0) {
             uint256 maxSize = pricing.maxTradeSize();
             uint256 tradeSize = Math.min(remaining, maxSize);
+            uint256 oldMarketPrice = l.marketPrice;
 
             {
                 uint256 nextMarketPrice;
@@ -627,29 +628,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.protocolFees += protocolFee;
             }
 
-            if (isBuy) {
-                shortDelta += int256(
-                    l.shortRate *
-                        PoolStorage.MIN_TICK_DISTANCE *
-                        (l.marketPrice - l.currentTick)
-                );
-                longDelta -= int256(
-                    l.longRate *
-                        PoolStorage.MIN_TICK_DISTANCE *
-                        (l.marketPrice - l.currentTick)
-                );
-            } else {
-                longDelta += int256(
-                    l.longRate *
-                        PoolStorage.MIN_TICK_DISTANCE *
-                        (l.tickIndex.next(l.currentTick) - l.marketPrice)
-                );
-                shortDelta -= int256(
-                    l.shortRate *
-                        PoolStorage.MIN_TICK_DISTANCE *
-                        (l.tickIndex.next(l.currentTick) - l.marketPrice)
-                );
-            }
+
+            uint256 dist = Math.abs(int256(l.marketPrice) - int256(oldMarketPrice));
+            shortDelta += l.shortRate * PoolStorage.MIN_TICK_DISTANCE * dist;
+            longDelta += l.longRate * PoolStorage.MIN_TICK_DISTANCE * dist;
 
             // ToDo : Deal with rounding error
             if (maxSize >= remaining - (WAD / 10)) {
@@ -679,16 +661,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             transferCollateralToUser
         );
 
-        if (shortDelta > 0) {
+        if (isBuy) {
             _mint(address(this), PoolStorage.SHORT, uint256(shortDelta), "");
-        } else if (shortDelta != 0) {
-            _burn(address(this), PoolStorage.SHORT, uint256(-shortDelta));
-        }
-
-        if (longDelta > 0) {
+            _burn(address(this), PoolStorage.LONG, uint256(longDelta));
+        } else {
             _mint(address(this), PoolStorage.LONG, uint256(longDelta), "");
-        } else if (longDelta != 0) {
-            _burn(address(this), PoolStorage.LONG, uint256(-longDelta));
+            _burn(address(this), PoolStorage.SHORT, uint256(shortDelta));
         }
 
         emit Trade(
