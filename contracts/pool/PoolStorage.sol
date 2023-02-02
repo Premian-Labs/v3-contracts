@@ -55,6 +55,7 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
+        mapping(address => uint256) quoteNonce;
     }
 
     function layout() internal pure returns (Layout storage l) {
