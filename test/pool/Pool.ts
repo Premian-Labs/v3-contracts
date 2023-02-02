@@ -20,8 +20,8 @@ import {
   revertToSnapshotAfterEach,
 } from '../../utils/time';
 import { signQuote, TradeQuote } from '../../utils/quote';
-import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 import { bnToNumber } from '../../utils/math';
+import { now } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -43,7 +43,7 @@ describe('Pool', () => {
   let isCall: boolean;
   let collateral: BigNumber;
 
-  let getQuote: () => TradeQuote;
+  let getQuote: () => Promise<TradeQuote>;
 
   before(async () => {
     [deployer, lp, trader] = await ethers.getSigners();
@@ -94,14 +94,14 @@ describe('Pool', () => {
       }
     }
 
-    getQuote = () => {
+    getQuote = async () => {
       return {
         provider: lp.address,
         taker: trader.address,
         price: parseEther('0.1').toString(),
         size: parseEther('10').toString(),
         isBuy: false,
-        deadline: getCurrentTimestamp() + ONE_HOUR,
+        deadline: (await now()) + ONE_HOUR,
         nonce: 0,
       };
     };
@@ -181,7 +181,7 @@ describe('Pool', () => {
 
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
-      const quote = getQuote();
+      const quote = await getQuote();
 
       const initialBalance = parseEther('10');
 
@@ -228,8 +228,8 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is expired', async () => {
-      const quote = getQuote();
-      quote.deadline = getCurrentTimestamp() - 1;
+      const quote = await getQuote();
+      quote.deadline = (await now()) - 1;
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -241,7 +241,7 @@ describe('Pool', () => {
     });
 
     it('should revert if quote price is out of bounds', async () => {
-      const quote = getQuote();
+      const quote = await getQuote();
       quote.price = 1;
 
       let sig = await signQuote(lp.provider!, callPool.address, quote);
@@ -263,7 +263,7 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is not used by someone else than taker', async () => {
-      const quote = getQuote();
+      const quote = await getQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -275,7 +275,7 @@ describe('Pool', () => {
     });
 
     it('should revert if nonce is not the current one', async () => {
-      const quote = getQuote();
+      const quote = await getQuote();
 
       await callPool.setNonce(trader.address, 2);
 
@@ -300,7 +300,7 @@ describe('Pool', () => {
     });
 
     it('should revert if signed message does not match quote', async () => {
-      const quote = getQuote();
+      const quote = await getQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
