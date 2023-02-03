@@ -17,6 +17,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
+    error Pool__InvalidReconciliation();
     error Pool__InvalidTransfer();
     error Pool__InvalidSwapTokenIn();
     error Pool__InvalidSwapTokenOut();

@@ -1434,9 +1434,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //                   ^
         //              market price
         if (delta > 0) {
+            uint256 crossings;
+
             while (l.tickIndex.next(l.currentTick) < marketPrice) {
                 _cross(true);
+                crossings++;
             }
+
+            while (l.currentTick > marketPrice) {
+                _cross(false);
+                crossings++;
+            }
+
+            if (crossings > 2) revert Pool__InvalidReconciliation();
         } else {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
@@ -1510,46 +1520,69 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    /// @notice Given a new range order that is supposed to be deposited, a market
-    ///         price is considered to be stranded if within the range order' range
-    ///         there's no liquidity provided, and the lower and upper ticks are between
-    ///         the current tick and the tick right of the current tick.
-    ///
-    ///         Example: Assume R1 and R2 are existing orders. The area below the two
-    ///           range orders marked with the x's marks the area in which a range order
-    ///           may be deposited. An ask-side order deposited within that range would
-    ///           change the market price to the lower tick (indicated by the upward
-    ///           arrow). A bid-side order would change the market price to the upper tick of
-    ///           that range order (again indicated by an arrow below the range order).
-    ///
-    ///           |---R1---|                          |---R2---|
-    ///                    |xxxxxxxxxxxxxxxxxxxxxxxxxx|
-    ///                                 |---ask---|
-    ///                                 ^
-    ///                     |---bid---|
-    ///                               ^
+    /// @notice Gets the lower and upper bound of the stranded market area when it
+    ///         exists. In case the stranded market area does not exist it will return
+    ///         s the stranded market area the maximum tick price for both the lower
+    ///         and the upper, in which case the market price is not stranded given
+    ///         any range order info order.
+    /// @return lower Lower bound of the stranded market price area (Default : 1e18)
+    /// @return upper Upper bound of the stranded market price area (Default : 1e18)
+    function _getStrandedArea(
+        PoolStorage.Layout storage l
+    ) internal view returns (uint256 lower, uint256 upper) {
+        lower = WAD;
+        upper = WAD;
+
+        uint256 current = l.currentTick;
+        uint256 right = l.tickIndex.next(current);
+
+        if (l.liquidityRate == 0) {
+            // applies whenever the pool is empty or the last active order that
+            // was traversed by the price was withdrawn
+            // the check is independent of the current market price
+            lower = current;
+            upper = right;
+        } else if (
+            -l.ticks[right].delta > 0 &&
+            l.liquidityRate == uint256(-l.ticks[right].delta) &&
+            right == l.marketPrice &&
+            l.tickIndex.next(right) != 0
+        ) {
+            // bid-bound market price check
+            // liquidity_rate > 0
+            //        market price
+            //             v
+            // |------[----]------|
+            //        ^
+            //     current
+            lower = right;
+            upper = l.tickIndex.next(right);
+        } else if (
+            -l.ticks[current].delta > 0 &&
+            l.liquidityRate == uint256(-l.ticks[current].delta) &&
+            current == l.marketPrice &&
+            l.tickIndex.prev(current) != 0
+        ) {
+            //  ask-bound market price check
+            //  liquidity_rate > 0
+            //  market price
+            //        v
+            // |------[----]------|
+            //        ^
+            //     current
+            lower = l.tickIndex.prev(current);
+            upper = current;
+        }
+    }
+
     function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
         Position.Key memory p,
         bool isBid
     ) internal view returns (bool) {
-        uint256 right = l.tickIndex.next(l.currentTick);
-
-        bool isStranded = l.liquidityRate == 0 &&
-            p.lower >= l.currentTick &&
-            p.upper <= right;
-
-        if (isStranded) return true;
-        if (right == Pricing.MAX_TICK_PRICE) return isStranded;
-
-        uint256 rightRight = l.tickIndex.next(right);
-
-        return (l.ticks[right].delta < 0 &&
-            l.liquidityRate == uint256(-l.ticks[right].delta) &&
-            isBid &&
-            l.marketPrice == right &&
-            p.lower >= right &&
-            p.upper <= rightRight);
+        (uint256 lower, uint256 upper) = _getStrandedArea(l);
+        uint256 tick = isBid ? p.upper : p.lower;
+        return lower <= tick && tick <= upper;
     }
 
     /// @notice In case the market price is stranded the market price needs to be
