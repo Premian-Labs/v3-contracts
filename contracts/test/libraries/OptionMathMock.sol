@@ -2,29 +2,29 @@
 
 pragma solidity ^0.8.0;
 
-import {OptionMath, SD59x18} from "../../libraries/OptionMath.sol";
+import {OptionMath} from "../../libraries/OptionMath.sol";
 
 contract OptionMathMock {
-    function helperNormal(SD59x18 x) external pure returns (SD59x18) {
+    function helperNormal(int256 x) external pure returns (int256) {
         return OptionMath.helperNormal(x);
     }
 
-    function normalCdf(SD59x18 x) external pure returns (SD59x18) {
+    function normalCdf(int256 x) external pure returns (int256) {
         return OptionMath.normalCdf(x);
     }
 
-    function relu(SD59x18 x) external pure returns (SD59x18) {
+    function relu(int256 x) external pure returns (int256) {
         return OptionMath.relu(x);
     }
 
     function blackScholesPrice(
-        SD59x18 spot59x18,
-        SD59x18 strike59x18,
-        SD59x18 timeToMaturity59x18,
-        SD59x18 volAnnualized59x18,
-        SD59x18 riskFreeRate59x18,
+        int256 spot59x18,
+        int256 strike59x18,
+        int256 timeToMaturity59x18,
+        int256 volAnnualized59x18,
+        int256 riskFreeRate59x18,
         bool isCall
-    ) external pure returns (SD59x18) {
+    ) external pure returns (int256) {
         return
             OptionMath.blackScholesPrice(
                 spot59x18,
