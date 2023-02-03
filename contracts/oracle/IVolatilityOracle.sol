@@ -36,7 +36,7 @@ interface IVolatilityOracle {
     ) external pure returns (int256[] memory params);
 
     /// @notice Update a list of Anchored eSSVI model parameters
-    /// @param tokens List of the underlying tokens
+    /// @param tokens List of the base tokens
     /// @param tau List of maturities
     /// @param theta List of ATM total implied variance curves
     /// @param psi List of ATM skew curves

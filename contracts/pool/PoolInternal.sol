@@ -74,7 +74,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return Math.max(premiumFee, notionalFee);
     }
 
-    function _getQuote(
+    function _getTradeQuote(
         uint256 size,
         bool isBuy
     ) internal view returns (uint256) {
@@ -580,12 +580,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     nextMarketPrice = isBuy ? pricing.upper : pricing.lower;
                 }
 
-                uint256 quotePrice = Math.average(
+                uint256 tradeQuotePrice = Math.average(
                     l.marketPrice,
                     nextMarketPrice
                 );
 
-                uint256 premium = quotePrice.mul(tradeSize);
+                uint256 premium = tradeQuotePrice.mul(tradeSize);
                 uint256 takerFee = Position.contractsToCollateral(
                     _takerFee(tradeSize, premium),
                     l.strike,
@@ -786,22 +786,22 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         fully while having the price guaranteed.
     function _fillQuote(
         address user,
-        TradeQuote memory quote,
+        TradeQuote memory tradeQuote,
         uint256 size,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) internal {
-        if (size > quote.size) revert Pool__AboveQuoteSize();
+        if (size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureQuoteIsValid(l, user, quote, v, r, s);
+        _ensureQuoteIsValid(l, user, tradeQuote, v, r, s);
 
         // Increment nonce so that quote cannot be replayed
-        l.quoteNonce[user] += 1;
+        l.tradeQuoteNonce[user] += 1;
 
-        uint256 premium = quote.price.mul(size);
+        uint256 premium = tradeQuote.price.mul(size);
         uint256 takerFee = Position.contractsToCollateral(
             _takerFee(size, premium),
             l.strike,
@@ -822,7 +822,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         /////////////////////////
         // Process trade taker //
         /////////////////////////
-        uint256 premiumTaker = !quote.isBuy
+        uint256 premiumTaker = !tradeQuote.isBuy
             ? premium // Taker Buying
             : premium - takerFee; // Taker selling
 
@@ -832,7 +832,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             premiumTaker,
             0,
             size,
-            !quote.isBuy,
+            !tradeQuote.isBuy,
             true
         );
 
@@ -853,23 +853,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // note that the logic is different from the trade logic, since the
         // maker rebate gets directly transferred to the LP instead of
         // incrementing the global rate
-        uint256 premiumMaker = quote.isBuy
+        uint256 premiumMaker = tradeQuote.isBuy
             ? premium - makerRebate // Maker buying
             : premium - protocolFee; // Maker selling
 
         Delta memory deltaMaker = _updateUserAssets(
             l,
-            quote.provider,
+            tradeQuote.provider,
             premiumMaker,
             0,
             size,
-            quote.isBuy,
+            tradeQuote.isBuy,
             true
         );
 
         emit FillQuote(
             user,
-            quote.provider,
+            tradeQuote.provider,
             size,
             deltaMaker.collateral,
             deltaMaker.longs,
@@ -880,7 +880,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             premium,
             takerFee,
             protocolFee,
-            !quote.isBuy
+            !tradeQuote.isBuy
         );
     }
 
@@ -1602,31 +1602,32 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _ensureQuoteIsValid(
         PoolStorage.Layout storage l,
         address user,
-        TradeQuote memory quote,
+        TradeQuote memory tradeQuote,
         uint8 v,
         bytes32 r,
         bytes32 s
     ) internal view {
-        if (block.timestamp > quote.deadline) revert Pool__QuoteExpired();
+        if (block.timestamp > tradeQuote.deadline) revert Pool__QuoteExpired();
 
         if (
-            Pricing.MIN_TICK_PRICE > quote.price ||
-            quote.price > Pricing.MAX_TICK_PRICE
+            Pricing.MIN_TICK_PRICE > tradeQuote.price ||
+            tradeQuote.price > Pricing.MAX_TICK_PRICE
         ) revert Pool__OutOfBoundsPrice();
 
-        if (user != quote.taker) revert Pool__InvalidQuoteTaker();
-        if (l.quoteNonce[user] != quote.nonce) revert Pool__InvalidQuoteNonce();
+        if (user != tradeQuote.taker) revert Pool__InvalidQuoteTaker();
+        if (l.tradeQuoteNonce[user] != tradeQuote.nonce)
+            revert Pool__InvalidQuoteNonce();
 
         bytes32 structHash = keccak256(
             abi.encode(
                 FILL_QUOTE_TYPE_HASH,
-                quote.provider,
-                quote.taker,
-                quote.price,
-                quote.size,
-                quote.isBuy,
-                quote.nonce,
-                quote.deadline
+                tradeQuote.provider,
+                tradeQuote.taker,
+                tradeQuote.price,
+                tradeQuote.size,
+                tradeQuote.isBuy,
+                tradeQuote.nonce,
+                tradeQuote.deadline
             )
         );
 
@@ -1642,6 +1643,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         address signer = ECDSA.recover(hash, v, r, s);
-        if (signer != quote.provider) revert Pool__InvalidQuoteSignature();
+        if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
 }

@@ -23,9 +23,9 @@ contract PoolBase is ERC1155Base, ERC1155Enumerable, ERC165Base, Multicall {
         return
             string(
                 abi.encodePacked(
-                    IERC20Metadata(l.underlying).symbol(),
-                    " / ",
                     IERC20Metadata(l.base).symbol(),
+                    " / ",
+                    IERC20Metadata(l.quote).symbol(),
                     " - Premia Options Pool"
                 )
             );

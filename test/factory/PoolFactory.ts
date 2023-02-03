@@ -26,9 +26,9 @@ describe('PoolFactory', () => {
   let p: PoolUtil;
 
   let base: ERC20Mock;
-  let underlying: ERC20Mock;
+  let quote: ERC20Mock;
   let baseOracle: MockContract;
-  let underlyingOracle: MockContract;
+  let quoteOracle: MockContract;
 
   let isCall = true;
   let strike = parseEther('1000'); // ATM
@@ -38,26 +38,26 @@ describe('PoolFactory', () => {
   before(async () => {
     [deployer] = await ethers.getSigners();
 
-    underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+    base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    p = await PoolUtil.deploy(deployer, underlying.address, true, true);
+    p = await PoolUtil.deploy(deployer, base.address, true, true);
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(parseUnits('1', 8));
+    await baseOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
     await baseOracle.mock.decimals.returns(8);
 
-    underlyingOracle = await deployMockContract(deployer as any, [
+    quoteOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await underlyingOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
-    await underlyingOracle.mock.decimals.returns(8);
+    await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
+    await quoteOracle.mock.decimals.returns(8);
 
     maturity = await getValidMaturity(10, 'months');
     blockTimestamp = await now();
@@ -70,9 +70,9 @@ describe('PoolFactory', () => {
       expect(
         await p.poolFactory.isPoolDeployed(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -83,9 +83,9 @@ describe('PoolFactory', () => {
     it('should return true if a pool with given parameters has been deployed', async () => {
       await p.poolFactory.deployPool(
         base.address,
-        underlying.address,
+        quote.address,
         baseOracle.address,
-        underlyingOracle.address,
+        quoteOracle.address,
         strike,
         maturity,
         isCall,
@@ -94,9 +94,10 @@ describe('PoolFactory', () => {
       expect(
         await p.poolFactory.isPoolDeployed(
           base.address,
-          underlying.address,
+          quote.address,
+
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -109,9 +110,10 @@ describe('PoolFactory', () => {
     it('should properly deploy the pool', async () => {
       const tx = await p.poolFactory.deployPool(
         base.address,
-        underlying.address,
+        quote.address,
+
         baseOracle.address,
-        underlyingOracle.address,
+        quoteOracle.address,
         strike,
         maturity,
         isCall,
@@ -125,30 +127,31 @@ describe('PoolFactory', () => {
 
       expect([
         poolSettings.base,
-        poolSettings.underlying,
+        poolSettings.quote,
         poolSettings.baseOracle,
-        poolSettings.underlyingOracle,
+        poolSettings.quoteOracle,
         poolSettings.strike,
         poolSettings.maturity,
         poolSettings.isCallPool,
       ]).to.deep.eq([
         base.address,
-        underlying.address,
+        quote.address,
+
         baseOracle.address,
-        underlyingOracle.address,
+        quoteOracle.address,
         strike,
         maturity,
         isCall,
       ]);
     });
 
-    it('should revert if base and underlying are identical', async () => {
+    it('should revert if base and base are identical', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          base.address,
+          quote.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -159,13 +162,13 @@ describe('PoolFactory', () => {
       );
     });
 
-    it('should revert if baseOracle and underlyingOracle are identical', async () => {
+    it('should revert if quoteOracle and baseOracle are identical', async () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
-          baseOracle.address,
-          baseOracle.address,
+          quote.address,
+          quoteOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -176,13 +179,13 @@ describe('PoolFactory', () => {
       );
     });
 
-    it('should revert if base, underlying, baseOracle, or underlyingOracle are zero address', async () => {
+    it('should revert if base, base, quoteOracle, or baseOracle are zero address', async () => {
       await expect(
         p.poolFactory.deployPool(
+          base.address,
           ethers.constants.AddressZero,
-          underlying.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -195,9 +198,24 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
+          baseOracle.address,
           ethers.constants.AddressZero,
-          underlyingOracle.address,
+          strike,
+          maturity,
+          isCall,
+        ),
+      ).to.be.revertedWithCustomError(
+        p.poolFactory,
+        'PoolFactory__ZeroAddress',
+      );
+
+      await expect(
+        p.poolFactory.deployPool(
+          ethers.constants.AddressZero,
+          quote.address,
+          baseOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -210,24 +228,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
+          quote.address,
           ethers.constants.AddressZero,
-          baseOracle.address,
-          underlyingOracle.address,
-          strike,
-          maturity,
-          isCall,
-        ),
-      ).to.be.revertedWithCustomError(
-        p.poolFactory,
-        'PoolFactory__ZeroAddress',
-      );
-
-      await expect(
-        p.poolFactory.deployPool(
-          base.address,
-          underlying.address,
-          baseOracle.address,
-          ethers.constants.AddressZero,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -241,9 +244,9 @@ describe('PoolFactory', () => {
     it('should revert if pool has already been deployed', async () => {
       await p.poolFactory.deployPool(
         base.address,
-        underlying.address,
+        quote.address,
         baseOracle.address,
-        underlyingOracle.address,
+        quoteOracle.address,
         strike,
         maturity,
         isCall,
@@ -252,9 +255,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           maturity,
           isCall,
@@ -269,9 +272,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           0,
           maturity,
           isCall,
@@ -293,9 +296,9 @@ describe('PoolFactory', () => {
         await expect(
           p.poolFactory.deployPool(
             base.address,
-            underlying.address,
+            quote.address,
             baseOracle.address,
-            underlyingOracle.address,
+            quoteOracle.address,
             strike,
             maturity,
             isCall,
@@ -311,9 +314,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           blockTimestamp,
           isCall,
@@ -328,9 +331,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           (await getValidMaturity(2, 'days')) + 1,
           isCall,
@@ -345,9 +348,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           (await getValidMaturity(2, 'weeks')) - ONE_DAY,
           isCall,
@@ -362,9 +365,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           (await getValidMaturity(2, 'months')) - ONE_WEEK,
           isCall,
@@ -379,9 +382,9 @@ describe('PoolFactory', () => {
       await expect(
         p.poolFactory.deployPool(
           base.address,
-          underlying.address,
+          quote.address,
           baseOracle.address,
-          underlyingOracle.address,
+          quoteOracle.address,
           strike,
           await getLastFridayOfMonth(await now(), 13),
           isCall,

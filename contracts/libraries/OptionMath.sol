@@ -127,7 +127,7 @@ library OptionMath {
     }
 
     /// @notice Calculates the strike interval for the given spot price
-    /// @param spot The spot price of the underlying asset
+    /// @param spot The spot price of the base asset
     /// @return The strike interval
     function calculateStrikeInterval(
         int256 spot

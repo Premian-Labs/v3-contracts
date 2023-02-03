@@ -29,9 +29,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         view
         returns (
             address base,
-            address underlying,
+            address quote,
             address baseOracle,
-            address underlyingOracle,
+            address quoteOracle,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -40,9 +40,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return (
             l.base,
-            l.underlying,
+            l.quote,
             l.baseOracle,
-            l.underlyingOracle,
+            l.quoteOracle,
             l.strike,
             l.maturity,
             l.isCallPool
@@ -50,11 +50,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getQuote(
+    function getTradeQuote(
         uint256 size,
         bool isBuy
     ) external view returns (uint256) {
-        return _getQuote(size, isBuy);
+        return _getTradeQuote(size, isBuy);
     }
 
     /// @inheritdoc IPoolCore
@@ -231,7 +231,7 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getQuoteNonce(address user) external view returns (uint256) {
-        return PoolStorage.layout().quoteNonce[user];
+    function getTradeQuoteNonce(address user) external view returns (uint256) {
+        return PoolStorage.layout().tradeQuoteNonce[user];
     }
 }

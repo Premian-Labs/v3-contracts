@@ -20,9 +20,9 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
-    /// @return underlying Address of underlying token
+    /// @return quote Address of quote token
     /// @return baseOracle Address of base token price feed
-    /// @return underlyingOracle Address of underlying token price feed
+    /// @return quoteOracle Address of quote token price feed
     /// @return strike The strike of the option
     /// @return maturity The maturity timestamp of the option
     /// @return isCallPool Whether the pool is for call or put options
@@ -31,9 +31,9 @@ interface IPoolCore is IPoolInternal {
         view
         returns (
             address base,
-            address underlying,
+            address quote,
             address baseOracle,
-            address underlyingOracle,
+            address quoteOracle,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -43,7 +43,10 @@ interface IPoolCore is IPoolInternal {
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
     /// @return The premium which has to be paid to complete the trade
-    function getQuote(uint256 size, bool isBuy) external view returns (uint256);
+    function getTradeQuote(
+        uint256 size,
+        bool isBuy
+    ) external view returns (uint256);
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to
@@ -209,5 +212,5 @@ interface IPoolCore is IPoolInternal {
     /// @notice Get the current quote nonce for the given user
     /// @param user User for which to return the current quote nonce
     /// @return The current quote nonce
-    function getQuoteNonce(address user) external view returns (uint256);
+    function getTradeQuoteNonce(address user) external view returns (uint256);
 }

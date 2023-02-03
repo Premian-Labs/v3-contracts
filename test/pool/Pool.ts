@@ -33,9 +33,10 @@ describe('Pool', () => {
   let p: PoolUtil;
 
   let base: ERC20Mock;
-  let underlying: ERC20Mock;
+  let quote: ERC20Mock;
+
   let baseOracle: MockContract;
-  let underlyingOracle: MockContract;
+  let quoteOracle: MockContract;
 
   let strike = parseEther('1000'); // ATM
   let maturity: number;
@@ -43,40 +44,41 @@ describe('Pool', () => {
   let isCall: boolean;
   let collateral: BigNumber;
 
-  let getQuote: () => Promise<TradeQuote>;
+  let getTradeQuote: () => Promise<TradeQuote>;
 
   before(async () => {
     [deployer, lp, trader] = await ethers.getSigners();
 
-    underlying = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    base = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+    base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    p = await PoolUtil.deploy(deployer, underlying.address, true, true);
+    p = await PoolUtil.deploy(deployer, base.address, true, true);
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(100000000);
+    await baseOracle.mock.latestAnswer.returns(100000000000);
     await baseOracle.mock.decimals.returns(8);
 
-    underlyingOracle = await deployMockContract(deployer as any, [
+    quoteOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await underlyingOracle.mock.latestAnswer.returns(100000000000);
-    await underlyingOracle.mock.decimals.returns(8);
+    await quoteOracle.mock.latestAnswer.returns(100000000);
+    await quoteOracle.mock.decimals.returns(8);
 
     maturity = await getValidMaturity(10, 'months');
 
     for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
         base.address,
-        underlying.address,
+        quote.address,
+
         baseOracle.address,
-        underlyingOracle.address,
+        quoteOracle.address,
         strike,
         maturity,
         isCall,
@@ -94,7 +96,7 @@ describe('Pool', () => {
       }
     }
 
-    getQuote = async () => {
+    getTradeQuote = async () => {
       return {
         provider: lp.address,
         taker: trader.address,
@@ -142,11 +144,11 @@ describe('Pool', () => {
           strike: strike,
         };
 
-        await underlying.connect(lp).approve(callPool.address, collateral);
+        await base.connect(lp).approve(callPool.address, collateral);
 
         const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
 
-        await underlying.mint(lp.address, parseEther('2000'));
+        await base.mint(lp.address, parseEther('2000'));
 
         await callPool
           .connect(lp)
@@ -181,17 +183,17 @@ describe('Pool', () => {
 
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
 
       const initialBalance = parseEther('10');
 
-      await underlying.mint(lp.address, initialBalance);
-      await underlying.mint(trader.address, initialBalance);
+      await base.mint(lp.address, initialBalance);
+      await base.mint(trader.address, initialBalance);
 
-      await underlying
+      await base
         .connect(lp)
         .approve(callPool.address, ethers.constants.MaxUint256);
-      await underlying
+      await base
         .connect(trader)
         .approve(callPool.address, ethers.constants.MaxUint256);
 
@@ -207,10 +209,10 @@ describe('Pool', () => {
 
       const fee = (await callPool.takerFee(quote.size, premium)).div(2); // Divide by 2 to account for protocol fee
 
-      expect(await underlying.balanceOf(lp.address)).to.eq(
+      expect(await base.balanceOf(lp.address)).to.eq(
         initialBalance.sub(quote.size).add(premium).sub(fee),
       );
-      expect(await underlying.balanceOf(trader.address)).to.eq(
+      expect(await base.balanceOf(trader.address)).to.eq(
         initialBalance.sub(premium),
       );
 
@@ -228,7 +230,7 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is expired', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
       quote.deadline = (await now()) - 1;
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
@@ -241,7 +243,7 @@ describe('Pool', () => {
     });
 
     it('should revert if quote price is out of bounds', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
       quote.price = 1;
 
       let sig = await signQuote(lp.provider!, callPool.address, quote);
@@ -263,7 +265,7 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is not used by someone else than taker', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -275,7 +277,7 @@ describe('Pool', () => {
     });
 
     it('should revert if nonce is not the current one', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
 
       await callPool.setNonce(trader.address, 2);
 
@@ -300,7 +302,7 @@ describe('Pool', () => {
     });
 
     it('should revert if signed message does not match quote', async () => {
-      const quote = await getQuote();
+      const quote = await getTradeQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
