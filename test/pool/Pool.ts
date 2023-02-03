@@ -35,6 +35,13 @@ describe('Pool', () => {
   let isCall: boolean;
   let collateral: BigNumber;
 
+  // TODO: Move to PoolUtil
+  enum OrderType {
+    CSUP,
+    CS,
+    LC,
+  }
+
   before(async () => {
     [deployer, lp] = await ethers.getSigners();
 
@@ -118,7 +125,7 @@ describe('Pool', () => {
           upper: upper,
           operator: lp.address,
           owner: lp.address,
-          orderType: 2,
+          orderType: OrderType.LC,
           isCall: isCall,
           strike: strike,
         };
@@ -158,6 +165,53 @@ describe('Pool', () => {
     });
   });
 
+  describe('#deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)', () => {
+    describe('OrderType LC', () => {
+      it('should mint 2000 LP tokens when LP deposits 2000 unit(s) of collateral', async () => {
+        let lower = parseEther('0.25');
+        let upper = parseEther('0.75');
+
+        let position = {
+          lower: lower,
+          upper: upper,
+          operator: lp.address,
+          owner: lp.address,
+          orderType: OrderType.LC,
+          isCall: isCall,
+          strike: strike,
+        };
+
+        const tokenId = await callPool.formatTokenId(
+          position.operator,
+          position.lower,
+          position.upper,
+          position.orderType,
+        );
+
+        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+
+        const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
+        const size = parseEther('2000');
+
+        await underlying.connect(lp).approve(callPool.address, size);
+
+        await callPool
+          .connect(lp)
+          [
+            'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)'
+          ](
+            position,
+            nearestBelow.nearestBelowLower,
+            nearestBelow.nearestBelowUpper,
+            size,
+            0,
+          );
+
+        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(size);
+      });
+    });
+  });
+
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
       const operator = '0x1000000000000000000000000000000000000001';
@@ -165,7 +219,7 @@ describe('Pool', () => {
         operator,
         parseEther('0.001'),
         parseEther('1'),
-        2,
+        OrderType.LC,
       );
 
       console.log(tokenId.toHexString());
@@ -189,7 +243,7 @@ describe('Pool', () => {
       expect(r.lower).to.eq(parseEther('0.001'));
       expect(r.upper).to.eq(parseEther('1'));
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
-      expect(r.orderType).to.eq(2);
+      expect(r.orderType).to.eq(OrderType.LC);
       expect(r.version).to.eq(1);
     });
   });

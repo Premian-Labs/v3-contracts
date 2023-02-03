@@ -71,4 +71,43 @@ contract PositionMock {
     ) external pure returns (uint256) {
         return Position.collateral(self, size, price);
     }
+
+    function contracts(
+        Position.Key memory self,
+        uint256 size,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.contracts(self, size, price);
+    }
+
+    function long(
+        Position.Key memory self,
+        uint256 size,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.long(self, size, price);
+    }
+
+    function short(
+        Position.Key memory self,
+        uint256 size,
+        uint256 price
+    ) external pure returns (uint256) {
+        return Position.short(self, size, price);
+    }
+
+    function calculatePositionUpdate(
+        Position.Key memory self,
+        uint256 currentBalance,
+        int256 amount,
+        uint256 price
+    ) external pure returns (Position.Delta memory delta) {
+        return
+            Position.calculatePositionUpdate(
+                self,
+                currentBalance,
+                amount,
+                price
+            );
+    }
 }

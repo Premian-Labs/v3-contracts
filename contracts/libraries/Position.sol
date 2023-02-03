@@ -253,18 +253,17 @@ library Position {
         int256 amount,
         uint256 price
     ) internal pure returns (Delta memory delta) {
-        int256 collateralHeld = self
-            .collateral(currentBalance, price)
-            .toInt256();
-        int256 longsHeld = self.long(currentBalance, price).toInt256();
-        int256 shortsHeld = self.short(currentBalance, price).toInt256();
+        if (int256(currentBalance) + amount < 0)
+            revert IPosition.Position__InvalidPositionUpdate();
 
-        uint256 newBalance = currentBalance.add(amount);
+        uint256 absChangeTokens = Math.abs(amount);
+        int256 sign = amount > 0 ? int256(1) : int256(-1);
 
         delta.collateral =
-            (self.collateral(newBalance, price)).toInt256() -
-            collateralHeld;
-        delta.longs = (self.long(newBalance, price)).toInt256() - longsHeld;
-        delta.shorts = (self.short(newBalance, price)).toInt256() - shortsHeld;
+            sign *
+            (self.collateral(absChangeTokens, price)).toInt256();
+
+        delta.longs = sign * (self.long(absChangeTokens, price)).toInt256();
+        delta.shorts = sign * (self.short(absChangeTokens, price)).toInt256();
     }
 }

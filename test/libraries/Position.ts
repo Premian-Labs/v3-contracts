@@ -297,24 +297,514 @@ describe('Position', () => {
     });
   });
 
-  // TODO
-  describe.skip('#collateral', () => {
-    const cases = [
-      ['0.5', '0.3', '0.01375'],
-      ['1', '0.5', '0.1875'],
-      ['2', '0.7', '0.855'],
-    ];
+  describe('#collateral', () => {
+    const size = '2';
 
-    describe('#collateral <-> short - use premiums', () => {
-      it(``, async () => {});
+    describe('OrderType CSUP', () => {
+      const cases = [
+        ['0.2', '1.'],
+        ['0.25', '1.'],
+        ['0.3', '0.855'],
+        ['0.5', '0.375'],
+        ['0.7', '0.055'],
+        ['0.75', '0'],
+        ['0.8', '0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
+          key.orderType = OrderType.CSUP;
+
+          let collateral = await instance.collateral(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(collateral).to.eq(parseEther(c[1]));
+        });
+      }
     });
 
-    describe('#collateral <-> short', () => {
-      it(``, async () => {});
+    describe('OrderType CS', () => {
+      const cases = [
+        ['0.2', '2.'],
+        ['0.25', '2.'],
+        ['0.3', '1.855'],
+        ['0.5', '1.375'],
+        ['0.7', '1.055'],
+        ['0.75', '1.0'],
+        ['0.8', '1.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
+          key.orderType = OrderType.CS;
+
+          let collateral = await instance.collateral(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(collateral).to.eq(parseEther(c[1]));
+        });
+      }
     });
 
-    describe('#long <-> collateral', () => {
-      it(``, async () => {});
+    describe('OrderType LC', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0.055'],
+        ['0.5', '0.375'],
+        ['0.7', '0.855'],
+        ['0.75', '1.0'],
+        ['0.8', '1.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
+          key.orderType = OrderType.LC;
+
+          let collateral = await instance.collateral(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(collateral).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+  });
+
+  describe('#contracts', () => {
+    const size = '2';
+
+    describe('OrderType CSUP', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0.2'],
+        ['0.5', '1.0'],
+        ['0.7', '1.8'],
+        ['0.75', '2.0'],
+        ['0.8', '2.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
+          key.orderType = OrderType.CSUP;
+
+          let contracts = await instance.contracts(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType CS', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0.2'],
+        ['0.5', '1.0'],
+        ['0.7', '1.8'],
+        ['0.75', '2.0'],
+        ['0.8', '2.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
+          key.orderType = OrderType.CS;
+
+          let contracts = await instance.contracts(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType LC', () => {
+      const cases = [
+        ['0.2', '2.'],
+        ['0.25', '2.'],
+        ['0.3', '1.8'],
+        ['0.5', '1.0'],
+        ['0.7', '0.2'],
+        ['0.75', '0'],
+        ['0.8', '0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
+          key.orderType = OrderType.LC;
+
+          let contracts = await instance.contracts(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+  });
+
+  describe('#long', () => {
+    const size = '2';
+
+    describe('OrderType CSUP', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0'],
+        ['0.5', '0'],
+        ['0.7', '0'],
+        ['0.75', '0'],
+        ['0.8', '0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.CSUP;
+
+          let contracts = await instance.long(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType CS', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0'],
+        ['0.5', '0'],
+        ['0.7', '0'],
+        ['0.75', '0'],
+        ['0.8', '0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.CS;
+
+          let contracts = await instance.long(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType LC', () => {
+      const cases = [
+        ['0.2', '2.0'],
+        ['0.25', '2.0'],
+        ['0.3', '1.8'],
+        ['0.5', '1.0'],
+        ['0.7', '0.2'],
+        ['0.75', '0.0'],
+        ['0.8', '0.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.LC;
+
+          let contracts = await instance.long(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+  });
+
+  describe('#short', () => {
+    const size = '2';
+
+    describe('OrderType CSUP', () => {
+      const cases = [
+        ['0.2', '0.0'],
+        ['0.25', '0.0'],
+        ['0.3', '0.2'],
+        ['0.5', '1.0'],
+        ['0.7', '1.8'],
+        ['0.75', '2.0'],
+        ['0.8', '2.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.CSUP;
+
+          let contracts = await instance.short(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType CS', () => {
+      const cases = [
+        ['0.2', '0.0'],
+        ['0.25', '0.0'],
+        ['0.3', '0.2'],
+        ['0.5', '1.0'],
+        ['0.7', '1.8'],
+        ['0.75', '2.0'],
+        ['0.8', '2.0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.CS;
+
+          let contracts = await instance.short(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+
+    describe('OrderType LC', () => {
+      const cases = [
+        ['0.2', '0'],
+        ['0.25', '0'],
+        ['0.3', '0'],
+        ['0.5', '0'],
+        ['0.7', '0'],
+        ['0.75', '0'],
+        ['0.8', '0'],
+      ];
+
+      for (let c of cases) {
+        it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
+          key.orderType = OrderType.LC;
+
+          let contracts = await instance.short(
+            key,
+            parseEther(size),
+            parseEther(c[0]),
+          );
+
+          expect(contracts).to.eq(parseEther(c[1]));
+        });
+      }
+    });
+  });
+
+  describe('#calculatePositionUpdate', () => {
+
+    const prices = ['0.2', '0.25', '0.3', '0.6', '0.75', '0.8'];
+    const deltas = ['0.8', '1.2',];
+    const actions = [true, false];
+    const currentBalance = parseEther('2');
+
+    describe('OrderType CSUP', () => {
+      const expected = [
+        ['0.400', '0.000', '0.000'],
+        ['0.400', '0.000', '0.000'],
+        ['0.342', '0.000', '0.080'],
+        ['0.078', '0.000', '0.560'],
+        ['0.000', '0.000', '0.800'],
+        ['0.000', '0.000', '0.800'],
+        ['0.600', '0.000', '0.000'],
+        ['0.600', '0.000', '0.000'],
+        ['0.513', '0.000', '0.120'],
+        ['0.117', '0.000', '0.840'],
+        ['0.000', '0.000', '1.200'],
+        ['0.000', '0.000', '1.200'],
+        ['-0.400', '-0.000', '-0.000'],
+        ['-0.400', '-0.000', '-0.000'],
+        ['-0.342', '-0.000', '-0.080'],
+        ['-0.078', '-0.000', '-0.560'],
+        ['-0.000', '-0.000', '-0.800'],
+        ['-0.000', '-0.000', '-0.800'],
+        ['-0.600', '-0.000', '-0.000'],
+        ['-0.600', '-0.000', '-0.000'],
+        ['-0.513', '-0.000', '-0.120'],
+        ['-0.117', '-0.000', '-0.840'],
+        ['-0.000', '-0.000', '-1.200'],
+        ['-0.000', '-0.000', '-1.200'],
+      ];
+
+      let counter: number = 0;
+      for (let is_deposit of actions) {
+        for (let deltaBalance of deltas) {
+          for (let price of prices) {
+            it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
+              key.orderType = OrderType.CSUP;
+
+              let sign: number;
+
+              if (is_deposit) {sign = 1;} else {sign = -1;}
+
+              let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
+              let formattedPrice = parseEther(price);
+
+              let delta = await instance.calculatePositionUpdate(
+                  key,
+                  currentBalance,
+                  formattedDeltaBalance,
+                  formattedPrice,
+              );
+              expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
+              expect(delta.longs).to.eq(parseEther(expected[counter][1]));
+              expect(delta.shorts).to.eq(parseEther(expected[counter][2]));
+              counter++;
+            });
+          }
+        }
+      }
+    });
+
+    describe('OrderType CS', () => {
+      const expected = [
+
+        ['0.800', '0.000', '0.000'],
+        ['0.800', '0.000', '0.000'],
+        ['0.742', '0.000', '0.080'],
+        ['0.478', '0.000', '0.560'],
+        ['0.400', '0.000', '0.800'],
+        ['0.400', '0.000', '0.800'],
+        ['1.200', '0.000', '0.000'],
+        ['1.200', '0.000', '0.000'],
+        ['1.113', '0.000', '0.120'],
+        ['0.717', '0.000', '0.840'],
+        ['0.600', '0.000', '1.200'],
+        ['0.600', '0.000', '1.200'],
+        ['-0.800', '-0.000', '-0.000'],
+        ['-0.800', '-0.000', '-0.000'],
+        ['-0.742', '-0.000', '-0.080'],
+        ['-0.478', '-0.000', '-0.560'],
+        ['-0.400', '-0.000', '-0.800'],
+        ['-0.400', '-0.000', '-0.800'],
+        ['-1.200', '-0.000', '-0.000'],
+        ['-1.200', '-0.000', '-0.000'],
+        ['-1.113', '-0.000', '-0.120'],
+        ['-0.717', '-0.000', '-0.840'],
+        ['-0.600', '-0.000', '-1.200'],
+        ['-0.600', '-0.000', '-1.200'],
+      ];
+
+      let counter: number = 0;
+      for (let is_deposit of actions) {
+        for (let deltaBalance of deltas) {
+          for (let price of prices) {
+            it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
+              key.orderType = OrderType.CS;
+
+              let sign: number;
+
+              if (is_deposit) {sign = 1;} else {sign = -1;}
+
+              let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
+              let formattedPrice = parseEther(price);
+
+              let delta = await instance.calculatePositionUpdate(
+                  key,
+                  currentBalance,
+                  formattedDeltaBalance,
+                  formattedPrice,
+              );
+              expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
+              expect(delta.longs).to.eq(parseEther(expected[counter][1]));
+              expect(delta.shorts).to.eq(parseEther(expected[counter][2]));
+              counter++;
+            });
+          }
+        }
+      }
+    });
+
+    describe('OrderType LC', () => {
+      const expected = [
+        ['0.000', '0.800', '0.000'],
+        ['0.000', '0.800', '0.000'],
+        ['0.022', '0.720', '0.000'],
+        ['0.238', '0.240', '0.000'],
+        ['0.400', '0.000', '0.000'],
+        ['0.400', '0.000', '0.000'],
+        ['0.000', '1.200', '0.000'],
+        ['0.000', '1.200', '0.000'],
+        ['0.033', '1.080', '0.000'],
+        ['0.357', '0.360', '0.000'],
+        ['0.600', '0.000', '0.000'],
+        ['0.600', '0.000', '0.000'],
+        ['-0.000', '-0.800', '-0.000'],
+        ['-0.000', '-0.800', '-0.000'],
+        ['-0.022', '-0.720', '-0.000'],
+        ['-0.238', '-0.240', '-0.000'],
+        ['-0.400', '-0.000', '-0.000'],
+        ['-0.400', '-0.000', '-0.000'],
+        ['-0.000', '-1.200', '-0.000'],
+        ['-0.000', '-1.200', '-0.000'],
+        ['-0.033', '-1.080', '-0.000'],
+        ['-0.357', '-0.360', '-0.000'],
+        ['-0.600', '-0.000', '-0.000'],
+        ['-0.600', '-0.000', '-0.000'],
+      ];
+
+      let counter: number = 0;
+      for (let is_deposit of actions) {
+        for (let deltaBalance of deltas) {
+          for (let price of prices) {
+            it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
+              key.orderType = OrderType.LC;
+
+              let sign: number;
+
+              if (is_deposit) {sign = 1;} else {sign = -1;}
+
+              let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
+              let formattedPrice = parseEther(price);
+
+              let delta = await instance.calculatePositionUpdate(
+                  key,
+                  currentBalance,
+                  formattedDeltaBalance,
+                  formattedPrice,
+              );
+              expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
+              expect(delta.longs).to.eq(parseEther(expected[counter][1]));
+              expect(delta.shorts).to.eq(parseEther(expected[counter][2]));
+              counter++;
+            });
+          }
+        }
+      }
     });
   });
 });
