@@ -301,12 +301,12 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 strike,
         uint256 timeToMaturity
     ) external view returns (int256) {
-        int256 sigma = _getVolatility(
-            token,
-            int256(spot),
-            int256(strike),
-            int256(timeToMaturity)
-        );
-        return sigma;
+        return
+            _getVolatility(
+                token,
+                int256(spot),
+                int256(strike),
+                int256(timeToMaturity)
+            );
     }
 }

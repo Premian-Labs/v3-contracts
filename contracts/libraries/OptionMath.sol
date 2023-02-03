@@ -91,12 +91,8 @@ library OptionMath {
             timeScaledRiskFreeRate).div(timeScaledVol);
         int256 d2 = d1 - timeScaledVol;
 
-        int256 sign;
-        if (isCall) {
-            sign = ONE;
-        } else {
-            sign = -ONE;
-        }
+        int256 sign = isCall ? ONE : -ONE;
+
         int256 a = spot.mul(normalCdf(d1.mul(sign)));
         int256 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
         price = (a - b).mul(sign);
