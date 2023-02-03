@@ -31,13 +31,13 @@ library PoolStorage {
     struct Layout {
         // ERC20 token addresses
         address base;
-        address underlying;
+        address quote;
         // AggregatorV3Interface oracle addresses
         address baseOracle;
-        address underlyingOracle;
+        address quoteOracle;
         // token metadata
-        uint8 underlyingDecimals;
         uint8 baseDecimals;
+        uint8 quoteDecimals;
         uint64 maturity;
         // Whether its a call or put pool
         bool isCallPool;
@@ -55,6 +55,8 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
+        // Gets incremented everytime `fillQuote` is called successfully
+        mapping(address => uint256) tradeQuoteNonce;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -64,9 +66,9 @@ library PoolStorage {
         }
     }
 
-    /// @notice Get the token used as options collateral and for payment of premium. (Base for PUT pools, underlying for CALL pools)
+    /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
     function getPoolToken(Layout storage l) internal view returns (address) {
-        return l.isCallPool ? l.underlying : l.base;
+        return l.isCallPool ? l.base : l.quote;
     }
 
     function getSpotPrice(Layout storage l) internal returns (uint256 price) {
@@ -74,10 +76,10 @@ library PoolStorage {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
+            int256 quotePrice = getSpotPrice(l.quoteOracle);
             int256 basePrice = getSpotPrice(l.baseOracle);
-            int256 underlyingPrice = getSpotPrice(l.underlyingOracle);
 
-            l.spot = ((underlyingPrice * 1e18) / basePrice).toUint256();
+            l.spot = ((basePrice * 1e18) / quotePrice).toUint256();
         }
 
         return l.spot;

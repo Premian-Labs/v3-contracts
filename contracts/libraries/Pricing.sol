@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {IPricing} from "./IPricing.sol";
-import {WadMath} from "./WadMath.sol";
 
 /// @notice This class implements the methods necessary for computing price movements within a tick range.
 ///         Warnings
@@ -19,9 +19,9 @@ import {WadMath} from "./WadMath.sol";
 library Pricing {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
-    using WadMath for uint256;
+    using UD60x18 for uint256;
 
-    uint256 private constant WAD = 1e18;
+    uint256 private constant ONE = 1e18;
 
     uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
     uint256 internal constant MIN_TICK_PRICE = 1e15; // 0.001
@@ -44,7 +44,7 @@ library Pricing {
         if (lower > marketPrice || marketPrice > upper)
             revert IPricing.Pricing__PriceOutOfRange();
 
-        return (marketPrice - lower).divWad(upper - lower);
+        return (marketPrice - lower).div((upper - lower));
     }
 
     function proportion(Args memory args) internal pure returns (uint256) {
@@ -83,11 +83,11 @@ library Pricing {
     }
 
     function bidLiquidity(Args memory args) internal pure returns (uint256) {
-        return proportion(args).mulWad(liquidity(args));
+        return proportion(args).mul(liquidity(args));
     }
 
     function askLiquidity(Args memory args) internal pure returns (uint256) {
-        return (WAD - proportion(args)).mulWad(liquidity(args));
+        return (ONE - proportion(args)).mul(liquidity(args));
     }
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
@@ -95,8 +95,8 @@ library Pricing {
         return args.isBuy ? askLiquidity(args) : bidLiquidity(args);
     }
 
-    /// @notice         Computes price reached from the current lower/upper tick after
-    ///                 buying/selling `trade_size` amount of contracts.
+    /// @notice Computes price reached from the current lower/upper tick after
+    ///         buying/selling `trade_size` amount of contracts.
     function price(
         Args memory args,
         uint256 tradeSize
@@ -105,15 +105,15 @@ library Pricing {
         if (liq == 0) return args.isBuy ? args.upper : args.lower;
 
         uint256 _proportion;
-        if (tradeSize > 0) _proportion = tradeSize.divWad(liq);
+        if (tradeSize > 0) _proportion = tradeSize.div(liq);
 
-        if (_proportion > WAD)
+        if (_proportion > ONE)
             revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             args.isBuy
-                ? args.lower + (args.upper - args.lower).mulWad(_proportion)
-                : args.upper - (args.upper - args.lower).mulWad(_proportion);
+                ? args.lower + (args.upper - args.lower).mul(_proportion)
+                : args.upper - (args.upper - args.lower).mul(_proportion);
     }
 
     /// @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts.

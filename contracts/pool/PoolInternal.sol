@@ -10,11 +10,13 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
+import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Tick} from "../libraries/Tick.sol";
-import {WadMath} from "../libraries/WadMath.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IExchangeHelper} from "../IExchangeHelper.sol";
@@ -28,23 +30,29 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using Position for Position.Key;
     using Position for Position.OrderType;
     using Pricing for Pricing.Args;
-    using WadMath for uint256;
     using Tick for Tick.Data;
     using SafeCast for uint256;
     using SafeCast for int256;
     using Math for int256;
     using UintUtils for uint256;
+    using ECDSA for bytes32;
+    using UD60x18 for uint256;
 
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
-    uint256 private constant INVERSE_BASIS_POINT = 1e4;
-    uint256 private constant WAD = 1e18;
+    uint256 private constant ONE = 1e18;
 
+    // ToDo : Add getter for fee values
     // ToDo : Define final values
-    uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
-    uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
-    uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
+    uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e17; // 50%
+    uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e16; // 1%
+    uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e16; // 1%
+
+    bytes32 private constant FILL_QUOTE_TYPE_HASH =
+        keccak256(
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 nonce,uint256 deadline)"
+        );
 
     constructor(address exchangeHelper, address wrappedNativeToken) {
         EXCHANGE_HELPER = exchangeHelper;
@@ -59,16 +67,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size,
         uint256 premium
     ) internal pure returns (uint256) {
-        uint256 premiumFee = (premium * PREMIUM_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
         // 3% of premium
-        uint256 notionalFee = (size * COLLATERAL_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
         // 0.3% of notional
         return Math.max(premiumFee, notionalFee);
     }
 
-    function _getQuote(
+    function _getTradeQuote(
         uint256 size,
         bool isBuy
     ) internal view returns (uint256) {
@@ -98,8 +104,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (liquidity == 0) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
-                uint256 priceDelta = (pricing.upper - pricing.lower).mulWad(
-                    tradeSize.divWad(liquidity)
+                uint256 priceDelta = (pricing.upper - pricing.lower).mul(
+                    tradeSize.div(liquidity)
                 );
 
                 nextPrice = isBuy
@@ -110,7 +116,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             {
                 uint256 premium = Math
                     .average(pricing.marketPrice, nextPrice)
-                    .mulWad(tradeSize);
+                    .mul(tradeSize);
                 uint256 takerFee = Position.contractsToCollateral(
                     _takerFee(size, premium),
                     l.strike,
@@ -129,7 +135,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             // ToDo : Deal with rounding error
-            if (maxSize >= size - (WAD / 10)) {
+            if (maxSize >= size - (ONE / 10)) {
                 size = 0;
             } else {
                 // Cross tick
@@ -163,7 +169,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 liquidityPerTick
     ) internal {
         // Compute the claimable fees
-        uint256 claimableFees = (feeRate - pData.lastFeeRate).mulWad(
+        uint256 claimableFees = (feeRate - pData.lastFeeRate).mul(
             liquidityPerTick
         );
         pData.claimableFees += claimableFees;
@@ -574,12 +580,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     nextMarketPrice = isBuy ? pricing.upper : pricing.lower;
                 }
 
-                uint256 quotePrice = Math.average(
+                uint256 tradeQuotePrice = Math.average(
                     l.marketPrice,
                     nextMarketPrice
                 );
 
-                uint256 premium = quotePrice.mulWad(tradeSize);
+                uint256 premium = tradeQuotePrice.mul(tradeSize);
                 uint256 takerFee = Position.contractsToCollateral(
                     _takerFee(tradeSize, premium),
                     l.strike,
@@ -594,8 +600,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
 
                 // Update price and liquidity variables
-                uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
-                    INVERSE_BASIS_POINT;
+                uint256 protocolFee = takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
                 uint256 makerRebate = takerFee - protocolFee;
 
                 _updateGlobalFeeRate(l, makerRebate);
@@ -611,7 +616,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             // ToDo : Deal with rounding error
-            if (maxSize >= remaining - (WAD / 10)) {
+            if (maxSize >= remaining - (ONE / 10)) {
                 remaining = 0;
             } else {
                 // The trade will require crossing into the next tick range
@@ -781,21 +786,22 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         fully while having the price guaranteed.
     function _fillQuote(
         address user,
+        TradeQuote memory tradeQuote,
         uint256 size,
-        TradeQuote memory quote
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) internal {
-        // ToDo : Implement checks to make sure quote is valid
-
-        if (size > quote.size) revert Pool__AboveQuoteSize();
-
-        if (
-            Pricing.MIN_TICK_PRICE > quote.price ||
-            quote.price > Pricing.MAX_TICK_PRICE
-        ) revert Pool__OutOfBoundsPrice();
+        if (size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        uint256 premium = quote.price.mulWad(size);
+        _ensureQuoteIsValid(l, user, tradeQuote, v, r, s);
+
+        // Increment nonce so that quote cannot be replayed
+        l.tradeQuoteNonce[user] += 1;
+
+        uint256 premium = tradeQuote.price.mul(size);
         uint256 takerFee = Position.contractsToCollateral(
             _takerFee(size, premium),
             l.strike,
@@ -809,19 +815,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 protocolFee = takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
         uint256 makerRebate = takerFee - protocolFee;
         l.protocolFees += protocolFee;
 
         /////////////////////////
         // Process trade taker //
         /////////////////////////
-        uint256 premiumTaker = !quote.isBuy
+        uint256 premiumTaker = !tradeQuote.isBuy
             ? premium // Taker Buying
             : premium - takerFee; // Taker selling
 
-        _updateUserAssets(l, user, premiumTaker, 0, size, !quote.isBuy, true);
+        Delta memory deltaTaker = _updateUserAssets(
+            l,
+            user,
+            premiumTaker,
+            0,
+            size,
+            !tradeQuote.isBuy,
+            true
+        );
 
         /////////////////////////
         // Process trade maker //
@@ -840,28 +853,34 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // note that the logic is different from the trade logic, since the
         // maker rebate gets directly transferred to the LP instead of
         // incrementing the global rate
-        uint256 premiumMaker = quote.isBuy
+        uint256 premiumMaker = tradeQuote.isBuy
             ? premium - makerRebate // Maker buying
             : premium - protocolFee; // Maker selling
 
-        _updateUserAssets(
+        Delta memory deltaMaker = _updateUserAssets(
             l,
-            quote.provider,
+            tradeQuote.provider,
             premiumMaker,
             0,
             size,
-            quote.isBuy,
+            tradeQuote.isBuy,
             true
         );
 
         emit FillQuote(
             user,
-            quote.provider,
+            tradeQuote.provider,
             size,
+            deltaMaker.collateral,
+            deltaMaker.longs,
+            deltaMaker.shorts,
+            deltaTaker.collateral,
+            deltaTaker.longs,
+            deltaTaker.shorts,
             premium,
             takerFee,
             protocolFee,
-            !quote.isBuy
+            !tradeQuote.isBuy
         );
     }
 
@@ -928,7 +947,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 srcSize = _balanceOf(srcP.owner, srcTokenId);
         if (size > srcSize) revert Pool__NotEnoughTokens();
 
-        uint256 proportionTransferred = size.divWad(srcSize);
+        uint256 proportionTransferred = size.div(srcSize);
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
         Position.Data storage srcData = l.positions[srcKey];
@@ -943,7 +962,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             dstData.lastFeeRate = srcData.lastFeeRate;
         }
 
-        uint256 feesTransferred = (proportionTransferred).mulWad(
+        uint256 feesTransferred = (proportionTransferred).mul(
             srcData.claimableFees
         );
         dstData.claimableFees += feesTransferred;
@@ -988,10 +1007,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             return 0;
         }
 
-        uint256 exerciseValue = size.mulWad(intrinsicValue);
+        uint256 exerciseValue = size.mul(intrinsicValue);
 
         if (isCall) {
-            exerciseValue = exerciseValue.divWad(spot);
+            exerciseValue = exerciseValue.div(spot);
         }
 
         return exerciseValue;
@@ -1005,7 +1024,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return
             l.isCallPool
                 ? size - exerciseValue
-                : size.mulWad(l.strike) - exerciseValue;
+                : size.mul(l.strike) - exerciseValue;
     }
 
     /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
@@ -1095,13 +1114,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
         uint256 price = l.marketPrice;
-        uint256 payoff = _calculateExerciseValue(l, WAD);
+        uint256 payoff = _calculateExerciseValue(l, ONE);
         uint256 claimableFees = pData.claimableFees;
 
         uint256 collateral = p.collateral(size, price);
-        collateral += p.long(size, price).mulWad(payoff);
-        collateral += p.short(size, price).mulWad(
-            (l.isCallPool ? WAD : l.strike) - payoff
+        collateral += p.long(size, price).mul(payoff);
+        collateral += p.short(size, price).mul(
+            (l.isCallPool ? ONE : l.strike) - payoff
         );
         collateral += claimableFees;
 
@@ -1415,9 +1434,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //                   ^
         //              market price
         if (delta > 0) {
+            uint256 crossings;
+
             while (l.tickIndex.next(l.currentTick) < marketPrice) {
                 _cross(true);
+                crossings++;
             }
+
+            while (l.currentTick > marketPrice) {
+                _cross(false);
+                crossings++;
+            }
+
+            if (crossings > 2) revert Pool__InvalidReconciliation();
         } else {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
@@ -1429,7 +1458,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 amount
     ) internal {
         if (l.liquidityRate == 0) return;
-        l.globalFeeRate += amount.divWad(l.liquidityRate);
+        l.globalFeeRate += amount.div(l.liquidityRate);
     }
 
     function _cross(bool isBuy) internal {
@@ -1491,46 +1520,69 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    /// @notice Given a new range order that is supposed to be deposited, a market
-    ///         price is considered to be stranded if within the range order' range
-    ///         there's no liquidity provided, and the lower and upper ticks are between
-    ///         the current tick and the tick right of the current tick.
-    ///
-    ///         Example: Assume R1 and R2 are existing orders. The area below the two
-    ///           range orders marked with the x's marks the area in which a range order
-    ///           may be deposited. An ask-side order deposited within that range would
-    ///           change the market price to the lower tick (indicated by the upward
-    ///           arrow). A bid-side order would change the market price to the upper tick of
-    ///           that range order (again indicated by an arrow below the range order).
-    ///
-    ///           |---R1---|                          |---R2---|
-    ///                    |xxxxxxxxxxxxxxxxxxxxxxxxxx|
-    ///                                 |---ask---|
-    ///                                 ^
-    ///                     |---bid---|
-    ///                               ^
+    /// @notice Gets the lower and upper bound of the stranded market area when it
+    ///         exists. In case the stranded market area does not exist it will return
+    ///         s the stranded market area the maximum tick price for both the lower
+    ///         and the upper, in which case the market price is not stranded given
+    ///         any range order info order.
+    /// @return lower Lower bound of the stranded market price area (Default : 1e18)
+    /// @return upper Upper bound of the stranded market price area (Default : 1e18)
+    function _getStrandedArea(
+        PoolStorage.Layout storage l
+    ) internal view returns (uint256 lower, uint256 upper) {
+        lower = WAD;
+        upper = WAD;
+
+        uint256 current = l.currentTick;
+        uint256 right = l.tickIndex.next(current);
+
+        if (l.liquidityRate == 0) {
+            // applies whenever the pool is empty or the last active order that
+            // was traversed by the price was withdrawn
+            // the check is independent of the current market price
+            lower = current;
+            upper = right;
+        } else if (
+            -l.ticks[right].delta > 0 &&
+            l.liquidityRate == uint256(-l.ticks[right].delta) &&
+            right == l.marketPrice &&
+            l.tickIndex.next(right) != 0
+        ) {
+            // bid-bound market price check
+            // liquidity_rate > 0
+            //        market price
+            //             v
+            // |------[----]------|
+            //        ^
+            //     current
+            lower = right;
+            upper = l.tickIndex.next(right);
+        } else if (
+            -l.ticks[current].delta > 0 &&
+            l.liquidityRate == uint256(-l.ticks[current].delta) &&
+            current == l.marketPrice &&
+            l.tickIndex.prev(current) != 0
+        ) {
+            //  ask-bound market price check
+            //  liquidity_rate > 0
+            //  market price
+            //        v
+            // |------[----]------|
+            //        ^
+            //     current
+            lower = l.tickIndex.prev(current);
+            upper = current;
+        }
+    }
+
     function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
         Position.Key memory p,
         bool isBid
     ) internal view returns (bool) {
-        uint256 right = l.tickIndex.next(l.currentTick);
-
-        bool isStranded = l.liquidityRate == 0 &&
-            p.lower >= l.currentTick &&
-            p.upper <= right;
-
-        if (isStranded) return true;
-        if (right == Pricing.MAX_TICK_PRICE) return isStranded;
-
-        uint256 rightRight = l.tickIndex.next(right);
-
-        return (l.ticks[right].delta < 0 &&
-            l.liquidityRate == uint256(-l.ticks[right].delta) &&
-            isBid &&
-            l.marketPrice == right &&
-            p.lower >= right &&
-            p.upper <= rightRight);
+        (uint256 lower, uint256 upper) = _getStrandedArea(l);
+        uint256 tick = isBid ? p.upper : p.lower;
+        return lower <= tick && tick <= upper;
     }
 
     /// @notice In case the market price is stranded the market price needs to be
@@ -1573,10 +1625,57 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         uint256 maxSlippage
     ) internal view {
-        uint256 lowerBound = (WAD - maxSlippage).mulWad(l.marketPrice);
-        uint256 upperBound = (WAD + maxSlippage).mulWad(l.marketPrice);
+        uint256 lowerBound = (ONE - maxSlippage).mul(l.marketPrice);
+        uint256 upperBound = (ONE + maxSlippage).mul(l.marketPrice);
 
         if (lowerBound > l.marketPrice || l.marketPrice > upperBound)
             revert Pool__AboveMaxSlippage();
+    }
+
+    function _ensureQuoteIsValid(
+        PoolStorage.Layout storage l,
+        address user,
+        TradeQuote memory tradeQuote,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view {
+        if (block.timestamp > tradeQuote.deadline) revert Pool__QuoteExpired();
+
+        if (
+            Pricing.MIN_TICK_PRICE > tradeQuote.price ||
+            tradeQuote.price > Pricing.MAX_TICK_PRICE
+        ) revert Pool__OutOfBoundsPrice();
+
+        if (user != tradeQuote.taker) revert Pool__InvalidQuoteTaker();
+        if (l.tradeQuoteNonce[user] != tradeQuote.nonce)
+            revert Pool__InvalidQuoteNonce();
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                FILL_QUOTE_TYPE_HASH,
+                tradeQuote.provider,
+                tradeQuote.taker,
+                tradeQuote.price,
+                tradeQuote.size,
+                tradeQuote.isBuy,
+                tradeQuote.nonce,
+                tradeQuote.deadline
+            )
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                EIP712.calculateDomainSeparator(
+                    keccak256("Premia"),
+                    keccak256("1")
+                ),
+                structHash
+            )
+        );
+
+        address signer = ECDSA.recover(hash, v, r, s);
+        if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
 }

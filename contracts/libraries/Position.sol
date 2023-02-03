@@ -6,19 +6,20 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
+
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
-import {WadMath} from "./WadMath.sol";
 
 /// @notice Keeps track of LP positions
 ///         Stores the lower and upper Ticks of a user's range order, and tracks the pro-rata exposure of the order.
 library Position {
     using Math for int256;
-    using WadMath for uint256;
     using Position for Position.Key;
     using Position for Position.OrderType;
     using UintUtils for uint256;
     using SafeCast for uint256;
+    using UD60x18 for uint256;
 
     uint256 private constant WAD = 1e18;
 
@@ -109,10 +110,10 @@ library Position {
             a = self.upper;
         }
 
-        uint256 numerator = (a.mulWad(a) - self.lower.mulWad(self.lower));
+        uint256 numerator = (a.mul(a) - self.lower.mul(self.lower));
         uint256 denominator = 2 * (self.upper - self.lower);
 
-        return numerator.divWad(denominator);
+        return numerator.div(denominator);
     }
 
     function collateralToContracts(
@@ -120,7 +121,7 @@ library Position {
         uint256 strike,
         bool isCall
     ) internal pure returns (uint256) {
-        return isCall ? _collateral : _collateral.divWad(strike);
+        return isCall ? _collateral : _collateral.div(strike);
     }
 
     function contractsToCollateral(
@@ -128,7 +129,7 @@ library Position {
         uint256 strike,
         bool isCall
     ) internal pure returns (uint256) {
-        return isCall ? _contracts : _contracts.mulWad(strike);
+        return isCall ? _contracts : _contracts.mul(strike);
     }
 
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
@@ -157,7 +158,7 @@ library Position {
     ) internal pure returns (uint256) {
         return
             contractsToCollateral(
-                pieceWiseQuadratic(self, price).mulWad(size),
+                pieceWiseQuadratic(self, price).mul(size),
                 self.strike,
                 self.isCall
             );
@@ -175,7 +176,7 @@ library Position {
 
         if (self.orderType.isShort()) {
             _collateral = contractsToCollateral(
-                (WAD - nu).mulWad(size),
+                (WAD - nu).mul(size),
                 self.strike,
                 self.isCall
             );
@@ -201,10 +202,10 @@ library Position {
         uint256 nu = pieceWiseLinear(self, price);
 
         if (self.orderType.isLong()) {
-            return (WAD - nu).mulWad(size);
+            return (WAD - nu).mul(size);
         }
 
-        return nu.mulWad(size);
+        return nu.mul(size);
     }
 
     /// @notice Number of long contracts held in position at current price

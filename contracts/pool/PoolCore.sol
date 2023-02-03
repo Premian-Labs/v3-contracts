@@ -16,14 +16,22 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256) {
+        return _takerFee(size, premium);
+    }
+
+    /// @inheritdoc IPoolCore
     function getPoolSettings()
         external
         view
         returns (
             address base,
-            address underlying,
+            address quote,
             address baseOracle,
-            address underlyingOracle,
+            address quoteOracle,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -32,9 +40,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return (
             l.base,
-            l.underlying,
+            l.quote,
             l.baseOracle,
-            l.underlyingOracle,
+            l.quoteOracle,
             l.strike,
             l.maturity,
             l.isCallPool
@@ -42,11 +50,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getQuote(
+    function getTradeQuote(
         uint256 size,
         bool isBuy
     ) external view returns (uint256) {
-        return _getQuote(size, isBuy);
+        return _getTradeQuote(size, isBuy);
     }
 
     /// @inheritdoc IPoolCore
@@ -112,6 +120,17 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) external {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
         _withdraw(p, size, maxSlippage);
+    }
+
+    /// @inheritdoc IPoolCore
+    function fillQuote(
+        TradeQuote memory quote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        _fillQuote(msg.sender, quote, size, v, r, s);
     }
 
     /// @inheritdoc IPoolCore
@@ -209,5 +228,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
     {
         return _getNearestTicksBelow(lower, upper);
+    }
+
+    /// @inheritdoc IPoolCore
+    function getTradeQuoteNonce(address user) external view returns (uint256) {
+        return PoolStorage.layout().tradeQuoteNonce[user];
     }
 }
