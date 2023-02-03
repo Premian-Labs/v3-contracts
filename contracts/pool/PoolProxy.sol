@@ -25,9 +25,9 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
     constructor(
         address diamond,
         address base,
-        address underlying,
+        address quote,
         address baseOracle,
-        address underlyingOracle,
+        address quoteOracle,
         uint256 strike,
         uint64 maturity,
         bool isCallPool
@@ -39,20 +39,21 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             PoolStorage.Layout storage l = PoolStorage.layout();
 
             l.base = base;
-            l.underlying = underlying;
+            l.quote = quote;
 
             // TODO : Add checks for oracle
+
             l.baseOracle = baseOracle;
-            l.underlyingOracle = underlyingOracle;
+            l.quoteOracle = quoteOracle;
 
             l.strike = strike;
             l.maturity = maturity;
 
             uint8 baseDecimals = IERC20Metadata(base).decimals();
-            uint8 underlyingDecimals = IERC20Metadata(underlying).decimals();
+            uint8 quoteDecimals = IERC20Metadata(quote).decimals();
 
             l.baseDecimals = baseDecimals;
-            l.underlyingDecimals = underlyingDecimals;
+            l.quoteDecimals = quoteDecimals;
 
             l.isCallPool = isCallPool;
 

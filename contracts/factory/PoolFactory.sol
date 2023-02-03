@@ -24,18 +24,18 @@ contract PoolFactory is IPoolFactory {
     /// @inheritdoc IPoolFactory
     function isPoolDeployed(
         address base,
-        address underlying,
+        address quote,
         address baseOracle,
-        address underlyingOracle,
+        address quoteOracle,
         uint256 strike,
         uint64 maturity,
         bool isCallPool
     ) external view returns (bool) {
         bytes32 poolKey = PoolFactoryStorage.poolKey(
             base,
-            underlying,
+            quote,
             baseOracle,
-            underlyingOracle,
+            quoteOracle,
             strike,
             maturity,
             isCallPool
@@ -50,31 +50,31 @@ contract PoolFactory is IPoolFactory {
     /// @inheritdoc IPoolFactory
     function deployPool(
         address base,
-        address underlying,
+        address quote,
         address baseOracle,
-        address underlyingOracle,
+        address quoteOracle,
         uint256 strike,
         uint64 maturity,
         bool isCallPool
     ) external returns (address poolAddress) {
-        if (base == underlying || baseOracle == underlyingOracle)
+        if (base == quote || baseOracle == quoteOracle)
             revert PoolFactory__IdenticalAddresses();
 
         if (
             base == address(0) ||
             baseOracle == address(0) ||
-            underlying == address(0) ||
-            underlyingOracle == address(0)
+            quote == address(0) ||
+            quoteOracle == address(0)
         ) revert PoolFactory__ZeroAddress();
 
-        _ensureOptionStrikeIsValid(strike, baseOracle, underlyingOracle);
+        _ensureOptionStrikeIsValid(strike, baseOracle, quoteOracle);
         _ensureOptionMaturityIsValid(maturity);
 
         bytes32 poolKey = PoolFactoryStorage.poolKey(
             base,
-            underlying,
+            quote,
             baseOracle,
-            underlyingOracle,
+            quoteOracle,
             strike,
             maturity,
             isCallPool
@@ -86,9 +86,9 @@ contract PoolFactory is IPoolFactory {
             new PoolProxy(
                 DIAMOND,
                 base,
-                underlying,
+                quote,
                 baseOracle,
-                underlyingOracle,
+                quoteOracle,
                 strike,
                 maturity,
                 isCallPool
@@ -99,9 +99,9 @@ contract PoolFactory is IPoolFactory {
 
         emit PoolDeployed(
             base,
-            underlying,
+            quote,
             baseOracle,
-            underlyingOracle,
+            quoteOracle,
             strike,
             maturity,
             poolAddress
@@ -112,14 +112,14 @@ contract PoolFactory is IPoolFactory {
     function _ensureOptionStrikeIsValid(
         uint256 strike,
         address baseOracle,
-        address underlyingOracle
+        address quoteOracle
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
         int256 basePrice = PoolStorage.getSpotPrice(baseOracle);
-        int256 underlyingPrice = PoolStorage.getSpotPrice(underlyingOracle);
+        int256 quotePrice = PoolStorage.getSpotPrice(quoteOracle);
 
-        int256 spot = (underlyingPrice * 1e18) / basePrice;
+        int256 spot = (basePrice * 1e18) / quotePrice;
         int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike.toInt256() % strikeInterval != 0)

@@ -35,7 +35,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
     }
 
     function setNonce(address user, uint256 nonce) external {
-        PoolStorage.layout().quoteNonce[user] = nonce;
+        PoolStorage.layout().tradeQuoteNonce[user] = nonce;
     }
 
     function parseTokenId(
