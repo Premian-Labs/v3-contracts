@@ -41,14 +41,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
-    uint256 private constant INVERSE_BASIS_POINT = 1e4;
     uint256 private constant ONE = 1e18;
 
     // ToDo : Add getter for fee values
     // ToDo : Define final values
-    uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e3; // 50%
-    uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e2; // 1%
-    uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e2; // 1%
+    uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e17; // 50%
+    uint256 private constant PREMIUM_FEE_PERCENTAGE = 1e16; // 1%
+    uint256 private constant COLLATERAL_FEE_PERCENTAGE = 1e16; // 1%
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
@@ -68,11 +67,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size,
         uint256 premium
     ) internal pure returns (uint256) {
-        uint256 premiumFee = (premium * PREMIUM_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
         // 3% of premium
-        uint256 notionalFee = (size * COLLATERAL_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
         // 0.3% of notional
         return Math.max(premiumFee, notionalFee);
     }
@@ -603,8 +600,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
 
                 // Update price and liquidity variables
-                uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
-                    INVERSE_BASIS_POINT;
+                uint256 protocolFee = takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
                 uint256 makerRebate = takerFee - protocolFee;
 
                 _updateGlobalFeeRate(l, makerRebate);
@@ -819,8 +815,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        uint256 protocolFee = (takerFee * PROTOCOL_FEE_PERCENTAGE) /
-            INVERSE_BASIS_POINT;
+        uint256 protocolFee = takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
         uint256 makerRebate = takerFee - protocolFee;
         l.protocolFees += protocolFee;
 
