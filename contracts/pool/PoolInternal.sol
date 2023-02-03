@@ -277,7 +277,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
-        if (_isMarketPriceStranded(l, p)) {
+        if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
             l.marketPrice = _getStrandedMarketPriceUpdate(
                 p,
                 isBidIfStrandedMarketPrice
@@ -1558,10 +1558,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
-        Position.Key memory p
+        Position.Key memory p,
+        bool isBid
     ) internal view returns (bool) {
         (uint256 lower, uint256 upper) = _getStrandedArea(l);
-        return p.lower >= lower && p.upper <= upper;
+        uint256 tick = isBid ? p.upper : p.lower;
+        return lower <= tick && tick <= upper;
     }
 
     /// @notice In case the market price is stranded the market price needs to be
