@@ -6,6 +6,7 @@ import { formatEther, parseEther } from 'ethers/lib/utils';
 import { ONE_WEEK, now, weekOfMonth } from '../../utils/time';
 
 import moment from 'moment-timezone';
+import { BigNumber } from 'ethers';
 moment.tz.setDefault('UTC');
 
 describe('OptionMath', () => {
@@ -59,7 +60,7 @@ describe('OptionMath', () => {
         [parseEther('1.1'), '1.1'],
         [parseEther('2.1'), '2.1'],
         [parseEther('3.6'), '3.6'],
-      ]) {
+      ] as Array<[BigNumber, string]>) {
         expect(parseFloat(formatEther(await instance.relu(t[0])))).to.eq(
           parseFloat(t[1]),
         );
@@ -85,7 +86,7 @@ describe('OptionMath', () => {
         [parseEther('1.0'), false, '0.0'],
         [parseEther('1.2'), false, '0.0'],
         [parseEther('2.2'), false, '0.0'],
-      ]) {
+      ] as Array<[BigNumber, boolean, string]>) {
         const result = formatEther(
           await instance.blackScholesPrice(
             t[0],
@@ -118,7 +119,7 @@ describe('OptionMath', () => {
         [parseEther('1.0'), false, '0.3187969986532439'],
         [parseEther('1.2'), false, '0.26996428171296216'],
         [parseEther('2.2'), false, '0.13414479819198477'],
-      ]) {
+      ] as Array<[BigNumber, boolean, string]>) {
         const result = formatEther(
           await instance.blackScholesPrice(
             t[0],
