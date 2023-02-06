@@ -4,6 +4,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { PositionMock, PositionMock__factory } from '../../typechain';
 import { formatEther, parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/math';
+import { OrderType } from '../../utils/PoolUtil';
 
 describe('Position', () => {
   let deployer: SignerWithAddress;
@@ -15,12 +16,6 @@ describe('Position', () => {
   let key: any;
 
   let WAD = parseEther('1');
-
-  enum OrderType {
-    CSUP,
-    CS,
-    LC,
-  }
 
   before(async () => {
     [deployer] = await ethers.getSigners();
@@ -626,9 +621,8 @@ describe('Position', () => {
   });
 
   describe('#calculatePositionUpdate', () => {
-
     const prices = ['0.2', '0.25', '0.3', '0.6', '0.75', '0.8'];
-    const deltas = ['0.8', '1.2',];
+    const deltas = ['0.8', '1.2'];
     const actions = [true, false];
     const currentBalance = parseEther('2');
 
@@ -669,16 +663,20 @@ describe('Position', () => {
 
               let sign: number;
 
-              if (is_deposit) {sign = 1;} else {sign = -1;}
+              if (is_deposit) {
+                sign = 1;
+              } else {
+                sign = -1;
+              }
 
               let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                  key,
-                  currentBalance,
-                  formattedDeltaBalance,
-                  formattedPrice,
+                key,
+                currentBalance,
+                formattedDeltaBalance,
+                formattedPrice,
               );
               expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
               expect(delta.longs).to.eq(parseEther(expected[counter][1]));
@@ -692,7 +690,6 @@ describe('Position', () => {
 
     describe('OrderType CS', () => {
       const expected = [
-
         ['0.800', '0.000', '0.000'],
         ['0.800', '0.000', '0.000'],
         ['0.742', '0.000', '0.080'],
@@ -728,16 +725,20 @@ describe('Position', () => {
 
               let sign: number;
 
-              if (is_deposit) {sign = 1;} else {sign = -1;}
+              if (is_deposit) {
+                sign = 1;
+              } else {
+                sign = -1;
+              }
 
               let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                  key,
-                  currentBalance,
-                  formattedDeltaBalance,
-                  formattedPrice,
+                key,
+                currentBalance,
+                formattedDeltaBalance,
+                formattedPrice,
               );
               expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
               expect(delta.longs).to.eq(parseEther(expected[counter][1]));
@@ -786,16 +787,20 @@ describe('Position', () => {
 
               let sign: number;
 
-              if (is_deposit) {sign = 1;} else {sign = -1;}
+              if (is_deposit) {
+                sign = 1;
+              } else {
+                sign = -1;
+              }
 
               let formattedDeltaBalance = parseEther(deltaBalance).mul(sign);
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                  key,
-                  currentBalance,
-                  formattedDeltaBalance,
-                  formattedPrice,
+                key,
+                currentBalance,
+                formattedDeltaBalance,
+                formattedPrice,
               );
               expect(delta.collateral).to.eq(parseEther(expected[counter][0]));
               expect(delta.longs).to.eq(parseEther(expected[counter][1]));

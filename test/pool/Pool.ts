@@ -9,7 +9,7 @@ import {
 } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { PoolUtil, TokenType } from '../../utils/PoolUtil';
+import { OrderType, PoolUtil, TokenType } from '../../utils/PoolUtil';
 import {
   deployMockContract,
   MockContract,
@@ -45,13 +45,6 @@ describe('Pool', () => {
   let collateral: BigNumber;
 
   let getTradeQuote: () => Promise<TradeQuote>;
-
-  // TODO: Move to PoolUtil
-  enum OrderType {
-    CSUP,
-    CS,
-    LC,
-  }
 
   before(async () => {
     [deployer, lp, trader] = await ethers.getSigners();
