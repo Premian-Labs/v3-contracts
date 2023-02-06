@@ -53,6 +53,15 @@ export async function increaseTo(target: number | BigNumber) {
   return increase(diff);
 }
 
+export function weekOfMonth(timestamp: number) {
+  const firstDayOfMonth = moment.unix(timestamp).clone().startOf('month');
+  const firstDayOfWeek = firstDayOfMonth.clone().startOf('week');
+
+  const offset = firstDayOfMonth.diff(firstDayOfWeek, 'days');
+
+  return Math.ceil((moment.unix(timestamp).date() + offset) / 7);
+}
+
 export async function getLastFridayOfMonth(timestamp: number, interval: any) {
   const currentTime = moment.unix(timestamp);
 

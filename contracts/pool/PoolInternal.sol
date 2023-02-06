@@ -1530,8 +1530,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _getStrandedArea(
         PoolStorage.Layout storage l
     ) internal view returns (uint256 lower, uint256 upper) {
-        lower = WAD;
-        upper = WAD;
+        lower = ONE;
+        upper = ONE;
 
         uint256 current = l.currentTick;
         uint256 right = l.tickIndex.next(current);

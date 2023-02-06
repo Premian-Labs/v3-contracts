@@ -17,6 +17,12 @@ export enum TokenType {
   LONG = 1,
 }
 
+export enum OrderType {
+  CSUP,
+  CS,
+  LC,
+}
+
 interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
