@@ -9,6 +9,14 @@ import {DateTime} from "./DateTime.sol";
 library OptionMath {
     using SD59x18 for int256;
 
+    // To prevent stack too deep
+    struct BlackScholesPriceVarsInternal {
+        int256 discountFactor;
+        int256 timeScaledVol;
+        int256 timeScaledVar;
+        int256 timeScaledRiskFreeRate;
+    }
+
     int256 internal constant ONE = 1e18;
     int256 internal constant TWO = 2e18;
     int256 internal constant ALPHA = -6.37309208e18;
@@ -72,29 +80,31 @@ library OptionMath {
             return price;
         }
 
-        int256 discountFactor = riskFreeRate.mul(timeToMaturity).exp();
+        BlackScholesPriceVarsInternal memory vars;
+
+        vars.discountFactor = riskFreeRate.mul(timeToMaturity).exp();
         if (volAnnualized == 0) {
             if (isCall) {
-                price = relu(spot - strike.div(discountFactor));
+                price = relu(spot - strike.div(vars.discountFactor));
             } else {
-                price = relu(strike.div(discountFactor) - spot);
+                price = relu(strike.div(vars.discountFactor) - spot);
             }
             return price;
         }
 
-        int256 timeScaledVol = timeToMaturity.mul(volAnnualized);
-        int256 timeScaledVar = timeScaledVol.pow(TWO);
-        int256 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
+        vars.timeScaledVol = timeToMaturity.mul(volAnnualized);
+        vars.timeScaledVar = vars.timeScaledVol.pow(TWO);
+        vars.timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
 
         int256 d1 = (spot.div(strike).ln() +
-            timeScaledVar.div(TWO) +
-            timeScaledRiskFreeRate).div(timeScaledVol);
-        int256 d2 = d1 - timeScaledVol;
+            vars.timeScaledVar.div(TWO) +
+            vars.timeScaledRiskFreeRate).div(vars.timeScaledVol);
+        int256 d2 = d1 - vars.timeScaledVol;
 
         int256 sign = isCall ? ONE : -ONE;
 
         int256 a = spot.mul(normalCdf(d1.mul(sign)));
-        int256 b = strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
+        int256 b = strike.div(vars.discountFactor).mul(normalCdf(d2.mul(sign)));
         price = (a - b).mul(sign);
         return price;
     }

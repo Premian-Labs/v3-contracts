@@ -114,13 +114,13 @@ interface IPoolCore is IPoolInternal {
     ///         An LP can create a quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
-    /// @param quote The quote given by the provider
+    /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote
     /// @param v secp256k1 'v' value
     /// @param r secp256k1 'r' value
     /// @param s secp256k1 's' value
     function fillQuote(
-        TradeQuote memory quote,
+        TradeQuote memory tradeQuote,
         uint256 size,
         uint8 v,
         bytes32 r,
