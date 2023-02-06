@@ -72,4 +72,38 @@ interface IPoolInternal is IPosition, IPricing {
         int256 longs;
         int256 shorts;
     }
+
+    struct TradeArgsInternal {
+        address user;
+        uint256 size;
+        bool isBuy;
+        uint256 creditAmount;
+        bool transferCollateralToUser;
+    }
+
+    struct DepositArgsInternal {
+        uint256 belowLower;
+        uint256 belowUpper;
+        uint256 size;
+        uint256 maxSlippage;
+        uint256 collateralCredit;
+        bool isBidIfStrandedMarketPrice;
+    }
+
+    struct FillQuoteArgsInternal {
+        address user;
+        uint256 size;
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
+    struct FillQuoteInternal {
+        uint256 premium;
+        uint256 takerFee;
+        uint256 protocolFee;
+        uint256 makerRebate;
+        uint256 premiumTaker;
+        uint256 premiumMaker;
+    }
 }
