@@ -266,6 +266,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
+    /// @param args The deposit parameters
     function _deposit(
         Position.Key memory p,
         DepositArgsInternal memory args
@@ -524,6 +525,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    /// @param args Trade parameters
+    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         TradeArgsInternal memory args
     ) internal returns (uint256 totalPremium, Delta memory delta) {
@@ -765,6 +769,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         An LP can create a quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
+    /// @param args The fillQuote parameters
+    /// @param tradeQuote The quote given by the provider
     function _fillQuote(
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote
