@@ -771,7 +771,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         if (args.size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
-        FillQuoteInternal memory x;
+        FillQuoteVarsInternal memory vars;
         Delta memory deltaTaker;
         Delta memory deltaMaker;
 
@@ -790,36 +790,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // Increment nonce so that quote cannot be replayed
             l.tradeQuoteNonce[args.user] += 1;
 
-            x.premium = tradeQuote.price.mul(args.size);
-            x.takerFee = Position.contractsToCollateral(
-                _takerFee(args.size, x.premium),
+            vars.premium = tradeQuote.price.mul(args.size);
+            vars.takerFee = Position.contractsToCollateral(
+                _takerFee(args.size, vars.premium),
                 l.strike,
                 l.isCallPool
             );
 
             // Denormalize premium
-            x.premium = Position.contractsToCollateral(
-                x.premium,
+            vars.premium = Position.contractsToCollateral(
+                vars.premium,
                 l.strike,
                 l.isCallPool
             );
 
-            x.protocolFee = x.takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
-            x.makerRebate = x.takerFee - x.protocolFee;
-            l.protocolFees += x.protocolFee;
+            vars.protocolFee = vars.takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
+            vars.makerRebate = vars.takerFee - vars.protocolFee;
+            l.protocolFees += vars.protocolFee;
 
             /////////////////////////
             // Process trade taker //
             /////////////////////////
 
-            x.premiumTaker = !tradeQuote.isBuy
-                ? x.premium // Taker Buying
-                : x.premium - x.takerFee; // Taker selling
+            vars.premiumTaker = !tradeQuote.isBuy
+                ? vars.premium // Taker Buying
+                : vars.premium - vars.takerFee; // Taker selling
 
             deltaTaker = _updateUserAssets(
                 l,
                 args.user,
-                x.premiumTaker,
+                vars.premiumTaker,
                 0,
                 args.size,
                 !tradeQuote.isBuy,
@@ -844,14 +844,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // maker rebate gets directly transferred to the LP instead of
             // incrementing the global rate
 
-            x.premiumMaker = tradeQuote.isBuy
-                ? x.premium - x.makerRebate // Maker buying
-                : x.premium - x.protocolFee; // Maker selling
+            vars.premiumMaker = tradeQuote.isBuy
+                ? vars.premium - vars.makerRebate // Maker buying
+                : vars.premium - vars.protocolFee; // Maker selling
 
             deltaMaker = _updateUserAssets(
                 l,
                 tradeQuote.provider,
-                x.premiumMaker,
+                vars.premiumMaker,
                 0,
                 args.size,
                 tradeQuote.isBuy,
@@ -865,9 +865,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.size,
             deltaMaker,
             deltaTaker,
-            x.premium,
-            x.takerFee,
-            x.protocolFee,
+            vars.premium,
+            vars.takerFee,
+            vars.protocolFee,
             !tradeQuote.isBuy
         );
     }

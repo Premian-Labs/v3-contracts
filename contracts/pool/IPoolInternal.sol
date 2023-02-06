@@ -98,7 +98,7 @@ interface IPoolInternal is IPosition, IPricing {
         bytes32 s;
     }
 
-    struct FillQuoteInternal {
+    struct FillQuoteVarsInternal {
         uint256 premium;
         uint256 takerFee;
         uint256 protocolFee;

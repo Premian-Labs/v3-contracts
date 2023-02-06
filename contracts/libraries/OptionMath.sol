@@ -10,7 +10,7 @@ library OptionMath {
     using SD59x18 for int256;
 
     // To prevent stack too deep
-    struct BlackScholesPriceInternal {
+    struct BlackScholesPriceVarsInternal {
         int256 discountFactor;
         int256 timeScaledVol;
         int256 timeScaledVar;
@@ -80,31 +80,31 @@ library OptionMath {
             return price;
         }
 
-        BlackScholesPriceInternal memory x;
+        BlackScholesPriceVarsInternal memory vars;
 
-        x.discountFactor = riskFreeRate.mul(timeToMaturity).exp();
+        vars.discountFactor = riskFreeRate.mul(timeToMaturity).exp();
         if (volAnnualized == 0) {
             if (isCall) {
-                price = relu(spot - strike.div(x.discountFactor));
+                price = relu(spot - strike.div(vars.discountFactor));
             } else {
-                price = relu(strike.div(x.discountFactor) - spot);
+                price = relu(strike.div(vars.discountFactor) - spot);
             }
             return price;
         }
 
-        x.timeScaledVol = timeToMaturity.mul(volAnnualized);
-        x.timeScaledVar = x.timeScaledVol.pow(TWO);
-        x.timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
+        vars.timeScaledVol = timeToMaturity.mul(volAnnualized);
+        vars.timeScaledVar = vars.timeScaledVol.pow(TWO);
+        vars.timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
 
         int256 d1 = (spot.div(strike).ln() +
-            x.timeScaledVar.div(TWO) +
-            x.timeScaledRiskFreeRate).div(x.timeScaledVol);
-        int256 d2 = d1 - x.timeScaledVol;
+            vars.timeScaledVar.div(TWO) +
+            vars.timeScaledRiskFreeRate).div(vars.timeScaledVol);
+        int256 d2 = d1 - vars.timeScaledVol;
 
         int256 sign = isCall ? ONE : -ONE;
 
         int256 a = spot.mul(normalCdf(d1.mul(sign)));
-        int256 b = strike.div(x.discountFactor).mul(normalCdf(d2.mul(sign)));
+        int256 b = strike.div(vars.discountFactor).mul(normalCdf(d2.mul(sign)));
         price = (a - b).mul(sign);
         return price;
     }
