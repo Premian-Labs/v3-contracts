@@ -254,7 +254,7 @@ library Position {
         int256 amount,
         uint256 price
     ) internal pure returns (Delta memory delta) {
-        if (int256(currentBalance) + amount < 0)
+        if (currentBalance.toInt256() + amount < 0)
             revert IPosition.Position__InvalidPositionUpdate();
 
         uint256 absChangeTokens = Math.abs(amount);
