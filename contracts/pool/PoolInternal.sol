@@ -671,11 +671,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 shorts = _balanceOf(user, PoolStorage.SHORT);
 
         if (isBuy) {
-            delta.shorts = -int256(Math.min(shorts, size));
-            delta.longs = int256(size) + delta.shorts;
+            delta.shorts = -Math.min(shorts, size).toInt256();
+            delta.longs = size.toInt256() + delta.shorts;
         } else {
-            delta.longs = -int256(Math.min(longs, size));
-            delta.shorts = int256(size) + delta.longs;
+            delta.longs = -Math.min(longs, size).toInt256();
+            delta.shorts = size.toInt256() + delta.longs;
         }
     }
 
@@ -709,12 +709,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (delta.shorts < 0) {
             delta.collateral = _isBuy
-                ? int256(shortCollateral) - int256(totalPremium)
-                : int256(totalPremium);
-        } else {
+                ? shortCollateral.toInt256() - totalPremium.toInt256()
+                : totalPremium.toInt256();
+        } else if (delta.shorts > 0) {
             delta.collateral = _isBuy
-                ? -int256(totalPremium)
-                : int256(totalPremium) - int256(shortCollateral);
+                ? -totalPremium.toInt256()
+                : totalPremium.toInt256() - shortCollateral.toInt256();
         }
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
@@ -1364,7 +1364,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //                [---------------------)
         //                         current
 
-        int256 _delta = int256(delta);
+        int256 _delta = delta.toInt256();
         if (upper <= l.currentTick) {
             lowerTick.delta -= _delta;
             upperTick.delta += _delta;

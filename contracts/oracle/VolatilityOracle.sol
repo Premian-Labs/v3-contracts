@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
@@ -15,6 +16,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SD59x18 for int256;
+    using SafeCast for uint256;
 
     int256 internal constant ONE = 1e18;
     int256 internal constant TWO = 2e18;
@@ -304,9 +306,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return
             _getVolatility(
                 token,
-                int256(spot),
-                int256(strike),
-                int256(timeToMaturity)
+                spot.toInt256(),
+                strike.toInt256(),
+                timeToMaturity.toInt256()
             );
     }
 }
