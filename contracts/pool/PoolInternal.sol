@@ -616,10 +616,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     // is_buy: taker has to pay premium + fees
                     // ~is_buy: taker receives premium - fees
                     totalPremium += args.isBuy
-                        ? uint128(premium + takerFee)
-                        : uint128(premium - takerFee);
-                    vars.totalTakerFees += uint128(takerFee);
-                    vars.totalProtocolFees += uint128(protocolFee);
+                        ? premium + takerFee
+                        : premium - takerFee;
+                    vars.totalTakerFees += takerFee;
+                    vars.totalProtocolFees += protocolFee;
 
                     l.marketPrice = nextMarketPrice;
                     l.protocolFees += protocolFee;
@@ -629,12 +629,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     int256(l.marketPrice) - int256(oldMarketPrice)
                 );
 
-                vars.shortDelta += uint128(
-                    l.shortRate * PoolStorage.MIN_TICK_DISTANCE * dist
-                );
-                vars.longDelta += uint128(
-                    l.longRate * PoolStorage.MIN_TICK_DISTANCE * dist
-                );
+                vars.shortDelta +=
+                    l.shortRate *
+                    PoolStorage.MIN_TICK_DISTANCE *
+                    dist;
+                vars.longDelta +=
+                    l.longRate *
+                    PoolStorage.MIN_TICK_DISTANCE *
+                    dist;
 
                 // ToDo : Deal with rounding error
                 if (maxSize >= remaining - (ONE / 10)) {
