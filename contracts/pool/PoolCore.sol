@@ -16,14 +16,22 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256) {
+        return _takerFee(size, premium);
+    }
+
+    /// @inheritdoc IPoolCore
     function getPoolSettings()
         external
         view
         returns (
             address base,
-            address underlying,
+            address quote,
             address baseOracle,
-            address underlyingOracle,
+            address quoteOracle,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -32,9 +40,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return (
             l.base,
-            l.underlying,
+            l.quote,
             l.baseOracle,
-            l.underlyingOracle,
+            l.quoteOracle,
             l.strike,
             l.maturity,
             l.isCallPool
@@ -42,11 +50,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getQuote(
+    function getTradeQuote(
         uint256 size,
         bool isBuy
     ) external view returns (uint256) {
-        return _getQuote(size, isBuy);
+        return _getTradeQuote(size, isBuy);
     }
 
     /// @inheritdoc IPoolCore
@@ -78,12 +86,14 @@ contract PoolCore is IPoolCore, PoolInternal {
         if (p.operator != msg.sender) revert Pool__NotAuthorized();
         _deposit(
             p,
-            belowLower,
-            belowUpper,
-            size,
-            maxSlippage,
-            0,
-            isBidIfStrandedMarketPrice
+            DepositArgsInternal(
+                belowLower,
+                belowUpper,
+                size,
+                maxSlippage,
+                0,
+                isBidIfStrandedMarketPrice
+            )
         );
     }
 
@@ -115,11 +125,25 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
+    function fillQuote(
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        _fillQuote(
+            FillQuoteArgsInternal(msg.sender, size, v, r, s),
+            tradeQuote
+        );
+    }
+
+    /// @inheritdoc IPoolCore
     function trade(
         uint256 size,
         bool isBuy
     ) external returns (uint256 totalPremium, Delta memory delta) {
-        return _trade(msg.sender, size, isBuy, 0, true);
+        return _trade(TradeArgsInternal(msg.sender, size, isBuy, 0, true));
     }
 
     /// @inheritdoc IPoolCore
@@ -142,11 +166,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         (swapOutAmount, ) = _swap(s);
 
         (totalPremium, delta) = _trade(
-            msg.sender,
-            size,
-            isBuy,
-            swapOutAmount,
-            true
+            TradeArgsInternal(msg.sender, size, isBuy, swapOutAmount, true)
         );
 
         return (totalPremium, delta, swapOutAmount);
@@ -167,7 +187,9 @@ contract PoolCore is IPoolCore, PoolInternal {
         )
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        (totalPremium, delta) = _trade(msg.sender, size, isBuy, 0, false);
+        (totalPremium, delta) = _trade(
+            TradeArgsInternal(msg.sender, size, isBuy, 0, false)
+        );
 
         if (delta.collateral <= 0) return (totalPremium, delta, 0, 0);
 
@@ -209,5 +231,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
     {
         return _getNearestTicksBelow(lower, upper);
+    }
+
+    /// @inheritdoc IPoolCore
+    function getTradeQuoteNonce(address user) external view returns (uint256) {
+        return PoolStorage.layout().tradeQuoteNonce[user];
     }
 }

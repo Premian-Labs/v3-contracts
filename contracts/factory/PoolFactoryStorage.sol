@@ -22,9 +22,9 @@ library PoolFactoryStorage {
 
     function poolKey(
         address base,
-        address underlying,
+        address quote,
         address baseOracle,
-        address underlyingOracle,
+        address quoteOracle,
         uint256 strike,
         uint64 maturity,
         bool isCallPool
@@ -33,9 +33,9 @@ library PoolFactoryStorage {
             keccak256(
                 abi.encode(
                     base,
-                    underlying,
+                    quote,
                     baseOracle,
-                    underlyingOracle,
+                    quoteOracle,
                     strike,
                     maturity,
                     isCallPool

@@ -13,7 +13,11 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientBidLiquidity();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
+    error Pool__InvalidQuoteNonce();
+    error Pool__InvalidQuoteSignature();
+    error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
+    error Pool__InvalidReconciliation();
     error Pool__InvalidTransfer();
     error Pool__InvalidSwapTokenIn();
     error Pool__InvalidSwapTokenOut();
@@ -27,6 +31,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
+    error Pool__QuoteExpired();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
@@ -54,14 +59,67 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct TradeQuote {
         address provider;
+        address taker;
         uint256 price;
         uint256 size;
         bool isBuy;
+        uint256 nonce;
+        uint256 deadline;
     }
 
     struct Delta {
         int256 collateral;
         int256 longs;
         int256 shorts;
+    }
+
+    struct TradeArgsInternal {
+        // The account doing the trade
+        address user;
+        // The number of contracts being traded
+        uint256 size;
+        // Whether the taker is buying or selling
+        bool isBuy;
+        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
+        uint256 creditAmount;
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        bool transferCollateralToUser;
+    }
+
+    struct DepositArgsInternal {
+        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+        uint256 belowLower;
+        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+        uint256 belowUpper;
+        // The position size to deposit
+        uint256 size;
+        // Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+        uint256 maxSlippage;
+        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
+        uint256 collateralCredit;
+        // Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
+        bool isBidIfStrandedMarketPrice;
+    }
+
+    struct FillQuoteArgsInternal {
+        // The user filling the quote
+        address user;
+        // The size to fill from the quote
+        uint256 size;
+        // secp256k1 'v' value
+        uint8 v;
+        // secp256k1 'r' value
+        bytes32 r;
+        // secp256k1 's' value
+        bytes32 s;
+    }
+
+    struct FillQuoteVarsInternal {
+        uint256 premium;
+        uint256 takerFee;
+        uint256 protocolFee;
+        uint256 makerRebate;
+        uint256 premiumTaker;
+        uint256 premiumMaker;
     }
 }

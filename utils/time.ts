@@ -4,7 +4,8 @@ import { BigNumber } from 'ethers';
 import moment from 'moment-timezone';
 moment.tz.setDefault('UTC');
 
-export const ONE_DAY = 24 * 3600;
+export const ONE_HOUR = 3600;
+export const ONE_DAY = 24 * ONE_HOUR;
 export const ONE_WEEK = 7 * ONE_DAY;
 export const ONE_MONTH = 30 * ONE_DAY;
 export const ONE_YEAR = 365 * ONE_DAY;
@@ -50,6 +51,15 @@ export async function increaseTo(target: number | BigNumber) {
 
   const diff = target.sub(now);
   return increase(diff);
+}
+
+export function weekOfMonth(timestamp: number) {
+  const firstDayOfMonth = moment.unix(timestamp).clone().startOf('month');
+  const firstDayOfWeek = firstDayOfMonth.clone().startOf('week');
+
+  const offset = firstDayOfMonth.diff(firstDayOfWeek, 'days');
+
+  return Math.ceil((moment.unix(timestamp).date() + offset) / 7);
 }
 
 export async function getLastFridayOfMonth(timestamp: number, interval: any) {

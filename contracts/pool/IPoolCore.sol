@@ -9,11 +9,20 @@ import {Position} from "../libraries/Position.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolCore is IPoolInternal {
+    /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param size The size of a trade (number of contracts)
+    /// @param premium The total cost of option(s) for a purchase
+    /// @return The taker fee for an option trade
+    function takerFee(
+        uint256 size,
+        uint256 premium
+    ) external pure returns (uint256);
+
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
-    /// @return underlying Address of underlying token
+    /// @return quote Address of quote token
     /// @return baseOracle Address of base token price feed
-    /// @return underlyingOracle Address of underlying token price feed
+    /// @return quoteOracle Address of quote token price feed
     /// @return strike The strike of the option
     /// @return maturity The maturity timestamp of the option
     /// @return isCallPool Whether the pool is for call or put options
@@ -22,9 +31,9 @@ interface IPoolCore is IPoolInternal {
         view
         returns (
             address base,
-            address underlying,
+            address quote,
             address baseOracle,
-            address underlyingOracle,
+            address quoteOracle,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -34,7 +43,10 @@ interface IPoolCore is IPoolInternal {
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
     /// @return The premium which has to be paid to complete the trade
-    function getQuote(uint256 size, bool isBuy) external view returns (uint256);
+    function getTradeQuote(
+        uint256 size,
+        bool isBuy
+    ) external view returns (uint256);
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to
@@ -96,6 +108,23 @@ interface IPoolCore is IPoolInternal {
         Position.Key memory p,
         uint256 size,
         uint256 maxSlippage
+    ) external;
+
+    /// @notice Functionality to support the RFQ / OTC system.
+    ///         An LP can create a quote for which he will do an OTC trade through
+    ///         the exchange. Takers can buy from / sell to the LP then partially or
+    ///         fully while having the price guaranteed.
+    /// @param tradeQuote The quote given by the provider
+    /// @param size The size to fill from the quote
+    /// @param v secp256k1 'v' value
+    /// @param r secp256k1 'r' value
+    /// @param s secp256k1 's' value
+    function fillQuote(
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -179,4 +208,9 @@ interface IPoolCore is IPoolInternal {
         external
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
+
+    /// @notice Get the current quote nonce for the given user
+    /// @param user User for which to return the current quote nonce
+    /// @return The current quote nonce
+    function getTradeQuoteNonce(address user) external view returns (uint256);
 }

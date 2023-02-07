@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {IPoolInternal} from "./IPoolInternal.sol";
+
 interface IPoolEvents {
     event Deposit(
         address indexed owner,
@@ -40,6 +42,8 @@ interface IPoolEvents {
         address indexed user,
         address indexed provider,
         uint256 contractSize,
+        IPoolInternal.Delta deltaMaker,
+        IPoolInternal.Delta deltaTaker,
         uint256 premium,
         uint256 takerFee,
         uint256 protocolFee,
@@ -49,9 +53,7 @@ interface IPoolEvents {
     event Trade(
         address indexed user,
         uint256 contractSize,
-        int256 deltaCollateral,
-        int256 deltaLongs,
-        int256 deltasShorts,
+        IPoolInternal.Delta delta,
         uint256 premium,
         uint256 takerFee,
         uint256 protocolFee,

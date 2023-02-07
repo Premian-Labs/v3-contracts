@@ -16,6 +16,8 @@ interface IPoolCoreMock {
         Position.OrderType orderType
     ) external pure returns (uint256 tokenId);
 
+    function setNonce(address user, uint256 nonce) external;
+
     function parseTokenId(
         uint256 tokenId
     )
