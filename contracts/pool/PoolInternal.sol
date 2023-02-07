@@ -1671,4 +1671,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address signer = ECDSA.recover(hash, v, r, s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
+
+    function _ensureOperator(address operator) internal view {
+        if (operator != msg.sender) revert Pool__NotAuthorized();
+    }
 }

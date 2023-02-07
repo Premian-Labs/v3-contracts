@@ -70,7 +70,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         uint256 maxSlippage
     ) external {
-        if (p.operator != msg.sender) revert Pool__NotAuthorized();
+        _ensureOperator(p.operator);
         _deposit(p, belowLower, belowUpper, size, maxSlippage, 0);
     }
 
@@ -83,7 +83,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 maxSlippage,
         bool isBidIfStrandedMarketPrice
     ) external {
-        if (p.operator != msg.sender) revert Pool__NotAuthorized();
+        _ensureOperator(p.operator);
         _deposit(
             p,
             DepositArgsInternal(
@@ -106,6 +106,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         uint256 maxSlippage
     ) external payable {
+        _ensureOperator(p.operator);
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
@@ -120,7 +121,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 size,
         uint256 maxSlippage
     ) external {
-        if (p.operator != msg.sender) revert Pool__NotAuthorized();
+        _ensureOperator(p.operator);
         _withdraw(p, size, maxSlippage);
     }
 
