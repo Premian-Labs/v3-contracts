@@ -549,13 +549,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    struct TradeUpdate {
-        uint128 totalTakerFees;
-        uint128 totalProtocolFees;        
-        uint128 longDelta;
-        uint128 shortDelta;
-    }
-
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
     /// @return totalPremium The premium paid or received by the taker for the trade
@@ -568,7 +561,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureNonZeroSize(args.size);
         _ensureNotExpired(l);
 
-        TradeUpdate memory update;
+        TradeVarsInternal memory vars;
 
         {
             uint256 remaining = args.size;
@@ -625,17 +618,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     totalPremium += args.isBuy
                         ? uint128(premium + takerFee)
                         : uint128(premium - takerFee);
-                    update.totalTakerFees += uint128(takerFee);
-                    update.totalProtocolFees += uint128(protocolFee);
+                    vars.totalTakerFees += uint128(takerFee);
+                    vars.totalProtocolFees += uint128(protocolFee);
 
                     l.marketPrice = nextMarketPrice;
                     l.protocolFees += protocolFee;
                 }
 
-                uint256 dist = Math.abs(int256(l.marketPrice) - int256(oldMarketPrice));
+                uint256 dist = Math.abs(
+                    int256(l.marketPrice) - int256(oldMarketPrice)
+                );
 
-                update.shortDelta += uint128(l.shortRate * PoolStorage.MIN_TICK_DISTANCE * dist);
-                update.longDelta += uint128(l.longRate * PoolStorage.MIN_TICK_DISTANCE * dist);
+                vars.shortDelta += uint128(
+                    l.shortRate * PoolStorage.MIN_TICK_DISTANCE * dist
+                );
+                vars.longDelta += uint128(
+                    l.longRate * PoolStorage.MIN_TICK_DISTANCE * dist
+                );
 
                 // ToDo : Deal with rounding error
                 if (maxSize >= remaining - (ONE / 10)) {
@@ -668,26 +667,40 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         if (args.isBuy) {
-            if (update.shortDelta > 0)
-                _mint(address(this), PoolStorage.SHORT, uint256(update.shortDelta), "");
+            if (vars.shortDelta > 0)
+                _mint(
+                    address(this),
+                    PoolStorage.SHORT,
+                    uint256(vars.shortDelta),
+                    ""
+                );
 
-            if (update.longDelta > 0)
-                _burn(address(this), PoolStorage.LONG, uint256(update.longDelta));
+            if (vars.longDelta > 0)
+                _burn(address(this), PoolStorage.LONG, uint256(vars.longDelta));
         } else {
-            if (update.longDelta > 0)
-                _mint(address(this), PoolStorage.LONG, uint256(update.longDelta), "");
-            
-            if (update.shortDelta > 0)
-                _burn(address(this), PoolStorage.SHORT, uint256(update.shortDelta));
+            if (vars.longDelta > 0)
+                _mint(
+                    address(this),
+                    PoolStorage.LONG,
+                    uint256(vars.longDelta),
+                    ""
+                );
+
+            if (vars.shortDelta > 0)
+                _burn(
+                    address(this),
+                    PoolStorage.SHORT,
+                    uint256(vars.shortDelta)
+                );
         }
 
         emit Trade(
             args.user,
             args.size,
             delta,
-            args.isBuy ? totalPremium - update.totalTakerFees : totalPremium,
-            update.totalTakerFees,
-            update.totalProtocolFees,
+            args.isBuy ? totalPremium - vars.totalTakerFees : totalPremium,
+            vars.totalTakerFees,
+            vars.totalProtocolFees,
             l.marketPrice,
             l.liquidityRate,
             l.currentTick,
@@ -1304,7 +1317,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.tickIndex.next(priceBelow) <= price
         ) revert Pool__InvalidBelowPrice();
 
-        tick = Tick.Data(0, price <= l.marketPrice ? l.globalFeeRate : 0, 0, 0, 0);
+        tick = Tick.Data(
+            0,
+            price <= l.marketPrice ? l.globalFeeRate : 0,
+            0,
+            0,
+            0
+        );
 
         l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
@@ -1428,7 +1447,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lowerTick.delta -= _delta;
             upperTick.delta -= _delta;
             l.liquidityRate += delta;
-            
+
             if (orderType.isLong()) {
                 lowerTick.longDelta -= _delta;
                 upperTick.longDelta -= _delta;
