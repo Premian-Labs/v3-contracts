@@ -488,10 +488,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _balanceOf(p.owner, tokenId)
         ) - liquidityPerTick;
 
-        _updateTicks(p.lower, p.upper, l.marketPrice, liquidityDelta,
+        _updateTicks(
+            p.lower,
+            p.upper,
+            l.marketPrice,
+            liquidityDelta,
             false,
             isFullWithdrawal,
-            p.orderType);
+            p.orderType
+        );
 
         emit Withdrawal(
             p.owner,
@@ -628,8 +633,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.protocolFees += protocolFee;
             }
 
-
             uint256 dist = Math.abs(int256(l.marketPrice) - int256(oldMarketPrice));
+
             shortDelta += l.shortRate * PoolStorage.MIN_TICK_DISTANCE * dist;
             longDelta += l.longRate * PoolStorage.MIN_TICK_DISTANCE * dist;
 
@@ -662,11 +667,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         if (isBuy) {
-            _mint(address(this), PoolStorage.SHORT, uint256(shortDelta), "");
-            _burn(address(this), PoolStorage.LONG, uint256(longDelta));
+            if (shortDelta > 0)
+                _mint(address(this), PoolStorage.SHORT, uint256(shortDelta), "");
+
+            if (longDelta > 0)
+                _burn(address(this), PoolStorage.LONG, uint256(longDelta));
         } else {
-            _mint(address(this), PoolStorage.LONG, uint256(longDelta), "");
-            _burn(address(this), PoolStorage.SHORT, uint256(shortDelta));
+            if (longDelta > 0)
+                _mint(address(this), PoolStorage.LONG, uint256(longDelta), "");
+            
+            if (shortDelta > 0)
+                _burn(address(this), PoolStorage.SHORT, uint256(shortDelta));
         }
 
         emit Trade(
@@ -1373,7 +1384,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (upper <= l.currentTick) {
             lowerTick.delta -= _delta;
             upperTick.delta += _delta;
-            if (orderType.isLong()){
+
+            if (orderType.isLong()) {
                 lowerTick.longDelta -= _delta;
                 upperTick.longDelta += _delta;
             } else {
@@ -1383,7 +1395,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (lower > l.currentTick) {
             lowerTick.delta += _delta;
             upperTick.delta -= _delta;
-            if (orderType.isLong()){
+
+            if (orderType.isLong()) {
                 lowerTick.longDelta += _delta;
                 upperTick.longDelta -= _delta;
             } else {
@@ -1394,7 +1407,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lowerTick.delta -= _delta;
             upperTick.delta -= _delta;
             l.liquidityRate += delta;
-            if (orderType.isLong()){
+            
+            if (orderType.isLong()) {
                 lowerTick.longDelta -= _delta;
                 upperTick.longDelta -= _delta;
                 l.longRate = uint256(int256(l.longRate) + _delta);
