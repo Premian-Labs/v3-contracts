@@ -707,14 +707,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        if (delta.shorts < 0) {
-            delta.collateral = _isBuy
-                ? shortCollateral.toInt256() - totalPremium.toInt256()
-                : totalPremium.toInt256();
-        } else if (delta.shorts > 0) {
-            delta.collateral = _isBuy
-                ? -totalPremium.toInt256()
-                : totalPremium.toInt256() - shortCollateral.toInt256();
+        if (_isBuy) {
+            delta.collateral =
+                -Math.min(shortCollateral, 0).toInt256() -
+                totalPremium.toInt256();
+        } else {
+            delta.collateral =
+                totalPremium.toInt256() -
+                Math.max(shortCollateral, 0).toInt256();
         }
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
