@@ -1439,11 +1439,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (orderType.isLong()) {
                 lowerTick.longDelta -= _delta;
                 upperTick.longDelta -= _delta;
-                l.longRate = uint256(int256(l.longRate) + _delta);
+                l.longRate = l.longRate.add(_delta);
             } else {
                 lowerTick.shortDelta -= _delta;
                 upperTick.shortDelta -= _delta;
-                l.shortRate = uint256(int256(l.shortRate) + _delta);
+                l.shortRate = l.shortRate.add(_delta);
             }
         }
 
