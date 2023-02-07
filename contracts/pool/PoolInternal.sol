@@ -670,30 +670,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (args.isBuy) {
             if (vars.shortDelta > 0)
-                _mint(
-                    address(this),
-                    PoolStorage.SHORT,
-                    uint256(vars.shortDelta),
-                    ""
-                );
+                _mint(address(this), PoolStorage.SHORT, vars.shortDelta, "");
 
             if (vars.longDelta > 0)
-                _burn(address(this), PoolStorage.LONG, uint256(vars.longDelta));
+                _burn(address(this), PoolStorage.LONG, vars.longDelta);
         } else {
             if (vars.longDelta > 0)
-                _mint(
-                    address(this),
-                    PoolStorage.LONG,
-                    uint256(vars.longDelta),
-                    ""
-                );
+                _mint(address(this), PoolStorage.LONG, vars.longDelta, "");
 
             if (vars.shortDelta > 0)
-                _burn(
-                    address(this),
-                    PoolStorage.SHORT,
-                    uint256(vars.shortDelta)
-                );
+                _burn(address(this), PoolStorage.SHORT, vars.shortDelta);
         }
 
         emit Trade(
@@ -1550,8 +1536,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Tick.Data storage currentTick = l.ticks[l.currentTick];
 
         l.liquidityRate = l.liquidityRate.add(currentTick.delta);
-        l.longRate = uint256(int256(l.longRate) + currentTick.longDelta);
-        l.shortRate = uint256(int256(l.shortRate) + currentTick.shortDelta);
+        l.longRate = l.longRate.add(currentTick.longDelta);
+        l.shortRate = l.shortRate.add(currentTick.shortDelta);
 
         // Flip the tick
         currentTick.delta = -currentTick.delta;
