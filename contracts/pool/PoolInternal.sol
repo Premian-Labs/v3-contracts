@@ -626,7 +626,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 }
 
                 uint256 dist = Math.abs(
-                    int256(l.marketPrice) - int256(oldMarketPrice)
+                    l.marketPrice.toInt256() - oldMarketPrice.toInt256()
                 );
 
                 vars.shortDelta +=
