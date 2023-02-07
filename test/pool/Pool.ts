@@ -9,7 +9,7 @@ import {
 } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { OrderType, PoolUtil, TokenType } from '../../utils/PoolUtil';
+import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
   MockContract,
@@ -19,9 +19,10 @@ import {
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
-import { signQuote, TradeQuote } from '../../utils/quote';
-import { bnToNumber } from '../../utils/math';
+import { signQuote, TradeQuote } from '../../utils/sdk/quote';
+import { bnToNumber } from '../../utils/sdk/math';
 import { now } from '../../utils/time';
+import { OrderType, TokenType } from '../../utils/sdk/types';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
