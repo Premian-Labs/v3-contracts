@@ -97,6 +97,8 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 maxSlippage;
         // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
         uint256 collateralCredit;
+        // The address to which refund excess credit
+        address refundAddress;
         // Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
         bool isBidIfStrandedMarketPrice;
     }

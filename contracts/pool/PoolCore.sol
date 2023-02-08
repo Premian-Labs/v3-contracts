@@ -71,7 +71,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 maxSlippage
     ) external {
         _ensureOperator(p.operator);
-        _deposit(p, belowLower, belowUpper, size, maxSlippage, 0);
+        _deposit(p, belowLower, belowUpper, size, maxSlippage, 0, address(0));
     }
 
     /// @inheritdoc IPoolCore
@@ -92,6 +92,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                 size,
                 maxSlippage,
                 0,
+                address(0),
                 isBidIfStrandedMarketPrice
             )
         );
@@ -112,7 +113,15 @@ contract PoolCore is IPoolCore, PoolInternal {
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (uint256 creditAmount, ) = _swap(s);
 
-        _deposit(p, belowLower, belowUpper, size, maxSlippage, creditAmount);
+        _deposit(
+            p,
+            belowLower,
+            belowUpper,
+            size,
+            maxSlippage,
+            creditAmount,
+            s.refundAddress
+        );
     }
 
     /// @inheritdoc IPoolCore

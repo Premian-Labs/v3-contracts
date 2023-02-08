@@ -249,7 +249,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 belowUpper,
         uint256 size,
         uint256 maxSlippage,
-        uint256 collateralCredit
+        uint256 collateralCredit,
+        address refundAddress
     ) internal {
         _deposit(
             p,
@@ -259,6 +260,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 size,
                 maxSlippage,
                 collateralCredit,
+                refundAddress,
                 p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
             )
         );
@@ -311,6 +313,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             address(this),
             delta.collateral.toUint256(),
             args.collateralCredit,
+            args.refundAddress,
             delta.longs.toUint256(),
             delta.shorts.toUint256()
         );
@@ -378,6 +381,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureExpired(l);
 
         _ensureBelowMaxSlippage(l, maxSlippage);
+        _ensureNonZeroSize(size);
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
@@ -452,6 +456,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 p.operator,
                 collateralToTransfer,
                 0,
+                address(0),
                 Math.abs(delta.longs),
                 Math.abs(delta.shorts)
             );
@@ -489,6 +494,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address to,
         uint256 collateral,
         uint256 collateralCredit,
+        address refundAddress,
         uint256 longs,
         uint256 shorts
     ) internal {
@@ -506,8 +512,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (collateralCredit > collateral) {
             // If there was too much collateral credit, we refund the excess
             IERC20(poolToken).transferFrom(
-                to,
-                from,
+                address(this),
+                refundAddress,
                 collateralCredit - collateral
             );
         }
