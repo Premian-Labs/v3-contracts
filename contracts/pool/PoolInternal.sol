@@ -342,13 +342,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             _mint(p.owner, tokenId, args.size, "");
 
+            int256 tickDelta = p
+                .liquidityPerTick(_balanceOf(p.owner, tokenId))
+                .toInt256() - liquidityPerTick.toInt256();
+
             // Adjust tick deltas
             _updateTicks(
                 p.lower,
                 p.upper,
                 l.marketPrice,
-                p.liquidityPerTick(_balanceOf(p.owner, tokenId)) -
-                    liquidityPerTick,
+                tickDelta,
                 initialSize == 0,
                 false
             );
@@ -462,14 +465,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        _updateTicks(
-            p.lower,
-            p.upper,
-            l.marketPrice,
-            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick, // Adjust tick deltas (reverse of deposit)
-            false,
-            initialSize == size // isFullWithdrawal
-        );
+        {
+            int256 tickDelta = p
+                .liquidityPerTick(_balanceOf(p.owner, tokenId))
+                .toInt256() - liquidityPerTick.toInt256();
+
+            _updateTicks(
+                p.lower,
+                p.upper,
+                l.marketPrice,
+                tickDelta, // Adjust tick deltas (reverse of deposit)
+                false,
+                initialSize == size // isFullWithdrawal
+            );
+        }
 
         emit Withdrawal(
             p.owner,
@@ -1323,7 +1332,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 lower,
         uint256 upper,
         uint256 marketPrice,
-        uint256 delta,
+        int256 delta,
         bool isNewDeposit,
         bool isFullWithdrawal
     ) internal {
@@ -1378,17 +1387,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //                [---------------------)
         //                         current
 
-        int256 _delta = delta.toInt256();
         if (upper <= l.currentTick) {
-            lowerTick.delta -= _delta;
-            upperTick.delta += _delta;
+            lowerTick.delta -= delta;
+            upperTick.delta += delta;
         } else if (lower > l.currentTick) {
-            lowerTick.delta += _delta;
-            upperTick.delta -= _delta;
+            lowerTick.delta += delta;
+            upperTick.delta -= delta;
         } else {
-            lowerTick.delta -= _delta;
-            upperTick.delta -= _delta;
-            l.liquidityRate += delta;
+            lowerTick.delta -= delta;
+            upperTick.delta -= delta;
+            l.liquidityRate = l.liquidityRate.add(delta);
         }
 
         // After deposit / full withdrawal the current tick needs be reconciled. We
