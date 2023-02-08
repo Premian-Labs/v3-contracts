@@ -381,7 +381,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 maxSlippage
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
+        _ensureNotExpired(l);
 
         _ensureBelowMaxSlippage(l, maxSlippage);
         _ensureNonZeroSize(size);
@@ -1048,6 +1048,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param holder The holder of the contracts
     function _exercise(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureExpired(l);
+
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
@@ -1067,6 +1069,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param holder The holder of the contracts
     function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureExpired(l);
+
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
@@ -1092,7 +1096,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param p The position key
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureNotExpired(l);
+        _ensureExpired(l);
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;

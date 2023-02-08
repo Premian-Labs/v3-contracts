@@ -61,6 +61,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.tickIndex.push(Pricing.MAX_TICK_PRICE);
 
             l.currentTick = Pricing.MIN_TICK_PRICE;
+            l.marketPrice = Pricing.MIN_TICK_PRICE;
         }
 
         _setSupportsInterface(type(IERC165).interfaceId, true);
