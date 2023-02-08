@@ -7,6 +7,8 @@ library Tick {
     struct Data {
         int256 delta;
         uint256 externalFeeRate;
+        int256 longDelta;
+        int256 shortDelta;
         uint256 counter;
     }
 }
