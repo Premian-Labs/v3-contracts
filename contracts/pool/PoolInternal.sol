@@ -504,15 +504,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         address poolToken = l.getPoolToken();
         if (collateral > collateralCredit) {
-            IERC20(poolToken).transferFrom(
-                from,
-                to,
-                collateral - collateralCredit
-            );
+            if (from == address(this)) {
+                IERC20(poolToken).transfer(to, collateral - collateralCredit);
+            } else {
+                IERC20(poolToken).transferFrom(
+                    from,
+                    to,
+                    collateral - collateralCredit
+                );
+            }
         } else if (collateralCredit > collateral) {
             // If there was too much collateral credit, we refund the excess
-            IERC20(poolToken).transferFrom(
-                address(this),
+            IERC20(poolToken).transfer(
                 refundAddress,
                 collateralCredit - collateral
             );
