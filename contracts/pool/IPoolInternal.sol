@@ -73,6 +73,10 @@ interface IPoolInternal is IPosition, IPricing {
         int256 shorts;
     }
 
+    ////////////////////
+    ////////////////////
+    // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
+
     struct TradeArgsInternal {
         // The account doing the trade
         address user;
@@ -108,6 +112,13 @@ interface IPoolInternal is IPosition, IPricing {
         address refundAddress;
         // Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
         bool isBidIfStrandedMarketPrice;
+    }
+
+    struct WithdrawVarsInternal {
+        uint256 tokenId;
+        uint256 initialSize;
+        uint256 liquidityPerTick;
+        bool isFullWithdrawal;
     }
 
     struct FillQuoteArgsInternal {

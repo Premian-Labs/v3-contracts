@@ -419,25 +419,27 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        uint256 tokenId = PoolStorage.formatTokenId(
+        WithdrawVarsInternal memory vars;
+
+        vars.tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        uint256 initialSize = _balanceOf(p.owner, tokenId);
+        vars.initialSize = _balanceOf(p.owner, vars.tokenId);
 
-        if (initialSize == 0) revert Pool__PositionDoesNotExist();
+        if (vars.initialSize == 0) revert Pool__PositionDoesNotExist();
 
-        uint256 liquidityPerTick;
+        vars.isFullWithdrawal = vars.initialSize == size;
 
         {
             Tick.Data memory lowerTick = _getTick(p.lower);
             Tick.Data memory upperTick = _getTick(p.upper);
 
             // Initialize variables before position update
-            liquidityPerTick = p.liquidityPerTick(initialSize);
+            vars.liquidityPerTick = p.liquidityPerTick(vars.initialSize);
             uint256 feeRate = _rangeFeeRate(
                 l,
                 p.lower,
@@ -447,7 +449,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
 
             // Update claimable fees
-            _updateClaimableFees(pData, feeRate, liquidityPerTick);
+            _updateClaimableFees(pData, feeRate, vars.liquidityPerTick);
         }
 
         // Check whether it's a full withdrawal before updating the position
@@ -456,8 +458,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             uint256 collateralToTransfer;
-            // If full withdrawal
-            if (initialSize == size) {
+            if (vars.isFullWithdrawal) {
                 uint256 feesClaimed = pData.claimableFees;
                 // Claim all fees and remove the position completely
                 collateralToTransfer += feesClaimed;
@@ -465,18 +466,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
 
-                emit ClaimFees(p.owner, tokenId, feesClaimed, 0);
+                emit ClaimFees(p.owner, vars.tokenId, feesClaimed, 0);
             }
 
             delta = p.calculatePositionUpdate(
-                initialSize,
+                vars.initialSize,
                 -size.toInt256(),
                 l.marketPrice
             );
 
             collateralToTransfer += Math.abs(delta.collateral);
 
-            _burn(p.owner, tokenId, size);
+            _burn(p.owner, vars.tokenId, size);
 
             _transferTokens(
                 l,
@@ -492,8 +493,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             int256 tickDelta = p
-                .liquidityPerTick(_balanceOf(p.owner, tokenId))
-                .toInt256() - liquidityPerTick.toInt256();
+                .liquidityPerTick(_balanceOf(p.owner, vars.tokenId))
+                .toInt256() - vars.liquidityPerTick.toInt256();
 
             _updateTicks(
                 p.lower,
@@ -501,14 +502,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.marketPrice,
                 tickDelta, // Adjust tick deltas (reverse of deposit)
                 false,
-                initialSize == size, // isFullWithdrawal
+                vars.isFullWithdrawal,
                 p.orderType
             );
         }
 
         emit Withdrawal(
             p.owner,
-            tokenId,
+            vars.tokenId,
             Math.abs(delta.collateral),
             Math.abs(delta.longs),
             Math.abs(delta.shorts),
@@ -1461,7 +1462,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else {
             lowerTick.delta -= delta;
             upperTick.delta -= delta;
-            l.liquidityRate += delta;
+            l.liquidityRate = l.liquidityRate.add(delta);
 
             if (orderType.isLong()) {
                 lowerTick.longDelta -= delta;
