@@ -1700,6 +1700,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower == 0 ||
             upper == 0 ||
             lower >= upper ||
+            lower < Pricing.MIN_TICK_PRICE ||
             upper > Pricing.MAX_TICK_PRICE
         ) revert Pool__InvalidRange();
     }

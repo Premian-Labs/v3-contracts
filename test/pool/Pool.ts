@@ -24,7 +24,7 @@ import {
 import { signQuote, TradeQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber } from '../../utils/sdk/math';
 import { OrderType, PositionKey, TokenType } from '../../utils/sdk/types';
-import { ONE_ETHER } from '../../utils/constants';
+import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -248,7 +248,7 @@ describe('Pool', () => {
 
       it('should revert if msg.sender != p.operator', async () => {
         await expect(
-          callPool.connect(deployer)[fnSig](pKey, 0, 0, parseEther('2000'), 0),
+          callPool.connect(deployer)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
         ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
       });
 
@@ -263,7 +263,7 @@ describe('Pool', () => {
       it('should revert if option is expired', async () => {
         await increaseTo(maturity);
         await expect(
-          callPool.connect(lp)[fnSig](pKey, 0, 0, parseEther('2000'), 0),
+          callPool.connect(lp)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
         ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
       });
 
@@ -271,13 +271,13 @@ describe('Pool', () => {
         await expect(
           callPool
             .connect(lp)
-            [fnSig]({ ...pKey, lower: 0 }, 0, 0, parseEther('2000'), 0),
+            [fnSig]({ ...pKey, lower: 0 }, 0, 0, THREE_ETHER, 0),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
         await expect(
           callPool
             .connect(lp)
-            [fnSig]({ ...pKey, upper: 0 }, 0, 0, parseEther('2000'), 0),
+            [fnSig]({ ...pKey, upper: 0 }, 0, 0, THREE_ETHER, 0),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
         await expect(
@@ -287,7 +287,19 @@ describe('Pool', () => {
               { ...pKey, lower: parseEther('0.5'), upper: parseEther('0.25') },
               0,
               0,
-              parseEther('2000'),
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, lower: parseEther('0.0001') },
+              0,
+              0,
+              THREE_ETHER,
               0,
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
@@ -299,7 +311,7 @@ describe('Pool', () => {
               { ...pKey, upper: parseEther('1.01') },
               0,
               0,
-              parseEther('2000'),
+              THREE_ETHER,
               0,
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
@@ -313,7 +325,7 @@ describe('Pool', () => {
               { ...pKey, lower: parseEther('0.2501') },
               0,
               0,
-              parseEther('2000'),
+              THREE_ETHER,
               0,
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
@@ -325,7 +337,7 @@ describe('Pool', () => {
               { ...pKey, upper: parseEther('0.7501') },
               0,
               0,
-              parseEther('2000'),
+              THREE_ETHER,
               0,
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
@@ -391,7 +403,7 @@ describe('Pool', () => {
 
     it('should revert if msg.sender != p.operator', async () => {
       await expect(
-        callPool.connect(deployer).withdraw(pKey, parseEther('2000'), 0),
+        callPool.connect(deployer).withdraw(pKey, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
     });
 
@@ -406,27 +418,23 @@ describe('Pool', () => {
     it('should revert if option is expired', async () => {
       await increaseTo(maturity);
       await expect(
-        callPool.connect(lp).withdraw(pKey, parseEther('2000'), 0),
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
     });
 
     it('should revert if position does not exists', async () => {
       await expect(
-        callPool.connect(lp).withdraw(pKey, parseEther('2000'), 0),
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__PositionDoesNotExist');
     });
 
     it('should revert if range is not valid', async () => {
       await expect(
-        callPool
-          .connect(lp)
-          .withdraw({ ...pKey, lower: 0 }, parseEther('2000'), 0),
+        callPool.connect(lp).withdraw({ ...pKey, lower: 0 }, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
-        callPool
-          .connect(lp)
-          .withdraw({ ...pKey, upper: 0 }, parseEther('2000'), 0),
+        callPool.connect(lp).withdraw({ ...pKey, upper: 0 }, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
@@ -434,7 +442,7 @@ describe('Pool', () => {
           .connect(lp)
           .withdraw(
             { ...pKey, lower: parseEther('0.5'), upper: parseEther('0.25') },
-            parseEther('2000'),
+            THREE_ETHER,
             0,
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
@@ -442,11 +450,13 @@ describe('Pool', () => {
       await expect(
         callPool
           .connect(lp)
-          .withdraw(
-            { ...pKey, upper: parseEther('1.01') },
-            parseEther('2000'),
-            0,
-          ),
+          .withdraw({ ...pKey, lower: parseEther('0.0001') }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, upper: parseEther('1.01') }, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
     });
 
@@ -454,21 +464,13 @@ describe('Pool', () => {
       await expect(
         callPool
           .connect(lp)
-          .withdraw(
-            { ...pKey, lower: parseEther('0.2501') },
-            parseEther('2000'),
-            0,
-          ),
+          .withdraw({ ...pKey, lower: parseEther('0.2501') }, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
 
       await expect(
         callPool
           .connect(lp)
-          .withdraw(
-            { ...pKey, upper: parseEther('0.7501') },
-            parseEther('2000'),
-            0,
-          ),
+          .withdraw({ ...pKey, upper: parseEther('0.7501') }, THREE_ETHER, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
     });
   });
