@@ -45,6 +45,25 @@ interface IPoolFactory {
         bool isCallPool
     ) external view returns (bool);
 
+    /// @notice Returns the fee required to initialize a pool
+    /// @param base Address of base token
+    /// @param quote Address of quote token
+    /// @param baseOracle Address of base token price feed
+    /// @param quoteOracle Address of quote token price feed
+    /// @param strike The strike of the option
+    /// @param maturity The maturity timestamp of the option
+    /// @param isCallPool Whether the pool is for call or put options
+    /// @return The fee required to initialize this pool
+    function initializationFee(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+     ) external view returns (uint256);
+    
     /// @notice Deploy a new option pool
     /// @param base Address of base token
     /// @param quote Address of quote token

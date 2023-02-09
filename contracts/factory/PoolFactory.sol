@@ -8,12 +8,14 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolStorage for PoolStorage.Layout;
     using SafeCast for uint256;
+    using UD60x18 for uint256;
 
     address internal immutable DIAMOND;
 
@@ -116,13 +118,12 @@ contract PoolFactory is IPoolFactory {
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
-        int256 basePrice = PoolStorage.getSpotPrice(baseOracle);
-        int256 quotePrice = PoolStorage.getSpotPrice(quoteOracle);
+        uint256 basePrice = PoolStorage.getSpotPrice(baseOracle);
+        uint256 quotePrice = PoolStorage.getSpotPrice(quoteOracle);
+        uint256 spot = basePrice.div(quotePrice);
+        uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        int256 spot = (basePrice * 1e18) / quotePrice;
-        int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
-
-        if (strike.toInt256() % strikeInterval != 0)
+        if (strike % strikeInterval != 0)
             revert PoolFactory__OptionStrikeInvalid();
     }
 
@@ -135,12 +136,12 @@ contract PoolFactory is IPoolFactory {
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
-        if (ttm >= 3 days && ttm <= 31 days) {
+        if (ttm >= 3 days && ttm <= 30 days) {
             if (!OptionMath.isFriday(maturity))
                 revert PoolFactory__OptionMaturityNotFriday();
         }
 
-        if (ttm > 31 days) {
+        if (ttm > 30 days) {
             if (!OptionMath.isLastFriday(maturity))
                 revert PoolFactory__OptionMaturityNotLastFriday();
         }
