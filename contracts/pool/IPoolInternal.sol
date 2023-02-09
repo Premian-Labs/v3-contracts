@@ -11,6 +11,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveMaxSlippage();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientLiquidity();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
     error Pool__InvalidQuoteNonce();

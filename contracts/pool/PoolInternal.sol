@@ -113,7 +113,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     : pricing.marketPrice - priceDelta;
             }
 
-            {
+            if (tradeSize > 0) {
                 uint256 premium = Math
                     .average(pricing.marketPrice, nextPrice)
                     .mul(tradeSize);
@@ -131,8 +131,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
 
                 totalPremium += isBuy ? premium + takerFee : premium - takerFee;
-                pricing.marketPrice = nextPrice;
             }
+
+            pricing.marketPrice = nextPrice;
 
             // ToDo : Deal with rounding error
             if (maxSize >= size - (ONE / 10)) {
@@ -152,6 +153,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     ? pricing.upper
                     : l.tickIndex.prev(pricing.lower);
                 pricing.upper = l.tickIndex.next(pricing.lower);
+
+                if (pricing.upper == 0) revert Pool__InsufficientLiquidity();
 
                 // Compute new liquidity
                 liquidity = pricing.liquidity();

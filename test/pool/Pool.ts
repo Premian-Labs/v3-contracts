@@ -26,6 +26,9 @@ import { average, bnToNumber } from '../../utils/sdk/math';
 import { OrderType, PositionKey, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
+const depositFnSig =
+  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
+
 describe('Pool', () => {
   let deployer: SignerWithAddress;
   let lp: SignerWithAddress;
@@ -198,9 +201,69 @@ describe('Pool', () => {
     });
   });
 
+  describe('#getTradeQuote', () => {
+    it('should successfully return a trade quote', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const price = pKey.lower;
+      const nextPrice = parseEther('0.2');
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+
+      expect(await callPool.getTradeQuote(tradeSize, true)).to.eq(
+        tradeSize.mul(avgPrice).div(ONE_ETHER).add(takerFee),
+      );
+    });
+
+    it('should revert if not enough liquidity', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const size = parseEther('1000');
+
+      await base.mint(lp.address, size);
+      await base.connect(lp).approve(callPool.address, size);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          size,
+          0,
+        );
+
+      await expect(
+        callPool.getTradeQuote(parseEther('1001'), true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InsufficientLiquidity');
+    });
+  });
+
   describe('#deposit', () => {
-    const fnSig =
-      'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
+    const fnSig = depositFnSig;
 
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
