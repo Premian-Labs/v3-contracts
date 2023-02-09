@@ -86,6 +86,13 @@ interface IPoolInternal is IPosition, IPricing {
         bool transferCollateralToUser;
     }
 
+    struct TradeVarsInternal {
+        uint256 totalTakerFees;
+        uint256 totalProtocolFees;
+        uint256 longDelta;
+        uint256 shortDelta;
+    }
+
     struct DepositArgsInternal {
         // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
         uint256 belowLower;
