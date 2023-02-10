@@ -7,8 +7,6 @@ import {
   StatefulChainlinkOracle__factory,
 } from '../../typechain';
 
-import { parseUnits } from 'ethers/lib/utils';
-
 import {
   convertPriceToBigNumberWithDecimals,
   getPrice,
