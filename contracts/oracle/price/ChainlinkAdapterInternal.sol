@@ -2,8 +2,8 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
+import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
 
@@ -289,7 +289,7 @@ abstract contract ChainlinkAdapterInternal is
     function _getDecimals(address _token) internal view returns (int256) {
         if (_isETH(_token)) {
             return ETH_DECIMALS;
-        } else if (!Address.isContract(_token)) {
+        } else if (!AddressUtils.isContract(_token)) {
             return FOREX_DECIMALS;
         } else {
             return int256(uint256(IERC20Metadata(_token).decimals()));
