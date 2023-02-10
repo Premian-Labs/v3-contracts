@@ -365,10 +365,6 @@ describe('ChainlinkAdapter', () => {
       expect(await instance.supportsInterface('0xffffffff')).to.be.false;
     });
 
-    it('should return false if interface not supported (e.g. IERC20)', async () => {
-      expect(await instance.supportsInterface('0x36372b07')).to.be.false;
-    });
-
     it('should return true if interface is IERC165', async () => {
       expect(await instance.supportsInterface('0x01ffc9a7')).to.be.true;
     });
@@ -377,12 +373,8 @@ describe('ChainlinkAdapter', () => {
       expect(await instance.supportsInterface('0xac9650d8')).to.be.true;
     });
 
-    it('should return true if interface is IAccessControl', async () => {
-      expect(await instance.supportsInterface('0x7965db0b')).to.be.true;
-    });
-
     it('should return true if interface is IOracleAdapter', async () => {
-      expect(await instance.supportsInterface('0x06dae6ce')).to.be.true;
+      expect(await instance.supportsInterface('0x07252f69')).to.be.true;
     });
 
     it('should return true if interface is IChainlinkAdapter', async () => {

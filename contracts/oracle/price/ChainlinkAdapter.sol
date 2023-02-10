@@ -1,15 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
+import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
+
 import {FeedRegistryInterface, ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
-contract ChainlinkAdapter is ChainlinkAdapterInternal, IChainlinkAdapter {
+contract ChainlinkAdapter is
+    ChainlinkAdapterInternal,
+    IChainlinkAdapter,
+    ERC165Base
+{
     constructor(
-        FeedRegistryInterface _registry
-    ) ChainlinkAdapterInternal(_registry) {}
+        FeedRegistryInterface _registry,
+        address[] memory _addresses,
+        address[] memory _mappings
+    ) ChainlinkAdapterInternal(_registry, _addresses, _mappings) {
+        _setSupportsInterface(type(IChainlinkAdapter).interfaceId, true);
+    }
 
     /// @inheritdoc IOracleAdapter
     function canSupportPair(
@@ -54,20 +64,6 @@ contract ChainlinkAdapter is ChainlinkAdapterInternal, IChainlinkAdapter {
             return
                 _getPriceDifferentBases(_mappedTokenIn, _mappedTokenOut, _plan);
         }
-    }
-
-    /// @inheritdoc IOracleAdapter
-    function supportsInterface(
-        bytes4 _interfaceId
-    )
-        public
-        view
-        override(ChainlinkAdapterInternal, IOracleAdapter)
-        returns (bool)
-    {
-        return
-            _interfaceId == type(IChainlinkAdapter).interfaceId ||
-            super.supportsInterface(_interfaceId);
     }
 
     /// @inheritdoc IChainlinkAdapter

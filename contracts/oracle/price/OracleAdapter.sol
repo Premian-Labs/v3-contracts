@@ -1,17 +1,28 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
+import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
+import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/base/ERC165BaseInternal.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @title Base oracle adapter implementation, which suppoprts multi-call and ERC165
+/// @title Base oracle adapter implementation, which suppoprts access control multi-call and ERC165
 /// @notice Most implementations of `IOracleAdapter` will have an internal function that is called in both
 ///         `addSupportForPairIfNeeded` and `addOrModifySupportForPair`. This oracle is now making this explicit, and
 ///         implementing these two functions. They remain virtual so that they can be overriden if needed.
 /// @notice derived from https://github.com/Mean-Finance/oracles
-abstract contract OracleAdapter is ERC165Base, IOracleAdapter, Multicall {
+abstract contract OracleAdapter is
+    ERC165BaseInternal,
+    IOracleAdapter,
+    Multicall
+{
+    constructor() {
+        _setSupportsInterface(type(IERC165).interfaceId, true);
+        _setSupportsInterface(type(IOracleAdapter).interfaceId, true);
+        _setSupportsInterface(type(Multicall).interfaceId, true);
+    }
+
     /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
         address tokenA,
@@ -37,16 +48,6 @@ abstract contract OracleAdapter is ERC165Base, IOracleAdapter, Multicall {
             revert Oracle__PairAlreadySupported(_tokenA, _tokenB);
 
         _addOrModifySupportForPair(_tokenA, _tokenB, _data);
-    }
-
-    /// @inheritdoc IOracleAdapter
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view virtual override(ERC165Base, IOracleAdapter) returns (bool) {
-        return
-            _interfaceId == type(IOracleAdapter).interfaceId ||
-            _interfaceId == type(Multicall).interfaceId ||
-            super.supportsInterface(_interfaceId);
     }
 
     /// @notice Add or reconfigures the support for a given pair. This function will let the oracle take some actions

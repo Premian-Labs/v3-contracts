@@ -366,10 +366,4 @@ abstract contract ChainlinkAdapterInternal is
     function _isETH(address _token) internal pure returns (bool) {
         return _token == Denominations.ETH;
     }
-
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view virtual override(OracleAdapter) returns (bool) {
-        return super.supportsInterface(_interfaceId);
-    }
 }

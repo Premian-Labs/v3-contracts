@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
-import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
-
 /// @title The interface for an oracle that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
-interface IOracleAdapter is IERC165 {
+interface IOracleAdapter {
     /// @notice Thrown when trying to add pair where base and quote are the same
     error Oracle__BaseAndQuoteAreSame(address tokenA, address tokenB);
 
@@ -81,11 +79,4 @@ interface IOracleAdapter is IERC165 {
         address tokenB,
         bytes calldata data
     ) external;
-
-    /// @notice Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding
-    ///         https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section] to learn more about how these ids are
-    ///         created.
-    /// @dev This function call must use less than 30 000 gas.
-    /// @param interfaceId The interface identifier
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
