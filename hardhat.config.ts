@@ -31,6 +31,16 @@ const {
   CACHE_PATH,
 } = process.env;
 
+const UNISWAP_SETTING = {
+  version: '0.7.6',
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
+  },
+};
+
 export default {
   solidity: {
     compilers: [
@@ -44,7 +54,16 @@ export default {
           },
         },
       },
+      UNISWAP_SETTING,
     ],
+    overrides: {
+      '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol':
+        UNISWAP_SETTING,
+      '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol':
+        UNISWAP_SETTING,
+      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol':
+        UNISWAP_SETTING,
+    },
   },
   paths: {
     cache: CACHE_PATH ?? './cache',
