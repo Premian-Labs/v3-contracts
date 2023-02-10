@@ -9,6 +9,7 @@ import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {FeedRegistryInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
+import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapter} from "./OracleAdapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
@@ -16,6 +17,7 @@ abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
     OracleAdapter
 {
+    using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using UD60x18 for uint256;
 
     uint32 internal constant MAX_DELAY = 25 hours;
@@ -25,9 +27,6 @@ abstract contract ChainlinkAdapterInternal is
     int256 private constant ETH_DECIMALS = 18;
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
-
-    mapping(address => address) internal _tokenMappings;
-    mapping(bytes32 => PricingPlan) internal _planForPair;
 
     constructor(
         FeedRegistryInterface _registry,
@@ -48,18 +47,21 @@ abstract contract ChainlinkAdapterInternal is
         PricingPlan _plan = _determinePricingPlan(__tokenA, __tokenB);
         bytes32 _keyForPair = _keyForSortedPair(__tokenA, __tokenB);
 
+        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
+            .layout();
+
         if (_plan == PricingPlan.NONE) {
             // Check if there is a current plan. If there is, it means that the pair was supported and it
             // lost support. In that case, we will remove the current plan and continue working as expected.
             // If there was no supported plan, and there still isn't, then we will fail
-            PricingPlan _currentPlan = _planForPair[_keyForPair];
+            PricingPlan _currentPlan = l.planForPair[_keyForPair];
 
             if (_currentPlan == PricingPlan.NONE) {
                 revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
             }
         }
 
-        _planForPair[_keyForPair] = _plan;
+        l.planForPair[_keyForPair] = _plan;
         emit UpdatedPlanForPair(__tokenA, __tokenB, _plan);
     }
 
@@ -331,14 +333,19 @@ abstract contract ChainlinkAdapterInternal is
             revert Oracle__InvalidMappingsInput();
 
         for (uint256 i = 0; i < _addresses.length; i++) {
-            _tokenMappings[_addresses[i]] = _mappings[i];
+            ChainlinkAdapterStorage.layout().tokenMappings[
+                _addresses[i]
+            ] = _mappings[i];
         }
 
         emit MappingsAdded(_addresses, _mappings);
     }
 
     function _mappedToken(address _token) internal view returns (address) {
-        address _mapping = _tokenMappings[_token];
+        address _mapping = ChainlinkAdapterStorage.layout().tokenMappings[
+            _token
+        ];
+
         return _mapping != address(0) ? _mapping : _token;
     }
 

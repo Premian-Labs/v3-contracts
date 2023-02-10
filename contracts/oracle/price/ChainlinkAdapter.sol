@@ -4,7 +4,7 @@ pragma solidity >=0.8.7 <0.9.0;
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 
-import {FeedRegistryInterface, ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
+import {FeedRegistryInterface, ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 
@@ -15,6 +15,8 @@ contract ChainlinkAdapter is
     ERC165Base,
     SafeOwnable
 {
+    using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
+
     constructor(
         FeedRegistryInterface _registry,
         address[] memory _addresses,
@@ -53,7 +55,7 @@ contract ChainlinkAdapter is
             _tokenOut
         );
 
-        PricingPlan _plan = _planForPair[
+        PricingPlan _plan = ChainlinkAdapterStorage.layout().planForPair[
             _keyForUnsortedPair(_mappedTokenIn, _mappedTokenOut)
         ];
 
@@ -75,7 +77,10 @@ contract ChainlinkAdapter is
         address _tokenB
     ) public view returns (PricingPlan) {
         (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
-        return _planForPair[_keyForSortedPair(__tokenA, __tokenB)];
+        return
+            ChainlinkAdapterStorage.layout().planForPair[
+                _keyForSortedPair(__tokenA, __tokenB)
+            ];
     }
 
     /// @inheritdoc IChainlinkAdapter
