@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
+import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 
 import {FeedRegistryInterface, ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
@@ -11,13 +12,15 @@ import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 contract ChainlinkAdapter is
     ChainlinkAdapterInternal,
     IChainlinkAdapter,
-    ERC165Base
+    ERC165Base,
+    SafeOwnable
 {
     constructor(
         FeedRegistryInterface _registry,
         address[] memory _addresses,
         address[] memory _mappings
     ) ChainlinkAdapterInternal(_registry, _addresses, _mappings) {
+        _setOwner(msg.sender);
         _setSupportsInterface(type(IChainlinkAdapter).interfaceId, true);
     }
 
@@ -79,7 +82,7 @@ contract ChainlinkAdapter is
     function addMappings(
         address[] memory _addresses,
         address[] memory _mappings
-    ) external {
+    ) external onlyOwner {
         _addMappings(_addresses, _mappings);
     }
 

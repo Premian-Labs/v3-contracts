@@ -113,11 +113,11 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 // TODO: Set block to 15591000 and chainId to 1, if it is not already set
 describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
-  let superAdmin: SignerWithAddress;
+  let notOwner: SignerWithAddress;
   let instance: ChainlinkAdapter;
 
   beforeEach(async () => {
-    [deployer, superAdmin] = await ethers.getSigners();
+    [deployer, notOwner] = await ethers.getSigners();
 
     instance = await new ChainlinkAdapter__factory(deployer).deploy(
       feedRegistryAddress,
@@ -163,19 +163,27 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#addMappings', () => {
+    const tokenAddressMapping = [
+      tokens.CRV.address,
+      tokens.AAVE.address,
+      tokens.MATIC.address,
+    ];
+
+    const chainlinkAddressMapping = [
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+    ];
+
+    it('shoud revert if not owner', async () => {
+      await expect(
+        instance
+          .connect(notOwner)
+          .addMappings(tokenAddressMapping, chainlinkAddressMapping),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
     it('shoud return token address if token is not mapped', async () => {
-      const tokenAddressMapping = [
-        tokens.CRV.address,
-        tokens.AAVE.address,
-        tokens.MATIC.address,
-      ];
-
-      const chainlinkAddressMapping = [
-        '0x0000000000000000000000000000000000000001',
-        '0x0000000000000000000000000000000000000002',
-        '0x0000000000000000000000000000000000000003',
-      ];
-
       await instance.addMappings(tokenAddressMapping, chainlinkAddressMapping);
 
       for (let i = 0; i < tokenAddressMapping.length; i++) {
