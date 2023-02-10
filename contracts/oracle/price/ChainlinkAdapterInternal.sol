@@ -6,6 +6,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
+import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {FeedRegistryInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {OracleAdapter} from "./OracleAdapter.sol";
@@ -15,6 +16,8 @@ abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
     OracleAdapter
 {
+    using UD60x18 for uint256;
+
     uint32 internal constant MAX_DELAY = 25 hours;
     FeedRegistryInterface internal immutable FeedRegistry;
 
@@ -91,7 +94,7 @@ abstract contract ChainlinkAdapterInternal is
         bool invert = _isUSD(_tokenIn) ||
             (_plan == PricingPlan.TOKEN_ETH_PAIR && _isETH(_tokenIn));
 
-        return invert ? (1E36 / _price) : _price;
+        return invert ? _price.inv() : _price;
     }
 
     /// @dev Handles prices when both tokens share the same base (either ETH or USD)
@@ -120,7 +123,7 @@ abstract contract ChainlinkAdapterInternal is
             _scaleBy
         );
 
-        return (adjustedTokenInToBase * ONE_ETH) / adjustedTokenOutToBase;
+        return adjustedTokenInToBase.div(adjustedTokenOutToBase);
     }
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
@@ -147,8 +150,9 @@ abstract contract ChainlinkAdapterInternal is
             uint256 _tokenOutToETH = _getPriceAgainstETH(_tokenOut);
 
             return
-                (((adjustedTokenInToUSD * ONE_ETH) / adjustedEthToUSDPrice) *
-                    ONE_ETH) / _tokenOutToETH;
+                adjustedTokenInToUSD.div(adjustedEthToUSDPrice).div(
+                    _tokenOutToETH
+                );
         } else {
             uint256 _tokenInToETH = _getPriceAgainstETH(_tokenIn);
 
@@ -158,8 +162,9 @@ abstract contract ChainlinkAdapterInternal is
             );
 
             return
-                (_tokenInToETH * adjustedEthToUSDPrice) /
-                (adjustedTokenOutToUSD);
+                _tokenInToETH.mul(adjustedEthToUSDPrice).div(
+                    adjustedTokenOutToUSD
+                );
         }
     }
 
@@ -284,10 +289,13 @@ abstract contract ChainlinkAdapterInternal is
         uint256 _amount,
         int256 _factor
     ) internal pure returns (uint256) {
+        uint256 ten = 10E18;
+        _factor = _factor * 1E18;
+
         if (_factor < 0) {
-            return _amount / (10 ** uint256(-_factor));
+            return _amount.div(ten.pow(uint256(-_factor)));
         } else {
-            return _amount * (10 ** uint256(_factor));
+            return _amount.mul(ten.pow(uint256(_factor)));
         }
     }
 
