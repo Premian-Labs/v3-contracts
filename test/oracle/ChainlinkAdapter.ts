@@ -31,8 +31,21 @@ enum PricingPlan {
 
 const feedRegistryAddress = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf';
 
-let superAdminRole: string;
-let adminRole: string;
+let tokenAddressMapping = [
+  tokens.WBTC.address,
+  tokens.WETH.address,
+  tokens.USDC.address,
+  tokens.USDT.address,
+  tokens.DAI.address,
+];
+
+let chainlinkAddressMapping = [
+  CHAINLINK_BTC,
+  CHAINLINK_ETH,
+  CHAINLINK_USD,
+  CHAINLINK_USD,
+  CHAINLINK_USD,
+];
 
 let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 
@@ -108,30 +121,11 @@ describe('ChainlinkAdapter', () => {
 
     instance = await new ChainlinkAdapter__factory(deployer).deploy(
       feedRegistryAddress,
-      superAdmin.address,
-      [deployer.address],
+      tokenAddressMapping,
+      chainlinkAddressMapping,
     );
 
     await instance.deployed();
-
-    await instance
-      .connect(deployer)
-      .addMappings(
-        [
-          tokens.WBTC.address,
-          tokens.WETH.address,
-          tokens.USDC.address,
-          tokens.USDT.address,
-          tokens.DAI.address,
-        ],
-        [
-          CHAINLINK_BTC,
-          CHAINLINK_ETH,
-          CHAINLINK_USD,
-          CHAINLINK_USD,
-          CHAINLINK_USD,
-        ],
-      );
   });
 
   describe('#constructor', () => {
@@ -140,61 +134,55 @@ describe('ChainlinkAdapter', () => {
         await expect(
           new ChainlinkAdapter__factory(deployer).deploy(
             ethers.constants.AddressZero,
-            superAdmin.address,
-            [deployer.address],
+            tokenAddressMapping,
+            chainlinkAddressMapping,
           ),
         ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
       });
 
-      it('super admin is zero address', async () => {
-        await expect(
-          new ChainlinkAdapter__factory(deployer).deploy(
-            feedRegistryAddress,
-            ethers.constants.AddressZero,
-            [deployer.address],
-          ),
-        ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+      describe('on successful deployment', () => {
+        it('registry is set correctly', async () => {
+          const registry = await instance.feedRegistry();
+          expect(registry).to.eql(feedRegistryAddress);
+        });
+
+        it('max delay is set correctly', async () => {
+          const maxDelay = await instance.maxDelay();
+          expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
+        });
+
+        it('tokens are mapped correctly', async () => {
+          for (let i = 0; i < tokenAddressMapping.length; i++) {
+            expect(await instance.mappedToken(tokenAddressMapping[i])).to.equal(
+              chainlinkAddressMapping[i],
+            );
+          }
+        });
       });
     });
+  });
 
-    describe('on successful deployment', () => {
-      before(async () => {
-        superAdminRole = await instance.SUPER_ADMIN_ROLE();
-        adminRole = await instance.ADMIN_ROLE();
-      });
+  describe('#addMappings', () => {
+    it('shoud return token address if token is not mapped', async () => {
+      const tokenAddressMapping = [
+        tokens.CRV.address,
+        tokens.AAVE.address,
+        tokens.MATIC.address,
+      ];
 
-      it('registry is set correctly', async () => {
-        const registry = await instance.feedRegistry();
-        expect(registry).to.eql(feedRegistryAddress);
-      });
+      const chainlinkAddressMapping = [
+        '0x0000000000000000000000000000000000000001',
+        '0x0000000000000000000000000000000000000002',
+        '0x0000000000000000000000000000000000000003',
+      ];
 
-      it('max delay is set correctly', async () => {
-        const maxDelay = await instance.maxDelay();
-        expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
-      });
+      await instance.addMappings(tokenAddressMapping, chainlinkAddressMapping);
 
-      it('super admin is set correctly', async () => {
-        const hasRole = await instance.hasRole(
-          superAdminRole,
-          superAdmin.address,
+      for (let i = 0; i < tokenAddressMapping.length; i++) {
+        expect(await instance.mappedToken(tokenAddressMapping[i])).to.equal(
+          chainlinkAddressMapping[i],
         );
-        expect(hasRole).to.be.true;
-      });
-
-      it('initial admins are set correctly', async () => {
-        const hasRole = await instance.hasRole(adminRole, deployer.address);
-        expect(hasRole).to.be.true;
-      });
-
-      it('super admin role is set as super admin role', async () => {
-        const admin = await instance.getRoleAdmin(superAdminRole);
-        expect(admin).to.equal(superAdminRole);
-      });
-
-      it('super admin role is set as admin role', async () => {
-        const admin = await instance.getRoleAdmin(adminRole);
-        expect(admin).to.equal(superAdminRole);
-      });
+      }
     });
   });
 
@@ -202,20 +190,6 @@ describe('ChainlinkAdapter', () => {
     it('shoud return token address if token is not mapped', async () => {
       expect(await instance.mappedToken(tokens.AMP.address)).to.equal(
         tokens.AMP.address,
-      );
-    });
-
-    it('shoud return mapped token address if token is mapped', async () => {
-      expect(await instance.mappedToken(tokens.WBTC.address)).to.equal(
-        CHAINLINK_BTC,
-      );
-
-      expect(await instance.mappedToken(tokens.WETH.address)).to.equal(
-        CHAINLINK_ETH,
-      );
-
-      expect(await instance.mappedToken(tokens.DAI.address)).to.equal(
-        CHAINLINK_USD,
       );
     });
   });

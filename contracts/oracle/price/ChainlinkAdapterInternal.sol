@@ -26,9 +26,14 @@ abstract contract ChainlinkAdapterInternal is
     mapping(address => address) internal _tokenMappings;
     mapping(bytes32 => PricingPlan) internal _planForPair;
 
-    constructor(FeedRegistryInterface _registry) {
+    constructor(
+        FeedRegistryInterface _registry,
+        address[] memory _addresses,
+        address[] memory _mappings
+    ) {
         if (address(_registry) == address(0)) revert Oracle__ZeroAddress();
         FeedRegistry = _registry;
+        _addMappings(_addresses, _mappings);
     }
 
     function _addOrModifySupportForPair(
@@ -308,6 +313,20 @@ abstract contract ChainlinkAdapterInternal is
             revert Oracle__LastUpdateIsTooOld();
 
         return uint256(_price);
+    }
+
+    function _addMappings(
+        address[] memory _addresses,
+        address[] memory _mappings
+    ) internal {
+        if (_addresses.length != _mappings.length)
+            revert Oracle__InvalidMappingsInput();
+
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            _tokenMappings[_addresses[i]] = _mappings[i];
+        }
+
+        emit MappingsAdded(_addresses, _mappings);
     }
 
     function _mappedToken(address _token) internal view returns (address) {

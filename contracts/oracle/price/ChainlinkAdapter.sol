@@ -77,17 +77,10 @@ contract ChainlinkAdapter is
 
     /// @inheritdoc IChainlinkAdapter
     function addMappings(
-        address[] calldata _addresses,
-        address[] calldata _mappings
+        address[] memory _addresses,
+        address[] memory _mappings
     ) external {
-        if (_addresses.length != _mappings.length)
-            revert Oracle__InvalidMappingsInput();
-
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            _tokenMappings[_addresses[i]] = _mappings[i];
-        }
-
-        emit MappingsAdded(_addresses, _mappings);
+        _addMappings(_addresses, _mappings);
     }
 
     /// @inheritdoc IChainlinkAdapter
