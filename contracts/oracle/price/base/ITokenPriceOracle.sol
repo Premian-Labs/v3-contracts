@@ -6,12 +6,17 @@ pragma solidity >=0.5.0;
  * @notice These methods allow users to add support for pairs, and then ask for quotes
  * @notice derived from https://github.com/Mean-Finance/oracles
  */
-interface ITokenPriceOracle {
+    /// @notice Thrown when trying to add support for a pair that has already been added
+    error Oracle__PairAlreadySupported(address tokenA, address tokenB);
+
     /// @notice Thrown when trying to add support for a pair that cannot be supported
-    error PairCannotBeSupported(address tokenA, address tokenB);
+    error Oracle__PairCannotBeSupported(address tokenA, address tokenB);
 
     /// @notice Thrown when trying to execute a quote with a pair that isn't supported yet
-    error PairNotSupportedYet(address tokenA, address tokenB);
+    error Oracle__PairNotSupportedYet(address tokenA, address tokenB);
+
+    /// @notice Thrown when one of the parameters is a zero address
+    error Oracle__ZeroAddress();
 
     /**
      * @notice Returns whether this oracle can support the given pair of tokens

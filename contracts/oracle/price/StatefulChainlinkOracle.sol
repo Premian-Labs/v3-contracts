@@ -87,7 +87,7 @@ contract StatefulChainlinkOracle is
         ];
 
         if (_plan == PricingPlan.NONE)
-            revert PairNotSupportedYet(_tokenIn, _tokenOut);
+            revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
 
         // TODO: Handle same tokens
         if (_plan == PricingPlan.SAME_TOKENS) return 0;
@@ -118,7 +118,7 @@ contract StatefulChainlinkOracle is
             PricingPlan _currentPlan = _planForPair[_keyForPair];
 
             if (_currentPlan == PricingPlan.NONE) {
-                revert PairCannotBeSupported(_tokenA, _tokenB);
+                revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
             }
         }
 
@@ -141,7 +141,7 @@ contract StatefulChainlinkOracle is
         address[] calldata _mappings
     ) external onlyRole(ADMIN_ROLE) {
         if (_addresses.length != _mappings.length)
-            revert InvalidMappingsInput();
+            revert Oracle__InvalidMappingsInput();
         for (uint256 i = 0; i < _addresses.length; i++) {
             _tokenMappings[_addresses[i]] = _mappings[i];
         }
@@ -414,9 +414,11 @@ contract StatefulChainlinkOracle is
             _base,
             _quote
         );
-        if (_price <= 0) revert InvalidPrice();
+        if (_price <= 0) revert Oracle__InvalidPrice();
+
         if (block.timestamp > _updatedAt + MAX_DELAY)
-            revert LastUpdateIsTooOld();
+            revert Oracle__LastUpdateIsTooOld();
+
         return uint256(_price);
     }
 
@@ -428,6 +430,7 @@ contract StatefulChainlinkOracle is
             _tokenA,
             _tokenB
         );
+
         return TokenSorting.sortTokens(_mappedTokenA, _mappedTokenB);
     }
 
@@ -447,6 +450,7 @@ contract StatefulChainlinkOracle is
             _tokenA,
             _tokenB
         );
+        
         return _keyForSortedPair(__tokenA, __tokenB);
     }
 

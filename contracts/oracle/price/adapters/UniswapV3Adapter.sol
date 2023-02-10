@@ -34,7 +34,8 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     mapping(bytes32 => address[]) internal _poolsForPair; // key(tokenA, tokenB) => pools
 
     constructor(InitialConfig memory _initialConfig) {
-        if (_initialConfig.superAdmin == address(0)) revert ZeroAddress();
+        if (_initialConfig.superAdmin == address(0))
+            revert Oracle__ZeroAddress();
         UNISWAP_V3_ORACLE = _initialConfig.uniswapV3Oracle;
         MAX_PERIOD = _initialConfig.maxPeriod;
         MIN_PERIOD = _initialConfig.minPeriod;
@@ -50,7 +51,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
         if (
             _initialConfig.initialPeriod < MIN_PERIOD ||
             _initialConfig.initialPeriod > MAX_PERIOD
-        ) revert InvalidPeriod(_initialConfig.initialPeriod);
+        ) revert Oracle__InvalidPeriod(_initialConfig.initialPeriod);
         period = _initialConfig.initialPeriod;
         emit PeriodChanged(_initialConfig.initialPeriod);
 
@@ -95,7 +96,10 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
         address[] memory _pools = _poolsForPair[
             _keyForPair(_tokenIn, _tokenOut)
         ];
-        if (_pools.length == 0) revert PairNotSupportedYet(_tokenIn, _tokenOut);
+
+        if (_pools.length == 0)
+            revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
+        
         return
             UNISWAP_V3_ORACLE.quoteSpecificPoolsWithTimePeriod(
                 _amountIn.toUint128(),
@@ -125,8 +129,10 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     /// @inheritdoc IUniswapV3Adapter
     function setPeriod(uint32 _newPeriod) external onlyRole(ADMIN_ROLE) {
         if (_newPeriod < MIN_PERIOD || _newPeriod > MAX_PERIOD)
-            revert InvalidPeriod(_newPeriod);
+            revert Oracle__InvalidPeriod(_newPeriod);
+
         period = _newPeriod;
+
         emit PeriodChanged(_newPeriod);
     }
 
@@ -134,8 +140,11 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     function setCardinalityPerMinute(
         uint8 _cardinalityPerMinute
     ) external onlyRole(ADMIN_ROLE) {
-        if (_cardinalityPerMinute == 0) revert InvalidCardinalityPerMinute();
+        if (_cardinalityPerMinute == 0)
+            revert Oracle__InvalidCardinalityPerMinute();
+
         cardinalityPerMinute = _cardinalityPerMinute;
+
         emit CardinalityPerMinuteChanged(_cardinalityPerMinute);
     }
 
@@ -143,7 +152,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     function setGasPerCardinality(
         uint104 _gasPerCardinality
     ) external onlyRole(ADMIN_ROLE) {
-        if (_gasPerCardinality == 0) revert InvalidGasPerCardinality();
+        if (_gasPerCardinality == 0) revert Oracle__InvalidGasPerCardinality();
         gasPerCardinality = _gasPerCardinality;
         emit GasPerCardinalityChanged(_gasPerCardinality);
     }
@@ -152,8 +161,11 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     function setGasCostToSupportPool(
         uint112 _gasCostToSupportPool
     ) external onlyRole(ADMIN_ROLE) {
-        if (_gasCostToSupportPool == 0) revert InvalidGasCostToSupportPool();
+        if (_gasCostToSupportPool == 0)
+            revert Oracle__InvalidGasCostToSupportPool();
+
         gasCostToSupportPool = _gasCostToSupportPool;
+
         emit GasCostToSupportPoolChanged(_gasCostToSupportPool);
     }
 
@@ -162,7 +174,9 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
         Pair[] calldata _pairs,
         bool[] calldata _denylisted
     ) external onlyRole(ADMIN_ROLE) {
-        if (_pairs.length != _denylisted.length) revert InvalidDenylistParams();
+        if (_pairs.length != _denylisted.length)
+            revert Oracle__InvalidDenylistParams();
+
         for (uint256 i; i < _pairs.length; i++) {
             bytes32 _pairKey = _keyForPair(_pairs[i].tokenA, _pairs[i].tokenB);
             _isPairDenylisted[_pairKey] = _denylisted[i];
@@ -170,6 +184,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
                 delete _poolsForPair[_pairKey];
             }
         }
+
         emit DenylistChanged(_pairs, _denylisted);
     }
 
@@ -190,13 +205,15 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     ) internal override {
         bytes32 _pairKey = _keyForPair(_tokenA, _tokenB);
         if (_isPairDenylisted[_pairKey])
-            revert PairCannotBeSupported(_tokenA, _tokenB);
+            revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
 
         address[] memory _pools = _getAllPoolsSortedByLiquidity(
             _tokenA,
             _tokenB
         );
-        if (_pools.length == 0) revert PairCannotBeSupported(_tokenA, _tokenB);
+        
+        if (_pools.length == 0)
+            revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
 
         // Load to mem to avoid multiple storage reads
         address[] storage _storagePools = _poolsForPair[_pairKey];
@@ -235,7 +252,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
             }
         }
 
-        if (_preparedPools == 0) revert GasTooLow();
+        if (_preparedPools == 0) revert Oracle__GasTooLow();
 
         // If I have less pools than before, then remove the extra pools
         for (uint256 i = _preparedPools; i < _poolsPreviouslyInStorage; i++) {

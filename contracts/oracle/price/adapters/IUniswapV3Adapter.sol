@@ -6,6 +6,24 @@ import "../IStaticOracle.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IUniswapV3Adapter is ITokenPriceOracle {
+    /// @notice Thrown when trying to set an invalid period
+    error Oracle__InvalidPeriod(uint32 period);
+
+    /// @notice Thrown when trying to set an invalid cardinality
+    error Oracle__InvalidCardinalityPerMinute();
+
+    /// @notice Thrown when trying to set an invalid gas cost per cardinality
+    error Oracle__InvalidGasPerCardinality();
+
+    /// @notice Thrown when trying to set an invalid gas cost to support a pools
+    error Oracle__InvalidGasCostToSupportPool();
+
+    /// @notice Thrown when trying to set a denylist but the given parameters are invalid
+    error Oracle__InvalidDenylistParams();
+
+    /// @notice Thrown when the gas limit is so low that no pools can be initialized
+    error Oracle__GasTooLow();
+
     /// @notice The initial adapter's configuration
     struct InitialConfig {
         IStaticOracle uniswapV3Oracle;
@@ -60,27 +78,6 @@ interface IUniswapV3Adapter is ITokenPriceOracle {
      * @param preparedPools The amount of pools that were prepared to support the pair
      */
     event UpdatedSupport(address tokenA, address tokenB, uint256 preparedPools);
-
-    /// @notice Thrown when one of the parameters is the zero address
-    error ZeroAddress();
-
-    /// @notice Thrown when trying to set an invalid period
-    error InvalidPeriod(uint32 period);
-
-    /// @notice Thrown when trying to set an invalid cardinality
-    error InvalidCardinalityPerMinute();
-
-    /// @notice Thrown when trying to set an invalid gas cost per cardinality
-    error InvalidGasPerCardinality();
-
-    /// @notice Thrown when trying to set an invalid gas cost to support a pools
-    error InvalidGasCostToSupportPool();
-
-    /// @notice Thrown when trying to set a denylist but the given parameters are invalid
-    error InvalidDenylistParams();
-
-    /// @notice Thrown when the gas limit is so low that no pools can be initialized
-    error GasTooLow();
 
     /**
      * @notice Returns the address of the Uniswap oracle

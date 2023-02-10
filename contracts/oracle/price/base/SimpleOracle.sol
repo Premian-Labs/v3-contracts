@@ -32,9 +32,10 @@ abstract contract SimpleOracle is BaseOracle {
         address _tokenB,
         bytes calldata _data
     ) external virtual {
-        if (!isPairAlreadySupported(_tokenA, _tokenB)) {
-            _addOrModifySupportForPair(_tokenA, _tokenB, _data);
-        }
+        if (isPairAlreadySupported(_tokenA, _tokenB))
+            revert Oracle__PairAlreadySupported(_tokenA, _tokenB);
+
+        _addOrModifySupportForPair(_tokenA, _tokenB, _data);
     }
 
     /**

@@ -10,6 +10,15 @@ import "./base/ITokenPriceOracle.sol";
  * @notice derived from https://github.com/Mean-Finance/oracles
  */
 interface IStatefulChainlinkOracle is ITokenPriceOracle {
+    /// @notice Thrown when the price is non-positive
+    error Oracle__InvalidPrice();
+
+    /// @notice Thrown when the last price update was too long ago
+    error Oracle__LastUpdateIsTooOld();
+
+    /// @notice Thrown when the input for adding mappings in invalid
+    error Oracle__InvalidMappingsInput();
+
     /// @notice The plan that will be used to calculate quotes for a given pair
     enum PricingPlan {
         // There is no plan calculated
@@ -58,18 +67,6 @@ interface IStatefulChainlinkOracle is ITokenPriceOracle {
      * @param mappings Their new mappings
      */
     event MappingsAdded(address[] tokens, address[] mappings);
-
-    /// @notice Thrown when the price is non-positive
-    error InvalidPrice();
-
-    /// @notice Thrown when the last price update was too long ago
-    error LastUpdateIsTooOld();
-
-    /// @notice Thrown when one of the parameters is a zero address
-    error ZeroAddress();
-
-    /// @notice Thrown when the input for adding mappings in invalid
-    error InvalidMappingsInput();
 
     /**
      * @notice Returns how old the last price update can be before the oracle reverts by considering it too old
