@@ -39,108 +39,101 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _addOrModifySupportForPair(
-        address _tokenA,
-        address _tokenB,
+        address tokenA,
+        address tokenB,
         bytes calldata
     ) internal virtual override {
-        (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
-        PricingPlan _plan = _determinePricingPlan(__tokenA, __tokenB);
-        bytes32 _keyForPair = _keyForSortedPair(__tokenA, __tokenB);
+        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
+        PricingPlan plan = _determinePricingPlan(_tokenA, _tokenB);
+        bytes32 keyForPair = _keyForSortedPair(_tokenA, _tokenB);
 
         ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
             .layout();
 
-        if (_plan == PricingPlan.NONE) {
+        if (plan == PricingPlan.NONE) {
             // Check if there is a current plan. If there is, it means that the pair was supported and it
             // lost support. In that case, we will remove the current plan and continue working as expected.
             // If there was no supported plan, and there still isn't, then we will fail
-            PricingPlan _currentPlan = l.planForPair[_keyForPair];
+            PricingPlan _currentPlan = l.planForPair[keyForPair];
 
             if (_currentPlan == PricingPlan.NONE) {
-                revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
+                revert Oracle__PairCannotBeSupported(tokenA, tokenB);
             }
         }
 
-        l.planForPair[_keyForPair] = _plan;
-        emit UpdatedPlanForPair(__tokenA, __tokenB, _plan);
+        l.planForPair[keyForPair] = plan;
+        emit UpdatedPlanForPair(_tokenA, _tokenB, plan);
     }
 
     function _isPairAlreadySupported(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal view virtual override(OracleAdapter) returns (bool) {
-        return _planForPair(_tokenA, _tokenB) != PricingPlan.NONE;
+        return _planForPair(tokenA, tokenB) != PricingPlan.NONE;
     }
 
     function _planForPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal view returns (PricingPlan) {
-        (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
+        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
         return
             ChainlinkAdapterStorage.layout().planForPair[
-                _keyForSortedPair(__tokenA, __tokenB)
+                _keyForSortedPair(_tokenA, _tokenB)
             ];
     }
 
     /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
     function _getDirectPrice(
-        address _tokenIn,
-        address _tokenOut,
-        PricingPlan _plan
+        address tokenIn,
+        address tokenOut,
+        PricingPlan plan
     ) internal view returns (uint256) {
-        int256 _scaleBy = ETH_DECIMALS -
+        int256 scaleBy = ETH_DECIMALS -
             (
-                _plan == PricingPlan.TOKEN_ETH_PAIR
+                plan == PricingPlan.TOKEN_ETH_PAIR
                     ? ETH_DECIMALS
                     : FOREX_DECIMALS
             );
 
-        uint256 _price;
-        if (_plan == PricingPlan.ETH_USD_PAIR) {
-            _price = _getETHUSD();
-        } else if (_plan == PricingPlan.TOKEN_USD_PAIR) {
-            _price = _getPriceAgainstUSD(
-                _isUSD(_tokenOut) ? _tokenIn : _tokenOut
-            );
-        } else if (_plan == PricingPlan.TOKEN_ETH_PAIR) {
-            _price = _getPriceAgainstETH(
-                _isETH(_tokenOut) ? _tokenIn : _tokenOut
-            );
+        uint256 price;
+        if (plan == PricingPlan.ETH_USD_PAIR) {
+            price = _getETHUSD();
+        } else if (plan == PricingPlan.TOKEN_USD_PAIR) {
+            price = _getPriceAgainstUSD(_isUSD(tokenOut) ? tokenIn : tokenOut);
+        } else if (plan == PricingPlan.TOKEN_ETH_PAIR) {
+            price = _getPriceAgainstETH(_isETH(tokenOut) ? tokenIn : tokenOut);
         }
 
-        _price = _adjustDecimals(_price, _scaleBy);
+        price = _adjustDecimals(price, scaleBy);
 
-        bool invert = _isUSD(_tokenIn) ||
-            (_plan == PricingPlan.TOKEN_ETH_PAIR && _isETH(_tokenIn));
+        bool invert = _isUSD(tokenIn) ||
+            (plan == PricingPlan.TOKEN_ETH_PAIR && _isETH(tokenIn));
 
-        return invert ? _price.inv() : _price;
+        return invert ? price.inv() : price;
     }
 
     /// @dev Handles prices when both tokens share the same base (either ETH or USD)
     function _getPriceSameBase(
-        address _tokenIn,
-        address _tokenOut,
-        PricingPlan _plan
+        address tokenIn,
+        address tokenOut,
+        PricingPlan plan
     ) internal view returns (uint256) {
-        int256 _diff = _getDecimals(_tokenIn) - _getDecimals(_tokenOut);
-        int256 _scaleBy = ETH_DECIMALS - (_diff > 0 ? _diff : _diff * -1);
+        int256 diff = _getDecimals(tokenIn) - _getDecimals(tokenOut);
+        int256 scaleBy = ETH_DECIMALS - (diff > 0 ? diff : -diff);
 
-        address _base = _plan == PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR
+        address base = plan == PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR
             ? Denominations.USD
             : Denominations.ETH;
 
-        uint256 _tokenInToBase = _callRegistry(_tokenIn, _base);
-        uint256 _tokenOutToBase = _callRegistry(_tokenOut, _base);
+        uint256 tokenInToBase = _callRegistry(tokenIn, base);
+        uint256 tokenOutToBase = _callRegistry(tokenOut, base);
 
-        uint256 adjustedTokenInToBase = _adjustDecimals(
-            _tokenInToBase,
-            _scaleBy
-        );
+        uint256 adjustedTokenInToBase = _adjustDecimals(tokenInToBase, scaleBy);
 
         uint256 adjustedTokenOutToBase = _adjustDecimals(
-            _tokenOutToBase,
-            _scaleBy
+            tokenOutToBase,
+            scaleBy
         );
 
         return adjustedTokenInToBase.div(adjustedTokenOutToBase);
@@ -148,114 +141,114 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
     function _getPriceDifferentBases(
-        address _tokenIn,
-        address _tokenOut,
-        PricingPlan _plan
+        address tokenIn,
+        address tokenOut,
+        PricingPlan plan
     ) internal view returns (uint256) {
-        int256 _scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
-        uint256 adjustedEthToUSDPrice = _adjustDecimals(_getETHUSD(), _scaleBy);
+        int256 scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
+        uint256 adjustedEthToUSDPrice = _adjustDecimals(_getETHUSD(), scaleBy);
 
-        bool _isTokenInUSD = (_plan ==
+        bool isTokenInUSD = (plan ==
             PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B &&
-            _tokenIn < _tokenOut) ||
-            (_plan == PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B &&
-                _tokenIn > _tokenOut);
+            tokenIn < tokenOut) ||
+            (plan == PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B &&
+                tokenIn > tokenOut);
 
-        if (_isTokenInUSD) {
+        if (isTokenInUSD) {
             uint256 adjustedTokenInToUSD = _adjustDecimals(
-                _getPriceAgainstUSD(_tokenIn),
-                _scaleBy
+                _getPriceAgainstUSD(tokenIn),
+                scaleBy
             );
 
-            uint256 _tokenOutToETH = _getPriceAgainstETH(_tokenOut);
+            uint256 tokenOutToETH = _getPriceAgainstETH(tokenOut);
 
             return
                 adjustedTokenInToUSD.div(adjustedEthToUSDPrice).div(
-                    _tokenOutToETH
+                    tokenOutToETH
                 );
         } else {
-            uint256 _tokenInToETH = _getPriceAgainstETH(_tokenIn);
+            uint256 tokenInToETH = _getPriceAgainstETH(tokenIn);
 
             uint256 adjustedTokenOutToUSD = _adjustDecimals(
-                _getPriceAgainstUSD(_tokenOut),
-                _scaleBy
+                _getPriceAgainstUSD(tokenOut),
+                scaleBy
             );
 
             return
-                _tokenInToETH.mul(adjustedEthToUSDPrice).div(
+                tokenInToETH.mul(adjustedEthToUSDPrice).div(
                     adjustedTokenOutToUSD
                 );
         }
     }
 
     function _getPriceAgainstUSD(
-        address _token
+        address token
     ) internal view returns (uint256) {
         return
-            _isUSD(_token) ? ONE_USD : _callRegistry(_token, Denominations.USD);
+            _isUSD(token) ? ONE_USD : _callRegistry(token, Denominations.USD);
     }
 
     function _getPriceAgainstETH(
-        address _token
+        address token
     ) internal view returns (uint256) {
         return
-            _isETH(_token) ? ONE_ETH : _callRegistry(_token, Denominations.ETH);
+            _isETH(token) ? ONE_ETH : _callRegistry(token, Denominations.ETH);
     }
 
-    /// @dev Expects `_tokenA` and `_tokenB` to be sorted
+    /// @dev Expects `tokenA` and `tokenB` to be sorted
     function _determinePricingPlan(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal view virtual returns (PricingPlan) {
-        if (_tokenA == _tokenB)
-            revert Oracle__BaseAndQuoteAreSame(_tokenA, _tokenB);
+        if (tokenA == tokenB)
+            revert Oracle__BaseAndQuoteAreSame(tokenA, tokenB);
 
-        bool _isTokenAUSD = _isUSD(_tokenA);
-        bool _isTokenBUSD = _isUSD(_tokenB);
-        bool _isTokenAETH = _isETH(_tokenA);
-        bool _isTokenBETH = _isETH(_tokenB);
+        bool isTokenAUSD = _isUSD(tokenA);
+        bool isTokenBUSD = _isUSD(tokenB);
+        bool isTokenAETH = _isETH(tokenA);
+        bool isTokenBETH = _isETH(tokenB);
 
-        if ((_isTokenAETH && _isTokenBUSD) || (_isTokenAUSD && _isTokenBETH)) {
+        if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPlan.ETH_USD_PAIR;
-        } else if (_isTokenBUSD) {
+        } else if (isTokenBUSD) {
             return
                 _tryWithBases(
-                    _tokenA,
+                    tokenA,
                     PricingPlan.TOKEN_USD_PAIR,
                     PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B
                 );
-        } else if (_isTokenAUSD) {
+        } else if (isTokenAUSD) {
             return
                 _tryWithBases(
-                    _tokenB,
+                    tokenB,
                     PricingPlan.TOKEN_USD_PAIR,
                     PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (_isTokenBETH) {
+        } else if (isTokenBETH) {
             return
                 _tryWithBases(
-                    _tokenA,
+                    tokenA,
                     PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
                     PricingPlan.TOKEN_ETH_PAIR
                 );
-        } else if (_isTokenAETH) {
+        } else if (isTokenAETH) {
             return
                 _tryWithBases(
-                    _tokenB,
+                    tokenB,
                     PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPlan.TOKEN_ETH_PAIR
                 );
-        } else if (_exists(_tokenA, Denominations.USD)) {
+        } else if (_exists(tokenA, Denominations.USD)) {
             return
                 _tryWithBases(
-                    _tokenB,
+                    tokenB,
                     PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR,
                     PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (_exists(_tokenA, Denominations.ETH)) {
+        } else if (_exists(tokenA, Denominations.ETH)) {
             return
                 _tryWithBases(
-                    _tokenB,
+                    tokenB,
                     PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR
                 );
@@ -265,157 +258,156 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _tryWithBases(
-        address _token,
-        PricingPlan _ifUSD,
-        PricingPlan _ifETH
+        address token,
+        PricingPlan ifUSD,
+        PricingPlan ifETH
     ) internal view returns (PricingPlan) {
         // Note: we are prioritizing plans that have fewer external calls
         (
-            address _firstBase,
-            PricingPlan _firstResult,
-            address _secondBaseBase,
-            PricingPlan _secondResult
-        ) = _ifUSD < _ifETH
-                ? (Denominations.USD, _ifUSD, Denominations.ETH, _ifETH)
-                : (Denominations.ETH, _ifETH, Denominations.USD, _ifUSD);
+            address firstBase,
+            PricingPlan firstResult,
+            address secondBaseBase,
+            PricingPlan secondResult
+        ) = ifUSD < ifETH
+                ? (Denominations.USD, ifUSD, Denominations.ETH, ifETH)
+                : (Denominations.ETH, ifETH, Denominations.USD, ifUSD);
 
-        if (_exists(_token, _firstBase)) {
-            return _firstResult;
-        } else if (_exists(_token, _secondBaseBase)) {
-            return _secondResult;
+        if (_exists(token, firstBase)) {
+            return firstResult;
+        } else if (_exists(token, secondBaseBase)) {
+            return secondResult;
         } else {
             return PricingPlan.NONE;
         }
     }
 
-    function _exists(
-        address _base,
-        address _quote
-    ) internal view returns (bool) {
-        try FeedRegistry.latestRoundData(_base, _quote) returns (
+    function _exists(address base, address quote) internal view returns (bool) {
+        try FeedRegistry.latestRoundData(base, quote) returns (
             uint80,
-            int256 _price,
+            int256 price,
             uint256,
             uint256,
             uint80
         ) {
-            return _price > 0;
+            return price > 0;
         } catch {
             return false;
         }
     }
 
     function _adjustDecimals(
-        uint256 _amount,
-        int256 _factor
+        uint256 amount,
+        int256 factor
     ) internal pure returns (uint256) {
         uint256 ten = 10E18;
-        _factor = _factor * 1E18;
+        factor = factor * 1E18;
 
-        if (_factor < 0) {
-            return _amount.div(ten.pow(uint256(-_factor)));
+        if (factor < 0) {
+            return amount.div(ten.pow(uint256(-factor)));
         } else {
-            return _amount.mul(ten.pow(uint256(_factor)));
+            return amount.mul(ten.pow(uint256(factor)));
         }
     }
 
-    function _getDecimals(address _token) internal view returns (int256) {
-        if (_isETH(_token)) {
+    function _getDecimals(address token) internal view returns (int256) {
+        if (_isETH(token)) {
             return ETH_DECIMALS;
-        } else if (!AddressUtils.isContract(_token)) {
+        } else if (!AddressUtils.isContract(token)) {
             return FOREX_DECIMALS;
         } else {
-            return int256(uint256(IERC20Metadata(_token).decimals()));
+            return int256(uint256(IERC20Metadata(token).decimals()));
         }
     }
 
     function _callRegistry(
-        address _base,
-        address _quote
+        address base,
+        address quote
     ) internal view returns (uint256) {
-        (, int256 _price, , uint256 _updatedAt, ) = FeedRegistry
-            .latestRoundData(_base, _quote);
-        if (_price <= 0) revert Oracle__InvalidPrice();
+        (, int256 price, , uint256 updatedAt, ) = FeedRegistry.latestRoundData(
+            base,
+            quote
+        );
+        if (price <= 0) revert Oracle__InvalidPrice();
 
-        if (block.timestamp > _updatedAt + MAX_DELAY)
+        if (block.timestamp > updatedAt + MAX_DELAY)
             revert Oracle__LastUpdateIsTooOld();
 
-        return uint256(_price);
+        return uint256(price);
     }
 
     function _addMappings(
-        address[] memory _addresses,
-        address[] memory _mappings
+        address[] memory addresses,
+        address[] memory mappings
     ) internal {
-        if (_addresses.length != _mappings.length)
+        if (addresses.length != mappings.length)
             revert Oracle__InvalidMappingsInput();
 
-        for (uint256 i = 0; i < _addresses.length; i++) {
+        for (uint256 i = 0; i < addresses.length; i++) {
             ChainlinkAdapterStorage.layout().tokenMappings[
-                _addresses[i]
-            ] = _mappings[i];
+                addresses[i]
+            ] = mappings[i];
         }
 
-        emit MappingsAdded(_addresses, _mappings);
+        emit MappingsAdded(addresses, mappings);
     }
 
-    function _mappedToken(address _token) internal view returns (address) {
-        address _mapping = ChainlinkAdapterStorage.layout().tokenMappings[
-            _token
+    function _mappedToken(address token) internal view returns (address) {
+        address tokenMapping = ChainlinkAdapterStorage.layout().tokenMappings[
+            token
         ];
 
-        return _mapping != address(0) ? _mapping : _token;
+        return tokenMapping != address(0) ? tokenMapping : token;
     }
 
     function _mapAndSort(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal view returns (address, address) {
         (address _mappedTokenA, address _mappedTokenB) = _mapPair(
-            _tokenA,
-            _tokenB
+            tokenA,
+            tokenB
         );
 
         return TokenSorting.sortTokens(_mappedTokenA, _mappedTokenB);
     }
 
     function _mapPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal view returns (address _mappedTokenA, address _mappedTokenB) {
-        _mappedTokenA = _mappedToken(_tokenA);
-        _mappedTokenB = _mappedToken(_tokenB);
+        _mappedTokenA = _mappedToken(tokenA);
+        _mappedTokenB = _mappedToken(tokenB);
     }
 
     function _keyForUnsortedPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal pure returns (bytes32) {
-        (address __tokenA, address __tokenB) = TokenSorting.sortTokens(
-            _tokenA,
-            _tokenB
+        (address _tokenA, address _tokenB) = TokenSorting.sortTokens(
+            tokenA,
+            tokenB
         );
 
-        return _keyForSortedPair(__tokenA, __tokenB);
+        return _keyForSortedPair(_tokenA, _tokenB);
     }
 
-    /// @dev Expects `_tokenA` and `_tokenB` to be sorted
+    /// @dev Expects `tokenA` and `tokenB` to be sorted
     function _keyForSortedPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_tokenA, _tokenB));
+        return keccak256(abi.encodePacked(tokenA, tokenB));
     }
 
     function _getETHUSD() internal view returns (uint256) {
         return _callRegistry(Denominations.ETH, Denominations.USD);
     }
 
-    function _isUSD(address _token) internal pure returns (bool) {
-        return _token == Denominations.USD;
+    function _isUSD(address token) internal pure returns (bool) {
+        return token == Denominations.USD;
     }
 
-    function _isETH(address _token) internal pure returns (bool) {
-        return _token == Denominations.ETH;
+    function _isETH(address token) internal pure returns (bool) {
+        return token == Denominations.ETH;
     }
 }

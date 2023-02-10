@@ -28,68 +28,67 @@ contract ChainlinkAdapter is
 
     /// @inheritdoc IOracleAdapter
     function canSupportPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) external view returns (bool) {
-        (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
-        PricingPlan _plan = _determinePricingPlan(__tokenA, __tokenB);
-        return _plan != PricingPlan.NONE;
+        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
+        PricingPlan plan = _determinePricingPlan(_tokenA, _tokenB);
+        return plan != PricingPlan.NONE;
     }
 
     /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) external view override(IOracleAdapter, OracleAdapter) returns (bool) {
-        return _isPairAlreadySupported(_tokenA, _tokenB);
+        return _isPairAlreadySupported(tokenA, tokenB);
     }
 
     /// @inheritdoc IOracleAdapter
     function quote(
-        address _tokenIn,
-        address _tokenOut,
+        address tokenIn,
+        address tokenOut,
         bytes calldata
-    ) external view returns (uint256 _amountOut) {
-        (address _mappedTokenIn, address _mappedTokenOut) = _mapPair(
-            _tokenIn,
-            _tokenOut
+    ) external view returns (uint256) {
+        (address mappedTokenIn, address mappedTokenOut) = _mapPair(
+            tokenIn,
+            tokenOut
         );
 
-        PricingPlan _plan = ChainlinkAdapterStorage.layout().planForPair[
-            _keyForUnsortedPair(_mappedTokenIn, _mappedTokenOut)
+        PricingPlan plan = ChainlinkAdapterStorage.layout().planForPair[
+            _keyForUnsortedPair(mappedTokenIn, mappedTokenOut)
         ];
 
-        if (_plan == PricingPlan.NONE) {
-            revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
-        } else if (_plan <= PricingPlan.TOKEN_ETH_PAIR) {
-            return _getDirectPrice(_mappedTokenIn, _mappedTokenOut, _plan);
-        } else if (_plan <= PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
-            return _getPriceSameBase(_mappedTokenIn, _mappedTokenOut, _plan);
+        if (plan == PricingPlan.NONE) {
+            revert Oracle__PairNotSupportedYet(tokenIn, tokenOut);
+        } else if (plan <= PricingPlan.TOKEN_ETH_PAIR) {
+            return _getDirectPrice(mappedTokenIn, mappedTokenOut, plan);
+        } else if (plan <= PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
+            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, plan);
         } else {
-            return
-                _getPriceDifferentBases(_mappedTokenIn, _mappedTokenOut, _plan);
+            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, plan);
         }
     }
 
     /// @inheritdoc IChainlinkAdapter
     function planForPair(
-        address _tokenA,
-        address _tokenB
+        address tokenA,
+        address tokenB
     ) external view returns (PricingPlan) {
-        return _planForPair(_tokenA, _tokenB);
+        return _planForPair(tokenA, tokenB);
     }
 
     /// @inheritdoc IChainlinkAdapter
     function addMappings(
-        address[] memory _addresses,
-        address[] memory _mappings
+        address[] memory addresses,
+        address[] memory mappings
     ) external onlyOwner {
-        _addMappings(_addresses, _mappings);
+        _addMappings(addresses, mappings);
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function mappedToken(address _token) external view returns (address) {
-        return _mappedToken(_token);
+    function mappedToken(address token) external view returns (address) {
+        return _mappedToken(token);
     }
 
     /// @inheritdoc IChainlinkAdapter

@@ -31,23 +31,23 @@ abstract contract OracleAdapter is
 
     /// @inheritdoc IOracleAdapter
     function addOrModifySupportForPair(
-        address _tokenA,
-        address _tokenB,
-        bytes calldata _data
+        address tokenA,
+        address tokenB,
+        bytes calldata data
     ) external virtual {
-        _addOrModifySupportForPair(_tokenA, _tokenB, _data);
+        _addOrModifySupportForPair(tokenA, tokenB, data);
     }
 
     /// @inheritdoc IOracleAdapter
     function addSupportForPairIfNeeded(
-        address _tokenA,
-        address _tokenB,
-        bytes calldata _data
+        address tokenA,
+        address tokenB,
+        bytes calldata data
     ) external virtual {
-        if (_isPairAlreadySupported(_tokenA, _tokenB))
-            revert Oracle__PairAlreadySupported(_tokenA, _tokenB);
+        if (_isPairAlreadySupported(tokenA, tokenB))
+            revert Oracle__PairAlreadySupported(tokenA, tokenB);
 
-        _addOrModifySupportForPair(_tokenA, _tokenB, _data);
+        _addOrModifySupportForPair(tokenA, tokenB, data);
     }
 
     function _isPairAlreadySupported(
