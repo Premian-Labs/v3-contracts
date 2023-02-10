@@ -2,10 +2,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import {
-  StatefulChainlinkOracle,
-  StatefulChainlinkOracle__factory,
-} from '../../typechain';
+import { ChainlinkAdapter, ChainlinkAdapter__factory } from '../../typechain';
 
 import {
   convertPriceToBigNumberWithDecimals,
@@ -101,15 +98,15 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 }
 
 // TODO: Set block to 15591000 and chainId to 1, if it is not already set
-describe('StatefulChainlinkOracle', () => {
+describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
   let superAdmin: SignerWithAddress;
-  let instance: StatefulChainlinkOracle;
+  let instance: ChainlinkAdapter;
 
   beforeEach(async () => {
     [deployer, superAdmin] = await ethers.getSigners();
 
-    instance = await new StatefulChainlinkOracle__factory(deployer).deploy(
+    instance = await new ChainlinkAdapter__factory(deployer).deploy(
       feedRegistryAddress,
       superAdmin.address,
       [deployer.address],
@@ -141,7 +138,7 @@ describe('StatefulChainlinkOracle', () => {
     describe('should revert if', () => {
       it('feed registry is zero address', async () => {
         await expect(
-          new StatefulChainlinkOracle__factory(deployer).deploy(
+          new ChainlinkAdapter__factory(deployer).deploy(
             ethers.constants.AddressZero,
             superAdmin.address,
             [deployer.address],
@@ -151,7 +148,7 @@ describe('StatefulChainlinkOracle', () => {
 
       it('super admin is zero address', async () => {
         await expect(
-          new StatefulChainlinkOracle__factory(deployer).deploy(
+          new ChainlinkAdapter__factory(deployer).deploy(
             feedRegistryAddress,
             ethers.constants.AddressZero,
             [deployer.address],
@@ -360,7 +357,7 @@ describe('StatefulChainlinkOracle', () => {
   });
 
   for (let i = 0; i < plans.length; i++) {
-    describe.skip(`${PricingPlan[plans[i][0].plan]}`, () => {
+    describe(`${PricingPlan[plans[i][0].plan]}`, () => {
       for (const { plan, tokenIn, tokenOut } of plans[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {

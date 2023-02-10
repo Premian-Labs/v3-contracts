@@ -6,25 +6,21 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {BaseOracle, SimpleOracle} from "./base/SimpleOracle.sol";
-import {TokenSorting} from "./libraries/TokenSorting.sol";
+import {TokenSorting} from "../../libraries/TokenSorting.sol";
 
-import {FeedRegistryInterface, IStatefulChainlinkOracle, ITokenPriceOracle} from "./IStatefulChainlinkOracle.sol";
+import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
+import {FeedRegistryInterface, IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
-contract StatefulChainlinkOracle is
-    AccessControl,
-    SimpleOracle,
-    IStatefulChainlinkOracle
-{
+contract ChainlinkAdapter is AccessControl, IChainlinkAdapter, OracleAdapter {
     // TODO: Remove SUPER_ADMIN_ROLE?
     bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    /// @inheritdoc IStatefulChainlinkOracle
+    /// @inheritdoc IChainlinkAdapter
     uint32 public constant MAX_DELAY = 25 hours;
 
-    /// @inheritdoc IStatefulChainlinkOracle
+    /// @inheritdoc IChainlinkAdapter
     FeedRegistryInterface public immutable registry;
 
     int256 private constant FOREX_DECIMALS = 8;
@@ -55,7 +51,7 @@ contract StatefulChainlinkOracle is
         }
     }
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function canSupportPair(
         address _tokenA,
         address _tokenB
@@ -65,15 +61,15 @@ contract StatefulChainlinkOracle is
         return _plan != PricingPlan.NONE;
     }
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
         address _tokenA,
         address _tokenB
-    ) public view override(ITokenPriceOracle, SimpleOracle) returns (bool) {
+    ) public view override(IOracleAdapter, OracleAdapter) returns (bool) {
         return planForPair(_tokenA, _tokenB) != PricingPlan.NONE;
     }
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function quote(
         address _tokenIn,
         address _tokenOut,
@@ -100,19 +96,19 @@ contract StatefulChainlinkOracle is
         }
     }
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function supportsInterface(
         bytes4 _interfaceId
     )
         public
         view
-        override(ITokenPriceOracle, AccessControl, BaseOracle)
+        override(IOracleAdapter, AccessControl, OracleAdapter)
         returns (bool)
     {
         return
-            _interfaceId == type(IStatefulChainlinkOracle).interfaceId ||
+            _interfaceId == type(IChainlinkAdapter).interfaceId ||
             AccessControl.supportsInterface(_interfaceId) ||
-            BaseOracle.supportsInterface(_interfaceId);
+            OracleAdapter.supportsInterface(_interfaceId);
     }
 
     function _addOrModifySupportForPair(
@@ -139,7 +135,7 @@ contract StatefulChainlinkOracle is
         emit UpdatedPlanForPair(__tokenA, __tokenB, _plan);
     }
 
-    /// @inheritdoc IStatefulChainlinkOracle
+    /// @inheritdoc IChainlinkAdapter
     function planForPair(
         address _tokenA,
         address _tokenB
@@ -148,7 +144,7 @@ contract StatefulChainlinkOracle is
         return _planForPair[_keyForSortedPair(__tokenA, __tokenB)];
     }
 
-    /// @inheritdoc IStatefulChainlinkOracle
+    /// @inheritdoc IChainlinkAdapter
     function addMappings(
         address[] calldata _addresses,
         address[] calldata _mappings
@@ -163,7 +159,7 @@ contract StatefulChainlinkOracle is
         emit MappingsAdded(_addresses, _mappings);
     }
 
-    /// @inheritdoc IStatefulChainlinkOracle
+    /// @inheritdoc IChainlinkAdapter
     function mappedToken(address _token) public view returns (address) {
         address _mapping = _tokenMappings[_token];
         return _mapping != address(0) ? _mapping : _token;

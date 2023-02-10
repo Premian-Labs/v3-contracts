@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import {BaseOracle, ITokenPriceOracle} from "./BaseOracle.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
+
+import {IOracleAdapter} from "./IOracleAdapter.sol";
 
 /// @title A simple implementation of `BaseOracle` that already implements functions to add support
-/// @notice Most implementations of `ITokenPriceOracle` will have an internal function that is called in both
+/// @notice Most implementations of `IOracleAdapter` will have an internal function that is called in both
 ///         `addSupportForPairIfNeeded` and `addOrModifySupportForPair`. This oracle is now making this explicit, and
 ///         implementing these two functions. They remain virtual so that they can be overriden if needed.
 /// @notice derived from https://github.com/Mean-Finance/oracles
-abstract contract SimpleOracle is BaseOracle {
-    /// @inheritdoc ITokenPriceOracle
+abstract contract OracleAdapter is Multicall, ERC165, IOracleAdapter {
+    /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
         address tokenA,
         address tokenB
     ) public view virtual returns (bool);
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function addOrModifySupportForPair(
         address _tokenA,
         address _tokenB,
@@ -24,7 +27,7 @@ abstract contract SimpleOracle is BaseOracle {
         _addOrModifySupportForPair(_tokenA, _tokenB, _data);
     }
 
-    /// @inheritdoc ITokenPriceOracle
+    /// @inheritdoc IOracleAdapter
     function addSupportForPairIfNeeded(
         address _tokenA,
         address _tokenB,
@@ -48,4 +51,14 @@ abstract contract SimpleOracle is BaseOracle {
         address tokenB,
         bytes calldata data
     ) internal virtual;
+
+    /// @inheritdoc IOracleAdapter
+    function supportsInterface(
+        bytes4 _interfaceId
+    ) public view virtual override(IOracleAdapter, ERC165) returns (bool) {
+        return
+            _interfaceId == type(IOracleAdapter).interfaceId ||
+            _interfaceId == type(Multicall).interfaceId ||
+            super.supportsInterface(_interfaceId);
+    }
 }

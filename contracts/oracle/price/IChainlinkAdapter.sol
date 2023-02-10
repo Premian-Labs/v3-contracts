@@ -2,12 +2,13 @@
 pragma solidity >=0.5.0;
 
 import {FeedRegistryInterface} from "@chainlink/contracts/src/v0.8/interfaces/FeedRegistryInterface.sol";
-import {ITokenPriceOracle} from "./base/ITokenPriceOracle.sol";
+
+import {IOracleAdapter} from "./IOracleAdapter.sol";
 
 /// @title An implementation of IPriceOracle that uses Chainlink feeds
 /// @notice This oracle will attempt to use all available feeds to determine prices between pairs
 /// @notice derived from https://github.com/Mean-Finance/oracles
-interface IStatefulChainlinkOracle is ITokenPriceOracle {
+interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Thrown when the price is non-positive
     error Oracle__InvalidPrice();
 
