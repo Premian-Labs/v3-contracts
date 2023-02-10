@@ -76,7 +76,7 @@ export default {
         ? {
             forking: {
               url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-              blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
+              blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '15591000'),
             },
           }
         : {}),

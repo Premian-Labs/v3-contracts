@@ -18,6 +18,10 @@ import {
   tokens,
 } from '../../utils/addresses';
 
+const { API_KEY_ALCHEMY } = process.env;
+const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
+const blockNumber = 15591000;
+
 enum PricingPlan {
   NONE,
   ETH_USD_PAIR,
@@ -110,11 +114,16 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
   ];
 }
 
-// TODO: Set block to 15591000 and chainId to 1, if it is not already set
 describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
   let notOwner: SignerWithAddress;
   let instance: ChainlinkAdapter;
+
+  before(async () => {
+    await ethers.provider.send('hardhat_reset', [
+      { forking: { jsonRpcUrl, blockNumber } },
+    ]);
+  });
 
   beforeEach(async () => {
     [deployer, notOwner] = await ethers.getSigners();
