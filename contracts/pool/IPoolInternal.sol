@@ -73,6 +73,10 @@ interface IPoolInternal is IPosition, IPricing {
         int256 shorts;
     }
 
+    ////////////////////
+    ////////////////////
+    // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
+
     struct TradeArgsInternal {
         // The account doing the trade
         address user;
@@ -104,8 +108,17 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 maxSlippage;
         // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
         uint256 collateralCredit;
+        // The address to which refund excess credit
+        address refundAddress;
         // Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
         bool isBidIfStrandedMarketPrice;
+    }
+
+    struct WithdrawVarsInternal {
+        uint256 tokenId;
+        uint256 initialSize;
+        uint256 liquidityPerTick;
+        bool isFullWithdrawal;
     }
 
     struct FillQuoteArgsInternal {

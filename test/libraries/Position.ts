@@ -3,8 +3,8 @@ import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { PositionMock, PositionMock__factory } from '../../typechain';
 import { formatEther, parseEther } from 'ethers/lib/utils';
-import { average } from '../../utils/math';
-import { OrderType } from '../../utils/PoolUtil';
+import { average } from '../../utils/sdk/math';
+import { PositionKey, OrderType } from '../../utils/sdk/types';
 
 describe('Position', () => {
   let deployer: SignerWithAddress;
@@ -13,7 +13,7 @@ describe('Position', () => {
   let strike = parseEther('1000');
   let isCall = true;
 
-  let key: any;
+  let key: PositionKey;
 
   let WAD = parseEther('1');
 
