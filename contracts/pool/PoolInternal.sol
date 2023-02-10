@@ -590,9 +590,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             uint256 remaining = args.size;
-            Pricing.Args memory pricing = _getPricing(l, args.isBuy);
 
             while (remaining > 0) {
+                Pricing.Args memory pricing = _getPricing(l, args.isBuy);
                 uint256 maxSize = pricing.maxTradeSize();
                 uint256 tradeSize = Math.min(remaining, maxSize);
                 uint256 oldMarketPrice = l.marketPrice;
@@ -663,8 +663,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     PoolStorage.MIN_TICK_DISTANCE *
                     dist;
 
-                // ToDo : Deal with rounding error
-                if (maxSize >= remaining - (ONE / 10)) {
+                if (maxSize >= remaining) {
                     remaining = 0;
                 } else {
                     // The trade will require crossing into the next tick range
