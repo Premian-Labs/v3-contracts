@@ -47,8 +47,7 @@ contract ChainlinkAdapter is
     /// @inheritdoc IOracleAdapter
     function quote(
         address tokenIn,
-        address tokenOut,
-        bytes calldata
+        address tokenOut
     ) external view returns (uint256) {
         (address mappedTokenIn, address mappedTokenOut) = _mapPair(
             tokenIn,

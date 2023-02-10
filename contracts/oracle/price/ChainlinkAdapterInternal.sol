@@ -40,8 +40,7 @@ abstract contract ChainlinkAdapterInternal is
 
     function _addOrModifySupportForPair(
         address tokenA,
-        address tokenB,
-        bytes calldata
+        address tokenB
     ) internal virtual override {
         (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
         PricingPlan plan = _determinePricingPlan(_tokenA, _tokenB);

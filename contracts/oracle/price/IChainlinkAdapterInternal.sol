@@ -37,18 +37,10 @@ interface IChainlinkAdapterInternal {
     }
 
     /// @notice Emitted when the oracle updated the pricing plan for a pair
-    /// @param tokenA One of the pair's tokens
-    /// @param tokenB The other of the pair's tokens
+    /// @param tokenA The exchange token (base token)
+    /// @param tokenB The token to quote against (quote token)
     /// @param plan The new plan
     event UpdatedPlanForPair(address tokenA, address tokenB, PricingPlan plan);
-
-    /// @notice Emitted when new tokens are considered USD
-    /// @param tokens The new tokens
-    event TokensConsideredUSD(address[] tokens);
-
-    /// @notice Emitted when tokens should no longer be considered USD
-    /// @param tokens The tokens to no longer consider USD
-    event TokensNoLongerConsideredUSD(address[] tokens);
 
     /// @notice Emitted when new mappings are added
     /// @param tokens The tokens

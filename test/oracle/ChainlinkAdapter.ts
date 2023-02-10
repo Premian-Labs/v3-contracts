@@ -239,7 +239,6 @@ describe('ChainlinkAdapter', () => {
         instance.addOrModifySupportForPair(
           ethers.constants.AddressZero,
           tokens.WETH.address,
-          [],
         ),
       ).to.be.revertedWithCustomError(
         instance,
@@ -251,7 +250,6 @@ describe('ChainlinkAdapter', () => {
       await instance.addSupportForPairIfNeeded(
         tokens.WETH.address,
         tokens.DAI.address,
-        [],
       );
 
       expect(
@@ -264,7 +262,6 @@ describe('ChainlinkAdapter', () => {
       instance.addSupportForPairIfNeeded(
         tokens.WETH.address,
         tokens.DAI.address,
-        [],
       );
     });
   });
@@ -275,7 +272,6 @@ describe('ChainlinkAdapter', () => {
         instance.addSupportForPairIfNeeded(
           tokens.WETH.address,
           tokens.WETH.address,
-          [],
         ),
       ).to.be.revertedWithCustomError(instance, 'Oracle__BaseAndQuoteAreSame');
     });
@@ -284,7 +280,6 @@ describe('ChainlinkAdapter', () => {
       await instance.addSupportForPairIfNeeded(
         tokens.WETH.address,
         tokens.DAI.address,
-        [],
       );
 
       expect(
@@ -298,7 +293,6 @@ describe('ChainlinkAdapter', () => {
         instance.addSupportForPairIfNeeded(
           tokens.WETH.address,
           tokens.DAI.address,
-          [],
         ),
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairAlreadySupported');
     });
@@ -307,7 +301,6 @@ describe('ChainlinkAdapter', () => {
       await instance.addSupportForPairIfNeeded(
         tokens.WETH.address,
         tokens.DAI.address,
-        [],
       );
 
       expect(
@@ -320,7 +313,6 @@ describe('ChainlinkAdapter', () => {
       instance.addSupportForPairIfNeeded(
         tokens.DAI.address,
         tokens.WETH.address,
-        [],
       );
 
       expect(
@@ -342,7 +334,7 @@ describe('ChainlinkAdapter', () => {
   describe('#quote', async () => {
     it('should revert if pair is not supported yet', async () => {
       await expect(
-        instance.quote(tokens.WETH.address, tokens.DAI.address, []),
+        instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
     });
   });
@@ -365,7 +357,7 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return true if interface is IOracleAdapter', async () => {
-      expect(await instance.supportsInterface('0x07252f69')).to.be.true;
+      expect(await instance.supportsInterface('0x2b2a0525')).to.be.true;
     });
 
     it('should return true if interface is IChainlinkAdapter', async () => {
@@ -381,7 +373,6 @@ describe('ChainlinkAdapter', () => {
             await instance.addSupportForPairIfNeeded(
               tokenIn.address,
               tokenOut.address,
-              [],
             );
           });
 
@@ -429,7 +420,6 @@ describe('ChainlinkAdapter', () => {
               const quote = await instance.quote(
                 tokenIn.address,
                 tokenOut.address,
-                [],
               );
 
               const coingeckoPrice = await getPriceBetweenTokens(

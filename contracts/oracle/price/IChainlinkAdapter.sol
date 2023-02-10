@@ -10,6 +10,8 @@ import {IOracleAdapter} from "./IOracleAdapter.sol";
 interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Returns the pricing plan that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
+    /// @param tokenA The exchange token (base token)
+    /// @param tokenB The token to quote against (quote token)
     /// @return The pricing plan that will be used
     function planForPair(
         address tokenA,

@@ -32,22 +32,20 @@ abstract contract OracleAdapter is
     /// @inheritdoc IOracleAdapter
     function addOrModifySupportForPair(
         address tokenA,
-        address tokenB,
-        bytes calldata data
+        address tokenB
     ) external virtual {
-        _addOrModifySupportForPair(tokenA, tokenB, data);
+        _addOrModifySupportForPair(tokenA, tokenB);
     }
 
     /// @inheritdoc IOracleAdapter
     function addSupportForPairIfNeeded(
         address tokenA,
-        address tokenB,
-        bytes calldata data
+        address tokenB
     ) external virtual {
         if (_isPairAlreadySupported(tokenA, tokenB))
             revert Oracle__PairAlreadySupported(tokenA, tokenB);
 
-        _addOrModifySupportForPair(tokenA, tokenB, data);
+        _addOrModifySupportForPair(tokenA, tokenB);
     }
 
     function _isPairAlreadySupported(
@@ -61,10 +59,8 @@ abstract contract OracleAdapter is
     /// @dev Will revert if pair cannot be supported. tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
-    /// @param data Custom data that the oracle might need to operate
     function _addOrModifySupportForPair(
         address tokenA,
-        address tokenB,
-        bytes calldata data
+        address tokenB
     ) internal virtual;
 }
