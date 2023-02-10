@@ -158,7 +158,6 @@ describe('StatefulChainlinkOracle', () => {
             it(`returns correct quote`, async () => {
               const quote = await instance.quote(
                 tokenIn.address,
-                parseUnits('1', tokenIn.decimals),
                 tokenOut.address,
                 [],
               );

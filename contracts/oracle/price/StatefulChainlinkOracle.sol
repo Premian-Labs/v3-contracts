@@ -42,11 +42,14 @@ contract StatefulChainlinkOracle is
     ) {
         if (address(_registry) == address(0) || _superAdmin == address(0))
             revert Oracle__ZeroAddress();
+
         registry = _registry;
+
         // We are setting the super admin role as its own admin so we can transfer it
         _setRoleAdmin(SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE);
         _setRoleAdmin(ADMIN_ROLE, SUPER_ADMIN_ROLE);
         _setupRole(SUPER_ADMIN_ROLE, _superAdmin);
+
         for (uint256 i = 0; i < _initialAdmins.length; i++) {
             _setupRole(ADMIN_ROLE, _initialAdmins[i]);
         }
@@ -73,7 +76,6 @@ contract StatefulChainlinkOracle is
     /// @inheritdoc ITokenPriceOracle
     function quote(
         address _tokenIn,
-        uint256,
         address _tokenOut,
         bytes calldata
     ) external view returns (uint256 _amountOut) {

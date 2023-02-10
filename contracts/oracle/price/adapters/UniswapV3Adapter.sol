@@ -91,7 +91,6 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
     /// @inheritdoc ITokenPriceOracle
     function quote(
         address _tokenIn,
-        uint256 _amountIn,
         address _tokenOut,
         bytes calldata
     ) external view returns (uint256) {
@@ -102,9 +101,10 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
         if (_pools.length == 0)
             revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
 
+        // TODO Remove amountIn
         return
             UNISWAP_V3_ORACLE.quoteSpecificPoolsWithTimePeriod(
-                _amountIn.toUint128(),
+                0,
                 _tokenIn,
                 _tokenOut,
                 _pools,

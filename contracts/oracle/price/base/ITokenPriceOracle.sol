@@ -49,17 +49,15 @@ interface ITokenPriceOracle is IERC165 {
     ) external view returns (bool);
 
     /**
-     * @notice Returns a quote, based on the given tokens and amount
+     * @notice Returns a quote, based on the given token pair
      * @dev Will revert if pair isn't supported
      * @param tokenIn The token that will be provided
-     * @param amountIn The amount that will be provided
      * @param tokenOut The token we would like to quote
      * @param data Custom data that the oracle might need to operate
      * @return amountOut How much `tokenOut` will be returned in exchange for `amountIn` amount of `tokenIn`
      */
     function quote(
         address tokenIn,
-        uint256 amountIn,
         address tokenOut,
         bytes calldata data
     ) external view returns (uint256 amountOut);
