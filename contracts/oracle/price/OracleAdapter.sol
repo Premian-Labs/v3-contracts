@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC165, ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @title A simple implementation of `BaseOracle` that already implements functions to add support
+/// @title Base oracle adapter implementation, which suppoprts multicall and ERC165
 /// @notice Most implementations of `IOracleAdapter` will have an internal function that is called in both
 ///         `addSupportForPairIfNeeded` and `addOrModifySupportForPair`. This oracle is now making this explicit, and
 ///         implementing these two functions. They remain virtual so that they can be overriden if needed.
 /// @notice derived from https://github.com/Mean-Finance/oracles
-abstract contract OracleAdapter is Multicall, ERC165, IOracleAdapter {
+abstract contract OracleAdapter is ERC165, IOracleAdapter, Multicall {
     /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
         address tokenA,

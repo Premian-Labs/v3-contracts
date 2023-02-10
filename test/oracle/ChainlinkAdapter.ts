@@ -164,12 +164,12 @@ describe('ChainlinkAdapter', () => {
       });
 
       it('registry is set correctly', async () => {
-        const registry = await instance.registry();
+        const registry = await instance.feedRegistry();
         expect(registry).to.eql(feedRegistryAddress);
       });
 
       it('max delay is set correctly', async () => {
-        const maxDelay = await instance.MAX_DELAY();
+        const maxDelay = await instance.maxDelay();
         expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
       });
 
@@ -353,6 +353,40 @@ describe('ChainlinkAdapter', () => {
       await expect(
         instance.quote(tokens.WETH.address, tokens.DAI.address, []),
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
+    });
+  });
+
+  describe('supportsInterface', () => {
+    it('should return false if interface unknown', async () => {
+      expect(await instance.supportsInterface('0x00000000')).to.be.false;
+    });
+
+    it('should return false if interface invalid', async () => {
+      expect(await instance.supportsInterface('0xffffffff')).to.be.false;
+    });
+
+    it('should return false if interface not supported (e.g. IERC20)', async () => {
+      expect(await instance.supportsInterface('0x36372b07')).to.be.false;
+    });
+
+    it('should return true if interface is IERC165', async () => {
+      expect(await instance.supportsInterface('0x01ffc9a7')).to.be.true;
+    });
+
+    it('should return true if interface is Multicall', async () => {
+      expect(await instance.supportsInterface('0xac9650d8')).to.be.true;
+    });
+
+    it('should return true if interface is IAccessControl', async () => {
+      expect(await instance.supportsInterface('0x7965db0b')).to.be.true;
+    });
+
+    it('should return true if interface is IOracleAdapter', async () => {
+      expect(await instance.supportsInterface('0x06dae6ce')).to.be.true;
+    });
+
+    it('should return true if interface is IChainlinkAdapter', async () => {
+      expect(await instance.supportsInterface('0xc5f65fd0')).to.be.true;
     });
   });
 
