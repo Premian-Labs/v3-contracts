@@ -40,8 +40,8 @@ contract ChainlinkAdapter is
     function isPairAlreadySupported(
         address _tokenA,
         address _tokenB
-    ) public view override(IOracleAdapter, OracleAdapter) returns (bool) {
-        return planForPair(_tokenA, _tokenB) != PricingPlan.NONE;
+    ) external view override(IOracleAdapter, OracleAdapter) returns (bool) {
+        return _isPairAlreadySupported(_tokenA, _tokenB);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -75,12 +75,8 @@ contract ChainlinkAdapter is
     function planForPair(
         address _tokenA,
         address _tokenB
-    ) public view returns (PricingPlan) {
-        (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
-        return
-            ChainlinkAdapterStorage.layout().planForPair[
-                _keyForSortedPair(__tokenA, __tokenB)
-            ];
+    ) external view returns (PricingPlan) {
+        return _planForPair(_tokenA, _tokenB);
     }
 
     /// @inheritdoc IChainlinkAdapter

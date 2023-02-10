@@ -65,6 +65,24 @@ abstract contract ChainlinkAdapterInternal is
         emit UpdatedPlanForPair(__tokenA, __tokenB, _plan);
     }
 
+    function _isPairAlreadySupported(
+        address _tokenA,
+        address _tokenB
+    ) internal view virtual override(OracleAdapter) returns (bool) {
+        return _planForPair(_tokenA, _tokenB) != PricingPlan.NONE;
+    }
+
+    function _planForPair(
+        address _tokenA,
+        address _tokenB
+    ) internal view returns (PricingPlan) {
+        (address __tokenA, address __tokenB) = _mapAndSort(_tokenA, _tokenB);
+        return
+            ChainlinkAdapterStorage.layout().planForPair[
+                _keyForSortedPair(__tokenA, __tokenB)
+            ];
+    }
+
     /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
     function _getDirectPrice(
         address _tokenIn,

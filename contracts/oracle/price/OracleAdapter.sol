@@ -27,7 +27,7 @@ abstract contract OracleAdapter is
     function isPairAlreadySupported(
         address tokenA,
         address tokenB
-    ) public view virtual returns (bool);
+    ) external view virtual returns (bool);
 
     /// @inheritdoc IOracleAdapter
     function addOrModifySupportForPair(
@@ -44,11 +44,16 @@ abstract contract OracleAdapter is
         address _tokenB,
         bytes calldata _data
     ) external virtual {
-        if (isPairAlreadySupported(_tokenA, _tokenB))
+        if (_isPairAlreadySupported(_tokenA, _tokenB))
             revert Oracle__PairAlreadySupported(_tokenA, _tokenB);
 
         _addOrModifySupportForPair(_tokenA, _tokenB, _data);
     }
+
+    function _isPairAlreadySupported(
+        address tokenA,
+        address tokenB
+    ) internal view virtual returns (bool);
 
     /// @notice Add or reconfigures the support for a given pair. This function will let the oracle take some actions
     ///         to configure the pair, in preparation for future quotes. Can be called many times in order to let the oracle
