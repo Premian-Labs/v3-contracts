@@ -327,7 +327,7 @@ contract StaticOracle is IStaticOracle {
         }
     }
 
-    /// @notice https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.2/contracts/utils/Address.sol#L26-L35
+    /// @dev https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.2/contracts/utils/Address.sol#L26-L35
     function _isContract(address account) internal view returns (bool) {
         // This method relies on extcodesize, which returns 0 for contracts in
         // construction, since the code is only stored at the end of the

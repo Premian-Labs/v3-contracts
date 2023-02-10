@@ -169,7 +169,7 @@ contract StatefulChainlinkOracle is
         return _mapping != address(0) ? _mapping : _token;
     }
 
-    /** Handles prices when the pair is either ETH/USD, token/ETH or token/USD */
+    /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
     function _getDirectPrice(
         address _tokenIn,
         address _tokenOut,
@@ -203,7 +203,7 @@ contract StatefulChainlinkOracle is
         return invert ? (1E36 / _price) : _price;
     }
 
-    /** Handles prices when both tokens share the same base (either ETH or USD) */
+    /// @dev Handles prices when both tokens share the same base (either ETH or USD)
     function _getPriceSameBase(
         address _tokenIn,
         address _tokenOut,
@@ -232,7 +232,7 @@ contract StatefulChainlinkOracle is
         return (adjustedTokenInToBase * ONE_ETH) / adjustedTokenOutToBase;
     }
 
-    /** Handles prices when one of the tokens uses ETH as the base, and the other USD */
+    /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
     function _getPriceDifferentBases(
         address _tokenIn,
         address _tokenOut,
