@@ -86,13 +86,9 @@ contract StatefulChainlinkOracle is
             _keyForUnsortedPair(_mappedTokenIn, _mappedTokenOut)
         ];
 
-        if (_plan == PricingPlan.NONE)
+        if (_plan == PricingPlan.NONE) {
             revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
-
-        // TODO: Handle same tokens
-        if (_plan == PricingPlan.SAME_TOKENS) return 0;
-
-        if (_plan <= PricingPlan.TOKEN_ETH_PAIR) {
+        } else if (_plan <= PricingPlan.TOKEN_ETH_PAIR) {
             return _getDirectPrice(_mappedTokenIn, _mappedTokenOut, _plan);
         } else if (_plan <= PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
             return _getPriceSameBase(_mappedTokenIn, _mappedTokenOut, _plan);
@@ -157,9 +153,11 @@ contract StatefulChainlinkOracle is
     ) external onlyRole(ADMIN_ROLE) {
         if (_addresses.length != _mappings.length)
             revert Oracle__InvalidMappingsInput();
+
         for (uint256 i = 0; i < _addresses.length; i++) {
             _tokenMappings[_addresses[i]] = _mappings[i];
         }
+
         emit MappingsAdded(_addresses, _mappings);
     }
 
@@ -291,9 +289,8 @@ contract StatefulChainlinkOracle is
         address _tokenA,
         address _tokenB
     ) internal view virtual returns (PricingPlan) {
-        if (_tokenA == _tokenB) {
-            return PricingPlan.SAME_TOKENS;
-        }
+        if (_tokenA == _tokenB)
+            revert Oracle__BaseAndQuoteAreSame(_tokenA, _tokenB);
 
         bool _isTokenAUSD = _isUSD(_tokenA);
         bool _isTokenBUSD = _isUSD(_tokenB);
@@ -455,7 +452,7 @@ contract StatefulChainlinkOracle is
             _tokenA,
             _tokenB
         );
-        
+
         return _keyForSortedPair(__tokenA, __tokenB);
     }
 

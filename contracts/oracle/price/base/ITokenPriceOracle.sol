@@ -9,6 +9,9 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
  * @notice derived from https://github.com/Mean-Finance/oracles
  */
 interface ITokenPriceOracle is IERC165 {
+    /// @notice Thrown when trying to add pair where base and quote are the same
+    error Oracle__BaseAndQuoteAreSame(address tokenA, address tokenB);
+
     /// @notice Thrown when trying to add support for a pair that has already been added
     error Oracle__PairAlreadySupported(address tokenA, address tokenB);
 

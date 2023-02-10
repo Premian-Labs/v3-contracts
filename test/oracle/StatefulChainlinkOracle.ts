@@ -26,7 +26,6 @@ enum PricingPlan {
   TOKEN_TO_ETH_TO_TOKEN_PAIR,
   TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
   TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-  SAME_TOKENS,
 }
 
 let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
@@ -88,11 +87,6 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 
       { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => USD, ETH => OUT (tokenA)
       { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => ETH, USD => OUT (tokenB)
-    ],
-    [
-      // SAME_TOKENS
-      { plan: PricingPlan.SAME_TOKENS, tokenIn: tokens.USDT, tokenOut: tokens.USDC }, // tokenA is USD, tokenB is USD
-      { plan: PricingPlan.SAME_TOKENS, tokenIn: tokens.ALPHA, tokenOut: tokens.ALPHA }, // tokenA == token B
     ],
   ];
 }
