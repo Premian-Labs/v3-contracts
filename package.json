@@ -43,6 +43,8 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.13.0",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.3",
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "ethers": "5.7.2",
