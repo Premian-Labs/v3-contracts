@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "../libraries/TokenSorting.sol";
-import "../base/SimpleOracle.sol";
-import "./IUniswapV3Adapter.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import {TokenSorting} from "../libraries/TokenSorting.sol";
+import {BaseOracle, ITokenPriceOracle, SimpleOracle} from "../base/SimpleOracle.sol";
+
+import {IStaticOracle, IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
@@ -99,7 +101,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
 
         if (_pools.length == 0)
             revert Oracle__PairNotSupportedYet(_tokenIn, _tokenOut);
-        
+
         return
             UNISWAP_V3_ORACLE.quoteSpecificPoolsWithTimePeriod(
                 _amountIn.toUint128(),
@@ -211,7 +213,7 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
             _tokenA,
             _tokenB
         );
-        
+
         if (_pools.length == 0)
             revert Oracle__PairCannotBeSupported(_tokenA, _tokenB);
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import "./BaseOracle.sol";
+import {BaseOracle, ITokenPriceOracle} from "./BaseOracle.sol";
 
 /**
  * @title A simple implementation of `BaseOracle` that already implements functions to add support

@@ -2,10 +2,10 @@
 pragma solidity =0.7.6;
 pragma abicoder v2;
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
-import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-import "./IStaticOracle.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {PoolAddress} from "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
+import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import {IStaticOracle, IUniswapV3Factory} from "./IStaticOracle.sol";
 
 /// @title Uniswap V3 Static Oracle
 /// @notice Oracle contract for price quoting against Uniswap V3 pools

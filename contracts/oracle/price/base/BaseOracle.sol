@@ -3,7 +3,7 @@ pragma solidity >=0.8.7 <0.9.0;
 
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "./ITokenPriceOracle.sol";
+import {ITokenPriceOracle} from "./ITokenPriceOracle.sol";
 
 /// @title A base implementation of `ITokenPriceOracle` that implements `ERC165` and `Multicall`
 /// @notice derived from https://github.com/Mean-Finance/oracles

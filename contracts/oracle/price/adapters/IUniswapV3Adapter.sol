@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import "../base/ITokenPriceOracle.sol";
-import "../IStaticOracle.sol";
+import {ITokenPriceOracle} from "../base/ITokenPriceOracle.sol";
+import {IStaticOracle} from "../IStaticOracle.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IUniswapV3Adapter is ITokenPriceOracle {

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
-import "@chainlink/contracts/src/v0.8/interfaces/FeedRegistryInterface.sol";
-import "./base/ITokenPriceOracle.sol";
+import {FeedRegistryInterface} from "@chainlink/contracts/src/v0.8/interfaces/FeedRegistryInterface.sol";
+import {ITokenPriceOracle} from "./base/ITokenPriceOracle.sol";
 
 /**
  * @title An implementation of IPriceOracle that uses Chainlink feeds

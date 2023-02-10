@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import "@chainlink/contracts/src/v0.8/Denominations.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import "./base/SimpleOracle.sol";
-import "./libraries/TokenSorting.sol";
+import {BaseOracle, SimpleOracle} from "./base/SimpleOracle.sol";
+import {TokenSorting} from "./libraries/TokenSorting.sol";
 
-import "./IStatefulChainlinkOracle.sol";
+import {FeedRegistryInterface, IStatefulChainlinkOracle, ITokenPriceOracle} from "./IStatefulChainlinkOracle.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract StatefulChainlinkOracle is
@@ -17,20 +17,20 @@ contract StatefulChainlinkOracle is
     SimpleOracle,
     IStatefulChainlinkOracle
 {
+    // TODO: Remove SUPER_ADMIN_ROLE?
     bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     /// @inheritdoc IStatefulChainlinkOracle
-    uint32 public constant MAX_DELAY = 24 hours;
+    uint32 public constant MAX_DELAY = 25 hours;
+
     /// @inheritdoc IStatefulChainlinkOracle
     FeedRegistryInterface public immutable registry;
 
-    // solhint-disable private-vars-leading-underscore
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
-    // solhint-enable private-vars-leading-underscore
 
     mapping(address => address) internal _tokenMappings;
     mapping(bytes32 => PricingPlan) internal _planForPair;
@@ -41,7 +41,7 @@ contract StatefulChainlinkOracle is
         address[] memory _initialAdmins
     ) {
         if (address(_registry) == address(0) || _superAdmin == address(0))
-            revert ZeroAddress();
+            revert Oracle__ZeroAddress();
         registry = _registry;
         // We are setting the super admin role as its own admin so we can transfer it
         _setRoleAdmin(SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE);

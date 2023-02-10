@@ -2,7 +2,7 @@
 
 pragma solidity >=0.7.6 <0.9.0;
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 /// @title Uniswap V3 Static Oracle
 /// @notice Oracle contract for calculating price quoting against Uniswap V3
