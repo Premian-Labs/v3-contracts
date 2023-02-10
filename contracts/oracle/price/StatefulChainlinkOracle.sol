@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
+import "@chainlink/contracts/src/v0.8/Denominations.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@chainlink/contracts/src/v0.8/Denominations.sol";
+
 import "./base/SimpleOracle.sol";
 import "./libraries/TokenSorting.sol";
+
 import "./IStatefulChainlinkOracle.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
@@ -24,8 +26,10 @@ contract StatefulChainlinkOracle is
     FeedRegistryInterface public immutable registry;
 
     // solhint-disable private-vars-leading-underscore
-    int8 private constant FOREX_DECIMALS = 8;
-    int8 private constant ETH_DECIMALS = 18;
+    int256 private constant FOREX_DECIMALS = 8;
+    int256 private constant ETH_DECIMALS = 18;
+    uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
+    uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     // solhint-enable private-vars-leading-underscore
 
     mapping(address => address) internal _tokenMappings;
@@ -69,7 +73,7 @@ contract StatefulChainlinkOracle is
     /// @inheritdoc ITokenPriceOracle
     function quote(
         address _tokenIn,
-        uint256 _amountIn,
+        uint256,
         address _tokenOut,
         bytes calldata
     ) external view returns (uint256 _amountOut) {
@@ -77,46 +81,24 @@ contract StatefulChainlinkOracle is
             _tokenIn,
             _tokenOut
         );
+
         PricingPlan _plan = _planForPair[
             _keyForUnsortedPair(_mappedTokenIn, _mappedTokenOut)
         ];
+
         if (_plan == PricingPlan.NONE)
             revert PairNotSupportedYet(_tokenIn, _tokenOut);
-        if (_plan == PricingPlan.SAME_TOKENS) return _amountIn;
 
-        int16 _inDecimals = _getDecimals(_tokenIn);
-        int16 _outDecimals = _getDecimals(_tokenOut);
+        // TODO: Handle same tokens
+        if (_plan == PricingPlan.SAME_TOKENS) return 0;
 
         if (_plan <= PricingPlan.TOKEN_ETH_PAIR) {
-            return
-                _getDirectPrice(
-                    _mappedTokenIn,
-                    _mappedTokenOut,
-                    _inDecimals,
-                    _outDecimals,
-                    _amountIn,
-                    _plan
-                );
+            return _getDirectPrice(_mappedTokenIn, _mappedTokenOut, _plan);
         } else if (_plan <= PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
-            return
-                _getPriceSameBase(
-                    _mappedTokenIn,
-                    _mappedTokenOut,
-                    _inDecimals,
-                    _outDecimals,
-                    _amountIn,
-                    _plan
-                );
+            return _getPriceSameBase(_mappedTokenIn, _mappedTokenOut, _plan);
         } else {
             return
-                _getPriceDifferentBases(
-                    _mappedTokenIn,
-                    _mappedTokenOut,
-                    _inDecimals,
-                    _outDecimals,
-                    _amountIn,
-                    _plan
-                );
+                _getPriceDifferentBases(_mappedTokenIn, _mappedTokenOut, _plan);
         }
     }
 
@@ -186,18 +168,16 @@ contract StatefulChainlinkOracle is
     function _getDirectPrice(
         address _tokenIn,
         address _tokenOut,
-        int16 _inDecimals,
-        int16 _outDecimals,
-        uint256 _amountIn,
         PricingPlan _plan
     ) internal view returns (uint256) {
-        uint256 _price;
-        int8 _resultDecimals = _plan == PricingPlan.TOKEN_ETH_PAIR
-            ? ETH_DECIMALS
-            : FOREX_DECIMALS;
-        bool _needsInverting = _isUSD(_tokenIn) ||
-            (_plan == PricingPlan.TOKEN_ETH_PAIR && _isETH(_tokenIn));
+        int256 _scaleBy = ETH_DECIMALS -
+            (
+                _plan == PricingPlan.TOKEN_ETH_PAIR
+                    ? ETH_DECIMALS
+                    : FOREX_DECIMALS
+            );
 
+        uint256 _price;
         if (_plan == PricingPlan.ETH_USD_PAIR) {
             _price = _getETHUSD();
         } else if (_plan == PricingPlan.TOKEN_USD_PAIR) {
@@ -209,93 +189,96 @@ contract StatefulChainlinkOracle is
                 _isETH(_tokenOut) ? _tokenIn : _tokenOut
             );
         }
-        if (!_needsInverting) {
-            return
-                _adjustDecimals(
-                    _price * _amountIn,
-                    _outDecimals - _resultDecimals - _inDecimals
-                );
-        } else {
-            return
-                _adjustDecimals(
-                    _adjustDecimals(_amountIn, _resultDecimals + _outDecimals) /
-                        _price,
-                    -_inDecimals
-                );
-        }
+
+        _price = _adjustDecimals(_price, _scaleBy);
+
+        bool invert = _isUSD(_tokenIn) ||
+            (_plan == PricingPlan.TOKEN_ETH_PAIR && _isETH(_tokenIn));
+
+        return invert ? (1E36 / _price) : _price;
     }
 
     /** Handles prices when both tokens share the same base (either ETH or USD) */
     function _getPriceSameBase(
         address _tokenIn,
         address _tokenOut,
-        int16 _inDecimals,
-        int16 _outDecimals,
-        uint256 _amountIn,
         PricingPlan _plan
     ) internal view returns (uint256) {
+        int256 _diff = _getDecimals(_tokenIn) - _getDecimals(_tokenOut);
+        int256 _scaleBy = ETH_DECIMALS - (_diff > 0 ? _diff : _diff * -1);
+
         address _base = _plan == PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR
             ? Denominations.USD
             : Denominations.ETH;
+
         uint256 _tokenInToBase = _callRegistry(_tokenIn, _base);
         uint256 _tokenOutToBase = _callRegistry(_tokenOut, _base);
-        return
-            _adjustDecimals(
-                (_amountIn * _tokenInToBase) / _tokenOutToBase,
-                _outDecimals - _inDecimals
-            );
+
+        uint256 adjustedTokenInToBase = _adjustDecimals(
+            _tokenInToBase,
+            _scaleBy
+        );
+
+        uint256 adjustedTokenOutToBase = _adjustDecimals(
+            _tokenOutToBase,
+            _scaleBy
+        );
+
+        return (adjustedTokenInToBase * ONE_ETH) / adjustedTokenOutToBase;
     }
 
     /** Handles prices when one of the tokens uses ETH as the base, and the other USD */
     function _getPriceDifferentBases(
         address _tokenIn,
         address _tokenOut,
-        int16 _inDecimals,
-        int16 _outDecimals,
-        uint256 _amountIn,
         PricingPlan _plan
     ) internal view returns (uint256) {
+        int256 _scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
+        uint256 adjustedEthToUSDPrice = _adjustDecimals(_getETHUSD(), _scaleBy);
+
         bool _isTokenInUSD = (_plan ==
             PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B &&
             _tokenIn < _tokenOut) ||
             (_plan == PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B &&
                 _tokenIn > _tokenOut);
 
-        uint256 _ethToUSDPrice = _getETHUSD();
-
         if (_isTokenInUSD) {
-            uint256 _tokenInToUSD = _getPriceAgainstUSD(_tokenIn);
-            uint256 _tokenOutToETH = _getPriceAgainstETH(_tokenOut);
-
-            uint256 _adjustedInUSDValue = _adjustDecimals(
-                _amountIn * _tokenInToUSD,
-                _outDecimals - _inDecimals + ETH_DECIMALS
+            uint256 adjustedTokenInToUSD = _adjustDecimals(
+                _getPriceAgainstUSD(_tokenIn),
+                _scaleBy
             );
 
-            return _adjustedInUSDValue / _ethToUSDPrice / _tokenOutToETH;
-        } else {
-            uint256 _tokenInToETH = _getPriceAgainstETH(_tokenIn);
-            uint256 _tokenOutToUSD = _getPriceAgainstUSD(_tokenOut);
+            uint256 _tokenOutToETH = _getPriceAgainstETH(_tokenOut);
 
             return
-                _adjustDecimals(
-                    (_amountIn * _tokenInToETH * _ethToUSDPrice) /
-                        _tokenOutToUSD,
-                    _outDecimals - _inDecimals - ETH_DECIMALS
-                );
+                (((adjustedTokenInToUSD * ONE_ETH) / adjustedEthToUSDPrice) *
+                    ONE_ETH) / _tokenOutToETH;
+        } else {
+            uint256 _tokenInToETH = _getPriceAgainstETH(_tokenIn);
+
+            uint256 adjustedTokenOutToUSD = _adjustDecimals(
+                _getPriceAgainstUSD(_tokenOut),
+                _scaleBy
+            );
+
+            return
+                (_tokenInToETH * adjustedEthToUSDPrice) /
+                (adjustedTokenOutToUSD);
         }
     }
 
     function _getPriceAgainstUSD(
         address _token
     ) internal view returns (uint256) {
-        return _isUSD(_token) ? 1e8 : _callRegistry(_token, Denominations.USD);
+        return
+            _isUSD(_token) ? ONE_USD : _callRegistry(_token, Denominations.USD);
     }
 
     function _getPriceAgainstETH(
         address _token
     ) internal view returns (uint256) {
-        return _isETH(_token) ? 1e18 : _callRegistry(_token, Denominations.ETH);
+        return
+            _isETH(_token) ? ONE_ETH : _callRegistry(_token, Denominations.ETH);
     }
 
     /// @dev Expects `_tokenA` and `_tokenB` to be sorted
@@ -375,6 +358,7 @@ contract StatefulChainlinkOracle is
         ) = _ifUSD < _ifETH
                 ? (Denominations.USD, _ifUSD, Denominations.ETH, _ifETH)
                 : (Denominations.ETH, _ifETH, Denominations.USD, _ifUSD);
+
         if (_exists(_token, _firstBase)) {
             return _firstResult;
         } else if (_exists(_token, _secondBaseBase)) {
@@ -412,13 +396,13 @@ contract StatefulChainlinkOracle is
         }
     }
 
-    function _getDecimals(address _token) internal view returns (int16) {
+    function _getDecimals(address _token) internal view returns (int256) {
         if (_isETH(_token)) {
             return ETH_DECIMALS;
         } else if (!Address.isContract(_token)) {
             return FOREX_DECIMALS;
         } else {
-            return int16(uint16(IERC20Metadata(_token).decimals()));
+            return int256(uint256(IERC20Metadata(_token).decimals()));
         }
     }
 
