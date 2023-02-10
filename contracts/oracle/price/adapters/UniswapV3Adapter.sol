@@ -112,6 +112,22 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
             );
     }
 
+    /// @inheritdoc ITokenPriceOracle
+    function supportsInterface(
+        bytes4 _interfaceId
+    )
+        public
+        view
+        virtual
+        override(ITokenPriceOracle, AccessControl, BaseOracle)
+        returns (bool)
+    {
+        return
+            _interfaceId == type(IUniswapV3Adapter).interfaceId ||
+            AccessControl.supportsInterface(_interfaceId) ||
+            BaseOracle.supportsInterface(_interfaceId);
+    }
+
     /// @inheritdoc IUniswapV3Adapter
     function isPairDenylisted(
         address _tokenA,
@@ -188,16 +204,6 @@ contract UniswapV3Adapter is AccessControl, SimpleOracle, IUniswapV3Adapter {
         }
 
         emit DenylistChanged(_pairs, _denylisted);
-    }
-
-    /// @inheritdoc IERC165
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view virtual override(AccessControl, BaseOracle) returns (bool) {
-        return
-            _interfaceId == type(IUniswapV3Adapter).interfaceId ||
-            AccessControl.supportsInterface(_interfaceId) ||
-            BaseOracle.supportsInterface(_interfaceId);
     }
 
     function _addOrModifySupportForPair(

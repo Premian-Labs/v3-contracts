@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 /**
  * @title The interface for an oracle that provides price quotes
  * @notice These methods allow users to add support for pairs, and then ask for quotes
  * @notice derived from https://github.com/Mean-Finance/oracles
  */
+interface ITokenPriceOracle is IERC165 {
     /// @notice Thrown when trying to add support for a pair that has already been added
     error Oracle__PairAlreadySupported(address tokenA, address tokenB);
 
@@ -87,4 +90,13 @@ pragma solidity >=0.5.0;
         address tokenB,
         bytes calldata data
     ) external;
+
+    /**
+     * @notice Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding
+     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section] to learn more about how these ids are
+     * created.
+     * @dev This function call must use less than 30 000 gas.
+     * @param interfaceId The interface identifier
+     */
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }

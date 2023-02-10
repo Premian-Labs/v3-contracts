@@ -102,6 +102,21 @@ contract StatefulChainlinkOracle is
         }
     }
 
+    /// @inheritdoc ITokenPriceOracle
+    function supportsInterface(
+        bytes4 _interfaceId
+    )
+        public
+        view
+        override(ITokenPriceOracle, AccessControl, BaseOracle)
+        returns (bool)
+    {
+        return
+            _interfaceId == type(IStatefulChainlinkOracle).interfaceId ||
+            AccessControl.supportsInterface(_interfaceId) ||
+            BaseOracle.supportsInterface(_interfaceId);
+    }
+
     function _addOrModifySupportForPair(
         address _tokenA,
         address _tokenB,
@@ -152,16 +167,6 @@ contract StatefulChainlinkOracle is
     function mappedToken(address _token) public view returns (address) {
         address _mapping = _tokenMappings[_token];
         return _mapping != address(0) ? _mapping : _token;
-    }
-
-    /// @inheritdoc IERC165
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) public view override(AccessControl, BaseOracle) returns (bool) {
-        return
-            _interfaceId == type(IStatefulChainlinkOracle).interfaceId ||
-            AccessControl.supportsInterface(_interfaceId) ||
-            BaseOracle.supportsInterface(_interfaceId);
     }
 
     /** Handles prices when the pair is either ETH/USD, token/ETH or token/USD */
