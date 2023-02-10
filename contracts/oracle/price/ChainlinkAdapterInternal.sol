@@ -2,7 +2,6 @@
 pragma solidity >=0.8.7 <0.9.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AccessControl, IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
@@ -11,20 +10,12 @@ import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {FeedRegistryInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {OracleAdapter} from "./OracleAdapter.sol";
 
-import "hardhat/console.sol";
-
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
-    AccessControl,
     IChainlinkAdapterInternal,
     OracleAdapter
 {
-    // TODO: Remove SUPER_ADMIN_ROLE?
-    bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
     uint32 internal constant MAX_DELAY = 25 hours;
-
     FeedRegistryInterface internal immutable FeedRegistry;
 
     int256 private constant FOREX_DECIMALS = 8;
@@ -39,20 +30,11 @@ abstract contract ChainlinkAdapterInternal is
         FeedRegistryInterface _registry,
         address _superAdmin,
         address[] memory _initialAdmins
-    ) {
+    ) OracleAdapter(_superAdmin, _initialAdmins) {
         if (address(_registry) == address(0) || _superAdmin == address(0))
             revert Oracle__ZeroAddress();
 
         FeedRegistry = _registry;
-
-        // We are setting the super admin role as its own admin so we can transfer it
-        _setRoleAdmin(SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE);
-        _setRoleAdmin(ADMIN_ROLE, SUPER_ADMIN_ROLE);
-        _setupRole(SUPER_ADMIN_ROLE, _superAdmin);
-
-        for (uint256 i = 0; i < _initialAdmins.length; i++) {
-            _setupRole(ADMIN_ROLE, _initialAdmins[i]);
-        }
     }
 
     function _addOrModifySupportForPair(
@@ -393,15 +375,7 @@ abstract contract ChainlinkAdapterInternal is
 
     function supportsInterface(
         bytes4 _interfaceId
-    )
-        public
-        view
-        virtual
-        override(AccessControl, OracleAdapter)
-        returns (bool)
-    {
-        return
-            _interfaceId == type(IAccessControl).interfaceId ||
-            super.supportsInterface(_interfaceId);
+    ) public view virtual override(OracleAdapter) returns (bool) {
+        return super.supportsInterface(_interfaceId);
     }
 }
