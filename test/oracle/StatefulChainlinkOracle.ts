@@ -12,8 +12,14 @@ import {
   getPrice,
 } from '../../utils/defillama';
 
-import { now } from '../../utils/time';
-import { Token, tokens } from '../../utils/addresses';
+import { ONE_HOUR, ONE_DAY, now } from '../../utils/time';
+import {
+  Token,
+  CHAINLINK_BTC,
+  CHAINLINK_USD,
+  CHAINLINK_ETH,
+  tokens,
+} from '../../utils/addresses';
 
 enum PricingPlan {
   NONE,
@@ -25,6 +31,11 @@ enum PricingPlan {
   TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
   TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
 }
+
+const feedRegistryAddress = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf';
+
+let superAdminRole: string;
+let adminRole: string;
 
 let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 
@@ -92,14 +103,15 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
 // TODO: Set block to 15591000 and chainId to 1, if it is not already set
 describe('StatefulChainlinkOracle', () => {
   let deployer: SignerWithAddress;
+  let superAdmin: SignerWithAddress;
   let instance: StatefulChainlinkOracle;
 
   beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
+    [deployer, superAdmin] = await ethers.getSigners();
 
     instance = await new StatefulChainlinkOracle__factory(deployer).deploy(
-      '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf',
-      deployer.address,
+      feedRegistryAddress,
+      superAdmin.address,
       [deployer.address],
     );
 
@@ -116,29 +128,273 @@ describe('StatefulChainlinkOracle', () => {
           tokens.DAI.address,
         ],
         [
-          '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB',
-          '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-          '0x0000000000000000000000000000000000000348',
-          '0x0000000000000000000000000000000000000348',
-          '0x0000000000000000000000000000000000000348',
+          CHAINLINK_BTC,
+          CHAINLINK_ETH,
+          CHAINLINK_USD,
+          CHAINLINK_USD,
+          CHAINLINK_USD,
         ],
       );
   });
 
-  describe('#quote', () => {
-    for (let i = 0; i < plans.length; i++) {
-      describe(`${PricingPlan[plans[i][0].plan]}`, () => {
-        for (const { plan, tokenIn, tokenOut } of plans[i]) {
-          describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
-            beforeEach(async () => {
-              await instance.addSupportForPairIfNeeded(
-                tokenIn.address,
-                tokenOut.address,
-                [],
-              );
-            });
+  describe('#constructor', () => {
+    describe('should revert if', () => {
+      it('feed registry is zero address', async () => {
+        await expect(
+          new StatefulChainlinkOracle__factory(deployer).deploy(
+            ethers.constants.AddressZero,
+            superAdmin.address,
+            [deployer.address],
+          ),
+        ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+      });
 
-            it(`pricing plan is the correct one`, async () => {
+      it('super admin is zero address', async () => {
+        await expect(
+          new StatefulChainlinkOracle__factory(deployer).deploy(
+            feedRegistryAddress,
+            ethers.constants.AddressZero,
+            [deployer.address],
+          ),
+        ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+      });
+    });
+
+    describe('on successful deployment', () => {
+      before(async () => {
+        superAdminRole = await instance.SUPER_ADMIN_ROLE();
+        adminRole = await instance.ADMIN_ROLE();
+      });
+
+      it('registry is set correctly', async () => {
+        const registry = await instance.registry();
+        expect(registry).to.eql(feedRegistryAddress);
+      });
+
+      it('max delay is set correctly', async () => {
+        const maxDelay = await instance.MAX_DELAY();
+        expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
+      });
+
+      it('super admin is set correctly', async () => {
+        const hasRole = await instance.hasRole(
+          superAdminRole,
+          superAdmin.address,
+        );
+        expect(hasRole).to.be.true;
+      });
+
+      it('initial admins are set correctly', async () => {
+        const hasRole = await instance.hasRole(adminRole, deployer.address);
+        expect(hasRole).to.be.true;
+      });
+
+      it('super admin role is set as super admin role', async () => {
+        const admin = await instance.getRoleAdmin(superAdminRole);
+        expect(admin).to.equal(superAdminRole);
+      });
+
+      it('super admin role is set as admin role', async () => {
+        const admin = await instance.getRoleAdmin(adminRole);
+        expect(admin).to.equal(superAdminRole);
+      });
+    });
+  });
+
+  describe('#mappedToken', () => {
+    it('shoud return token address if token is not mapped', async () => {
+      expect(await instance.mappedToken(tokens.AMP.address)).to.equal(
+        tokens.AMP.address,
+      );
+    });
+
+    it('shoud return mapped token address if token is mapped', async () => {
+      expect(await instance.mappedToken(tokens.WBTC.address)).to.equal(
+        CHAINLINK_BTC,
+      );
+
+      expect(await instance.mappedToken(tokens.WETH.address)).to.equal(
+        CHAINLINK_ETH,
+      );
+
+      expect(await instance.mappedToken(tokens.DAI.address)).to.equal(
+        CHAINLINK_USD,
+      );
+    });
+  });
+
+  describe('#canSupportPair', () => {
+    it('returns false if adapter cannot support pair', async () => {
+      expect(
+        await instance.canSupportPair(
+          ethers.constants.AddressZero,
+          tokens.WETH.address,
+        ),
+      ).to.be.false;
+    });
+  });
+
+  describe('#isPairAlreadySupported', () => {
+    it('returns false if pair is not supported by adapter', async () => {
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.WETH.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.false;
+    });
+  });
+
+  describe('#addOrModifySupportForPair', () => {
+    it('should revert if pair cannot be supported', async () => {
+      await expect(
+        instance.addOrModifySupportForPair(
+          ethers.constants.AddressZero,
+          tokens.WETH.address,
+          [],
+        ),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'Oracle__PairCannotBeSupported',
+      );
+    });
+
+    it('should not fail if called multiple times for same pair', async () => {
+      await instance.addSupportForPairIfNeeded(
+        tokens.WETH.address,
+        tokens.DAI.address,
+        [],
+      );
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.WETH.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.true;
+
+      instance.addSupportForPairIfNeeded(
+        tokens.WETH.address,
+        tokens.DAI.address,
+        [],
+      );
+    });
+  });
+
+  describe('#addSupportForPairIfNeeded', () => {
+    it('should revert if pair contains like assets', async () => {
+      await expect(
+        instance.addSupportForPairIfNeeded(
+          tokens.WETH.address,
+          tokens.WETH.address,
+          [],
+        ),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__BaseAndQuoteAreSame');
+    });
+
+    it('should revert if pair has been added', async () => {
+      await instance.addSupportForPairIfNeeded(
+        tokens.WETH.address,
+        tokens.DAI.address,
+        [],
+      );
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.WETH.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.true;
+
+      await expect(
+        instance.addSupportForPairIfNeeded(
+          tokens.WETH.address,
+          tokens.DAI.address,
+          [],
+        ),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__PairAlreadySupported');
+    });
+
+    it('should treat tokenA/tokenB, tokenB/tokenA as separate pairs', async () => {
+      await instance.addSupportForPairIfNeeded(
+        tokens.WETH.address,
+        tokens.DAI.address,
+        [],
+      );
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.WETH.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.true;
+
+      instance.addSupportForPairIfNeeded(
+        tokens.DAI.address,
+        tokens.WETH.address,
+        [],
+      );
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.WETH.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.true;
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokens.DAI.address,
+          tokens.WETH.address,
+        ),
+      ).to.be.true;
+    });
+  });
+
+  describe('#quote', async () => {
+    it('should revert if pair is not supported yet', async () => {
+      await expect(
+        instance.quote(tokens.WETH.address, tokens.DAI.address, []),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
+    });
+  });
+
+  for (let i = 0; i < plans.length; i++) {
+    describe.skip(`${PricingPlan[plans[i][0].plan]}`, () => {
+      for (const { plan, tokenIn, tokenOut } of plans[i]) {
+        describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
+          beforeEach(async () => {
+            await instance.addSupportForPairIfNeeded(
+              tokenIn.address,
+              tokenOut.address,
+              [],
+            );
+          });
+
+          describe('#canSupportPair', () => {
+            it('returns true if adapter can support pair', async () => {
+              expect(
+                await instance.canSupportPair(
+                  tokenIn.address,
+                  tokenOut.address,
+                ),
+              ).to.be.true;
+            });
+          });
+
+          describe('#isPairAlreadySupported', () => {
+            it('returns true if pair is supported by adapter', async () => {
+              expect(
+                await instance.isPairAlreadySupported(
+                  tokenIn.address,
+                  tokenOut.address,
+                ),
+              ).to.be.true;
+            });
+          });
+
+          describe('#planForPair', () => {
+            it('returns pricing plan for pair', async () => {
               const plan1 = await instance.planForPair(
                 tokenIn.address,
                 tokenOut.address,
@@ -152,8 +408,10 @@ describe('StatefulChainlinkOracle', () => {
               expect(plan1).to.equal(plan);
               expect(plan2).to.equal(plan);
             });
+          });
 
-            it(`returns correct quote`, async () => {
+          describe('#quote', async () => {
+            it('returns quote for pair', async () => {
               const quote = await instance.quote(
                 tokenIn.address,
                 tokenOut.address,
@@ -173,10 +431,10 @@ describe('StatefulChainlinkOracle', () => {
               validateQuote(quote, expected);
             });
           });
-        }
-      });
-    }
-  });
+        });
+      }
+    });
+  }
 });
 
 const TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher

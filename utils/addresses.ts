@@ -1,5 +1,9 @@
 export type Token = { address: string; decimals: number; symbol: string };
 
+export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
+export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
+
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
 export const tokens: { [symbol: string]: Token } =  {
