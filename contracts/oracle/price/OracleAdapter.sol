@@ -1,31 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.8.7 <0.9.0;
 
-import {AccessControl, IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {Multicall} from "@openzeppelin/contracts/utils/Multicall.sol";
+import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
+import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @title Base oracle adapter implementation, which suppoprts access control multi-call and ERC165
+/// @title Base oracle adapter implementation, which suppoprts multi-call and ERC165
 /// @notice Most implementations of `IOracleAdapter` will have an internal function that is called in both
 ///         `addSupportForPairIfNeeded` and `addOrModifySupportForPair`. This oracle is now making this explicit, and
 ///         implementing these two functions. They remain virtual so that they can be overriden if needed.
 /// @notice derived from https://github.com/Mean-Finance/oracles
-abstract contract OracleAdapter is AccessControl, IOracleAdapter, Multicall {
-    bytes32 public constant SUPER_ADMIN_ROLE = keccak256("SUPER_ADMIN_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    constructor(address _superAdmin, address[] memory _initialAdmins) {
-        // We are setting the super admin role as its own admin so we can transfer it
-        _setRoleAdmin(SUPER_ADMIN_ROLE, SUPER_ADMIN_ROLE);
-        _setRoleAdmin(ADMIN_ROLE, SUPER_ADMIN_ROLE);
-        _setupRole(SUPER_ADMIN_ROLE, _superAdmin);
-
-        for (uint256 i = 0; i < _initialAdmins.length; i++) {
-            _setupRole(ADMIN_ROLE, _initialAdmins[i]);
-        }
-    }
-
+abstract contract OracleAdapter is ERC165Base, IOracleAdapter, Multicall {
     /// @inheritdoc IOracleAdapter
     function isPairAlreadySupported(
         address tokenA,
@@ -56,15 +42,8 @@ abstract contract OracleAdapter is AccessControl, IOracleAdapter, Multicall {
     /// @inheritdoc IOracleAdapter
     function supportsInterface(
         bytes4 _interfaceId
-    )
-        public
-        view
-        virtual
-        override(AccessControl, IOracleAdapter)
-        returns (bool)
-    {
+    ) public view virtual override(ERC165Base, IOracleAdapter) returns (bool) {
         return
-            _interfaceId == type(IAccessControl).interfaceId ||
             _interfaceId == type(IOracleAdapter).interfaceId ||
             _interfaceId == type(Multicall).interfaceId ||
             super.supportsInterface(_interfaceId);

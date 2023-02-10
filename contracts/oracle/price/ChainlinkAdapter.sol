@@ -8,10 +8,8 @@ import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract ChainlinkAdapter is ChainlinkAdapterInternal, IChainlinkAdapter {
     constructor(
-        FeedRegistryInterface _registry,
-        address _superAdmin,
-        address[] memory _initialAdmins
-    ) ChainlinkAdapterInternal(_registry, _superAdmin, _initialAdmins) {}
+        FeedRegistryInterface _registry
+    ) ChainlinkAdapterInternal(_registry) {}
 
     /// @inheritdoc IOracleAdapter
     function canSupportPair(
@@ -85,7 +83,7 @@ contract ChainlinkAdapter is ChainlinkAdapterInternal, IChainlinkAdapter {
     function addMappings(
         address[] calldata _addresses,
         address[] calldata _mappings
-    ) external onlyRole(ADMIN_ROLE) {
+    ) external {
         if (_addresses.length != _mappings.length)
             revert Oracle__InvalidMappingsInput();
 

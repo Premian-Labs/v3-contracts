@@ -26,14 +26,8 @@ abstract contract ChainlinkAdapterInternal is
     mapping(address => address) internal _tokenMappings;
     mapping(bytes32 => PricingPlan) internal _planForPair;
 
-    constructor(
-        FeedRegistryInterface _registry,
-        address _superAdmin,
-        address[] memory _initialAdmins
-    ) OracleAdapter(_superAdmin, _initialAdmins) {
-        if (address(_registry) == address(0) || _superAdmin == address(0))
-            revert Oracle__ZeroAddress();
-
+    constructor(FeedRegistryInterface _registry) {
+        if (address(_registry) == address(0)) revert Oracle__ZeroAddress();
         FeedRegistry = _registry;
     }
 
