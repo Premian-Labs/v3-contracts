@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.5.0;
+
+pragma solidity ^0.8.0;
 
 /// @title The interface for an oracle that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes

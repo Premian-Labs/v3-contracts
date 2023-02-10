@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.8.7 <0.9.0;
+
+pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";

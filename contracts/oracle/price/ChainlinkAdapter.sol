@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity >=0.8.7 <0.9.0;
+
+pragma solidity ^0.8.0;
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
