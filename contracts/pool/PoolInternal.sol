@@ -135,8 +135,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             pricing.marketPrice = nextPrice;
 
-            // ToDo : Deal with rounding error
-            if (maxSize >= size - (ONE / 10)) {
+            if (maxSize >= size) {
                 size = 0;
             } else {
                 // Cross tick
