@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
@@ -15,6 +16,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SD59x18 for int256;
+    using SafeCast for uint256;
 
     int256 internal constant ONE = 1e18;
     int256 internal constant TWO = 2e18;
@@ -217,9 +219,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /// @return The annualized implied volatility, where 1 is defined as 100%
     function _getVolatility(
         address token,
-        int256 spot,
-        int256 strike,
-        int256 timeToMaturity
+        uint256 spot,
+        uint256 strike,
+        uint256 timeToMaturity
     ) internal view returns (int256) {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
@@ -238,15 +240,17 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 n = params.tau.length;
 
         // Log Moneyness
-        int256 k = strike.div(spot).ln();
+        int256 k = strike.toInt256().div(spot.toInt256()).ln();
 
         // Compute total implied variance
         SliceInfo memory info;
         int256 lam;
 
+        int256 _timeToMaturity = timeToMaturity.toInt256();
+
         // Short-Term Extrapolation
-        if (timeToMaturity < params.tau[0]) {
-            lam = timeToMaturity.div(params.tau[0]);
+        if (_timeToMaturity < params.tau[0]) {
+            lam = _timeToMaturity.div(params.tau[0]);
 
             info = SliceInfo({
                 theta: lam.mul(params.theta[0]),
@@ -255,8 +259,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             });
         }
         // Long-term extrapolation
-        else if (timeToMaturity >= params.tau[n - 1]) {
-            int256 u = timeToMaturity - params.tau[n - 1];
+        else if (_timeToMaturity >= params.tau[n - 1]) {
+            int256 u = _timeToMaturity - params.tau[n - 1];
             u = u.mul(params.theta[n - 1] - params.theta[n - 2]);
             u = u.div(params.tau[n - 1] - params.tau[n - 2]);
 
@@ -268,9 +272,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
         // Interpolation between tau[0] to tau[n - 1]
         else {
-            uint256 i = _findInterval(params.tau, timeToMaturity);
+            uint256 i = _findInterval(params.tau, _timeToMaturity);
 
-            lam = timeToMaturity - params.tau[i];
+            lam = _timeToMaturity - params.tau[i];
             lam = lam.div(params.tau[i + 1] - params.tau[i]);
 
             info = SliceInfo({
@@ -291,7 +295,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         int256 w = info.theta.div(TWO);
         w = w.mul(ONE + info.rho.mul(phi).mul(k) + term.sqrt());
 
-        return w.div(timeToMaturity).sqrt();
+        return w.div(_timeToMaturity).sqrt();
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -301,12 +305,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 strike,
         uint256 timeToMaturity
     ) external view returns (int256) {
-        return
-            _getVolatility(
-                token,
-                int256(spot),
-                int256(strike),
-                int256(timeToMaturity)
-            );
+        return _getVolatility(token, spot, strike, timeToMaturity);
     }
 }

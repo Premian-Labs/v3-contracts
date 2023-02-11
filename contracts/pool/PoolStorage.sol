@@ -53,6 +53,8 @@ library PoolStorage {
         uint256 protocolFees;
         uint256 strike;
         uint256 liquidityRate;
+        uint256 longRate;
+        uint256 shortRate;
         // Current tick normalized price
         uint256 currentTick;
         // Spot price after maturity // ToDo : Save the spot price

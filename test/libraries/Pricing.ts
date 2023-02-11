@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { PricingMock, PricingMock__factory } from '../../typechain';
 import { parseEther } from 'ethers/lib/utils';
-import { average } from '../../utils/math';
+import { average } from '../../utils/sdk/math';
 
 describe('Pricing', () => {
   let deployer: SignerWithAddress;

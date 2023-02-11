@@ -1,6 +1,6 @@
 import { signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
-import { IPool__factory } from '../typechain';
+import { IPool__factory } from '../../typechain';
 
 interface TradeQuoteBase {
   provider: string;
@@ -48,7 +48,7 @@ export async function signQuote(
   // Query current nonce for taker from contract, if nonce is not specified
   if (quote.nonce === undefined) {
     quote.nonce = (
-      await IPool__factory.connect(poolAddress, w3Provider).getQuoteNonce(
+      await IPool__factory.connect(poolAddress, w3Provider).getTradeQuoteNonce(
         quote.taker,
       )
     ).toNumber();
