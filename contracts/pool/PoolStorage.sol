@@ -31,8 +31,6 @@ library PoolStorage {
         keccak256("premia.contracts.storage.Pool");
 
     struct Layout {
-        // Pool creation factory
-        address factory;
         // ERC20 token addresses
         address base;
         address quote;

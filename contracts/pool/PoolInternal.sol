@@ -40,6 +40,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using ECDSA for bytes32;
     using UD60x18 for uint256;
 
+    address internal immutable FACTORY;
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
@@ -56,7 +57,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 nonce,uint256 deadline)"
         );
 
-    constructor(address exchangeHelper, address wrappedNativeToken) {
+    constructor(
+        address factory,
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) {
+        FACTORY = factory;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
     }
@@ -1595,7 +1601,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         l.hasRemoved = true;
 
-        IPoolFactory(l.factory).removePool(
+        IPoolFactory(FACTORY).removePool(
             IPoolFactory.PoolKey(
                 l.base,
                 l.quote,
