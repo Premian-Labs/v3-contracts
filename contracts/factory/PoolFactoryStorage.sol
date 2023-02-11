@@ -12,13 +12,13 @@ library PoolFactoryStorage {
         // Pool Key -> Address
         mapping(bytes32 => address) pools;
         // Discount lattice for strike
-        mapping(bool => mapping(address => mapping(address => mapping(address => mapping(address => mapping(uint256 => uint256)))))) strikeCount;
+        mapping(bytes32 => uint256) strikeCount;
         // Discount lattice for maturity
-        mapping(bool => mapping(address => mapping(address => mapping(address => mapping(address => mapping(uint64 => uint256)))))) maturityCount;
+        mapping(bytes32 => uint256) maturityCount;
 
         // Discount % per neighboring strike/maturity, 1e18 base
-        uint256 discountBps;
-        // Controller of discountBps
+        uint256 discountPerPool;
+        // Controller of discountPerPool
         address discountAdmin;
     }
 
@@ -46,6 +46,48 @@ library PoolFactoryStorage {
                     baseOracle,
                     quoteOracle,
                     strike,
+                    maturity,
+                    isCallPool
+                )
+            );
+    }
+
+    function strikeKey(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint256 strike,
+        bool isCallPool
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    base,
+                    quote,
+                    baseOracle,
+                    quoteOracle,
+                    strike,
+                    isCallPool
+                )
+            );
+    }
+
+    function maturityKey(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint64 maturity,
+        bool isCallPool
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    base,
+                    quote,
+                    baseOracle,
+                    quoteOracle,
                     maturity,
                     isCallPool
                 )

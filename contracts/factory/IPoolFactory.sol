@@ -19,7 +19,7 @@ interface IPoolFactory {
     error PoolFactory__PoolAlreadyDeployed();
     error PoolFactory__PoolNotExpired();
 
-    event SetDiscountBps(uint256 indexed discountBps);
+    event SetDiscountBps(uint256 indexed discountPerPool);
     event SetDiscountAdmin(address indexed discountAdmin);
     event PoolDeployed(
         address indexed base,
@@ -69,9 +69,9 @@ interface IPoolFactory {
         bool isCallPool
      ) external view returns (uint256);
     
-    /// @notice Set the discountBps for new pools - only callable by discountAdmin
-    /// @param discountBps The new discount percentage denominated in 1e18
-    function setDiscountBps(uint256 discountBps) external;
+    /// @notice Set the discountPerPool for new pools - only callable by discountAdmin
+    /// @param discountPerPool The new discount percentage denominated in 1e18
+    function setDiscountBps(uint256 discountPerPool) external;
     
     /// @notice Set the new discountAdmin - only callable by discountAdmin
     /// @param discountAdmin The new discount admin address
