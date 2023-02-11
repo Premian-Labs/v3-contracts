@@ -16,12 +16,12 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import {
   getValidMaturity,
+  now,
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
 import { signQuote, TradeQuote } from '../../utils/quote';
 import { bnToNumber } from '../../utils/math';
-import { now } from '../../utils/time';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -73,16 +73,15 @@ describe('Pool', () => {
     maturity = await getValidMaturity(10, 'months');
 
     for (isCall of [true, false]) {
-      const tx = await p.poolFactory.deployPool(
-        base.address,
-        quote.address,
-
-        baseOracle.address,
-        quoteOracle.address,
-        strike,
-        maturity,
-        isCall,
-      );
+      const tx = await p.poolFactory.deployPool({
+        base: base.address,
+        quote: quote.address,
+        baseOracle: baseOracle.address,
+        quoteOracle: quoteOracle.address,
+        strike: strike,
+        maturity: maturity,
+        isCallPool: isCall,
+      });
 
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;
