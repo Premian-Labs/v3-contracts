@@ -14,6 +14,7 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
+    using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -22,7 +23,11 @@ contract PoolFactory is IPoolFactory {
     uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
 
-    constructor(address diamond, uint256 discountPerPool, address discountAdmin) {
+    constructor(
+        address diamond,
+        uint256 discountPerPool,
+        address discountAdmin
+    ) {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
 
         DIAMOND = diamond;
@@ -32,25 +37,8 @@ contract PoolFactory is IPoolFactory {
     }
 
     /// @inheritdoc IPoolFactory
-    function isPoolDeployed(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (bool) {
-        bytes32 poolKey = PoolFactoryStorage.poolKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
-        return _isPoolDeployed(poolKey);
+    function isPoolDeployed(PoolKey memory k) external view returns (bool) {
+        return _isPoolDeployed(k.poolKey());
     }
 
     function _isPoolDeployed(bytes32 poolKey) internal view returns (bool) {
@@ -77,41 +65,14 @@ contract PoolFactory is IPoolFactory {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) public view returns (uint256) {
+    function initializationFee(PoolKey memory k) public view returns (uint256) {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
-        bytes32 strikeKey = PoolFactoryStorage.strikeKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            isCallPool
-        );
-        bytes32 maturityKey = PoolFactoryStorage.maturityKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            maturity,
-            isCallPool
-        );
 
-        uint256 discountFactor = self.maturityCount[maturityKey] + self.strikeCount[strikeKey];
+        uint256 discountFactor = self.maturityCount[k.maturityKey()] +
+            self.strikeCount[k.strikeKey()];
         uint256 discount = (ONE - self.discountPerPool).pow(discountFactor);
-        uint256 spot = getSpotPrice(baseOracle, quoteOracle);
-        uint256 fee = OptionMath.initializationFee(
-            spot,
-            strike,
-            maturity
-        );
+        uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
+        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
 
         return fee.mul(discount);
     }
@@ -135,134 +96,69 @@ contract PoolFactory is IPoolFactory {
         if (msg.sender != self.discountAdmin)
             revert PoolFactory__NotAuthorized();
 
-        self.discountAdmin = discountAdmin;    
+        self.discountAdmin = discountAdmin;
 
         emit SetDiscountAdmin(discountAdmin);
     }
 
     /// @inheritdoc IPoolFactory
     function deployPool(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
+        PoolKey memory k
     ) external returns (address poolAddress) {
-        if (base == quote || baseOracle == quoteOracle)
+        if (k.base == k.quote || k.baseOracle == k.quoteOracle)
             revert PoolFactory__IdenticalAddresses();
 
         if (
-            base == address(0) ||
-            baseOracle == address(0) ||
-            quote == address(0) ||
-            quoteOracle == address(0)
+            k.base == address(0) ||
+            k.baseOracle == address(0) ||
+            k.quote == address(0) ||
+            k.quoteOracle == address(0)
         ) revert PoolFactory__ZeroAddress();
 
-        _ensureOptionStrikeIsValid(strike, baseOracle, quoteOracle);
-        _ensureOptionMaturityIsValid(maturity);
+        _ensureOptionStrikeIsValid(k.strike, k.baseOracle, k.quoteOracle);
+        _ensureOptionMaturityIsValid(k.maturity);
 
-        bytes32 poolKey = PoolFactoryStorage.poolKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
-        bytes32 strikeKey = PoolFactoryStorage.strikeKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            isCallPool
-        );
-        bytes32 maturityKey = PoolFactoryStorage.maturityKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            maturity,
-            isCallPool
-        );
+        bytes32 poolKey = k.poolKey();
 
         if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
 
         poolAddress = address(
             new PoolProxy(
                 DIAMOND,
-                base,
-                quote,
-                baseOracle,
-                quoteOracle,
-                strike,
-                maturity,
-                isCallPool
+                k.base,
+                k.quote,
+                k.baseOracle,
+                k.quoteOracle,
+                k.strike,
+                k.maturity,
+                k.isCallPool
             )
         );
 
         PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
-        PoolFactoryStorage.layout().strikeCount[strikeKey] += 1;
-        PoolFactoryStorage.layout().maturityCount[maturityKey] += 1;
+        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] += 1;
+        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] += 1;
 
         emit PoolDeployed(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
+            k.base,
+            k.quote,
+            k.baseOracle,
+            k.quoteOracle,
+            k.strike,
+            k.maturity,
             poolAddress
         );
     }
 
     /// @inheritdoc IPoolFactory
-    function removePool(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external {
-        if (maturity < block.timestamp)
-            revert PoolFactory__PoolNotExpired();
+    function removePool(PoolKey memory k) external {
+        if (k.maturity < block.timestamp) revert PoolFactory__PoolNotExpired();
 
-        bytes32 poolKey = PoolFactoryStorage.poolKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
-        bytes32 strikeKey = PoolFactoryStorage.strikeKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            isCallPool
-        );
-        bytes32 maturityKey = PoolFactoryStorage.maturityKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            maturity,
-            isCallPool
-        );
-
-        if (PoolFactoryStorage.layout().pools[poolKey] != msg.sender)
+        if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
             revert PoolFactory__NotAuthorized();
 
-        PoolFactoryStorage.layout().strikeCount[strikeKey] -= 1;
-        PoolFactoryStorage.layout().maturityCount[maturityKey] -= 1;
+        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
+        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
