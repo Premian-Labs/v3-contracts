@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {IPoolFactory} from "./IPoolFactory.sol";
+
 library PoolFactoryStorage {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
@@ -15,7 +17,6 @@ library PoolFactoryStorage {
         mapping(bytes32 => uint256) strikeCount;
         // Discount lattice for maturity
         mapping(bytes32 => uint256) maturityCount;
-
         // Discount % per neighboring strike/maturity, 1e18 base
         uint256 discountPerPool;
         // Controller of discountPerPool
@@ -30,66 +31,50 @@ library PoolFactoryStorage {
     }
 
     function poolKey(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
+        IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    base,
-                    quote,
-                    baseOracle,
-                    quoteOracle,
-                    strike,
-                    maturity,
-                    isCallPool
+                    k.base,
+                    k.quote,
+                    k.baseOracle,
+                    k.quoteOracle,
+                    k.strike,
+                    k.maturity,
+                    k.isCallPool
                 )
             );
     }
 
     function strikeKey(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        bool isCallPool
+        IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    base,
-                    quote,
-                    baseOracle,
-                    quoteOracle,
-                    strike,
-                    isCallPool
+                    k.base,
+                    k.quote,
+                    k.baseOracle,
+                    k.quoteOracle,
+                    k.strike,
+                    k.isCallPool
                 )
             );
     }
 
     function maturityKey(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint64 maturity,
-        bool isCallPool
+        IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
-                    base,
-                    quote,
-                    baseOracle,
-                    quoteOracle,
-                    maturity,
-                    isCallPool
+                    k.base,
+                    k.quote,
+                    k.baseOracle,
+                    k.quoteOracle,
+                    k.maturity,
+                    k.isCallPool
                 )
             );
     }

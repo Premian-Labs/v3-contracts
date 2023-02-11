@@ -31,86 +31,51 @@ interface IPoolFactory {
         address poolAddress
     );
 
+    struct PoolKey {
+        // Address of base token
+        address base;
+        // Address of quote token
+        address quote;
+        // Address of base token price feed
+        address baseOracle;
+        // Address of quote token price feed
+        address quoteOracle;
+        // The strike of the option
+        uint256 strike;
+        // The maturity timestamp of the option
+        uint64 maturity;
+        // Whether the pool is for call or put options
+        bool isCallPool;
+    }
+
     /// @notice Returns whether a pool has been deployed with those parameters or not
-    /// @param base Address of base token
-    /// @param quote Address of quote token
-    /// @param baseOracle Address of base token price feed
-    /// @param quoteOracle Address of quote token price feed
-    /// @param strike The strike of the option
-    /// @param maturity The maturity timestamp of the option
-    /// @param isCallPool Whether the pool is for call or put options
+    /// @param k The pool key
     /// @return Whether a pool has already been deployed with those parameters or not
-    function isPoolDeployed(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (bool);
+    function isPoolDeployed(PoolKey memory k) external view returns (bool);
 
     /// @notice Returns the fee required to initialize a pool
-    /// @param base Address of base token
-    /// @param quote Address of quote token
-    /// @param baseOracle Address of base token price feed
-    /// @param quoteOracle Address of quote token price feed
-    /// @param strike The strike of the option
-    /// @param maturity The maturity timestamp of the option
-    /// @param isCallPool Whether the pool is for call or put options
+    /// @param k The pool key
     /// @return The fee required to initialize this pool
     function initializationFee(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-     ) external view returns (uint256);
-    
+        PoolKey memory k
+    ) external view returns (uint256);
+
     /// @notice Set the discountPerPool for new pools - only callable by discountAdmin
     /// @param discountPerPool The new discount percentage denominated in 1e18
     function setDiscountBps(uint256 discountPerPool) external;
-    
+
     /// @notice Set the new discountAdmin - only callable by discountAdmin
     /// @param discountAdmin The new discount admin address
     function setDiscountAdmin(address discountAdmin) external;
-    
+
     /// @notice Deploy a new option pool
-    /// @param base Address of base token
-    /// @param quote Address of quote token
-    /// @param baseOracle Address of base token price feed
-    /// @param quoteOracle Address of quote token price feed
-    /// @param strike The strike of the option
-    /// @param maturity The maturity timestamp of the option
-    /// @param isCallPool Whether the pool is for call or put options
+    /// @param k The pool key
     /// @return poolAddress The address of the deployed pool
     function deployPool(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
+        PoolKey memory k
     ) external returns (address poolAddress);
-    
+
     /// @notice Removes an existing pool, can only be called by the pool after maturity
-    /// @param base Address of base token
-    /// @param quote Address of quote token
-    /// @param baseOracle Address of base token price feed
-    /// @param quoteOracle Address of quote token price feed
-    /// @param strike The strike of the option
-    /// @param maturity The maturity timestamp of the option
-    /// @param isCallPool Whether the pool is for call or put options
-    function removePool(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external;
+    /// @param k The pool key
+    function removePool(PoolKey memory k) external;
 }

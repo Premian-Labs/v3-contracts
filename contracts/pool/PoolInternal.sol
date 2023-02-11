@@ -1494,13 +1494,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.hasRemoved = true;
 
         IPoolFactory(l.factory).removePool(
-            l.base,
-            l.quote,
-            l.baseOracle,
-            l.quoteOracle,
-            l.strike,
-            l.maturity,
-            l.isCallPool
+            IPoolFactory.PoolKey(
+                l.base,
+                l.quote,
+                l.baseOracle,
+                l.quoteOracle,
+                l.strike,
+                l.maturity,
+                l.isCallPool
+            )
         );
     }
 
