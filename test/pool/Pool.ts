@@ -77,7 +77,7 @@ describe('Pool', () => {
       deployer,
       base.address,
       baseOracle.address,
-      BigNumber.from('1' + '0'.repeat(17)), // 10%
+      parseEther('0.1'), // 10%
       true,
       true,
     );
