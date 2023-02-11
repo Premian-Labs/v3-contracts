@@ -17,8 +17,8 @@ library PoolFactoryStorage {
         mapping(bytes32 => uint256) strikeCount;
         // Discount lattice for maturity
         mapping(bytes32 => uint256) maturityCount;
-        // Chainlink price oracle for the ETH/USD pair
-        address ethUsdOracle;
+        // Chainlink price oracle for the Native/USD (ETH/USD) pair
+        address nativeUsdOracle;
         // Discount % per neighboring strike/maturity, 1e18 base
         uint256 discountPerPool;
         // Initialization fee receiver

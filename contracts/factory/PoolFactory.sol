@@ -24,11 +24,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
 
-    constructor(address diamond, address ethUsdOracle, uint256 discountPerPool) {
+    constructor(address diamond, address nativeUsdOracle, uint256 discountPerPool) {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
 
         DIAMOND = diamond;
-        self.ethUsdOracle = ethUsdOracle;
+        self.nativeUsdOracle = nativeUsdOracle;
         self.discountPerPool = discountPerPool;
     }
 
@@ -47,7 +47,6 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     ) internal view returns (uint256 price) {
         uint256 quotePrice = getSpotPrice(quoteOracle);
         uint256 basePrice = getSpotPrice(baseOracle);
-
         return basePrice.div(quotePrice);
     }
 
@@ -57,7 +56,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         int256 price = AggregatorInterface(oracle).latestAnswer();
         if (price < 0) revert PoolFactory__NegativeSpotPrice();
 
-        return price.toUint256();
+        // TODO Replace with adapter, decimals should not be hard-coded
+
+        return price.toUint256() * 10**10;
     }
 
     // @inheritdoc IPoolFactory
@@ -69,16 +70,16 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         uint256 discount = (ONE - l.discountPerPool).pow(discountFactor);
         uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 ethUsdPrice = getSpotPrice(l.ethUsdOracle) * 10**18;
+        uint256 nativeUsdPrice = getSpotPrice(l.nativeUsdOracle);
 
-        return fee.mul(discount).div(ethUsdPrice);
+        return fee.mul(discount).div(nativeUsdPrice);
     }
 
     /// @inheritdoc IPoolFactory
-    function setEthUsdOracle(address ethUsdOracle) external onlyOwner {
+    function setNativeUsdOracle(address nativeUsdOracle) external onlyOwner {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-        l.ethUsdOracle = ethUsdOracle;
-        emit SetEthUsdOracle(ethUsdOracle);
+        l.nativeUsdOracle = nativeUsdOracle;
+        emit SetNativeUsdOracle(nativeUsdOracle);
     }
     
     /// @inheritdoc IPoolFactory
@@ -149,7 +150,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function removePool(PoolKey memory k) external {
+    function removeDiscount(PoolKey memory k) external {
         if (k.maturity < block.timestamp) revert PoolFactory__PoolNotExpired();
 
         if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
@@ -167,9 +168,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
-        uint256 basePrice = PoolStorage.getSpotPrice(baseOracle);
-        uint256 quotePrice = PoolStorage.getSpotPrice(quoteOracle);
-        uint256 spot = basePrice.div(quotePrice);
+        uint256 spot = getSpotPrice(baseOracle, quoteOracle);
         uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != 0)

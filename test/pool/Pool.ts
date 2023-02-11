@@ -8,7 +8,7 @@ import {
   IPoolMock__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
@@ -57,14 +57,12 @@ describe('Pool', () => {
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    p = await PoolUtil.deploy(deployer, base.address, true, true);
-
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(100000000000);
+    await baseOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
     await baseOracle.mock.decimals.returns(8);
 
     quoteOracle = await deployMockContract(deployer as any, [
@@ -72,8 +70,17 @@ describe('Pool', () => {
       'function decimals () external view returns (uint8)',
     ]);
 
-    await quoteOracle.mock.latestAnswer.returns(100000000);
+    await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
     await quoteOracle.mock.decimals.returns(8);
+
+    p = await PoolUtil.deploy(
+      deployer,
+      base.address,
+      baseOracle.address,
+      BigNumber.from('1' + '0'.repeat(17)), // 10%
+      true,
+      true,
+    );
 
     maturity = await getValidMaturity(10, 'months');
 

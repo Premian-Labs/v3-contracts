@@ -19,7 +19,7 @@ interface IPoolFactory {
     error PoolFactory__PoolAlreadyDeployed();
     error PoolFactory__PoolNotExpired();
 
-    event SetEthUsdOracle(address indexed ethUsdOracle);
+    event SetNativeUsdOracle(address indexed nativeUsdOracle);
     event SetDiscountPerPool(uint256 indexed discountPerPool);
     event SetFeeReceiver(address indexed feeReceiver);
     event PoolDeployed(
@@ -62,8 +62,8 @@ interface IPoolFactory {
     ) external view returns (uint256);
 
     /// @notice Set the ETH/USD price oracle address - only callable by owner
-    /// @param ethUsdOracle The new ETH/USD price oracle address
-    function setEthUsdOracle(address ethUsdOracle) external;
+    /// @param nativeUsdOracle The new ETH/USD price oracle address
+    function setNativeUsdOracle(address nativeUsdOracle) external;
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage denominated in 1e18
@@ -80,7 +80,8 @@ interface IPoolFactory {
         PoolKey memory k
     ) external payable returns (address poolAddress);
 
-    /// @notice Removes an existing pool, can only be called by the pool after maturity
+    /// @notice Removes the discount caused by an existing pool,
+    ///         can only be called by the pool after maturity
     /// @param k The pool key
-    function removePool(PoolKey memory k) external;
+    function removeDiscount(PoolKey memory k) external;
 }

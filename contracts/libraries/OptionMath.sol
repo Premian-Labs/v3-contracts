@@ -89,7 +89,7 @@ library OptionMath {
     /// @return result SD59x18 output of the relu function
     function relu(int256 x) internal pure returns (uint256) {
         if (x >= 0) {
-            return uint256(x);
+            return x.toUint256();
         }
         return 0;
     }
@@ -140,9 +140,9 @@ library OptionMath {
 
         int256 discountFactor;
         if (riskFreeRate > 0) {
-            discountFactor = riskFreeRate.mul(timeToMaturity).exp().toInt256();
+            discountFactor = riskFreeRate.mul(timeToMaturity).toInt256().exp();
         } else {
-            discountFactor = int256(1);
+            discountFactor = ONE_I;
         }
          
         if (volAnnualized == 0) {
@@ -198,14 +198,12 @@ library OptionMath {
     function calculateStrikeInterval(
         uint256 spot
     ) internal pure returns (uint256) {
-        uint256 o = spot.log10().floor();
-        uint256 x = spot.mul(
-            TEN_I.pow(
-                o.toInt256().mul(-ONE_I) - ONE.toInt256()
-            ).toUint256()
+        int256 o = spot.toInt256().log10().floor();
+        int256 x = spot.toInt256().mul(
+            TEN_I.pow(o.mul(-ONE_I) - ONE_I)
         );
-        uint256 f = TEN.pow(o - ONE);
-        uint256 y = x < ONE_HALF ? ONE.mul(f) : FIVE.mul(f);
+        uint256 f = TEN_I.pow(o - ONE_I).toUint256();
+        uint256 y = x.toUint256() < ONE_HALF ? ONE.mul(f) : FIVE.mul(f);
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 

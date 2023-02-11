@@ -20,6 +20,7 @@ import {
 import moment from 'moment-timezone';
 import { beforeEach } from 'mocha';
 import { PoolKey } from '../../utils/sdk/types';
+import { BigNumber } from 'ethers';
 
 moment.tz.setDefault('UTC');
 
@@ -45,8 +46,6 @@ describe('PoolFactory', () => {
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    p = await PoolUtil.deploy(deployer, base.address, true, true);
-
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
@@ -63,6 +62,15 @@ describe('PoolFactory', () => {
     await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
     await quoteOracle.mock.decimals.returns(8);
 
+    p = await PoolUtil.deploy(
+      deployer,
+      base.address,
+      baseOracle.address,
+      BigNumber.from('1' + '0'.repeat(17)), // 10%
+      true,
+      true,
+    );
+
     maturity = await getValidMaturity(10, 'months');
     blockTimestamp = await now();
   });
@@ -74,7 +82,7 @@ describe('PoolFactory', () => {
       baseOracle: baseOracle.address,
       quoteOracle: quoteOracle.address,
       strike,
-      maturity,
+      maturity: BigNumber.from(maturity),
       isCallPool: isCall,
     };
   });
