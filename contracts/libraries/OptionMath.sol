@@ -167,47 +167,6 @@ library OptionMath {
 
         return (a - b).mul(sign).toUint256();
     }
-    
-    /// @notice Calculates the Black-Scholes vega (greek) of an option
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @param timeToMaturity 60x18 fixed point representation of duration of option contract (in years)
-    /// @param volAnnualized 60x18 fixed point representation of annualized volatility
-    /// @param riskFreeRate 60x18 fixed point representation the risk-free frate
-    /// @param isCall whether to price "call" or "put" option
-    /// @return vega 60x18 fixed point representation of Black-Scholes vega
-    function vega(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate,
-        bool isCall
-    ) internal pure returns (uint256) {
-        (int256 d1, int256 d2) = d1d2(
-            spot,
-            strike,
-            timeToMaturity,
-            volAnnualized,
-            riskFreeRate
-        );
-
-        if (isCall) {
-            return spot.toInt256().mul(
-                normalPdf(d1)
-            ).mul(
-                timeToMaturity.toInt256().pow(ONE_HALF_I)
-            ).toUint256();
-        }
-
-        return strike.toInt256().mul(
-            -riskFreeRate.toInt256().mul(timeToMaturity.toInt256())
-        ).mul(
-            normalPdf(d2)
-        ).mul(
-            timeToMaturity.toInt256().pow(ONE_HALF_I)
-        ).toUint256();
-    }
 
     /// @notice Returns true if the maturity day is Friday
     /// @param maturity The maturity timestamp of the option
@@ -287,47 +246,5 @@ library OptionMath {
             .mul(kBase + scaledT)
             .mul(scaledT)
             .mul(FEE_SCALAR);
-    }
-
-    /// @notice Newton-Raphson method for estimating IV from initial estimate and BS price
-    /// TODO: See if this is used
-    function estimateImpliedVolatility(
-        uint256 optionPrice,
-        uint256 spot,
-        uint256 strike,
-        uint64 maturity,
-        uint256 riskFreeRate,
-        bool isCall,
-        uint256 ivEstimate,
-        uint256 errorBound
-    ) internal view returns (uint256) {
-        uint256 timeToMaturity = calculateTimeToMaturity(maturity);
-        while (true) {
-            uint256 bsEstimate = blackScholesPrice(
-                spot,
-                strike,
-                timeToMaturity,
-                ivEstimate,
-                0,
-                isCall
-            );
-            uint256 _vega = vega(
-                spot,
-                strike,
-                timeToMaturity,
-                ivEstimate,
-                riskFreeRate,
-                isCall
-            );
-            uint256 diff = optionPrice > bsEstimate
-                ? optionPrice - bsEstimate
-                : bsEstimate - optionPrice;
-
-            if (diff < errorBound) break;
-
-            ivEstimate = ivEstimate + diff.div(_vega);
-        }
-
-        return ivEstimate;
     }
 }

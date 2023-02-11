@@ -74,26 +74,4 @@ contract OptionMathMock {
     ) external view returns (uint256) {
         return OptionMath.initializationFee(spot, strike, maturity);
     }
-
-    function estimateImpliedVolatility(
-        uint256 optionPrice,
-        uint256 spot,
-        uint256 strike,
-        uint64 maturity,
-        uint256 riskFreeRate,
-        bool isCall,
-        uint256 estimateIv,
-        uint256 errorBound
-    ) internal view returns (uint256) {
-        return OptionMath.estimateImpliedVolatility(
-            optionPrice,
-            spot,
-            strike,
-            maturity,
-            riskFreeRate,
-            isCall,
-            estimateIv,
-            errorBound
-        );
-    }
 }
