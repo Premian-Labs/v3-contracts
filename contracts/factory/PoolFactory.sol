@@ -24,10 +24,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
 
-    constructor(address diamond, uint256 discountPerPool) {
+    constructor(address diamond, address ethUsdOracle, uint256 discountPerPool) {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
 
         DIAMOND = diamond;
+        self.ethUsdOracle = ethUsdOracle;
         self.discountPerPool = discountPerPool;
     }
 
@@ -61,29 +62,43 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     // @inheritdoc IPoolFactory
     function initializationFee(PoolKey memory k) public view returns (uint256) {
-        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
-        uint256 discountFactor = self.maturityCount[k.maturityKey()] +
-            self.strikeCount[k.strikeKey()];
-        uint256 discount = (ONE - self.discountPerPool).pow(discountFactor);
+        uint256 discountFactor = l.maturityCount[k.maturityKey()] +
+            l.strikeCount[k.strikeKey()];
+        uint256 discount = (ONE - l.discountPerPool).pow(discountFactor);
         uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+        uint256 ethUsdPrice = getSpotPrice(l.ethUsdOracle) * 10**18;
 
-        return fee.mul(discount);
+        return fee.mul(discount).div(ethUsdPrice);
     }
 
     /// @inheritdoc IPoolFactory
+    function setEthUsdOracle(address ethUsdOracle) external onlyOwner {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.ethUsdOracle = ethUsdOracle;
+        emit SetEthUsdOracle(ethUsdOracle);
+    }
+    
+    /// @inheritdoc IPoolFactory
     function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
-        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
-
-        self.discountPerPool = discountPerPool;
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.discountPerPool = discountPerPool;
         emit SetDiscountPerPool(discountPerPool);
+    }
+
+    /// @inheritdoc IPoolFactory
+    function setFeeReceiver(address feeReceiver) external onlyOwner {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.feeReceiver = feeReceiver;
+        emit SetFeeReceiver(feeReceiver);
     }
 
     /// @inheritdoc IPoolFactory
     function deployPool(
         PoolKey memory k
-    ) external returns (address poolAddress) {
+    ) external payable returns (address poolAddress) {
         if (k.base == k.quote || k.baseOracle == k.quoteOracle)
             revert PoolFactory__IdenticalAddresses();
 
@@ -98,8 +113,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         _ensureOptionMaturityIsValid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
+        uint256 fee = initializationFee(k);
 
         if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
+
+        payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
+        payable(msg.sender).transfer(msg.value - fee);
 
         poolAddress = address(
             new PoolProxy(

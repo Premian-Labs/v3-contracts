@@ -17,10 +17,12 @@ library PoolFactoryStorage {
         mapping(bytes32 => uint256) strikeCount;
         // Discount lattice for maturity
         mapping(bytes32 => uint256) maturityCount;
+        // Chainlink price oracle for the ETH/USD pair
+        address ethUsdOracle;
         // Discount % per neighboring strike/maturity, 1e18 base
         uint256 discountPerPool;
-        // Controller of discountPerPool
-        address discountAdmin;
+        // Initialization fee receiver
+        address feeReceiver;
     }
 
     function layout() internal pure returns (Layout storage l) {
