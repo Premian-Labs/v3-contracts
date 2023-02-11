@@ -31,6 +31,8 @@ library PoolStorage {
         keccak256("premia.contracts.storage.Pool");
 
     struct Layout {
+        // Pool creation factory
+        address factory;
         // ERC20 token addresses
         address base;
         address quote;
@@ -59,6 +61,8 @@ library PoolStorage {
         mapping(bytes32 => Position.Data) positions;
         // Gets incremented everytime `fillQuote` is called successfully
         mapping(address => uint256) tradeQuoteNonce;
+        // Set to true after maturity, to handle factory initialization discount
+        bool hasRemoved;
     }
 
     function layout() internal pure returns (Layout storage l) {

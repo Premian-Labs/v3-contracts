@@ -38,6 +38,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
 
+            l.factory = msg.sender;
             l.base = base;
             l.quote = quote;
 
