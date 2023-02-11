@@ -18,21 +18,10 @@ import {
 } from '../../utils/time';
 
 import moment from 'moment-timezone';
-import { BigNumberish } from 'ethers';
 import { beforeEach } from 'mocha';
+import { PoolKey } from '../../utils/sdk/types';
 
 moment.tz.setDefault('UTC');
-
-// ToDo : Move to SDK folder after merging master in this branch
-interface PoolKey {
-  base: string;
-  quote: string;
-  baseOracle: string;
-  quoteOracle: string;
-  strike: BigNumberish;
-  maturity: BigNumberish;
-  isCallPool: boolean;
-}
 
 describe('PoolFactory', () => {
   let deployer: SignerWithAddress;
