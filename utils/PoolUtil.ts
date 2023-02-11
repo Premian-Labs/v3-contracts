@@ -12,6 +12,7 @@ import {
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
 import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -31,7 +32,7 @@ export class PoolUtil {
     deployer: SignerWithAddress,
     wrappedNativeToken: string,
     nativeUsdOracle: string,
-    discountPerPool: BigNumber = BigNumber.from('1' + '0'.repeat(17)), // 10%
+    discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     isDevMode = false,
   ) {
