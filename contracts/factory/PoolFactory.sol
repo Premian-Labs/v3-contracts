@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
@@ -12,7 +13,7 @@ import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
-contract PoolFactory is IPoolFactory {
+contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
@@ -23,17 +24,11 @@ contract PoolFactory is IPoolFactory {
     uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
 
-    constructor(
-        address diamond,
-        uint256 discountPerPool,
-        address discountAdmin
-    ) {
+    constructor(address diamond, uint256 discountPerPool) {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
 
         DIAMOND = diamond;
-
         self.discountPerPool = discountPerPool;
-        self.discountAdmin = discountAdmin;
     }
 
     /// @inheritdoc IPoolFactory
@@ -78,27 +73,11 @@ contract PoolFactory is IPoolFactory {
     }
 
     /// @inheritdoc IPoolFactory
-    function setDiscountBps(uint256 discountPerPool) external {
+    function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
         PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
-
-        if (msg.sender != self.discountAdmin)
-            revert PoolFactory__NotAuthorized();
 
         self.discountPerPool = discountPerPool;
-
-        emit SetDiscountBps(discountPerPool);
-    }
-
-    /// @inheritdoc IPoolFactory
-    function setDiscountAdmin(address discountAdmin) external {
-        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
-
-        if (msg.sender != self.discountAdmin)
-            revert PoolFactory__NotAuthorized();
-
-        self.discountAdmin = discountAdmin;
-
-        emit SetDiscountAdmin(discountAdmin);
+        emit SetDiscountPerPool(discountPerPool);
     }
 
     /// @inheritdoc IPoolFactory
