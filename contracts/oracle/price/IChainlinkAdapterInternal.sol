@@ -15,9 +15,9 @@ interface IChainlinkAdapterInternal {
     /// @notice Thrown when the input for adding mappings in invalid
     error Oracle__InvalidMappingsInput();
 
-    /// @notice The plan that will be used to calculate quotes for a given pair
-    enum PricingPlan {
-        // There is no plan calculated
+    /// @notice The path that will be used to calculate quotes for a given pair
+    enum PricingPath {
+        // There is no path calculated
         NONE,
         // Will use the ETH/USD feed
         ETH_USD_PAIR,
@@ -37,11 +37,11 @@ interface IChainlinkAdapterInternal {
         SAME_TOKENS
     }
 
-    /// @notice Emitted when the oracle updated the pricing plan for a pair
+    /// @notice Emitted when the oracle updated the pricing path for a pair
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
-    /// @param plan The new plan
-    event UpdatedPlanForPair(address tokenA, address tokenB, PricingPlan plan);
+    /// @param path The new path
+    event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
 
     /// @notice Emitted when new mappings are added
     /// @param tokens The tokens

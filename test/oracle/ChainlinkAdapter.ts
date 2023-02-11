@@ -22,7 +22,7 @@ const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
 const blockNumber = 15591000;
 
-enum PricingPlan {
+enum PricingPath {
   NONE,
   ETH_USD_PAIR,
   TOKEN_USD_PAIR,
@@ -51,50 +51,50 @@ let chainlinkAddressMapping = [
   CHAINLINK_USD,
 ];
 
-let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
+let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
 // prettier-ignore
 {
-  plans = [
+  paths = [
     [
       // ETH_USD_PAIR
-      { plan: PricingPlan.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.USDT }, // IN is ETH, OUT is USD
-      { plan: PricingPlan.ETH_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.USDT }, // IN is ETH, OUT is USD
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
     ],
     [
       // TOKEN_USD_PAIR
-      { plan: PricingPlan.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
-      { plan: PricingPlan.TOKEN_USD_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => OUT (tokenA) is USD
-      { plan: PricingPlan.TOKEN_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) is USD => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_USD_PAIR, tokenIn: tokens.USDT, tokenOut: tokens.WBTC }, // IN (tokenB) is USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => OUT (tokenA) is USD
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) is USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.USDT, tokenOut: tokens.WBTC }, // IN (tokenB) is USD => OUT (tokenA)
     ],
     [
       // TOKEN_ETH_PAIR
-      { plan: PricingPlan.TOKEN_ETH_PAIR, tokenIn: tokens.BNT, tokenOut: tokens.WETH }, // IN (tokenA) => OUT (tokenB) is ETH
-      { plan: PricingPlan.TOKEN_ETH_PAIR, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
-      { plan: PricingPlan.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH => OUT (tokenA)
-      { plan: PricingPlan.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.BNT, tokenOut: tokens.WETH }, // IN (tokenA) => OUT (tokenB) is ETH
+      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
+      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH => OUT (tokenA)
+      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
     ],
     [
       // TOKEN_TO_USD_TO_TOKEN_PAIR
-      { plan: PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
     ],
     [
       // TOKEN_TO_ETH_TO_TOKEN_PAIR
-      { plan: PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.BOND, tokenOut: tokens.AXS }, // IN (tokenA) => ETH => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.ALPHA, tokenOut: tokens.BOND }, // IN (tokenB) => ETH => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.BOND, tokenOut: tokens.AXS }, // IN (tokenA) => ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.ALPHA, tokenOut: tokens.BOND }, // IN (tokenB) => ETH => OUT (tokenA)
     ],
     [
       // TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.WETH }, // IN (tokenA) => USD, OUT (tokenB) is ETH
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.MATIC }, // IN (tokenB) is ETH, USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.WETH }, // IN (tokenA) => USD, OUT (tokenB) is ETH
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.MATIC }, // IN (tokenB) is ETH, USD => OUT (tokenA)
 
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
 
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
     ],
     [
       // TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B
@@ -103,13 +103,13 @@ let plans: { plan: PricingPlan; tokenIn: Token; tokenOut: Token }[][];
       // - IN (tokenA) => ETH, OUT (tokenB) is USD
       // - IN (tokenB) is USD, ETH => OUT (tokenA)
 
-      { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.AMP }, // IN (tokenA) is ETH, USD => OUT (tokenB)
-      { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AMP, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.AMP }, // IN (tokenA) is ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AMP, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
 
-      { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.AMP }, // IN (tokenA) => ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.AMP }, // IN (tokenA) => ETH, USD => OUT (tokenB)
 
-      { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => USD, ETH => OUT (tokenA)
-      { plan: PricingPlan.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => USD, ETH => OUT (tokenA)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => ETH, USD => OUT (tokenB)
     ],
   ];
 }
@@ -361,13 +361,13 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return true if interface is IChainlinkAdapter', async () => {
-      expect(await instance.supportsInterface('0xc5f65fd0')).to.be.true;
+      expect(await instance.supportsInterface('0x74f2cdd5')).to.be.true;
     });
   });
 
-  for (let i = 0; i < plans.length; i++) {
-    describe(`${PricingPlan[plans[i][0].plan]}`, () => {
-      for (const { plan, tokenIn, tokenOut } of plans[i]) {
+  for (let i = 0; i < paths.length; i++) {
+    describe(`${PricingPath[paths[i][0].path]}`, () => {
+      for (const { path, tokenIn, tokenOut } of paths[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
             await instance.addSupportForPairIfNeeded(
@@ -398,20 +398,20 @@ describe('ChainlinkAdapter', () => {
             });
           });
 
-          describe('#planForPair', () => {
-            it('returns pricing plan for pair', async () => {
-              const plan1 = await instance.planForPair(
+          describe('#pathForPair', () => {
+            it('returns pricing path for pair', async () => {
+              const path1 = await instance.pathForPair(
                 tokenIn.address,
                 tokenOut.address,
               );
 
-              const plan2 = await instance.planForPair(
+              const path2 = await instance.pathForPair(
                 tokenOut.address,
                 tokenIn.address,
               );
 
-              expect(plan1).to.equal(plan);
-              expect(plan2).to.equal(plan);
+              expect(path1).to.equal(path);
+              expect(path2).to.equal(path);
             });
           });
 

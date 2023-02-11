@@ -33,8 +33,8 @@ contract ChainlinkAdapter is
         address tokenB
     ) external view returns (bool) {
         (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
-        PricingPlan plan = _determinePricingPlan(_tokenA, _tokenB);
-        return plan != PricingPlan.NONE;
+        PricingPath path = _determinePricingPath(_tokenA, _tokenB);
+        return path != PricingPath.NONE;
     }
 
     /// @inheritdoc IOracleAdapter
@@ -55,27 +55,27 @@ contract ChainlinkAdapter is
             tokenOut
         );
 
-        PricingPlan plan = ChainlinkAdapterStorage.layout().planForPair[
+        PricingPath path = ChainlinkAdapterStorage.layout().pathForPair[
             _keyForUnsortedPair(mappedTokenIn, mappedTokenOut)
         ];
 
-        if (plan == PricingPlan.NONE) {
+        if (path == PricingPath.NONE) {
             revert Oracle__PairNotSupportedYet(tokenIn, tokenOut);
-        } else if (plan <= PricingPlan.TOKEN_ETH_PAIR) {
-            return _getDirectPrice(mappedTokenIn, mappedTokenOut, plan);
-        } else if (plan <= PricingPlan.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
-            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, plan);
+        } else if (path <= PricingPath.TOKEN_ETH_PAIR) {
+            return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
+        } else if (path <= PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
+            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
         } else {
-            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, plan);
+            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
         }
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function planForPair(
+    function pathForPair(
         address tokenA,
         address tokenB
-    ) external view returns (PricingPlan) {
-        return _planForPair(tokenA, tokenB);
+    ) external view returns (PricingPath) {
+        return _pathForPair(tokenA, tokenB);
     }
 
     /// @inheritdoc IChainlinkAdapter

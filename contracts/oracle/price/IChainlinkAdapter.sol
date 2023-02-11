@@ -9,15 +9,15 @@ import {IOracleAdapter} from "./IOracleAdapter.sol";
 /// @notice This oracle will attempt to use all available feeds to determine prices between pairs
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapter is IOracleAdapter {
-    /// @notice Returns the pricing plan that will be used when quoting the given pair
+    /// @notice Returns the pricing path that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
-    /// @return The pricing plan that will be used
-    function planForPair(
+    /// @return The pricing path that will be used
+    function pathForPair(
         address tokenA,
         address tokenB
-    ) external view returns (IChainlinkAdapterInternal.PricingPlan);
+    ) external view returns (IChainlinkAdapterInternal.PricingPath);
 
     /// @notice Returns the mapping of the given token, if it exists. If it doesn't, then the original token is returned
     /// @return If it exists, the mapping is returned. Otherwise, the original token is returned

@@ -10,7 +10,7 @@ library ChainlinkAdapterStorage {
 
     struct Layout {
         mapping(address => address) tokenMappings;
-        mapping(bytes32 => IChainlinkAdapterInternal.PricingPlan) planForPair;
+        mapping(bytes32 => IChainlinkAdapterInternal.PricingPath) pathForPair;
     }
 
     function layout() internal pure returns (Layout storage l) {
