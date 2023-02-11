@@ -66,15 +66,13 @@ library OptionMath {
         result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
     }
 
-    /**
-     * @notice Approximation of the Probability Density Function.
-     *
-     * @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
-     * Only computes pdf of a distribution with µ = 0 and σ = 1.
-     *
-     * @custom:error Maximum error of 1.2e-7.
-     * @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
-     */
+    /// @notice Approximation of the Probability Density Function.
+    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
+    ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
+    /// @custom:error Maximum error of 1.2e-7.
+    /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
+    /// @param x 60x18 fixed point number to get PDF for
+    /// @return z 60x18 fixed point z-number
     function normalPdf(int256 x) internal pure returns (int256 z) {
         int256 e;
         assembly {
