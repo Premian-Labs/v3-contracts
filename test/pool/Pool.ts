@@ -77,6 +77,7 @@ describe('Pool', () => {
       deployer,
       base.address,
       baseOracle.address,
+      deployer.address,
       parseEther('0.1'), // 10%
       true,
       true,
@@ -85,15 +86,20 @@ describe('Pool', () => {
     maturity = await getValidMaturity(10, 'months');
 
     for (isCall of [true, false]) {
-      const tx = await p.poolFactory.deployPool({
-        base: base.address,
-        quote: quote.address,
-        baseOracle: baseOracle.address,
-        quoteOracle: quoteOracle.address,
-        strike: strike,
-        maturity: maturity,
-        isCallPool: isCall,
-      });
+      const tx = await p.poolFactory.deployPool(
+        {
+          base: base.address,
+          quote: quote.address,
+          baseOracle: baseOracle.address,
+          quoteOracle: quoteOracle.address,
+          strike: strike,
+          maturity: maturity,
+          isCallPool: isCall,
+        },
+        {
+          value: parseEther('1'),
+        },
+      );
 
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;

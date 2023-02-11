@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 interface IPoolFactory {
     error PoolFactory__ZeroAddress();
     error PoolFactory__IdenticalAddresses();
+    error PoolFactory__InitializationFeeRequired();
     error PoolFactory__InvalidMaturity();
     error PoolFactory__InvalidStrike();
     error PoolFactory__NegativeSpotPrice();

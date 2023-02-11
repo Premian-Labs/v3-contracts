@@ -66,6 +66,7 @@ describe('PoolFactory', () => {
       deployer,
       base.address,
       baseOracle.address,
+      deployer.address,
       parseEther('0.1'), // 10%
       true,
       true,
@@ -95,7 +96,7 @@ describe('PoolFactory', () => {
     });
 
     it('should return true if a pool with given parameters has been deployed', async () => {
-      await p.poolFactory.deployPool(poolKey);
+      await p.poolFactory.deployPool(poolKey, { value: parseEther('1') });
 
       expect(await p.poolFactory.isPoolDeployed(poolKey)).to.be.true;
     });
@@ -103,7 +104,9 @@ describe('PoolFactory', () => {
 
   describe('#deployPool', () => {
     it('should properly deploy the pool', async () => {
-      const tx = await p.poolFactory.deployPool(poolKey);
+      const tx = await p.poolFactory.deployPool(poolKey, {
+        value: parseEther('1'),
+      });
 
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;
@@ -133,7 +136,12 @@ describe('PoolFactory', () => {
 
     it('should revert if base and base are identical', async () => {
       await expect(
-        p.poolFactory.deployPool({ ...poolKey, base: quote.address }),
+        p.poolFactory.deployPool(
+          { ...poolKey, base: quote.address },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__IdenticalAddresses',
@@ -142,10 +150,15 @@ describe('PoolFactory', () => {
 
     it('should revert if quoteOracle and baseOracle are identical', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          baseOracle: quoteOracle.address,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            baseOracle: quoteOracle.address,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__IdenticalAddresses',
@@ -154,40 +167,60 @@ describe('PoolFactory', () => {
 
     it('should revert if base, base, quoteOracle, or baseOracle are zero address', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          quote: ethers.constants.AddressZero,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            quote: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__ZeroAddress',
       );
 
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          quoteOracle: ethers.constants.AddressZero,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            quoteOracle: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__ZeroAddress',
       );
 
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          base: ethers.constants.AddressZero,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            base: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__ZeroAddress',
       );
 
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          baseOracle: ethers.constants.AddressZero,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            baseOracle: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__ZeroAddress',
@@ -195,10 +228,14 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if pool has already been deployed', async () => {
-      await p.poolFactory.deployPool(poolKey);
+      await p.poolFactory.deployPool(poolKey, {
+        value: parseEther('1'),
+      });
 
       await expect(
-        p.poolFactory.deployPool(poolKey),
+        p.poolFactory.deployPool(poolKey, {
+          value: parseEther('1'),
+        }),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__PoolAlreadyDeployed',
@@ -207,7 +244,12 @@ describe('PoolFactory', () => {
 
     it('should revert if strike is zero', async () => {
       await expect(
-        p.poolFactory.deployPool({ ...poolKey, strike: 0 }),
+        p.poolFactory.deployPool(
+          { ...poolKey, strike: 0 },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionStrikeEqualsZero',
@@ -223,7 +265,12 @@ describe('PoolFactory', () => {
         parseEther('11'),
       ]) {
         await expect(
-          p.poolFactory.deployPool({ ...poolKey, strike }),
+          p.poolFactory.deployPool(
+            { ...poolKey, strike },
+            {
+              value: parseEther('1'),
+            },
+          ),
         ).to.be.revertedWithCustomError(
           p.poolFactory,
           'PoolFactory__OptionStrikeInvalid',
@@ -233,7 +280,12 @@ describe('PoolFactory', () => {
 
     it('should revert if daily option maturity has expired', async () => {
       await expect(
-        p.poolFactory.deployPool({ ...poolKey, maturity: blockTimestamp }),
+        p.poolFactory.deployPool(
+          { ...poolKey, maturity: blockTimestamp },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionExpired',
@@ -242,10 +294,15 @@ describe('PoolFactory', () => {
 
     it('should revert if daily option maturity is not at 8AM UTC', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          maturity: (await getValidMaturity(2, 'days')) + 1,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'days')) + 1,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionMaturityNot8UTC',
@@ -254,10 +311,15 @@ describe('PoolFactory', () => {
 
     it('should revert if weekly option maturity not on Friday', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          maturity: (await getValidMaturity(2, 'weeks')) - ONE_DAY,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'weeks')) - ONE_DAY,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionMaturityNotFriday',
@@ -266,10 +328,15 @@ describe('PoolFactory', () => {
 
     it('should revert if monthly option maturity not on last Friday', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          maturity: (await getValidMaturity(2, 'months')) - ONE_WEEK,
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'months')) - ONE_WEEK,
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionMaturityNotLastFriday',
@@ -278,10 +345,15 @@ describe('PoolFactory', () => {
 
     it('should revert if monthly option maturity exceeds 365 days', async () => {
       await expect(
-        p.poolFactory.deployPool({
-          ...poolKey,
-          maturity: await getLastFridayOfMonth(await now(), 13),
-        }),
+        p.poolFactory.deployPool(
+          {
+            ...poolKey,
+            maturity: await getLastFridayOfMonth(await now(), 13),
+          },
+          {
+            value: parseEther('1'),
+          },
+        ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__OptionMaturityExceedsMax',

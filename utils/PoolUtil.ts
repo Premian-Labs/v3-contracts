@@ -32,6 +32,7 @@ export class PoolUtil {
     deployer: SignerWithAddress,
     wrappedNativeToken: string,
     nativeUsdOracle: string,
+    feeReceiver: string,
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     isDevMode = false,
@@ -58,7 +59,7 @@ export class PoolUtil {
 
     const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
-    ).deploy(poolFactoryImpl.address, discountPerPool);
+    ).deploy(poolFactoryImpl.address, discountPerPool, feeReceiver);
     await poolFactoryProxy.deployed();
 
     if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);

@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
+
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
@@ -10,6 +12,7 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 
+import {SD59x18} from "../libraries/prbMath/SD59x18.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -19,6 +22,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolStorage for PoolStorage.Layout;
     using SafeCast for int256;
     using SafeCast for uint256;
+    using SD59x18 for int256;
     using UD60x18 for uint256;
 
     uint256 internal constant ONE = 1e18;
@@ -66,7 +70,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
-        uint256 discount = (ONE - l.discountPerPool).pow(discountFactor);
+        uint256 discount = (ONE - l.discountPerPool).toInt256().pow(discountFactor.toInt256()).toUint256();
         uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
         uint256 nativeUsdPrice = getSpotPrice(NATIVE_USD_ORACLE);
@@ -109,9 +113,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         uint256 fee = initializationFee(k);
 
         if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
+        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
 
         payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
-        payable(msg.sender).transfer(msg.value - fee);
+       
+        if (msg.value > fee) {
+            payable(msg.sender).transfer(msg.value - fee);
+        }
 
         poolAddress = address(
             new PoolProxy(
