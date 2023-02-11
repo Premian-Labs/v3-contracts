@@ -61,10 +61,6 @@ interface IPoolFactory {
         PoolKey memory k
     ) external view returns (uint256);
 
-    /// @notice Set the ETH/USD price oracle address - only callable by owner
-    /// @param nativeUsdOracle The new ETH/USD price oracle address
-    function setNativeUsdOracle(address nativeUsdOracle) external;
-
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage denominated in 1e18
     function setDiscountPerPool(uint256 discountPerPool) external;

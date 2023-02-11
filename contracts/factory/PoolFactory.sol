@@ -23,13 +23,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
+    // Chainlink price oracle for the Native/USD (ETH/USD) pair
+    address internal immutable NATIVE_USD_ORACLE;
 
-    constructor(address diamond, address nativeUsdOracle, uint256 discountPerPool) {
-        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
-
+    constructor(address diamond, address nativeUsdOracle) {
         DIAMOND = diamond;
-        self.nativeUsdOracle = nativeUsdOracle;
-        self.discountPerPool = discountPerPool;
+        NATIVE_USD_ORACLE = nativeUsdOracle;
     }
 
     /// @inheritdoc IPoolFactory
@@ -58,7 +57,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         // TODO Replace with adapter, decimals should not be hard-coded
 
-        return price.toUint256() * 10**10;
+        return price.toUint256() * 1e10;
     }
 
     // @inheritdoc IPoolFactory
@@ -70,16 +69,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         uint256 discount = (ONE - l.discountPerPool).pow(discountFactor);
         uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 nativeUsdPrice = getSpotPrice(l.nativeUsdOracle);
+        uint256 nativeUsdPrice = getSpotPrice(NATIVE_USD_ORACLE);
 
         return fee.mul(discount).div(nativeUsdPrice);
-    }
-
-    /// @inheritdoc IPoolFactory
-    function setNativeUsdOracle(address nativeUsdOracle) external onlyOwner {
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-        l.nativeUsdOracle = nativeUsdOracle;
-        emit SetNativeUsdOracle(nativeUsdOracle);
     }
     
     /// @inheritdoc IPoolFactory

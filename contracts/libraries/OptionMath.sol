@@ -27,7 +27,6 @@ library OptionMath {
     uint256 internal constant ONE_HALF = 0.5e18;
     uint256 internal constant ONE = 1e18;
     uint256 internal constant TWO = 2e18;
-    uint256 internal constant FOUR = 4e18;
     uint256 internal constant FIVE = 5e18;
     uint256 internal constant TEN = 10e18;
     uint256 internal constant ONE_THOUSAND = 1000e18;
@@ -40,6 +39,7 @@ library OptionMath {
     int256 internal constant ONE_HALF_I = 0.5e18;
     int256 internal constant ONE_I = 1e18;
     int256 internal constant TWO_I = 2e18;
+    int256 internal constant FOUR_I = 4e18;
     int256 internal constant TEN_I = 10e18;
     int256 internal constant ALPHA = -6.37309208e18;
     int256 internal constant LAMBDA = -0.61228883e18;
@@ -207,6 +207,10 @@ library OptionMath {
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 
+    function _ln(int256 x) internal pure returns (int256) {
+        return (SD59x18.log2(x) * SD59x18.UNIT) / SD59x18.LOG2_E;
+    }
+
     /// @notice Calculate the log moneyness of a strike/spot price pair
     /// @param spot 60x18 fixed point representation of spot price
     /// @param strike 60x18 fixed point representation of strike price
@@ -215,7 +219,7 @@ library OptionMath {
         uint256 spot,
         uint256 strike
     ) internal pure returns (uint256) {
-        return spot.div(strike).pow(TWO).ln().sqrt();
+        return _ln(spot.div(strike).toInt256()).abs().toUint256();
     }
 
     function initializationFee(
@@ -231,7 +235,7 @@ library OptionMath {
             maturity
         );
         uint256 kBase = moneyness < ATM_MONEYNESS
-            ? (ATM_MONEYNESS - moneyness).pow(FOUR)
+            ? (ATM_MONEYNESS - moneyness).toInt256().pow(FOUR_I).toUint256()
             : moneyness - ATM_MONEYNESS;
         uint256 tBase = timeToMaturity < NEAR_TERM_TTM
             ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
