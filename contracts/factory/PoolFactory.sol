@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
@@ -14,13 +15,20 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 contract PoolFactory is IPoolFactory {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolStorage for PoolStorage.Layout;
+    using SafeCast for int256;
     using SafeCast for uint256;
     using UD60x18 for uint256;
 
+    uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
 
-    constructor(address diamond) {
+    constructor(address diamond, uint256 discountBps, address discountAdmin) {
+        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
+
         DIAMOND = diamond;
+
+        self.discountBps = discountBps;
+        self.discountAdmin = discountAdmin;
     }
 
     /// @inheritdoc IPoolFactory
@@ -47,6 +55,73 @@ contract PoolFactory is IPoolFactory {
 
     function _isPoolDeployed(bytes32 poolKey) internal view returns (bool) {
         return PoolFactoryStorage.layout().pools[poolKey] != address(0);
+    }
+
+    function getSpotPrice(
+        address baseOracle,
+        address quoteOracle
+    ) internal view returns (uint256 price) {
+        uint256 quotePrice = getSpotPrice(quoteOracle);
+        uint256 basePrice = getSpotPrice(baseOracle);
+
+        return basePrice.div(quotePrice);
+    }
+
+    function getSpotPrice(address oracle) internal view returns (uint256) {
+        // TODO: Add spot price validation
+
+        int256 price = AggregatorInterface(oracle).latestAnswer();
+        if (price < 0) revert PoolFactory__NegativeSpotPrice();
+
+        return price.toUint256();
+    }
+
+    // @inheritdoc IPoolFactory
+    function initializationFee(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) public view returns (uint256) {
+        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
+        uint256 discountFactor = self.maturityCount[isCallPool][base][baseOracle][quote][quoteOracle][maturity]
+                                    + self.strikeCount[isCallPool][base][baseOracle][quote][quoteOracle][strike];
+        uint256 discount = (ONE - self.discountBps).pow(discountFactor);
+        uint256 spot = getSpotPrice(baseOracle, quoteOracle);
+        uint256 fee = OptionMath.initializationFee(
+            spot,
+            strike,
+            maturity
+        );
+
+        return fee.mul(discount);
+    }
+
+    /// @inheritdoc IPoolFactory
+    function setDiscountBps(uint256 discountBps) external {
+        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
+
+        if (msg.sender != self.discountAdmin)
+            revert PoolFactory__NotAuthorized();
+
+        self.discountBps = discountBps;
+
+        emit SetDiscountBps(discountBps);
+    }
+
+    /// @inheritdoc IPoolFactory
+    function setDiscountAdmin(address discountAdmin) external {
+        PoolFactoryStorage.Layout storage self = PoolFactoryStorage.layout();
+
+        if (msg.sender != self.discountAdmin)
+            revert PoolFactory__NotAuthorized();
+
+        self.discountAdmin = discountAdmin;    
+
+        emit SetDiscountAdmin(discountAdmin);
     }
 
     /// @inheritdoc IPoolFactory
@@ -98,6 +173,8 @@ contract PoolFactory is IPoolFactory {
         );
 
         PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
+        PoolFactoryStorage.layout().strikeCount[isCallPool][base][baseOracle][quote][quoteOracle][strike] += 1;
+        PoolFactoryStorage.layout().maturityCount[isCallPool][base][baseOracle][quote][quoteOracle][maturity] += 1;
 
         emit PoolDeployed(
             base,
@@ -108,6 +185,36 @@ contract PoolFactory is IPoolFactory {
             maturity,
             poolAddress
         );
+    }
+
+    /// @inheritdoc IPoolFactory
+    function removePool(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) external {
+        if (maturity < block.timestamp)
+            revert PoolFactory__PoolNotExpired();
+
+        bytes32 poolKey = PoolFactoryStorage.poolKey(
+            base,
+            quote,
+            baseOracle,
+            quoteOracle,
+            strike,
+            maturity,
+            isCallPool
+        );
+
+        if (PoolFactoryStorage.layout().pools[poolKey] != msg.sender)
+            revert PoolFactory__NotAuthorized();
+
+        PoolFactoryStorage.layout().strikeCount[isCallPool][base][baseOracle][quote][quoteOracle][strike] -= 1;
+        PoolFactoryStorage.layout().maturityCount[isCallPool][base][baseOracle][quote][quoteOracle][maturity] -= 1;
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise

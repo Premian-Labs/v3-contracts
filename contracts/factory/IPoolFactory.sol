@@ -7,6 +7,8 @@ interface IPoolFactory {
     error PoolFactory__IdenticalAddresses();
     error PoolFactory__InvalidMaturity();
     error PoolFactory__InvalidStrike();
+    error PoolFactory__NegativeSpotPrice();
+    error PoolFactory__NotAuthorized();
     error PoolFactory__OptionExpired();
     error PoolFactory__OptionMaturityExceedsMax();
     error PoolFactory__OptionMaturityNot8UTC();
@@ -15,7 +17,10 @@ interface IPoolFactory {
     error PoolFactory__OptionStrikeEqualsZero();
     error PoolFactory__OptionStrikeInvalid();
     error PoolFactory__PoolAlreadyDeployed();
+    error PoolFactory__PoolNotExpired();
 
+    event SetDiscountBps(uint256 indexed discountBps);
+    event SetDiscountAdmin(address indexed discountAdmin);
     event PoolDeployed(
         address indexed base,
         address indexed quote,
@@ -64,6 +69,14 @@ interface IPoolFactory {
         bool isCallPool
      ) external view returns (uint256);
     
+    /// @notice Set the discountBps for new pools - only callable by discountAdmin
+    /// @param discountBps The new discount percentage denominated in 1e18
+    function setDiscountBps(uint256 discountBps) external;
+    
+    /// @notice Set the new discountAdmin - only callable by discountAdmin
+    /// @param discountAdmin The new discount admin address
+    function setDiscountAdmin(address discountAdmin) external;
+    
     /// @notice Deploy a new option pool
     /// @param base Address of base token
     /// @param quote Address of quote token
@@ -82,4 +95,22 @@ interface IPoolFactory {
         uint64 maturity,
         bool isCallPool
     ) external returns (address poolAddress);
+    
+    /// @notice Removes an existing pool, can only be called by the pool after maturity
+    /// @param base Address of base token
+    /// @param quote Address of quote token
+    /// @param baseOracle Address of base token price feed
+    /// @param quoteOracle Address of quote token price feed
+    /// @param strike The strike of the option
+    /// @param maturity The maturity timestamp of the option
+    /// @param isCallPool Whether the pool is for call or put options
+    function removePool(
+        address base,
+        address quote,
+        address baseOracle,
+        address quoteOracle,
+        uint256 strike,
+        uint64 maturity,
+        bool isCallPool
+    ) external;
 }

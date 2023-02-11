@@ -60,23 +60,38 @@ contract OptionMathMock {
         return OptionMath.calculateStrikeInterval(spot);
     }
 
+    function logMoneyness(
+        uint256 spot,
+        uint256 strike
+    ) external pure returns (uint256) {
+        return OptionMath.logMoneyness(spot, strike);
+    }
+
+    function initializationFee(
+        uint256 spot,
+        uint256 strike,
+        uint64 maturity
+    ) external view returns (uint256) {
+        return OptionMath.initializationFee(spot, strike, maturity);
+    }
+
     function estimateImpliedVolatility(
-        bool isCall,
         uint256 optionPrice,
         uint256 spot,
         uint256 strike,
         uint64 maturity,
         uint256 riskFreeRate,
+        bool isCall,
         uint256 estimateIv,
         uint256 errorBound
     ) internal view returns (uint256) {
         return OptionMath.estimateImpliedVolatility(
-            isCall,
             optionPrice,
             spot,
             strike,
             maturity,
             riskFreeRate,
+            isCall,
             estimateIv,
             errorBound
         );

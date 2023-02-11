@@ -11,6 +11,15 @@ library PoolFactoryStorage {
     struct Layout {
         // Pool Key -> Address
         mapping(bytes32 => address) pools;
+        // Discount lattice for strike
+        mapping(bool => mapping(address => mapping(address => mapping(address => mapping(address => mapping(uint256 => uint256)))))) strikeCount;
+        // Discount lattice for maturity
+        mapping(bool => mapping(address => mapping(address => mapping(address => mapping(address => mapping(uint64 => uint256)))))) maturityCount;
+
+        // Discount % per neighboring strike/maturity, 1e18 base
+        uint256 discountBps;
+        // Controller of discountBps
+        address discountAdmin;
     }
 
     function layout() internal pure returns (Layout storage l) {
