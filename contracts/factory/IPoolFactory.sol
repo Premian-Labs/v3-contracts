@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-interface IPoolFactory {
+import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
+
+interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__ZeroAddress();
     error PoolFactory__IdenticalAddresses();
     error PoolFactory__InitializationFeeRequired();
@@ -19,18 +21,6 @@ interface IPoolFactory {
     error PoolFactory__OptionStrikeInvalid();
     error PoolFactory__PoolAlreadyDeployed();
     error PoolFactory__PoolNotExpired();
-
-    event SetDiscountPerPool(uint256 indexed discountPerPool);
-    event SetFeeReceiver(address indexed feeReceiver);
-    event PoolDeployed(
-        address indexed base,
-        address indexed quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        address poolAddress
-    );
 
     struct PoolKey {
         // Address of base token
