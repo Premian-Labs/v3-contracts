@@ -20,7 +20,6 @@ interface IPoolFactory {
     error PoolFactory__PoolAlreadyDeployed();
     error PoolFactory__PoolNotExpired();
 
-    event SetNativeUsdOracle(address indexed nativeUsdOracle);
     event SetDiscountPerPool(uint256 indexed discountPerPool);
     event SetFeeReceiver(address indexed feeReceiver);
     event PoolDeployed(
