@@ -205,10 +205,6 @@ library OptionMath {
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 
-    function _ln(int256 x) internal pure returns (int256) {
-        return (SD59x18.log2(x) * SD59x18.UNIT) / SD59x18.LOG2_E;
-    }
-
     /// @notice Calculate the log moneyness of a strike/spot price pair
     /// @param spot 60x18 fixed point representation of spot price
     /// @param strike 60x18 fixed point representation of strike price
@@ -217,7 +213,7 @@ library OptionMath {
         uint256 spot,
         uint256 strike
     ) internal pure returns (uint256) {
-        return _ln(spot.div(strike).toInt256()).abs().toUint256();
+        return spot.div(strike).toInt256().ln().abs().toUint256();
     }
 
     function initializationFee(
