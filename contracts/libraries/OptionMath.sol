@@ -23,7 +23,6 @@ library OptionMath {
         int256 timeScaledRiskFreeRate;
     }
 
-
     uint256 internal constant ONE_HALF = 0.5e18;
     uint256 internal constant ONE = 1e18;
     uint256 internal constant TWO = 2e18;
@@ -105,7 +104,8 @@ library OptionMath {
         uint256 timeScaledVar = timeScaledVol.pow(TWO);
         uint256 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
 
-        d1 = spot.div(strike).toInt256().ln() +
+        d1 =
+            spot.div(strike).toInt256().ln() +
             timeScaledVar.div(TWO).toInt256() +
             timeScaledRiskFreeRate.div(timeScaledVol).toInt256();
         d2 = d1 - timeScaledVol.toInt256();
@@ -144,7 +144,7 @@ library OptionMath {
         } else {
             discountFactor = ONE_I;
         }
-         
+
         if (volAnnualized == 0) {
             if (isCall) {
                 return relu(_spot - _strike.div(discountFactor));
@@ -199,9 +199,7 @@ library OptionMath {
         uint256 spot
     ) internal pure returns (uint256) {
         int256 o = spot.toInt256().log10().floor();
-        int256 x = spot.toInt256().mul(
-            TEN_I.pow(o.mul(-ONE_I) - ONE_I)
-        );
+        int256 x = spot.toInt256().mul(TEN_I.pow(o.mul(-ONE_I) - ONE_I));
         uint256 f = TEN_I.pow(o - ONE_I).toUint256();
         uint256 y = x.toUint256() < ONE_HALF ? ONE.mul(f) : FIVE.mul(f);
         return spot < ONE_THOUSAND ? y : y.ceil();
@@ -227,13 +225,8 @@ library OptionMath {
         uint256 strike,
         uint64 maturity
     ) internal view returns (uint256) {
-        uint256 moneyness = logMoneyness(
-            spot,
-            strike
-        );
-        uint256 timeToMaturity = calculateTimeToMaturity(
-            maturity
-        );
+        uint256 moneyness = logMoneyness(spot, strike);
+        uint256 timeToMaturity = calculateTimeToMaturity(maturity);
         uint256 kBase = moneyness < ATM_MONEYNESS
             ? (ATM_MONEYNESS - moneyness).toInt256().pow(FOUR_I).toUint256()
             : moneyness - ATM_MONEYNESS;
@@ -242,9 +235,9 @@ library OptionMath {
             : timeToMaturity;
         uint256 scaledT = tBase.div(ONE_YEAR_TTM).sqrt();
 
-        return INITIALIZATION_ALPHA
-            .mul(kBase + scaledT)
-            .mul(scaledT)
-            .mul(FEE_SCALAR);
+        return
+            INITIALIZATION_ALPHA.mul(kBase + scaledT).mul(scaledT).mul(
+                FEE_SCALAR
+            );
     }
 }

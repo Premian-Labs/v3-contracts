@@ -8,10 +8,12 @@ import {ProxyUpgradeableOwnable} from "../proxy/ProxyUpgradeableOwnable.sol";
 
 contract PoolFactoryProxy is ProxyUpgradeableOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
-    
-    constructor(address implementation, uint256 discountPerPool, address feeReceiver)
-        ProxyUpgradeableOwnable(implementation)
-    {
+
+    constructor(
+        address implementation,
+        uint256 discountPerPool,
+        address feeReceiver
+    ) ProxyUpgradeableOwnable(implementation) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         l.discountPerPool = discountPerPool;

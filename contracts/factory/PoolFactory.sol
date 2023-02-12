@@ -70,14 +70,17 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
-        uint256 discount = (ONE - l.discountPerPool).toInt256().pow(discountFactor.toInt256()).toUint256();
+        uint256 discount = (ONE - l.discountPerPool)
+            .toInt256()
+            .pow(discountFactor.toInt256())
+            .toUint256();
         uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
         uint256 nativeUsdPrice = getSpotPrice(NATIVE_USD_ORACLE);
 
         return fee.mul(discount).div(nativeUsdPrice);
     }
-    
+
     /// @inheritdoc IPoolFactory
     function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
@@ -116,7 +119,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
 
         payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
-       
+
         if (msg.value > fee) {
             payable(msg.sender).transfer(msg.value - fee);
         }
