@@ -63,7 +63,15 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(PoolKey memory k) public view returns (uint256) {
+    function initializationFee(
+        PoolKey memory k
+    ) external view returns (uint256) {
+        return _initializationFee(k);
+    }
+
+    function _initializationFee(
+        PoolKey memory k
+    ) internal view returns (uint256) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
@@ -111,7 +119,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         _ensureOptionMaturityIsValid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
-        uint256 fee = initializationFee(k);
+        uint256 fee = _initializationFee(k);
 
         if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
         if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
