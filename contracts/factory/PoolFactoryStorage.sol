@@ -13,9 +13,9 @@ library PoolFactoryStorage {
     struct Layout {
         // Pool Key -> Address
         mapping(bytes32 => address) pools;
-        // Discount lattice for strike
+        // Pool Key -> Count (Discount lattice for strike)
         mapping(bytes32 => uint256) strikeCount;
-        // Discount lattice for maturity
+        // Pool Key -> Count (Discount lattice for maturity)
         mapping(bytes32 => uint256) maturityCount;
         // Discount % per neighboring strike/maturity, 1e18 base
         uint256 discountPerPool;
