@@ -46,7 +46,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     uint256 private constant ONE = 1e18;
 
-    // ToDo : Add getter for fee values
     // ToDo : Define final values
     uint256 private constant PROTOCOL_FEE_PERCENTAGE = 5e17; // 50%
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 3e16; // 3%
@@ -662,14 +661,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.marketPrice.toInt256() - oldMarketPrice.toInt256()
                 );
 
-                vars.shortDelta +=
-                    l.shortRate *
-                    PoolStorage.MIN_TICK_DISTANCE *
-                    dist;
-                vars.longDelta +=
-                    l.longRate *
-                    PoolStorage.MIN_TICK_DISTANCE *
-                    dist;
+                vars.shortDelta += l.shortRate.mul(dist).div(
+                    PoolStorage.MIN_TICK_DISTANCE
+                );
+                vars.longDelta += l.longRate.mul(dist).div(
+                    PoolStorage.MIN_TICK_DISTANCE
+                );
 
                 if (maxSize >= remaining) {
                     remaining = 0;
