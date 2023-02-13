@@ -9,15 +9,19 @@ import {
   MockContract,
 } from '@ethereum-waffle/mock-contract';
 import {
-  ONE_DAY,
-  ONE_WEEK,
-  now,
   getLastFridayOfMonth,
   getValidMaturity,
+  now,
+  ONE_DAY,
+  ONE_WEEK,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
 
 import moment from 'moment-timezone';
+import { beforeEach } from 'mocha';
+import { PoolKey } from '../../utils/sdk/types';
+import { BigNumber } from 'ethers';
+
 moment.tz.setDefault('UTC');
 
 describe('PoolFactory', () => {
@@ -34,14 +38,13 @@ describe('PoolFactory', () => {
   let strike = parseEther('1000'); // ATM
   let maturity: number;
   let blockTimestamp: number;
+  let poolKey: PoolKey;
 
   before(async () => {
     [deployer] = await ethers.getSigners();
 
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
-
-    p = await PoolUtil.deploy(deployer, base.address, true, true);
 
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
@@ -59,65 +62,51 @@ describe('PoolFactory', () => {
     await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
     await quoteOracle.mock.decimals.returns(8);
 
+    p = await PoolUtil.deploy(
+      deployer,
+      base.address,
+      baseOracle.address,
+      deployer.address,
+      parseEther('0.1'), // 10%
+      true,
+      true,
+    );
+
     maturity = await getValidMaturity(10, 'months');
     blockTimestamp = await now();
+  });
+
+  beforeEach(async () => {
+    poolKey = {
+      base: base.address,
+      quote: quote.address,
+      baseOracle: baseOracle.address,
+      quoteOracle: quoteOracle.address,
+      strike,
+      maturity: BigNumber.from(maturity),
+      isCallPool: isCall,
+    };
   });
 
   revertToSnapshotAfterEach(async () => {});
 
   describe('#isPoolDeployed', () => {
     it('should return false if no pool has been deployed with given parameters', async () => {
-      expect(
-        await p.poolFactory.isPoolDeployed(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
-        ),
-      ).to.be.false;
+      expect(await p.poolFactory.isPoolDeployed(poolKey)).to.be.false;
     });
 
     it('should return true if a pool with given parameters has been deployed', async () => {
-      await p.poolFactory.deployPool(
-        base.address,
-        quote.address,
-        baseOracle.address,
-        quoteOracle.address,
-        strike,
-        maturity,
-        isCall,
-      );
+      await p.poolFactory.deployPool(poolKey, { value: parseEther('1') });
 
-      expect(
-        await p.poolFactory.isPoolDeployed(
-          base.address,
-          quote.address,
-
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
-        ),
-      ).to.be.true;
+      expect(await p.poolFactory.isPoolDeployed(poolKey)).to.be.true;
     });
   });
 
   describe('#deployPool', () => {
     it('should properly deploy the pool', async () => {
-      const tx = await p.poolFactory.deployPool(
-        base.address,
-        quote.address,
-
-        baseOracle.address,
-        quoteOracle.address,
-        strike,
-        maturity,
-        isCall,
-      );
+      const tx = await p.poolFactory.deployPool(poolKey, {
+        value: parseEther('1'),
+      });
 
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;
@@ -148,13 +137,10 @@ describe('PoolFactory', () => {
     it('should revert if base and base are identical', async () => {
       await expect(
         p.poolFactory.deployPool(
-          quote.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
+          { ...poolKey, base: quote.address },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -165,13 +151,13 @@ describe('PoolFactory', () => {
     it('should revert if quoteOracle and baseOracle are identical', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          quoteOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
+          {
+            ...poolKey,
+            baseOracle: quoteOracle.address,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -182,13 +168,13 @@ describe('PoolFactory', () => {
     it('should revert if base, base, quoteOracle, or baseOracle are zero address', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          ethers.constants.AddressZero,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
+          {
+            ...poolKey,
+            quote: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -197,13 +183,13 @@ describe('PoolFactory', () => {
 
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          ethers.constants.AddressZero,
-          strike,
-          maturity,
-          isCall,
+          {
+            ...poolKey,
+            quoteOracle: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -212,13 +198,13 @@ describe('PoolFactory', () => {
 
       await expect(
         p.poolFactory.deployPool(
-          ethers.constants.AddressZero,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
+          {
+            ...poolKey,
+            base: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -227,13 +213,13 @@ describe('PoolFactory', () => {
 
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          ethers.constants.AddressZero,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
+          {
+            ...poolKey,
+            baseOracle: ethers.constants.AddressZero,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -242,26 +228,14 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if pool has already been deployed', async () => {
-      await p.poolFactory.deployPool(
-        base.address,
-        quote.address,
-        baseOracle.address,
-        quoteOracle.address,
-        strike,
-        maturity,
-        isCall,
-      );
+      await p.poolFactory.deployPool(poolKey, {
+        value: parseEther('1'),
+      });
 
       await expect(
-        p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          maturity,
-          isCall,
-        ),
+        p.poolFactory.deployPool(poolKey, {
+          value: parseEther('1'),
+        }),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
         'PoolFactory__PoolAlreadyDeployed',
@@ -271,13 +245,10 @@ describe('PoolFactory', () => {
     it('should revert if strike is zero', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          0,
-          maturity,
-          isCall,
+          { ...poolKey, strike: 0 },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -295,13 +266,10 @@ describe('PoolFactory', () => {
       ]) {
         await expect(
           p.poolFactory.deployPool(
-            base.address,
-            quote.address,
-            baseOracle.address,
-            quoteOracle.address,
-            strike,
-            maturity,
-            isCall,
+            { ...poolKey, strike },
+            {
+              value: parseEther('1'),
+            },
           ),
         ).to.be.revertedWithCustomError(
           p.poolFactory,
@@ -313,13 +281,10 @@ describe('PoolFactory', () => {
     it('should revert if daily option maturity has expired', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          blockTimestamp,
-          isCall,
+          { ...poolKey, maturity: blockTimestamp },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -330,13 +295,13 @@ describe('PoolFactory', () => {
     it('should revert if daily option maturity is not at 8AM UTC', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          (await getValidMaturity(2, 'days')) + 1,
-          isCall,
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'days')) + 1,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -347,13 +312,13 @@ describe('PoolFactory', () => {
     it('should revert if weekly option maturity not on Friday', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          (await getValidMaturity(2, 'weeks')) - ONE_DAY,
-          isCall,
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'weeks')) - ONE_DAY,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -364,13 +329,13 @@ describe('PoolFactory', () => {
     it('should revert if monthly option maturity not on last Friday', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          (await getValidMaturity(2, 'months')) - ONE_WEEK,
-          isCall,
+          {
+            ...poolKey,
+            maturity: (await getValidMaturity(2, 'months')) - ONE_WEEK,
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,
@@ -381,13 +346,13 @@ describe('PoolFactory', () => {
     it('should revert if monthly option maturity exceeds 365 days', async () => {
       await expect(
         p.poolFactory.deployPool(
-          base.address,
-          quote.address,
-          baseOracle.address,
-          quoteOracle.address,
-          strike,
-          await getLastFridayOfMonth(await now(), 13),
-          isCall,
+          {
+            ...poolKey,
+            maturity: await getLastFridayOfMonth(await now(), 13),
+          },
+          {
+            value: parseEther('1'),
+          },
         ),
       ).to.be.revertedWithCustomError(
         p.poolFactory,

@@ -8,7 +8,7 @@ import {
   IPoolMock__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
-import { parseEther } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
@@ -60,14 +60,12 @@ describe('Pool', () => {
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    p = await PoolUtil.deploy(deployer, base.address, true, true);
-
     baseOracle = await deployMockContract(deployer as any, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(100000000000);
+    await baseOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
     await baseOracle.mock.decimals.returns(8);
 
     quoteOracle = await deployMockContract(deployer as any, [
@@ -75,21 +73,35 @@ describe('Pool', () => {
       'function decimals () external view returns (uint8)',
     ]);
 
-    await quoteOracle.mock.latestAnswer.returns(100000000);
+    await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
     await quoteOracle.mock.decimals.returns(8);
+
+    p = await PoolUtil.deploy(
+      deployer,
+      base.address,
+      baseOracle.address,
+      deployer.address,
+      parseEther('0.1'), // 10%
+      true,
+      true,
+    );
 
     maturity = await getValidMaturity(10, 'months');
 
     for (isCall of [true, false]) {
       const tx = await p.poolFactory.deployPool(
-        base.address,
-        quote.address,
-
-        baseOracle.address,
-        quoteOracle.address,
-        strike,
-        maturity,
-        isCall,
+        {
+          base: base.address,
+          quote: quote.address,
+          baseOracle: baseOracle.address,
+          quoteOracle: quoteOracle.address,
+          strike: strike,
+          maturity: maturity,
+          isCallPool: isCall,
+        },
+        {
+          value: parseEther('1'),
+        },
       );
 
       const r = await tx.wait(1);
