@@ -221,7 +221,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         claimedFees = pData.claimableFees;
 
         pData.claimableFees = 0;
-        IERC20(l.getPoolToken()).transfer(p.operator, claimedFees);
+        IERC20(l.getPoolToken()).safeTransfer(p.operator, claimedFees);
 
         emit ClaimFees(
             p.owner,
@@ -249,7 +249,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 belowUpper,
         uint256 size,
         uint256 maxSlippage,
-        uint256 collateralCredit
+        uint256 collateralCredit,
+        address refundAddress
     ) internal {
         _deposit(
             p,
@@ -259,6 +260,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 size,
                 maxSlippage,
                 collateralCredit,
+                refundAddress,
                 p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
             )
         );
@@ -311,6 +313,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             address(this),
             delta.collateral.toUint256(),
             args.collateralCredit,
+            args.refundAddress,
             delta.longs.toUint256(),
             delta.shorts.toUint256()
         );
@@ -377,12 +380,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _mint(p.owner, tokenId, size, "");
 
+        int256 tickDelta = p
+            .liquidityPerTick(_balanceOf(p.owner, tokenId))
+            .toInt256() - liquidityPerTick.toInt256();
+
         // Adjust tick deltas
         _updateTicks(
             p.lower,
             p.upper,
             l.marketPrice,
-            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick,
+            tickDelta,
             initialSize == 0,
             false,
             p.orderType
@@ -399,9 +406,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 maxSlippage
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
+        _ensureNotExpired(l);
 
         _ensureBelowMaxSlippage(l, maxSlippage);
+        _ensureNonZeroSize(size);
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
@@ -411,25 +419,27 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        uint256 tokenId = PoolStorage.formatTokenId(
+        WithdrawVarsInternal memory vars;
+
+        vars.tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        uint256 initialSize = _balanceOf(p.owner, tokenId);
+        vars.initialSize = _balanceOf(p.owner, vars.tokenId);
 
-        if (initialSize == 0) revert Pool__PositionDoesNotExist();
+        if (vars.initialSize == 0) revert Pool__PositionDoesNotExist();
 
-        uint256 liquidityPerTick;
+        vars.isFullWithdrawal = vars.initialSize == size;
 
         {
             Tick.Data memory lowerTick = _getTick(p.lower);
             Tick.Data memory upperTick = _getTick(p.upper);
 
             // Initialize variables before position update
-            liquidityPerTick = p.liquidityPerTick(initialSize);
+            vars.liquidityPerTick = p.liquidityPerTick(vars.initialSize);
             uint256 feeRate = _rangeFeeRate(
                 l,
                 p.lower,
@@ -439,7 +449,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
 
             // Update claimable fees
-            _updateClaimableFees(pData, feeRate, liquidityPerTick);
+            _updateClaimableFees(pData, feeRate, vars.liquidityPerTick);
         }
 
         // Check whether it's a full withdrawal before updating the position
@@ -448,8 +458,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             uint256 collateralToTransfer;
-            // If full withdrawal
-            if (initialSize == size) {
+            if (vars.isFullWithdrawal) {
                 uint256 feesClaimed = pData.claimableFees;
                 // Claim all fees and remove the position completely
                 collateralToTransfer += feesClaimed;
@@ -457,18 +466,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 pData.claimableFees = 0;
                 pData.lastFeeRate = 0;
 
-                emit ClaimFees(p.owner, tokenId, feesClaimed, 0);
+                emit ClaimFees(p.owner, vars.tokenId, feesClaimed, 0);
             }
 
             delta = p.calculatePositionUpdate(
-                initialSize,
+                vars.initialSize,
                 -size.toInt256(),
                 l.marketPrice
             );
 
             collateralToTransfer += Math.abs(delta.collateral);
 
-            _burn(p.owner, tokenId, size);
+            _burn(p.owner, vars.tokenId, size);
 
             _transferTokens(
                 l,
@@ -476,24 +485,31 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 p.operator,
                 collateralToTransfer,
                 0,
+                address(0),
                 Math.abs(delta.longs),
                 Math.abs(delta.shorts)
             );
         }
 
-        _updateTicks(
-            p.lower,
-            p.upper,
-            l.marketPrice,
-            p.liquidityPerTick(_balanceOf(p.owner, tokenId)) - liquidityPerTick, // Adjust tick deltas (reverse of deposit)
-            false,
-            initialSize == size, // isFullWithdrawal,
-            p.orderType
-        );
+        {
+            int256 tickDelta = p
+                .liquidityPerTick(_balanceOf(p.owner, vars.tokenId))
+                .toInt256() - vars.liquidityPerTick.toInt256();
+
+            _updateTicks(
+                p.lower,
+                p.upper,
+                l.marketPrice,
+                tickDelta, // Adjust tick deltas (reverse of deposit)
+                false,
+                vars.isFullWithdrawal,
+                p.orderType
+            );
+        }
 
         emit Withdrawal(
             p.owner,
-            tokenId,
+            vars.tokenId,
             Math.abs(delta.collateral),
             Math.abs(delta.longs),
             Math.abs(delta.shorts),
@@ -514,6 +530,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address to,
         uint256 collateral,
         uint256 collateralCredit,
+        address refundAddress,
         uint256 longs,
         uint256 shorts
     ) internal {
@@ -523,16 +540,22 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         address poolToken = l.getPoolToken();
         if (collateral > collateralCredit) {
-            IERC20(poolToken).transferFrom(
-                from,
-                to,
-                collateral - collateralCredit
-            );
+            if (from == address(this)) {
+                IERC20(poolToken).safeTransfer(
+                    to,
+                    collateral - collateralCredit
+                );
+            } else {
+                IERC20(poolToken).safeTransferFrom(
+                    from,
+                    to,
+                    collateral - collateralCredit
+                );
+            }
         } else if (collateralCredit > collateral) {
             // If there was too much collateral credit, we refund the excess
-            IERC20(poolToken).transferFrom(
-                to,
-                from,
+            IERC20(poolToken).safeTransfer(
+                refundAddress,
                 collateralCredit - collateral
             );
         }
@@ -752,9 +775,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         bool _isBuy = delta.longs > 0 || delta.shorts < 0;
 
-        uint256 deltaShortAbs = Math.abs(delta.shorts);
         uint256 shortCollateral = Position.contractsToCollateral(
-            deltaShortAbs,
+            Math.abs(delta.shorts),
             l.strike,
             l.isCallPool
         );
@@ -778,13 +800,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         // Transfer collateral
         if (_deltaCollateral < 0) {
-            IERC20(l.getPoolToken()).transferFrom(
+            IERC20(l.getPoolToken()).safeTransferFrom(
                 user,
                 address(this),
                 uint256(-_deltaCollateral)
             );
         } else if (_deltaCollateral > 0 && transferCollateralToUser) {
-            IERC20(l.getPoolToken()).transfer(user, uint256(_deltaCollateral));
+            IERC20(l.getPoolToken()).safeTransfer(
+                user,
+                uint256(_deltaCollateral)
+            );
         }
 
         // Transfer long
@@ -924,7 +949,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _burn(owner, PoolStorage.SHORT, size);
         _burn(owner, PoolStorage.LONG, size);
-        IERC20(l.getPoolToken()).transfer(
+        IERC20(l.getPoolToken()).safeTransfer(
             owner,
             Position.contractsToCollateral(size, l.strike, l.isCallPool)
         );
@@ -1062,6 +1087,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param holder The holder of the contracts
     function _exercise(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureExpired(l);
+
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
@@ -1069,7 +1096,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(holder, PoolStorage.LONG, size);
 
         if (exerciseValue > 0) {
-            IERC20(l.getPoolToken()).transfer(holder, exerciseValue);
+            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
         }
 
         emit Exercise(holder, size, exerciseValue, l.spot, 0);
@@ -1081,6 +1108,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param holder The holder of the contracts
     function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureExpired(l);
+
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
 
         uint256 exerciseValue = _calculateExerciseValue(l, size);
@@ -1094,7 +1123,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.SHORT, size);
         if (collateralValue > 0) {
-            IERC20(l.getPoolToken()).transfer(holder, collateralValue);
+            IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
         }
 
         emit Settle(holder, size, exerciseValue, l.spot, 0);
@@ -1106,7 +1135,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param p The position key
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureNotExpired(l);
+        _ensureExpired(l);
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;
@@ -1160,7 +1189,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = 0;
 
         if (collateral > 0) {
-            IERC20(l.getPoolToken()).transfer(p.operator, collateral);
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, collateral);
         }
 
         emit SettlePosition(
@@ -1352,7 +1381,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 lower,
         uint256 upper,
         uint256 marketPrice,
-        uint256 delta,
+        int256 delta,
         bool isNewDeposit,
         bool isFullWithdrawal,
         Position.OrderType orderType
@@ -1408,42 +1437,41 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //                [---------------------)
         //                         current
 
-        int256 _delta = delta.toInt256();
         if (upper <= l.currentTick) {
-            lowerTick.delta -= _delta;
-            upperTick.delta += _delta;
+            lowerTick.delta -= delta;
+            upperTick.delta += delta;
 
             if (orderType.isLong()) {
-                lowerTick.longDelta -= _delta;
-                upperTick.longDelta += _delta;
+                lowerTick.longDelta -= delta;
+                upperTick.longDelta += delta;
             } else {
-                lowerTick.shortDelta -= _delta;
-                upperTick.shortDelta += _delta;
+                lowerTick.shortDelta -= delta;
+                upperTick.shortDelta += delta;
             }
         } else if (lower > l.currentTick) {
-            lowerTick.delta += _delta;
-            upperTick.delta -= _delta;
+            lowerTick.delta += delta;
+            upperTick.delta -= delta;
 
             if (orderType.isLong()) {
-                lowerTick.longDelta += _delta;
-                upperTick.longDelta -= _delta;
+                lowerTick.longDelta += delta;
+                upperTick.longDelta -= delta;
             } else {
-                lowerTick.shortDelta += _delta;
-                upperTick.shortDelta -= _delta;
+                lowerTick.shortDelta += delta;
+                upperTick.shortDelta -= delta;
             }
         } else {
-            lowerTick.delta -= _delta;
-            upperTick.delta -= _delta;
-            l.liquidityRate += delta;
+            lowerTick.delta -= delta;
+            upperTick.delta -= delta;
+            l.liquidityRate = l.liquidityRate.add(delta);
 
             if (orderType.isLong()) {
-                lowerTick.longDelta -= _delta;
-                upperTick.longDelta -= _delta;
-                l.longRate = l.longRate.add(_delta);
+                lowerTick.longDelta -= delta;
+                upperTick.longDelta -= delta;
+                l.longRate = l.longRate.add(delta);
             } else {
-                lowerTick.shortDelta -= _delta;
-                upperTick.shortDelta -= _delta;
-                l.shortRate = l.shortRate.add(_delta);
+                lowerTick.shortDelta -= delta;
+                upperTick.shortDelta -= delta;
+                l.shortRate = l.shortRate.add(delta);
             }
         }
 
@@ -1672,6 +1700,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower == 0 ||
             upper == 0 ||
             lower >= upper ||
+            lower < Pricing.MIN_TICK_PRICE ||
             upper > Pricing.MAX_TICK_PRICE
         ) revert Pool__InvalidRange();
     }
@@ -1744,5 +1773,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         address signer = ECDSA.recover(hash, v, r, s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
+    }
+
+    function _ensureOperator(address operator) internal view {
+        if (operator != msg.sender) revert Pool__NotAuthorized();
     }
 }

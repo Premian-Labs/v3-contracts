@@ -9,19 +9,22 @@ import {
 } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { OrderType, PoolUtil, TokenType } from '../../utils/PoolUtil';
+import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
 import {
   getValidMaturity,
+  increaseTo,
+  now,
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
-import { signQuote, TradeQuote } from '../../utils/quote';
-import { bnToNumber } from '../../utils/math';
-import { now } from '../../utils/time';
+import { signQuote, TradeQuote } from '../../utils/sdk/quote';
+import { average, bnToNumber } from '../../utils/sdk/math';
+import { OrderType, PositionKey, TokenType } from '../../utils/sdk/types';
+import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -43,6 +46,8 @@ describe('Pool', () => {
 
   let isCall: boolean;
   let collateral: BigNumber;
+
+  let pKey: PositionKey;
 
   let getTradeQuote: () => Promise<TradeQuote>;
 
@@ -109,6 +114,18 @@ describe('Pool', () => {
     };
   });
 
+  beforeEach(async () => {
+    pKey = {
+      owner: lp.address,
+      operator: lp.address,
+      lower: parseEther('0.1'),
+      upper: parseEther('0.3'),
+      orderType: OrderType.LC,
+      isCall: isCall,
+      strike: strike,
+    };
+  });
+
   revertToSnapshotAfterEach(async () => {});
 
   describe('__internal', function () {
@@ -118,7 +135,7 @@ describe('Pool', () => {
         let args = await callPool._getPricing(isBuy);
 
         expect(args.liquidityRate).to.eq(0);
-        expect(args.marketPrice).to.eq(0);
+        expect(args.marketPrice).to.eq(parseEther('0.001'));
         expect(args.lower).to.eq(parseEther('0.001'));
         expect(args.upper).to.eq(parseEther('1'));
         expect(args.isBuy).to.eq(isBuy);
@@ -126,7 +143,7 @@ describe('Pool', () => {
         args = await callPool._getPricing(!isBuy);
 
         expect(args.liquidityRate).to.eq(0);
-        expect(args.marketPrice).to.eq(0);
+        expect(args.marketPrice).to.eq(parseEther('0.001'));
         expect(args.lower).to.eq(parseEther('0.001'));
         expect(args.upper).to.eq(parseEther('1'));
         expect(args.isBuy).to.eq(!isBuy);
@@ -181,51 +198,280 @@ describe('Pool', () => {
     });
   });
 
-  describe('#deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)', () => {
+  describe('#deposit', () => {
+    const fnSig =
+      'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
+
+    describe(`#${fnSig}`, () => {
+      describe('OrderType LC', () => {
+        it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
+          const tokenId = await callPool.formatTokenId(
+            pKey.operator,
+            pKey.lower,
+            pKey.upper,
+            pKey.orderType,
+          );
+
+          expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+
+          const nearestBelow = await callPool.getNearestTicksBelow(
+            pKey.lower,
+            pKey.upper,
+          );
+          const size = parseEther('1000');
+
+          await base.mint(lp.address, size);
+          await base.connect(lp).approve(callPool.address, size);
+
+          await callPool
+            .connect(lp)
+            [fnSig](
+              pKey,
+              nearestBelow.nearestBelowLower,
+              nearestBelow.nearestBelowUpper,
+              size,
+              0,
+            );
+
+          const averagePrice = average(pKey.lower, pKey.upper);
+          const collateralValue = size.mul(averagePrice).div(ONE_ETHER);
+
+          expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(size);
+          expect(await callPool.totalSupply(tokenId)).to.eq(size);
+          expect(await base.balanceOf(callPool.address)).to.eq(collateralValue);
+          expect(await base.balanceOf(lp.address)).to.eq(
+            size.sub(collateralValue),
+          );
+          expect(await callPool.marketPrice()).to.eq(pKey.upper);
+        });
+      });
+
+      it('should revert if msg.sender != p.operator', async () => {
+        await expect(
+          callPool.connect(deployer)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
+      });
+
+      it('should revert if above max slippage'); // ToDo
+
+      it('should revert if zero size', async () => {
+        await expect(
+          callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+      });
+
+      it('should revert if option is expired', async () => {
+        await increaseTo(maturity);
+        await expect(
+          callPool.connect(lp)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
+      });
+
+      it('should revert if range is not valid', async () => {
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig]({ ...pKey, lower: 0 }, 0, 0, THREE_ETHER, 0),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig]({ ...pKey, upper: 0 }, 0, 0, THREE_ETHER, 0),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, lower: parseEther('0.5'), upper: parseEther('0.25') },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, lower: parseEther('0.0001') },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, upper: parseEther('1.01') },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+      });
+
+      it('should revert if tick width is invalid', async () => {
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, lower: parseEther('0.2501') },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](
+              { ...pKey, upper: parseEther('0.7501') },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+            ),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
+      });
+    });
+  });
+
+  describe('#withdraw', () => {
     describe('OrderType LC', () => {
-      it('should mint 2000 LP tokens when LP deposits 2000 unit(s) of collateral', async () => {
-        let lower = parseEther('0.25');
-        let upper = parseEther('0.75');
-
-        let position = {
-          lower: lower,
-          upper: upper,
-          operator: lp.address,
-          owner: lp.address,
-          orderType: OrderType.LC,
-          isCall: isCall,
-          strike: strike,
-        };
-
+      it('should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)', async () => {
         const tokenId = await callPool.formatTokenId(
-          position.operator,
-          position.lower,
-          position.upper,
-          position.orderType,
+          pKey.operator,
+          pKey.lower,
+          pKey.upper,
+          pKey.orderType,
         );
 
-        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+        const nearestBelow = await callPool.getNearestTicksBelow(
+          pKey.lower,
+          pKey.upper,
+        );
+        const size = parseEther('1000');
 
-        const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
-        const size = parseEther('2000');
-
-        await base.mint(lp.address, parseEther('2000'));
-        await base.connect(lp).approve(callPool.address, size);
+        const depositCollateralValue = parseEther('200');
+        await base.mint(lp.address, depositCollateralValue);
+        await base
+          .connect(lp)
+          .approve(callPool.address, depositCollateralValue);
 
         await callPool
           .connect(lp)
           [
             'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)'
           ](
-            position,
+            pKey,
             nearestBelow.nearestBelowLower,
             nearestBelow.nearestBelowUpper,
             size,
             0,
           );
 
-        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(size);
+        expect(await base.balanceOf(lp.address)).to.eq(0);
+        expect(await base.balanceOf(callPool.address)).to.eq(parseEther('200'));
+
+        const withdrawSize = parseEther('750');
+
+        const averagePrice = average(pKey.lower, pKey.upper);
+        const withdrawCollateralValue = withdrawSize
+          .mul(averagePrice)
+          .div(ONE_ETHER);
+
+        await callPool.connect(lp).withdraw(pKey, withdrawSize, 0);
+        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
+          parseEther('250'),
+        );
+        expect(await callPool.totalSupply(tokenId)).to.eq(parseEther('250'));
+        expect(await base.balanceOf(callPool.address)).to.eq(
+          depositCollateralValue.sub(withdrawCollateralValue),
+        );
+        expect(await base.balanceOf(lp.address)).to.eq(withdrawCollateralValue);
       });
+    });
+
+    it('should revert if msg.sender != p.operator', async () => {
+      await expect(
+        callPool.connect(deployer).withdraw(pKey, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
+    });
+
+    it('should revert if above max slippage'); // ToDo
+
+    it('should revert if zero size', async () => {
+      await expect(
+        callPool.connect(lp).withdraw(pKey, 0, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+    });
+
+    it('should revert if option is expired', async () => {
+      await increaseTo(maturity);
+      await expect(
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
+    });
+
+    it('should revert if position does not exists', async () => {
+      await expect(
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__PositionDoesNotExist');
+    });
+
+    it('should revert if range is not valid', async () => {
+      await expect(
+        callPool.connect(lp).withdraw({ ...pKey, lower: 0 }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+      await expect(
+        callPool.connect(lp).withdraw({ ...pKey, upper: 0 }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw(
+            { ...pKey, lower: parseEther('0.5'), upper: parseEther('0.25') },
+            THREE_ETHER,
+            0,
+          ),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, lower: parseEther('0.0001') }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, upper: parseEther('1.01') }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
+    });
+
+    it('should revert if tick width is invalid', async () => {
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, lower: parseEther('0.2501') }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, upper: parseEther('0.7501') }, THREE_ETHER, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
     });
   });
 
