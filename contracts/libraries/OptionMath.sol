@@ -24,6 +24,11 @@ library OptionMath {
     int256 internal constant S1 = -0.11105481e18;
     int256 internal constant S2 = 0.44334159e18;
 
+    error OptionMath__NegativeSpot();
+    error OptionMath__NegativeStrike();
+    error OptionMath__NegativeTimeToMaturity();
+    error OptionMath__NonPositiveVol();
+
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x 59x18 fixed point representation of the input to the normal CDF
     /// @return result 59x18 fixed point representation of the value of the evaluated helper function
@@ -71,6 +76,11 @@ library OptionMath {
         int256 riskFreeRate,
         bool isCall
     ) internal pure returns (int256 price) {
+        if (spot < 0) revert OptionMath__NegativeSpot();
+        if (strike < 0) revert OptionMath__NegativeStrike();
+        if (timeToMaturity < 0) revert OptionMath__NegativeTimeToMaturity();
+        if (volAnnualized <= 0) revert OptionMath__NonPositiveVol();
+
         if (timeToMaturity == 0) {
             if (isCall) {
                 price = relu(spot - strike);
@@ -83,15 +93,6 @@ library OptionMath {
         BlackScholesPriceVarsInternal memory vars;
 
         vars.discountFactor = riskFreeRate.mul(timeToMaturity).exp();
-        if (volAnnualized == 0) {
-            if (isCall) {
-                price = relu(spot - strike.div(vars.discountFactor));
-            } else {
-                price = relu(strike.div(vars.discountFactor) - spot);
-            }
-            return price;
-        }
-
         vars.timeScaledVol = timeToMaturity.mul(volAnnualized);
         vars.timeScaledVar = vars.timeScaledVol.pow(TWO);
         vars.timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
