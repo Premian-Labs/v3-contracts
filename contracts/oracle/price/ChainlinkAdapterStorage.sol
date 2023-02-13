@@ -9,8 +9,9 @@ library ChainlinkAdapterStorage {
         keccak256("premia.contracts.storage.ChainlinkAdapter");
 
     struct Layout {
-        mapping(address => address) tokenMappings;
+        mapping(address => address) denominations;
         mapping(bytes32 => IChainlinkAdapterInternal.PricingPath) pathForPair;
+        mapping(bytes32 => address) feeds;
     }
 
     function layout() internal pure returns (Layout storage l) {

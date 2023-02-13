@@ -9,7 +9,7 @@ import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
-import {FeedRegistryInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
+import {AggregatorV3Interface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapter} from "./OracleAdapter.sol";
 
@@ -22,28 +22,20 @@ abstract contract ChainlinkAdapterInternal is
     using UD60x18 for uint256;
 
     uint32 internal constant MAX_DELAY = 25 hours;
-    FeedRegistryInterface internal immutable FeedRegistry;
 
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
 
-    constructor(
-        FeedRegistryInterface _registry,
-        address[] memory _addresses,
-        address[] memory _mappings
-    ) {
-        if (address(_registry) == address(0)) revert Oracle__ZeroAddress();
-        FeedRegistry = _registry;
-        _addMappings(_addresses, _mappings);
-    }
-
     function _addOrModifySupportForPair(
         address tokenA,
         address tokenB
     ) internal virtual override {
-        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
+        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
+            tokenA,
+            tokenB
+        );
         PricingPath path = _determinePricingPath(_tokenA, _tokenB);
         bytes32 keyForPair = _keyForSortedPair(_tokenA, _tokenB);
 
@@ -76,7 +68,10 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (PricingPath) {
-        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
+        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
+            tokenA,
+            tokenB
+        );
         return
             ChainlinkAdapterStorage.layout().pathForPair[
                 _keyForSortedPair(_tokenA, _tokenB)
@@ -200,8 +195,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view virtual returns (PricingPath) {
-        if (tokenA == tokenB)
-            revert Oracle__BaseAndQuoteAreSame(tokenA, tokenB);
+        if (tokenA == tokenB) revert Oracle__TokensAreSame(tokenA, tokenB);
 
         bool isTokenAUSD = _isUSD(tokenA);
         bool isTokenBUSD = _isUSD(tokenB);
@@ -282,17 +276,7 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _exists(address base, address quote) internal view returns (bool) {
-        try FeedRegistry.latestRoundData(base, quote) returns (
-            uint80,
-            int256 price,
-            uint256,
-            uint256,
-            uint80
-        ) {
-            return price > 0;
-        } catch {
-            return false;
-        }
+        return _feed(base, quote) != address(0);
     }
 
     function _adjustDecimals(
@@ -323,10 +307,11 @@ abstract contract ChainlinkAdapterInternal is
         address base,
         address quote
     ) internal view returns (uint256) {
-        (, int256 price, , uint256 updatedAt, ) = FeedRegistry.latestRoundData(
-            base,
-            quote
-        );
+        address feed = _feed(base, quote);
+
+        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
+            .latestRoundData();
+
         if (price <= 0) revert Oracle__InvalidPrice();
 
         if (block.timestamp > updatedAt + MAX_DELAY)
@@ -335,35 +320,61 @@ abstract contract ChainlinkAdapterInternal is
         return uint256(price);
     }
 
-    function _addMappings(
-        address[] memory addresses,
-        address[] memory mappings
+    function _batchRegisterFeedMappings(
+        FeedMappingArgs[] memory args
     ) internal {
-        if (addresses.length != mappings.length)
-            revert Oracle__InvalidMappingsInput();
+        for (uint256 i = 0; i < args.length; i++) {
+            address token = args[i].token;
+            address denomination = args[i].denomination;
 
-        for (uint256 i = 0; i < addresses.length; i++) {
-            ChainlinkAdapterStorage.layout().tokenMappings[
-                addresses[i]
-            ] = mappings[i];
+            if (token == denomination)
+                revert Oracle__TokensAreSame(token, denomination);
+
+            if (token == address(0) || denomination == address(0))
+                revert Oracle__ZeroAddress();
+
+            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
+            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
         }
 
-        emit MappingsAdded(addresses, mappings);
+        emit FeedMappingsRegistered(args);
     }
 
-    function _mappedToken(address token) internal view returns (address) {
-        address tokenMapping = ChainlinkAdapterStorage.layout().tokenMappings[
+    function _feed(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address) {
+        return
+            ChainlinkAdapterStorage.layout().feeds[
+                _keyForUnsortedPair(tokenA, tokenB)
+            ];
+    }
+
+    function _batchRegisterDenominationMappings(
+        DenominationMappingArgs[] memory args
+    ) internal {
+        for (uint256 i = 0; i < args.length; i++) {
+            ChainlinkAdapterStorage.layout().denominations[
+                args[i].token
+            ] = args[i].denomination;
+        }
+
+        emit DenominationMappingsRegistered(args);
+    }
+
+    function _denomination(address token) internal view returns (address) {
+        address tokenMapping = ChainlinkAdapterStorage.layout().denominations[
             token
         ];
 
         return tokenMapping != address(0) ? tokenMapping : token;
     }
 
-    function _mapAndSort(
+    function _mapToDenominationAndSort(
         address tokenA,
         address tokenB
     ) internal view returns (address, address) {
-        (address _mappedTokenA, address _mappedTokenB) = _mapPair(
+        (address _mappedTokenA, address _mappedTokenB) = _mapPairToDenomination(
             tokenA,
             tokenB
         );
@@ -371,12 +382,12 @@ abstract contract ChainlinkAdapterInternal is
         return TokenSorting.sortTokens(_mappedTokenA, _mappedTokenB);
     }
 
-    function _mapPair(
+    function _mapPairToDenomination(
         address tokenA,
         address tokenB
     ) internal view returns (address _mappedTokenA, address _mappedTokenB) {
-        _mappedTokenA = _mappedToken(tokenA);
-        _mappedTokenB = _mappedToken(tokenB);
+        _mappedTokenA = _denomination(tokenA);
+        _mappedTokenB = _denomination(tokenB);
     }
 
     function _keyForUnsortedPair(

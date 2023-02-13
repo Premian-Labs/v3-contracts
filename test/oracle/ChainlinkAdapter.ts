@@ -15,12 +15,13 @@ import {
   CHAINLINK_BTC,
   CHAINLINK_USD,
   CHAINLINK_ETH,
+  feeds,
   tokens,
 } from '../../utils/addresses';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 15591000;
+const blockNumber = 16600000;
 
 enum PricingPath {
   NONE,
@@ -33,22 +34,12 @@ enum PricingPath {
   TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
 }
 
-const feedRegistryAddress = '0x47Fb2585D2C56Fe188D0E6ec628a38b74fCeeeDf';
-
-let tokenAddressMapping = [
-  tokens.WBTC.address,
-  tokens.WETH.address,
-  tokens.USDC.address,
-  tokens.USDT.address,
-  tokens.DAI.address,
-];
-
-let chainlinkAddressMapping = [
-  CHAINLINK_BTC,
-  CHAINLINK_ETH,
-  CHAINLINK_USD,
-  CHAINLINK_USD,
-  CHAINLINK_USD,
+let deonominationMapping = [
+  { token: tokens.WBTC.address, denomination: CHAINLINK_BTC },
+  { token: tokens.WETH.address, denomination: CHAINLINK_ETH },
+  { token: tokens.USDC.address, denomination: CHAINLINK_USD },
+  { token: tokens.USDT.address, denomination: CHAINLINK_USD },
+  { token: tokens.DAI.address, denomination: CHAINLINK_USD },
 ];
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -103,10 +94,10 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       // - IN (tokenA) => ETH, OUT (tokenB) is USD
       // - IN (tokenB) is USD, ETH => OUT (tokenA)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.AMP }, // IN (tokenA) is ETH, USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AMP, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.IMX }, // IN (tokenA) is ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.IMX, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.AMP }, // IN (tokenA) => ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.IMX }, // IN (tokenA) => ETH, USD => OUT (tokenB)
 
       { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => USD, ETH => OUT (tokenA)
       { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => ETH, USD => OUT (tokenB)
@@ -129,83 +120,51 @@ describe('ChainlinkAdapter', () => {
     [deployer, notOwner] = await ethers.getSigners();
 
     instance = await new ChainlinkAdapter__factory(deployer).deploy(
-      feedRegistryAddress,
-      tokenAddressMapping,
-      chainlinkAddressMapping,
+      feeds,
+      deonominationMapping,
     );
 
     await instance.deployed();
   });
 
   describe('#constructor', () => {
-    describe('should revert if', () => {
-      it('feed registry is zero address', async () => {
-        await expect(
-          new ChainlinkAdapter__factory(deployer).deploy(
-            ethers.constants.AddressZero,
-            tokenAddressMapping,
-            chainlinkAddressMapping,
-          ),
-        ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
-      });
-
-      describe('on successful deployment', () => {
-        it('registry is set correctly', async () => {
-          const registry = await instance.feedRegistry();
-          expect(registry).to.eql(feedRegistryAddress);
-        });
-
-        it('max delay is set correctly', async () => {
-          const maxDelay = await instance.maxDelay();
-          expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
-        });
-
-        it('tokens are mapped correctly', async () => {
-          for (let i = 0; i < tokenAddressMapping.length; i++) {
-            expect(await instance.mappedToken(tokenAddressMapping[i])).to.equal(
-              chainlinkAddressMapping[i],
-            );
-          }
-        });
-      });
-    });
-  });
-
-  describe('#addMappings', () => {
-    const tokenAddressMapping = [
-      tokens.CRV.address,
-      tokens.AAVE.address,
-      tokens.MATIC.address,
-    ];
-
-    const chainlinkAddressMapping = [
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-    ];
-
-    it('shoud revert if not owner', async () => {
-      await expect(
-        instance
-          .connect(notOwner)
-          .addMappings(tokenAddressMapping, chainlinkAddressMapping),
-      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    it('should return max delay (25 hours)', async () => {
+      const maxDelay = await instance.maxDelay();
+      expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
     });
 
-    it('shoud return token address if token is not mapped', async () => {
-      await instance.addMappings(tokenAddressMapping, chainlinkAddressMapping);
-
-      for (let i = 0; i < tokenAddressMapping.length; i++) {
-        expect(await instance.mappedToken(tokenAddressMapping[i])).to.equal(
-          chainlinkAddressMapping[i],
-        );
+    it('should return tokens mapped to denomination', async () => {
+      for (let i = 0; i < deonominationMapping.length; i++) {
+        expect(
+          await instance.denomination(deonominationMapping[i].token),
+        ).to.equal(deonominationMapping[i].denomination);
       }
     });
   });
 
-  describe('#mappedToken', () => {
+  describe('#batchRegisterDenominationMappings', () => {
+    it('shoud revert if not owner', async () => {
+      await expect(
+        instance
+          .connect(notOwner)
+          .batchRegisterDenominationMappings(deonominationMapping),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
     it('shoud return token address if token is not mapped', async () => {
-      expect(await instance.mappedToken(tokens.AMP.address)).to.equal(
+      await instance.batchRegisterDenominationMappings(deonominationMapping);
+
+      for (let i = 0; i < deonominationMapping.length; i++) {
+        expect(
+          await instance.denomination(deonominationMapping[i].token),
+        ).to.equal(deonominationMapping[i].denomination);
+      }
+    });
+  });
+
+  describe('#denomination', () => {
+    it('shoud return token address if token is not mapped', async () => {
+      expect(await instance.denomination(tokens.AMP.address)).to.equal(
         tokens.AMP.address,
       );
     });
@@ -273,7 +232,7 @@ describe('ChainlinkAdapter', () => {
           tokens.WETH.address,
           tokens.WETH.address,
         ),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__BaseAndQuoteAreSame');
+      ).to.be.revertedWithCustomError(instance, 'Oracle__TokensAreSame');
     });
 
     it('should revert if pair has been added', async () => {
@@ -331,12 +290,20 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
+  describe('#bathRegisterFeedMappings', async () => {
+    it.skip('should not add feed if aggregator does not exist', async () => {});
+    it.skip('should overwrite existing feed', async () => {});
+  });
+
   describe('#quote', async () => {
     it('should revert if pair is not supported yet', async () => {
       await expect(
         instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
     });
+
+    it.skip('should revert if pair not already supported and there is no feed', async () => {});
+    it.skip('should add pair if they are not already supported', async () => {});
   });
 
   describe('supportsInterface', () => {
@@ -377,7 +344,7 @@ describe('ChainlinkAdapter', () => {
           });
 
           describe('#canSupportPair', () => {
-            it('returns true if adapter can support pair', async () => {
+            it('should return true if adapter can support pair', async () => {
               expect(
                 await instance.canSupportPair(
                   tokenIn.address,
@@ -388,7 +355,7 @@ describe('ChainlinkAdapter', () => {
           });
 
           describe('#isPairAlreadySupported', () => {
-            it('returns true if pair is supported by adapter', async () => {
+            it('should return true if pair is supported by adapter', async () => {
               expect(
                 await instance.isPairAlreadySupported(
                   tokenIn.address,
@@ -399,7 +366,7 @@ describe('ChainlinkAdapter', () => {
           });
 
           describe('#pathForPair', () => {
-            it('returns pricing path for pair', async () => {
+            it('should return pricing path for pair', async () => {
               const path1 = await instance.pathForPair(
                 tokenIn.address,
                 tokenOut.address,
@@ -416,7 +383,7 @@ describe('ChainlinkAdapter', () => {
           });
 
           describe('#quote', async () => {
-            it('returns quote for pair', async () => {
+            it('should return quote for pair', async () => {
               const quote = await instance.quote(
                 tokenIn.address,
                 tokenOut.address,

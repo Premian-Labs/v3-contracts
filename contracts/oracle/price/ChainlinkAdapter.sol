@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 
-import {FeedRegistryInterface, ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
+import {ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 
@@ -19,10 +19,12 @@ contract ChainlinkAdapter is
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
 
     constructor(
-        FeedRegistryInterface _registry,
-        address[] memory _addresses,
-        address[] memory _mappings
-    ) ChainlinkAdapterInternal(_registry, _addresses, _mappings) {
+        FeedMappingArgs[] memory feedMappingArgs,
+        DenominationMappingArgs[] memory denominationMappingArgs
+    ) {
+        _batchRegisterFeedMappings(feedMappingArgs);
+        _batchRegisterDenominationMappings(denominationMappingArgs);
+
         _setOwner(msg.sender);
         _setSupportsInterface(type(IChainlinkAdapter).interfaceId, true);
     }
@@ -32,7 +34,11 @@ contract ChainlinkAdapter is
         address tokenA,
         address tokenB
     ) external view returns (bool) {
-        (address _tokenA, address _tokenB) = _mapAndSort(tokenA, tokenB);
+        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
+            tokenA,
+            tokenB
+        );
+
         PricingPath path = _determinePricingPath(_tokenA, _tokenB);
         return path != PricingPath.NONE;
     }
@@ -50,10 +56,10 @@ contract ChainlinkAdapter is
         address tokenIn,
         address tokenOut
     ) external view returns (uint256) {
-        (address mappedTokenIn, address mappedTokenOut) = _mapPair(
-            tokenIn,
-            tokenOut
-        );
+        (
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _mapPairToDenomination(tokenIn, tokenOut);
 
         PricingPath path = ChainlinkAdapterStorage.layout().pathForPair[
             _keyForUnsortedPair(mappedTokenIn, mappedTokenOut)
@@ -79,25 +85,34 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function addMappings(
-        address[] memory addresses,
-        address[] memory mappings
+    function batchRegisterFeedMappings(
+        FeedMappingArgs[] memory args
     ) external onlyOwner {
-        _addMappings(addresses, mappings);
+        _batchRegisterFeedMappings(args);
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function mappedToken(address token) external view returns (address) {
-        return _mappedToken(token);
+    function batchRegisterDenominationMappings(
+        DenominationMappingArgs[] memory args
+    ) external onlyOwner {
+        _batchRegisterDenominationMappings(args);
+    }
+
+    /// @inheritdoc IChainlinkAdapter
+    function feed(
+        address tokenA,
+        address tokenB
+    ) external view returns (address) {
+        return _feed(tokenA, tokenB);
+    }
+
+    /// @inheritdoc IChainlinkAdapter
+    function denomination(address token) external view returns (address) {
+        return _denomination(token);
     }
 
     /// @inheritdoc IChainlinkAdapter
     function maxDelay() external pure returns (uint32) {
         return MAX_DELAY;
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function feedRegistry() external view returns (address) {
-        return address(FeedRegistry);
     }
 }

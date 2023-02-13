@@ -6,8 +6,8 @@ pragma solidity ^0.8.0;
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
-    /// @notice Thrown when trying to add pair where base and quote are the same
-    error Oracle__BaseAndQuoteAreSame(address tokenA, address tokenB);
+    /// @notice Thrown when trying to add pair where addresses are the same
+    error Oracle__TokensAreSame(address tokenA, address tokenB);
 
     /// @notice Thrown when trying to add support for a pair that has already been added
     error Oracle__PairAlreadySupported(address tokenA, address tokenB);
