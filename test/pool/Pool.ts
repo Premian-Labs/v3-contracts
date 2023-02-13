@@ -609,6 +609,45 @@ describe('Pool', () => {
     });
   });
 
+  describe('#trade', () => {
+    it('should successfully buy an option', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        tradeSize,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        tradeSize,
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(0);
+    });
+  });
+
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
       const quote = await getTradeQuote();
