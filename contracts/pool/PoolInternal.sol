@@ -18,7 +18,6 @@ import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
-import {Tick} from "../libraries/Tick.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IExchangeHelper} from "../IExchangeHelper.sol";
@@ -32,7 +31,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using Position for Position.Key;
     using Position for Position.OrderType;
     using Pricing for Pricing.Args;
-    using Tick for Tick.Data;
     using SafeCast for uint256;
     using SafeCast for int256;
     using Math for int256;
@@ -192,8 +190,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Position.Key memory p,
         Position.Data storage pData
     ) internal {
-        Tick.Data memory lowerTick = _getTick(p.lower);
-        Tick.Data memory upperTick = _getTick(p.upper);
+        Tick memory lowerTick = _getTick(p.lower);
+        Tick memory upperTick = _getTick(p.upper);
 
         _updateClaimableFees(
             pData,
@@ -364,8 +362,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 feeRate;
         {
             // If ticks dont exist they are created and inserted into the linked list
-            Tick.Data memory lowerTick = _getOrCreateTick(p.lower, belowLower);
-            Tick.Data memory upperTick = _getOrCreateTick(p.upper, belowUpper);
+            Tick memory lowerTick = _getOrCreateTick(p.lower, belowLower);
+            Tick memory upperTick = _getOrCreateTick(p.upper, belowUpper);
 
             feeRate = _rangeFeeRate(
                 l,
@@ -444,8 +442,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         vars.isFullWithdrawal = vars.initialSize == size;
 
         {
-            Tick.Data memory lowerTick = _getTick(p.lower);
-            Tick.Data memory upperTick = _getTick(p.upper);
+            Tick memory lowerTick = _getTick(p.lower);
+            Tick memory upperTick = _getTick(p.upper);
 
             // Initialize variables before position update
             vars.liquidityPerTick = p.liquidityPerTick(vars.initialSize);
@@ -1150,8 +1148,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        Tick.Data memory lowerTick = _getTick(p.lower);
-        Tick.Data memory upperTick = _getTick(p.upper);
+        Tick memory lowerTick = _getTick(p.lower);
+        Tick memory upperTick = _getTick(p.upper);
 
         uint256 tokenId = PoolStorage.formatTokenId(
             p.operator,
@@ -1300,8 +1298,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Get a tick, reverts if tick is not found
-    function _getTick(uint256 price) internal view returns (Tick.Data memory) {
-        (Tick.Data memory tick, bool tickFound) = _tryGetTick(price);
+    function _getTick(uint256 price) internal view returns (Tick memory) {
+        (Tick memory tick, bool tickFound) = _tryGetTick(price);
         if (!tickFound) revert Pool__TickNotFound();
 
         return tick;
@@ -1310,7 +1308,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Try to get tick, does not revert if tick is not found
     function _tryGetTick(
         uint256 price
-    ) internal view returns (Tick.Data memory tick, bool tickFound) {
+    ) internal view returns (Tick memory tick, bool tickFound) {
         _verifyTickWidth(price);
 
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
@@ -1320,7 +1318,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.tickIndex.contains(price)) return (l.ticks[price], true);
 
-        return (Tick.Data(0, 0, 0, 0, 0), false);
+        return (Tick(0, 0, 0, 0, 0), false);
     }
 
     /// @notice Creates a Tick for a given price, or returns the existing tick.
@@ -1330,10 +1328,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _getOrCreateTick(
         uint256 price,
         uint256 priceBelow
-    ) internal returns (Tick.Data memory) {
+    ) internal returns (Tick memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        (Tick.Data memory tick, bool tickFound) = _tryGetTick(price);
+        (Tick memory tick, bool tickFound) = _tryGetTick(price);
 
         if (tickFound) return tick;
 
@@ -1342,13 +1340,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.tickIndex.next(priceBelow) <= price
         ) revert Pool__InvalidBelowPrice();
 
-        tick = Tick.Data(
-            0,
-            price <= l.marketPrice ? l.globalFeeRate : 0,
-            0,
-            0,
-            0
-        );
+        tick = Tick(0, price <= l.marketPrice ? l.globalFeeRate : 0, 0, 0, 0);
 
         l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
@@ -1362,7 +1354,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (!l.tickIndex.contains(price)) return;
 
-        Tick.Data storage tick = l.ticks[price];
+        Tick storage tick = l.ticks[price];
 
         if (
             price > Pricing.MIN_TICK_PRICE &&
@@ -1396,8 +1388,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        Tick.Data storage lowerTick = l.ticks[lower];
-        Tick.Data storage upperTick = l.ticks[upper];
+        Tick storage lowerTick = l.ticks[lower];
+        Tick storage upperTick = l.ticks[upper];
 
         if (isNewDeposit) {
             lowerTick.counter += 1;
@@ -1569,7 +1561,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.currentTick = right;
         }
 
-        Tick.Data storage currentTick = l.ticks[l.currentTick];
+        Tick storage currentTick = l.ticks[l.currentTick];
 
         l.liquidityRate = l.liquidityRate.add(currentTick.delta);
         l.longRate = l.longRate.add(currentTick.longDelta);

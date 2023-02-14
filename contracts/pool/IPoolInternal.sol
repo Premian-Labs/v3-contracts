@@ -40,6 +40,14 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickWidthInvalid();
     error Pool__ZeroSize();
 
+    struct Tick {
+        int256 delta;
+        uint256 externalFeeRate;
+        int256 longDelta;
+        int256 shortDelta;
+        uint256 counter;
+    }
+
     struct SwapArgs {
         // token to pass in to swap (Must be poolToken for `tradeAndSwap`)
         address tokenIn;
