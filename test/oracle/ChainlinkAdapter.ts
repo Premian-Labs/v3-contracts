@@ -208,7 +208,7 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should not fail if called multiple times for same pair', async () => {
-      await instance.addSupportForPairIfNeeded(
+      await instance.addOrModifySupportForPair(
         tokens.WETH.address,
         tokens.DAI.address,
       );
@@ -220,7 +220,7 @@ describe('ChainlinkAdapter', () => {
         ),
       ).to.be.true;
 
-      instance.addSupportForPairIfNeeded(
+      await instance.addOrModifySupportForPair(
         tokens.WETH.address,
         tokens.DAI.address,
       );
@@ -400,11 +400,11 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return true if interface is IOracleAdapter', async () => {
-      expect(await instance.supportsInterface('0x2b2a0525')).to.be.true;
+      expect(await instance.supportsInterface('0xb55cf0e7')).to.be.true;
     });
 
     it('should return true if interface is IChainlinkAdapter', async () => {
-      expect(await instance.supportsInterface('0x74f2cdd5')).to.be.true;
+      expect(await instance.supportsInterface('0xe7ef79f6')).to.be.true;
     });
   });
 
