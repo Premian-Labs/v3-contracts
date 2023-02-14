@@ -34,12 +34,12 @@ contract ChainlinkAdapter is
         address tokenA,
         address tokenB
     ) external view returns (bool) {
-        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
-            tokenA,
-            tokenB
-        );
+        (
+            address mappedTokenA,
+            address mappedTokenB
+        ) = _mapToDenominationAndSort(tokenA, tokenB);
 
-        PricingPath path = _determinePricingPath(_tokenA, _tokenB);
+        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
         return path != PricingPath.NONE;
     }
 

@@ -49,13 +49,13 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal virtual override {
-        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
-            tokenA,
-            tokenB
-        );
+        (
+            address mappedTokenA,
+            address mappedTokenB
+        ) = _mapToDenominationAndSort(tokenA, tokenB);
 
-        PricingPath path = _determinePricingPath(_tokenA, _tokenB);
-        bytes32 keyForPair = _keyForSortedPair(_tokenA, _tokenB);
+        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
+        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
 
         ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
             .layout();
@@ -72,7 +72,7 @@ abstract contract ChainlinkAdapterInternal is
         }
 
         l.pathForPair[keyForPair] = path;
-        emit UpdatedPathForPair(_tokenA, _tokenB, path);
+        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
     function _isPairAlreadySupported(
@@ -86,14 +86,14 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (PricingPath) {
-        (address _tokenA, address _tokenB) = _mapToDenominationAndSort(
-            tokenA,
-            tokenB
-        );
+        (
+            address mappedTokenA,
+            address mappedTokenB
+        ) = _mapToDenominationAndSort(tokenA, tokenB);
 
         return
             ChainlinkAdapterStorage.layout().pathForPair[
-                _keyForSortedPair(_tokenA, _tokenB)
+                _keyForSortedPair(mappedTokenA, mappedTokenB)
             ];
     }
 
@@ -409,32 +409,32 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (address, address) {
-        (address _mappedTokenA, address _mappedTokenB) = _mapPairToDenomination(
+        (address mappedTokenA, address mappedTokenB) = _mapPairToDenomination(
             tokenA,
             tokenB
         );
 
-        return TokenSorting.sortTokens(_mappedTokenA, _mappedTokenB);
+        return TokenSorting.sortTokens(mappedTokenA, mappedTokenB);
     }
 
     function _mapPairToDenomination(
         address tokenA,
         address tokenB
-    ) internal view returns (address _mappedTokenA, address _mappedTokenB) {
-        _mappedTokenA = _denomination(tokenA);
-        _mappedTokenB = _denomination(tokenB);
+    ) internal view returns (address mappedTokenA, address mappedTokenB) {
+        mappedTokenA = _denomination(tokenA);
+        mappedTokenB = _denomination(tokenB);
     }
 
     function _keyForUnsortedPair(
         address tokenA,
         address tokenB
     ) internal pure returns (bytes32) {
-        (address _tokenA, address _tokenB) = TokenSorting.sortTokens(
+        (address mappedTokenA, address mappedTokenB) = TokenSorting.sortTokens(
             tokenA,
             tokenB
         );
 
-        return _keyForSortedPair(_tokenA, _tokenB);
+        return _keyForSortedPair(mappedTokenA, mappedTokenB);
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
