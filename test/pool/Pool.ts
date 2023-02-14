@@ -255,8 +255,8 @@ describe('Pool', () => {
       );
       const depositSize = parseEther('1000');
 
-      await base.mint(lp.address, depositSize.mul(2));
-      await base.connect(lp).approve(callPool.address, depositSize.mul(2));
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -610,7 +610,7 @@ describe('Pool', () => {
   });
 
   describe('#trade', () => {
-    it('should successfully buy an option', async () => {
+    it('should successfully buy 500 options', async () => {
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -645,6 +645,43 @@ describe('Pool', () => {
         tradeSize,
       );
       expect(await base.balanceOf(trader.address)).to.eq(0);
+    });
+
+    it('should successfully sell 500 options', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
+
+      await base.mint(trader.address, tradeSize);
+      await base.connect(trader).approve(callPool.address, tradeSize);
+
+      await callPool.connect(trader).trade(tradeSize, false);
+
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        tradeSize,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.LONG)).to.eq(
+        tradeSize,
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(totalPremium);
     });
   });
 
