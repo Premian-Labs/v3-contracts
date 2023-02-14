@@ -1054,7 +1054,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size
     ) internal returns (uint256) {
         _ensureNonZeroSize(size);
-        _ensureExpired(l);
 
         uint256 spot = l.getSpotPrice();
         uint256 strike = l.strike;
@@ -1100,7 +1099,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _removeFromFactory(l);
 
-        // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
+        // Not need to check for size > 0 or option expired as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.LONG, size);
 
         if (exerciseValue > 0) {
