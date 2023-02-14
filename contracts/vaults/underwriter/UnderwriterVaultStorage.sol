@@ -13,8 +13,10 @@ library UnderwriterVaultStorage {
 
     struct Layout {
 
-        // VolatilityOracle address
-        address oracle;
+        uint256 variable;
+
+        address base;
+        address quote;
 
         // Whether the vault is underwriting calls or puts
         bool isCall;

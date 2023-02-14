@@ -2,26 +2,47 @@
 
 pragma solidity ^0.8.0;
 
+import "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
+import "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol"; 
+
 import "./IUnderwriterVault.sol";
 import "./UnderwriterVaultStorage.sol";
+import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol"; 
 
-contract UnderwriterVault is IUnderwriterVault{
+contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableInternal {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
+    using SafeERC20 for IERC20;
 
-    /// @inheritdoc ERC4626BaseInternal
-    function _asset() internal view virtual returns (address) {
+    // Instance Variables
+    // isCall : bool
+    // listings : 
+    address internal immutable ORACLE;
+
+
+    constructor (address oracleAddress) {
+        ORACLE = oracleAddress;
+    }
+
+
+    function setVariable(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().variable = value;
+    } 
+
+    function _asset() override internal view virtual returns (address) {
         return ERC4626BaseStorage.layout().asset;
     }
 
-    /// @inheritdoc ERC4626BaseInternal
-    function _totalAssets() internal view virtual returns (uint256) {
+    function _totalAssets() override internal view virtual returns (uint256) {
+        uint256 totalAssets; 
         return totalAssets;
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _convertToShares(
         uint256 assetAmount
-    ) internal view virtual returns (uint256 shareAmount) {
+    ) override internal view virtual returns (uint256 shareAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -36,10 +57,9 @@ contract UnderwriterVault is IUnderwriterVault{
         }
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _convertToAssets(
         uint256 shareAmount
-    ) internal view virtual returns (uint256 assetAmount) {
+    ) override internal view virtual returns (uint256 assetAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -49,45 +69,39 @@ contract UnderwriterVault is IUnderwriterVault{
         }
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _maxDeposit(
         address
-    ) internal view virtual returns (uint256 maxAssets) {
+    ) override internal view virtual returns (uint256 maxAssets) {
         maxAssets = type(uint256).max;
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _maxMint(
         address
-    ) internal view virtual returns (uint256 maxShares) {
+    ) override internal view virtual returns (uint256 maxShares) {
         maxShares = type(uint256).max;
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _maxWithdraw(
         address owner
-    ) internal view virtual returns (uint256 maxAssets) {
+    ) override internal view virtual returns (uint256 maxAssets) {
         maxAssets = _convertToAssets(_balanceOf(owner));
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _maxRedeem(
         address owner
-    ) internal view virtual returns (uint256 maxShares) {
+    ) override internal view virtual returns (uint256 maxShares) {
         maxShares = _balanceOf(owner);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _previewDeposit(
         uint256 assetAmount
-    ) internal view virtual returns (uint256 shareAmount) {
+    ) override  internal view virtual returns (uint256 shareAmount) {
         shareAmount = _convertToShares(assetAmount);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _previewMint(
         uint256 shareAmount
-    ) internal view virtual returns (uint256 assetAmount) {
+    ) override internal view virtual returns (uint256 assetAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -97,10 +111,9 @@ contract UnderwriterVault is IUnderwriterVault{
         }
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _previewWithdraw(
         uint256 assetAmount
-    ) internal view virtual returns (uint256 shareAmount) {
+    ) override internal view virtual returns (uint256 shareAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -118,18 +131,16 @@ contract UnderwriterVault is IUnderwriterVault{
         }
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _previewRedeem(
         uint256 shareAmount
-    ) internal view virtual returns (uint256 assetAmount) {
+    ) override internal view virtual returns (uint256 assetAmount) {
         assetAmount = _convertToAssets(shareAmount);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _deposit(
         uint256 assetAmount,
         address receiver
-    ) internal virtual returns (uint256 shareAmount) {
+    ) override internal virtual returns (uint256 shareAmount) {
         if (assetAmount > _maxDeposit(receiver))
             revert ERC4626Base__MaximumAmountExceeded();
 
@@ -138,11 +149,10 @@ contract UnderwriterVault is IUnderwriterVault{
         _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _mint(
         uint256 shareAmount,
         address receiver
-    ) internal virtual returns (uint256 assetAmount) {
+    ) override internal virtual returns (uint256 assetAmount) {
         if (shareAmount > _maxMint(receiver))
             revert ERC4626Base__MaximumAmountExceeded();
 
@@ -151,12 +161,11 @@ contract UnderwriterVault is IUnderwriterVault{
         _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _withdraw(
         uint256 assetAmount,
         address receiver,
         address owner
-    ) internal virtual returns (uint256 shareAmount) {
+    ) override internal virtual returns (uint256 shareAmount) {
         if (assetAmount > _maxWithdraw(owner))
             revert ERC4626Base__MaximumAmountExceeded();
 
@@ -165,12 +174,11 @@ contract UnderwriterVault is IUnderwriterVault{
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _redeem(
         uint256 shareAmount,
         address receiver,
         address owner
-    ) internal virtual returns (uint256 assetAmount) {
+    ) override internal virtual returns (uint256 assetAmount) {
         if (shareAmount > _maxRedeem(owner))
             revert ERC4626Base__MaximumAmountExceeded();
 
@@ -179,21 +187,18 @@ contract UnderwriterVault is IUnderwriterVault{
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _afterDeposit(
         address receiver,
         uint256 assetAmount,
         uint256 shareAmount
-    ) internal virtual {}
+    ) override internal virtual {}
 
-    /// @inheritdoc ERC4626BaseInternal
     function _beforeWithdraw(
         address owner,
         uint256 assetAmount,
         uint256 shareAmount
-    ) internal virtual {}
+    ) override internal virtual {}
 
-    /// @inheritdoc ERC4626BaseInternal
     function _deposit(
         address caller,
         address receiver,
@@ -201,7 +206,7 @@ contract UnderwriterVault is IUnderwriterVault{
         uint256 shareAmount,
         uint256 assetAmountOffset,
         uint256 shareAmountOffset
-    ) internal virtual {
+    ) override internal virtual {
         uint256 assetAmountNet = assetAmount - assetAmountOffset;
 
         if (assetAmountNet > 0) {
@@ -223,7 +228,6 @@ contract UnderwriterVault is IUnderwriterVault{
         emit Deposit(caller, receiver, assetAmount, shareAmount);
     }
 
-    /// @inheritdoc ERC4626BaseInternal
     function _withdraw(
         address caller,
         address receiver,
@@ -232,7 +236,7 @@ contract UnderwriterVault is IUnderwriterVault{
         uint256 shareAmount,
         uint256 assetAmountOffset,
         uint256 shareAmountOffset
-    ) internal virtual {
+    ) override internal virtual {
         if (caller != owner) {
             uint256 allowance = _allowance(owner, caller);
 
@@ -271,14 +275,14 @@ contract UnderwriterVault is IUnderwriterVault{
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) external view returns (uint256 premium) {
+    ) override external view returns (uint256 premium) {
 
         // Validate listing
         // Check if this listing has a pool deployed
 
         // Compute premium and the spread collected
-
-
+        // uint256 sigma = IVolatilityOracle(ORACLE).getImpliedVol(...);
+        
         // Handle the premiums and spread capture generated
         // _handleTradeFees(premium, spread)
 
@@ -286,7 +290,7 @@ contract UnderwriterVault is IUnderwriterVault{
     }
 
     /// @inheritdoc IUnderwriterVault
-    function settle() external returns (uint256) {
+    function settle() override external returns (uint256) {
         return 0;
     }
 

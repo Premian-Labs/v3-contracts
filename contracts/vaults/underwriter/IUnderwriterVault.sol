@@ -3,10 +3,10 @@
 pragma solidity ^0.8.0;
 
 
-import "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
+import "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
 
-contract IUnderwriterVault is SolidStateERC4626 {
+interface IUnderwriterVault is ISolidStateERC4626 {
 
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option
@@ -19,9 +19,9 @@ contract IUnderwriterVault is SolidStateERC4626 {
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) external view returns (uint256 premium);
+    ) external view virtual returns (uint256 premium);
 
     // @notice Settle all positions that are past their maturity.
-    function settle() external returns (uint256);
+    function settle() external virtual returns (uint256);
 
 }
