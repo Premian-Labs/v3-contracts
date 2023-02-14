@@ -23,7 +23,6 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     using SD59x18 for int256;
     using UD60x18 for uint256;
 
-    uint256 internal constant ONE = 1e18;
     address internal immutable DIAMOND;
     // Chainlink price oracle for the Native/USD (ETH/USD) pair
     address internal immutable NATIVE_USD_ORACLE;
@@ -68,7 +67,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
-        uint256 discount = (ONE - l.discountPerPool)
+        uint256 discount = (OptionMath.ONE - l.discountPerPool)
             .toInt256()
             .pow(discountFactor.toInt256())
             .toUint256();
