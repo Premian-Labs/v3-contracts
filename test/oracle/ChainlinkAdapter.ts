@@ -204,7 +204,7 @@ describe('ChainlinkAdapter', () => {
         ),
       ).to.be.revertedWithCustomError(
         instance,
-        'Oracle__PairCannotBeSupported',
+        'OracleAdapter__PairCannotBeSupported',
       );
     });
 
@@ -235,7 +235,7 @@ describe('ChainlinkAdapter', () => {
           tokens.WETH.address,
           tokens.WETH.address,
         ),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__TokensAreSame');
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__TokensAreSame');
     });
 
     it('should revert if pair has been added', async () => {
@@ -256,7 +256,10 @@ describe('ChainlinkAdapter', () => {
           tokens.WETH.address,
           tokens.DAI.address,
         ),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__PairAlreadySupported');
+      ).to.be.revertedWithCustomError(
+        instance,
+        'OracleAdapter__PairAlreadySupported',
+      );
     });
 
     it('should revert if pair does not have a feed', async () => {
@@ -267,7 +270,7 @@ describe('ChainlinkAdapter', () => {
         ),
       ).to.be.revertedWithCustomError(
         instance,
-        'Oracle__PairCannotBeSupported',
+        'OracleAdapter__PairCannotBeSupported',
       );
 
       await instance.batchRegisterFeedMappings([
@@ -328,7 +331,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__TokensAreSame');
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__TokensAreSame');
     });
 
     it('should revert if token or denomination address is 0', async () => {
@@ -340,7 +343,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
 
       await expect(
         instance.batchRegisterFeedMappings([
@@ -350,7 +353,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
     });
 
     it('shoud return feed of mapped token and denomination', async () => {
@@ -378,7 +381,7 @@ describe('ChainlinkAdapter', () => {
         instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'Oracle__PairCannotBeSupported',
+        'OracleAdapter__PairCannotBeSupported',
       );
     });
 
@@ -423,7 +426,10 @@ describe('ChainlinkAdapter', () => {
     it('should revert if pair is not supported yet', async () => {
       await expect(
         instance.quote(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
+      ).to.be.revertedWithCustomError(
+        instance,
+        'OracleAdapter__PairNotSupportedYet',
+      );
     });
   });
 

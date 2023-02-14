@@ -65,7 +65,7 @@ abstract contract ChainlinkAdapterInternal is
             PricingPath _currentPath = l.pathForPair[keyForPair];
 
             if (_currentPath == PricingPath.NONE) {
-                revert Oracle__PairCannotBeSupported(tokenA, tokenB);
+                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
             }
         }
 
@@ -227,7 +227,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view virtual returns (PricingPath) {
-        if (tokenA == tokenB) revert Oracle__TokensAreSame(tokenA, tokenB);
+        if (tokenA == tokenB)
+            revert OracleAdapter__TokensAreSame(tokenA, tokenB);
 
         bool isTokenAUSD = _isUSD(tokenA);
         bool isTokenBUSD = _isUSD(tokenB);
@@ -344,10 +345,10 @@ abstract contract ChainlinkAdapterInternal is
         (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
             .latestRoundData();
 
-        if (price <= 0) revert Oracle__InvalidPrice();
+        if (price <= 0) revert OracleAdapter__InvalidPrice(uint256(price));
 
         if (block.timestamp > updatedAt + MAX_DELAY)
-            revert Oracle__LastUpdateIsTooOld();
+            revert ChainlinkAdapter__LastUpdateIsTooOld();
 
         return uint256(price);
     }
@@ -360,10 +361,10 @@ abstract contract ChainlinkAdapterInternal is
             address denomination = args[i].denomination;
 
             if (token == denomination)
-                revert Oracle__TokensAreSame(token, denomination);
+                revert OracleAdapter__TokensAreSame(token, denomination);
 
             if (token == address(0) || denomination == address(0))
-                revert Oracle__ZeroAddress();
+                revert OracleAdapter__ZeroAddress();
 
             bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
             ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;

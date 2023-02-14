@@ -6,20 +6,23 @@ pragma solidity ^0.8.0;
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
+    /// @notice Thrown when the price is non-positive
+    error OracleAdapter__InvalidPrice(uint256 price);
+
     /// @notice Thrown when trying to add pair where addresses are the same
-    error Oracle__TokensAreSame(address tokenA, address tokenB);
+    error OracleAdapter__TokensAreSame(address tokenA, address tokenB);
 
     /// @notice Thrown when trying to add support for a pair that has already been added
-    error Oracle__PairAlreadySupported(address tokenA, address tokenB);
+    error OracleAdapter__PairAlreadySupported(address tokenA, address tokenB);
 
     /// @notice Thrown when trying to add support for a pair that cannot be supported
-    error Oracle__PairCannotBeSupported(address tokenA, address tokenB);
+    error OracleAdapter__PairCannotBeSupported(address tokenA, address tokenB);
 
     /// @notice Thrown when trying to execute a quote with a pair that isn't supported yet
-    error Oracle__PairNotSupportedYet(address tokenA, address tokenB);
+    error OracleAdapter__PairNotSupportedYet(address tokenA, address tokenB);
 
     /// @notice Thrown when one of the parameters is a zero address
-    error Oracle__ZeroAddress();
+    error OracleAdapter__ZeroAddress();
 
     /// @notice Returns whether this oracle can support the given pair of tokens
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order

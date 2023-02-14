@@ -87,7 +87,7 @@ contract ChainlinkAdapter is
         ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
 
         if (path == PricingPath.NONE)
-            revert Oracle__PairNotSupportedYet(tokenIn, tokenOut);
+            revert OracleAdapter__PairNotSupportedYet(tokenIn, tokenOut);
 
         return _quote(path, mappedTokenIn, mappedTokenOut);
     }

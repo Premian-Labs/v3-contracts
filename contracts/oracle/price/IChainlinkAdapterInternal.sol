@@ -39,14 +39,8 @@ interface IChainlinkAdapterInternal {
         SAME_TOKENS
     }
 
-    /// @notice Thrown when the price is non-positive
-    error Oracle__InvalidPrice();
-
     /// @notice Thrown when the last price update was too long ago
-    error Oracle__LastUpdateIsTooOld();
-
-    /// @notice Thrown when the input array lengths do not match
-    error Oracle__InvalidArrayLengths();
+    error ChainlinkAdapter__LastUpdateIsTooOld();
 
     /// @notice Emitted when the oracle updated the pricing path for a pair
     /// @param tokenA The exchange token (base token)

@@ -44,7 +44,7 @@ abstract contract OracleAdapter is
         address tokenB
     ) external virtual {
         if (_isPairAlreadySupported(tokenA, tokenB))
-            revert Oracle__PairAlreadySupported(tokenA, tokenB);
+            revert OracleAdapter__PairAlreadySupported(tokenA, tokenB);
 
         _addOrModifySupportForPair(tokenA, tokenB);
     }
