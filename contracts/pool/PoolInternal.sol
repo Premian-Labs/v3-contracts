@@ -1053,7 +1053,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         uint256 size
     ) internal returns (uint256) {
-        _ensureNonZeroSize(size);
+        if (size == 0) return 0;
 
         uint256 spot = l.getSpotPrice();
         uint256 strike = l.strike;
@@ -1118,7 +1118,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureExpired(l);
 
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
-
         uint256 exerciseValue = _calculateExerciseValue(l, size);
         uint256 collateralValue = _calculateCollateralValue(
             l,
@@ -1129,7 +1128,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _removeFromFactory(l);
 
         // Burn short and transfer collateral to operator
-        // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.SHORT, size);
         if (collateralValue > 0) {
             IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
