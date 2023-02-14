@@ -8,6 +8,7 @@ export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
 // prettier-ignore
 export const tokens: { [symbol: string]: Token } =  {
     'BNT': { address: '0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C', decimals: 18, symbol: 'BNT' },
+    'EUL': { address: '0xd9fcd98c322942075a5c3860693e9f4f03aae07b', decimals: 18, symbol: 'EUL' },
     'CRV': { address: '0xD533a949740bb3306d119CC777fa900bA034cd52', decimals: 18, symbol: 'CRV' },
     'AMP': { address: '0xfF20817765cB7f73d4bde2e66e067E58D11095C2', decimals: 18, symbol: 'AMP' },
     'IMX': { address: '0xf57e7e7c23978c3caec3c3548e3d615c346e79ff', decimals: 18, symbol: 'IMX' },

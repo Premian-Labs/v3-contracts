@@ -19,6 +19,8 @@ import {
   tokens,
 } from '../../utils/addresses';
 
+import { bnToAddress } from '@solidstate/library';
+
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
 const blockNumber = 16600000;
@@ -151,7 +153,7 @@ describe('ChainlinkAdapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
-    it('shoud return token address if token is not mapped', async () => {
+    it('shoud return denomination of mapped token', async () => {
       await instance.batchRegisterDenominationMappings(deonominationMapping);
 
       for (let i = 0; i < deonominationMapping.length; i++) {
@@ -174,7 +176,7 @@ describe('ChainlinkAdapter', () => {
     it('returns false if adapter cannot support pair', async () => {
       expect(
         await instance.canSupportPair(
-          ethers.constants.AddressZero,
+          bnToAddress(BigNumber.from(0)),
           tokens.WETH.address,
         ),
       ).to.be.false;
@@ -196,7 +198,7 @@ describe('ChainlinkAdapter', () => {
     it('should revert if pair cannot be supported', async () => {
       await expect(
         instance.addOrModifySupportForPair(
-          ethers.constants.AddressZero,
+          bnToAddress(BigNumber.from(0)),
           tokens.WETH.address,
         ),
       ).to.be.revertedWithCustomError(
@@ -256,6 +258,31 @@ describe('ChainlinkAdapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairAlreadySupported');
     });
 
+    it('should revert if pair does not have a feed', async () => {
+      await expect(
+        instance.addSupportForPairIfNeeded(
+          tokens.EUL.address,
+          tokens.DAI.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'Oracle__PairCannotBeSupported',
+      );
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: tokens.EUL.address,
+          denomination: CHAINLINK_USD,
+          feed: bnToAddress(BigNumber.from(1)),
+        },
+      ]);
+
+      await instance.addSupportForPairIfNeeded(
+        tokens.EUL.address,
+        tokens.DAI.address,
+      );
+    });
+
     it('should treat tokenA/tokenB, tokenB/tokenA as separate pairs', async () => {
       await instance.addSupportForPairIfNeeded(
         tokens.WETH.address,
@@ -291,8 +318,57 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#bathRegisterFeedMappings', async () => {
-    it.skip('should not add feed if aggregator does not exist', async () => {});
-    it.skip('should overwrite existing feed', async () => {});
+    it('should revert if token == denomination', async () => {
+      await expect(
+        instance.batchRegisterFeedMappings([
+          {
+            token: tokens.EUL.address,
+            denomination: tokens.EUL.address,
+            feed: bnToAddress(BigNumber.from(1)),
+          },
+        ]),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__TokensAreSame');
+    });
+
+    it('should revert if token or denomination address is 0', async () => {
+      await expect(
+        instance.batchRegisterFeedMappings([
+          {
+            token: bnToAddress(BigNumber.from(0)),
+            denomination: CHAINLINK_USD,
+            feed: bnToAddress(BigNumber.from(1)),
+          },
+        ]),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+
+      await expect(
+        instance.batchRegisterFeedMappings([
+          {
+            token: tokens.EUL.address,
+            denomination: bnToAddress(BigNumber.from(0)),
+            feed: bnToAddress(BigNumber.from(1)),
+          },
+        ]),
+      ).to.be.revertedWithCustomError(instance, 'Oracle__ZeroAddress');
+    });
+
+    it('shoud return feed of mapped token and denomination', async () => {
+      await instance.batchRegisterFeedMappings(feeds);
+
+      for (let i = 0; i < feeds.length; i++) {
+        expect(
+          await instance.feed(feeds[i].token, feeds[i].denomination),
+        ).to.equal(feeds[i].feed);
+      }
+    });
+  });
+
+  describe('#feed', async () => {
+    it('should return zero address if feed has not been added', async () => {
+      expect(await instance.feed(tokens.EUL.address, CHAINLINK_USD)).to.equal(
+        bnToAddress(BigNumber.from(0)),
+      );
+    });
   });
 
   describe('#quote', async () => {
