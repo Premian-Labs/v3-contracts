@@ -10,9 +10,7 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 
-import {SD59x18} from "../libraries/prbMath/SD59x18.sol";
-import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
-import {OptionMath} from "../libraries/OptionMath.sol";
+import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
