@@ -28,6 +28,21 @@ abstract contract ChainlinkAdapterInternal is
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
 
+    /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
+    function _quote(
+        PricingPath path,
+        address mappedTokenIn,
+        address mappedTokenOut
+    ) internal view returns (uint256) {
+        if (path <= PricingPath.TOKEN_ETH_PAIR) {
+            return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
+        } else if (path <= PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
+            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
+        } else {
+            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
+        }
+    }
+
     function _addOrModifySupportForPair(
         address tokenA,
         address tokenB
@@ -36,6 +51,7 @@ abstract contract ChainlinkAdapterInternal is
             tokenA,
             tokenB
         );
+
         PricingPath path = _determinePricingPath(_tokenA, _tokenB);
         bytes32 keyForPair = _keyForSortedPair(_tokenA, _tokenB);
 
@@ -72,10 +88,26 @@ abstract contract ChainlinkAdapterInternal is
             tokenA,
             tokenB
         );
+
         return
             ChainlinkAdapterStorage.layout().pathForPair[
                 _keyForSortedPair(_tokenA, _tokenB)
             ];
+    }
+
+    function _pathForPairAndUnsortedMappedTokens(
+        address tokenA,
+        address tokenB
+    )
+        internal
+        view
+        returns (PricingPath path, address mappedTokenA, address mappedTokenB)
+    {
+        (mappedTokenA, mappedTokenB) = _mapPairToDenomination(tokenA, tokenB);
+
+        path = ChainlinkAdapterStorage.layout().pathForPair[
+            _keyForUnsortedPair(mappedTokenA, mappedTokenB)
+        ];
     }
 
     /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD

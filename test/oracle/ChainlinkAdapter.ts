@@ -10,6 +10,7 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_HOUR, ONE_DAY, now } from '../../utils/time';
+
 import {
   Token,
   CHAINLINK_BTC,
@@ -371,15 +372,59 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
+  describe('#tryQuote', async () => {
+    it('should revert if pair not already supported and there is no feed', async () => {
+      await expect(
+        instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'Oracle__PairCannotBeSupported',
+      );
+    });
+
+    it('should add pair if they are not already supported', async () => {
+      const tokenIn = tokens.WETH;
+      const tokenOut = tokens.DAI;
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokenIn.address,
+          tokenOut.address,
+        ),
+      ).to.be.false;
+
+      await instance.tryQuote(tokenIn.address, tokenOut.address);
+
+      expect(
+        await instance.isPairAlreadySupported(
+          tokenIn.address,
+          tokenOut.address,
+        ),
+      ).to.be.true;
+    });
+
+    it('should return quote for pair', async () => {
+      const tokenIn = tokens.WETH;
+      const tokenOut = tokens.DAI;
+
+      const quote = await instance.callStatic['tryQuote(address,address)'](
+        tokenIn.address,
+        tokenOut.address,
+      );
+
+      const coingeckoPrice = await getPriceBetweenTokens(tokenIn, tokenOut);
+      const expected = convertPriceToBigNumberWithDecimals(coingeckoPrice, 18);
+
+      validateQuote(quote, expected);
+    });
+  });
+
   describe('#quote', async () => {
     it('should revert if pair is not supported yet', async () => {
       await expect(
         instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(instance, 'Oracle__PairNotSupportedYet');
     });
-
-    it.skip('should revert if pair not already supported and there is no feed', async () => {});
-    it.skip('should add pair if they are not already supported', async () => {});
   });
 
   describe('supportsInterface', () => {

@@ -51,29 +51,45 @@ contract ChainlinkAdapter is
         return _isPairAlreadySupported(tokenA, tokenB);
     }
 
+    // /// @inheritdoc IChainlinkAdapter
+    function tryQuote(
+        address tokenIn,
+        address tokenOut
+    ) external returns (uint256) {
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
+
+        if (path == PricingPath.NONE) {
+            _addOrModifySupportForPair(tokenIn, tokenOut);
+
+            (
+                path,
+                mappedTokenIn,
+                mappedTokenOut
+            ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
+        }
+
+        return _quote(path, mappedTokenIn, mappedTokenOut);
+    }
+
     /// @inheritdoc IOracleAdapter
     function quote(
         address tokenIn,
         address tokenOut
     ) external view returns (uint256) {
         (
+            PricingPath path,
             address mappedTokenIn,
             address mappedTokenOut
-        ) = _mapPairToDenomination(tokenIn, tokenOut);
+        ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
 
-        PricingPath path = ChainlinkAdapterStorage.layout().pathForPair[
-            _keyForUnsortedPair(mappedTokenIn, mappedTokenOut)
-        ];
-
-        if (path == PricingPath.NONE) {
+        if (path == PricingPath.NONE)
             revert Oracle__PairNotSupportedYet(tokenIn, tokenOut);
-        } else if (path <= PricingPath.TOKEN_ETH_PAIR) {
-            return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
-        } else if (path <= PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
-            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
-        } else {
-            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
-        }
+
+        return _quote(path, mappedTokenIn, mappedTokenOut);
     }
 
     /// @inheritdoc IChainlinkAdapter
