@@ -22,8 +22,8 @@ contract ChainlinkAdapter is
         FeedMappingArgs[] memory feedMappingArgs,
         DenominationMappingArgs[] memory denominationMappingArgs
     ) {
-        _batchRegisterFeedMappings(feedMappingArgs);
         _batchRegisterDenominationMappings(denominationMappingArgs);
+        _batchRegisterFeedMappings(feedMappingArgs);
 
         _setOwner(msg.sender);
         _setSupportsInterface(type(IChainlinkAdapter).interfaceId, true);
