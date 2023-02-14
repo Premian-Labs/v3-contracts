@@ -683,6 +683,76 @@ describe('Pool', () => {
       );
       expect(await base.balanceOf(trader.address)).to.eq(totalPremium);
     });
+
+    it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      await expect(
+        callPool.connect(trader).trade(depositSize.add(1), true),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InsufficientAskLiquidity',
+      );
+    });
+
+    it('should revert if trying to sell options and bid liquidity is insufficient', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      await expect(
+        callPool.connect(trader).trade(depositSize.add(1), false),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InsufficientBidLiquidity',
+      );
+    });
+
+    it('should revert if trade size is 0', async () => {
+      await expect(
+        callPool.connect(trader).trade(0, true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+    });
+
+    it('should revert if expired', async () => {
+      await increaseTo(maturity);
+
+      await expect(
+        callPool.connect(trader).trade(1, true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
+    });
   });
 
   describe('#fillQuote', () => {
