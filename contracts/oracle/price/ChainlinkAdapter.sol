@@ -103,7 +103,12 @@ contract ChainlinkAdapter is
         address tokenA,
         address tokenB
     ) external view returns (address) {
-        return _feed(tokenA, tokenB);
+        (address mappedTokenA, address mappedTokenB) = _mapPairToDenomination(
+            tokenA,
+            tokenB
+        );
+
+        return _feed(mappedTokenA, mappedTokenB);
     }
 
     /// @inheritdoc IChainlinkAdapter
