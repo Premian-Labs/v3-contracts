@@ -344,13 +344,21 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
 
-        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
-            .latestRoundData();
+        (
+            uint80 roundId,
+            int256 price,
+            ,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) = AggregatorV3Interface(feed).latestRoundData();
 
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
 
         if (block.timestamp > updatedAt + MAX_DELAY)
-            revert ChainlinkAdapter__LastUpdateIsTooOld();
+            revert ChainlinkAdapter__PriceIsStale(block.timestamp, updatedAt);
+
+        if (roundId > answeredInRound)
+            revert ChainlinkAdapter__RoundIsStale(roundId, answeredInRound);
 
         return price.toUint256();
     }

@@ -39,8 +39,18 @@ interface IChainlinkAdapterInternal {
         SAME_TOKENS
     }
 
-    /// @notice Thrown when the last price update was too long ago
-    error ChainlinkAdapter__LastUpdateIsTooOld();
+    /// @notice Thrown when the last price update exceeds the max delay
+    /// @param timestamp Current timestamp
+    /// @param updatedAt Timestamp of the last price update
+    error ChainlinkAdapter__PriceIsStale(uint256 timestamp, uint256 updatedAt);
+
+    /// @notice Thrown when the round id exceeds the answered round id
+    /// @param roundId Derived round id
+    /// @param answeredInRound Round of last price update
+    error ChainlinkAdapter__RoundIsStale(
+        uint80 roundId,
+        uint80 answeredInRound
+    );
 
     /// @notice Emitted when the oracle updated the pricing path for a pair
     /// @param tokenA The exchange token (base token)
