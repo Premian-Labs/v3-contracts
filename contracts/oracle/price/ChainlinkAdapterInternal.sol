@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
@@ -19,6 +20,7 @@ abstract contract ChainlinkAdapterInternal is
     OracleAdapter
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
+    using SafeCast for int256;
     using UD60x18 for uint256;
 
     uint32 internal constant MAX_DELAY = 25 hours;
@@ -320,9 +322,9 @@ abstract contract ChainlinkAdapterInternal is
         factor = factor * 1E18;
 
         if (factor < 0) {
-            return amount.div(ten.pow(uint256(-factor)));
+            return amount.div(ten.pow((-factor).toUint256()));
         } else {
-            return amount.mul(ten.pow(uint256(factor)));
+            return amount.mul(ten.pow(factor.toUint256()));
         }
     }
 
@@ -345,12 +347,12 @@ abstract contract ChainlinkAdapterInternal is
         (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
             .latestRoundData();
 
-        if (price <= 0) revert OracleAdapter__InvalidPrice(uint256(price));
+        if (price <= 0) revert OracleAdapter__InvalidPrice(price);
 
         if (block.timestamp > updatedAt + MAX_DELAY)
             revert ChainlinkAdapter__LastUpdateIsTooOld();
 
-        return uint256(price);
+        return price.toUint256();
     }
 
     function _batchRegisterFeedMappings(

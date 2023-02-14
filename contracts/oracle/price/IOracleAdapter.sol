@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
     /// @notice Thrown when the price is non-positive
-    error OracleAdapter__InvalidPrice(uint256 price);
+    error OracleAdapter__InvalidPrice(int256 price);
 
     /// @notice Thrown when trying to add pair where addresses are the same
     error OracleAdapter__TokensAreSame(address tokenA, address tokenB);
