@@ -152,7 +152,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     /// @inheritdoc IPoolFactory
     function removeDiscount(PoolKey memory k) external {
-        if (k.maturity < block.timestamp) revert PoolFactory__PoolNotExpired();
+        if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
 
         if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
             revert PoolFactory__NotAuthorized();
