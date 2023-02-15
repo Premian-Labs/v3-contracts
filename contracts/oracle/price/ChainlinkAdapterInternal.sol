@@ -10,7 +10,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
-import {AggregatorV3Interface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
+import {AggregatorInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapter} from "./OracleAdapter.sol";
 
@@ -343,23 +343,8 @@ abstract contract ChainlinkAdapterInternal is
         address quote
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
-
-        (
-            uint80 roundId,
-            int256 price,
-            ,
-            uint256 updatedAt,
-            uint80 answeredInRound
-        ) = AggregatorV3Interface(feed).latestRoundData();
-
+        int256 price = AggregatorInterface(feed).latestAnswer();
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
-
-        if (block.timestamp > updatedAt + MAX_DELAY)
-            revert ChainlinkAdapter__PriceIsStale(block.timestamp, updatedAt);
-
-        if (roundId > answeredInRound)
-            revert ChainlinkAdapter__RoundIsStale(roundId, answeredInRound);
-
         return price.toUint256();
     }
 

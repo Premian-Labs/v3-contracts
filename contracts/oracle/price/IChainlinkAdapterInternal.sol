@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapterInternal {
