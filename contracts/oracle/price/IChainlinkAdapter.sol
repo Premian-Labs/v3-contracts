@@ -44,8 +44,4 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// If it doesn't, then the original token is returned
     /// @return If it exists, the mapping is returned. Otherwise, the original token is returned
     function denomination(address token) external view returns (address);
-
-    /// @notice Returns max duration between price updates before the oracle price is considered stale
-    /// @return max duration between price updates
-    function maxDelay() external pure returns (uint32);
 }

@@ -119,9 +119,4 @@ contract ChainlinkAdapter is
     function denomination(address token) external view returns (address) {
         return _denomination(token);
     }
-
-    /// @inheritdoc IChainlinkAdapter
-    function maxDelay() external pure returns (uint32) {
-        return MAX_DELAY;
-    }
 }

@@ -23,8 +23,6 @@ abstract contract ChainlinkAdapterInternal is
     using SafeCast for int256;
     using UD60x18 for uint256;
 
-    uint32 internal constant MAX_DELAY = 25 hours;
-
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);

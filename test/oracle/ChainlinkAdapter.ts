@@ -144,11 +144,6 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#constructor', () => {
-    it('should return max delay (25 hours)', async () => {
-      const maxDelay = await instance.maxDelay();
-      expect(maxDelay).to.eql(ONE_DAY + ONE_HOUR);
-    });
-
     it('should return tokens mapped to denomination', async () => {
       for (let i = 0; i < deonominationMapping.length; i++) {
         expect(
