@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
-import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 
 import {ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
@@ -13,21 +12,10 @@ import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 contract ChainlinkAdapter is
     ChainlinkAdapterInternal,
     IChainlinkAdapter,
-    ERC165Base,
+    OracleAdapter,
     SafeOwnable
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
-
-    constructor(
-        FeedMappingArgs[] memory feedMappingArgs,
-        DenominationMappingArgs[] memory denominationMappingArgs
-    ) {
-        _batchRegisterDenominationMappings(denominationMappingArgs);
-        _batchRegisterFeedMappings(feedMappingArgs);
-
-        _setOwner(msg.sender);
-        _setSupportsInterface(type(IChainlinkAdapter).interfaceId, true);
-    }
 
     /// @inheritdoc IOracleAdapter
     function canSupportPair(

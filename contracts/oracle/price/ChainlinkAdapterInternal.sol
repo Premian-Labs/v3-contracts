@@ -12,12 +12,12 @@ import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {AggregatorInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-import {OracleAdapter} from "./OracleAdapter.sol";
+import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
-    OracleAdapter
+    OracleAdapterInternal
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using SafeCast for int256;
@@ -78,7 +78,7 @@ abstract contract ChainlinkAdapterInternal is
     function _isPairSupported(
         address tokenA,
         address tokenB
-    ) internal view virtual override(OracleAdapter) returns (bool) {
+    ) internal view virtual override returns (bool) {
         return _pathForPair(tokenA, tokenB) != PricingPath.NONE;
     }
 

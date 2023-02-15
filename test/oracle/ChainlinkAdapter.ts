@@ -2,7 +2,11 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { ChainlinkAdapter, ChainlinkAdapter__factory } from '../../typechain';
+import {
+  ChainlinkAdapter,
+  ChainlinkAdapter__factory,
+  ChainlinkAdapterProxy__factory,
+} from '../../typechain';
 
 import {
   convertPriceToBigNumberWithDecimals,
@@ -122,12 +126,21 @@ describe('ChainlinkAdapter', () => {
   beforeEach(async () => {
     [deployer, notOwner] = await ethers.getSigners();
 
-    instance = await new ChainlinkAdapter__factory(deployer).deploy(
+    const implementation = await new ChainlinkAdapter__factory(
+      deployer,
+    ).deploy();
+
+    await implementation.deployed();
+
+    const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
+      implementation.address,
       feeds,
       deonominationMapping,
     );
 
-    await instance.deployed();
+    await proxy.deployed();
+
+    instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
   });
 
   describe('#constructor', () => {
@@ -404,32 +417,6 @@ describe('ChainlinkAdapter', () => {
         instance,
         'OracleAdapter__PairNotSupported',
       );
-    });
-  });
-
-  describe('supportsInterface', () => {
-    it('should return false if interface unknown', async () => {
-      expect(await instance.supportsInterface('0x00000000')).to.be.false;
-    });
-
-    it('should return false if interface invalid', async () => {
-      expect(await instance.supportsInterface('0xffffffff')).to.be.false;
-    });
-
-    it('should return true if interface is IERC165', async () => {
-      expect(await instance.supportsInterface('0x01ffc9a7')).to.be.true;
-    });
-
-    it('should return true if interface is Multicall', async () => {
-      expect(await instance.supportsInterface('0xac9650d8')).to.be.true;
-    });
-
-    it('should return true if interface is IOracleAdapter', async () => {
-      expect(await instance.supportsInterface('0xb279847b')).to.be.true;
-    });
-
-    it('should return true if interface is IChainlinkAdapter', async () => {
-      expect(await instance.supportsInterface('0xe7ef79f6')).to.be.true;
     });
   });
 
