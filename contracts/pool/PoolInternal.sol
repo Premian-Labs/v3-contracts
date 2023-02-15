@@ -1179,17 +1179,27 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // determines the amount of ask.
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
-        uint256 claimableFees = pData.claimableFees;
-        uint256 payoff = _calculateExerciseValue(l, ONE);
-        uint256 collateral = p.collateral(size, l.marketPrice);
-        collateral += p.long(size, l.marketPrice).mul(payoff);
-        collateral += p.short(size, l.marketPrice).mul(
-            (l.isCallPool ? ONE : l.strike) - payoff
-        );
 
-        collateral += claimableFees;
+        uint256 claimableFees;
+        uint256 payoff;
+        uint256 collateral;
 
-        _burn(p.owner, tokenId, size);
+        {
+            uint256 longs = p.long(size, l.marketPrice);
+            uint256 shorts = p.short(size, l.marketPrice);
+
+            claimableFees = pData.claimableFees;
+            payoff = _calculateExerciseValue(l, ONE);
+            collateral = p.collateral(size, l.marketPrice);
+            collateral += longs.mul(payoff);
+            collateral += shorts.mul((l.isCallPool ? ONE : l.strike) - payoff);
+
+            collateral += claimableFees;
+
+            _burn(p.owner, tokenId, size);
+            _burn(address(this), PoolStorage.LONG, longs);
+            _burn(address(this), PoolStorage.SHORT, shorts);
+        }
 
         pData.claimableFees = 0;
         pData.lastFeeRate = 0;
