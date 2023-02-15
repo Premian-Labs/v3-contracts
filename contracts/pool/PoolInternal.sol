@@ -1093,11 +1093,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureExpired(l);
 
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
+        if (size == 0) return 0;
+
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
         _removeFromFactory(l);
 
-        // Not need to check for size > 0 or option expired as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.LONG, size);
 
         if (exerciseValue > 0) {
@@ -1116,6 +1117,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureExpired(l);
 
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
+        if (size == 0) return 0;
+
         uint256 exerciseValue = _calculateExerciseValue(l, size);
         uint256 collateralValue = _calculateCollateralValue(
             l,
@@ -1159,6 +1162,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         uint256 size = _balanceOf(p.owner, tokenId);
+        if (size == 0) return 0;
 
         {
             // Update claimable fees
@@ -1197,8 +1201,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             collateral += claimableFees;
 
             _burn(p.owner, tokenId, size);
-            _burn(address(this), PoolStorage.LONG, longs);
-            _burn(address(this), PoolStorage.SHORT, shorts);
+
+            if (longs > 0) {
+                _burn(address(this), PoolStorage.LONG, longs);
+            }
+
+            if (shorts > 0) {
+                _burn(address(this), PoolStorage.SHORT, shorts);
+            }
         }
 
         pData.claimableFees = 0;
