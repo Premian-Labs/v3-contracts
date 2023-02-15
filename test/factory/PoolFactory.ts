@@ -17,12 +17,8 @@ import {
   revertToSnapshotAfterEach,
 } from '../../utils/time';
 
-import moment from 'moment-timezone';
-import { beforeEach } from 'mocha';
 import { PoolKey } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
-
-moment.tz.setDefault('UTC');
 
 describe('PoolFactory', () => {
   let deployer: SignerWithAddress;
