@@ -7,8 +7,6 @@ import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol"
 import {ProxyUpgradeableOwnableStorage} from "./ProxyUpgradeableOwnableStorage.sol";
 
 contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
-    using ProxyUpgradeableOwnableStorage for ProxyUpgradeableOwnableStorage.Layout;
-
     constructor(address implementation) {
         _setOwner(msg.sender);
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;

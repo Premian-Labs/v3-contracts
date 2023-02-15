@@ -11,6 +11,8 @@ import {
 } from '../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
+import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -29,6 +31,9 @@ export class PoolUtil {
   static async deploy(
     deployer: SignerWithAddress,
     wrappedNativeToken: string,
+    nativeUsdOracle: string,
+    feeReceiver: string,
+    discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     isDevMode = false,
   ) {
@@ -37,6 +42,38 @@ export class PoolUtil {
     await premiaDiamond.deployed();
 
     if (log) console.log(`Premia Diamond : ${premiaDiamond.address}`);
+
+    //////////////////////////////////////////////
+
+    /////////////////
+    // PoolFactory //
+    /////////////////
+
+    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
+      premiaDiamond.address,
+      nativeUsdOracle,
+    );
+    await poolFactoryImpl.deployed();
+
+    if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);
+
+    const poolFactoryProxy = await new PoolFactoryProxy__factory(
+      deployer,
+    ).deploy(poolFactoryImpl.address, discountPerPool, feeReceiver);
+    await poolFactoryProxy.deployed();
+
+    if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);
+
+    const poolFactory = PoolFactory__factory.connect(
+      poolFactoryProxy.address,
+      deployer,
+    );
+
+    //////////////////////////////////////////////
+
+    /////////////////
+    // Pool //
+    /////////////////
 
     const poolBaseFactory = new PoolBase__factory(deployer);
     const poolBaseImpl = await poolBaseFactory.deploy();
@@ -55,6 +92,7 @@ export class PoolUtil {
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
 
     const poolCoreImpl = await poolCoreFactory.deploy(
+      poolFactory.address,
       exchangeHelper.address,
       wrappedNativeToken,
     );
@@ -85,31 +123,6 @@ export class PoolUtil {
         poolCoreFactory,
         registeredSelectors,
       ),
-    );
-
-    //////////////////////////////////////////////
-
-    /////////////////
-    // PoolFactory //
-    /////////////////
-
-    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
-      premiaDiamond.address,
-    );
-    await poolFactoryImpl.deployed();
-
-    if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);
-
-    const poolFactoryProxy = await new PoolFactoryProxy__factory(
-      deployer,
-    ).deploy(poolFactoryImpl.address);
-    await poolFactoryProxy.deployed();
-
-    if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);
-
-    const poolFactory = PoolFactory__factory.connect(
-      poolFactoryProxy.address,
-      deployer,
     );
 
     return new PoolUtil({ premiaDiamond, poolFactory });

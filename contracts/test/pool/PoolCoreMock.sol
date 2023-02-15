@@ -14,9 +14,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
+        address factory,
         address exchangeHelper,
         address wrappedNativeToken
-    ) PoolCore(exchangeHelper, wrappedNativeToken) {}
+    ) PoolCore(factory, exchangeHelper, wrappedNativeToken) {}
 
     function _getPricing(
         bool isBuy
