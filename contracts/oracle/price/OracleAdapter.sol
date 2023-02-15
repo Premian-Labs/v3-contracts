@@ -25,7 +25,7 @@ abstract contract OracleAdapter is
     }
 
     /// @inheritdoc IOracleAdapter
-    function isPairAlreadySupported(
+    function isPairSupported(
         address tokenA,
         address tokenB
     ) external view virtual returns (bool);
@@ -43,13 +43,13 @@ abstract contract OracleAdapter is
         address tokenA,
         address tokenB
     ) external virtual {
-        if (_isPairAlreadySupported(tokenA, tokenB))
+        if (_isPairSupported(tokenA, tokenB))
             revert OracleAdapter__PairAlreadySupported(tokenA, tokenB);
 
         _addOrModifySupportForPair(tokenA, tokenB);
     }
 
-    function _isPairAlreadySupported(
+    function _isPairSupported(
         address tokenA,
         address tokenB
     ) internal view virtual returns (bool);

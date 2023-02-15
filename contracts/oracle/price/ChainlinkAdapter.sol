@@ -44,14 +44,14 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IOracleAdapter
-    function isPairAlreadySupported(
+    function isPairSupported(
         address tokenA,
         address tokenB
     ) external view override(IOracleAdapter, OracleAdapter) returns (bool) {
-        return _isPairAlreadySupported(tokenA, tokenB);
+        return _isPairSupported(tokenA, tokenB);
     }
 
-    // /// @inheritdoc IChainlinkAdapter
+    /// @inheritdoc IOracleAdapter
     function tryQuote(
         address tokenIn,
         address tokenOut

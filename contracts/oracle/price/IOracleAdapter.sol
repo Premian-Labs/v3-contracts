@@ -39,7 +39,7 @@ interface IOracleAdapter {
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
     /// @return Whether the given pair of tokens is already being supported by the oracle
-    function isPairAlreadySupported(
+    function isPairSupported(
         address tokenA,
         address tokenB
     ) external view returns (bool);

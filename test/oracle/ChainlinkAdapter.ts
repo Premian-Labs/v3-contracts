@@ -184,13 +184,10 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#isPairAlreadySupported', () => {
+  describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
+        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.false;
     });
   });
@@ -215,10 +212,7 @@ describe('ChainlinkAdapter', () => {
       );
 
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
+        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.true;
 
       await instance.addOrModifySupportForPair(
@@ -245,10 +239,7 @@ describe('ChainlinkAdapter', () => {
       );
 
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
+        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.true;
 
       await expect(
@@ -294,10 +285,7 @@ describe('ChainlinkAdapter', () => {
       );
 
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
+        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.true;
 
       instance.addSupportForPairIfNeeded(
@@ -306,17 +294,11 @@ describe('ChainlinkAdapter', () => {
       );
 
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
+        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.true;
 
       expect(
-        await instance.isPairAlreadySupported(
-          tokens.DAI.address,
-          tokens.WETH.address,
-        ),
+        await instance.isPairSupported(tokens.DAI.address, tokens.WETH.address),
       ).to.be.true;
     });
   });
@@ -389,21 +371,13 @@ describe('ChainlinkAdapter', () => {
       const tokenIn = tokens.WETH;
       const tokenOut = tokens.DAI;
 
-      expect(
-        await instance.isPairAlreadySupported(
-          tokenIn.address,
-          tokenOut.address,
-        ),
-      ).to.be.false;
+      expect(await instance.isPairSupported(tokenIn.address, tokenOut.address))
+        .to.be.false;
 
       await instance.tryQuote(tokenIn.address, tokenOut.address);
 
-      expect(
-        await instance.isPairAlreadySupported(
-          tokenIn.address,
-          tokenOut.address,
-        ),
-      ).to.be.true;
+      expect(await instance.isPairSupported(tokenIn.address, tokenOut.address))
+        .to.be.true;
     });
 
     it('should return quote for pair', async () => {
@@ -451,7 +425,7 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return true if interface is IOracleAdapter', async () => {
-      expect(await instance.supportsInterface('0xb55cf0e7')).to.be.true;
+      expect(await instance.supportsInterface('0xb279847b')).to.be.true;
     });
 
     it('should return true if interface is IChainlinkAdapter', async () => {
@@ -481,10 +455,10 @@ describe('ChainlinkAdapter', () => {
             });
           });
 
-          describe('#isPairAlreadySupported', () => {
+          describe('#isPairSupported', () => {
             it('should return true if pair is supported by adapter', async () => {
               expect(
-                await instance.isPairAlreadySupported(
+                await instance.isPairSupported(
                   tokenIn.address,
                   tokenOut.address,
                 ),

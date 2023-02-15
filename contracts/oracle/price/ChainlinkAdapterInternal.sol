@@ -75,7 +75,7 @@ abstract contract ChainlinkAdapterInternal is
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
-    function _isPairAlreadySupported(
+    function _isPairSupported(
         address tokenA,
         address tokenB
     ) internal view virtual override(OracleAdapter) returns (bool) {
