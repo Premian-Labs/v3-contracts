@@ -18,16 +18,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    error Vault__InsufficientFunds();
-    error Vault__OptionExpired();
-    error Vault__OptionPoolNotListed();
-    error Vault__OptionPoolNotSupported();
-
-    // Instance Variables
-    // isCall : bool
-    // listings : 
     address internal immutable ORACLE;
-
 
     constructor (address oracleAddress) {
         ORACLE = oracleAddress;
@@ -132,27 +123,20 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
     function _maxRedeem(
         address owner
-    ) override internal view virtual returns (uint256 maxShares) {
-        maxShares = _convertToShares(_maxWithdraw(owner)); 
+    ) override internal view virtual returns (uint256) {
+        return _convertToShares(_maxWithdraw(owner)); 
     }
 
     function _previewDeposit(
         uint256 assetAmount
-    ) override  internal view virtual returns (uint256 shareAmount) {
-        shareAmount = _convertToShares(assetAmount);
+    ) override  internal view virtual returns (uint256) {
+        return _convertToShares(assetAmount);
     }
 
     function _previewMint(
         uint256 shareAmount
-    ) override internal view virtual returns (uint256 assetAmount) {
-        uint256 supply = _totalSupply();
-
-        if (supply == 0) {
-            assetAmount = shareAmount;
-        } else {
-            assetAmount = shareAmount * _pricePerShare(); 
-            // assetAmount = (shareAmount * _totalAssets() + supply - 1) / supply;
-        }
+    ) override internal view virtual returns (uint256) {
+        return _convertToAssets(shareAmount); 
     }
 
     function _previewWithdraw(

@@ -8,6 +8,12 @@ import "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
 interface IUnderwriterVault is ISolidStateERC4626 {
 
+    // Errors
+    error Vault__InsufficientFunds();
+    error Vault__OptionExpired();
+    error Vault__OptionPoolNotListed();
+    error Vault__OptionPoolNotSupported();
+
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option
     // @param strike The strike price the option
