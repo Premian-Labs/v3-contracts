@@ -32,6 +32,7 @@ export const feeds = [
     { token: CHAINLINK_ETH, denomination: CHAINLINK_USD, feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'},
     { token: CHAINLINK_BTC, denomination: CHAINLINK_USD, feed: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'},
     { token: CHAINLINK_BTC, denomination: CHAINLINK_ETH, feed: '0xdeb288F737066589598e9214E782fa5A8eD689e8'},
+    { token: tokens.DAI.address, denomination: CHAINLINK_USD, feed: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9'},
     { token: tokens.BNT.address, denomination: CHAINLINK_USD, feed: '0x1E6cF0D433de4FE882A437ABC654F58E1e78548c'},
     { token: tokens.CRV.address, denomination: CHAINLINK_USD, feed: '0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f'},
     { token: tokens.AMP.address, denomination: CHAINLINK_USD, feed: '0xfAaA7460eD59C12E204349766CE73Cf5202e6aD6'},
@@ -47,4 +48,6 @@ export const feeds = [
     { token: tokens.CRV.address, denomination: CHAINLINK_ETH, feed: '0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e'},
     { token: tokens.AAVE.address, denomination: CHAINLINK_ETH, feed: '0x6Df09E975c830ECae5bd4eD9d90f3A95a4f88012'},
     { token: tokens.COMP.address, denomination: CHAINLINK_ETH, feed: '0x1B39Ee86Ec5979ba5C322b826B3ECb8C79991699'},
+    { token: tokens.DAI.address, denomination: CHAINLINK_ETH, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
+
 ]

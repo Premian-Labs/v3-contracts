@@ -46,7 +46,6 @@ let deonominationMapping = [
   { token: tokens.WETH.address, denomination: CHAINLINK_ETH },
   { token: tokens.USDC.address, denomination: CHAINLINK_USD },
   { token: tokens.USDT.address, denomination: CHAINLINK_USD },
-  { token: tokens.DAI.address, denomination: CHAINLINK_USD },
 ];
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -57,10 +56,12 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
     [
       // ETH_USD_PAIR
       { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.USDT }, // IN is ETH, OUT is USD
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.USDT, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
       { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
     ],
     [
       // TOKEN_USD_PAIR
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
       { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
       { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => OUT (tokenA) is USD
       { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) is USD => OUT (tokenB)
@@ -72,11 +73,15 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH => OUT (tokenA)
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
     ],
     [
       // TOKEN_TO_USD_TO_TOKEN_PAIR
       { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
       { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.DAI }, // IN (tokenB) => USD => OUT (tokenA)
     ],
     [
       // TOKEN_TO_ETH_TO_TOKEN_PAIR
@@ -90,6 +95,7 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.DAI, tokenOut: tokens.ALPHA }, // IN (tokenB) => ETH, OUT is USD (tokenA)
 
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
@@ -284,30 +290,6 @@ describe('ChainlinkAdapter', () => {
         tokens.EUL.address,
         tokens.DAI.address,
       );
-    });
-
-    it('should treat tokenA/tokenB, tokenB/tokenA as separate pairs', async () => {
-      await instance.addSupportForPairIfNeeded(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(
-        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.true;
-
-      instance.addSupportForPairIfNeeded(
-        tokens.DAI.address,
-        tokens.WETH.address,
-      );
-
-      expect(
-        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.true;
-
-      expect(
-        await instance.isPairSupported(tokens.DAI.address, tokens.WETH.address),
-      ).to.be.true;
     });
   });
 
