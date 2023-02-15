@@ -28,6 +28,26 @@ library UnderwriterVaultStorage {
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positions;
 
+        // supported maturities and strikes; these need to be managed by a keeper and can be updated whenever there is
+        // a sufficiently large change in spot which would require underwriting new strikes
+        mapping(uint256 => bool) supportedMaturities;
+        mapping(uint256 => bool) supportedStrikes;
+
+        // we need to manage a linked list in order to track what the next maturity such that we know when to decrement
+        // the spreadUnlockingRate
+        uint256 lastMaturity;
+        mapping(uint256 => uint256) nextMaturities;
+
+        // tracks the total profits / spreads that are locked such that we can deduct it from the total assets
+        uint256 totalLockedSpread;
+        // tracks the rate at which ask spreads are dispersed
+        // why? the vault charges FV + spread, therefore the pps would increase.
+        // this would allow
+        uint256 spreadUnlockingRate;
+        uint256 lastSpreadUnlockUpdate;
+        // we map maturities to the unlockingRate that needs to be deducted upon crossing
+        mapping(uint256 => uint256) spreadUnlockingTicks;
+
     }
 
     function layout() internal pure returns (Layout storage l) {
