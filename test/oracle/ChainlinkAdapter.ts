@@ -13,7 +13,9 @@ import {
   getPrice,
 } from '../../utils/defillama';
 
-import { ONE_HOUR, ONE_DAY, now } from '../../utils/time';
+import { ONE_ETHER } from '../../utils/constants';
+
+import { now } from '../../utils/time';
 
 import {
   Token,
@@ -394,6 +396,37 @@ describe('ChainlinkAdapter', () => {
         instance,
         'OracleAdapter__PairNotSupported',
       );
+    });
+
+    it('should return quote using correct denomination', async () => {
+      let tokenIn = tokens.WETH;
+      let tokenOut = tokens.DAI;
+
+      await instance.addSupportForPairIfNeeded(
+        tokenIn.address,
+        tokenOut.address,
+      );
+
+      let quote = await instance.quote(tokenIn.address, tokenOut.address);
+      let invertedQuote = await instance.quote(
+        tokenOut.address,
+        tokenIn.address,
+      );
+
+      expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
+
+      tokenIn = tokens.CRV;
+      tokenOut = tokens.AAVE;
+
+      await instance.addSupportForPairIfNeeded(
+        tokenIn.address,
+        tokenOut.address,
+      );
+
+      quote = await instance.quote(tokenIn.address, tokenOut.address);
+      invertedQuote = await instance.quote(tokenOut.address, tokenIn.address);
+
+      expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
     });
   });
 
