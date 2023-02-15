@@ -402,7 +402,7 @@ describe('ChainlinkAdapter', () => {
         instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'OracleAdapter__PairNotSupportedYet',
+        'OracleAdapter__PairNotSupported',
       );
     });
   });

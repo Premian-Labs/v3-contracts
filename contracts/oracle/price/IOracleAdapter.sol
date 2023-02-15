@@ -18,8 +18,8 @@ interface IOracleAdapter {
     /// @notice Thrown when trying to add support for a pair that cannot be supported
     error OracleAdapter__PairCannotBeSupported(address tokenA, address tokenB);
 
-    /// @notice Thrown when trying to execute a quote with a pair that isn't supported yet
-    error OracleAdapter__PairNotSupportedYet(address tokenA, address tokenB);
+    /// @notice Thrown when trying to execute a quote with a pair that isn't supported
+    error OracleAdapter__PairNotSupported(address tokenA, address tokenB);
 
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
