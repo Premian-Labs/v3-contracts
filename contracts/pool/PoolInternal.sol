@@ -12,6 +12,8 @@ import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
+import {IPoolFactory} from "../factory/IPoolFactory.sol";
+
 import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
@@ -38,6 +40,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using ECDSA for bytes32;
     using UD60x18 for uint256;
 
+    address internal immutable FACTORY;
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
@@ -54,7 +57,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 nonce,uint256 deadline)"
         );
 
-    constructor(address exchangeHelper, address wrappedNativeToken) {
+    constructor(
+        address factory,
+        address exchangeHelper,
+        address wrappedNativeToken
+    ) {
+        FACTORY = factory;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
     }
@@ -1092,6 +1100,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
         uint256 exerciseValue = _calculateExerciseValue(l, size);
 
+        _removeFromFactory(l);
+
         // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.LONG, size);
 
@@ -1119,6 +1129,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             exerciseValue
         );
 
+        _removeFromFactory(l);
+
         // Burn short and transfer collateral to operator
         // Not need to check for size > 0 as _calculateExerciseValue would revert if size == 0
         _burn(holder, PoolStorage.SHORT, size);
@@ -1136,6 +1148,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _settlePosition(Position.Key memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
+        _removeFromFactory(l);
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;
@@ -1581,6 +1594,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 revert Pool__TickOutOfRange();
             l.currentTick = l.tickIndex.prev(l.currentTick);
         }
+    }
+
+    function _removeFromFactory(PoolStorage.Layout storage l) internal {
+        if (l.hasRemoved) return;
+
+        l.hasRemoved = true;
+
+        IPoolFactory(FACTORY).removeDiscount(
+            IPoolFactory.PoolKey(
+                l.base,
+                l.quote,
+                l.baseOracle,
+                l.quoteOracle,
+                l.strike,
+                l.maturity,
+                l.isCallPool
+            )
+        );
     }
 
     /// @notice Calculates the growth and exposure change between the lower

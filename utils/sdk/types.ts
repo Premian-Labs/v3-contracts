@@ -20,3 +20,13 @@ export interface PositionKey {
   isCall: boolean;
   strike: BigNumber;
 }
+
+export interface PoolKey {
+  base: string;
+  quote: string;
+  baseOracle: string;
+  quoteOracle: string;
+  strike: BigNumber;
+  maturity: BigNumber;
+  isCallPool: boolean;
+}
