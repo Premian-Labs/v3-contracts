@@ -60,37 +60,37 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
     // @notice updates total spread in storage to be able to compute the price per share
     //
-    function _updateVars() internal {
-        UnderwriterVaultStorage.Layout storage layout = UnderwriterVaultStorage.layout();
+    function _updateState() internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        uint256 lastMaturity = layout.lastMaturity;
-        uint256 nextMaturity = layout.nextMaturities[lastMaturity];
-        uint256 lastSpreadUnlockUpdate = layout.lastSpreadUnlockUpdate;
-        uint256 spreadUnlockingRate = layout.spreadUnlockingRate;
-        uint256 totalLockedSpread = layout.totalLockedSpread;
+        uint256 lastMaturity = l.lastMaturity;
+        uint256 nextMaturity = l.nextMaturities[lastMaturity];
+        uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
+        uint256 spreadUnlockingRate = l.spreadUnlockingRate;
+        uint256 totalLockedSpread = l.totalLockedSpread;
 
         uint256 totalAssets = _totalAssets();
-        uint256 totalLockedSpread = layout.deadlineToWithdrawAmount;
+        uint256 totalLockedSpread = l.deadlineToWithdrawAmount;
 
         while (block.timestamp >= nextMaturity) {
             totalLockedSpread -= (nextMaturity - lastSpreadUnlockUpdate) * spreadUnlockingRate;
-            spreadUnlockingRate -= layout.spreadUnlockingTicks[nextMaturity];
+            spreadUnlockingRate -= l.spreadUnlockingTicks[nextMaturity];
             lastSpreadUnlockUpdate = nextMaturity;
-            nextMaturity = layout.nextMaturities[nextMaturity];
+            nextMaturity = l.nextMaturities[nextMaturity];
         }
         totalLockedSpread -= (block.timestamp - lastSpreadUnlockUpdate) * spreadUnlockingRate;
-        layout.totalLockedSpread = totalLockedSpread;
-        layout.spreadUnlockingRate = spreadUnlockingRate;
-        layout.lastSpreadUnlockUpdate = block.timestamp;
+        l.totalLockedSpread = totalLockedSpread;
+        l.spreadUnlockingRate = spreadUnlockingRate;
+        l.lastSpreadUnlockUpdate = block.timestamp;
     }
 
     function _pricePerShare() internal view returns (uint256) {
         uint256 totalAssets = _totalAssets();
-        uint256 supply = _totalSupply();
+        uint256 totalSupply = _totalSupply();
         uint256 fairValue = _fairValue();
         uint256 totalLockedSpread = _totalLockedSpread();
 
-        return (totalAssets - totalLockedSpread - fairValue) / supply;
+        return (totalAssets - totalLockedSpread - fairValue) / totalSupply;
     }
 
     function _convertToShares(
@@ -122,28 +122,18 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         }
     }
 
-    function _maxDeposit(
-        address
-    ) override internal view virtual returns (uint256 maxAssets) {
-        maxAssets = type(uint256).max;
-    }
-
-    function _maxMint(
-        address
-    ) override internal view virtual returns (uint256 maxShares) {
-        maxShares = type(uint256).max;
-    }
-
     function _maxWithdraw(
         address owner
     ) override internal view virtual returns (uint256 maxAssets) {
-        maxAssets = _convertToAssets(_balanceOf(owner));
+        _updateState(); 
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        maxAssets = l.totalAssets - l.totalLockedSpread - l.totalLockedAssets;
     }
 
     function _maxRedeem(
         address owner
     ) override internal view virtual returns (uint256 maxShares) {
-        maxShares = _balanceOf(owner);
+        maxShares = _convertToShares(_maxWithdraw(owner)); 
     }
 
     function _previewDeposit(
@@ -160,7 +150,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         if (supply == 0) {
             assetAmount = shareAmount;
         } else {
-            assetAmount = (shareAmount * _totalAssets() + supply - 1) / supply;
+            assetAmount = shareAmount * _pricePerShare(); 
+            // assetAmount = (shareAmount * _totalAssets() + supply - 1) / supply;
         }
     }
 
@@ -184,64 +175,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         }
     }
 
-    function _previewRedeem(
-        uint256 shareAmount
-    ) override internal view virtual returns (uint256 assetAmount) {
-        assetAmount = _convertToAssets(shareAmount);
-    }
-
-    function _deposit(
-        uint256 assetAmount,
-        address receiver
-    ) override internal virtual returns (uint256 shareAmount) {
-        if (assetAmount > _maxDeposit(receiver))
-            revert ERC4626Base__MaximumAmountExceeded();
-
-        _updateVars();
-        shareAmount = _previewDeposit(assetAmount);
-
-        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
-    }
-
-    function _mint(
-        uint256 shareAmount,
-        address receiver
-    ) override internal virtual returns (uint256 assetAmount) {
-        if (shareAmount > _maxMint(receiver))
-            revert ERC4626Base__MaximumAmountExceeded();
-
-        assetAmount = _previewMint(shareAmount);
-
-        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
-    }
-
-    function _withdraw(
-        uint256 assetAmount,
-        address receiver,
-        address owner
-    ) override internal virtual returns (uint256 shareAmount) {
-        if (assetAmount > _maxWithdraw(owner))
-            revert ERC4626Base__MaximumAmountExceeded();
-
-        shareAmount = _previewWithdraw(assetAmount);
-
-        _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
-    }
-
-    function _redeem(
-        uint256 shareAmount,
-        address receiver,
-        address owner
-    ) override internal virtual returns (uint256 assetAmount) {
-        if (shareAmount > _maxRedeem(owner))
-            revert ERC4626Base__MaximumAmountExceeded();
-
-        _updateVars();
-        assetAmount = _previewRedeem(shareAmount);
-
-        _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
-    }
-
     function _afterDeposit(
         address receiver,
         uint256 assetAmount,
@@ -253,72 +186,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 assetAmount,
         uint256 shareAmount
     ) override internal virtual {}
-
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assetAmount,
-        uint256 shareAmount,
-        uint256 assetAmountOffset,
-        uint256 shareAmountOffset
-    ) override internal virtual {
-        uint256 assetAmountNet = assetAmount - assetAmountOffset;
-
-        if (assetAmountNet > 0) {
-            IERC20(_asset()).safeTransferFrom(
-                caller,
-                address(this),
-                assetAmountNet
-            );
-        }
-
-        uint256 shareAmountNet = shareAmount - shareAmountOffset;
-
-        if (shareAmountNet > 0) {
-            _mint(receiver, shareAmountNet);
-        }
-
-        _afterDeposit(receiver, assetAmount, shareAmount);
-
-        emit Deposit(caller, receiver, assetAmount, shareAmount);
-    }
-
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assetAmount,
-        uint256 shareAmount,
-        uint256 assetAmountOffset,
-        uint256 shareAmountOffset
-    ) override internal virtual {
-        if (caller != owner) {
-            uint256 allowance = _allowance(owner, caller);
-
-            if (shareAmount > allowance)
-                revert ERC4626Base__AllowanceExceeded();
-
-        unchecked {
-            _approve(owner, caller, allowance - shareAmount);
-        }
-        }
-
-        _beforeWithdraw(owner, assetAmount, shareAmount);
-
-        uint256 shareAmountNet = shareAmount - shareAmountOffset;
-
-        if (shareAmountNet > 0) {
-            _burn(owner, shareAmountNet);
-        }
-
-        uint256 assetAmountNet = assetAmount - assetAmountOffset;
-
-        if (assetAmountNet > 0) {
-            IERC20(_asset()).safeTransfer(receiver, assetAmountNet);
-        }
-
-        emit Withdraw(caller, receiver, owner, assetAmount, shareAmount);
-    }
 
     function _handleTradeFees(uint256 premium, uint256 spread) internal view {
 
@@ -344,7 +211,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         ) revert Vault__OptionPoolNotSupported();
         // Check if the vault has sufficient funds
         // todo: the amount of available assets can change depending on whether we introduce deadlines
-        uint256 availableAssets = l.totalAssets - l.totalLockedSpread - l.totalLocked;
+        uint256 availableAssets = l.totalAssets - l.totalLockedSpread - l.totalLockedAssets;
         if (size >= availableAssets) revert Vault__InsufficientFunds();
         // Check if this listing has a pool deployed
         // revert Vault__OptionPoolNotListed();
@@ -383,11 +250,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 spreadRate = spread / timeToMaturity;
         // todo: we need to update totalLockedSpread before updating the spreadUnlockingRate (!)
         // todo: otherwise there will be an inconsistency and too much spread will be deducted since lastSpreadUpdate
-        // todo: call _updateVars()
+        // todo: call _updateState()
         l.spreadUnlockingRate += spreadRate;
 
         l.totalAssets += premium + spread;
-        l.totalLocked += size;
+        l.totalLockedAssets += size;
 
         return premium;
     }

@@ -23,7 +23,7 @@ library UnderwriterVaultStorage {
 
         // The total assets that have been included in the pool.
         uint256 totalAssets;
-        uint256 totalLocked;
+        uint256 totalLockedAssets;
 
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positions;
