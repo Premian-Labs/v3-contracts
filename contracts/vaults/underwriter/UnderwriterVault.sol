@@ -392,13 +392,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return premium;
     }
 
-    function settle(
-        uint256 maturity,
-        uint256 strike
-    ) override external returns (uint256) {
-        UnderwriterVaultStorage.Layout layout = UnderwriterVaultStorage.layout();
-
-        layout.totalLocked -= layout.positions[maturity][strike];
+    function settle() override external returns (uint256) {
         return 0;
     }
 
