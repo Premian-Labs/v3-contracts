@@ -13,25 +13,29 @@ contract OptionMathMock {
         return OptionMath.normalCdf(x);
     }
 
-    function relu(int256 x) external pure returns (int256) {
+    function normalPdf(int256 x) external pure returns (int256) {
+        return OptionMath.normalPdf(x);
+    }
+
+    function relu(int256 x) external pure returns (uint256) {
         return OptionMath.relu(x);
     }
 
     function blackScholesPrice(
-        int256 spot59x18,
-        int256 strike59x18,
-        int256 timeToMaturity59x18,
-        int256 volAnnualized59x18,
-        int256 riskFreeRate59x18,
+        uint256 spot60x18,
+        uint256 strike60x18,
+        uint256 timeToMaturity60x18,
+        uint256 volAnnualized60x18,
+        uint256 riskFreeRate60x18,
         bool isCall
-    ) external pure returns (int256) {
+    ) external pure returns (uint256) {
         return
             OptionMath.blackScholesPrice(
-                spot59x18,
-                strike59x18,
-                timeToMaturity59x18,
-                volAnnualized59x18,
-                riskFreeRate59x18,
+                spot60x18,
+                strike60x18,
+                timeToMaturity60x18,
+                volAnnualized60x18,
+                riskFreeRate60x18,
                 isCall
             );
     }
@@ -51,8 +55,23 @@ contract OptionMathMock {
     }
 
     function calculateStrikeInterval(
-        int256 spot
-    ) external pure returns (int256) {
+        uint256 spot
+    ) external pure returns (uint256) {
         return OptionMath.calculateStrikeInterval(spot);
+    }
+
+    function logMoneyness(
+        uint256 spot,
+        uint256 strike
+    ) external pure returns (uint256) {
+        return OptionMath.logMoneyness(spot, strike);
+    }
+
+    function initializationFee(
+        uint256 spot,
+        uint256 strike,
+        uint64 maturity
+    ) external view returns (uint256) {
+        return OptionMath.initializationFee(spot, strike, maturity);
     }
 }

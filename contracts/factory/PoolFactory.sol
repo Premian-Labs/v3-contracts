@@ -2,110 +2,160 @@
 
 pragma solidity ^0.8.0;
 
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 
-import {OptionMath} from "../libraries/OptionMath.sol";
+import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
 
-contract PoolFactory is IPoolFactory {
+contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
+    using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
+    using SafeCast for int256;
     using SafeCast for uint256;
+    using SD59x18 for int256;
+    using UD60x18 for uint256;
 
     address internal immutable DIAMOND;
+    // Chainlink price oracle for the Native/USD (ETH/USD) pair
+    address internal immutable NATIVE_USD_ORACLE;
 
-    constructor(address diamond) {
+    constructor(address diamond, address nativeUsdOracle) {
         DIAMOND = diamond;
+        NATIVE_USD_ORACLE = nativeUsdOracle;
     }
 
     /// @inheritdoc IPoolFactory
-    function isPoolDeployed(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external view returns (bool) {
-        bytes32 poolKey = PoolFactoryStorage.poolKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
-        return _isPoolDeployed(poolKey);
+    function isPoolDeployed(PoolKey memory k) external view returns (bool) {
+        return _isPoolDeployed(k.poolKey());
     }
 
     function _isPoolDeployed(bytes32 poolKey) internal view returns (bool) {
         return PoolFactoryStorage.layout().pools[poolKey] != address(0);
     }
 
+    function getSpotPrice(
+        address baseOracle,
+        address quoteOracle
+    ) internal view returns (uint256 price) {
+        uint256 quotePrice = getSpotPrice(quoteOracle);
+        uint256 basePrice = getSpotPrice(baseOracle);
+        return basePrice.div(quotePrice);
+    }
+
+    function getSpotPrice(address oracle) internal view returns (uint256) {
+        // TODO: Add spot price validation
+
+        int256 price = AggregatorInterface(oracle).latestAnswer();
+        if (price < 0) revert PoolFactory__NegativeSpotPrice();
+
+        // TODO Replace with adapter, decimals should not be hard-coded
+
+        return price.toUint256() * 1e10;
+    }
+
+    // @inheritdoc IPoolFactory
+    function initializationFee(PoolKey memory k) public view returns (uint256) {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+
+        uint256 discountFactor = l.maturityCount[k.maturityKey()] +
+            l.strikeCount[k.strikeKey()];
+        uint256 discount = (OptionMath.ONE - l.discountPerPool)
+            .toInt256()
+            .pow(discountFactor.toInt256())
+            .toUint256();
+        uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
+        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+        uint256 nativeUsdPrice = getSpotPrice(NATIVE_USD_ORACLE);
+
+        return fee.mul(discount).div(nativeUsdPrice);
+    }
+
+    /// @inheritdoc IPoolFactory
+    function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.discountPerPool = discountPerPool;
+        emit SetDiscountPerPool(discountPerPool);
+    }
+
+    /// @inheritdoc IPoolFactory
+    function setFeeReceiver(address feeReceiver) external onlyOwner {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.feeReceiver = feeReceiver;
+        emit SetFeeReceiver(feeReceiver);
+    }
+
     /// @inheritdoc IPoolFactory
     function deployPool(
-        address base,
-        address quote,
-        address baseOracle,
-        address quoteOracle,
-        uint256 strike,
-        uint64 maturity,
-        bool isCallPool
-    ) external returns (address poolAddress) {
-        if (base == quote || baseOracle == quoteOracle)
+        PoolKey memory k
+    ) external payable returns (address poolAddress) {
+        if (k.base == k.quote || k.baseOracle == k.quoteOracle)
             revert PoolFactory__IdenticalAddresses();
 
         if (
-            base == address(0) ||
-            baseOracle == address(0) ||
-            quote == address(0) ||
-            quoteOracle == address(0)
+            k.base == address(0) ||
+            k.baseOracle == address(0) ||
+            k.quote == address(0) ||
+            k.quoteOracle == address(0)
         ) revert PoolFactory__ZeroAddress();
 
-        _ensureOptionStrikeIsValid(strike, baseOracle, quoteOracle);
-        _ensureOptionMaturityIsValid(maturity);
+        _ensureOptionStrikeIsValid(k.strike, k.baseOracle, k.quoteOracle);
+        _ensureOptionMaturityIsValid(k.maturity);
 
-        bytes32 poolKey = PoolFactoryStorage.poolKey(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
-            isCallPool
-        );
+        bytes32 poolKey = k.poolKey();
+        uint256 fee = initializationFee(k);
 
         if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
+        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
+
+        payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
+
+        if (msg.value > fee) {
+            payable(msg.sender).transfer(msg.value - fee);
+        }
 
         poolAddress = address(
             new PoolProxy(
                 DIAMOND,
-                base,
-                quote,
-                baseOracle,
-                quoteOracle,
-                strike,
-                maturity,
-                isCallPool
+                k.base,
+                k.quote,
+                k.baseOracle,
+                k.quoteOracle,
+                k.strike,
+                k.maturity,
+                k.isCallPool
             )
         );
 
         PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
+        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] += 1;
+        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] += 1;
 
         emit PoolDeployed(
-            base,
-            quote,
-            baseOracle,
-            quoteOracle,
-            strike,
-            maturity,
+            k.base,
+            k.quote,
+            k.baseOracle,
+            k.quoteOracle,
+            k.strike,
+            k.maturity,
             poolAddress
         );
+    }
+
+    /// @inheritdoc IPoolFactory
+    function removeDiscount(PoolKey memory k) external {
+        if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
+
+        if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
+            revert PoolFactory__NotAuthorized();
+
+        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
+        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
@@ -116,13 +166,10 @@ contract PoolFactory is IPoolFactory {
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
-        int256 basePrice = PoolStorage.getSpotPrice(baseOracle);
-        int256 quotePrice = PoolStorage.getSpotPrice(quoteOracle);
+        uint256 spot = getSpotPrice(baseOracle, quoteOracle);
+        uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        int256 spot = (basePrice * 1e18) / quotePrice;
-        int256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
-
-        if (strike.toInt256() % strikeInterval != 0)
+        if (strike % strikeInterval != 0)
             revert PoolFactory__OptionStrikeInvalid();
     }
 
@@ -135,12 +182,12 @@ contract PoolFactory is IPoolFactory {
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
-        if (ttm >= 3 days && ttm <= 31 days) {
+        if (ttm >= 3 days && ttm <= 30 days) {
             if (!OptionMath.isFriday(maturity))
                 revert PoolFactory__OptionMaturityNotFriday();
         }
 
-        if (ttm > 31 days) {
+        if (ttm > 30 days) {
             if (!OptionMath.isLastFriday(maturity))
                 revert PoolFactory__OptionMaturityNotLastFriday();
         }
