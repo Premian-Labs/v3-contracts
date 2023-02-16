@@ -264,4 +264,28 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) external view returns (uint256) {
         return PoolStorage.layout().tradeQuoteCategoryNonce[provider][category];
     }
+
+    /// @inheritdoc IPoolCore
+    function cancelTradeQuotes(bytes32[] calldata hashes) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        for (uint256 i = 0; i < hashes.length; i++) {
+            l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = type(uint256).max;
+            emit CancelTradeQuote(msg.sender, hashes[i]);
+        }
+    }
+
+    /// @inheritdoc IPoolCore
+    function increaseTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        l.tradeQuoteCategoryNonce[provider][category]++;
+
+        emit IncreaseTradeQuoteCategoryNonce(
+            provider,
+            category,
+            l.tradeQuoteCategoryNonce[provider][category]
+        );
+    }
 }
