@@ -258,7 +258,10 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getTradeQuoteNonce(address user) external view returns (uint256) {
-        return PoolStorage.layout().tradeQuoteNonce[user];
+    function getTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external view returns (uint256) {
+        return PoolStorage.layout().tradeQuoteCategoryNonce[provider][category];
     }
 }

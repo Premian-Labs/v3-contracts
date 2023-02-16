@@ -216,8 +216,12 @@ interface IPoolCore is IPoolInternal {
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
 
-    /// @notice Get the current quote nonce for the given user
-    /// @param user User for which to return the current quote nonce
+    /// @notice Get the current quote category nonce for the given provider
+    /// @param provider Provider for which to return the current quote category nonce
+    /// @param category Category for which to return the current quote category nonce
     /// @return The current quote nonce
-    function getTradeQuoteNonce(address user) external view returns (uint256);
+    function getTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external view returns (uint256);
 }

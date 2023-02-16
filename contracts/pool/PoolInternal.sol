@@ -28,6 +28,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using PoolStorage for PoolStorage.Layout;
+    using PoolStorage for TradeQuote;
     using Position for Position.Key;
     using Position for Position.OrderType;
     using Pricing for Pricing.Args;
@@ -876,17 +877,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
 
-            _ensureQuoteIsValid(
-                l,
-                args.user,
-                tradeQuote,
-                args.v,
-                args.r,
-                args.s
-            );
+            bytes32 tradeQuoteHash = tradeQuote.hash();
+            _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
 
-            // Increment nonce so that quote cannot be replayed
-            l.tradeQuoteNonce[args.user] += 1;
+            l.tradeQuoteAmountFilled[tradeQuote.provider][
+                tradeQuoteHash
+            ] += args.size;
 
             vars.premium = tradeQuote.price.mul(args.size);
             vars.takerFee = Position.contractsToCollateral(
@@ -1794,22 +1790,34 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureQuoteIsValid(
         PoolStorage.Layout storage l,
-        address user,
+        FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        bytes32 tradeQuoteHash
     ) internal view {
         if (block.timestamp > tradeQuote.deadline) revert Pool__QuoteExpired();
+
+        uint256 filledAmount = l.tradeQuoteAmountFilled[tradeQuote.provider][
+            tradeQuoteHash
+        ];
+
+        if (
+            filledAmount == type(uint256).max ||
+            filledAmount + args.size > tradeQuote.size
+        ) revert Pool__QuoteOverfilled();
 
         if (
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||
             tradeQuote.price > Pricing.MAX_TICK_PRICE
         ) revert Pool__OutOfBoundsPrice();
 
-        if (user != tradeQuote.taker) revert Pool__InvalidQuoteTaker();
-        if (l.tradeQuoteNonce[user] != tradeQuote.nonce)
-            revert Pool__InvalidQuoteNonce();
+        if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
+            revert Pool__InvalidQuoteTaker();
+
+        if (
+            l.tradeQuoteCategoryNonce[tradeQuote.provider][
+                tradeQuote.category
+            ] != tradeQuote.categoryNonce
+        ) revert Pool__InvalidQuoteCategoryNonce();
 
         bytes32 structHash = keccak256(
             abi.encode(
@@ -1819,7 +1827,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.price,
                 tradeQuote.size,
                 tradeQuote.isBuy,
-                tradeQuote.nonce,
+                tradeQuote.category,
+                tradeQuote.categoryNonce,
                 tradeQuote.deadline
             )
         );
@@ -1835,7 +1844,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             )
         );
 
-        address signer = ECDSA.recover(hash, v, r, s);
+        address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
 

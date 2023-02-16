@@ -58,8 +58,10 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Gets incremented everytime `fillQuote` is called successfully
-        mapping(address => uint256) tradeQuoteNonce;
+        // Provider can increment a category nonce to cancel all pending quotes of this category (provider -> category -> nonce)
+        mapping(address => mapping(uint256 => uint256)) tradeQuoteCategoryNonce;
+        // Size of quotes already filled (provider -> quoteHash -> amountFilled)
+        mapping(address => mapping(bytes32 => uint256)) tradeQuoteAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }
@@ -150,5 +152,11 @@ library PoolStorage {
                 MIN_TICK_DISTANCE
             )
         }
+    }
+
+    function hash(
+        IPoolInternal.TradeQuote memory tradeQuote
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(tradeQuote));
     }
 }
