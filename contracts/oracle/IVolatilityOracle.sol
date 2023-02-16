@@ -75,4 +75,17 @@ interface IVolatilityOracle {
         uint256 strike,
         uint256 timeToMaturity
     ) external view returns (int256);
+
+    /// @notice Calculate the annualized volatility for given set of parameters
+    /// @param token The token address
+    /// @param spot The spot price of the token
+    /// @param strike The strike price of the option
+    /// @param timeToMaturity The time until maturity (denominated in years)
+    /// @return The annualized implied volatility, where 1 is defined as 100%
+    function getVolatility(
+        address token,
+        uint256 spot,
+        uint256[] memory strike,
+        uint256[] memory timeToMaturity
+    ) external view returns (int256[] memory);
 }

@@ -25,6 +25,8 @@ library UnderwriterVaultStorage {
         uint256 totalAssets;
         uint256 totalLockedAssets;
 
+        uint256 totalSupply;
+
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positions;
 
@@ -40,6 +42,7 @@ library UnderwriterVaultStorage {
 
         // tracks the total profits / spreads that are locked such that we can deduct it from the total assets
         uint256 totalLockedSpread;
+
         // tracks the rate at which ask spreads are dispersed
         // why? the vault charges FV + spread, therefore the pps would increase.
         // this would allow
@@ -49,6 +52,19 @@ library UnderwriterVaultStorage {
         mapping(uint256 => uint256) spreadUnlockingTicks;
 
     }
+
+    struct PricePerShareState {
+        // All of the info needed to compute the price per share
+        // This is to be used for storing the updated state variables that we are not able to save to memory
+
+        uint256 totalAssets;
+        uint256 totalLockedAssets;
+        uint256 totalSupply;
+        uint256 totalLockedSpread;
+        uint256 lastSpreadUnlockRate;
+
+    }
+
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;

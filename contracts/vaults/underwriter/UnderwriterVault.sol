@@ -24,10 +24,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         ORACLE = oracleAddress;
     }
 
-
     function setVariable(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().variable = value;
-    } 
+    }
 
     function _asset() override internal view virtual returns (address) {
         return ERC4626BaseStorage.layout().asset;
@@ -43,14 +42,37 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _fairValue() internal view returns (uint256) {
+    /// @notice Gets the updated price per share state. Necessary for computing
+    ///         the current price per share without changing variables in storage.
+    function _getUpdatedPricePerShareState() internal view returns (UnderwriterVaultStorage.PricePerShareState memory)
+    {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        return UnderwriterVaultStorage.PricePerShareState(
+            l.totalAssets,
+            l.totalLockedAssets,
+            l.totalSupply,
+            l.totalLockedSpread,
+            l.spreadUnlockingRate
+        );
+    }
+
+    function _getTotalFairValue(UnderwriterVaultStorage.PricePerShareState memory state) internal view returns (uint256) {
         // todo
         // store efficiently a list of strikes and maturities underwritten
         return 0;
     }
 
-    // @notice updates total spread in storage to be able to compute the price per share
-    //
+    function _getPricePerShare(UnderwriterVaultStorage.PricePerShareState memory state) internal view returns (uint256) {
+        uint256 totalAssets = _totalAssets();
+        uint256 totalSupply = _totalSupply();
+        uint256 fairValue = _getTotalFairValue(state);
+        uint256 totalLockedSpread = _totalLockedSpread();
+
+        return (state.totalAssets - state.totalLockedSpread - fairValue) / state.totalSupply;
+    }
+
+    /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -61,7 +83,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 totalLockedSpread = l.totalLockedSpread;
 
         uint256 totalAssets = _totalAssets();
-        uint256 totalLockedSpread = l.deadlineToWithdrawAmount;
+        //uint256 totalLockedSpread = l.deadlineToWithdrawAmount;
 
         while (block.timestamp >= nextMaturity) {
             totalLockedSpread -= (nextMaturity - lastSpreadUnlockUpdate) * spreadUnlockingRate;
@@ -75,28 +97,23 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         l.lastSpreadUnlockUpdate = block.timestamp;
     }
 
-    function _pricePerShare() internal view returns (uint256) {
-        uint256 totalAssets = _totalAssets();
-        uint256 totalSupply = _totalSupply();
-        uint256 fairValue = _fairValue();
-        uint256 totalLockedSpread = _totalLockedSpread();
-
-        return (totalAssets - totalLockedSpread - fairValue) / totalSupply;
-    }
-
     function _convertToShares(
         uint256 assetAmount
     ) override internal view returns (uint256 shareAmount) {
+
+        // Get the updated state so there is no change made to storage update triggered
+        UnderwriterVaultStorage.PricePerShareState memory state = _getUpdatedPricePerShareState();
+
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
             shareAmount = assetAmount;
         } else {
-            uint256 totalAssets = _totalAssets();
+            uint256 totalAssets = state.totalAssets;
             if (totalAssets == 0) {
                 shareAmount = assetAmount;
             } else {
-                shareAmount = assetAmount / _pricePerShare();
+                shareAmount = assetAmount / _getPricePerShare(state);
             }
         }
     }
@@ -106,19 +123,22 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     ) override internal view virtual returns (uint256 assetAmount) {
         uint256 supply = _totalSupply();
 
+        // Get the updated state so there is no change made to storage update triggered
+        UnderwriterVaultStorage.PricePerShareState memory state = _getUpdatedPricePerShareState();
+
         if (supply == 0) {
             assetAmount = shareAmount;
         } else {
-            assetAmount = shareAmount * _pricePerShare();
+            assetAmount = shareAmount * _getPricePerShare(state);
         }
     }
 
     function _maxWithdraw(
         address owner
     ) override internal view virtual returns (uint256 maxAssets) {
-        _updateState(); 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        maxAssets = l.totalAssets - l.totalLockedSpread - l.totalLockedAssets;
+        UnderwriterVaultStorage.PricePerShareState memory state = _getUpdatedPricePerShareState();
+
+        maxAssets = state.totalAssets - state.totalLockedSpread - state.totalLockedAssets;
     }
 
     function _maxRedeem(
@@ -171,6 +191,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 shareAmount
     ) override internal virtual {}
 
+    function _isValidListing(uint256 strike, uint256 maturity) internal view returns (bool){
+        return true;
+    }
+
     function _handleTradeFees(uint256 premium, uint256 spread) internal view {
 
     }
@@ -186,13 +210,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
         // Validate listing
         // Check if not expired
-        if (block.timestamp >= maturity) revert Vault__OptionExpired();
+        if (block.timestamp >= maturity)
+            revert Vault__OptionExpired();
+
         // Check if this listing is supported by the vault. We'll need to restrict it as big moves in spot may result
         // in new listings we may want to support, making FV calculations potentially intractable.
-        if (
-            !l.supportedMaturities[maturity] &&
-            !l.supportedStrikes[strike]
-        ) revert Vault__OptionPoolNotSupported();
+        if (_isValidListing(strike, maturity))
+            revert Vault__OptionPoolNotSupported();
+
         // Check if the vault has sufficient funds
         // todo: the amount of available assets can change depending on whether we introduce deadlines
         uint256 availableAssets = l.totalAssets - l.totalLockedSpread - l.totalLockedAssets;
@@ -243,6 +268,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return premium;
     }
 
+    /// @inheritdoc IUnderwriterVault
     function settle() override external returns (uint256) {
         return 0;
     }

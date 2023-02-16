@@ -187,16 +187,52 @@ describe('VolatilityOracle', () => {
       const timeToMaturity = parseEther('0.5');
 
       const iv = await oracle['getVolatility(address,uint256,uint256,uint256)'](
-        token,
-        spot,
-        strike,
-        timeToMaturity,
+          token,
+          spot,
+          strike,
+          timeToMaturity,
       );
       const result = parseFloat(formatEther(iv));
 
       const expected = 0.88798013;
 
       expect(expected / result).to.be.closeTo(1, 0.001);
+    });
+
+    it('should correctly perform a batch computation', async () => {
+
+      await prepareContractEnv();
+
+      const spot = parseEther('2800');
+      const strike = [
+        parseEther('1000'),
+        parseEther('2000'),
+        parseEther('3000'),
+        parseEther('4000'),
+        parseEther('5000')
+      ];
+      const timeToMaturity = [
+        parseEther('0.1'),
+        parseEther('0.2'),
+        parseEther('0.3'),
+        parseEther('0.4'),
+        parseEther('0.5')
+      ];
+
+      const iv = await oracle['getVolatility(address,uint256,uint256[],uint256[])'](
+          token,
+          spot,
+          strike,
+          timeToMaturity,
+      );
+      const result = iv.map((el) => parseFloat(formatEther(el)));
+
+      const expected = [0.43940756, 0.38175548, 0.38978258, 0.40428331, 0.41781315];
+
+      for (let i = 0; i < expected.length; i++ ) {
+        expect(expected[i] / result[i]).to.be.closeTo(1, 0.001);
+      }
+
     });
   });
 });

@@ -307,4 +307,29 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     ) external view returns (int256) {
         return _getVolatility(token, spot, strike, timeToMaturity);
     }
+
+    // @inheritdoc IVolatilityOracle
+    function getVolatility(
+        address token,
+        uint256 spot,
+        uint256[] memory strike,
+        uint256[] memory timeToMaturity
+    ) external view returns (int256[] memory) {
+
+        if (strike.length != timeToMaturity.length)
+            revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
+
+        int256[] memory sigma = new int256[](strike.length);
+
+        for (uint256 i = 0; i < sigma.length; i++) {
+            sigma[i] = _getVolatility(
+                token,
+                spot,
+                strike[i],
+                timeToMaturity[i]
+            );
+        }
+
+        return sigma;
+    }
 }
