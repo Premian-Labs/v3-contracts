@@ -44,6 +44,7 @@ describe('Pool', () => {
   let baseOracle: MockContract;
   let quoteOracle: MockContract;
 
+  const protocolFeePercentage = 0.5;
   let strike = parseEther('1000'); // ATM
   let maturity: number;
 
@@ -1113,7 +1114,9 @@ describe('Pool', () => {
         bnToNumber(BigNumber.from(quote.size)),
       );
 
-      const fee = (await callPool.takerFee(quote.size, premium)).div(2); // Divide by 2 to account for protocol fee
+      const fee = (await callPool.takerFee(quote.size, premium))
+        .mul(parseEther(protocolFeePercentage.toString()))
+        .div(ONE_ETHER);
 
       expect(await base.balanceOf(lp.address)).to.eq(
         initialBalance.sub(quote.size).add(premium).sub(fee),
@@ -1223,6 +1226,100 @@ describe('Pool', () => {
             sig.s,
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
+    });
+  });
+
+  describe('#getClaimableFees', async () => {
+    it('should successfully return amount of claimable fees', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const price = pKey.lower;
+      const nextPrice = pKey.upper;
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      expect(await callPool.connect(lp).getClaimableFees(pKey)).to.eq(
+        takerFee
+          .mul(parseEther(protocolFeePercentage.toString()))
+          .div(ONE_ETHER),
+      );
+    });
+  });
+
+  describe('#claim', () => {
+    it('should successfully claim fees', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      const claimableFees = await callPool.getClaimableFees(pKey);
+
+      await callPool.connect(lp).claim(pKey);
+
+      expect(await base.balanceOf(pKey.operator)).to.eq(claimableFees);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(claimableFees),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        ONE_ETHER,
+      );
     });
   });
 
