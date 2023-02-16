@@ -14,17 +14,8 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-
 import { now } from '../../utils/time';
-
-import {
-  Token,
-  CHAINLINK_BTC,
-  CHAINLINK_USD,
-  CHAINLINK_ETH,
-  feeds,
-  tokens,
-} from '../../utils/addresses';
+import { Token, feeds, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
 
@@ -43,13 +34,6 @@ enum PricingPath {
   TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
 }
 
-let deonominationMapping = [
-  { token: tokens.WBTC.address, denomination: CHAINLINK_BTC },
-  { token: tokens.WETH.address, denomination: CHAINLINK_ETH },
-  { token: tokens.USDC.address, denomination: CHAINLINK_USD },
-  { token: tokens.USDT.address, denomination: CHAINLINK_USD },
-];
-
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
 // prettier-ignore
@@ -57,33 +41,29 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
   paths = [
     [
       // ETH_USD_PAIR
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.USDT }, // IN is ETH, OUT is USD
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.USDT, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.CHAINLINK_USD, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
+      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.CHAINLINK_ETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
     ],
     [
       // TOKEN_USD_PAIR
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.USDT }, // IN (tokenA) => OUT (tokenB) is USD
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => OUT (tokenA) is USD
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) is USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.USDT, tokenOut: tokens.WBTC }, // IN (tokenB) is USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
+      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
     ],
     [
       // TOKEN_ETH_PAIR
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.BNT, tokenOut: tokens.WETH }, // IN (tokenA) => OUT (tokenB) is ETH
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
-      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH => OUT (tokenA)
-      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
       { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
     ],
     [
       // TOKEN_TO_USD_TO_TOKEN_PAIR
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
       { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenA) => USD => OUT (tokenB)
       { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.DAI }, // IN (tokenB) => USD => OUT (tokenA)
+
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
     ],
     [
       // TOKEN_TO_ETH_TO_TOKEN_PAIR
@@ -97,7 +77,7 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.DAI, tokenOut: tokens.ALPHA }, // IN (tokenB) => ETH, OUT is USD (tokenA)
+      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.DAI, tokenOut: tokens.ALPHA }, 
 
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
       { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
@@ -114,15 +94,14 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
       { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.IMX }, // IN (tokenA) => ETH, USD => OUT (tokenB)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => USD, ETH => OUT (tokenA)
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => ETH, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => ETH, USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => USD, ETH => OUT (tokenB) 
     ],
   ];
 }
 
 describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
-  let notOwner: SignerWithAddress;
   let instance: ChainlinkAdapter;
 
   before(async () => {
@@ -132,7 +111,7 @@ describe('ChainlinkAdapter', () => {
   });
 
   beforeEach(async () => {
-    [deployer, notOwner] = await ethers.getSigners();
+    [deployer] = await ethers.getSigners();
 
     const implementation = await new ChainlinkAdapter__factory(
       deployer,
@@ -142,51 +121,13 @@ describe('ChainlinkAdapter', () => {
 
     const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
       implementation.address,
+      tokens.WETH.address,
       feeds,
-      deonominationMapping,
     );
 
     await proxy.deployed();
 
     instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
-  });
-
-  describe('#constructor', () => {
-    it('should return tokens mapped to denomination', async () => {
-      for (let i = 0; i < deonominationMapping.length; i++) {
-        expect(
-          await instance.denomination(deonominationMapping[i].token),
-        ).to.equal(deonominationMapping[i].denomination);
-      }
-    });
-  });
-
-  describe('#batchRegisterDenominationMappings', () => {
-    it('shoud revert if not owner', async () => {
-      await expect(
-        instance
-          .connect(notOwner)
-          .batchRegisterDenominationMappings(deonominationMapping),
-      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
-    });
-
-    it('shoud return denomination of mapped token', async () => {
-      await instance.batchRegisterDenominationMappings(deonominationMapping);
-
-      for (let i = 0; i < deonominationMapping.length; i++) {
-        expect(
-          await instance.denomination(deonominationMapping[i].token),
-        ).to.equal(deonominationMapping[i].denomination);
-      }
-    });
-  });
-
-  describe('#denomination', () => {
-    it('shoud return token address if token is not mapped', async () => {
-      expect(await instance.denomination(tokens.AMP.address)).to.equal(
-        tokens.AMP.address,
-      );
-    });
   });
 
   describe('#canSupportPair', () => {
@@ -283,7 +224,7 @@ describe('ChainlinkAdapter', () => {
       await instance.batchRegisterFeedMappings([
         {
           token: tokens.EUL.address,
-          denomination: CHAINLINK_USD,
+          denomination: tokens.CHAINLINK_USD.address,
           feed: bnToAddress(BigNumber.from(1)),
         },
       ]);
@@ -313,7 +254,7 @@ describe('ChainlinkAdapter', () => {
         instance.batchRegisterFeedMappings([
           {
             token: bnToAddress(BigNumber.from(0)),
-            denomination: CHAINLINK_USD,
+            denomination: tokens.DAI.address,
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
@@ -343,9 +284,9 @@ describe('ChainlinkAdapter', () => {
 
   describe('#feed', async () => {
     it('should return zero address if feed has not been added', async () => {
-      expect(await instance.feed(tokens.EUL.address, CHAINLINK_USD)).to.equal(
-        bnToAddress(BigNumber.from(0)),
-      );
+      expect(
+        await instance.feed(tokens.EUL.address, tokens.DAI.address),
+      ).to.equal(bnToAddress(BigNumber.from(0)));
     });
   });
 
@@ -481,15 +422,34 @@ describe('ChainlinkAdapter', () => {
           });
 
           describe('#quote', async () => {
-            it('should return quote for pair', async () => {
+            it.only('should return quote for pair', async () => {
+              let _tokenIn = Object.assign({}, tokenIn);
+              let _tokenOut = Object.assign({}, tokenOut);
+
               const quote = await instance.quote(
-                tokenIn.address,
-                tokenOut.address,
+                _tokenIn.address,
+                _tokenOut.address,
               );
 
+              if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
+                _tokenIn.address = tokens.WETH.address;
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
+                _tokenOut.address = tokens.WETH.address;
+              }
+
+              if (tokenIn.symbol === tokens.CHAINLINK_USD.symbol) {
+                _tokenIn.address = tokens.DAI.address;
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_USD.symbol) {
+                _tokenOut.address = tokens.DAI.address;
+              }
+
               const coingeckoPrice = await getPriceBetweenTokens(
-                tokenIn,
-                tokenOut,
+                _tokenIn,
+                _tokenOut,
               );
 
               const expected = convertPriceToBigNumberWithDecimals(

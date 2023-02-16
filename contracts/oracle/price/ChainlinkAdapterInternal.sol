@@ -376,24 +376,11 @@ abstract contract ChainlinkAdapterInternal is
             ];
     }
 
-    function _batchRegisterDenominationMappings(
-        DenominationMappingArgs[] memory args
-    ) internal {
-        for (uint256 i = 0; i < args.length; i++) {
-            ChainlinkAdapterStorage.layout().denominations[
-                args[i].token
-            ] = args[i].denomination;
-        }
-
-        emit DenominationMappingsRegistered(args);
-    }
-
     function _denomination(address token) internal view returns (address) {
-        address tokenMapping = ChainlinkAdapterStorage.layout().denominations[
-            token
-        ];
-
-        return tokenMapping != address(0) ? tokenMapping : token;
+        return
+            token == ChainlinkAdapterStorage.layout().wrappedNativeToken
+                ? Denominations.ETH
+                : token;
     }
 
     function _mapToDenominationAndSort(

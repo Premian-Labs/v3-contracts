@@ -25,12 +25,6 @@ interface IChainlinkAdapter is IOracleAdapter {
         IChainlinkAdapterInternal.FeedMappingArgs[] memory args
     ) external;
 
-    /// @notice Registers mappings of ERC20 token to denomination (ETH, or USD)
-    /// @param args The arguments for the new mappings
-    function batchRegisterDenominationMappings(
-        IChainlinkAdapterInternal.DenominationMappingArgs[] memory args
-    ) external;
-
     /// @notice Returns the Chainlink feed for the given pair
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
@@ -39,9 +33,4 @@ interface IChainlinkAdapter is IOracleAdapter {
         address tokenA,
         address tokenB
     ) external view returns (address);
-
-    /// @notice Returns the mapping of the given ERC20 token to denomination (ETH, or USD), if it exists.
-    /// If it doesn't, then the original token is returned
-    /// @return If it exists, the mapping is returned. Otherwise, the original token is returned
-    function denomination(address token) external view returns (address);
 }

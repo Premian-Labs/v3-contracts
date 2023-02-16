@@ -1,12 +1,11 @@
 export type Token = { address: string; decimals: number; symbol: string };
 
-export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
-export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
-
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
 export const tokens: { [symbol: string]: Token } =  {
+    'CHAINLINK_BTC': { address: '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB', decimals: 8, symbol: 'CHAINLINK_BTC' },
+    'CHAINLINK_ETH': { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, symbol: 'CHAINLINK_ETH' },
+    'CHAINLINK_USD': { address: '0x0000000000000000000000000000000000000348', decimals: 8, symbol: 'CHAINLINK_USD' },
     'BNT': { address: '0x1F573D6Fb3F13d689FF844B4cE37794d79a7FF1C', decimals: 18, symbol: 'BNT' },
     'EUL': { address: '0xd9fcd98c322942075a5c3860693e9f4f03aae07b', decimals: 18, symbol: 'EUL' },
     'CRV': { address: '0xD533a949740bb3306d119CC777fa900bA034cd52', decimals: 18, symbol: 'CRV' },
@@ -29,25 +28,26 @@ export const tokens: { [symbol: string]: Token } =  {
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
 export const feeds = [
-    { token: CHAINLINK_ETH, denomination: CHAINLINK_USD, feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'},
-    { token: CHAINLINK_BTC, denomination: CHAINLINK_USD, feed: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'},
-    { token: CHAINLINK_BTC, denomination: CHAINLINK_ETH, feed: '0xdeb288F737066589598e9214E782fa5A8eD689e8'},
-    { token: tokens.DAI.address, denomination: CHAINLINK_USD, feed: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9'},
-    { token: tokens.BNT.address, denomination: CHAINLINK_USD, feed: '0x1E6cF0D433de4FE882A437ABC654F58E1e78548c'},
-    { token: tokens.CRV.address, denomination: CHAINLINK_USD, feed: '0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f'},
-    { token: tokens.AMP.address, denomination: CHAINLINK_USD, feed: '0xfAaA7460eD59C12E204349766CE73Cf5202e6aD6'},
-    { token: tokens.IMX.address, denomination: CHAINLINK_USD, feed: '0xBAEbEFc1D023c0feCcc047Bff42E75F15Ff213E6'},
-    { token: tokens.FXS.address, denomination: CHAINLINK_USD, feed: '0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f'},
-    { token: tokens.AAVE.address, denomination: CHAINLINK_USD, feed: '0x547a514d5e3769680Ce22B2361c10Ea13619e8a9'},
-    { token: tokens.COMP.address, denomination: CHAINLINK_USD, feed: '0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5'},
-    { token: tokens.MATIC.address, denomination: CHAINLINK_USD, feed: '0x7bAC85A8a13A4BcD8abb3eB7d6b4d632c5a57676'},
-    { token: tokens.AXS.address, denomination: CHAINLINK_ETH, feed: '0x8B4fC5b68cD50eAc1dD33f695901624a4a1A0A8b'},
-    { token: tokens.BOND.address, denomination: CHAINLINK_ETH, feed: '0xdd22A54e05410D8d1007c38b5c7A3eD74b855281'},
-    { token: tokens.ALPHA.address, denomination: CHAINLINK_ETH, feed: '0x89c7926c7c15fD5BFDB1edcFf7E7fC8283B578F6'},
-    { token: tokens.BNT.address, denomination: CHAINLINK_ETH, feed: '0xCf61d1841B178fe82C8895fe60c2EDDa08314416'},
-    { token: tokens.CRV.address, denomination: CHAINLINK_ETH, feed: '0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e'},
-    { token: tokens.AAVE.address, denomination: CHAINLINK_ETH, feed: '0x6Df09E975c830ECae5bd4eD9d90f3A95a4f88012'},
-    { token: tokens.COMP.address, denomination: CHAINLINK_ETH, feed: '0x1B39Ee86Ec5979ba5C322b826B3ECb8C79991699'},
-    { token: tokens.DAI.address, denomination: CHAINLINK_ETH, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
-
+    { token: tokens.CHAINLINK_ETH.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'},
+    { token: tokens.CHAINLINK_BTC.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'},
+    { token: tokens.USDC.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'},
+    { token: tokens.DAI.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9'},
+    { token: tokens.BNT.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x1E6cF0D433de4FE882A437ABC654F58E1e78548c'},
+    { token: tokens.CRV.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f'},
+    { token: tokens.AMP.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xfAaA7460eD59C12E204349766CE73Cf5202e6aD6'},
+    { token: tokens.IMX.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xBAEbEFc1D023c0feCcc047Bff42E75F15Ff213E6'},
+    { token: tokens.FXS.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f'},
+    { token: tokens.AAVE.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x547a514d5e3769680Ce22B2361c10Ea13619e8a9'},
+    { token: tokens.COMP.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xdbd020CAeF83eFd542f4De03e3cF0C28A4428bd5'},
+    { token: tokens.MATIC.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x7bAC85A8a13A4BcD8abb3eB7d6b4d632c5a57676'},
+    { token: tokens.USDT.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0xEe9F2375b4bdF6387aa8265dD4FB8F16512A1d46'},
+    { token: tokens.AXS.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x8B4fC5b68cD50eAc1dD33f695901624a4a1A0A8b'},
+    { token: tokens.BOND.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0xdd22A54e05410D8d1007c38b5c7A3eD74b855281'},
+    { token: tokens.ALPHA.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x89c7926c7c15fD5BFDB1edcFf7E7fC8283B578F6'},
+    { token: tokens.BNT.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0xCf61d1841B178fe82C8895fe60c2EDDa08314416'},
+    { token: tokens.CRV.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x8a12Be339B0cD1829b91Adc01977caa5E9ac121e'},
+    { token: tokens.AAVE.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x6Df09E975c830ECae5bd4eD9d90f3A95a4f88012'},
+    { token: tokens.COMP.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x1B39Ee86Ec5979ba5C322b826B3ECb8C79991699'},
+    { token: tokens.DAI.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
+    { token: tokens.WBTC.address, denomination: tokens.CHAINLINK_BTC.address, feed: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23'},
 ]

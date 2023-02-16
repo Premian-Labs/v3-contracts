@@ -96,13 +96,6 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function batchRegisterDenominationMappings(
-        DenominationMappingArgs[] memory args
-    ) external onlyOwner {
-        _batchRegisterDenominationMappings(args);
-    }
-
-    /// @inheritdoc IChainlinkAdapter
     function feed(
         address tokenA,
         address tokenB
@@ -113,10 +106,5 @@ contract ChainlinkAdapter is
         );
 
         return _feed(mappedTokenA, mappedTokenB);
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function denomination(address token) external view returns (address) {
-        return _denomination(token);
     }
 }
