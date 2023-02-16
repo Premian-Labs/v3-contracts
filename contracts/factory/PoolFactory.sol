@@ -143,6 +143,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             k.quoteOracle,
             k.strike,
             k.maturity,
+            k.isCallPool,
             poolAddress
         );
     }

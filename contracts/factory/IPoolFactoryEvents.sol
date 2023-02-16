@@ -11,6 +11,7 @@ interface IPoolFactoryEvents {
         address quoteOracle,
         uint256 strike,
         uint64 maturity,
+        bool isCallPool,
         address poolAddress
     );
 }
