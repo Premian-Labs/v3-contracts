@@ -30,3 +30,21 @@ export interface PoolKey {
   maturity: BigNumber;
   isCallPool: boolean;
 }
+
+interface TradeQuoteBase {
+  provider: string;
+  taker: string;
+  price: number | string;
+  size: number | string;
+  isBuy: boolean;
+  category: number;
+  deadline: number;
+}
+
+export interface TradeQuote extends TradeQuoteBase {
+  categoryNonce: number;
+}
+
+export interface TradeQuoteNonceOptional extends TradeQuoteBase {
+  categoryNonce?: number;
+}

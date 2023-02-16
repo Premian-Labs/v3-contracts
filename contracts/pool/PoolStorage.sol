@@ -153,10 +153,4 @@ library PoolStorage {
             )
         }
     }
-
-    function hash(
-        IPoolInternal.TradeQuote memory tradeQuote
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tradeQuote));
-    }
 }

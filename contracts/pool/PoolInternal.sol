@@ -52,7 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
-            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 nonce,uint256 deadline)"
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 category,uint256 categoryNonce,uint256 deadline)"
         );
 
     constructor(
@@ -877,7 +877,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
 
-            bytes32 tradeQuoteHash = tradeQuote.hash();
+            bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
             _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
 
             l.tradeQuoteAmountFilled[tradeQuote.provider][
@@ -1755,6 +1755,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__TickWidthInvalid();
     }
 
+    function _tradeQuoteHash(
+        IPoolInternal.TradeQuote memory tradeQuote
+    ) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                FILL_QUOTE_TYPE_HASH,
+                tradeQuote.provider,
+                tradeQuote.taker,
+                tradeQuote.price,
+                tradeQuote.size,
+                tradeQuote.isBuy,
+                tradeQuote.category,
+                tradeQuote.categoryNonce,
+                tradeQuote.deadline
+            )
+        );
+
+        return
+            keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    EIP712.calculateDomainSeparator(
+                        keccak256("Premia"),
+                        keccak256("1")
+                    ),
+                    structHash
+                )
+            );
+    }
+
     function _ensureValidRange(uint256 lower, uint256 upper) internal pure {
         if (
             lower == 0 ||
@@ -1818,31 +1848,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.category
             ] != tradeQuote.categoryNonce
         ) revert Pool__InvalidQuoteCategoryNonce();
-
-        bytes32 structHash = keccak256(
-            abi.encode(
-                FILL_QUOTE_TYPE_HASH,
-                tradeQuote.provider,
-                tradeQuote.taker,
-                tradeQuote.price,
-                tradeQuote.size,
-                tradeQuote.isBuy,
-                tradeQuote.category,
-                tradeQuote.categoryNonce,
-                tradeQuote.deadline
-            )
-        );
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                EIP712.calculateDomainSeparator(
-                    keccak256("Premia"),
-                    keccak256("1")
-                ),
-                structHash
-            )
-        );
 
         address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();

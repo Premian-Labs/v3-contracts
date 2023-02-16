@@ -1,23 +1,7 @@
 import { signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
 import { IPool__factory } from '../../typechain';
-
-interface TradeQuoteBase {
-  provider: string;
-  taker: string;
-  price: number | string;
-  size: number | string;
-  isBuy: boolean;
-  deadline: number;
-}
-
-export interface TradeQuote extends TradeQuoteBase {
-  nonce: number;
-}
-
-export interface TradeQuoteNonceOptional extends TradeQuoteBase {
-  nonce?: number;
-}
+import { TradeQuote, TradeQuoteNonceOptional } from './types';
 
 interface Domain {
   name: string;
@@ -46,11 +30,12 @@ export async function signQuote(
   };
 
   // Query current nonce for taker from contract, if nonce is not specified
-  if (quote.nonce === undefined) {
-    quote.nonce = (
-      await IPool__factory.connect(poolAddress, w3Provider).getTradeQuoteNonce(
-        quote.taker,
-      )
+  if (quote.categoryNonce === undefined) {
+    quote.categoryNonce = (
+      await IPool__factory.connect(
+        poolAddress,
+        w3Provider,
+      ).getTradeQuoteCategoryNonce(quote.provider, quote.category)
     ).toNumber();
   }
 
@@ -67,7 +52,8 @@ export async function signQuote(
         { name: 'price', type: 'uint256' },
         { name: 'size', type: 'uint256' },
         { name: 'isBuy', type: 'bool' },
-        { name: 'nonce', type: 'uint256' },
+        { name: 'category', type: 'uint256' },
+        { name: 'categoryNonce', type: 'uint256' },
         { name: 'deadline', type: 'uint256' },
       ],
     },
