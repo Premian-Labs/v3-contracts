@@ -169,39 +169,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return totalPremium;
     }
 
-    /// @notice Updates the amount of fees an LP can claim for a position (without claiming).
-    function _updateClaimableFees(
-        Position.Data storage pData,
-        uint256 feeRate,
-        uint256 liquidityPerTick
-    ) internal {
-        // Compute the claimable fees
-        uint256 claimableFees = (feeRate - pData.lastFeeRate).mul(
-            liquidityPerTick
-        );
-        pData.claimableFees += claimableFees;
-
-        // Reset the initial range rate of the position
-        pData.lastFeeRate = feeRate;
-    }
-
-    function _updateClaimableFees(
+    // @notice Returns amount of claimable fees from pending update of claimable fees for the position. This does not include pData.claimableFees
+    function _pendingClaimableFees(
         PoolStorage.Layout storage l,
         Position.Key memory p,
         Position.Data storage pData
-    ) internal {
+    ) internal view returns (uint256 claimableFees, uint256 feeRate) {
         Tick memory lowerTick = _getTick(p.lower);
         Tick memory upperTick = _getTick(p.upper);
 
-        _updateClaimableFees(
-            pData,
-            _rangeFeeRate(
-                l,
-                p.lower,
-                p.upper,
-                lowerTick.externalFeeRate,
-                upperTick.externalFeeRate
-            ),
+        feeRate = _rangeFeeRate(
+            l,
+            p.lower,
+            p.upper,
+            lowerTick.externalFeeRate,
+            upperTick.externalFeeRate
+        );
+
+        claimableFees = _calculateClaimableFees(
+            feeRate,
+            pData.lastFeeRate,
             p.liquidityPerTick(
                 _balanceOf(
                     p.owner,
@@ -214,6 +201,45 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 )
             )
         );
+    }
+
+    function _calculateClaimableFees(
+        uint256 feeRate,
+        uint256 lastFeeRate,
+        uint256 liquidityPerTick
+    ) internal pure returns (uint256) {
+        return (feeRate - lastFeeRate).mul(liquidityPerTick);
+    }
+
+    /// @notice Updates the amount of fees an LP can claim for a position (without claiming).
+    function _updateClaimableFees(
+        Position.Data storage pData,
+        uint256 feeRate,
+        uint256 liquidityPerTick
+    ) internal {
+        pData.claimableFees += _calculateClaimableFees(
+            feeRate,
+            pData.lastFeeRate,
+            liquidityPerTick
+        );
+
+        // Reset the initial range rate of the position
+        pData.lastFeeRate = feeRate;
+    }
+
+    function _updateClaimableFees(
+        PoolStorage.Layout storage l,
+        Position.Key memory p,
+        Position.Data storage pData
+    ) internal {
+        (uint256 claimableFees, uint256 feeRate) = _pendingClaimableFees(
+            l,
+            p,
+            pData
+        );
+
+        pData.claimableFees += claimableFees;
+        pData.lastFeeRate = feeRate;
     }
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
