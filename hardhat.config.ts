@@ -86,7 +86,6 @@ export default {
       accounts: [pkeyTestnet],
       timeout: 300000,
     },
-    goerli: {},
   },
 
   abiExporter: {
