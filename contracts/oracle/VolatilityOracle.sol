@@ -290,8 +290,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
 
         int256 phi = info.psi.div(info.theta);
-        int256 term = (phi.mul(k) + info.rho).pow(TWO) +
-            (ONE - info.rho.pow(TWO));
+        int256 term = (phi.mul(k) + info.rho).powu(2) +
+            (ONE - info.rho.powu(2));
         int256 w = info.theta.div(TWO);
         w = w.mul(ONE + info.rho.mul(phi).mul(k) + term.sqrt());
 

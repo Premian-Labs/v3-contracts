@@ -200,7 +200,6 @@ describe('VolatilityOracle', () => {
     });
 
     it('should correctly perform a batch computation', async () => {
-
       await prepareContractEnv();
 
       const spot = parseEther('2800');
@@ -227,7 +226,7 @@ describe('VolatilityOracle', () => {
       );
       const result = iv.map((el) => parseFloat(formatEther(el)));
 
-      const expected = [0.43940756, 0.38175548, 0.38978258, 0.40428331, 0.41781315];
+      const expected = [1.09666875, 0.83340507, 0.79662759, 0.82515717, 0.84407689];
 
       for (let i = 0; i < expected.length; i++ ) {
         expect(expected[i] / result[i]).to.be.closeTo(1, 0.001);
