@@ -38,11 +38,13 @@ const UNISWAP_SETTING = {
 
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
 const pkeyMainnet =
-  PKEY_ETH_MAIN ??
-  'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+  PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
+    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    : PKEY_ETH_MAIN;
 const pkeyTestnet =
-  PKEY_ETH_TEST ??
-  'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+  PKEY_ETH_TEST == undefined || PKEY_ETH_TEST.length == 0
+    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    : PKEY_ETH_TEST;
 
 export default {
   solidity: {
