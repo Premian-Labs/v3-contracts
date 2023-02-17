@@ -37,12 +37,10 @@ export async function signQuote(
 
   // Query current nonce for taker from contract, if nonce is not specified
   if (quote.categoryNonce === undefined) {
-    quote.categoryNonce = (
-      await IPool__factory.connect(
-        poolAddress,
-        w3Provider,
-      ).getTradeQuoteCategoryNonce(quote.provider, quote.category)
-    ).toNumber();
+    quote.categoryNonce = await IPool__factory.connect(
+      poolAddress,
+      w3Provider,
+    ).getTradeQuoteCategoryNonce(quote.provider, quote.category);
   }
 
   const message: any = {
