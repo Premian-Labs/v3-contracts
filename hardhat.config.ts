@@ -107,6 +107,14 @@ export default {
       //gasPrice: 10,
       timeout: 300000,
     },
+    arbitrumNova: {
+      url: `https://nova.arbitrum.io/rpc`,
+      accounts: [PKEY_ETH_MAIN],
+      //gas: 120000000000,
+      // blockGasLimit: 120000000000,
+      //gasPrice: 10,
+      timeout: 300000,
+    },
     rinkebyArbitrum: {
       url: `https://rinkeby.arbitrum.io/rpc`,
       accounts: [PKEY_ETH_TEST],
