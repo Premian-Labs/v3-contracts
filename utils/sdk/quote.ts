@@ -45,9 +45,15 @@ export async function signQuote(
     ).toNumber();
   }
 
-  const message: TradeQuote = {
-    ...(quote as TradeQuote),
+  const message: any = {
+    ...quote,
   };
+
+  message.price = quote.price.toString();
+  message.size = quote.size.toString();
+  message.category = quote.category.toString();
+  message.categoryNonce = quote.categoryNonce?.toString();
+  message.deadline = quote.deadline.toString();
 
   const typedData = {
     types: {

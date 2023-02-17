@@ -8,7 +8,12 @@ import {
   IPoolMock__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
+import {
+  keccak256,
+  parseEther,
+  parseUnits,
+  toUtf8Bytes,
+} from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
@@ -126,12 +131,12 @@ describe('Pool', () => {
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
-        price: parseEther('0.1').toString(),
-        size: parseEther('10').toString(),
+        price: parseEther('0.1'),
+        size: parseEther('10'),
         isBuy: false,
-        category: 1,
-        categoryNonce: 0,
-        deadline: (await now()) + ONE_HOUR,
+        category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
+        categoryNonce: BigNumber.from(0),
+        deadline: BigNumber.from((await now()) + ONE_HOUR),
       };
     };
   });
@@ -1155,7 +1160,7 @@ describe('Pool', () => {
 
     it('should revert if quote is expired', async () => {
       const quote = await getTradeQuote();
-      quote.deadline = (await now()) - 1;
+      quote.deadline = BigNumber.from((await now()) - 1);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1168,7 +1173,7 @@ describe('Pool', () => {
 
     it('should revert if quote price is out of bounds', async () => {
       const quote = await getTradeQuote();
-      quote.price = 1;
+      quote.price = BigNumber.from(1);
 
       let sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1178,7 +1183,7 @@ describe('Pool', () => {
           .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
 
-      quote.price = parseEther('1').add(1).toString();
+      quote.price = parseEther('1').add(1);
       sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
@@ -1238,7 +1243,10 @@ describe('Pool', () => {
     it('should revert if category nonce is not the current one', async () => {
       const quote = await getTradeQuote();
 
-      await callPool.increaseTradeQuoteCategoryNonce(lp.address, 1);
+      await callPool.increaseTradeQuoteCategoryNonce(
+        lp.address,
+        quote.category,
+      );
 
       let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
 
@@ -1253,7 +1261,7 @@ describe('Pool', () => {
 
       sig = await signQuote(lp.provider!, callPool.address, {
         ...quote,
-        categoryNonce: 10,
+        categoryNonce: BigNumber.from(10),
       });
 
       await expect(
@@ -1310,7 +1318,9 @@ describe('Pool', () => {
       const quote = await getTradeQuote();
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 1);
+      await callPool
+        .connect(lp)
+        .increaseTradeQuoteCategoryNonce(lp.address, quote.category);
 
       await expect(
         callPool
