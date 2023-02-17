@@ -27,6 +27,9 @@ abstract contract ChainlinkAdapterInternal is
     int256 private constant ETH_DECIMALS = 18;
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
+    uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
+
+    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
 
     /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
     function _quote(
@@ -38,8 +41,10 @@ abstract contract ChainlinkAdapterInternal is
             return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
         } else if (path <= PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
             return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
-        } else {
+        } else if (path <= PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B) {
             return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
+        } else {
+            return _getPriceBTCBases(mappedTokenIn, mappedTokenOut);
         }
     }
 
@@ -208,6 +213,26 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
+    /// @dev Handles prices when one of the tokens uses BTC as the base, and the other USD
+    function _getPriceBTCBases(
+        address tokenIn,
+        address tokenOut
+    ) internal view returns (uint256) {
+        bool isBTC = _isBTC(tokenIn);
+        int256 scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
+
+        uint256 adjustedWBTCToUSDPrice = _adjustDecimals(_getWBTCBTC(), scaleBy)
+            .mul(_adjustDecimals(_getBTCUSD(), scaleBy));
+
+        uint256 adjustedTokenToUSD = _adjustDecimals(
+            _getPriceAgainstUSD(!isBTC ? tokenIn : tokenOut),
+            scaleBy
+        );
+
+        uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
+        return !isBTC ? price.inv() : price;
+    }
+
     function _getPriceAgainstUSD(
         address token
     ) internal view returns (uint256) {
@@ -234,57 +259,72 @@ abstract contract ChainlinkAdapterInternal is
         bool isTokenBUSD = _isUSD(tokenB);
         bool isTokenAETH = _isETH(tokenA);
         bool isTokenBETH = _isETH(tokenB);
+        bool isTokenABTC = _isBTC(tokenA);
+        bool isTokenBBTC = _isBTC(tokenB);
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD_PAIR;
         } else if (isTokenBUSD) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenA,
                     PricingPath.TOKEN_USD_PAIR,
                     PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B
                 );
         } else if (isTokenAUSD) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_USD_PAIR,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (isTokenBETH) {
+        } else if (isTokenBETH && !isTokenABTC) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenA,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
                     PricingPath.TOKEN_ETH_PAIR
                 );
-        } else if (isTokenAETH) {
+        } else if (isTokenAETH && !isTokenBBTC) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPath.TOKEN_ETH_PAIR
                 );
-        } else if (_exists(tokenA, Denominations.USD)) {
+        } else if (_exists(tokenA, Denominations.USD) && !isTokenBBTC) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (_exists(tokenA, Denominations.ETH)) {
+        } else if (_exists(tokenA, Denominations.ETH) && !isTokenBBTC) {
             return
-                _tryWithBases(
+                _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR
+                );
+        } else if (_exists(tokenA, Denominations.ETH) && !isTokenBBTC) {
+            return
+                _tryWithETHUSDBases(
+                    tokenB,
+                    PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
+                    PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR
+                );
+        } else if (_exists(tokenA, Denominations.BTC) || isTokenBBTC) {
+            return
+                _tryWithBTCUSDBases(
+                    tokenB,
+                    PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B
                 );
         }
 
         return PricingPath.NONE;
     }
 
-    function _tryWithBases(
+    function _tryWithETHUSDBases(
         address token,
         PricingPath ifUSD,
         PricingPath ifETH
@@ -303,6 +343,22 @@ abstract contract ChainlinkAdapterInternal is
             return firstResult;
         } else if (_exists(token, secondBaseBase)) {
             return secondResult;
+        } else {
+            return PricingPath.NONE;
+        }
+    }
+
+    function _tryWithBTCUSDBases(
+        address token,
+        PricingPath ifBTC
+    ) internal view returns (PricingPath) {
+        (address firstBase, address secondBaseBase) = (
+            Denominations.USD,
+            Denominations.BTC
+        );
+
+        if (_exists(token, firstBase) || _exists(token, secondBaseBase)) {
+            return ifBTC;
         } else {
             return PricingPath.NONE;
         }
@@ -427,11 +483,23 @@ abstract contract ChainlinkAdapterInternal is
         return _callRegistry(Denominations.ETH, Denominations.USD);
     }
 
+    function _getBTCUSD() internal view returns (uint256) {
+        return _callRegistry(Denominations.BTC, Denominations.USD);
+    }
+
+    function _getWBTCBTC() internal view returns (uint256) {
+        return _callRegistry(WBTC, Denominations.BTC);
+    }
+
     function _isUSD(address token) internal pure returns (bool) {
         return token == Denominations.USD;
     }
 
     function _isETH(address token) internal pure returns (bool) {
         return token == Denominations.ETH;
+    }
+
+    function _isBTC(address token) internal pure returns (bool) {
+        return token == Denominations.BTC || token == WBTC;
     }
 }

@@ -35,6 +35,8 @@ interface IChainlinkAdapterInternal {
         TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
         // Will use tokenA/ETH, tokenB/USD and ETH/USD feeds
         TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
+        // Will use tokenA/BTC, tokenB/USD and BTC/USD feeds
+        TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B,
         // Used then tokenA is the same as tokenB
         SAME_TOKENS
     }
