@@ -35,14 +35,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolCore {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
     }
 
-    function setCategoryNonce(
-        address provider,
-        uint256 category,
-        uint256 nonce
-    ) external {
-        PoolStorage.layout().tradeQuoteCategoryNonce[provider][
-            category
-        ] = nonce;
+    function tradeQuoteHash(
+        TradeQuote memory tradeQuote
+    ) external view returns (bytes32) {
+        return _tradeQuoteHash(tradeQuote);
     }
 
     function parseTokenId(

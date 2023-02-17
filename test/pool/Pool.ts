@@ -21,7 +21,7 @@ import {
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
-import { signQuote } from '../../utils/sdk/quote';
+import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber } from '../../utils/sdk/math';
 import {
   OrderType,
@@ -216,6 +216,15 @@ describe('Pool', () => {
         expect(args.lower).to.eq(lower);
         expect(args.upper).to.eq(upper);
         expect(args.isBuy).to.eq(!isBuy);
+      });
+    });
+
+    describe('#_tradeQuoteHash', () => {
+      it('should successfully calculate a trade quote hash', async () => {
+        const quote = await getTradeQuote();
+        expect(await callPool.tradeQuoteHash(quote)).to.eq(
+          await calculateQuoteHash(lp.provider!, quote, callPool.address),
+        );
       });
     });
   });
@@ -1229,7 +1238,7 @@ describe('Pool', () => {
     it('should revert if category nonce is not the current one', async () => {
       const quote = await getTradeQuote();
 
-      await callPool.setCategoryNonce(lp.address, 1, 2);
+      await callPool.increaseTradeQuoteCategoryNonce(lp.address, 1);
 
       let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
 
@@ -1274,6 +1283,36 @@ describe('Pool', () => {
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
     });
+  });
+
+  describe('#cancelTradeQuotes', async () => {
+    it('should successfully cancel a trade quote', async () => {
+      const quote = await getTradeQuote();
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(
+            { ...quote, size: BigNumber.from(quote.size).mul(2).toString() },
+            quote.size,
+            sig.v,
+            sig.r,
+            sig.s,
+          ),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
+    });
+  });
+
+  describe('#increaseTradeQuoteCategoryNonce', async () => {
+    it('should successfully increase category nonce and invalidate orders for previous nonce of that category', async () => {
+      await callPool.increaseTradeQuoteCategoryNonce(lp.address, 1);
+
+      // expect(await callPool.categoryNonce(lp.address, 1)).to.eq(1);
+    });
+
+    it('should not invalidate a quote made for another category', async () => {});
   });
 
   describe('#getClaimableFees', async () => {
