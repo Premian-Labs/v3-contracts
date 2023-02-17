@@ -9,6 +9,17 @@ import {
   toUtf8Bytes,
 } from 'ethers/lib/utils';
 
+interface QuoteMessage {
+  provider: string;
+  taker: string;
+  price: string;
+  size: string;
+  isBuy: boolean;
+  category: string;
+  categoryNonce: string;
+  deadline: string;
+}
+
 interface Domain {
   name: string;
   version: string;
@@ -43,15 +54,14 @@ export async function signQuote(
     ).getTradeQuoteCategoryNonce(quote.provider, quote.category);
   }
 
-  const message: any = {
+  const message: QuoteMessage = {
     ...quote,
+    price: quote.price.toString(),
+    size: quote.size.toString(),
+    category: quote.category.toString(),
+    categoryNonce: quote.categoryNonce?.toString(),
+    deadline: quote.deadline.toString(),
   };
-
-  message.price = quote.price.toString();
-  message.size = quote.size.toString();
-  message.category = quote.category.toString();
-  message.categoryNonce = quote.categoryNonce?.toString();
-  message.deadline = quote.deadline.toString();
 
   const typedData = {
     types: {
