@@ -13,6 +13,7 @@ contract UnderwriterVaultProxy is ProxyUpgradeableOwnable, ERC20MetadataInternal
         address implementation,
         address base,
         address quote,
+        address priceOracle,
         string memory name,
         string memory symbol,
         bool isCall
@@ -27,6 +28,7 @@ contract UnderwriterVaultProxy is ProxyUpgradeableOwnable, ERC20MetadataInternal
         UnderwriterVaultStorage.layout().isCall = isCall;
         UnderwriterVaultStorage.layout().base = base;
         UnderwriterVaultStorage.layout().quote = quote;
+        UnderwriterVaultStorage.layout().priceOracle = priceOracle;
     }
 
 }

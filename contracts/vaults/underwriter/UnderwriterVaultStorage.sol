@@ -2,7 +2,10 @@
 
 pragma solidity ^0.8.0;
 
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -18,27 +21,27 @@ library UnderwriterVaultStorage {
         address base;
         address quote;
 
+        address priceOracle;
+
         // Whether the vault is underwriting calls or puts
         bool isCall;
 
         // The total assets that have been included in the pool.
         uint256 totalAssets;
-        uint256 totalLockedAssets;
-
         uint256 totalSupply;
 
+        uint256 totalLockedAssets;
+
         // (strike, maturity) => number of short contracts
-        mapping(uint256 => mapping(uint256 => uint256)) positions;
+        mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
 
-        // supported maturities and strikes; these need to be managed by a keeper and can be updated whenever there is
-        // a sufficiently large change in spot which would require underwriting new strikes
-        mapping(uint256 => bool) supportedMaturities;
-        mapping(uint256 => bool) supportedStrikes;
+        // SortedLinkedList for maturities
+        uint256 minMaturity;
+        uint256 maxMaturity;
+        DoublyLinkedList.Uint256List maturities;
 
-        // we need to manage a linked list in order to track what the next maturity such that we know when to decrement
-        // the spreadUnlockingRate
-        uint256 lastMaturity;
-        mapping(uint256 => uint256) nextMaturities;
+        // maturity => set of strikes
+        mapping(uint256 => EnumerableSet.UintSet) maturityToStrikes;
 
         // tracks the total profits / spreads that are locked such that we can deduct it from the total assets
         uint256 totalLockedSpread;
@@ -53,23 +56,15 @@ library UnderwriterVaultStorage {
 
     }
 
-    struct PricePerShareState {
-        // All of the info needed to compute the price per share
-        // This is to be used for storing the updated state variables that we are not able to save to memory
-
-        uint256 totalAssets;
-        uint256 totalLockedAssets;
-        uint256 totalSupply;
-        uint256 totalLockedSpread;
-        uint256 lastSpreadUnlockRate;
-
-    }
-
-
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;
         assembly {
             l.slot := slot
         }
     }
+
+    function getSpotPrice(uint256 timestamp) internal view returns (uint256) {
+        return 2800;
+    }
+
 }
