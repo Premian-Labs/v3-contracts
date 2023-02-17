@@ -1291,28 +1291,87 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
+      await callPool
+        .connect(lp)
+        .cancelTradeQuotes([
+          await calculateQuoteHash(lp.provider!, quote, callPool.address),
+        ]);
+
       await expect(
         callPool
           .connect(trader)
-          .fillQuote(
-            { ...quote, size: BigNumber.from(quote.size).mul(2).toString() },
-            quote.size,
-            sig.v,
-            sig.r,
-            sig.s,
-          ),
-      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
     });
   });
 
   describe('#increaseTradeQuoteCategoryNonce', async () => {
     it('should successfully increase category nonce and invalidate orders for previous nonce of that category', async () => {
-      await callPool.increaseTradeQuoteCategoryNonce(lp.address, 1);
+      const quote = await getTradeQuote();
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      // expect(await callPool.categoryNonce(lp.address, 1)).to.eq(1);
+      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 1);
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InvalidQuoteCategoryNonce',
+      );
     });
 
-    it('should not invalidate a quote made for another category', async () => {});
+    it('should not invalidate a quote made for another category', async () => {
+      const quote = await getTradeQuote();
+
+      const initialBalance = parseEther('10');
+
+      await base.mint(lp.address, initialBalance);
+      await base.mint(trader.address, initialBalance);
+
+      await base
+        .connect(lp)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+      await base
+        .connect(trader)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 2);
+
+      await callPool
+        .connect(trader)
+        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+
+      const premium = BigNumber.from(quote.price).mul(
+        bnToNumber(BigNumber.from(quote.size)),
+      );
+
+      const fee = (await callPool.takerFee(quote.size, premium))
+        .mul(parseEther(protocolFeePercentage.toString()))
+        .div(ONE_ETHER);
+
+      expect(await base.balanceOf(lp.address)).to.eq(
+        initialBalance.sub(quote.size).add(premium).sub(fee),
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(
+        initialBalance.sub(premium),
+      );
+
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        parseEther('10'),
+      );
+
+      expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(
+        parseEther('10'),
+      );
+      expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+    });
   });
 
   describe('#getClaimableFees', async () => {
