@@ -57,16 +57,17 @@ export default {
       allowUnlimitedContractSize: true,
       blockGasLimit: 180000000000,
     },
-    mainnet: {
-      url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [pkeyMainnet],
-      timeout: 100000,
-    },
     arbitrum: {
-      url: `https://arb1.arbitrum.io/rpc`,
+      url: `https://arb-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
+      accounts: [pkeyMainnet],
+      timeout: 300000,
+    },
+    goerli: {
+      url: `https://eth-goerli.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
       accounts: [pkeyTestnet],
       timeout: 300000,
     },
+    goerli: {},
   },
 
   abiExporter: {
