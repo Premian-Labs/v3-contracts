@@ -16,14 +16,19 @@ contract ChainlinkAdapterProxy is
     ERC165BaseInternal,
     ProxyUpgradeableOwnable
 {
+    using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
+
     constructor(
         address implementation,
         address wrappedNativeToken,
+        address wrappedBTCToken,
         FeedMappingArgs[] memory feedMappingArgs
     ) ProxyUpgradeableOwnable(implementation) {
-        ChainlinkAdapterStorage
-            .layout()
-            .wrappedNativeToken = wrappedNativeToken;
+        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
+            .layout();
+
+        l.wrappedNativeToken = wrappedNativeToken;
+        l.wrappedBTCToken = wrappedBTCToken;
 
         _batchRegisterFeedMappings(feedMappingArgs);
 

@@ -29,8 +29,6 @@ abstract contract ChainlinkAdapterInternal is
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
-    address private constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
-
     /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
     function _quote(
         PricingPath path,
@@ -473,7 +471,11 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getWBTCBTC() internal view returns (uint256) {
-        return _callRegistry(WBTC, Denominations.BTC);
+        return
+            _callRegistry(
+                ChainlinkAdapterStorage.layout().wrappedBTCToken,
+                Denominations.BTC
+            );
     }
 
     function _isUSD(address token) internal pure returns (bool) {
@@ -484,7 +486,7 @@ abstract contract ChainlinkAdapterInternal is
         return token == Denominations.ETH;
     }
 
-    function _isWBTC(address token) internal pure returns (bool) {
-        return token == WBTC;
+    function _isWBTC(address token) internal view returns (bool) {
+        return token == ChainlinkAdapterStorage.layout().wrappedBTCToken;
     }
 }

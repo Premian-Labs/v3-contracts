@@ -131,6 +131,7 @@ describe('ChainlinkAdapter', () => {
     const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
       implementation.address,
       tokens.WETH.address,
+      tokens.WBTC.address,
       feeds,
     );
 
