@@ -121,7 +121,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         PricingPath path
     ) internal view returns (uint256) {
-        int256 scaleBy = ETH_DECIMALS -
+        int256 factor = ETH_DECIMALS -
             (
                 path == PricingPath.TOKEN_ETH_PAIR
                     ? ETH_DECIMALS
@@ -137,7 +137,7 @@ abstract contract ChainlinkAdapterInternal is
             price = _getPriceAgainstETH(_isETH(tokenOut) ? tokenIn : tokenOut);
         }
 
-        price = _adjustDecimals(price, scaleBy);
+        price = _scale(price, factor);
 
         bool invert = _isUSD(tokenIn) ||
             (path == PricingPath.TOKEN_ETH_PAIR && _isETH(tokenIn));
@@ -152,7 +152,7 @@ abstract contract ChainlinkAdapterInternal is
         PricingPath path
     ) internal view returns (uint256) {
         int256 diff = _getDecimals(tokenIn) - _getDecimals(tokenOut);
-        int256 scaleBy = ETH_DECIMALS - (diff > 0 ? diff : -diff);
+        int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
 
         address base = path == PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR
             ? Denominations.USD
@@ -161,12 +161,8 @@ abstract contract ChainlinkAdapterInternal is
         uint256 tokenInToBase = _callRegistry(tokenIn, base);
         uint256 tokenOutToBase = _callRegistry(tokenOut, base);
 
-        uint256 adjustedTokenInToBase = _adjustDecimals(tokenInToBase, scaleBy);
-
-        uint256 adjustedTokenOutToBase = _adjustDecimals(
-            tokenOutToBase,
-            scaleBy
-        );
+        uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
+        uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
 
         return adjustedTokenInToBase.div(adjustedTokenOutToBase);
     }
@@ -177,8 +173,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         PricingPath path
     ) internal view returns (uint256) {
-        int256 scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
-        uint256 adjustedEthToUSDPrice = _adjustDecimals(_getETHUSD(), scaleBy);
+        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
+        uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(), factor);
 
         bool isTokenInUSD = (path ==
             PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B &&
@@ -187,9 +183,9 @@ abstract contract ChainlinkAdapterInternal is
                 tokenIn > tokenOut);
 
         if (isTokenInUSD) {
-            uint256 adjustedTokenInToUSD = _adjustDecimals(
+            uint256 adjustedTokenInToUSD = _scale(
                 _getPriceAgainstUSD(tokenIn),
-                scaleBy
+                factor
             );
 
             uint256 tokenOutToETH = _getPriceAgainstETH(tokenOut);
@@ -201,9 +197,9 @@ abstract contract ChainlinkAdapterInternal is
         } else {
             uint256 tokenInToETH = _getPriceAgainstETH(tokenIn);
 
-            uint256 adjustedTokenOutToUSD = _adjustDecimals(
+            uint256 adjustedTokenOutToUSD = _scale(
                 _getPriceAgainstUSD(tokenOut),
-                scaleBy
+                factor
             );
 
             return
@@ -219,14 +215,15 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut
     ) internal view returns (uint256) {
         bool isWBTC = _isWBTC(tokenIn);
-        int256 scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
+        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
 
-        uint256 adjustedWBTCToUSDPrice = _adjustDecimals(_getWBTCBTC(), scaleBy)
-            .mul(_adjustDecimals(_getBTCUSD(), scaleBy));
+        uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(), factor).mul(
+            _scale(_getBTCUSD(), factor)
+        );
 
-        uint256 adjustedTokenToUSD = _adjustDecimals(
+        uint256 adjustedTokenToUSD = _scale(
             _getPriceAgainstUSD(!isWBTC ? tokenIn : tokenOut),
-            scaleBy
+            factor
         );
 
         uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
@@ -355,7 +352,7 @@ abstract contract ChainlinkAdapterInternal is
         return _feed(base, quote) != address(0);
     }
 
-    function _adjustDecimals(
+    function _scale(
         uint256 amount,
         int256 factor
     ) internal pure returns (uint256) {
