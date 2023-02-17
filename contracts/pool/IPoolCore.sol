@@ -134,6 +134,15 @@ interface IPoolCore is IPoolInternal {
         bytes32 s
     ) external;
 
+    /// @notice Underwrite an option by depositing collateral
+    /// @notice underwrite The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
+    /// @notice longReceiver The address which will receive the long token
+    function writeFrom(
+        address underwriter,
+        address longReceiver,
+        uint256 size
+    ) external;
+
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling

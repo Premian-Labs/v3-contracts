@@ -605,6 +605,29 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    function _writeFrom(
+        address underwriter,
+        address longReceiver,
+        uint256 size
+    ) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _ensureNonZeroSize(size);
+        _ensureNotExpired(l);
+
+        IERC20(l.getPoolToken()).safeTransferFrom(
+            underwriter,
+            address(this),
+            size
+        );
+
+        _mint(underwriter, PoolStorage.SHORT, size, "");
+        _mint(longReceiver, PoolStorage.LONG, size, "");
+
+        // ToDo : Add fee ?
+        // ToDo : Add event
+    }
+
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
     /// @return totalPremium The premium paid or received by the taker for the trade
