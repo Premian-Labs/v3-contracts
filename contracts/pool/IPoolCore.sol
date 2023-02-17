@@ -54,6 +54,13 @@ interface IPoolCore is IPoolInternal {
     /// @param p The position key
     function claim(Position.Key memory p) external;
 
+    /// @notice Returns total claimable fees for the position
+    /// @param p The position key
+    /// @return The total claimable fees for the position
+    function getClaimableFees(
+        Position.Key memory p
+    ) external view returns (uint256);
+
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
@@ -209,8 +216,26 @@ interface IPoolCore is IPoolInternal {
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
 
-    /// @notice Get the current quote nonce for the given user
-    /// @param user User for which to return the current quote nonce
+    /// @notice Get the current quote category nonce for the given provider
+    /// @param provider Provider for which to return the current quote category nonce
+    /// @param category Category for which to return the current quote category nonce
     /// @return The current quote nonce
-    function getTradeQuoteNonce(address user) external view returns (uint256);
+    function getTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external view returns (uint256);
+
+    /// @notice Cancel given trade quotes
+    /// @dev No check is done to ensure the given hash correspond to a quote provider by msg.sender,
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a quote created by another provider
+    /// @param hashes The hashes of the quotes to cancel
+    function cancelTradeQuotes(bytes32[] calldata hashes) external;
+
+    /// @notice Increase the nonce for the given provider and category. This will invalidate all quotes created with the previous nonce
+    /// @param provider Provider for which to increase the nonce
+    /// @param category Category for which to increase the nonce
+    function increaseTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external;
 }

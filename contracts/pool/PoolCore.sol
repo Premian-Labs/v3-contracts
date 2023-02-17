@@ -9,6 +9,7 @@ import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
+    using Position for Position.Key;
 
     constructor(
         address factory,
@@ -61,6 +62,18 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function claim(Position.Key memory p) external {
         _claim(p);
+    }
+
+    /// @inheritdoc IPoolCore
+    function getClaimableFees(
+        Position.Key memory p
+    ) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage pData = l.positions[p.keyHash()];
+
+        (uint256 pendingClaimableFees, ) = _pendingClaimableFees(l, p, pData);
+
+        return pData.claimableFees + pendingClaimableFees;
     }
 
     /// @inheritdoc IPoolCore
@@ -245,7 +258,34 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getTradeQuoteNonce(address user) external view returns (uint256) {
-        return PoolStorage.layout().tradeQuoteNonce[user];
+    function getTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external view returns (uint256) {
+        return PoolStorage.layout().tradeQuoteCategoryNonce[provider][category];
+    }
+
+    /// @inheritdoc IPoolCore
+    function cancelTradeQuotes(bytes32[] calldata hashes) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        for (uint256 i = 0; i < hashes.length; i++) {
+            l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = type(uint256).max;
+            emit CancelTradeQuote(msg.sender, hashes[i]);
+        }
+    }
+
+    /// @inheritdoc IPoolCore
+    function increaseTradeQuoteCategoryNonce(
+        address provider,
+        uint256 category
+    ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        l.tradeQuoteCategoryNonce[provider][category]++;
+
+        emit IncreaseTradeQuoteCategoryNonce(
+            provider,
+            category,
+            l.tradeQuoteCategoryNonce[provider][category]
+        );
     }
 }

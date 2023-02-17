@@ -1,4 +1,4 @@
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 
 export enum TokenType {
   SHORT = 0,
@@ -29,4 +29,22 @@ export interface PoolKey {
   strike: BigNumber;
   maturity: BigNumber;
   isCallPool: boolean;
+}
+
+interface TradeQuoteBase {
+  provider: string;
+  taker: string;
+  price: BigNumber;
+  size: BigNumber;
+  isBuy: boolean;
+  category: BigNumber;
+  deadline: BigNumber;
+}
+
+export interface TradeQuote extends TradeQuoteBase {
+  categoryNonce: BigNumber;
+}
+
+export interface TradeQuoteNonceOptional extends TradeQuoteBase {
+  categoryNonce?: BigNumber;
 }

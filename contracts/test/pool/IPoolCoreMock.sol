@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
+import {IPoolInternal} from "../../pool/IPoolInternal.sol";
+
 interface IPoolCoreMock {
     function _getPricing(
         bool isBuy
@@ -16,7 +18,9 @@ interface IPoolCoreMock {
         Position.OrderType orderType
     ) external pure returns (uint256 tokenId);
 
-    function setNonce(address user, uint256 nonce) external;
+    function tradeQuoteHash(
+        IPoolInternal.TradeQuote memory tradeQuote
+    ) external view returns (bytes32);
 
     function parseTokenId(
         uint256 tokenId
@@ -32,4 +36,6 @@ interface IPoolCoreMock {
         );
 
     function marketPrice() external view returns (uint256);
+
+    function protocolFees() external view returns (uint256);
 }

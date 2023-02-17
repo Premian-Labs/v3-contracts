@@ -8,7 +8,12 @@ import {
   IPoolMock__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
+import {
+  keccak256,
+  parseEther,
+  parseUnits,
+  toUtf8Bytes,
+} from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
@@ -21,10 +26,18 @@ import {
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
-import { signQuote, TradeQuote } from '../../utils/sdk/quote';
+import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber } from '../../utils/sdk/math';
-import { OrderType, PositionKey, TokenType } from '../../utils/sdk/types';
+import {
+  OrderType,
+  PositionKey,
+  TokenType,
+  TradeQuote,
+} from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
+
+const depositFnSig =
+  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -41,6 +54,7 @@ describe('Pool', () => {
   let baseOracle: MockContract;
   let quoteOracle: MockContract;
 
+  const protocolFeePercentage = 0.5;
   let strike = parseEther('1000'); // ATM
   let maturity: number;
 
@@ -116,12 +130,13 @@ describe('Pool', () => {
     getTradeQuote = async () => {
       return {
         provider: lp.address,
-        taker: trader.address,
-        price: parseEther('0.1').toString(),
-        size: parseEther('10').toString(),
+        taker: ethers.constants.AddressZero,
+        price: parseEther('0.1'),
+        size: parseEther('10'),
         isBuy: false,
-        deadline: (await now()) + ONE_HOUR,
-        nonce: 0,
+        category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
+        categoryNonce: BigNumber.from(0),
+        deadline: BigNumber.from((await now()) + ONE_HOUR),
       };
     };
   });
@@ -208,11 +223,139 @@ describe('Pool', () => {
         expect(args.isBuy).to.eq(!isBuy);
       });
     });
+
+    describe('#_tradeQuoteHash', () => {
+      it('should successfully calculate a trade quote hash', async () => {
+        const quote = await getTradeQuote();
+        expect(await callPool.tradeQuoteHash(quote)).to.eq(
+          await calculateQuoteHash(lp.provider!, quote, callPool.address),
+        );
+      });
+    });
+  });
+
+  describe('#getTradeQuote', () => {
+    it('should successfully return a buy trade quote', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const price = pKey.lower;
+      const nextPrice = parseEther('0.2');
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+
+      expect(await callPool.getTradeQuote(tradeSize, true)).to.eq(
+        tradeSize.mul(avgPrice).div(ONE_ETHER).add(takerFee),
+      );
+    });
+
+    it('should successfully return a sell trade quote', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const price = pKey.upper;
+      const nextPrice = parseEther('0.2');
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+
+      expect(await callPool.getTradeQuote(tradeSize, false)).to.eq(
+        tradeSize.mul(avgPrice).div(ONE_ETHER).sub(takerFee),
+      );
+    });
+
+    it('should revert if not enough liquidity to buy', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const size = parseEther('1000');
+
+      await base.mint(lp.address, size);
+      await base.connect(lp).approve(callPool.address, size);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          size,
+          0,
+        );
+
+      await expect(
+        callPool.getTradeQuote(size.add(1), true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InsufficientLiquidity');
+    });
+
+    it('should revert if not enough liquidity to sell', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const size = parseEther('1000');
+
+      await base.mint(lp.address, size);
+      await base.connect(lp).approve(callPool.address, size);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          size,
+          0,
+        );
+
+      await expect(
+        callPool.getTradeQuote(size.add(1), false),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InsufficientLiquidity');
+    });
   });
 
   describe('#deposit', () => {
-    const fnSig =
-      'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
+    const fnSig = depositFnSig;
 
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
@@ -487,6 +630,484 @@ describe('Pool', () => {
     });
   });
 
+  describe('#trade', () => {
+    it('should successfully buy 500 options', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        tradeSize,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        tradeSize,
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(0);
+    });
+
+    it('should successfully sell 500 options', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
+
+      await base.mint(trader.address, tradeSize);
+      await base.connect(trader).approve(callPool.address, tradeSize);
+
+      await callPool.connect(trader).trade(tradeSize, false);
+
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        tradeSize,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.LONG)).to.eq(
+        tradeSize,
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(totalPremium);
+    });
+
+    it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      await expect(
+        callPool.connect(trader).trade(depositSize.add(1), true),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InsufficientAskLiquidity',
+      );
+    });
+
+    it('should revert if trying to sell options and bid liquidity is insufficient', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      await expect(
+        callPool.connect(trader).trade(depositSize.add(1), false),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InsufficientBidLiquidity',
+      );
+    });
+
+    it('should revert if trade size is 0', async () => {
+      await expect(
+        callPool.connect(trader).trade(0, true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+    });
+
+    it('should revert if expired', async () => {
+      await increaseTo(maturity);
+
+      await expect(
+        callPool.connect(trader).trade(1, true),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
+    });
+  });
+
+  describe('#exercise', () => {
+    it('should successfully exercise an ITM option', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+
+      await increaseTo(maturity);
+      await callPool.exercise(trader.address);
+
+      const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+      expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        ONE_ETHER,
+      );
+    });
+
+    it('should not pay any token when exercising an OTM option', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+
+      await increaseTo(maturity);
+      await callPool.exercise(trader.address);
+
+      const exerciseValue = 0;
+      expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        ONE_ETHER,
+      );
+    });
+
+    it('should revert if options is not expired', async () => {
+      await expect(
+        callPool.exercise(trader.address),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionNotExpired');
+    });
+  });
+
+  describe('#settle', () => {
+    it('should successfully settle an ITM option', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = depositSize;
+      const price = pKey.lower;
+      const nextPrice = pKey.upper;
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+
+      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
+
+      await base.mint(trader.address, ONE_ETHER);
+      await base.connect(trader).approve(callPool.address, ONE_ETHER);
+
+      await callPool.connect(trader).trade(tradeSize, false);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+
+      await increaseTo(maturity);
+      await callPool.settle(trader.address);
+
+      const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+      expect(await base.balanceOf(trader.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+      );
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        exerciseValue.add(takerFee),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+    });
+
+    it('should successfully settle an OTM option', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = depositSize;
+      const price = pKey.lower;
+      const nextPrice = pKey.upper;
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
+
+      await base.mint(trader.address, ONE_ETHER);
+      await base.connect(trader).approve(callPool.address, ONE_ETHER);
+
+      await callPool.connect(trader).trade(tradeSize, false);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+
+      await increaseTo(maturity);
+      await callPool.settle(trader.address);
+
+      const exerciseValue = BigNumber.from(0);
+      expect(await base.balanceOf(trader.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+      );
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        exerciseValue.add(takerFee),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+    });
+
+    it('should revert if not expired', async () => {
+      await expect(
+        callPool.settle(trader.address),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionNotExpired');
+    });
+  });
+
+  describe('#settlePosition', () => {
+    it('should successfully settle an ITM option position', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+
+      await increaseTo(maturity);
+      await callPool.settlePosition(pKey);
+
+      const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+      const protocolFees = await callPool.protocolFees();
+
+      expect(await base.balanceOf(trader.address)).to.eq(0);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        exerciseValue.add(protocolFees),
+      );
+      expect(await base.balanceOf(pKey.operator)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
+      );
+
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+    });
+
+    it('should successfully settle an OTM option position', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+
+      await increaseTo(maturity);
+      await callPool.settlePosition(pKey);
+
+      const exerciseValue = BigNumber.from(0);
+      const protocolFees = await callPool.protocolFees();
+
+      expect(await base.balanceOf(trader.address)).to.eq(0);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        exerciseValue.add(protocolFees),
+      );
+      expect(await base.balanceOf(pKey.operator)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
+      );
+
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+    });
+
+    it('should revert if not expired', async () => {
+      await expect(callPool.settlePosition(pKey)).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__OptionNotExpired',
+      );
+    });
+  });
+
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
       const quote = await getTradeQuote();
@@ -513,7 +1134,9 @@ describe('Pool', () => {
         bnToNumber(BigNumber.from(quote.size)),
       );
 
-      const fee = (await callPool.takerFee(quote.size, premium)).div(2); // Divide by 2 to account for protocol fee
+      const fee = (await callPool.takerFee(quote.size, premium))
+        .mul(parseEther(protocolFeePercentage.toString()))
+        .div(ONE_ETHER);
 
       expect(await base.balanceOf(lp.address)).to.eq(
         initialBalance.sub(quote.size).add(premium).sub(fee),
@@ -537,7 +1160,7 @@ describe('Pool', () => {
 
     it('should revert if quote is expired', async () => {
       const quote = await getTradeQuote();
-      quote.deadline = (await now()) - 1;
+      quote.deadline = BigNumber.from((await now()) - 1);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -550,7 +1173,7 @@ describe('Pool', () => {
 
     it('should revert if quote price is out of bounds', async () => {
       const quote = await getTradeQuote();
-      quote.price = 1;
+      quote.price = BigNumber.from(1);
 
       let sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -560,7 +1183,7 @@ describe('Pool', () => {
           .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
 
-      quote.price = parseEther('1').add(1).toString();
+      quote.price = parseEther('1').add(1);
       sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
@@ -570,8 +1193,9 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
     });
 
-    it('should revert if quote is not used by someone else than taker', async () => {
+    it('should revert if quote is used by someone else than taker', async () => {
       const quote = await getTradeQuote();
+      quote.taker = trader.address;
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -582,10 +1206,47 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteTaker');
     });
 
-    it('should revert if nonce is not the current one', async () => {
+    it('should revert if quote is over filled', async () => {
       const quote = await getTradeQuote();
 
-      await callPool.setNonce(trader.address, 2);
+      const initialBalance = parseEther('10');
+
+      await base.mint(lp.address, initialBalance);
+      await base.mint(trader.address, initialBalance);
+
+      await base
+        .connect(lp)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+      await base
+        .connect(trader)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool
+        .connect(trader)
+        .fillQuote(
+          quote,
+          BigNumber.from(quote.size).div(2),
+          sig.v,
+          sig.r,
+          sig.s,
+        );
+
+      await expect(
+        callPool
+          .connect(deployer)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
+    });
+
+    it('should revert if category nonce is not the current one', async () => {
+      const quote = await getTradeQuote();
+
+      await callPool.increaseTradeQuoteCategoryNonce(
+        lp.address,
+        quote.category,
+      );
 
       let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
 
@@ -593,18 +1254,24 @@ describe('Pool', () => {
         callPool
           .connect(trader)
           .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
-      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteNonce');
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InvalidQuoteCategoryNonce',
+      );
 
       sig = await signQuote(lp.provider!, callPool.address, {
         ...quote,
-        nonce: 10,
+        categoryNonce: BigNumber.from(10),
       });
 
       await expect(
         callPool
           .connect(trader)
           .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
-      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteNonce');
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InvalidQuoteCategoryNonce',
+      );
     });
 
     it('should revert if signed message does not match quote', async () => {
@@ -623,6 +1290,191 @@ describe('Pool', () => {
             sig.s,
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
+    });
+  });
+
+  describe('#cancelTradeQuotes', async () => {
+    it('should successfully cancel a trade quote', async () => {
+      const quote = await getTradeQuote();
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool
+        .connect(lp)
+        .cancelTradeQuotes([
+          await calculateQuoteHash(lp.provider!, quote, callPool.address),
+        ]);
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
+    });
+  });
+
+  describe('#increaseTradeQuoteCategoryNonce', async () => {
+    it('should successfully increase category nonce and invalidate orders for previous nonce of that category', async () => {
+      const quote = await getTradeQuote();
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool
+        .connect(lp)
+        .increaseTradeQuoteCategoryNonce(lp.address, quote.category);
+
+      await expect(
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__InvalidQuoteCategoryNonce',
+      );
+    });
+
+    it('should not invalidate a quote made for another category', async () => {
+      const quote = await getTradeQuote();
+
+      const initialBalance = parseEther('10');
+
+      await base.mint(lp.address, initialBalance);
+      await base.mint(trader.address, initialBalance);
+
+      await base
+        .connect(lp)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+      await base
+        .connect(trader)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 2);
+
+      await callPool
+        .connect(trader)
+        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+
+      const premium = BigNumber.from(quote.price).mul(
+        bnToNumber(BigNumber.from(quote.size)),
+      );
+
+      const fee = (await callPool.takerFee(quote.size, premium))
+        .mul(parseEther(protocolFeePercentage.toString()))
+        .div(ONE_ETHER);
+
+      expect(await base.balanceOf(lp.address)).to.eq(
+        initialBalance.sub(quote.size).add(premium).sub(fee),
+      );
+      expect(await base.balanceOf(trader.address)).to.eq(
+        initialBalance.sub(premium),
+      );
+
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        parseEther('10'),
+      );
+
+      expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(
+        parseEther('10'),
+      );
+      expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+    });
+  });
+
+  describe('#getClaimableFees', async () => {
+    it('should successfully return amount of claimable fees', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const price = pKey.lower;
+      const nextPrice = pKey.upper;
+      const avgPrice = average(price, nextPrice);
+      const takerFee = await callPool.takerFee(
+        tradeSize,
+        tradeSize.mul(avgPrice).div(ONE_ETHER),
+      );
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      expect(await callPool.connect(lp).getClaimableFees(pKey)).to.eq(
+        takerFee
+          .mul(parseEther(protocolFeePercentage.toString()))
+          .div(ONE_ETHER),
+      );
+    });
+  });
+
+  describe('#claim', () => {
+    it('should successfully claim fees', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = ONE_ETHER;
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      pKey.orderType = OrderType.CS;
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = ONE_ETHER;
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await callPool.connect(trader).trade(tradeSize, true);
+
+      const claimableFees = await callPool.getClaimableFees(pKey);
+
+      await callPool.connect(lp).claim(pKey);
+
+      expect(await base.balanceOf(pKey.operator)).to.eq(claimableFees);
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        ONE_ETHER.add(totalPremium).sub(claimableFees),
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        ONE_ETHER,
+      );
+      expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
+        ONE_ETHER,
+      );
     });
   });
 
