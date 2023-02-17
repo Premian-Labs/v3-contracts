@@ -63,8 +63,4 @@ library UnderwriterVaultStorage {
         }
     }
 
-    function getSpotPrice(uint256 timestamp) internal view returns (uint256) {
-        return 2800;
-    }
-
 }

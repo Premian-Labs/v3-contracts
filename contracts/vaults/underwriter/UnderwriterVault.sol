@@ -6,7 +6,9 @@ import "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 import "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol"; 
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
@@ -15,6 +17,8 @@ import {OptionMath} from "../../libraries/OptionMath.sol";
 
 
 contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableInternal {
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
+    using EnumerableSet for EnumerableSet.UintSet;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
@@ -42,11 +46,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
+    function _getSpotPrice(uint256 timestamp) internal view returns (uint256) {
+        return 2800;
+    }
+
     function _getTotalFairValue() internal view returns (uint256) {
         uint256 spot;
         uint256 strike;
         uint256 timeToMaturity;
-        uint256 sigma;
+        int256 sigma;
         uint256 price;
         uint256 size;
 
@@ -60,17 +68,17 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                 strike = l.maturityToStrikes[current].at(i);
 
                 if (block.timestamp < current) {
-                    spot = l.getSpotPrice(block.timestamp);
+                    spot = _getSpotPrice(block.timestamp);
                     timeToMaturity = current - block.timestamp;
                     sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
                         _asset(),
                         spot,
                         strike,
                         timeToMaturity
-                    ).toUint256();
+                    );
                 }
                 else {
-                    spot = l.getSpotPrice(current);
+                    spot = _getSpotPrice(current);
                     timeToMaturity = 0;
                     sigma = 0;
                 }
@@ -79,14 +87,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                     spot,
                     strike,
                     timeToMaturity,
-                    sigma,
+                    uint256(sigma),
                     0,
                     l.isCall
                 );
 
                 size = l.positionSizes[current][strike];
 
-                total = total.add(price.mul(size));
+                total = total + price * size;
 
             }
 
