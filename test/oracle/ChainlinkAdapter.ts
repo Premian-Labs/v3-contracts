@@ -32,7 +32,7 @@ enum PricingPath {
   TOKEN_TO_ETH_TO_TOKEN_PAIR,
   TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
   TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-  TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B,
+  TOKEN_WBTC_PAIR,
 }
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -99,12 +99,12 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => USD, ETH => OUT (tokenB) 
     ],
     [
-      // TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B
-      { path: PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
-      { path: PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
+      // TOKEN_WBTC_PAIR
+      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
+      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
     ]
   ];
 }
@@ -381,7 +381,7 @@ describe('ChainlinkAdapter', () => {
   });
 
   for (let i = 0; i < paths.length; i++) {
-    describe.only(`${PricingPath[paths[i][0].path]}`, () => {
+    describe(`${PricingPath[paths[i][0].path]}`, () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {

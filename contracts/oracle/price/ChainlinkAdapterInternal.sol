@@ -44,7 +44,7 @@ abstract contract ChainlinkAdapterInternal is
         } else if (path <= PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B) {
             return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
         } else {
-            return _getPriceBTCBases(mappedTokenIn, mappedTokenOut);
+            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut);
         }
     }
 
@@ -213,24 +213,24 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    /// @dev Handles prices when one of the tokens uses BTC as the base, and the other USD
-    function _getPriceBTCBases(
+    /// @dev Handles prices when the pair is token/WBTC
+    function _getPriceWBTCPrice(
         address tokenIn,
         address tokenOut
     ) internal view returns (uint256) {
-        bool isBTC = _isBTC(tokenIn);
+        bool isWBTC = _isWBTC(tokenIn);
         int256 scaleBy = ETH_DECIMALS - FOREX_DECIMALS;
 
         uint256 adjustedWBTCToUSDPrice = _adjustDecimals(_getWBTCBTC(), scaleBy)
             .mul(_adjustDecimals(_getBTCUSD(), scaleBy));
 
         uint256 adjustedTokenToUSD = _adjustDecimals(
-            _getPriceAgainstUSD(!isBTC ? tokenIn : tokenOut),
+            _getPriceAgainstUSD(!isWBTC ? tokenIn : tokenOut),
             scaleBy
         );
 
         uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
-        return !isBTC ? price.inv() : price;
+        return !isWBTC ? price.inv() : price;
     }
 
     function _getPriceAgainstUSD(
@@ -259,11 +259,11 @@ abstract contract ChainlinkAdapterInternal is
         bool isTokenBUSD = _isUSD(tokenB);
         bool isTokenAETH = _isETH(tokenA);
         bool isTokenBETH = _isETH(tokenB);
-        bool isTokenABTC = _isBTC(tokenA);
-        bool isTokenBBTC = _isBTC(tokenB);
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD_PAIR;
+        } else if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
+            return _tryWithBTCUSDBases(tokenB, PricingPath.TOKEN_WBTC_PAIR);
         } else if (isTokenBUSD) {
             return
                 _tryWithETHUSDBases(
@@ -278,50 +278,53 @@ abstract contract ChainlinkAdapterInternal is
                     PricingPath.TOKEN_USD_PAIR,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (isTokenBETH && !isTokenABTC) {
+        } else if (isTokenBETH) {
             return
                 _tryWithETHUSDBases(
                     tokenA,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
                     PricingPath.TOKEN_ETH_PAIR
                 );
-        } else if (isTokenAETH && !isTokenBBTC) {
+        } else if (isTokenAETH) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPath.TOKEN_ETH_PAIR
                 );
-        } else if (_exists(tokenA, Denominations.USD) && !isTokenBBTC) {
+        } else if (_exists(tokenA, Denominations.USD)) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR,
                     PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
                 );
-        } else if (_exists(tokenA, Denominations.ETH) && !isTokenBBTC) {
+        } else if (_exists(tokenA, Denominations.ETH)) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
                     PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
                     PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR
-                );
-        } else if (_exists(tokenA, Denominations.ETH) && !isTokenBBTC) {
-            return
-                _tryWithETHUSDBases(
-                    tokenB,
-                    PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-                    PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR
-                );
-        } else if (_exists(tokenA, Denominations.BTC) || isTokenBBTC) {
-            return
-                _tryWithBTCUSDBases(
-                    tokenB,
-                    PricingPath.TOKEN_A_TO_BTC_TO_USD_TO_TOKEN_B
                 );
         }
 
         return PricingPath.NONE;
+    }
+
+    function _tryWithBTCUSDBases(
+        address token,
+        PricingPath ifBTC
+    ) internal view returns (PricingPath) {
+        (address firstBase, address secondBaseBase) = (
+            Denominations.USD,
+            Denominations.BTC
+        );
+
+        if (_exists(token, firstBase) || _exists(token, secondBaseBase)) {
+            return ifBTC;
+        } else {
+            return PricingPath.NONE;
+        }
     }
 
     function _tryWithETHUSDBases(
@@ -343,22 +346,6 @@ abstract contract ChainlinkAdapterInternal is
             return firstResult;
         } else if (_exists(token, secondBaseBase)) {
             return secondResult;
-        } else {
-            return PricingPath.NONE;
-        }
-    }
-
-    function _tryWithBTCUSDBases(
-        address token,
-        PricingPath ifBTC
-    ) internal view returns (PricingPath) {
-        (address firstBase, address secondBaseBase) = (
-            Denominations.USD,
-            Denominations.BTC
-        );
-
-        if (_exists(token, firstBase) || _exists(token, secondBaseBase)) {
-            return ifBTC;
         } else {
             return PricingPath.NONE;
         }
@@ -432,6 +419,7 @@ abstract contract ChainlinkAdapterInternal is
             ];
     }
 
+    /// @dev Should only map wrapped tokens which are guarenteed to have a 1:1 ratio
     function _denomination(address token) internal view returns (address) {
         return
             token == ChainlinkAdapterStorage.layout().wrappedNativeToken
@@ -499,7 +487,7 @@ abstract contract ChainlinkAdapterInternal is
         return token == Denominations.ETH;
     }
 
-    function _isBTC(address token) internal pure returns (bool) {
-        return token == Denominations.BTC || token == WBTC;
+    function _isWBTC(address token) internal pure returns (bool) {
+        return token == WBTC;
     }
 }
