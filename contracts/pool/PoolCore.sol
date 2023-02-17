@@ -11,9 +11,10 @@ contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
+        address factory,
         address exchangeHelper,
         address wrappedNativeToken
-    ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
+    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
     function takerFee(
