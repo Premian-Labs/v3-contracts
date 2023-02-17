@@ -873,11 +873,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteVarsInternal memory vars;
         Delta memory deltaTaker;
         Delta memory deltaMaker;
+        bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
 
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
 
-            bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
             _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
 
             l.tradeQuoteAmountFilled[tradeQuote.provider][
@@ -954,6 +954,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         emit FillQuote(
+            tradeQuoteHash,
             args.user,
             tradeQuote.provider,
             args.size,

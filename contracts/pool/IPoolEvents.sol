@@ -39,6 +39,7 @@ interface IPoolEvents {
     );
 
     event FillQuote(
+        bytes32 indexed tradeQuoteHash,
         address indexed user,
         address indexed provider,
         uint256 contractSize,
