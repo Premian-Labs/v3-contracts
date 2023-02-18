@@ -2,6 +2,12 @@
 pragma solidity ^0.8.0;
 
 contract OrderbookStream {
+    struct Signature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
+
     struct Quote {
         // The pool address of the option quoted
         address pool;
@@ -22,6 +28,8 @@ contract OrderbookStream {
         uint256 categoryNonce;
         // Timestamp until which the quote is valid
         uint256 deadline;
+        // Signature of the quote
+        Signature signature;
     }
 
     event PublishQuote(
@@ -33,7 +41,8 @@ contract OrderbookStream {
         bool isBuy,
         uint256 category,
         uint256 categoryNonce,
-        uint256 deadline
+        uint256 deadline,
+        Signature signature
     );
 
     function add(Quote[] memory quote) external {
@@ -47,7 +56,8 @@ contract OrderbookStream {
                 quote[i].isBuy,
                 quote[i].category,
                 quote[i].categoryNonce,
-                quote[i].deadline
+                quote[i].deadline,
+                quote[i].signature
             );
         }
     }
