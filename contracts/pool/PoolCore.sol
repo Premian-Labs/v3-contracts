@@ -152,12 +152,10 @@ contract PoolCore is IPoolCore, PoolInternal {
     function fillQuote(
         TradeQuote memory tradeQuote,
         uint256 size,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature memory signature
     ) external {
         _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, v, r, s),
+            FillQuoteArgsInternal(msg.sender, size, signature),
             tradeQuote
         );
     }
