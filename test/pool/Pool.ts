@@ -1126,9 +1126,7 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool
-        .connect(trader)
-        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+      await callPool.connect(trader).fillQuote(quote, quote.size, sig);
 
       const premium = BigNumber.from(quote.price).mul(
         bnToNumber(BigNumber.from(quote.size)),
@@ -1165,9 +1163,7 @@ describe('Pool', () => {
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteExpired');
     });
 
@@ -1178,18 +1174,14 @@ describe('Pool', () => {
       let sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
 
       quote.price = parseEther('1').add(1);
       sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
     });
 
@@ -1200,9 +1192,7 @@ describe('Pool', () => {
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(deployer)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(deployer).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteTaker');
     });
 
@@ -1225,18 +1215,10 @@ describe('Pool', () => {
 
       await callPool
         .connect(trader)
-        .fillQuote(
-          quote,
-          BigNumber.from(quote.size).div(2),
-          sig.v,
-          sig.r,
-          sig.s,
-        );
+        .fillQuote(quote, BigNumber.from(quote.size).div(2), sig);
 
       await expect(
-        callPool
-          .connect(deployer)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(deployer).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
     });
 
@@ -1251,9 +1233,7 @@ describe('Pool', () => {
       let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pool__InvalidQuoteCategoryNonce',
@@ -1265,9 +1245,7 @@ describe('Pool', () => {
       });
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pool__InvalidQuoteCategoryNonce',
@@ -1285,9 +1263,7 @@ describe('Pool', () => {
           .fillQuote(
             { ...quote, size: BigNumber.from(quote.size).mul(2).toString() },
             quote.size,
-            sig.v,
-            sig.r,
-            sig.s,
+            sig,
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
     });
@@ -1306,9 +1282,7 @@ describe('Pool', () => {
         ]);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
     });
   });
@@ -1323,9 +1297,7 @@ describe('Pool', () => {
         .increaseTradeQuoteCategoryNonce(lp.address, quote.category);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pool__InvalidQuoteCategoryNonce',
@@ -1351,9 +1323,7 @@ describe('Pool', () => {
 
       await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 2);
 
-      await callPool
-        .connect(trader)
-        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+      await callPool.connect(trader).fillQuote(quote, quote.size, sig);
 
       const premium = BigNumber.from(quote.price).mul(
         bnToNumber(BigNumber.from(quote.size)),
