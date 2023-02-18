@@ -126,6 +126,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return totalLockedSpread;
     }
 
+    function _getAvailable() internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
+    }
+
     function _getPricePerShare() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
@@ -187,8 +192,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     function _maxWithdraw(
         address owner
     ) override internal view virtual returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
+        return _getAvailable();
     }
 
     function _maxRedeem(
@@ -245,6 +249,23 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return true;
     }
 
+    function _addListing(uint256 strike, uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        // Insert maturity if it doesn't exist
+        if (!l.maturities.contains(maturity)) {
+            uint256 before = l.maturities.prev(maturity);
+            l.maturities.insertAfter(before, maturity);
+        }
+
+        // Insert strike into the set of strikes for given maturity
+        l.maturityToStrikes[maturity].add(strike);
+
+        if (maturity > l.maxMaturity) {
+            l.maxMaturity = maturity;
+        }
+    }
+
     function _handleTradeFees(uint256 premium, uint256 spread) internal view {
 
     }
@@ -265,13 +286,16 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
         // Check if this listing is supported by the vault. We'll need to restrict it as big moves in spot may result
         // in new listings we may want to support, making FV calculations potentially intractable.
-        if (_isValidListing(strike, maturity))
+        if (!_isValidListing(strike, maturity))
             revert Vault__OptionPoolNotSupported();
+        else
+            _addListing(strike, maturity);
+
 
         // Check if the vault has sufficient funds
-        // todo: the amount of available assets can change depending on whether we introduce deadlines
-        uint256 availableAssets = l.totalAssets - l.totalLockedSpread - l.totalLockedAssets;
-        if (size >= availableAssets) revert Vault__InsufficientFunds();
+        uint256 availableAssets = _getAvailable();
+        if (size >= availableAssets)
+            revert Vault__InsufficientFunds();
         // Check if this listing has a pool deployed
         // revert Vault__OptionPoolNotListed();
 
@@ -302,7 +326,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         // connect with the corresponding pool to mint shorts + longs
 
         // Handle the premiums and spread capture generated
-        // _handleTradeFees(premium, spread)
+        _handleTradeFees(premium, spread);
 
         // below code could belong to the _handleTradeFees function
         l.totalLockedSpread += spread;
