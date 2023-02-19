@@ -286,6 +286,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         );
     }
 
+    /// @inheritdoc IPoolCore
     function getTradeQuoteFilledAmount(
         address provider,
         bytes32 tradeQuoteHash

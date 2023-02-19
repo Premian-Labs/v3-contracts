@@ -1383,6 +1383,42 @@ describe('Pool', () => {
     });
   });
 
+  describe('#getTradeQuoteFilledAmount', async () => {
+    it('should successfully return filled amount of a trade quote', async () => {
+      const quote = await getTradeQuote();
+
+      const initialBalance = parseEther('10');
+
+      await base.mint(lp.address, initialBalance);
+      await base.mint(trader.address, initialBalance);
+
+      await base
+        .connect(lp)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+      await base
+        .connect(trader)
+        .approve(callPool.address, ethers.constants.MaxUint256);
+
+      const sig = await signQuote(lp.provider!, callPool.address, quote);
+
+      await callPool
+        .connect(trader)
+        .fillQuote(quote, quote.size.div(2), sig.v, sig.r, sig.s);
+
+      const tradeQuoteHash = await calculateQuoteHash(
+        lp.provider!,
+        quote,
+        callPool.address,
+      );
+      expect(
+        await callPool.getTradeQuoteFilledAmount(
+          quote.provider,
+          tradeQuoteHash,
+        ),
+      ).to.eq(quote.size.div(2));
+    });
+  });
+
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
       const nearestBelow = await callPool.getNearestTicksBelow(
