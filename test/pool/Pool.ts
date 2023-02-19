@@ -1243,10 +1243,9 @@ describe('Pool', () => {
     it('should revert if category nonce is not the current one', async () => {
       const quote = await getTradeQuote();
 
-      await callPool.increaseTradeQuoteCategoryNonce(
-        lp.address,
-        quote.category,
-      );
+      await callPool
+        .connect(lp)
+        .increaseTradeQuoteCategoryNonce(quote.category);
 
       let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
 
@@ -1320,7 +1319,7 @@ describe('Pool', () => {
 
       await callPool
         .connect(lp)
-        .increaseTradeQuoteCategoryNonce(lp.address, quote.category);
+        .increaseTradeQuoteCategoryNonce(quote.category);
 
       await expect(
         callPool
@@ -1349,7 +1348,7 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 2);
+      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(2);
 
       await callPool
         .connect(trader)

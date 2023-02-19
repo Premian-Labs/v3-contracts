@@ -231,11 +231,7 @@ interface IPoolCore is IPoolInternal {
     /// @param hashes The hashes of the quotes to cancel
     function cancelTradeQuotes(bytes32[] calldata hashes) external;
 
-    /// @notice Increase the nonce for the given provider and category. This will invalidate all quotes created with the previous nonce
-    /// @param provider Provider for which to increase the nonce
+    /// @notice Increase the nonce for the given category of the sender. This will invalidate all quotes created with the previous nonce
     /// @param category Category for which to increase the nonce
-    function increaseTradeQuoteCategoryNonce(
-        address provider,
-        uint256 category
-    ) external;
+    function increaseTradeQuoteCategoryNonce(uint256 category) external;
 }

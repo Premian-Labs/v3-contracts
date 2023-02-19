@@ -275,17 +275,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function increaseTradeQuoteCategoryNonce(
-        address provider,
-        uint256 category
-    ) external {
+    function increaseTradeQuoteCategoryNonce(uint256 category) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        l.tradeQuoteCategoryNonce[provider][category]++;
+        l.tradeQuoteCategoryNonce[msg.sender][category]++;
 
         emit IncreaseTradeQuoteCategoryNonce(
-            provider,
+            msg.sender,
             category,
-            l.tradeQuoteCategoryNonce[provider][category]
+            l.tradeQuoteCategoryNonce[msg.sender][category]
         );
     }
 }
