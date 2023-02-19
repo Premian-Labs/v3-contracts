@@ -32,4 +32,6 @@ interface IPoolCoreMock {
         );
 
     function marketPrice() external view returns (uint256);
+
+    function protocolFees() external view returns (uint256);
 }
