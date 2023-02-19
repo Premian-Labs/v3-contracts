@@ -234,4 +234,12 @@ interface IPoolCore is IPoolInternal {
     /// @notice Increase the nonce for the given category of the sender. This will invalidate all quotes created with the previous nonce
     /// @param category Category for which to increase the nonce
     function increaseTradeQuoteCategoryNonce(uint256 category) external;
+
+    /// @notice Returns the size already filled for a given quote
+    /// @param provider Provider of the quote
+    /// @param tradeQuoteHash Hash of the quote
+    function getTradeQuoteFilledAmount(
+        address provider,
+        bytes32 tradeQuoteHash
+    ) external view returns (uint256);
 }

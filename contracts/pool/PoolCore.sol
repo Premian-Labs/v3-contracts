@@ -285,4 +285,14 @@ contract PoolCore is IPoolCore, PoolInternal {
             l.tradeQuoteCategoryNonce[msg.sender][category]
         );
     }
+
+    function getTradeQuoteFilledAmount(
+        address provider,
+        bytes32 tradeQuoteHash
+    ) external view returns (uint256) {
+        return
+            PoolStorage.layout().tradeQuoteAmountFilled[provider][
+                tradeQuoteHash
+            ];
+    }
 }

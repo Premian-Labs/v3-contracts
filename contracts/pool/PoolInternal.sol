@@ -1831,10 +1831,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tradeQuoteHash
         ];
 
-        if (
-            filledAmount == type(uint256).max ||
-            filledAmount + args.size > tradeQuote.size
-        ) revert Pool__QuoteOverfilled();
+        if (filledAmount == type(uint256).max) revert Pool__QuoteCancelled();
+
+        if (filledAmount + args.size > tradeQuote.size)
+            revert Pool__QuoteOverfilled();
 
         if (
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||

@@ -33,6 +33,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
+    error Pool__QuoteCancelled();
     error Pool__QuoteExpired();
     error Pool__QuoteOverfilled();
     error Pool__TickDeltaNotZero();
