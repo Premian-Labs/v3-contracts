@@ -58,8 +58,6 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Provider can increment a category nonce to cancel all pending quotes of this category (provider -> category -> nonce)
-        mapping(address => mapping(uint256 => uint256)) tradeQuoteCategoryNonce;
         // Size of quotes already filled (provider -> quoteHash -> amountFilled)
         mapping(address => mapping(bytes32 => uint256)) tradeQuoteAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
