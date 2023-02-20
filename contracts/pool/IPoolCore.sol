@@ -247,7 +247,7 @@ interface IPoolCore is IPoolInternal {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external view returns (bool);
+    ) external view returns (bool, InvalidQuoteError);
 
     /// @notice Returns the size already filled for a given quote
     /// @param provider Provider of the quote

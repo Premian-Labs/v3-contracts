@@ -168,4 +168,19 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 premiumTaker;
         uint256 premiumMaker;
     }
+
+    enum InvalidQuoteError {
+        None,
+        QuoteExpired,
+        QuoteCancelled,
+        QuoteOverfilled,
+        OutOfBoundsPrice,
+        InvalidQuoteTaker,
+        InvalidQuoteSignature,
+        InvalidAssetUpdate,
+        InsufficientCollateralAllowance,
+        InsufficientCollateralBalance,
+        InsufficientLongBalance,
+        InsufficientShortBalance
+    }
 }

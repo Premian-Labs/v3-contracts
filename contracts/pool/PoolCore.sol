@@ -293,18 +293,16 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external view returns (bool) {
+    ) external view returns (bool, InvalidQuoteError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
 
-        _ensureQuoteAndBalanceAreValid(
+        return _ensureQuoteAndBalanceAreValid(
             l,
             FillQuoteArgsInternal(msg.sender, size, v, r, s),
             tradeQuote,
             tradeQuoteHash
         );
-
-        return true;
     }
     
     /// @inheritdoc IPoolCore

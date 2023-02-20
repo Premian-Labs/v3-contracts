@@ -1824,9 +1824,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
         bytes32 tradeQuoteHash
-    ) internal view {
-        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
-        _ensureQuoteBalanceIsValid(l, args, tradeQuote);
+    ) internal view returns (bool isValid, InvalidQuoteError error) {
+        (isValid, error) = _ensureQuoteIsValidNoRevert(l, args, tradeQuote, tradeQuoteHash);
+        if (!isValid) {
+            return (isValid, error);
+        }
+        return _ensureQuoteBalanceIsValid(l, args, tradeQuote);
     }
 
     function _ensureQuoteIsValid(
@@ -1854,28 +1857,51 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
             revert Pool__InvalidQuoteTaker();
 
-        if (
-            l.tradeQuoteCategoryNonce[tradeQuote.provider][
-                tradeQuote.category
-            ] != tradeQuote.categoryNonce
-        ) revert Pool__InvalidQuoteCategoryNonce();
-
         address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
+    }
+
+    function _ensureQuoteIsValidNoRevert(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote,
+        bytes32 tradeQuoteHash
+    ) internal view returns (bool, InvalidQuoteError) {
+        if (block.timestamp > tradeQuote.deadline) return (false, InvalidQuoteError.QuoteExpired);
+
+        uint256 filledAmount = l.tradeQuoteAmountFilled[tradeQuote.provider][
+            tradeQuoteHash
+        ];
+
+        if (filledAmount == type(uint256).max) return (false, InvalidQuoteError.QuoteCancelled);
+
+        if (filledAmount + args.size > tradeQuote.size) return (false, InvalidQuoteError.QuoteOverfilled);
+
+        if (
+            Pricing.MIN_TICK_PRICE > tradeQuote.price ||
+            tradeQuote.price > Pricing.MAX_TICK_PRICE
+        ) return (false, InvalidQuoteError.OutOfBoundsPrice);
+
+        if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker) return (false, InvalidQuoteError.InvalidQuoteTaker);
+
+        address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
+        if (signer != tradeQuote.provider) return (false, InvalidQuoteError.InvalidQuoteSignature);
+
+        return (true, InvalidQuoteError.None);
     }
 
     function _ensureQuoteBalanceIsValid(
         PoolStorage.Layout storage l,
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote
-    ) internal view {
+    ) internal view returns (bool, InvalidQuoteError) {
         Delta memory delta = _getTradeDelta(args.user, args.size, tradeQuote.isBuy);
 
         if (
             (delta.longs == 0 && delta.shorts == 0) ||
             (delta.longs > 0 && delta.shorts > 0) ||
             (delta.longs < 0 && delta.shorts < 0)
-        ) revert Pool__InvalidAssetUpdate();
+        ) return (false, InvalidQuoteError.InvalidAssetUpdate);
 
         bool _isBuy = delta.longs > 0 || delta.shorts < 0;
         uint256 totalPremium = _getPremiumMaker(l, args, tradeQuote);
@@ -1897,21 +1923,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (delta.collateral < 0) {
             if (IERC20(l.getPoolToken()).allowance(args.user, address(this)) < uint256(-delta.collateral)) {
-                revert Pool__InsufficientCollateralAllowance();
+                return (false, InvalidQuoteError.InsufficientCollateralAllowance);
             }
 
             if (IERC20(l.getPoolToken()).balanceOf(args.user) < uint256(-delta.collateral)) {
-                revert Pool__InsufficientCollateralBalance();
+                return (false, InvalidQuoteError.InsufficientCollateralBalance);
             }
         }
 
         if (delta.longs < 0 && _balanceOf(args.user, PoolStorage.LONG) < uint256(-delta.longs)) {
-            revert Pool__InsufficientLongBalance();
+            return (false, InvalidQuoteError.InsufficientLongBalance);
         }
 
         if (delta.shorts < 0 && _balanceOf(args.user, PoolStorage.SHORT) < uint256(-delta.shorts)) {
-            revert Pool__InsufficientShortBalance();
+            return (false, InvalidQuoteError.InsufficientShortBalance);
         }
+
+        return (true, InvalidQuoteError.None);
     }
 
     function _getPremiumMaker(
