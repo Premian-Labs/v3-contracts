@@ -45,7 +45,7 @@ interface IChainlinkAdapterInternal {
         uint80 answeredInRound
     );
 
-    /// @notice Emitted when the oracle updated the pricing path for a pair
+    /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
     /// @param path The new path

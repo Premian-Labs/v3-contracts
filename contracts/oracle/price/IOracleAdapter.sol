@@ -2,12 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-/// @title The interface for an oracle that provides price quotes
+/// @title The interface for an oracle adapter that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
-    /// @notice Returns whether the pair has already been added to the oracle and if it the
-    ///         adapter supports the path required for the pair
+    /// @notice Returns whether the pair has already been added to the adapter and if it
+    ///         supports the path required for the pair
+    ///         (true, true): Pair is fully supported
+    ///         (false, true): Pair is not supported, but can be added
+    ///         (false, false): Pair cannot be supported
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
