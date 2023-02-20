@@ -284,6 +284,20 @@ contract PoolCore is IPoolCore, PoolInternal {
             category,
             l.tradeQuoteCategoryNonce[msg.sender][category]
         );
+    }    
+    
+    /// @inheritdoc IPoolCore
+    function isTradeQuoteValid(
+        address provider,
+        bytes32 tradeQuoteHash,
+        uint256 fillSize
+    ) external view returns (bool) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
+
+        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
+
+        return true;
     }
 
     /// @inheritdoc IPoolCore
