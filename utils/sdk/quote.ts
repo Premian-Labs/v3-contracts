@@ -1,7 +1,6 @@
 import { signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
-import { IPool__factory } from '../../typechain';
-import { TradeQuote, TradeQuoteNonceOptional } from './types';
+import { TradeQuote } from './types';
 import {
   defaultAbiCoder,
   keccak256,
@@ -26,7 +25,7 @@ const EIP712Domain = [
 export async function signQuote(
   w3Provider: Provider,
   poolAddress: string,
-  quote: TradeQuoteNonceOptional,
+  quote: TradeQuote,
 ) {
   const domain: Domain = {
     name: 'Premia',
@@ -35,22 +34,12 @@ export async function signQuote(
     verifyingContract: poolAddress,
   };
 
-  // Query current nonce for taker from contract, if nonce is not specified
-  if (quote.categoryNonce === undefined) {
-    quote.categoryNonce = await IPool__factory.connect(
-      poolAddress,
-      w3Provider,
-    ).getTradeQuoteCategoryNonce(quote.provider, quote.category);
-  }
-
   const message: any = {
     ...quote,
   };
 
   message.price = quote.price.toString();
   message.size = quote.size.toString();
-  message.category = quote.category.toString();
-  message.categoryNonce = quote.categoryNonce?.toString();
   message.deadline = quote.deadline.toString();
 
   const typedData = {
@@ -62,8 +51,6 @@ export async function signQuote(
         { name: 'price', type: 'uint256' },
         { name: 'size', type: 'uint256' },
         { name: 'isBuy', type: 'bool' },
-        { name: 'category', type: 'uint256' },
-        { name: 'categoryNonce', type: 'uint256' },
         { name: 'deadline', type: 'uint256' },
       ],
     },
@@ -83,7 +70,7 @@ export async function calculateQuoteHash(
 ) {
   const FILL_QUOTE_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 category,uint256 categoryNonce,uint256 deadline)',
+      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)',
     ),
   );
 
@@ -123,8 +110,6 @@ export async function calculateQuoteHash(
         'uint256',
         'bool',
         'uint256',
-        'uint256',
-        'uint256',
       ],
       [
         FILL_QUOTE_TYPE_HASH,
@@ -133,8 +118,6 @@ export async function calculateQuoteHash(
         quote.price,
         quote.size,
         quote.isBuy,
-        quote.category,
-        quote.categoryNonce,
         quote.deadline,
       ],
     ),
