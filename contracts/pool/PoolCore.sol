@@ -297,7 +297,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
 
-        _ensureQuoteIsValid(
+        _ensureQuoteAndBalanceAreValid(
             l,
             FillQuoteArgsInternal(msg.sender, size, v, r, s),
             tradeQuote,

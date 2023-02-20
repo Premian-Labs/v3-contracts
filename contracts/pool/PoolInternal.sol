@@ -1818,6 +1818,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (lowerBound > l.marketPrice || l.marketPrice > upperBound)
             revert Pool__AboveMaxSlippage();
     }
+    
+    function _ensureQuoteAndBalanceAreValid(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote,
+        bytes32 tradeQuoteHash
+    ) internal view {
+        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
+        _ensureQuoteBalanceIsValid(l, args, tradeQuote);
+    }
 
     function _ensureQuoteIsValid(
         PoolStorage.Layout storage l,
@@ -1852,6 +1862,91 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
+    }
+
+    function _ensureQuoteBalanceIsValid(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote
+    ) internal view {
+        Delta memory delta = _getTradeDelta(args.user, args.size, tradeQuote.isBuy);
+
+        if (
+            (delta.longs == 0 && delta.shorts == 0) ||
+            (delta.longs > 0 && delta.shorts > 0) ||
+            (delta.longs < 0 && delta.shorts < 0)
+        ) revert Pool__InvalidAssetUpdate();
+
+        bool _isBuy = delta.longs > 0 || delta.shorts < 0;
+        uint256 totalPremium = _getPremiumMaker(l, args, tradeQuote);
+        uint256 shortCollateral = Position.contractsToCollateral(
+            Math.abs(delta.shorts),
+            l.strike,
+            l.isCallPool
+        );
+
+        if (_isBuy) {
+            delta.collateral =
+                -Math.min(shortCollateral, 0).toInt256() -
+                totalPremium.toInt256();
+        } else {
+            delta.collateral =
+                totalPremium.toInt256() -
+                Math.max(shortCollateral, 0).toInt256();
+        }
+
+        if (delta.collateral < 0) {
+            if (IERC20(l.getPoolToken()).allowance(args.user, address(this)) < uint256(-delta.collateral)) {
+                revert Pool__InsufficientCollateralAllowance();
+            }
+
+            if (IERC20(l.getPoolToken()).balanceOf(args.user) < uint256(-delta.collateral)) {
+                revert Pool__InsufficientCollateralBalance();
+            }
+        }
+
+        if (delta.longs < 0 && _balanceOf(args.user, PoolStorage.LONG) < uint256(-delta.longs)) {
+            revert Pool__InsufficientLongBalance();
+        }
+
+        if (delta.shorts < 0 && _balanceOf(args.user, PoolStorage.SHORT) < uint256(-delta.shorts)) {
+            revert Pool__InsufficientShortBalance();
+        }
+    }
+
+    function _getPremiumMaker(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        FillQuoteVarsInternal memory vars;
+        
+        vars.premium = tradeQuote.price.mul(args.size);
+        vars.takerFee = Position.contractsToCollateral(
+            _takerFee(args.size, vars.premium),
+            l.strike,
+            l.isCallPool
+        );
+
+        // Denormalize premium
+        vars.premium = Position.contractsToCollateral(
+            vars.premium,
+            l.strike,
+            l.isCallPool
+        );
+
+        vars.protocolFee = vars.takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
+        vars.makerRebate = vars.takerFee - vars.protocolFee;
+
+        vars.premiumMaker = tradeQuote.isBuy
+            ? vars.premium - vars.makerRebate // Maker buying
+            : vars.premium - vars.protocolFee; // Maker selling
+
+        return vars.premiumMaker;
     }
 
     function _ensureOperator(address operator) internal view {
