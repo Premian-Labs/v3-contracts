@@ -132,8 +132,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     }
 
     function _getPricePerShare() internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
+        // UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        //return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
+        return 1;
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
@@ -183,6 +184,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
+            // if the total shares that were minted is zero, we should revert
             assetAmount = shareAmount;
         } else {
             assetAmount = shareAmount * _getPricePerShare();
@@ -284,7 +286,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         if (block.timestamp >= maturity)
             revert Vault__OptionExpired();
 
-        // Check if this listing is supported by the vault. We'll need to restrict it as big moves in spot may result
+        // Check if this listing is supported by the vaults. We'll need to restrict it as big moves in spot may result
         // in new listings we may want to support, making FV calculations potentially intractable.
         if (!_isValidListing(strike, maturity))
             revert Vault__OptionPoolNotSupported();
@@ -292,7 +294,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
             _addListing(strike, maturity);
 
 
-        // Check if the vault has sufficient funds
+        // Check if the vaults has sufficient funds
         uint256 availableAssets = _getAvailable();
         if (size >= availableAssets)
             revert Vault__InsufficientFunds();
