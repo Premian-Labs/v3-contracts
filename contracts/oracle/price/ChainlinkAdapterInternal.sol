@@ -85,13 +85,6 @@ abstract contract ChainlinkAdapterInternal is
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
-    function _isPairSupported(
-        address tokenA,
-        address tokenB
-    ) internal view virtual override returns (bool) {
-        return _pathForPair(tokenA, tokenB) != PricingPath.NONE;
-    }
-
     function _pathForPair(
         address tokenA,
         address tokenB

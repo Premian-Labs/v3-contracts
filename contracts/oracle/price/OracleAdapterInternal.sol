@@ -23,11 +23,6 @@ abstract contract OracleAdapterInternal {
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
 
-    function _isPairSupported(
-        address tokenA,
-        address tokenB
-    ) internal view virtual returns (bool);
-
     /// @notice Add or reconfigures the support for a given pair. This function will let the oracle take some actions
     ///         to configure the pair, in preparation for future quotes. Can be called many times in order to let the oracle
     ///         re-configure for a new context
