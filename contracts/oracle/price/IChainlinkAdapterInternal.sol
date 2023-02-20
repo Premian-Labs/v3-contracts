@@ -24,9 +24,9 @@ interface IChainlinkAdapterInternal {
         TOKEN_USD_TOKEN,
         // Will use tokenIn/ETH and tokenOut/ETH feeds
         TOKEN_ETH_TOKEN,
-        // Will use tokenA/USD, tokenB/ETH and ETH/USD feeds
+        // Will use tokenA/USD, tokenB/ETH and ETH/USD feeds, if B = ETH, ETH -> B conversion is skipped
         A_USD_ETH_B,
-        // Will use tokenA/ETH, tokenB/USD and ETH/USD feeds
+        // Will use tokenA/ETH, tokenB/USD and ETH/USD feeds, if B = USD, USD -> B conversion is skipped
         A_ETH_USD_B,
         // Will use a token/WBTC feed
         TOKEN_WBTC
