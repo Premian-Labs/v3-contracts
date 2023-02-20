@@ -39,10 +39,10 @@ interface IPoolFactory is IPoolFactoryEvents {
         bool isCallPool;
     }
 
-    /// @notice Returns whether a pool has been deployed with those parameters or not
+    /// @notice Returns the address of a pool if it has been deployed with those parameters (or address(0) if not)
     /// @param k The pool key
-    /// @return Whether a pool has already been deployed with those parameters or not
-    function isPoolDeployed(PoolKey memory k) external view returns (bool);
+    /// @return The pool address (Or address(0) if not deployed)
+    function getPoolAddress(PoolKey memory k) external view returns (address);
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key

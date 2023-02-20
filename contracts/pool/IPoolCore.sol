@@ -54,6 +54,13 @@ interface IPoolCore is IPoolInternal {
     /// @param p The position key
     function claim(Position.Key memory p) external;
 
+    /// @notice Returns total claimable fees for the position
+    /// @param p The position key
+    /// @return The total claimable fees for the position
+    function getClaimableFees(
+        Position.Key memory p
+    ) external view returns (uint256);
+
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
