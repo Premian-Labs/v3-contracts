@@ -17,6 +17,11 @@ contract ChainlinkAdapter is
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
 
+    constructor(
+        address _wrappedNativeToken,
+        address _wrappedBTCToken
+    ) ChainlinkAdapterInternal(_wrappedNativeToken, _wrappedBTCToken) {}
+
     /// @inheritdoc IOracleAdapter
     function canSupportPair(
         address tokenA,

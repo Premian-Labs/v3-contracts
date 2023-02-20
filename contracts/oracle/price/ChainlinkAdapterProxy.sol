@@ -8,30 +8,14 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
-import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 
-contract ChainlinkAdapterProxy is
-    ChainlinkAdapterInternal,
-    ERC165BaseInternal,
-    ProxyUpgradeableOwnable
-{
+contract ChainlinkAdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
 
     constructor(
-        address implementation,
-        address wrappedNativeToken,
-        address wrappedBTCToken,
-        FeedMappingArgs[] memory feedMappingArgs
+        address implementation
     ) ProxyUpgradeableOwnable(implementation) {
-        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
-            .layout();
-
-        l.wrappedNativeToken = wrappedNativeToken;
-        l.wrappedBTCToken = wrappedBTCToken;
-
-        _batchRegisterFeedMappings(feedMappingArgs);
-
         _setSupportsInterface(type(IERC165).interfaceId, true);
         _setSupportsInterface(type(Multicall).interfaceId, true);
     }

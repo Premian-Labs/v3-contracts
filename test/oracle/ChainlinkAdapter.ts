@@ -122,22 +122,22 @@ describe('ChainlinkAdapter', () => {
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
 
-    const implementation = await new ChainlinkAdapter__factory(
-      deployer,
-    ).deploy();
+    const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
+      tokens.WETH.address,
+      tokens.WBTC.address,
+    );
 
     await implementation.deployed();
 
     const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
       implementation.address,
-      tokens.WETH.address,
-      tokens.WBTC.address,
-      feeds,
     );
 
     await proxy.deployed();
 
     instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
+
+    await instance.batchRegisterFeedMappings(feeds);
   });
 
   describe('#canSupportPair', () => {

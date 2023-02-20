@@ -30,6 +30,14 @@ abstract contract ChainlinkAdapterInternal is
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
+    address private immutable WRAPPED_NATIVE_TOKEN;
+    address private immutable WRAPPED_BTC_TOKEN;
+
+    constructor(address _wrappedNativeToken, address _wrappedBTCToken) {
+        WRAPPED_NATIVE_TOKEN = _wrappedNativeToken;
+        WRAPPED_BTC_TOKEN = _wrappedBTCToken;
+    }
+
     /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
     function _quote(
         PricingPath path,
@@ -417,10 +425,7 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Should only map wrapped tokens which are guarenteed to have a 1:1 ratio
     function _denomination(address token) internal view returns (address) {
-        return
-            token == ChainlinkAdapterStorage.layout().wrappedNativeToken
-                ? Denominations.ETH
-                : token;
+        return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
 
     function _mapToDenominationAndSort(
@@ -472,11 +477,7 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getWBTCBTC() internal view returns (uint256) {
-        return
-            _callRegistry(
-                ChainlinkAdapterStorage.layout().wrappedBTCToken,
-                Denominations.BTC
-            );
+        return _callRegistry(WRAPPED_BTC_TOKEN, Denominations.BTC);
     }
 
     function _isUSD(address token) internal pure returns (bool) {
@@ -488,6 +489,6 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _isWBTC(address token) internal view returns (bool) {
-        return token == ChainlinkAdapterStorage.layout().wrappedBTCToken;
+        return token == WRAPPED_BTC_TOKEN;
     }
 }
