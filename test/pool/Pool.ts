@@ -610,6 +610,80 @@ describe('Pool', () => {
     });
   });
 
+  describe('#writeFrom', () => {
+    it('should successfully write 500 options', async () => {
+      const size = parseEther('500');
+      const fee = await callPool.takerFee(size, 0);
+
+      const totalSize = size.add(fee);
+
+      await base.mint(lp.address, totalSize);
+      await base.connect(lp).approve(callPool.address, totalSize);
+
+      await callPool
+        .connect(lp)
+        .writeFrom(lp.address, trader.address, parseEther('500'));
+
+      expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        size,
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+      expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(size);
+    });
+
+    it('should successfully write 500 options on behalf of another address', async () => {
+      const size = parseEther('500');
+      const fee = await callPool.takerFee(size, 0);
+
+      const totalSize = size.add(fee);
+
+      await base.mint(lp.address, totalSize);
+      await base.connect(lp).approve(callPool.address, totalSize);
+
+      await callPool.connect(lp).setApprovalForAll(deployer.address, true);
+
+      await callPool
+        .connect(deployer)
+        .writeFrom(lp.address, trader.address, parseEther('500'));
+
+      expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        size,
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+      expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(size);
+    });
+
+    it('should revert if trying to write options of behalf of another address without approval', async () => {
+      await expect(
+        callPool
+          .connect(deployer)
+          .writeFrom(lp.address, trader.address, parseEther('500')),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
+    });
+
+    it('should revert if size is zero', async () => {
+      await expect(
+        callPool.connect(lp).writeFrom(lp.address, trader.address, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+    });
+
+    it('should revert if option is expired', async () => {
+      await increaseTo(maturity);
+
+      await expect(
+        callPool.connect(lp).writeFrom(lp.address, trader.address, 1),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
+    });
+  });
+
   describe('#trade', () => {
     it('should successfully buy 500 options', async () => {
       const nearestBelow = await callPool.getNearestTicksBelow(
