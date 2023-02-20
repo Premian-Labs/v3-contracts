@@ -1954,7 +1954,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteVarsInternal memory vars;
         
         vars.premium = tradeQuote.price.mul(args.size);
-        vars.takerFee = Position.contractsToCollateral(
+        vars.protocolFee = Position.contractsToCollateral(
             _takerFee(args.size, vars.premium),
             l.strike,
             l.isCallPool
@@ -1967,11 +1967,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        vars.protocolFee = vars.takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
-        vars.makerRebate = vars.takerFee - vars.protocolFee;
-
         vars.premiumMaker = tradeQuote.isBuy
-            ? vars.premium - vars.makerRebate // Maker buying
+            ? vars.premium // Maker buying
             : vars.premium - vars.protocolFee; // Maker selling
 
         return vars.premiumMaker;
