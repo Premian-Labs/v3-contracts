@@ -9,6 +9,7 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
+    error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientCollateralAllowance();
