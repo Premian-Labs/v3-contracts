@@ -65,5 +65,10 @@
     "typechain": "^8.1.1",
     "typescript": "^4.9.5"
   },
-  "packageManager": "yarn@3.4.1"
+  "packageManager": "yarn@3.4.1",
+  "peerDependencies": {
+    "@ethersproject/abi": "*",
+    "@ethersproject/bytes": "*",
+    "@ethersproject/providers": "*"
+  }
 }

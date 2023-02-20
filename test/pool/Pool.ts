@@ -1134,12 +1134,10 @@ describe('Pool', () => {
         bnToNumber(BigNumber.from(quote.size)),
       );
 
-      const fee = (await callPool.takerFee(quote.size, premium))
-        .mul(parseEther(protocolFeePercentage.toString()))
-        .div(ONE_ETHER);
+      const protocolFee = await callPool.takerFee(quote.size, premium);
 
       expect(await base.balanceOf(lp.address)).to.eq(
-        initialBalance.sub(quote.size).add(premium).sub(fee),
+        initialBalance.sub(quote.size).add(premium).sub(protocolFee),
       );
       expect(await base.balanceOf(trader.address)).to.eq(
         initialBalance.sub(premium),
