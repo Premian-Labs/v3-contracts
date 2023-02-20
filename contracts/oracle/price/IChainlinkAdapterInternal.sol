@@ -2,15 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
-
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapterInternal {
-    struct DenominationMappingArgs {
-        address token;
-        address denomination;
-    }
-
     struct FeedMappingArgs {
         address token;
         address denomination;
@@ -36,9 +29,7 @@ interface IChainlinkAdapterInternal {
         // Will use tokenA/ETH, tokenB/USD and ETH/USD feeds
         TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
         // Will use a token/WBTC feed
-        TOKEN_WBTC_PAIR,
-        // Used then tokenA is the same as tokenB
-        SAME_TOKENS
+        TOKEN_WBTC_PAIR
     }
 
     /// @notice Thrown when the last price update exceeds the max delay
@@ -59,10 +50,6 @@ interface IChainlinkAdapterInternal {
     /// @param tokenB The token to quote against (quote token)
     /// @param path The new path
     event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
-
-    /// @notice Emitted when new Chainlink denomination mappings are registered
-    /// @param args The arguments for the new mappings
-    event DenominationMappingsRegistered(DenominationMappingArgs[] args);
 
     /// @notice Emitted when new Chainlink price feed mappings are registered
     /// @param args The arguments for the new mappings

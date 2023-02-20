@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -10,7 +11,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
-import {AggregatorInterface, IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
+import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
