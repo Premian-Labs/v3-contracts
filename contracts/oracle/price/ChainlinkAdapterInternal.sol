@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
-import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
@@ -26,6 +25,7 @@ abstract contract ChainlinkAdapterInternal is
 
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
+    
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
@@ -363,7 +363,7 @@ abstract contract ChainlinkAdapterInternal is
     function _decimals(address token) internal view returns (int256) {
         if (_isETH(token)) {
             return ETH_DECIMALS;
-        } else if (!AddressUtils.isContract(token)) {
+        } else if (_isUSD(token) || _isWBTC(token)) {
             return FOREX_DECIMALS;
         } else {
             return int256(uint256(IERC20Metadata(token).decimals()));
