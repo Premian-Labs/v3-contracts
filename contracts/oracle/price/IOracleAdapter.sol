@@ -6,25 +6,17 @@ pragma solidity ^0.8.0;
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
-    /// @notice Returns whether this oracle can support the given pair of tokens
+    /// @notice Returns whether the pair has already been added to the oracle and if it the
+    ///         adapter supports the path required for the pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
-    /// @return Whether the given pair of tokens can be supported by the oracle
-    function canSupportPair(
-        address tokenA,
-        address tokenB
-    ) external view returns (bool);
-
-    /// @notice Returns whether this oracle is already supporting the given pair of tokens
-    /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
-    /// @return Whether the given pair of tokens is already being supported by the oracle
+    /// @return isCached True if the pair has been cached, false otherwise
+    /// @return hasPath True if the pair has a valid path, false otherwise
     function isPairSupported(
         address tokenA,
         address tokenB
-    ) external view returns (bool);
+    ) external view returns (bool isCached, bool hasPath);
 
     /// @notice Returns a quote, based on the given token pair. If the pair has not been added
     ///         the adapter will attempt to add it

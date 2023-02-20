@@ -140,22 +140,23 @@ describe('ChainlinkAdapter', () => {
     await instance.batchRegisterFeedMappings(feeds);
   });
 
-  describe('#canSupportPair', () => {
-    it('returns false if adapter cannot support pair', async () => {
-      expect(
-        await instance.canSupportPair(
-          bnToAddress(BigNumber.from(0)),
-          tokens.WETH.address,
-        ),
-      ).to.be.false;
-    });
-  });
-
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
-      expect(
-        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.false;
+      const [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.false;
+    });
+
+    it('returns false if path for pair does not exist', async () => {
+      const [_, hasPath] = await instance.isPairSupported(
+        tokens.WETH.address,
+        bnToAddress(BigNumber.from(0)),
+      );
+
+      expect(hasPath).to.be.false;
     });
   });
 
@@ -178,9 +179,12 @@ describe('ChainlinkAdapter', () => {
         tokens.DAI.address,
       );
 
-      expect(
-        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.true;
+      const [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
 
       await instance.addOrModifySupportForPair(
         tokens.WETH.address,
@@ -205,9 +209,12 @@ describe('ChainlinkAdapter', () => {
         tokens.DAI.address,
       );
 
-      expect(
-        await instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
-      ).to.be.true;
+      const [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
 
       await expect(
         instance.addSupportForPairIfNeeded(
@@ -314,13 +321,21 @@ describe('ChainlinkAdapter', () => {
       const tokenIn = tokens.WETH;
       const tokenOut = tokens.DAI;
 
-      expect(await instance.isPairSupported(tokenIn.address, tokenOut.address))
-        .to.be.false;
+      let [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.false;
 
       await instance.tryQuote(tokenIn.address, tokenOut.address);
 
-      expect(await instance.isPairSupported(tokenIn.address, tokenOut.address))
-        .to.be.true;
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
     });
 
     it('should return quote for pair', async () => {
@@ -392,25 +407,15 @@ describe('ChainlinkAdapter', () => {
             );
           });
 
-          describe('#canSupportPair', () => {
-            it('should return true if adapter can support pair', async () => {
-              expect(
-                await instance.canSupportPair(
-                  tokenIn.address,
-                  tokenOut.address,
-                ),
-              ).to.be.true;
-            });
-          });
-
           describe('#isPairSupported', () => {
-            it('should return true if pair is supported by adapter', async () => {
-              expect(
-                await instance.isPairSupported(
-                  tokenIn.address,
-                  tokenOut.address,
-                ),
-              ).to.be.true;
+            it('should return true if pair is cached and path exists', async () => {
+              const [isCached, hasPath] = await instance.isPairSupported(
+                tokenIn.address,
+                tokenOut.address,
+              );
+
+              expect(isCached).to.be.true;
+              expect(hasPath).to.be.true;
             });
           });
 

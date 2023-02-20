@@ -23,25 +23,31 @@ contract ChainlinkAdapter is
     ) ChainlinkAdapterInternal(_wrappedNativeToken, _wrappedBTCToken) {}
 
     /// @inheritdoc IOracleAdapter
-    function canSupportPair(
+    function isPairSupported(
         address tokenA,
         address tokenB
-    ) external view returns (bool) {
+    )
+        external
+        view
+        override(IOracleAdapter)
+        returns (bool isCached, bool hasPath)
+    {
         (
             address mappedTokenA,
             address mappedTokenB
         ) = _mapToDenominationAndSort(tokenA, tokenB);
 
-        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        return path != PricingPath.NONE;
-    }
+        PricingPath path = ChainlinkAdapterStorage.layout().pathForPair[
+            _keyForSortedPair(mappedTokenA, mappedTokenB)
+        ];
 
-    /// @inheritdoc IOracleAdapter
-    function isPairSupported(
-        address tokenA,
-        address tokenB
-    ) external view override(IOracleAdapter, OracleAdapter) returns (bool) {
-        return _isPairSupported(tokenA, tokenB);
+        isCached = path != PricingPath.NONE;
+
+        if (isCached) return (isCached, true);
+
+        hasPath =
+            _determinePricingPath(mappedTokenA, mappedTokenB) !=
+            PricingPath.NONE;
     }
 
     /// @inheritdoc IOracleAdapter

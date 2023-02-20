@@ -18,12 +18,6 @@ abstract contract OracleAdapter is
     OracleAdapterInternal
 {
     /// @inheritdoc IOracleAdapter
-    function isPairSupported(
-        address tokenA,
-        address tokenB
-    ) external view virtual returns (bool);
-
-    /// @inheritdoc IOracleAdapter
     function addOrModifySupportForPair(
         address tokenA,
         address tokenB
