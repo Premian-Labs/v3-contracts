@@ -26,12 +26,7 @@ contract ChainlinkAdapter is
     function isPairSupported(
         address tokenA,
         address tokenB
-    )
-        external
-        view
-        override(IOracleAdapter)
-        returns (bool isCached, bool hasPath)
-    {
+    ) external view returns (bool isCached, bool hasPath) {
         (
             address mappedTokenA,
             address mappedTokenB
@@ -48,6 +43,14 @@ contract ChainlinkAdapter is
         hasPath =
             _determinePricingPath(mappedTokenA, mappedTokenB) !=
             PricingPath.NONE;
+    }
+
+    /// @inheritdoc IOracleAdapter
+    function addOrModifySupportForPair(
+        address tokenA,
+        address tokenB
+    ) external {
+        _addOrModifySupportForPair(tokenA, tokenB);
     }
 
     /// @inheritdoc IOracleAdapter

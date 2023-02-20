@@ -25,7 +25,7 @@ abstract contract ChainlinkAdapterInternal is
 
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
-    
+
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
@@ -58,7 +58,7 @@ abstract contract ChainlinkAdapterInternal is
     function _addOrModifySupportForPair(
         address tokenA,
         address tokenB
-    ) internal virtual override {
+    ) internal {
         (
             address mappedTokenA,
             address mappedTokenB

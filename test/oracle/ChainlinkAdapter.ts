@@ -193,66 +193,6 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#addSupportForPairIfNeeded', () => {
-    it('should revert if pair contains like assets', async () => {
-      await expect(
-        instance.addSupportForPairIfNeeded(
-          tokens.WETH.address,
-          tokens.WETH.address,
-        ),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__TokensAreSame');
-    });
-
-    it('should revert if pair has been added', async () => {
-      await instance.addSupportForPairIfNeeded(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      const [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.true;
-
-      await expect(
-        instance.addSupportForPairIfNeeded(
-          tokens.WETH.address,
-          tokens.DAI.address,
-        ),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'OracleAdapter__PairAlreadySupported',
-      );
-    });
-
-    it('should revert if pair does not have a feed', async () => {
-      await expect(
-        instance.addSupportForPairIfNeeded(
-          tokens.EUL.address,
-          tokens.DAI.address,
-        ),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'OracleAdapter__PairCannotBeSupported',
-      );
-
-      await instance.batchRegisterFeedMappings([
-        {
-          token: tokens.EUL.address,
-          denomination: tokens.CHAINLINK_USD.address,
-          feed: bnToAddress(BigNumber.from(1)),
-        },
-      ]);
-
-      await instance.addSupportForPairIfNeeded(
-        tokens.EUL.address,
-        tokens.DAI.address,
-      );
-    });
-  });
-
   describe('#bathRegisterFeedMappings', async () => {
     it('should revert if token == denomination', async () => {
       await expect(
@@ -368,7 +308,7 @@ describe('ChainlinkAdapter', () => {
       let tokenIn = tokens.WETH;
       let tokenOut = tokens.DAI;
 
-      await instance.addSupportForPairIfNeeded(
+      await instance.addOrModifySupportForPair(
         tokenIn.address,
         tokenOut.address,
       );
@@ -384,7 +324,7 @@ describe('ChainlinkAdapter', () => {
       tokenIn = tokens.CRV;
       tokenOut = tokens.AAVE;
 
-      await instance.addSupportForPairIfNeeded(
+      await instance.addOrModifySupportForPair(
         tokenIn.address,
         tokenOut.address,
       );
@@ -401,7 +341,7 @@ describe('ChainlinkAdapter', () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
-            await instance.addSupportForPairIfNeeded(
+            await instance.addOrModifySupportForPair(
               tokenIn.address,
               tokenOut.address,
             );
