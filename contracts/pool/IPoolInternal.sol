@@ -18,7 +18,6 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientShortBalance();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
-    error Pool__InvalidQuoteCategoryNonce();
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
@@ -84,11 +83,6 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // A category identifier used to be able to invalidate a group of quotes at a lower gas cost compared to invalidating each quote hash individually
-        uint256 category;
-        // The nonce of the category. This value must match current nonce of the category for the provider, for the quote to be valid
-        // When provider wants to invalidate all pending quotes for a category, he can increment this nonce
-        uint256 categoryNonce;
         // Timestamp until which the quote is valid
         uint256 deadline;
     }
