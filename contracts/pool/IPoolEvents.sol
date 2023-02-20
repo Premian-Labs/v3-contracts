@@ -45,7 +45,6 @@ interface IPoolEvents {
         IPoolInternal.Delta deltaMaker,
         IPoolInternal.Delta deltaTaker,
         uint256 premium,
-        uint256 takerFee,
         uint256 protocolFee,
         bool isBuy
     );

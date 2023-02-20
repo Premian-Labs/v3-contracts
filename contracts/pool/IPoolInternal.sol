@@ -146,9 +146,7 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct FillQuoteVarsInternal {
         uint256 premium;
-        uint256 takerFee;
         uint256 protocolFee;
-        uint256 makerRebate;
         uint256 premiumTaker;
         uint256 premiumMaker;
     }
