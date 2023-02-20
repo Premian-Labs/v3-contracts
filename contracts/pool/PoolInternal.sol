@@ -52,7 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
-            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 category,uint256 categoryNonce,uint256 deadline)"
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)"
         );
 
     constructor(
@@ -1767,8 +1767,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.price,
                 tradeQuote.size,
                 tradeQuote.isBuy,
-                tradeQuote.category,
-                tradeQuote.categoryNonce,
                 tradeQuote.deadline
             )
         );
@@ -1831,10 +1829,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tradeQuoteHash
         ];
 
-        if (
-            filledAmount == type(uint256).max ||
-            filledAmount + args.size > tradeQuote.size
-        ) revert Pool__QuoteOverfilled();
+        if (filledAmount == type(uint256).max) revert Pool__QuoteCancelled();
+
+        if (filledAmount + args.size > tradeQuote.size)
+            revert Pool__QuoteOverfilled();
 
         if (
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||
@@ -1843,12 +1841,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
             revert Pool__InvalidQuoteTaker();
-
-        if (
-            l.tradeQuoteCategoryNonce[tradeQuote.provider][
-                tradeQuote.category
-            ] != tradeQuote.categoryNonce
-        ) revert Pool__InvalidQuoteCategoryNonce();
 
         address signer = ECDSA.recover(tradeQuoteHash, args.signature.v, args.signature.r, args.signature.s);
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();

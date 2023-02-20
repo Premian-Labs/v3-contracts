@@ -1222,36 +1222,6 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
     });
 
-    it('should revert if category nonce is not the current one', async () => {
-      const quote = await getTradeQuote();
-
-      await callPool.increaseTradeQuoteCategoryNonce(
-        lp.address,
-        quote.category,
-      );
-
-      let sig = await signQuote(lp.provider!, callPool.address, { ...quote });
-
-      await expect(
-        callPool.connect(trader).fillQuote(quote, quote.size, sig),
-      ).to.be.revertedWithCustomError(
-        callPool,
-        'Pool__InvalidQuoteCategoryNonce',
-      );
-
-      sig = await signQuote(lp.provider!, callPool.address, {
-        ...quote,
-        categoryNonce: BigNumber.from(10),
-      });
-
-      await expect(
-        callPool.connect(trader).fillQuote(quote, quote.size, sig),
-      ).to.be.revertedWithCustomError(
-        callPool,
-        'Pool__InvalidQuoteCategoryNonce',
-      );
-    });
-
     it('should revert if signed message does not match quote', async () => {
       const quote = await getTradeQuote();
 
@@ -1282,29 +1252,15 @@ describe('Pool', () => {
         ]);
 
       await expect(
-        callPool.connect(trader).fillQuote(quote, quote.size, sig),
-      ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
+        callPool
+          .connect(trader)
+          .fillQuote(quote, quote.size, sig),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteCancelled');
     });
   });
 
-  describe('#increaseTradeQuoteCategoryNonce', async () => {
-    it('should successfully increase category nonce and invalidate orders for previous nonce of that category', async () => {
-      const quote = await getTradeQuote();
-      const sig = await signQuote(lp.provider!, callPool.address, quote);
-
-      await callPool
-        .connect(lp)
-        .increaseTradeQuoteCategoryNonce(lp.address, quote.category);
-
-      await expect(
-        callPool.connect(trader).fillQuote(quote, quote.size, sig),
-      ).to.be.revertedWithCustomError(
-        callPool,
-        'Pool__InvalidQuoteCategoryNonce',
-      );
-    });
-
-    it('should not invalidate a quote made for another category', async () => {
+  describe('#getTradeQuoteFilledAmount', async () => {
+    it('should successfully return filled amount of a trade quote', async () => {
       const quote = await getTradeQuote();
 
       const initialBalance = parseEther('10');
@@ -1321,36 +1277,21 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool.connect(lp).increaseTradeQuoteCategoryNonce(lp.address, 2);
+      await callPool
+        .connect(trader)
+        .fillQuote(quote, quote.size.div(2), sig);
 
-      await callPool.connect(trader).fillQuote(quote, quote.size, sig);
-
-      const premium = BigNumber.from(quote.price).mul(
-        bnToNumber(BigNumber.from(quote.size)),
+      const tradeQuoteHash = await calculateQuoteHash(
+        lp.provider!,
+        quote,
+        callPool.address,
       );
-
-      const fee = (await callPool.takerFee(quote.size, premium))
-        .mul(parseEther(protocolFeePercentage.toString()))
-        .div(ONE_ETHER);
-
-      expect(await base.balanceOf(lp.address)).to.eq(
-        initialBalance.sub(quote.size).add(premium).sub(fee),
-      );
-      expect(await base.balanceOf(trader.address)).to.eq(
-        initialBalance.sub(premium),
-      );
-
-      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
-        0,
-      );
-      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-        parseEther('10'),
-      );
-
-      expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(
-        parseEther('10'),
-      );
-      expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+      expect(
+        await callPool.getTradeQuoteFilledAmount(
+          quote.provider,
+          tradeQuoteHash,
+        ),
+      ).to.eq(quote.size.div(2));
     });
   });
 

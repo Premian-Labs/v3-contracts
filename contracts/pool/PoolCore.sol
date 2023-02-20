@@ -256,14 +256,6 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function getTradeQuoteCategoryNonce(
-        address provider,
-        uint256 category
-    ) external view returns (uint256) {
-        return PoolStorage.layout().tradeQuoteCategoryNonce[provider][category];
-    }
-
-    /// @inheritdoc IPoolCore
     function cancelTradeQuotes(bytes32[] calldata hashes) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
@@ -273,17 +265,13 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function increaseTradeQuoteCategoryNonce(
+    function getTradeQuoteFilledAmount(
         address provider,
-        uint256 category
-    ) external {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        l.tradeQuoteCategoryNonce[provider][category]++;
-
-        emit IncreaseTradeQuoteCategoryNonce(
-            provider,
-            category,
-            l.tradeQuoteCategoryNonce[provider][category]
-        );
+        bytes32 tradeQuoteHash
+    ) external view returns (uint256) {
+        return
+            PoolStorage.layout().tradeQuoteAmountFilled[provider][
+                tradeQuoteHash
+            ];
     }
 }
