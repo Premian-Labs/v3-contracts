@@ -8,7 +8,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
-import {Tick} from "../libraries/Tick.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
@@ -45,7 +44,7 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         DoublyLinkedList.Uint256List tickIndex;
-        mapping(uint256 => Tick.Data) ticks;
+        mapping(uint256 => IPoolInternal.Tick) ticks;
         uint256 marketPrice;
         uint256 globalFeeRate;
         uint256 protocolFees;
