@@ -46,9 +46,6 @@ library OptionMath {
     int256 internal constant S2 = 0.44334159e18;
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
-    error OptionMath__NegativeSpot();
-    error OptionMath__NegativeStrike();
-    error OptionMath__NegativeTimeToMaturity();
     error OptionMath__NonPositiveVol();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
