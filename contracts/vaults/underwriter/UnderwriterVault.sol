@@ -47,6 +47,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     }
 
     function _getSpotPrice(uint256 timestamp) internal view returns (uint256) {
+        //TODO: implement spot oracle
         return 2800;
     }
 
@@ -113,6 +114,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
+        // TODO: double check handling of negative total locked spread
         uint256 totalLockedSpread = l.totalLockedSpread;
 
         while (block.timestamp >= current) {
@@ -248,6 +250,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     ) override internal virtual {}
 
     function _isValidListing(uint256 strike, uint256 maturity) internal view returns (bool){
+        //TODO: query base layer factory => getPoolAddress(PoolKey memory k) external view returns (address)
+        //NOTE: query returns address(0) if no listing exists
+        //TODO: check the delta and dte are within our trader vault range
         return true;
     }
 
@@ -263,22 +268,40 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         // Insert strike into the set of strikes for given maturity
         l.maturityToStrikes[maturity].add(strike);
 
+        // Set new max maturity for doublylinkedlist
         if (maturity > l.maxMaturity) {
             l.maxMaturity = maturity;
         }
     }
 
-    function _handleTradeFees(uint256 premium, uint256 spread) internal view {
+    function _handleTradeFees(
+        uint256 premium, 
+        uint256 spread, 
+        uint256 size, 
+        uint256 timeToMaturity
+    ) internal view {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        // below code could belong to the _handleTradeFees function
+        l.totalLockedSpread += spread;
+        uint256 spreadRate = spread / timeToMaturity;
+        // TODO: we need to update totalLockedSpread before updating the spreadUnlockingRate (!)
+        // TODO: otherwise there will be an inconsistency and too much spread will be deducted since lastSpreadUpdate
+        // TODO: call _updateState()
+        l.spreadUnlockingRate += spreadRate;
 
+        l.totalAssets += premium + spread;
+        l.totalLockedAssets += size;
     }
 
     /// @inheritdoc IUnderwriterVault
     function buy(
-        address taker,
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) override external returns (uint256) {
+    ) external returns (uint256) {
+        // set taker to the function caller
+        address taker = msg.sender;
+
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Validate listing
@@ -286,33 +309,40 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         if (block.timestamp >= maturity)
             revert Vault__OptionExpired();
 
-        // Check if this listing is supported by the vaults. We'll need to restrict it as big moves in spot may result
-        // in new listings we may want to support, making FV calculations potentially intractable.
+        // Check if this listing is supported by the vault. 
         if (!_isValidListing(strike, maturity))
             revert Vault__OptionPoolNotSupported();
         else
             _addListing(strike, maturity);
 
 
-        // Check if the vaults has sufficient funds
+        // Check if the vault has sufficient funds
         uint256 availableAssets = _getAvailable();
+
         if (size >= availableAssets)
             revert Vault__InsufficientFunds();
         // Check if this listing has a pool deployed
         // revert Vault__OptionPoolNotListed();
 
         // Compute premium and the spread collected
-        uint256 spotPrice; // get price from oracle
+        //TODO: set up spot oracle
+        //TODO: should we use now or block timestamp?
+        uint256 spotPrice = _getSpotPrice(block.timestamp);
+
+        // TODO: check if Dte need to be converted for getVolatility()
         uint256 timeToMaturity = maturity - block.timestamp;
-        // todo: getVol should return uint
-        // todo: implement batched call
+
+        // TODO: check to see if getVol should return uint instead of int256?
         int256 sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
             _asset(),
             spotPrice,
             strike,
             timeToMaturity
         );
+
+        //TODO: remove once getvolatility() is uint256
         uint256 volAnnualized = uint256(sigma);
+
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
             strike,
@@ -323,23 +353,20 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         );
 
         uint256 premium = size * uint256(price);
-        // todo: enso / professors function call do compute the spread
-        uint256 spread;
-        // connect with the corresponding pool to mint shorts + longs
+        
+        // TODO: enso / professors function call do determine the spread
+        // TODO: embed the trading fee into the spread (requires calculating fee)
+        uint256 spread = 0;
+
+        // TODO: call mint function to receive shorts + longs
 
         // Handle the premiums and spread capture generated
-        _handleTradeFees(premium, spread);
-
-        // below code could belong to the _handleTradeFees function
-        l.totalLockedSpread += spread;
-        uint256 spreadRate = spread / timeToMaturity;
-        // todo: we need to update totalLockedSpread before updating the spreadUnlockingRate (!)
-        // todo: otherwise there will be an inconsistency and too much spread will be deducted since lastSpreadUpdate
-        // todo: call _updateState()
-        l.spreadUnlockingRate += spreadRate;
-
-        l.totalAssets += premium + spread;
-        l.totalLockedAssets += size;
+        _handleTradeFees(
+            premium, 
+            spread, 
+            size, 
+            timeToMaturity
+        );
 
         return premium;
     }
