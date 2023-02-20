@@ -265,7 +265,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             emit CancelTradeQuote(msg.sender, hashes[i]);
         }
     }
-    
+
     /// @inheritdoc IPoolCore
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
@@ -277,14 +277,15 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
 
-        return _ensureQuoteAndBalanceAreValid(
-            l,
-            FillQuoteArgsInternal(msg.sender, size, v, r, s),
-            tradeQuote,
-            tradeQuoteHash
-        );
+        return
+            _areQuoteAndBalanceValid(
+                l,
+                FillQuoteArgsInternal(msg.sender, size, v, r, s),
+                tradeQuote,
+                tradeQuoteHash
+            );
     }
-    
+
     /// @inheritdoc IPoolCore
     function getTradeQuoteFilledAmount(
         address provider,

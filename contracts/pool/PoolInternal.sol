@@ -1817,7 +1817,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__AboveMaxSlippage();
     }
 
-    function _ensureQuoteAndBalanceAreValid(
+    function _areQuoteAndBalanceValid(
         PoolStorage.Layout storage l,
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
