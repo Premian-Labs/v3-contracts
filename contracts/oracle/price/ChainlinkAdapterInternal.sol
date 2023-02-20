@@ -251,89 +251,115 @@ abstract contract ChainlinkAdapterInternal is
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD;
         } else if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
-            return _tryWithBTCUSDBases(tokenB, PricingPath.TOKEN_WBTC);
+            return _tryWithUSDThenBTCQuote(tokenB, PricingPath.TOKEN_WBTC);
         } else if (isTokenBUSD) {
             return
-                _tryWithETHUSDBases(
+                _tryWithUSDThenETHQuote(
                     tokenA,
                     PricingPath.TOKEN_USD,
                     PricingPath.A_ETH_USD_B
                 );
         } else if (isTokenAUSD) {
             return
-                _tryWithETHUSDBases(
+                _tryWithUSDThenETHQuote(
                     tokenB,
                     PricingPath.TOKEN_USD,
                     PricingPath.A_USD_ETH_B
                 );
         } else if (isTokenBETH) {
             return
-                _tryWithETHUSDBases(
+                _tryWithETHThenUSDQuote(
                     tokenA,
-                    PricingPath.A_USD_ETH_B,
-                    PricingPath.TOKEN_ETH
+                    PricingPath.TOKEN_ETH,
+                    PricingPath.A_USD_ETH_B
                 );
         } else if (isTokenAETH) {
             return
-                _tryWithETHUSDBases(
+                _tryWithETHThenUSDQuote(
                     tokenB,
-                    PricingPath.A_ETH_USD_B,
-                    PricingPath.TOKEN_ETH
+                    PricingPath.TOKEN_ETH,
+                    PricingPath.A_ETH_USD_B
                 );
         } else if (_exists(tokenA, Denominations.USD)) {
             return
-                _tryWithETHUSDBases(
+                _tryWithUSDThenETHQuote(
                     tokenB,
                     PricingPath.TOKEN_USD_TOKEN,
                     PricingPath.A_USD_ETH_B
                 );
         } else if (_exists(tokenA, Denominations.ETH)) {
             return
-                _tryWithETHUSDBases(
+                _tryWithETHThenUSDQuote(
                     tokenB,
-                    PricingPath.A_ETH_USD_B,
-                    PricingPath.TOKEN_ETH_TOKEN
+                    PricingPath.TOKEN_ETH_TOKEN,
+                    PricingPath.A_ETH_USD_B
                 );
         }
 
         return PricingPath.NONE;
     }
 
-    function _tryWithBTCUSDBases(
-        address token,
-        PricingPath ifBTC
-    ) internal view returns (PricingPath) {
-        (address firstBase, address secondBaseBase) = (
-            Denominations.USD,
-            Denominations.BTC
-        );
-
-        if (_exists(token, firstBase) || _exists(token, secondBaseBase)) {
-            return ifBTC;
-        } else {
-            return PricingPath.NONE;
-        }
-    }
-
-    function _tryWithETHUSDBases(
+    /// @dev checks if token/USD feed exists, if not, checks if token/ETH feed exists
+    /// Note: prioritizes path with least external calls
+    function _tryWithUSDThenETHQuote(
         address token,
         PricingPath ifUSD,
         PricingPath ifETH
     ) internal view returns (PricingPath) {
-        // Note: we are prioritizing paths that have fewer external calls
-        (
-            address firstBase,
-            PricingPath firstResult,
-            address secondBaseBase,
-            PricingPath secondResult
-        ) = ifUSD < ifETH
-                ? (Denominations.USD, ifUSD, Denominations.ETH, ifETH)
-                : (Denominations.ETH, ifETH, Denominations.USD, ifUSD);
+        return
+            _tryWithQuote(
+                token,
+                Denominations.USD,
+                ifUSD,
+                Denominations.ETH,
+                ifETH
+            );
+    }
 
-        if (_exists(token, firstBase)) {
-            return firstResult;
-        } else if (_exists(token, secondBaseBase)) {
-            return secondResult;
+    /// @dev checks if token/USD feed exists, if not, checks if token/BTC feed exists
+    /// Note: prioritizes path with least external calls
+    function _tryWithUSDThenBTCQuote(
+        address token,
+        PricingPath ifBTC
+    ) internal view returns (PricingPath) {
+        return
+            _tryWithQuote(
+                token,
+                Denominations.USD,
+                ifBTC,
+                Denominations.BTC,
+                ifBTC
+            );
+    }
+
+    /// @dev checks if token/ETH feed exists, if not, checks if token/USD feed exists
+    /// Note: prioritizes path with least external calls
+    function _tryWithETHThenUSDQuote(
+        address token,
+        PricingPath ifETH,
+        PricingPath ifUSD
+    ) internal view returns (PricingPath) {
+        return
+            _tryWithQuote(
+                token,
+                Denominations.ETH,
+                ifETH,
+                Denominations.USD,
+                ifUSD
+            );
+    }
+
+    function _tryWithQuote(
+        address token,
+        address firstQuote,
+        PricingPath firstPath,
+        address secondQuote,
+        PricingPath secondPath
+    ) internal view returns (PricingPath) {
+        if (_exists(token, firstQuote)) {
+            return firstPath;
+        } else if (_exists(token, secondQuote)) {
+            return secondPath;
         } else {
             return PricingPath.NONE;
         }
