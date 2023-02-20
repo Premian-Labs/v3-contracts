@@ -11,11 +11,11 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param premium The total cost of option(s) for a purchase
+    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
     /// @return The taker fee for an option trade
     function takerFee(
         uint256 size,
-        uint256 premium
+        uint256 normalizedPremium
     ) external pure returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
