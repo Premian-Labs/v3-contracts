@@ -147,7 +147,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         PricingPath path
     ) internal view returns (uint256) {
-        int256 diff = _getDecimals(tokenIn) - _getDecimals(tokenOut);
+        int256 diff = _decimals(tokenIn) - _decimals(tokenOut);
         int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
@@ -360,7 +360,7 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _getDecimals(address token) internal view returns (int256) {
+    function _decimals(address token) internal view returns (int256) {
         if (_isETH(token)) {
             return ETH_DECIMALS;
         } else if (!AddressUtils.isContract(token)) {
