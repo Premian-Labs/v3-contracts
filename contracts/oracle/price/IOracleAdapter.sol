@@ -18,14 +18,14 @@ interface IOracleAdapter {
         address tokenB
     ) external view returns (bool isCached, bool hasPath);
 
-    /// @notice Add or reconfigures the support for a given pair. This function will let the oracle take some actions to configure the
-    ///         pair, in preparation for future quotes. Can be called many times in order to let the oracle re-configure for a new
-    ///         context
-    /// @dev Will revert if pair cannot be supported or has already been added. tokenA and tokenB may be passed in either tokenA/tokenB
-    ///      or tokenB/tokenA order
+    /// @notice Maps the given token pair to a path or updates an existing mapping. This function will
+    ///         let the adapter take some actions to configure the pair, in preparation for future quotes.
+    ///         Can be called many times in order to let the adapter re-configure for a new context
+    /// @dev Will revert if pair cannot be supported or has already been added. tokenA and tokenB may be
+    ///      passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA The exchange token (base token)
     /// @param tokenB The token to quote against (quote token)
-    function addOrModifySupportForPair(address tokenA, address tokenB) external;
+    function upsertPair(address tokenA, address tokenB) external;
 
     /// @notice Returns a quote, based on the given token pair. If the pair has not been added
     ///         the adapter will attempt to add it

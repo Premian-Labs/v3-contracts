@@ -46,11 +46,8 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IOracleAdapter
-    function addOrModifySupportForPair(
-        address tokenA,
-        address tokenB
-    ) external {
-        _addOrModifySupportForPair(tokenA, tokenB);
+    function upsertPair(address tokenA, address tokenB) external {
+        _upsertPair(tokenA, tokenB);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -65,7 +62,7 @@ contract ChainlinkAdapter is
         ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
 
         if (path == PricingPath.NONE) {
-            _addOrModifySupportForPair(tokenIn, tokenOut);
+            _upsertPair(tokenIn, tokenOut);
 
             (
                 path,

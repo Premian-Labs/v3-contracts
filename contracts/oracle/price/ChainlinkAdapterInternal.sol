@@ -55,10 +55,7 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _addOrModifySupportForPair(
-        address tokenA,
-        address tokenB
-    ) internal {
+    function _upsertPair(address tokenA, address tokenB) internal {
         (
             address mappedTokenA,
             address mappedTokenB

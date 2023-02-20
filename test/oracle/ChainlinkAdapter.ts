@@ -160,10 +160,10 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#addOrModifySupportForPair', () => {
+  describe('#upsertPair', () => {
     it('should revert if pair cannot be supported', async () => {
       await expect(
-        instance.addOrModifySupportForPair(
+        instance.upsertPair(
           bnToAddress(BigNumber.from(0)),
           tokens.WETH.address,
         ),
@@ -174,10 +174,7 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should not fail if called multiple times for same pair', async () => {
-      await instance.addOrModifySupportForPair(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
+      await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
 
       const [isCached, _] = await instance.isPairSupported(
         tokens.WETH.address,
@@ -186,10 +183,7 @@ describe('ChainlinkAdapter', () => {
 
       expect(isCached).to.be.true;
 
-      await instance.addOrModifySupportForPair(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
+      await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
     });
   });
 
@@ -308,10 +302,7 @@ describe('ChainlinkAdapter', () => {
       let tokenIn = tokens.WETH;
       let tokenOut = tokens.DAI;
 
-      await instance.addOrModifySupportForPair(
-        tokenIn.address,
-        tokenOut.address,
-      );
+      await instance.upsertPair(tokenIn.address, tokenOut.address);
 
       let quote = await instance.quote(tokenIn.address, tokenOut.address);
       let invertedQuote = await instance.quote(
@@ -324,10 +315,7 @@ describe('ChainlinkAdapter', () => {
       tokenIn = tokens.CRV;
       tokenOut = tokens.AAVE;
 
-      await instance.addOrModifySupportForPair(
-        tokenIn.address,
-        tokenOut.address,
-      );
+      await instance.upsertPair(tokenIn.address, tokenOut.address);
 
       quote = await instance.quote(tokenIn.address, tokenOut.address);
       invertedQuote = await instance.quote(tokenOut.address, tokenIn.address);
@@ -341,10 +329,7 @@ describe('ChainlinkAdapter', () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
-            await instance.addOrModifySupportForPair(
-              tokenIn.address,
-              tokenOut.address,
-            );
+            await instance.upsertPair(tokenIn.address, tokenOut.address);
           });
 
           describe('#isPairSupported', () => {
