@@ -25,14 +25,14 @@ const blockNumber = 16600000;
 
 enum PricingPath {
   NONE,
-  ETH_USD_PAIR,
-  TOKEN_USD_PAIR,
-  TOKEN_ETH_PAIR,
-  TOKEN_TO_USD_TO_TOKEN_PAIR,
-  TOKEN_TO_ETH_TO_TOKEN_PAIR,
-  TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
-  TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-  TOKEN_WBTC_PAIR,
+  ETH_USD,
+  TOKEN_USD,
+  TOKEN_ETH,
+  TOKEN_USD_TOKEN,
+  TOKEN_ETH_TOKEN,
+  A_USD_ETH_B,
+  A_ETH_USD_B,
+  TOKEN_WBTC,
 }
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -41,70 +41,70 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 {
   paths = [
     [
-      // ETH_USD_PAIR
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.CHAINLINK_USD, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
-      { path: PricingPath.ETH_USD_PAIR, tokenIn: tokens.CHAINLINK_ETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
+      // ETH_USD
+      { path: PricingPath.ETH_USD, tokenIn: tokens.WETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
+      { path: PricingPath.ETH_USD, tokenIn: tokens.CHAINLINK_USD, tokenOut: tokens.WETH }, // IN is USD, OUT is ETH
+      { path: PricingPath.ETH_USD, tokenIn: tokens.CHAINLINK_ETH, tokenOut: tokens.CHAINLINK_USD }, // IN is ETH, OUT is USD
     ],
     [
-      // TOKEN_USD_PAIR
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
-      { path: PricingPath.TOKEN_USD_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
+      // TOKEN_USD
+      { path: PricingPath.TOKEN_USD, tokenIn: tokens.DAI, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
+      { path: PricingPath.TOKEN_USD, tokenIn: tokens.AAVE, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
     ],
     [
-      // TOKEN_ETH_PAIR
-      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.BNT, tokenOut: tokens.WETH }, // IN (tokenA) => OUT (tokenB) is ETH
-      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
-      { path: PricingPath.TOKEN_ETH_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
+      // TOKEN_ETH
+      { path: PricingPath.TOKEN_ETH, tokenIn: tokens.BNT, tokenOut: tokens.WETH }, // IN (tokenA) => OUT (tokenB) is ETH
+      { path: PricingPath.TOKEN_ETH, tokenIn: tokens.AXS, tokenOut: tokens.WETH }, // IN (tokenB) => OUT (tokenA) is ETH
+      { path: PricingPath.TOKEN_ETH, tokenIn: tokens.WETH, tokenOut: tokens.CRV }, // IN (tokenA) is ETH => OUT (tokenB)
     ],
     [
-      // TOKEN_TO_USD_TO_TOKEN_PAIR
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenA) => USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.AAVE, tokenOut: tokens.DAI }, // IN (tokenB) => USD => OUT (tokenA)
+      // TOKEN_USD_TOKEN
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenA) => USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.AAVE, tokenOut: tokens.DAI }, // IN (tokenB) => USD => OUT (tokenA)
 
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => USD => OUT (tokenA)
-      { path: PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
     ],
     [
-      // TOKEN_TO_ETH_TO_TOKEN_PAIR
-      { path: PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.BOND, tokenOut: tokens.AXS }, // IN (tokenA) => ETH => OUT (tokenB)
-      { path: PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR, tokenIn: tokens.ALPHA, tokenOut: tokens.BOND }, // IN (tokenB) => ETH => OUT (tokenA)
+      // TOKEN_ETH_TOKEN
+      { path: PricingPath.TOKEN_ETH_TOKEN, tokenIn: tokens.BOND, tokenOut: tokens.AXS }, // IN (tokenA) => ETH => OUT (tokenB)
+      { path: PricingPath.TOKEN_ETH_TOKEN, tokenIn: tokens.ALPHA, tokenOut: tokens.BOND }, // IN (tokenB) => ETH => OUT (tokenA)
     ],
     [
-      // TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.WETH }, // IN (tokenA) => USD, OUT (tokenB) is ETH
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.MATIC }, // IN (tokenB) is ETH, USD => OUT (tokenA)
+      // A_USD_ETH_B
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.FXS, tokenOut: tokens.WETH }, // IN (tokenA) => USD, OUT (tokenB) is ETH
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.WETH, tokenOut: tokens.MATIC }, // IN (tokenB) is ETH, USD => OUT (tokenA)
 
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.DAI, tokenOut: tokens.ALPHA }, 
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.USDC, tokenOut: tokens.AXS }, // IN (tokenA) is USD, ETH => OUT (tokenB)
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.ALPHA, tokenOut: tokens.DAI }, // IN (tokenB) => ETH, OUT is USD (tokenA)
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.DAI, tokenOut: tokens.ALPHA }, 
 
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
-      { path: PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
     ],
     [
-      // TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B
+      // A_ETH_USD_B
       // We can't test the following two cases, because we would need a token that is
       // supported by chainlink and lower than USD (address(840))
       // - IN (tokenA) => ETH, OUT (tokenB) is USD
       // - IN (tokenB) is USD, ETH => OUT (tokenA)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.WETH, tokenOut: tokens.IMX }, // IN (tokenA) is ETH, USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.IMX, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
+      { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.WETH, tokenOut: tokens.IMX }, // IN (tokenA) is ETH, USD => OUT (tokenB)
+      { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.IMX, tokenOut: tokens.WETH }, // IN (tokenB) => USD, OUT is ETH (tokenA)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.AXS, tokenOut: tokens.IMX }, // IN (tokenA) => ETH, USD => OUT (tokenB)
+      { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.AXS, tokenOut: tokens.IMX }, // IN (tokenA) => ETH, USD => OUT (tokenB)
 
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => ETH, USD => OUT (tokenA)
-      { path: PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => USD, ETH => OUT (tokenB) 
+      { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.FXS, tokenOut: tokens.BOND }, // IN (tokenB) => ETH, USD => OUT (tokenA)
+      { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => USD, ETH => OUT (tokenB) 
     ],
     [
-      // TOKEN_WBTC_PAIR
-      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
-      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_WBTC_PAIR, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
+      // TOKEN_WBTC
+      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
+      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
     ]
   ];
 }

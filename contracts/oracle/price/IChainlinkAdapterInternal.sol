@@ -15,21 +15,21 @@ interface IChainlinkAdapterInternal {
         // There is no path calculated
         NONE,
         // Will use the ETH/USD feed
-        ETH_USD_PAIR,
+        ETH_USD,
         // Will use a token/USD feed
-        TOKEN_USD_PAIR,
+        TOKEN_USD,
         // Will use a token/ETH feed
-        TOKEN_ETH_PAIR,
+        TOKEN_ETH,
         // Will use tokenIn/USD and tokenOut/USD feeds
-        TOKEN_TO_USD_TO_TOKEN_PAIR,
+        TOKEN_USD_TOKEN,
         // Will use tokenIn/ETH and tokenOut/ETH feeds
-        TOKEN_TO_ETH_TO_TOKEN_PAIR,
+        TOKEN_ETH_TOKEN,
         // Will use tokenA/USD, tokenB/ETH and ETH/USD feeds
-        TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
+        A_USD_ETH_B,
         // Will use tokenA/ETH, tokenB/USD and ETH/USD feeds
-        TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
+        A_ETH_USD_B,
         // Will use a token/WBTC feed
-        TOKEN_WBTC_PAIR
+        TOKEN_WBTC
     }
 
     /// @notice Thrown when the last price update exceeds the max delay

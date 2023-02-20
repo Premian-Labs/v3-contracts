@@ -44,11 +44,11 @@ abstract contract ChainlinkAdapterInternal is
         address mappedTokenIn,
         address mappedTokenOut
     ) internal view returns (uint256) {
-        if (path <= PricingPath.TOKEN_ETH_PAIR) {
+        if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
-        } else if (path <= PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR) {
+        } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
             return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
-        } else if (path <= PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B) {
+        } else if (path <= PricingPath.A_ETH_USD_B) {
             return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
         } else {
             return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut);
@@ -129,25 +129,21 @@ abstract contract ChainlinkAdapterInternal is
         PricingPath path
     ) internal view returns (uint256) {
         int256 factor = ETH_DECIMALS -
-            (
-                path == PricingPath.TOKEN_ETH_PAIR
-                    ? ETH_DECIMALS
-                    : FOREX_DECIMALS
-            );
+            (path == PricingPath.TOKEN_ETH ? ETH_DECIMALS : FOREX_DECIMALS);
 
         uint256 price;
-        if (path == PricingPath.ETH_USD_PAIR) {
+        if (path == PricingPath.ETH_USD) {
             price = _getETHUSD();
-        } else if (path == PricingPath.TOKEN_USD_PAIR) {
+        } else if (path == PricingPath.TOKEN_USD) {
             price = _getPriceAgainstUSD(_isUSD(tokenOut) ? tokenIn : tokenOut);
-        } else if (path == PricingPath.TOKEN_ETH_PAIR) {
+        } else if (path == PricingPath.TOKEN_ETH) {
             price = _getPriceAgainstETH(_isETH(tokenOut) ? tokenIn : tokenOut);
         }
 
         price = _scale(price, factor);
 
         bool invert = _isUSD(tokenIn) ||
-            (path == PricingPath.TOKEN_ETH_PAIR && _isETH(tokenIn));
+            (path == PricingPath.TOKEN_ETH && _isETH(tokenIn));
 
         return invert ? price.inv() : price;
     }
@@ -161,7 +157,7 @@ abstract contract ChainlinkAdapterInternal is
         int256 diff = _getDecimals(tokenIn) - _getDecimals(tokenOut);
         int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
 
-        address base = path == PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR
+        address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
             : Denominations.ETH;
 
@@ -183,11 +179,9 @@ abstract contract ChainlinkAdapterInternal is
         int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
         uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(), factor);
 
-        bool isTokenInUSD = (path ==
-            PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B &&
+        bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
             tokenIn < tokenOut) ||
-            (path == PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B &&
-                tokenIn > tokenOut);
+            (path == PricingPath.A_ETH_USD_B && tokenIn > tokenOut);
 
         if (isTokenInUSD) {
             uint256 adjustedTokenInToUSD = _scale(
@@ -265,50 +259,50 @@ abstract contract ChainlinkAdapterInternal is
         bool isTokenBETH = _isETH(tokenB);
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
-            return PricingPath.ETH_USD_PAIR;
+            return PricingPath.ETH_USD;
         } else if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
-            return _tryWithBTCUSDBases(tokenB, PricingPath.TOKEN_WBTC_PAIR);
+            return _tryWithBTCUSDBases(tokenB, PricingPath.TOKEN_WBTC);
         } else if (isTokenBUSD) {
             return
                 _tryWithETHUSDBases(
                     tokenA,
-                    PricingPath.TOKEN_USD_PAIR,
-                    PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B
+                    PricingPath.TOKEN_USD,
+                    PricingPath.A_ETH_USD_B
                 );
         } else if (isTokenAUSD) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
-                    PricingPath.TOKEN_USD_PAIR,
-                    PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
+                    PricingPath.TOKEN_USD,
+                    PricingPath.A_USD_ETH_B
                 );
         } else if (isTokenBETH) {
             return
                 _tryWithETHUSDBases(
                     tokenA,
-                    PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B,
-                    PricingPath.TOKEN_ETH_PAIR
+                    PricingPath.A_USD_ETH_B,
+                    PricingPath.TOKEN_ETH
                 );
         } else if (isTokenAETH) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
-                    PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-                    PricingPath.TOKEN_ETH_PAIR
+                    PricingPath.A_ETH_USD_B,
+                    PricingPath.TOKEN_ETH
                 );
         } else if (_exists(tokenA, Denominations.USD)) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
-                    PricingPath.TOKEN_TO_USD_TO_TOKEN_PAIR,
-                    PricingPath.TOKEN_A_TO_USD_TO_ETH_TO_TOKEN_B
+                    PricingPath.TOKEN_USD_TOKEN,
+                    PricingPath.A_USD_ETH_B
                 );
         } else if (_exists(tokenA, Denominations.ETH)) {
             return
                 _tryWithETHUSDBases(
                     tokenB,
-                    PricingPath.TOKEN_A_TO_ETH_TO_USD_TO_TOKEN_B,
-                    PricingPath.TOKEN_TO_ETH_TO_TOKEN_PAIR
+                    PricingPath.A_ETH_USD_B,
+                    PricingPath.TOKEN_ETH_TOKEN
                 );
         }
 
