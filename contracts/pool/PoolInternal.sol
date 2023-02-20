@@ -785,24 +785,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    /// @notice Execute a trade by transferring the net change in short and long option
-    ///         contracts and collateral to / from an agent.
-    function _updateUserAssets(
+    function _calculateAssetsUpdate(
         PoolStorage.Layout storage l,
         address user,
         uint256 totalPremium,
-        uint256 creditAmount,
         uint256 size,
-        bool isBuy,
-        bool transferCollateralToUser
-    ) internal returns (Delta memory delta) {
+        bool isBuy
+    ) internal view returns (Delta memory delta) {
         delta = _getTradeDelta(user, size, isBuy);
-
-        if (
-            (delta.longs == 0 && delta.shorts == 0) ||
-            (delta.longs > 0 && delta.shorts > 0) ||
-            (delta.longs < 0 && delta.shorts < 0)
-        ) revert Pool__InvalidAssetUpdate();
 
         bool _isBuy = delta.longs > 0 || delta.shorts < 0;
 
@@ -821,6 +811,28 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 totalPremium.toInt256() -
                 Math.max(shortCollateral, 0).toInt256();
         }
+
+        return delta;
+    }
+
+    /// @notice Execute a trade by transferring the net change in short and long option
+    ///         contracts and collateral to / from an agent.
+    function _updateUserAssets(
+        PoolStorage.Layout storage l,
+        address user,
+        uint256 totalPremium,
+        uint256 creditAmount,
+        uint256 size,
+        bool isBuy,
+        bool transferCollateralToUser
+    ) internal returns (Delta memory delta) {
+        delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
+
+        if (
+            (delta.longs == 0 && delta.shorts == 0) ||
+            (delta.longs > 0 && delta.shorts > 0) ||
+            (delta.longs < 0 && delta.shorts < 0)
+        ) revert Pool__InvalidAssetUpdate();
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
         // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
@@ -1900,8 +1912,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote
     ) internal view returns (bool, InvalidQuoteError) {
-        Delta memory delta = _getTradeDelta(
+        uint256 totalPremium = _getPremiumMaker(l, args, tradeQuote);
+
+        Delta memory delta = _calculateAssetsUpdate(
+            l,
             args.user,
+            totalPremium,
             args.size,
             tradeQuote.isBuy
         );
@@ -1912,27 +1928,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             (delta.longs < 0 && delta.shorts < 0)
         ) return (false, InvalidQuoteError.InvalidAssetUpdate);
 
-        bool _isBuy = delta.longs > 0 || delta.shorts < 0;
-        uint256 totalPremium = _getPremiumMaker(l, args, tradeQuote);
-        uint256 shortCollateral = Position.contractsToCollateral(
-            Math.abs(delta.shorts),
-            l.strike,
-            l.isCallPool
-        );
-
-        if (_isBuy) {
-            delta.collateral =
-                -Math.min(shortCollateral, 0).toInt256() -
-                totalPremium.toInt256();
-        } else {
-            delta.collateral =
-                totalPremium.toInt256() -
-                Math.max(shortCollateral, 0).toInt256();
-        }
-
         if (delta.collateral < 0) {
+            IERC20 token = IERC20(l.getPoolToken());
             if (
-                IERC20(l.getPoolToken()).allowance(args.user, address(this)) <
+                token.allowance(args.user, address(this)) <
                 uint256(-delta.collateral)
             ) {
                 return (
@@ -1941,10 +1940,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
             }
 
-            if (
-                IERC20(l.getPoolToken()).balanceOf(args.user) <
-                uint256(-delta.collateral)
-            ) {
+            if (token.balanceOf(args.user) < uint256(-delta.collateral)) {
                 return (false, InvalidQuoteError.InsufficientCollateralBalance);
             }
         }
@@ -1971,27 +1967,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote
     ) internal view returns (uint256) {
-        FillQuoteVarsInternal memory vars;
-
-        vars.premium = tradeQuote.price.mul(args.size);
-        vars.protocolFee = Position.contractsToCollateral(
-            _takerFee(args.size, vars.premium),
+        uint256 premium = tradeQuote.price.mul(args.size);
+        uint256 protocolFee = Position.contractsToCollateral(
+            _takerFee(args.size, premium),
             l.strike,
             l.isCallPool
         );
 
         // Denormalize premium
-        vars.premium = Position.contractsToCollateral(
-            vars.premium,
+        premium = Position.contractsToCollateral(
+            premium,
             l.strike,
             l.isCallPool
         );
 
-        vars.premiumMaker = tradeQuote.isBuy
-            ? vars.premium // Maker buying
-            : vars.premium - vars.protocolFee; // Maker selling
-
-        return vars.premiumMaker;
+        return
+            tradeQuote.isBuy
+                ? premium // Maker buying
+                : premium - protocolFee; // Maker selling
     }
 
     function _ensureOperator(address operator) internal view {
