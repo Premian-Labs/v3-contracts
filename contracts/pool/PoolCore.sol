@@ -284,22 +284,29 @@ contract PoolCore is IPoolCore, PoolInternal {
             category,
             l.tradeQuoteCategoryNonce[msg.sender][category]
         );
-    }    
+    }
     
     /// @inheritdoc IPoolCore
     function isTradeQuoteValid(
-        address provider,
-        bytes32 tradeQuoteHash,
-        uint256 fillSize
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external view returns (bool) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
 
-        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
+        _ensureQuoteIsValid(
+            l,
+            FillQuoteArgsInternal(msg.sender, size, v, r, s),
+            tradeQuote,
+            tradeQuoteHash
+        );
 
         return true;
     }
-
+    
     /// @inheritdoc IPoolCore
     function getTradeQuoteFilledAmount(
         address provider,

@@ -236,13 +236,17 @@ interface IPoolCore is IPoolInternal {
     function increaseTradeQuoteCategoryNonce(uint256 category) external;
 
     /// @notice Returns whether or not a quote is valid, given a fill size
-    /// @param provider Provider of the quote
-    /// @param tradeQuoteHash Hash of the quote
-    /// @param fillSize Size to fill from the quote
+    /// @param tradeQuote The quote to check
+    /// @param size Size to fill from the quote
+    /// @param v secp256k1 'v' value
+    /// @param r secp256k1 'r' value
+    /// @param s secp256k1 's' value
     function isTradeQuoteValid(
-        address provider,
-        bytes32 tradeQuoteHash,
-        uint256 fillSize
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external view returns (bool);
 
     /// @notice Returns the size already filled for a given quote
