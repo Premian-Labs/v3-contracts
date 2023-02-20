@@ -46,7 +46,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _getSpotPrice(uint256 timestamp) internal view returns (uint256) {
+    function _getSpotPrice(uint256 timestamp) internal pure returns (uint256) {
+        //TODO: change function to view once hydrated
+        if (timestamp == 0){
+            revert Vault__ZeroTimestamp();
+        }
         //TODO: implement spot oracle
         return 2800;
     }
@@ -133,7 +137,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
     }
 
-    function _getPricePerShare() internal view returns (uint256) {
+    function _getPricePerShare() internal pure returns (uint256) {
+        // TODO: change function to view once hydrated
         // UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         //return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
         return 1;
@@ -196,6 +201,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     function _maxWithdraw(
         address owner
     ) override internal view virtual returns (uint256) {
+        if (owner == address(0)){
+            revert Vault__AddressZero();
+        }
         return _getAvailable();
     }
 
@@ -241,15 +249,46 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         address receiver,
         uint256 assetAmount,
         uint256 shareAmount
-    ) override internal virtual {}
+    ) override internal virtual {
+
+        if (receiver == address(0)){
+            revert Vault__AddressZero();
+        }
+        if (assetAmount == 0){
+            revert Vault__ZeroAsset();
+        }
+        if (shareAmount == 0){
+            revert Vault__ZEROShares();
+        }
+    }
 
     function _beforeWithdraw(
         address owner,
         uint256 assetAmount,
         uint256 shareAmount
-    ) override internal virtual {}
+    ) override internal virtual {
+        if (owner == address(0)){
+            revert Vault__AddressZero();
+        }
+        if (assetAmount == 0){
+            revert Vault__ZeroAsset();
+        }
+        if (shareAmount == 0){
+            revert Vault__ZEROShares();
+        }
+    }
 
-    function _isValidListing(uint256 strike, uint256 maturity) internal view returns (bool){
+    function _isValidListing(
+        uint256 strike, 
+        uint256 maturity
+    ) internal pure returns (bool){
+        //TODO: channge function to view once hydrated
+        if (strike == 0){
+            revert Vault__AddressZero();
+        }
+        if (maturity == 0){
+            revert Vault__MaturityZero();
+        }
         //TODO: query base layer factory => getPoolAddress(PoolKey memory k) external view returns (address)
         //NOTE: query returns address(0) if no listing exists
         //TODO: check the delta and dte are within our trader vault range
@@ -279,7 +318,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 spread, 
         uint256 size, 
         uint256 timeToMaturity
-    ) internal view {
+    ) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         // below code could belong to the _handleTradeFees function
         l.totalLockedSpread += spread;
@@ -299,9 +338,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        // set taker to the function caller
-        address taker = msg.sender;
-
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Validate listing
@@ -372,7 +408,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     }
 
     /// @inheritdoc IUnderwriterVault
-    function settle() override external returns (uint256) {
+    function settle() override external pure returns (uint256) {
+        //TODO: remove pure when hydrated
         return 0;
     }
 

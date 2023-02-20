@@ -13,6 +13,12 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__OptionExpired();
     error Vault__OptionPoolNotListed();
     error Vault__OptionPoolNotSupported();
+    error Vault__ZEROShares();
+    error Vault__AddressZero();
+    error Vault__ZeroAsset();
+    error Vault__StrikeZero();
+    error Vault__MaturityZero();
+    error Vault__ZeroTimestamp();
 
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option
@@ -21,7 +27,6 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     // @param size The number of contracts
     // @return The premium paid for this option.
     function buy(
-        address taker,
         uint256 strike,
         uint256 maturity,
         uint256 size
