@@ -459,7 +459,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(tokenA, tokenB));
+        return keccak256(abi.encode(tokenA, tokenB));
     }
 
     function _getETHUSD() internal view returns (uint256) {
