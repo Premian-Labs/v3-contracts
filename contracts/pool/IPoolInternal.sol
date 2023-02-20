@@ -11,6 +11,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveMaxSlippage();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientLiquidity();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
     error Pool__InvalidQuoteNonce();
@@ -22,6 +23,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidSwapTokenIn();
     error Pool__InvalidSwapTokenOut();
     error Pool__LongOrShortMustBeZero();
+    error Pool__NegativeSpotPrice();
     error Pool__NotAuthorized();
     error Pool__NotEnoughSwapOutput();
     error Pool__NotEnoughTokens();
@@ -37,6 +39,14 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
     error Pool__ZeroSize();
+
+    struct Tick {
+        int256 delta;
+        uint256 externalFeeRate;
+        int256 longDelta;
+        int256 shortDelta;
+        uint256 counter;
+    }
 
     struct SwapArgs {
         // token to pass in to swap (Must be poolToken for `tradeAndSwap`)
@@ -136,9 +146,7 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct FillQuoteVarsInternal {
         uint256 premium;
-        uint256 takerFee;
         uint256 protocolFee;
-        uint256 makerRebate;
         uint256 premiumTaker;
         uint256 premiumMaker;
     }

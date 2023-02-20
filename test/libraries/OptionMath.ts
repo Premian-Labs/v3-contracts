@@ -287,8 +287,8 @@ describe('OptionMath', () => {
   describe('#calculateStrikeInterval', () => {
     for (let c of getStrikeIntervals()) {
       it(`should return ${c[1]} when spot price is ${c[0]}`, async () => {
-        let strike = parseEther(c[0].toString());
-        let interval = await instance.calculateStrikeInterval(strike);
+        let spot = parseEther(c[0].toString());
+        let interval = await instance.calculateStrikeInterval(spot);
 
         expect(interval).to.eq(parseEther(c[1].toString()));
       });

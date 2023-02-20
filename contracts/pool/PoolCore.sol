@@ -9,18 +9,20 @@ import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
+    using Position for Position.Key;
 
     constructor(
+        address factory,
         address exchangeHelper,
         address wrappedNativeToken
-    ) PoolInternal(exchangeHelper, wrappedNativeToken) {}
+    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
     function takerFee(
         uint256 size,
-        uint256 premium
+        uint256 normalizedPremium
     ) external pure returns (uint256) {
-        return _takerFee(size, premium);
+        return _takerFee(size, normalizedPremium);
     }
 
     /// @inheritdoc IPoolCore
@@ -60,6 +62,18 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function claim(Position.Key memory p) external {
         _claim(p);
+    }
+
+    /// @inheritdoc IPoolCore
+    function getClaimableFees(
+        Position.Key memory p
+    ) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        Position.Data storage pData = l.positions[p.keyHash()];
+
+        (uint256 pendingClaimableFees, ) = _pendingClaimableFees(l, p, pData);
+
+        return pData.claimableFees + pendingClaimableFees;
     }
 
     /// @inheritdoc IPoolCore

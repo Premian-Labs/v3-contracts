@@ -6,14 +6,15 @@ import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/Aggr
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
-import {Tick} from "../libraries/Tick.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
     using PoolStorage for PoolStorage.Layout;
     using SafeCast for int256;
+    using UD60x18 for uint256;
 
     // Token id for SHORT
     uint256 internal constant SHORT = 0;
@@ -43,7 +44,7 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         DoublyLinkedList.Uint256List tickIndex;
-        mapping(uint256 => Tick.Data) ticks;
+        mapping(uint256 => IPoolInternal.Tick) ticks;
         uint256 marketPrice;
         uint256 globalFeeRate;
         uint256 protocolFees;
@@ -59,6 +60,8 @@ library PoolStorage {
         mapping(bytes32 => Position.Data) positions;
         // Gets incremented everytime `fillQuote` is called successfully
         mapping(address => uint256) tradeQuoteNonce;
+        // Set to true after maturity, to handle factory initialization discount
+        bool hasRemoved;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -78,20 +81,22 @@ library PoolStorage {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
-            int256 quotePrice = getSpotPrice(l.quoteOracle);
-            int256 basePrice = getSpotPrice(l.baseOracle);
+            uint256 quotePrice = getSpotPrice(l.quoteOracle);
+            uint256 basePrice = getSpotPrice(l.baseOracle);
 
-            l.spot = ((basePrice * 1e18) / quotePrice).toUint256();
+            l.spot = basePrice.div(quotePrice);
         }
 
         return l.spot;
     }
 
-    function getSpotPrice(address oracle) internal view returns (int256) {
+    function getSpotPrice(address oracle) internal view returns (uint256) {
         // TODO: Add spot price validation
 
         int256 price = AggregatorInterface(oracle).latestAnswer();
-        return price;
+        if (price < 0) revert IPoolInternal.Pool__NegativeSpotPrice();
+
+        return price.toUint256();
     }
 
     /// @notice calculate ERC1155 token id for given option parameters

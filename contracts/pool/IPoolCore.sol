@@ -11,11 +11,11 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param premium The total cost of option(s) for a purchase
+    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
     /// @return The taker fee for an option trade
     function takerFee(
         uint256 size,
-        uint256 premium
+        uint256 normalizedPremium
     ) external pure returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
@@ -53,6 +53,13 @@ interface IPoolCore is IPoolInternal {
     ///         zero.
     /// @param p The position key
     function claim(Position.Key memory p) external;
+
+    /// @notice Returns total claimable fees for the position
+    /// @param p The position key
+    /// @return The total claimable fees for the position
+    function getClaimableFees(
+        Position.Key memory p
+    ) external view returns (uint256);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
