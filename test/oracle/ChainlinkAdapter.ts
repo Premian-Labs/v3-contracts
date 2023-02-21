@@ -32,7 +32,7 @@ enum PricingPath {
   TOKEN_ETH_TOKEN,
   A_USD_ETH_B,
   A_ETH_USD_B,
-  TOKEN_WBTC,
+  TOKEN_USD_BTC_WBTC,
 }
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -109,12 +109,15 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       { path: PricingPath.A_ETH_USD_B, tokenIn: tokens.BOND, tokenOut: tokens.FXS }, // IN (tokenA) => USD, ETH => OUT (tokenB) 
     ],
     [
-      // TOKEN_WBTC
-      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
-      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
-      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
-      { path: PricingPath.TOKEN_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
+      // TOKEN_USD_BTC_WBTC
+      // Note: Assumes WBTC/USD feed does not exist
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => BTC, OUT is USD
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.CHAINLINK_BTC }, // IN (tokenA) => BTC, OUT is BTC
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.WETH }, // IN (tokenA) => BTC, OUT is ETH (tokenB)
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) is ETH, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD, BTC => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => BTC, USD => OUT (tokenB)
+      { path: PricingPath.TOKEN_USD_BTC_WBTC, tokenIn: tokens.WBTC, tokenOut: tokens.BNT }, // IN (tokenA) => USD,  BTC => OUT (tokenB)
     ]
   ];
 }

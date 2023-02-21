@@ -201,7 +201,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut
     ) internal view returns (uint256) {
-        bool isWBTC = _isWBTC(tokenIn);
+        bool isTokenInWBTC = _isWBTC(tokenIn);
         int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
 
         uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(), factor).mul(
@@ -209,12 +209,12 @@ abstract contract ChainlinkAdapterInternal is
         );
 
         uint256 adjustedTokenToUSD = _scale(
-            _getPriceAgainstUSD(!isWBTC ? tokenIn : tokenOut),
+            _getPriceAgainstUSD(!isTokenInWBTC ? tokenIn : tokenOut),
             factor
         );
 
         uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
-        return !isWBTC ? price.inv() : price;
+        return !isTokenInWBTC ? price.inv() : price;
     }
 
     function _getPriceAgainstUSD(
@@ -266,32 +266,32 @@ abstract contract ChainlinkAdapterInternal is
             srcToken = isTokenAWBTC ? tokenB : tokenA;
             conversionType = ConversionType.ToBtc;
             // PricingPath used are same, but effective path slightly differs because of the 2 attempts in `_tryToFindPath`
-            preferredPath = PricingPath.TOKEN_WBTC; // Token -> USD -> BTC -> WBTC
-            fallbackPath = PricingPath.TOKEN_WBTC; // Token -> BTC -> WBTC
+            preferredPath = PricingPath.TOKEN_USD_BTC_WBTC; // Token -> USD -> BTC -> WBTC
+            fallbackPath = PricingPath.TOKEN_USD_BTC_WBTC; // Token -> BTC -> WBTC
         } else if (isTokenBUSD) {
             // If tokenB is USD, we want to convert tokenA to USD
             srcToken = tokenA;
             conversionType = ConversionType.ToUsd;
             preferredPath = PricingPath.TOKEN_USD;
-            fallbackPath = PricingPath.A_ETH_USD_B; // USD -> B is skipped, as B == USD
+            fallbackPath = PricingPath.A_ETH_USD_B; // USD -> B is skipped, if B == USD
         } else if (isTokenAUSD) {
             // If tokenA is USD, we want to convert tokenB to USD
             srcToken = tokenB;
             conversionType = ConversionType.ToUsd;
             preferredPath = PricingPath.TOKEN_USD;
-            fallbackPath = PricingPath.A_USD_ETH_B; // A -> USD is skipped, as A == USD
+            fallbackPath = PricingPath.A_USD_ETH_B; // A -> USD is skipped, if A == USD
         } else if (isTokenBETH) {
             // If tokenB is ETH, we want to convert tokenA to ETH
             srcToken = tokenA;
             conversionType = ConversionType.ToEth;
             preferredPath = PricingPath.TOKEN_ETH;
-            fallbackPath = PricingPath.A_USD_ETH_B; // B -> ETH is skipped, as B == ETH
+            fallbackPath = PricingPath.A_USD_ETH_B; // B -> ETH is skipped, if B == ETH
         } else if (isTokenAETH) {
             // If tokenA is ETH, we want to convert tokenB to ETH
             srcToken = tokenB;
             conversionType = ConversionType.ToEth;
             preferredPath = PricingPath.TOKEN_ETH;
-            fallbackPath = PricingPath.A_ETH_USD_B; // A -> ETH is skipped, as A == ETH
+            fallbackPath = PricingPath.A_ETH_USD_B; // A -> ETH is skipped, if A == ETH
         } else if (_exists(tokenA, Denominations.USD)) {
             // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively convert tokenB -> tokenA
             srcToken = tokenB;
