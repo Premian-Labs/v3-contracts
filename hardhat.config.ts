@@ -88,6 +88,11 @@ export default {
       accounts: [pkeyTestnet],
       timeout: 300000,
     },
+    arbitrumNova: {
+      url: `https://nova.arbitrum.io/rpc`,
+      accounts: [pkeyMainnet],
+      timeout: 300000,
+    },
   },
 
   abiExporter: {

@@ -8,7 +8,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
-import {Tick} from "../libraries/Tick.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
@@ -45,7 +44,7 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         DoublyLinkedList.Uint256List tickIndex;
-        mapping(uint256 => Tick.Data) ticks;
+        mapping(uint256 => IPoolInternal.Tick) ticks;
         uint256 marketPrice;
         uint256 globalFeeRate;
         uint256 protocolFees;
@@ -59,8 +58,8 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Gets incremented everytime `fillQuote` is called successfully
-        mapping(address => uint256) tradeQuoteNonce;
+        // Size of quotes already filled (provider -> quoteHash -> amountFilled)
+        mapping(address => mapping(bytes32 => uint256)) tradeQuoteAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }

@@ -39,15 +39,23 @@ interface IPoolEvents {
     );
 
     event FillQuote(
+        bytes32 indexed tradeQuoteHash,
         address indexed user,
         address indexed provider,
         uint256 contractSize,
         IPoolInternal.Delta deltaMaker,
         IPoolInternal.Delta deltaTaker,
         uint256 premium,
-        uint256 takerFee,
         uint256 protocolFee,
         bool isBuy
+    );
+
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        uint256 contractSize,
+        uint256 collateral,
+        uint256 protocolFee
     );
 
     event Trade(
@@ -98,4 +106,6 @@ interface IPoolEvents {
         uint256 srcTokenId,
         uint256 destTokenId
     );
+
+    event CancelTradeQuote(address indexed provider, bytes32 tradeQuoteHash);
 }

@@ -46,6 +46,8 @@ library OptionMath {
     int256 internal constant S2 = 0.44334159e18;
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
+    error OptionMath__NonPositiveVol();
+
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x 59x18 fixed point representation of the input to the normal CDF
     /// @return result 59x18 fixed point representation of the value of the evaluated helper function
@@ -131,6 +133,8 @@ library OptionMath {
         int256 _spot = spot.toInt256();
         int256 _strike = strike.toInt256();
 
+        if (volAnnualized == 0) revert OptionMath__NonPositiveVol();
+
         if (timeToMaturity == 0) {
             if (isCall) {
                 return relu(_spot - _strike);
@@ -143,13 +147,6 @@ library OptionMath {
             discountFactor = riskFreeRate.mul(timeToMaturity).toInt256().exp();
         } else {
             discountFactor = ONE_I;
-        }
-
-        if (volAnnualized == 0) {
-            if (isCall) {
-                return relu(_spot - _strike.div(discountFactor));
-            }
-            return relu(_strike.div(discountFactor) - _spot);
         }
 
         (int256 d1, int256 d2) = d1d2(

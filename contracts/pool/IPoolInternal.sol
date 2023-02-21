@@ -9,11 +9,16 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
+    error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientCollateralAllowance();
+    error Pool__InsufficientCollateralBalance();
+    error Pool__InsufficientLiquidity();
+    error Pool__InsufficientLongBalance();
+    error Pool__InsufficientShortBalance();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
-    error Pool__InvalidQuoteNonce();
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
@@ -32,12 +37,22 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
+    error Pool__QuoteCancelled();
     error Pool__QuoteExpired();
+    error Pool__QuoteOverfilled();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
     error Pool__ZeroSize();
+
+    struct Tick {
+        int256 delta;
+        uint256 externalFeeRate;
+        int256 longDelta;
+        int256 shortDelta;
+        uint256 counter;
+    }
 
     struct SwapArgs {
         // token to pass in to swap (Must be poolToken for `tradeAndSwap`)
@@ -59,13 +74,20 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeQuote {
+        // The provider of the quote
         address provider;
+        // The taker of the quote (address(0) if quote should be usable by anyone)
         address taker;
+        // The normalized option price
         uint256 price;
+        // The max size
         uint256 size;
+        // Whether provider is buying or selling
         bool isBuy;
-        uint256 nonce;
+        // Timestamp until which the quote is valid
         uint256 deadline;
+        // Salt to make quote unique
+        uint256 salt;
     }
 
     struct Delta {
@@ -122,25 +144,40 @@ interface IPoolInternal is IPosition, IPricing {
         bool isFullWithdrawal;
     }
 
+    struct Signature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
+
     struct FillQuoteArgsInternal {
         // The user filling the quote
         address user;
         // The size to fill from the quote
         uint256 size;
-        // secp256k1 'v' value
-        uint8 v;
-        // secp256k1 'r' value
-        bytes32 r;
-        // secp256k1 's' value
-        bytes32 s;
+        // secp256k1 concatenated 'r', 's', and 'v' value
+        Signature signature;
     }
 
-    struct FillQuoteVarsInternal {
+    struct PremiumAndFeeInternal {
         uint256 premium;
-        uint256 takerFee;
         uint256 protocolFee;
-        uint256 makerRebate;
         uint256 premiumTaker;
         uint256 premiumMaker;
+    }
+
+    enum InvalidQuoteError {
+        None,
+        QuoteExpired,
+        QuoteCancelled,
+        QuoteOverfilled,
+        OutOfBoundsPrice,
+        InvalidQuoteTaker,
+        InvalidQuoteSignature,
+        InvalidAssetUpdate,
+        InsufficientCollateralAllowance,
+        InsufficientCollateralBalance,
+        InsufficientLongBalance,
+        InsufficientShortBalance
     }
 }
