@@ -24,22 +24,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    address public IV_ORACLE_ADDR;
-    address public FACTORY_ADDR;
+    address internal immutable IV_ORACLE_ADDR;
+    address internal immutable FACTORY_ADDR;
 
     constructor (
         address oracleAddress, 
         address factoryAddress
     ) {
         IV_ORACLE_ADDR = oracleAddress;
-        FACTORY_ADDR = factoryAddress;
-    }
-
-    function setOracleAddr(address oracleAddress) external onlyOwner {
-        IV_ORACLE_ADDR = oracleAddress;
-    }
-
-    function setFactoryAddr(address factoryAddress) external onlyOwner {
         FACTORY_ADDR = factoryAddress;
     }
 
