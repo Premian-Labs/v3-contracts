@@ -265,25 +265,25 @@ abstract contract ChainlinkAdapterInternal is
             srcToken = tokenA;
             conversionType = ConversionType.ToUsd;
             preferredPath = PricingPath.TOKEN_USD;
-            fallbackPath = PricingPath.A_ETH_USD_B;
+            fallbackPath = PricingPath.A_ETH_USD_B; // USD -> B is skipped, as B == USD
         } else if (isTokenAUSD) {
             // If tokenA is USD, we want to convert tokenB to USD
             srcToken = tokenB;
             conversionType = ConversionType.ToUsd;
             preferredPath = PricingPath.TOKEN_USD;
-            fallbackPath = PricingPath.A_USD_ETH_B;
+            fallbackPath = PricingPath.A_USD_ETH_B; // A -> USD is skipped, as A == USD
         } else if (isTokenBETH) {
             // If tokenB is ETH, we want to convert tokenA to ETH
             srcToken = tokenA;
             conversionType = ConversionType.ToEth;
             preferredPath = PricingPath.TOKEN_ETH;
-            fallbackPath = PricingPath.A_USD_ETH_B;
+            fallbackPath = PricingPath.A_USD_ETH_B; // B -> ETH is skipped, as B == ETH
         } else if (isTokenAETH) {
             // If tokenA is ETH, we want to convert tokenB to ETH
             srcToken = tokenB;
             conversionType = ConversionType.ToEth;
             preferredPath = PricingPath.TOKEN_ETH;
-            fallbackPath = PricingPath.A_ETH_USD_B;
+            fallbackPath = PricingPath.A_ETH_USD_B; // A -> ETH is skipped, as A == ETH
         } else if (_exists(tokenA, Denominations.USD)) {
             // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively convert tokenB -> tokenA
             srcToken = tokenB;
