@@ -1840,7 +1840,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
             revert Pool__InvalidQuoteTaker();
 
-        address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
+        address signer = ECDSA.recover(
+            tradeQuoteHash,
+            args.signature.v,
+            args.signature.r,
+            args.signature.s
+        );
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
 

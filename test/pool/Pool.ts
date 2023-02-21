@@ -128,16 +128,14 @@ describe('Pool', () => {
     }
 
     getTradeQuote = async () => {
-      const timestamp = await now();
+      const timestamp = BigNumber.from(await now());
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
         price: parseEther('0.1'),
         size: parseEther('10'),
         isBuy: false,
-        category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
-        categoryNonce: BigNumber.from(0),
-        deadline: BigNumber.from(timestamp + ONE_HOUR),
+        deadline: timestamp.add(ONE_HOUR),
         salt: timestamp,
       };
     };
@@ -1128,9 +1126,7 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool
-        .connect(trader)
-        .fillQuote(quote, quote.size, sig.v, sig.r, sig.s);
+      await callPool.connect(trader).fillQuote(quote, quote.size, sig);
 
       const premium = BigNumber.from(quote.price).mul(
         bnToNumber(BigNumber.from(quote.size)),
@@ -1165,9 +1161,7 @@ describe('Pool', () => {
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteExpired');
     });
 
@@ -1178,18 +1172,14 @@ describe('Pool', () => {
       let sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
 
       quote.price = parseEther('1').add(1);
       sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OutOfBoundsPrice');
     });
 
@@ -1200,9 +1190,7 @@ describe('Pool', () => {
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
       await expect(
-        callPool
-          .connect(deployer)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(deployer).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteTaker');
     });
 
@@ -1225,18 +1213,10 @@ describe('Pool', () => {
 
       await callPool
         .connect(trader)
-        .fillQuote(
-          quote,
-          BigNumber.from(quote.size).div(2),
-          sig.v,
-          sig.r,
-          sig.s,
-        );
+        .fillQuote(quote, BigNumber.from(quote.size).div(2), sig);
 
       await expect(
-        callPool
-          .connect(deployer)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(deployer).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteOverfilled');
     });
 
@@ -1251,9 +1231,7 @@ describe('Pool', () => {
           .fillQuote(
             { ...quote, size: BigNumber.from(quote.size).mul(2).toString() },
             quote.size,
-            sig.v,
-            sig.r,
-            sig.s,
+            sig,
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidQuoteSignature');
     });
@@ -1272,9 +1250,7 @@ describe('Pool', () => {
         ]);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig.v, sig.r, sig.s),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteCancelled');
     });
   });
@@ -1297,9 +1273,7 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool
-        .connect(trader)
-        .fillQuote(quote, quote.size.div(2), sig.v, sig.r, sig.s);
+      await callPool.connect(trader).fillQuote(quote, quote.size.div(2), sig);
 
       const tradeQuoteHash = await calculateQuoteHash(
         lp.provider!,

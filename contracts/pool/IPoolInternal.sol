@@ -139,17 +139,19 @@ interface IPoolInternal is IPosition, IPricing {
         bool isFullWithdrawal;
     }
 
+    struct Signature {
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+    }
+
     struct FillQuoteArgsInternal {
         // The user filling the quote
         address user;
         // The size to fill from the quote
         uint256 size;
-        // secp256k1 'v' value
-        uint8 v;
-        // secp256k1 'r' value
-        bytes32 r;
-        // secp256k1 's' value
-        bytes32 s;
+        // secp256k1 concatenated 'r', 's', and 'v' value
+        Signature signature;
     }
 
     struct FillQuoteVarsInternal {
