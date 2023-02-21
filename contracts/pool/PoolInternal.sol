@@ -52,7 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
-            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)"
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)"
         );
 
     constructor(
@@ -67,13 +67,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param premium The total cost of option(s) for a purchase
+    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
     /// @return The taker fee for an option trade
     function _takerFee(
         uint256 size,
-        uint256 premium
+        uint256 normalizedPremium
     ) internal pure returns (uint256) {
-        uint256 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
+        uint256 premiumFee = normalizedPremium.mul(PREMIUM_FEE_PERCENTAGE);
         // 3% of premium
         uint256 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
         // 0.3% of notional
@@ -885,7 +885,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ] += args.size;
 
             vars.premium = tradeQuote.price.mul(args.size);
-            vars.takerFee = Position.contractsToCollateral(
+            vars.protocolFee = Position.contractsToCollateral(
                 _takerFee(args.size, vars.premium),
                 l.strike,
                 l.isCallPool
@@ -898,8 +898,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.isCallPool
             );
 
-            vars.protocolFee = vars.takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
-            vars.makerRebate = vars.takerFee - vars.protocolFee;
             l.protocolFees += vars.protocolFee;
 
             /////////////////////////
@@ -908,7 +906,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             vars.premiumTaker = !tradeQuote.isBuy
                 ? vars.premium // Taker Buying
-                : vars.premium - vars.takerFee; // Taker selling
+                : vars.premium - vars.protocolFee; // Taker selling
 
             deltaTaker = _updateUserAssets(
                 l,
@@ -939,7 +937,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // incrementing the global rate
 
             vars.premiumMaker = tradeQuote.isBuy
-                ? vars.premium - vars.makerRebate // Maker buying
+                ? vars.premium // Maker buying
                 : vars.premium - vars.protocolFee; // Maker selling
 
             deltaMaker = _updateUserAssets(
@@ -961,7 +959,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaMaker,
             deltaTaker,
             vars.premium,
-            vars.takerFee,
             vars.protocolFee,
             !tradeQuote.isBuy
         );
@@ -1767,7 +1764,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.price,
                 tradeQuote.size,
                 tradeQuote.isBuy,
-                tradeQuote.deadline
+                tradeQuote.deadline,
+                tradeQuote.salt
             )
         );
 
@@ -1842,7 +1840,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
             revert Pool__InvalidQuoteTaker();
 
-        address signer = ECDSA.recover(tradeQuoteHash, args.signature.v, args.signature.r, args.signature.s);
+        address signer = ECDSA.recover(
+            tradeQuoteHash,
+            args.signature.v,
+            args.signature.r,
+            args.signature.s
+        );
         if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
     }
 

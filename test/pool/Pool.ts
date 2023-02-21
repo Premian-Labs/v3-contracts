@@ -128,6 +128,7 @@ describe('Pool', () => {
     }
 
     getTradeQuote = async () => {
+      const timestamp = await now();
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
@@ -136,7 +137,8 @@ describe('Pool', () => {
         isBuy: false,
         category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
         categoryNonce: BigNumber.from(0),
-        deadline: BigNumber.from((await now()) + ONE_HOUR),
+        deadline: BigNumber.from(timestamp + ONE_HOUR),
+        salt: timestamp,
       };
     };
   });
@@ -1132,12 +1134,10 @@ describe('Pool', () => {
         bnToNumber(BigNumber.from(quote.size)),
       );
 
-      const fee = (await callPool.takerFee(quote.size, premium))
-        .mul(parseEther(protocolFeePercentage.toString()))
-        .div(ONE_ETHER);
+      const protocolFee = await callPool.takerFee(quote.size, premium);
 
       expect(await base.balanceOf(lp.address)).to.eq(
-        initialBalance.sub(quote.size).add(premium).sub(fee),
+        initialBalance.sub(quote.size).add(premium).sub(protocolFee),
       );
       expect(await base.balanceOf(trader.address)).to.eq(
         initialBalance.sub(premium),
@@ -1252,9 +1252,7 @@ describe('Pool', () => {
         ]);
 
       await expect(
-        callPool
-          .connect(trader)
-          .fillQuote(quote, quote.size, sig),
+        callPool.connect(trader).fillQuote(quote, quote.size, sig),
       ).to.be.revertedWithCustomError(callPool, 'Pool__QuoteCancelled');
     });
   });
@@ -1277,9 +1275,7 @@ describe('Pool', () => {
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
-      await callPool
-        .connect(trader)
-        .fillQuote(quote, quote.size.div(2), sig);
+      await callPool.connect(trader).fillQuote(quote, quote.size.div(2), sig);
 
       const tradeQuoteHash = await calculateQuoteHash(
         lp.provider!,

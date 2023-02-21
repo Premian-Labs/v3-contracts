@@ -19,17 +19,22 @@ Dotenv.config();
 
 const {
   API_KEY_ALCHEMY,
-  API_KEY_ETHERSCAN,
-  API_KEY_OPTIMISM,
   API_KEY_ARBISCAN,
-  API_KEY_FTMSCAN,
   PKEY_ETH_MAIN,
   PKEY_ETH_TEST,
-  FORK_MODE,
-  FORK_BLOCK_NUMBER,
   REPORT_GAS,
   CACHE_PATH,
 } = process.env;
+
+// As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
+const pkeyMainnet =
+  PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
+    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    : PKEY_ETH_MAIN;
+const pkeyTestnet =
+  PKEY_ETH_TEST == undefined || PKEY_ETH_TEST.length == 0
+    ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+    : PKEY_ETH_TEST;
 
 export default {
   solidity: {
@@ -53,85 +58,21 @@ export default {
     hardhat: {
       allowUnlimitedContractSize: true,
       blockGasLimit: 180000000000,
-      ...(FORK_MODE === 'true'
-        ? {
-            forking: {
-              url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-              blockNumber: parseInt(FORK_BLOCK_NUMBER ?? '13717777'),
-            },
-          }
-        : {}),
-    },
-    mainnet: {
-      url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [PKEY_ETH_MAIN],
-      //gas: 120000000000,
-      // blockGasLimit: 120000000000,
-      // gasPrice: 100000000000,
-      timeout: 100000,
-    },
-    rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [PKEY_ETH_TEST],
-      //gas: 120000000000,
-      blockGasLimit: 120000000000,
-      //gasPrice: 10,
-      timeout: 300000,
-    },
-    kovan: {
-      url: `https://eth-kovan.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [PKEY_ETH_TEST],
-      //gas: 120000000000,
-      blockGasLimit: 120000000000,
-      //gasPrice: 10,
-      timeout: 300000,
-    },
-    ropsten: {
-      url: `https://eth-ropsten.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-      accounts: [PKEY_ETH_TEST],
-      //gas: 120000000000,
-      blockGasLimit: 120000000000,
-      //gasPrice: 10,
-      timeout: 300000,
-    },
-    optimism: {
-      url: `https://mainnet.optimism.io`,
-      accounts: [PKEY_ETH_MAIN],
-      timeout: 300000,
     },
     arbitrum: {
-      url: `https://arb1.arbitrum.io/rpc`,
-      accounts: [PKEY_ETH_MAIN],
-      //gas: 120000000000,
-      // blockGasLimit: 120000000000,
-      //gasPrice: 10,
+      url: `https://arb-mainnet.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
+      accounts: [pkeyMainnet],
+      timeout: 300000,
+    },
+    goerli: {
+      url: `https://eth-goerli.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
+      accounts: [pkeyTestnet],
       timeout: 300000,
     },
     arbitrumNova: {
       url: `https://nova.arbitrum.io/rpc`,
-      accounts: [PKEY_ETH_MAIN],
-      //gas: 120000000000,
-      // blockGasLimit: 120000000000,
-      //gasPrice: 10,
+      accounts: [pkeyMainnet],
       timeout: 300000,
-    },
-    rinkebyArbitrum: {
-      url: `https://rinkeby.arbitrum.io/rpc`,
-      accounts: [PKEY_ETH_TEST],
-      //gas: 120000000000,
-      // blockGasLimit: 120000000000,
-      // gasPrice: 100000000000,
-      timeout: 100000,
-    },
-    fantomDev: {
-      url: `https://rpc.ftm.tools/`,
-      accounts: [PKEY_ETH_TEST],
-      timeout: 100000,
-    },
-    fantom: {
-      url: `https://rpc.ftm.tools/`,
-      accounts: [PKEY_ETH_MAIN],
-      timeout: 100000,
     },
   },
 
@@ -150,10 +91,7 @@ export default {
 
   etherscan: {
     apiKey: {
-      mainnet: API_KEY_ETHERSCAN,
       arbitrumOne: API_KEY_ARBISCAN,
-      opera: API_KEY_FTMSCAN,
-      optimisticEthereum: API_KEY_OPTIMISM,
     },
   },
 

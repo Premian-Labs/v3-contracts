@@ -86,15 +86,21 @@ describe('PoolFactory', () => {
 
   revertToSnapshotAfterEach(async () => {});
 
-  describe('#isPoolDeployed', () => {
-    it('should return false if no pool has been deployed with given parameters', async () => {
-      expect(await p.poolFactory.isPoolDeployed(poolKey)).to.be.false;
+  describe('#getPoolAddress', () => {
+    it('should return address(0) if no pool has been deployed with given parameters', async () => {
+      expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(
+        ethers.constants.AddressZero,
+      );
     });
 
-    it('should return true if a pool with given parameters has been deployed', async () => {
-      await p.poolFactory.deployPool(poolKey, { value: parseEther('1') });
+    it('should return the pool address if a pool with given parameters has been deployed', async () => {
+      const tx = await p.poolFactory.deployPool(poolKey, {
+        value: parseEther('1'),
+      });
+      const r = await tx.wait(1);
+      const poolAddress = (r as any).events[0].args.poolAddress;
 
-      expect(await p.poolFactory.isPoolDeployed(poolKey)).to.be.true;
+      expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(poolAddress);
     });
   });
 

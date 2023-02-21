@@ -31,32 +31,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function isPoolDeployed(PoolKey memory k) external view returns (bool) {
-        return _isPoolDeployed(k.poolKey());
+    function getPoolAddress(PoolKey memory k) external view returns (address) {
+        return _getPoolAddress(k.poolKey());
     }
 
-    function _isPoolDeployed(bytes32 poolKey) internal view returns (bool) {
-        return PoolFactoryStorage.layout().pools[poolKey] != address(0);
-    }
-
-    function getSpotPrice(
-        address baseOracle,
-        address quoteOracle
-    ) internal view returns (uint256 price) {
-        uint256 quotePrice = getSpotPrice(quoteOracle);
-        uint256 basePrice = getSpotPrice(baseOracle);
-        return basePrice.div(quotePrice);
-    }
-
-    function getSpotPrice(address oracle) internal view returns (uint256) {
-        // TODO: Add spot price validation
-
-        int256 price = AggregatorInterface(oracle).latestAnswer();
-        if (price < 0) revert PoolFactory__NegativeSpotPrice();
-
-        // TODO Replace with adapter, decimals should not be hard-coded
-
-        return price.toUint256() * 1e10;
+    function _getPoolAddress(bytes32 poolKey) internal view returns (address) {
+        return PoolFactoryStorage.layout().pools[poolKey];
     }
 
     // @inheritdoc IPoolFactory
@@ -69,9 +49,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             .toInt256()
             .pow(discountFactor.toInt256())
             .toUint256();
-        uint256 spot = getSpotPrice(k.baseOracle, k.quoteOracle);
+        uint256 spot = _getSpotPrice(k.baseOracle, k.quoteOracle);
         uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 nativeUsdPrice = getSpotPrice(NATIVE_USD_ORACLE);
+        uint256 nativeUsdPrice = _getSpotPrice(NATIVE_USD_ORACLE);
 
         return fee.mul(discount).div(nativeUsdPrice);
     }
@@ -110,7 +90,8 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k);
 
-        if (_isPoolDeployed(poolKey)) revert PoolFactory__PoolAlreadyDeployed();
+        if (_getPoolAddress(poolKey) != address(0))
+            revert PoolFactory__PoolAlreadyDeployed();
         if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
 
         payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
@@ -159,6 +140,26 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
+    function _getSpotPrice(
+        address baseOracle,
+        address quoteOracle
+    ) internal view returns (uint256 price) {
+        uint256 quotePrice = _getSpotPrice(quoteOracle);
+        uint256 basePrice = _getSpotPrice(baseOracle);
+        return basePrice.div(quotePrice);
+    }
+
+    function _getSpotPrice(address oracle) internal view returns (uint256) {
+        // TODO: Add spot price validation
+
+        int256 price = AggregatorInterface(oracle).latestAnswer();
+        if (price < 0) revert PoolFactory__NegativeSpotPrice();
+
+        // TODO Replace with adapter, decimals should not be hard-coded
+
+        return price.toUint256() * 1e10;
+    }
+
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
     function _ensureOptionStrikeIsValid(
         uint256 strike,
@@ -167,7 +168,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
-        uint256 spot = getSpotPrice(baseOracle, quoteOracle);
+        uint256 spot = _getSpotPrice(baseOracle, quoteOracle);
         uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != 0)

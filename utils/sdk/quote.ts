@@ -62,6 +62,7 @@ export async function signQuote(
         { name: 'size', type: 'uint256' },
         { name: 'isBuy', type: 'bool' },
         { name: 'deadline', type: 'uint256' },
+        { name: 'salt', type: 'uint256' },
       ],
     },
     primaryType: 'FillQuote',
@@ -80,7 +81,7 @@ export async function calculateQuoteHash(
 ) {
   const FILL_QUOTE_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)',
+      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
   );
 
@@ -120,6 +121,7 @@ export async function calculateQuoteHash(
         'uint256',
         'bool',
         'uint256',
+        'uint256',
       ],
       [
         FILL_QUOTE_TYPE_HASH,
@@ -129,6 +131,7 @@ export async function calculateQuoteHash(
         quote.size,
         quote.isBuy,
         quote.deadline,
+        quote.salt,
       ],
     ),
   );

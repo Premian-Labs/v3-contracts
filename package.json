@@ -23,10 +23,9 @@
     "compile": "hardhat compile",
     "compile:force": "hardhat compile --force",
     "deploy:orderbook": "hardhat run \"./scripts/deploy/0001-deployOrderbook.ts\" --network arbitrumNova",
-    "postinstall": "yarn compile",
+    "postinstall": "yarn compile && husky install",
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
-    "prepare": "husky install",
     "prettier": "prettier --write --ignore-path .gitignore ."
   },
   "devDependencies": {
@@ -66,5 +65,10 @@
     "typechain": "^8.1.1",
     "typescript": "^4.9.5"
   },
-  "packageManager": "yarn@3.4.1"
+  "packageManager": "yarn@3.4.1",
+  "peerDependencies": {
+    "@ethersproject/abi": "*",
+    "@ethersproject/bytes": "*",
+    "@ethersproject/providers": "*"
+  }
 }
