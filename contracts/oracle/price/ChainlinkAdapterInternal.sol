@@ -91,7 +91,7 @@ abstract contract ChainlinkAdapterInternal is
         view
         returns (PricingPath path, address mappedTokenA, address mappedTokenB)
     {
-        (mappedTokenA, mappedTokenB) = _mapPairToDenomination(tokenA, tokenB);
+        (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
         (address sortedA, address sortedB) = TokenSorting.sortTokens(
             mappedTokenA,
@@ -412,7 +412,7 @@ abstract contract ChainlinkAdapterInternal is
             ];
     }
 
-    /// @dev Should only map wrapped tokens which are guarenteed to have a 1:1 ratio
+    /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
     function _denomination(address token) internal view returns (address) {
         return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
@@ -421,7 +421,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (address, address) {
-        (address mappedTokenA, address mappedTokenB) = _mapPairToDenomination(
+        (address mappedTokenA, address mappedTokenB) = _mapToDenomination(
             tokenA,
             tokenB
         );
@@ -429,7 +429,7 @@ abstract contract ChainlinkAdapterInternal is
         return TokenSorting.sortTokens(mappedTokenA, mappedTokenB);
     }
 
-    function _mapPairToDenomination(
+    function _mapToDenomination(
         address tokenA,
         address tokenB
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
