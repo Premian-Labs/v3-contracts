@@ -123,15 +123,11 @@ interface IPoolCore is IPoolInternal {
     ///         fully while having the price guaranteed.
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote
-    /// @param v secp256k1 'v' value
-    /// @param r secp256k1 'r' value
-    /// @param s secp256k1 's' value
+    /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
     function fillQuote(
         TradeQuote memory tradeQuote,
         uint256 size,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature memory signature
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.

@@ -52,7 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
-            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)"
+            "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)"
         );
 
     constructor(
@@ -1767,7 +1767,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.price,
                 tradeQuote.size,
                 tradeQuote.isBuy,
-                tradeQuote.deadline
+                tradeQuote.deadline,
+                tradeQuote.salt
             )
         );
 
@@ -1888,7 +1889,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
             return (false, InvalidQuoteError.InvalidQuoteTaker);
 
-        address signer = ECDSA.recover(tradeQuoteHash, args.v, args.r, args.s);
+        address signer = ECDSA.recover(
+          tradeQuoteHash,
+          args.signature.v,
+          args.signature.r,
+          args.signature.s
+        );
         if (signer != tradeQuote.provider)
             return (false, InvalidQuoteError.InvalidQuoteSignature);
 

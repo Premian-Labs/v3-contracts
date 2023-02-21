@@ -38,4 +38,5 @@ export interface TradeQuote {
   size: BigNumber;
   isBuy: boolean;
   deadline: BigNumber;
+  salt: BigNumber;
 }

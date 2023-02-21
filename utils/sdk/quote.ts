@@ -8,6 +8,16 @@ import {
   toUtf8Bytes,
 } from 'ethers/lib/utils';
 
+interface QuoteMessage {
+  provider: string;
+  taker: string;
+  price: string;
+  size: string;
+  isBuy: boolean;
+  deadline: string;
+  salt: string;
+}
+
 interface Domain {
   name: string;
   version: string;
@@ -34,13 +44,13 @@ export async function signQuote(
     verifyingContract: poolAddress,
   };
 
-  const message: any = {
+  const message: QuoteMessage = {
     ...quote,
+    price: quote.price.toString(),
+    size: quote.size.toString(),
+    deadline: quote.deadline.toString(),
+    salt: quote.salt.toString(),
   };
-
-  message.price = quote.price.toString();
-  message.size = quote.size.toString();
-  message.deadline = quote.deadline.toString();
 
   const typedData = {
     types: {
@@ -52,6 +62,7 @@ export async function signQuote(
         { name: 'size', type: 'uint256' },
         { name: 'isBuy', type: 'bool' },
         { name: 'deadline', type: 'uint256' },
+        { name: 'salt', type: 'uint256' },
       ],
     },
     primaryType: 'FillQuote',
@@ -70,7 +81,7 @@ export async function calculateQuoteHash(
 ) {
   const FILL_QUOTE_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline)',
+      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
   );
 
@@ -110,6 +121,7 @@ export async function calculateQuoteHash(
         'uint256',
         'bool',
         'uint256',
+        'uint256',
       ],
       [
         FILL_QUOTE_TYPE_HASH,
@@ -119,6 +131,7 @@ export async function calculateQuoteHash(
         quote.size,
         quote.isBuy,
         quote.deadline,
+        quote.salt,
       ],
     ),
   );
