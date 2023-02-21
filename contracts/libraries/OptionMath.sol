@@ -65,7 +65,7 @@ library OptionMath {
         result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
     }
 
-    /// @notice Approximation of the Probability Density Function.
+    /// @notice Normal Distribution Probability Density Function.
     /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
     ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
@@ -109,6 +109,36 @@ library OptionMath {
             timeScaledVar.div(TWO).toInt256() +
             timeScaledRiskFreeRate.div(timeScaledVol).toInt256();
         d2 = d1 - timeScaledVol.toInt256();
+    }
+
+    /// @notice Calculate option delta
+    /// @param spot 60x18 fixed point representation of spot price
+    /// @param strike 60x18 fixed point representation of strike price
+    /// @param timeToMaturity 60x18 fixed point representation of duration of option contract (in years)
+    /// @param volAnnualized 60x18 fixed point representation of annualized volatility
+    /// @param isCall whether to price "call" or "put" option
+    /// @return price 60x18 fixed point representation of option delta
+    function optionDelta(
+        uint256 spot,
+        uint256 strike,
+        uint256 timeToMaturity,
+        uint256 volAnnualized,
+        uint256 riskFreeRate,
+        bool isCall
+    ) internal pure returns (int256) {
+        (int256 d1, int256 d2) = d1d2(
+            spot,
+            strike,
+            timeToMaturity,
+            volAnnualized,
+            riskFreeRate
+        );
+
+        if (isCall) {
+            return normalCdf(d1);
+        } else {
+            return normalCdf(-d1);
+        }
     }
 
     /// @notice Calculate the price of an option using the Black-Scholes model

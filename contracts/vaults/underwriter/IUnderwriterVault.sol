@@ -19,6 +19,7 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__StrikeZero();
     error Vault__MaturityZero();
     error Vault__ZeroTimestamp();
+    error Vault__ZeroVol();
 
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option

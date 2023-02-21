@@ -138,6 +138,43 @@ describe('OptionMath', () => {
     });
   });
 
+  describe('#delta', function () {
+    it('option delta test', async () => {
+      const strike59x18 = parseEther('1.');
+      const timeToMaturity59x18 = parseEther('0.1');
+      const varAnnualized59x18 = parseEther('0.');
+      const riskFreeRate59x18 = parseEther('0.');
+
+      for (const t of [
+        // calls
+        [parseEther('0.5'), true, 0.05],
+        [parseEther('0.8'), true, 0.1],
+        [parseEther('1.0'), true, 0.4],
+        [parseEther('1.2'), true, 0.5],
+        [parseEther('1.2'), true, 0.8],
+        [parseEther('2.2'), true, 1.0],
+        // puts
+        [parseEther('0.8'), true, -0.1],
+        [parseEther('1.0'), true, -0.4],
+        [parseEther('1.2'), true, -0.5],
+        [parseEther('1.2'), true, -0.8],
+        [parseEther('2.2'), true, -0.95],
+      ] as Array<[BigNumber, boolean, number]>) {
+        const result = formatEther(
+          await instance.optionDelta(
+            t[0],
+            strike59x18,
+            timeToMaturity59x18,
+            varAnnualized59x18,
+            riskFreeRate59x18,
+            t[1],
+          ),
+        );
+        expect(parseFloat(result)).to.eq(t[2]);
+      }
+    });
+  });
+
   describe('#isFriday', () => {
     describe('should return false if maturity is not Friday', () => {
       for (let c of [
