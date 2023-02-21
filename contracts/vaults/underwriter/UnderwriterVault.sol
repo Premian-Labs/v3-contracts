@@ -14,6 +14,8 @@ import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
+import {IPoolFactory} from "../../factory/IPoolFactory.sol";
+import {IPool} from "../../pool/IPool.sol";
 
 
 contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableInternal {
@@ -22,10 +24,23 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    address internal immutable IV_ORACLE;
+    address public IV_ORACLE;
+    address public FACTORY;
 
-    constructor (address oracleAddress) {
+    constructor (
+        address oracleAddress, 
+        address factoryAddress
+    ) {
         IV_ORACLE = oracleAddress;
+        FACTORY = factoryAddress;
+    }
+
+    function setOracleAddr(address oracleAddress) external onlyOwner {
+        IV_ORACLE = oracleAddress;
+    }
+
+    function setFactoryAddr(address factoryAddress) external onlyOwner {
+        FACTORY = factoryAddress;
     }
 
     function setVariable(uint256 value) external onlyOwner {
@@ -140,7 +155,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     function _getPricePerShare() internal pure returns (uint256) {
         // TODO: change function to view once hydrated
         // UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        //return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
+        // return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
         return 1;
     }
 
