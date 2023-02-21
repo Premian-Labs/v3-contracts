@@ -20,9 +20,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function takerFee(
         uint256 size,
-        uint256 normalizedPremium
-    ) external pure returns (uint256) {
-        return _takerFee(size, normalizedPremium);
+        uint256 premium,
+        bool isPremiumNormalized
+    ) external view returns (uint256) {
+        return
+            _takerFee(PoolStorage.layout(), size, premium, isPremiumNormalized);
     }
 
     /// @inheritdoc IPoolCore

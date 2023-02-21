@@ -67,17 +67,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
-    /// @return The taker fee for an option trade
+    /// @param premium The total cost of option(s) for a purchase
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @return The taker fee for an option trade denormalized
     function _takerFee(
+        PoolStorage.Layout storage l,
         uint256 size,
-        uint256 normalizedPremium
-    ) internal pure returns (uint256) {
-        uint256 premiumFee = normalizedPremium.mul(PREMIUM_FEE_PERCENTAGE);
-        // 3% of premium
+        uint256 premium,
+        bool isPremiumNormalized
+    ) internal view returns (uint256) {
+        uint256 strike = l.strike;
+        bool isCallPool = l.isCallPool;
+
+        if (!isPremiumNormalized) {
+            // Normalize premium
+            premium = Position.collateralToContracts(
+                premium,
+                strike,
+                isCallPool
+            );
+        }
+
+        uint256 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
         uint256 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
-        // 0.3% of notional
-        return Math.max(premiumFee, notionalFee);
+
+        return
+            Position.contractsToCollateral(
+                Math.max(premiumFee, notionalFee),
+                strike,
+                isCallPool
+            );
     }
 
     function _getTradeQuote(
@@ -123,11 +142,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 uint256 premium = Math
                     .average(pricing.marketPrice, nextPrice)
                     .mul(tradeSize);
-                uint256 takerFee = Position.contractsToCollateral(
-                    _takerFee(size, premium),
-                    l.strike,
-                    l.isCallPool
-                );
+                uint256 takerFee = _takerFee(l, size, premium, true);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(
@@ -649,11 +664,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                         premium = tradeQuotePrice.mul(tradeSize);
                     }
-                    uint256 takerFee = Position.contractsToCollateral(
-                        _takerFee(tradeSize, premium),
-                        l.strike,
-                        l.isCallPool
-                    );
+                    uint256 takerFee = _takerFee(l, tradeSize, premium, true);
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(
@@ -878,7 +889,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price.mul(size);
         r.protocolFee = Position.contractsToCollateral(
-            _takerFee(size, r.premium),
+            _takerFee(l, size, r.premium, true),
             l.strike,
             l.isCallPool
         );
