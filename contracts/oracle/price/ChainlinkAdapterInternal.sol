@@ -243,6 +243,8 @@ abstract contract ChainlinkAdapterInternal is
         bool isTokenBUSD = _isUSD(tokenB);
         bool isTokenAETH = _isETH(tokenA);
         bool isTokenBETH = _isETH(tokenB);
+        bool isTokenAWBTC = _isWBTC(tokenA);
+        bool isTokenBWBTC = _isWBTC(tokenB);
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD;
@@ -253,9 +255,15 @@ abstract contract ChainlinkAdapterInternal is
         PricingPath preferredPath;
         PricingPath fallbackPath;
 
-        if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
-            // If one of the token is WBTC, we want to convert the other token to WBTC
-            srcToken = _isWBTC(tokenA) ? tokenB : tokenA;
+        bool wbtcUSDFeedExists = _exists(
+            isTokenAWBTC ? tokenA : tokenB,
+            Denominations.USD
+        );
+
+        if ((isTokenAWBTC || isTokenBWBTC) && !wbtcUSDFeedExists) {
+            // If one of the token is WBTC and there is no WBTC/USD feed, we want to convert the other token to WBTC
+            // Note: If there is a WBTC/USD feed the preferred path is TOKEN_USD, TOKEN_USD_TOKEN, or A_USD_ETH_B
+            srcToken = isTokenAWBTC ? tokenB : tokenA;
             conversionType = ConversionType.ToBtc;
             // PricingPath used are same, but effective path slightly differs because of the 2 attempts in `_tryToFindPath`
             preferredPath = PricingPath.TOKEN_WBTC; // Token -> USD -> BTC -> WBTC

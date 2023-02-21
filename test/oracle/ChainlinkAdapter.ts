@@ -50,6 +50,10 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       // TOKEN_USD
       { path: PricingPath.TOKEN_USD, tokenIn: tokens.DAI, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
       { path: PricingPath.TOKEN_USD, tokenIn: tokens.AAVE, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
+
+      // Note: Assumes WBTC/USD feed exists
+      { path: PricingPath.TOKEN_USD, tokenIn: tokens.CHAINLINK_USD, tokenOut: tokens.WBTC }, // IN (tokenB) is USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD, tokenIn: tokens.WBTC, tokenOut: tokens.CHAINLINK_USD }, // IN (tokenA) => OUT (tokenB) is USD
     ],
     [
       // TOKEN_ETH
@@ -62,9 +66,12 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
       { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.CRV, tokenOut: tokens.AAVE }, // IN (tokenB) => USD => OUT (tokenA)
       { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.DAI, tokenOut: tokens.AAVE }, // IN (tokenA) => USD => OUT (tokenB)
       { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.AAVE, tokenOut: tokens.DAI }, // IN (tokenB) => USD => OUT (tokenA)
-
       { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.CRV, tokenOut: tokens.USDC }, // IN (tokenB) => USD => OUT (tokenA)
       { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.USDC, tokenOut: tokens.COMP }, // IN (tokenA) => USD => OUT (tokenB)
+
+      // Note: Assumes WBTC/USD feed exists
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.DAI, tokenOut: tokens.WBTC }, // IN (tokenB) => USD => OUT (tokenA)
+      { path: PricingPath.TOKEN_USD_TOKEN, tokenIn: tokens.WBTC, tokenOut: tokens.USDC }, // IN (tokenA) => USD => OUT (tokenB)
     ],
     [
       // TOKEN_ETH_TOKEN
@@ -82,6 +89,9 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
       { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.FXS, tokenOut: tokens.AXS }, // IN (tokenA) => USD, ETH => OUT (tokenB)
       { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.ALPHA, tokenOut: tokens.MATIC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
+
+      // Note: Assumes WBTC/USD feed exists
+      { path: PricingPath.A_USD_ETH_B, tokenIn: tokens.WETH, tokenOut: tokens.WBTC }, // IN (tokenB) => ETH, USD => OUT (tokenA)
     ],
     [
       // A_ETH_USD_B
@@ -166,6 +176,16 @@ describe('ChainlinkAdapter', () => {
         instance.upsertPair(
           bnToAddress(BigNumber.from(0)),
           tokens.WETH.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'OracleAdapter__PairCannotBeSupported',
+      );
+
+      await expect(
+        instance.upsertPair(
+          tokens.WBTC.address,
+          bnToAddress(BigNumber.from(0)),
         ),
       ).to.be.revertedWithCustomError(
         instance,
@@ -329,6 +349,20 @@ describe('ChainlinkAdapter', () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
+            if (
+              path == PricingPath.TOKEN_USD ||
+              path == PricingPath.TOKEN_USD_TOKEN ||
+              path == PricingPath.A_USD_ETH_B
+            ) {
+              await instance.batchRegisterFeedMappings([
+                {
+                  token: tokens.WBTC.address,
+                  denomination: tokens.CHAINLINK_USD.address,
+                  feed: '0xf4030086522a5beea4988f8ca5b36dbc97bee88c', // maps WBTC/USD to BTC/USD feed on Ethereum mainnet
+                },
+              ]);
+            }
+
             await instance.upsertPair(tokenIn.address, tokenOut.address);
           });
 
