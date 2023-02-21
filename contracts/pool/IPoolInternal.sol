@@ -81,6 +81,8 @@ interface IPoolInternal is IPosition, IPricing {
         bool isBuy;
         // Timestamp until which the quote is valid
         uint256 deadline;
+        // Salt to make quote unique
+        uint256 salt;
     }
 
     struct Delta {

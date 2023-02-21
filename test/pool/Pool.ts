@@ -128,6 +128,7 @@ describe('Pool', () => {
     }
 
     getTradeQuote = async () => {
+      const timestamp = await now();
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
@@ -136,7 +137,8 @@ describe('Pool', () => {
         isBuy: false,
         category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
         categoryNonce: BigNumber.from(0),
-        deadline: BigNumber.from((await now()) + ONE_HOUR),
+        deadline: BigNumber.from(timestamp + ONE_HOUR),
+        salt: timestamp,
       };
     };
   });
