@@ -28,13 +28,10 @@ contract ChainlinkAdapter is
         address tokenB
     ) external view returns (bool isCached, bool hasPath) {
         (
+            PricingPath path,
             address mappedTokenA,
             address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
-
-        PricingPath path = ChainlinkAdapterStorage.layout().pathForPair[
-            _keyForSortedPair(mappedTokenA, mappedTokenB)
-        ];
+        ) = _pathForPair(tokenA, tokenB, true);
 
         isCached = path != PricingPath.NONE;
 
