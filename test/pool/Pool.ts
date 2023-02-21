@@ -128,16 +128,14 @@ describe('Pool', () => {
     }
 
     getTradeQuote = async () => {
-      const timestamp = await now();
+      const timestamp = BigNumber.from(await now());
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
         price: parseEther('0.1'),
         size: parseEther('10'),
         isBuy: false,
-        category: BigNumber.from(keccak256(toUtf8Bytes('test-category'))),
-        categoryNonce: BigNumber.from(0),
-        deadline: BigNumber.from(timestamp + ONE_HOUR),
+        deadline: timestamp.add(ONE_HOUR),
         salt: timestamp,
       };
     };

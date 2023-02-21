@@ -14,9 +14,8 @@ interface QuoteMessage {
   price: string;
   size: string;
   isBuy: boolean;
-  category: string;
-  categoryNonce: string;
   deadline: string;
+  salt: string;
 }
 
 interface Domain {
@@ -50,6 +49,7 @@ export async function signQuote(
     price: quote.price.toString(),
     size: quote.size.toString(),
     deadline: quote.deadline.toString(),
+    salt: quote.salt.toString(),
   };
 
   const typedData = {
