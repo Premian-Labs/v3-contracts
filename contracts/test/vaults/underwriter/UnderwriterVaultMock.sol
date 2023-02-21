@@ -17,10 +17,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    constructor(
-        address oracleAddress,
-        address factoryAddress
-    ) UnderwriterVault(oracleAddress, factoryAddress) {}
+    constructor(address oracleAddress, address factoryAddress)
+        UnderwriterVault(oracleAddress, factoryAddress) {}
 
     function getTotalFairValue() external view returns (uint256) {
         return _getTotalFairValue();
@@ -66,7 +64,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().maturities.next(last);
     }
 
-    function getPricePerShare() external view returns (uint256) {
+    function getPricePerShare() external pure returns (uint256) {
         return _getPricePerShare();
     }
 
