@@ -646,7 +646,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
         uint256 protocolFee = Position.contractsToCollateral(
-            _takerFee(size, 0),
+            _takerFee(l, size, 0, true),
             l.strike,
             l.isCallPool
         );
