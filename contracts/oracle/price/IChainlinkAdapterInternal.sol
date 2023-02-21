@@ -32,6 +32,14 @@ interface IChainlinkAdapterInternal {
         TOKEN_WBTC
     }
 
+    enum ConversionType {
+        ToBtc, // Token -> BTC
+        ToUsd, // Token -> USD
+        ToEth, // Token -> ETH
+        ToUsdToToken, // Token -> USD -> Token
+        ToEthToToken // Token -> ETH -> Token
+    }
+
     /// @notice Thrown when the last price update exceeds the max delay
     /// @param timestamp Current timestamp
     /// @param updatedAt Timestamp of the last price update

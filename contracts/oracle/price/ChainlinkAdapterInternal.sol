@@ -246,116 +246,99 @@ abstract contract ChainlinkAdapterInternal is
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD;
-        } else if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
-            return _tryWithUSDThenBTCQuote(tokenB, PricingPath.TOKEN_WBTC);
-        } else if (isTokenBUSD) {
-            return
-                _tryWithUSDThenETHQuote(
-                    tokenA,
-                    PricingPath.TOKEN_USD,
-                    PricingPath.A_ETH_USD_B
-                );
-        } else if (isTokenAUSD) {
-            return
-                _tryWithUSDThenETHQuote(
-                    tokenB,
-                    PricingPath.TOKEN_USD,
-                    PricingPath.A_USD_ETH_B
-                );
-        } else if (isTokenBETH) {
-            return
-                _tryWithETHThenUSDQuote(
-                    tokenA,
-                    PricingPath.TOKEN_ETH,
-                    PricingPath.A_USD_ETH_B
-                );
-        } else if (isTokenAETH) {
-            return
-                _tryWithETHThenUSDQuote(
-                    tokenB,
-                    PricingPath.TOKEN_ETH,
-                    PricingPath.A_ETH_USD_B
-                );
-        } else if (_exists(tokenA, Denominations.USD)) {
-            return
-                _tryWithUSDThenETHQuote(
-                    tokenB,
-                    PricingPath.TOKEN_USD_TOKEN,
-                    PricingPath.A_USD_ETH_B
-                );
-        } else if (_exists(tokenA, Denominations.ETH)) {
-            return
-                _tryWithETHThenUSDQuote(
-                    tokenB,
-                    PricingPath.TOKEN_ETH_TOKEN,
-                    PricingPath.A_ETH_USD_B
-                );
         }
 
-        return PricingPath.NONE;
-    }
+        address srcToken;
+        ConversionType conversionType;
+        PricingPath preferredPath;
+        PricingPath fallbackPath;
 
-    /// @dev checks if token/USD feed exists, if not, checks if token/ETH feed exists
-    /// Note: prioritizes path with least external calls
-    function _tryWithUSDThenETHQuote(
-        address token,
-        PricingPath ifUSD,
-        PricingPath ifETH
-    ) internal view returns (PricingPath) {
+        if (_isWBTC(tokenA) || _isWBTC(tokenB)) {
+            // If one of the token is WBTC, we want to convert the other token to WBTC
+            srcToken = _isWBTC(tokenA) ? tokenB : tokenA;
+            conversionType = ConversionType.ToBtc;
+            // PricingPath used are same, but effective path slightly differs because of the 2 attempts in `_tryToFindPath`
+            preferredPath = PricingPath.TOKEN_WBTC; // Token -> USD -> BTC -> WBTC
+            fallbackPath = PricingPath.TOKEN_WBTC; // Token -> BTC -> WBTC
+        } else if (isTokenBUSD) {
+            // If tokenB is USD, we want to convert tokenA to USD
+            srcToken = tokenA;
+            conversionType = ConversionType.ToUsd;
+            preferredPath = PricingPath.TOKEN_USD;
+            fallbackPath = PricingPath.A_ETH_USD_B;
+        } else if (isTokenAUSD) {
+            // If tokenA is USD, we want to convert tokenB to USD
+            srcToken = tokenB;
+            conversionType = ConversionType.ToUsd;
+            preferredPath = PricingPath.TOKEN_USD;
+            fallbackPath = PricingPath.A_USD_ETH_B;
+        } else if (isTokenBETH) {
+            // If tokenB is ETH, we want to convert tokenA to ETH
+            srcToken = tokenA;
+            conversionType = ConversionType.ToEth;
+            preferredPath = PricingPath.TOKEN_ETH;
+            fallbackPath = PricingPath.A_USD_ETH_B;
+        } else if (isTokenAETH) {
+            // If tokenA is ETH, we want to convert tokenB to ETH
+            srcToken = tokenB;
+            conversionType = ConversionType.ToEth;
+            preferredPath = PricingPath.TOKEN_ETH;
+            fallbackPath = PricingPath.A_ETH_USD_B;
+        } else if (_exists(tokenA, Denominations.USD)) {
+            // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively convert tokenB -> tokenA
+            srcToken = tokenB;
+            conversionType = ConversionType.ToUsdToToken;
+            preferredPath = PricingPath.TOKEN_USD_TOKEN;
+            fallbackPath = PricingPath.A_USD_ETH_B;
+        } else if (_exists(tokenA, Denominations.ETH)) {
+            // If tokenA has an ETH feed, we want to convert tokenB to ETH, and then use tokenA ETH feed to effectively convert tokenB -> tokenA
+            srcToken = tokenB;
+            conversionType = ConversionType.ToEthToToken;
+            preferredPath = PricingPath.TOKEN_ETH_TOKEN;
+            fallbackPath = PricingPath.A_ETH_USD_B;
+        } else {
+            return PricingPath.NONE;
+        }
+
         return
-            _tryWithQuote(
-                token,
-                Denominations.USD,
-                ifUSD,
-                Denominations.ETH,
-                ifETH
+            _tryToFindPath(
+                srcToken,
+                conversionType,
+                preferredPath,
+                fallbackPath
             );
     }
 
-    /// @dev checks if token/USD feed exists, if not, checks if token/BTC feed exists
-    /// Note: prioritizes path with least external calls
-    function _tryWithUSDThenBTCQuote(
+    function _tryToFindPath(
         address token,
-        PricingPath ifBTC
+        ConversionType conversionType,
+        PricingPath preferredPath,
+        PricingPath fallbackPath
     ) internal view returns (PricingPath) {
-        return
-            _tryWithQuote(
-                token,
-                Denominations.USD,
-                ifBTC,
-                Denominations.BTC,
-                ifBTC
-            );
-    }
+        address firstQuote;
+        address secondQuote;
 
-    /// @dev checks if token/ETH feed exists, if not, checks if token/USD feed exists
-    /// Note: prioritizes path with least external calls
-    function _tryWithETHThenUSDQuote(
-        address token,
-        PricingPath ifETH,
-        PricingPath ifUSD
-    ) internal view returns (PricingPath) {
-        return
-            _tryWithQuote(
-                token,
-                Denominations.ETH,
-                ifETH,
-                Denominations.USD,
-                ifUSD
-            );
-    }
+        if (conversionType == ConversionType.ToBtc) {
+            firstQuote = Denominations.USD;
+            secondQuote = Denominations.BTC;
+        } else if (conversionType == ConversionType.ToUsd) {
+            firstQuote = Denominations.USD;
+            secondQuote = Denominations.ETH;
+        } else if (conversionType == ConversionType.ToEth) {
+            firstQuote = Denominations.ETH;
+            secondQuote = Denominations.USD;
+        } else if (conversionType == ConversionType.ToUsdToToken) {
+            firstQuote = Denominations.USD;
+            secondQuote = Denominations.ETH;
+        } else if (conversionType == ConversionType.ToEthToToken) {
+            firstQuote = Denominations.ETH;
+            secondQuote = Denominations.USD;
+        }
 
-    function _tryWithQuote(
-        address token,
-        address firstQuote,
-        PricingPath firstPath,
-        address secondQuote,
-        PricingPath secondPath
-    ) internal view returns (PricingPath) {
         if (_exists(token, firstQuote)) {
-            return firstPath;
+            return preferredPath;
         } else if (_exists(token, secondQuote)) {
-            return secondPath;
+            return fallbackPath;
         } else {
             return PricingPath.NONE;
         }
