@@ -161,6 +161,15 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
+    function writeFrom(
+        address underwriter,
+        address longReceiver,
+        uint256 size
+    ) external {
+        return _writeFrom(underwriter, longReceiver, size);
+    }
+
+    /// @inheritdoc IPoolCore
     function trade(
         uint256 size,
         bool isBuy

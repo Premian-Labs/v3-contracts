@@ -50,6 +50,14 @@ interface IPoolEvents {
         bool isBuy
     );
 
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        uint256 contractSize,
+        uint256 collateral,
+        uint256 protocolFee
+    );
+
     event Trade(
         address indexed user,
         uint256 contractSize,

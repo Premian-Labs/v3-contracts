@@ -6,6 +6,7 @@ import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol"
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
+import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
@@ -604,6 +605,55 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 ""
             );
         }
+    }
+
+    function _writeFrom(
+        address underwriter,
+        address longReceiver,
+        uint256 size
+    ) internal {
+        if (
+            msg.sender != underwriter &&
+            ERC1155BaseStorage.layout().operatorApprovals[underwriter][
+                msg.sender
+            ] ==
+            false
+        ) revert Pool__NotAuthorized();
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _ensureNonZeroSize(size);
+        _ensureNotExpired(l);
+
+        uint256 collateral = Position.contractsToCollateral(
+            size,
+            l.strike,
+            l.isCallPool
+        );
+        uint256 protocolFee = Position.contractsToCollateral(
+            _takerFee(size, 0),
+            l.strike,
+            l.isCallPool
+        );
+
+        IERC20(l.getPoolToken()).safeTransferFrom(
+            underwriter,
+            address(this),
+            collateral + protocolFee
+        );
+
+        l.protocolFees += protocolFee;
+
+        _mint(underwriter, PoolStorage.SHORT, size, "");
+        _mint(longReceiver, PoolStorage.LONG, size, "");
+
+        emit WriteFrom(
+            underwriter,
+            longReceiver,
+            size,
+            collateral,
+            protocolFee
+        );
     }
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
