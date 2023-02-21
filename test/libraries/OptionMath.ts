@@ -140,25 +140,30 @@ describe('OptionMath', () => {
 
   describe('#delta', function () {
     it('option delta test', async () => {
-      const strike59x18 = parseEther('1.');
-      const timeToMaturity59x18 = parseEther('0.1');
-      const varAnnualized59x18 = parseEther('0.');
-      const riskFreeRate59x18 = parseEther('0.');
+      const strike59x18 = parseEther('1.0');
+      const timeToMaturity59x18 = parseEther('0.246');
+      const varAnnualized59x18 = parseEther('1.0');
+      const riskFreeRate59x18 = parseEther('0.0');
 
       for (const t of [
         // calls
-        [parseEther('0.5'), true, 0.05],
-        [parseEther('0.8'), true, 0.1],
-        [parseEther('1.0'), true, 0.4],
-        [parseEther('1.2'), true, 0.5],
-        [parseEther('1.2'), true, 0.8],
-        [parseEther('2.2'), true, 1.0],
+        [parseEther('0.2'), true, 0.0014],
+        [parseEther('0.3'), true, 0.0148],
+        [parseEther('0.5'), true, 0.1256],
+        [parseEther('0.7'), true, 0.3192],
+        [parseEther('0.9'), true, 0.5144],
+        [parseEther('1.0'), true, 0.5980],
+        [parseEther('1.5'), true, 0.8565],
+        [parseEther('2.0'), true, 0.9499],
         // puts
-        [parseEther('0.8'), true, -0.1],
-        [parseEther('1.0'), true, -0.4],
-        [parseEther('1.2'), true, -0.5],
-        [parseEther('1.2'), true, -0.8],
-        [parseEther('2.2'), true, -0.95],
+        [parseEther('0.2'), false, 0.0014 - 1],
+        [parseEther('0.3'), false, 0.0148 - 1],
+        [parseEther('0.5'), false, 0.1256 - 1],
+        [parseEther('0.7'), false, 0.3192 - 1],
+        [parseEther('0.9'), false, 0.5144 - 1],
+        [parseEther('1.0'), false, 0.5980 - 1],
+        [parseEther('1.5'), false, 0.8565 - 1],
+        [parseEther('2.0'), false, 0.9499 - 1],
       ] as Array<[BigNumber, boolean, number]>) {
         const result = formatEther(
           await instance.optionDelta(
@@ -170,7 +175,10 @@ describe('OptionMath', () => {
             t[1],
           ),
         );
-        expect(parseFloat(result)).to.eq(t[2]);
+        expect(parseFloat(result) - t[2]).to.be.closeTo(
+          0,
+          0.0001,
+        );
       }
     });
   });
