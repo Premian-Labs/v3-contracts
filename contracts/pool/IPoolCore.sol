@@ -11,12 +11,14 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
-    /// @return The taker fee for an option trade
+    /// @param premium The total cost of option(s) for a purchase
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @return The taker fee for an option trade denormalized
     function takerFee(
         uint256 size,
-        uint256 normalizedPremium
-    ) external pure returns (uint256);
+        uint256 premium,
+        bool isPremiumNormalized
+    ) external view returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
@@ -227,6 +229,16 @@ interface IPoolCore is IPoolInternal {
     ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a quote created by another provider
     /// @param hashes The hashes of the quotes to cancel
     function cancelTradeQuotes(bytes32[] calldata hashes) external;
+
+    /// @notice Returns whether or not a quote is valid, given a fill size
+    /// @param tradeQuote The quote to check
+    /// @param size Size to fill from the quote
+    /// @param sig secp256k1 Signature
+    function isTradeQuoteValid(
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        Signature memory sig
+    ) external view returns (bool, InvalidQuoteError);
 
     /// @notice Returns the size already filled for a given quote
     /// @param provider Provider of the quote

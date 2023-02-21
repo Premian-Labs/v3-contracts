@@ -262,6 +262,7 @@ describe('Pool', () => {
       const takerFee = await callPool.takerFee(
         tradeSize,
         tradeSize.mul(avgPrice).div(ONE_ETHER),
+        true,
       );
 
       expect(await callPool.getTradeQuote(tradeSize, true)).to.eq(
@@ -296,6 +297,7 @@ describe('Pool', () => {
       const takerFee = await callPool.takerFee(
         tradeSize,
         tradeSize.mul(avgPrice).div(ONE_ETHER),
+        true,
       );
 
       expect(await callPool.getTradeQuote(tradeSize, false)).to.eq(
@@ -974,6 +976,7 @@ describe('Pool', () => {
       const takerFee = await callPool.takerFee(
         tradeSize,
         tradeSize.mul(avgPrice).div(ONE_ETHER),
+        true,
       );
 
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
@@ -1030,6 +1033,7 @@ describe('Pool', () => {
       const takerFee = await callPool.takerFee(
         tradeSize,
         tradeSize.mul(avgPrice).div(ONE_ETHER),
+        true,
       );
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
@@ -1206,7 +1210,7 @@ describe('Pool', () => {
         bnToNumber(BigNumber.from(quote.size)),
       );
 
-      const protocolFee = await callPool.takerFee(quote.size, premium);
+      const protocolFee = await callPool.takerFee(quote.size, premium, true);
 
       expect(await base.balanceOf(lp.address)).to.eq(
         initialBalance.sub(quote.size).add(premium).sub(protocolFee),
@@ -1393,6 +1397,7 @@ describe('Pool', () => {
       const takerFee = await callPool.takerFee(
         tradeSize,
         tradeSize.mul(avgPrice).div(ONE_ETHER),
+        true,
       );
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 

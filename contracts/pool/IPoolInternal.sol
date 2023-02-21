@@ -9,9 +9,14 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
+    error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientCollateralAllowance();
+    error Pool__InsufficientCollateralBalance();
     error Pool__InsufficientLiquidity();
+    error Pool__InsufficientLongBalance();
+    error Pool__InsufficientShortBalance();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
     error Pool__InvalidQuoteSignature();
@@ -154,10 +159,25 @@ interface IPoolInternal is IPosition, IPricing {
         Signature signature;
     }
 
-    struct FillQuoteVarsInternal {
+    struct PremiumAndFeeInternal {
         uint256 premium;
         uint256 protocolFee;
         uint256 premiumTaker;
         uint256 premiumMaker;
+    }
+
+    enum InvalidQuoteError {
+        None,
+        QuoteExpired,
+        QuoteCancelled,
+        QuoteOverfilled,
+        OutOfBoundsPrice,
+        InvalidQuoteTaker,
+        InvalidQuoteSignature,
+        InvalidAssetUpdate,
+        InsufficientCollateralAllowance,
+        InsufficientCollateralBalance,
+        InsufficientLongBalance,
+        InsufficientShortBalance
     }
 }

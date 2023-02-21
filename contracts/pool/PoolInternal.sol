@@ -68,17 +68,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
-    /// @return The taker fee for an option trade
+    /// @param premium The total cost of option(s) for a purchase
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @return The taker fee for an option trade denormalized
     function _takerFee(
+        PoolStorage.Layout storage l,
         uint256 size,
-        uint256 normalizedPremium
-    ) internal pure returns (uint256) {
-        uint256 premiumFee = normalizedPremium.mul(PREMIUM_FEE_PERCENTAGE);
-        // 3% of premium
+        uint256 premium,
+        bool isPremiumNormalized
+    ) internal view returns (uint256) {
+        uint256 strike = l.strike;
+        bool isCallPool = l.isCallPool;
+
+        if (!isPremiumNormalized) {
+            // Normalize premium
+            premium = Position.collateralToContracts(
+                premium,
+                strike,
+                isCallPool
+            );
+        }
+
+        uint256 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
         uint256 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
-        // 0.3% of notional
-        return Math.max(premiumFee, notionalFee);
+
+        return
+            Position.contractsToCollateral(
+                Math.max(premiumFee, notionalFee),
+                strike,
+                isCallPool
+            );
     }
 
     function _getTradeQuote(
@@ -124,11 +143,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 uint256 premium = Math
                     .average(pricing.marketPrice, nextPrice)
                     .mul(tradeSize);
-                uint256 takerFee = Position.contractsToCollateral(
-                    _takerFee(size, premium),
-                    l.strike,
-                    l.isCallPool
-                );
+                uint256 takerFee = _takerFee(l, size, premium, true);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(
@@ -699,11 +714,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                         premium = tradeQuotePrice.mul(tradeSize);
                     }
-                    uint256 takerFee = Position.contractsToCollateral(
-                        _takerFee(tradeSize, premium),
-                        l.strike,
-                        l.isCallPool
-                    );
+                    uint256 takerFee = _takerFee(l, tradeSize, premium, true);
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(
@@ -835,24 +846,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    /// @notice Execute a trade by transferring the net change in short and long option
-    ///         contracts and collateral to / from an agent.
-    function _updateUserAssets(
+    function _calculateAssetsUpdate(
         PoolStorage.Layout storage l,
         address user,
         uint256 totalPremium,
-        uint256 creditAmount,
         uint256 size,
-        bool isBuy,
-        bool transferCollateralToUser
-    ) internal returns (Delta memory delta) {
+        bool isBuy
+    ) internal view returns (Delta memory delta) {
         delta = _getTradeDelta(user, size, isBuy);
-
-        if (
-            (delta.longs == 0 && delta.shorts == 0) ||
-            (delta.longs > 0 && delta.shorts > 0) ||
-            (delta.longs < 0 && delta.shorts < 0)
-        ) revert Pool__InvalidAssetUpdate();
 
         bool _isBuy = delta.longs > 0 || delta.shorts < 0;
 
@@ -871,6 +872,28 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 totalPremium.toInt256() -
                 Math.max(shortCollateral, 0).toInt256();
         }
+
+        return delta;
+    }
+
+    /// @notice Execute a trade by transferring the net change in short and long option
+    ///         contracts and collateral to / from an agent.
+    function _updateUserAssets(
+        PoolStorage.Layout storage l,
+        address user,
+        uint256 totalPremium,
+        uint256 creditAmount,
+        uint256 size,
+        bool isBuy,
+        bool transferCollateralToUser
+    ) internal returns (Delta memory delta) {
+        delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
+
+        if (
+            (delta.longs == 0 && delta.shorts == 0) ||
+            (delta.longs > 0 && delta.shorts > 0) ||
+            (delta.longs < 0 && delta.shorts < 0)
+        ) revert Pool__InvalidAssetUpdate();
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
         // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
@@ -908,6 +931,37 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    function _calculateQuotePremiumAndFee(
+        PoolStorage.Layout storage l,
+        uint256 size,
+        uint256 price,
+        bool isBuy
+    ) internal view returns (PremiumAndFeeInternal memory r) {
+        r.premium = price.mul(size);
+        r.protocolFee = Position.contractsToCollateral(
+            _takerFee(l, size, r.premium, true),
+            l.strike,
+            l.isCallPool
+        );
+
+        // Denormalize premium
+        r.premium = Position.contractsToCollateral(
+            r.premium,
+            l.strike,
+            l.isCallPool
+        );
+
+        r.premiumMaker = isBuy
+            ? r.premium // Maker buying
+            : r.premium - r.protocolFee; // Maker selling
+
+        r.premiumTaker = !isBuy
+            ? r.premium // Taker Buying
+            : r.premium - r.protocolFee; // Taker selling
+
+        return r;
+    }
+
     /// @notice Functionality to support the RFQ / OTC system.
     ///         An LP can create a quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
@@ -920,86 +974,46 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         if (args.size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
-        FillQuoteVarsInternal memory vars;
-        Delta memory deltaTaker;
-        Delta memory deltaMaker;
+        PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
+        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
 
-        {
-            PoolStorage.Layout storage l = PoolStorage.layout();
-
-            _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
-
-            l.tradeQuoteAmountFilled[tradeQuote.provider][
-                tradeQuoteHash
-            ] += args.size;
-
-            vars.premium = tradeQuote.price.mul(args.size);
-            vars.protocolFee = Position.contractsToCollateral(
-                _takerFee(args.size, vars.premium),
-                l.strike,
-                l.isCallPool
-            );
-
-            // Denormalize premium
-            vars.premium = Position.contractsToCollateral(
-                vars.premium,
-                l.strike,
-                l.isCallPool
-            );
-
-            l.protocolFees += vars.protocolFee;
-
-            /////////////////////////
-            // Process trade taker //
-            /////////////////////////
-
-            vars.premiumTaker = !tradeQuote.isBuy
-                ? vars.premium // Taker Buying
-                : vars.premium - vars.protocolFee; // Taker selling
-
-            deltaTaker = _updateUserAssets(
+        PremiumAndFeeInternal
+            memory premiumAndFee = _calculateQuotePremiumAndFee(
                 l,
-                args.user,
-                vars.premiumTaker,
-                0,
                 args.size,
-                !tradeQuote.isBuy,
-                true
+                tradeQuote.price,
+                tradeQuote.isBuy
             );
 
-            /////////////////////////
-            // Process trade maker //
-            /////////////////////////
-            // if the maker is selling (is_buy is True) the protocol
-            // if the taker is buying (is_buy is False) the maker is paying the
-            // premium minus the maker fee, he will be charged the protocol fee.
-            // summary:
-            // is_buy:
-            //         quote.premium              quote.premium - PF
-            //   LT --------------------> Pool --------------------> LP
-            // ~is_buy:
-            //         quote.premium - TF         quote.premium - MF
-            //   LT <-------------------- Pool <-------------------- LP
-            //
-            // note that the logic is different from the trade logic, since the
-            // maker rebate gets directly transferred to the LP instead of
-            // incrementing the global rate
+        // Update amount filled for this quote
+        l.tradeQuoteAmountFilled[tradeQuote.provider][tradeQuoteHash] += args
+            .size;
 
-            vars.premiumMaker = tradeQuote.isBuy
-                ? vars.premium // Maker buying
-                : vars.premium - vars.protocolFee; // Maker selling
+        // Update protocol fees
+        l.protocolFees += premiumAndFee.protocolFee;
 
-            deltaMaker = _updateUserAssets(
-                l,
-                tradeQuote.provider,
-                vars.premiumMaker,
-                0,
-                args.size,
-                tradeQuote.isBuy,
-                true
-            );
-        }
+        // Process trade taker
+        Delta memory deltaTaker = _updateUserAssets(
+            l,
+            args.user,
+            premiumAndFee.premiumTaker,
+            0,
+            args.size,
+            !tradeQuote.isBuy,
+            true
+        );
+
+        // Process trade maker
+        Delta memory deltaMaker = _updateUserAssets(
+            l,
+            tradeQuote.provider,
+            premiumAndFee.premiumMaker,
+            0,
+            args.size,
+            tradeQuote.isBuy,
+            true
+        );
 
         emit FillQuote(
             tradeQuoteHash,
@@ -1008,8 +1022,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.size,
             deltaMaker,
             deltaTaker,
-            vars.premium,
-            vars.protocolFee,
+            premiumAndFee.premium,
+            premiumAndFee.protocolFee,
             !tradeQuote.isBuy
         );
     }
@@ -1865,30 +1879,76 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__AboveMaxSlippage();
     }
 
+    function _areQuoteAndBalanceValid(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote,
+        bytes32 tradeQuoteHash
+    ) internal view returns (bool isValid, InvalidQuoteError error) {
+        (isValid, error) = _isQuoteValid(l, args, tradeQuote, tradeQuoteHash);
+        if (!isValid) {
+            return (isValid, error);
+        }
+        return _isQuoteBalanceValid(l, args, tradeQuote);
+    }
+
     function _ensureQuoteIsValid(
         PoolStorage.Layout storage l,
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
         bytes32 tradeQuoteHash
     ) internal view {
-        if (block.timestamp > tradeQuote.deadline) revert Pool__QuoteExpired();
+        (bool isValid, InvalidQuoteError error) = _isQuoteValid(
+            l,
+            args,
+            tradeQuote,
+            tradeQuoteHash
+        );
+
+        if (isValid) return;
+
+        if (error == InvalidQuoteError.QuoteExpired)
+            revert Pool__QuoteExpired();
+        if (error == InvalidQuoteError.QuoteCancelled)
+            revert Pool__QuoteCancelled();
+        if (error == InvalidQuoteError.QuoteOverfilled)
+            revert Pool__QuoteOverfilled();
+        if (error == InvalidQuoteError.OutOfBoundsPrice)
+            revert Pool__OutOfBoundsPrice();
+        if (error == InvalidQuoteError.InvalidQuoteTaker)
+            revert Pool__InvalidQuoteTaker();
+        if (error == InvalidQuoteError.InvalidQuoteSignature)
+            revert Pool__InvalidQuoteSignature();
+
+        revert Pool__ErrorNotHandled();
+    }
+
+    function _isQuoteValid(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote,
+        bytes32 tradeQuoteHash
+    ) internal view returns (bool, InvalidQuoteError) {
+        if (block.timestamp > tradeQuote.deadline)
+            return (false, InvalidQuoteError.QuoteExpired);
 
         uint256 filledAmount = l.tradeQuoteAmountFilled[tradeQuote.provider][
             tradeQuoteHash
         ];
 
-        if (filledAmount == type(uint256).max) revert Pool__QuoteCancelled();
+        if (filledAmount == type(uint256).max)
+            return (false, InvalidQuoteError.QuoteCancelled);
 
         if (filledAmount + args.size > tradeQuote.size)
-            revert Pool__QuoteOverfilled();
+            return (false, InvalidQuoteError.QuoteOverfilled);
 
         if (
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||
             tradeQuote.price > Pricing.MAX_TICK_PRICE
-        ) revert Pool__OutOfBoundsPrice();
+        ) return (false, InvalidQuoteError.OutOfBoundsPrice);
 
         if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
-            revert Pool__InvalidQuoteTaker();
+            return (false, InvalidQuoteError.InvalidQuoteTaker);
 
         address signer = ECDSA.recover(
             tradeQuoteHash,
@@ -1896,7 +1956,71 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.signature.r,
             args.signature.s
         );
-        if (signer != tradeQuote.provider) revert Pool__InvalidQuoteSignature();
+        if (signer != tradeQuote.provider)
+            return (false, InvalidQuoteError.InvalidQuoteSignature);
+
+        return (true, InvalidQuoteError.None);
+    }
+
+    function _isQuoteBalanceValid(
+        PoolStorage.Layout storage l,
+        FillQuoteArgsInternal memory args,
+        TradeQuote memory tradeQuote
+    ) internal view returns (bool, InvalidQuoteError) {
+        PremiumAndFeeInternal
+            memory premiumAndFee = _calculateQuotePremiumAndFee(
+                l,
+                args.size,
+                tradeQuote.price,
+                tradeQuote.isBuy
+            );
+
+        Delta memory delta = _calculateAssetsUpdate(
+            l,
+            args.user,
+            premiumAndFee.premium,
+            args.size,
+            tradeQuote.isBuy
+        );
+
+        if (
+            (delta.longs == 0 && delta.shorts == 0) ||
+            (delta.longs > 0 && delta.shorts > 0) ||
+            (delta.longs < 0 && delta.shorts < 0)
+        ) return (false, InvalidQuoteError.InvalidAssetUpdate);
+
+        if (delta.collateral < 0) {
+            IERC20 token = IERC20(l.getPoolToken());
+            if (
+                token.allowance(args.user, address(this)) <
+                uint256(-delta.collateral)
+            ) {
+                return (
+                    false,
+                    InvalidQuoteError.InsufficientCollateralAllowance
+                );
+            }
+
+            if (token.balanceOf(args.user) < uint256(-delta.collateral)) {
+                return (false, InvalidQuoteError.InsufficientCollateralBalance);
+            }
+        }
+
+        if (
+            delta.longs < 0 &&
+            _balanceOf(args.user, PoolStorage.LONG) < uint256(-delta.longs)
+        ) {
+            return (false, InvalidQuoteError.InsufficientLongBalance);
+        }
+
+        if (
+            delta.shorts < 0 &&
+            _balanceOf(args.user, PoolStorage.SHORT) < uint256(-delta.shorts)
+        ) {
+            return (false, InvalidQuoteError.InsufficientShortBalance);
+        }
+
+        return (true, InvalidQuoteError.None);
     }
 
     function _ensureOperator(address operator) internal view {

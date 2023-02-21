@@ -20,9 +20,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function takerFee(
         uint256 size,
-        uint256 normalizedPremium
-    ) external pure returns (uint256) {
-        return _takerFee(size, normalizedPremium);
+        uint256 premium,
+        bool isPremiumNormalized
+    ) external view returns (uint256) {
+        return
+            _takerFee(PoolStorage.layout(), size, premium, isPremiumNormalized);
     }
 
     /// @inheritdoc IPoolCore
@@ -271,6 +273,23 @@ contract PoolCore is IPoolCore, PoolInternal {
             l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = type(uint256).max;
             emit CancelTradeQuote(msg.sender, hashes[i]);
         }
+    }
+
+    /// @inheritdoc IPoolCore
+    function isTradeQuoteValid(
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        Signature memory sig
+    ) external view returns (bool, InvalidQuoteError) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
+        return
+            _areQuoteAndBalanceValid(
+                l,
+                FillQuoteArgsInternal(msg.sender, size, sig),
+                tradeQuote,
+                tradeQuoteHash
+            );
     }
 
     /// @inheritdoc IPoolCore
