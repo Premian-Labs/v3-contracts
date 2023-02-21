@@ -22,10 +22,9 @@
     "chain": "hardhat node --hostname 0.0.0.0",
     "compile": "hardhat compile",
     "compile:force": "hardhat compile --force",
-    "postinstall": "yarn compile",
+    "postinstall": "yarn compile && husky install",
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
-    "prepare": "husky install",
     "prettier": "prettier --write --ignore-path .gitignore ."
   },
   "devDependencies": {
