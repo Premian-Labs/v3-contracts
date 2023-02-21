@@ -30,19 +30,11 @@ contract UnderwriterVault is
     using SafeERC20 for IERC20;
     using UD60x18 for uint256;
 
-    address public IV_ORACLE_ADDR;
-    address public FACTORY_ADDR;
+    address internal immutable IV_ORACLE_ADDR;
+    address internal immutable FACTORY_ADDR;
 
     constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE_ADDR = oracleAddress;
-        FACTORY_ADDR = factoryAddress;
-    }
-
-    function setOracleAddr(address oracleAddress) external onlyOwner {
-        IV_ORACLE_ADDR = oracleAddress;
-    }
-
-    function setFactoryAddr(address factoryAddress) external onlyOwner {
         FACTORY_ADDR = factoryAddress;
     }
 
@@ -335,6 +327,8 @@ contract UnderwriterVault is
     ) internal view returns (bool) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+    ) internal view returns (bool){
+
 
         if (strike == 0) {
             revert Vault__AddressZero();
@@ -359,6 +353,9 @@ contract UnderwriterVault is
 
         // NOTE: query returns address(0) if no listing exists
         if (listingAddr == address(0)) {
+        address listingAddr = _getFactoryAddress(strike, maturity);
+
+        if (listingAddr == address(0)){
             revert Vault__OptionPoolNotListed();
         }
 
@@ -403,6 +400,24 @@ contract UnderwriterVault is
 
         l.totalAssets += premium + spread;
         l.totalLockedAssets += size;
+    }
+
+    function _getFactoryAddress(uint256 strike, uint256 maturity) internal view returns (address){
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        // generate struct to grab pool address
+         IPoolFactory.PoolKey memory _poolKey;
+         _poolKey.base = l.base;
+         _poolKey.quote = l.quote;
+         _poolKey.baseOracle = l.priceOracle;
+         _poolKey.quoteOracle = l.quoteOracle;
+         _poolKey.strike = strike;
+         _poolKey.maturity = uint64(maturity);
+         _poolKey.isCallPool = l.isCall;
+
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+
+        return listingAddr;
     }
 
     /// @inheritdoc IUnderwriterVault
