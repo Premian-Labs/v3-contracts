@@ -28,7 +28,7 @@ contract OptionMathMock {
         uint256 volAnnualized,
         uint256 riskFreeRate,
         bool isCall
-    ) internal pure returns (int256) {
+    ) external pure returns (int256) {
         return OptionMath.optionDelta(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
     }
 
