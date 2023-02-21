@@ -38,7 +38,6 @@ describe('UnderwriterVault', () => {
   let quote: ERC20Mock;
 
   let baseOracle: MockContract;
-  let volOracle: MockContract;
 
   // ==================================================================
   // Setup volatility oracle
