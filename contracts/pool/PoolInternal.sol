@@ -1890,10 +1890,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             return (false, InvalidQuoteError.InvalidQuoteTaker);
 
         address signer = ECDSA.recover(
-          tradeQuoteHash,
-          args.signature.v,
-          args.signature.r,
-          args.signature.s
+            tradeQuoteHash,
+            args.signature.v,
+            args.signature.r,
+            args.signature.s
         );
         if (signer != tradeQuote.provider)
             return (false, InvalidQuoteError.InvalidQuoteSignature);

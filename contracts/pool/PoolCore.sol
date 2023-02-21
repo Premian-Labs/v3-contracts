@@ -268,17 +268,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
         uint256 size,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature memory sig
     ) external view returns (bool, InvalidQuoteError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
-
         return
             _areQuoteAndBalanceValid(
                 l,
-                FillQuoteArgsInternal(msg.sender, size, v, r, s),
+                FillQuoteArgsInternal(msg.sender, size, sig),
                 tradeQuote,
                 tradeQuoteHash
             );

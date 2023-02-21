@@ -221,17 +221,13 @@ interface IPoolCore is IPoolInternal {
     /// @notice Returns whether or not a quote is valid, given a fill size
     /// @param tradeQuote The quote to check
     /// @param size Size to fill from the quote
-    /// @param v secp256k1 'v' value
-    /// @param r secp256k1 'r' value
-    /// @param s secp256k1 's' value
+    /// @param sig secp256k1 Signature
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
         uint256 size,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature memory sig
     ) external view returns (bool, InvalidQuoteError);
-    
+
     /// @notice Returns the size already filled for a given quote
     /// @param provider Provider of the quote
     /// @param tradeQuoteHash Hash of the quote
