@@ -889,7 +889,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price.mul(size);
         r.protocolFee = Position.contractsToCollateral(
-            _takerFee(size, r.premium),
+            _takerFee(l, size, r.premium, true),
             l.strike,
             l.isCallPool
         );
