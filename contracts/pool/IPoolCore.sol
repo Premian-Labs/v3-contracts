@@ -135,8 +135,9 @@ interface IPoolCore is IPoolInternal {
     ) external;
 
     /// @notice Underwrite an option by depositing collateral
-    /// @notice underwrite The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
-    /// @notice longReceiver The address which will receive the long token
+    /// @param underwrite The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
+    /// @param longReceiver The address which will receive the long token
+    /// @param size The number of contracts being underwritten
     function writeFrom(
         address underwriter,
         address longReceiver,
