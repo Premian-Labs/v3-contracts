@@ -16,21 +16,24 @@ import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
+import "hardhat/console.sol";
+import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
-
-contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableInternal {
+contract UnderwriterVault is
+    IUnderwriterVault,
+    SolidStateERC4626,
+    OwnableInternal
+{
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
+    using UD60x18 for uint256;
 
     address public IV_ORACLE_ADDR;
     address public FACTORY_ADDR;
 
-    constructor (
-        address oracleAddress, 
-        address factoryAddress
-    ) {
+    constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE_ADDR = oracleAddress;
         FACTORY_ADDR = factoryAddress;
     }
@@ -47,11 +50,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         UnderwriterVaultStorage.layout().variable = value;
     }
 
-    function _asset() override internal view virtual returns (address) {
+    function _asset() internal view virtual override returns (address) {
         return ERC4626BaseStorage.layout().asset;
     }
 
-    function _totalAssets() override internal view returns (uint256) {
+    function _totalAssets() internal view override returns (uint256) {
         // total assets = deposits + premiums + spreads
         return UnderwriterVaultStorage.layout().totalAssets;
     }
@@ -63,7 +66,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
     function _getSpotPrice(uint256 timestamp) internal pure returns (uint256) {
         //TODO: change function to view once hydrated
-        if (timestamp == 0){
+        if (timestamp == 0) {
             revert Vault__ZeroTimestamp();
         }
         //TODO: implement spot oracle
@@ -78,13 +81,17 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 price;
         uint256 size;
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
         uint256 current = l.minMaturity;
         uint256 total = 0;
 
         while (current <= l.maxMaturity) {
-            for (uint256 i = 0; i < l.maturityToStrikes[current].length(); i++) {
-
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
                 strike = l.maturityToStrikes[current].at(i);
 
                 if (block.timestamp < current) {
@@ -96,8 +103,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                         strike,
                         timeToMaturity
                     );
-                }
-                else {
+                } else {
                     spot = _getSpotPrice(current);
                     timeToMaturity = 0;
                     sigma = 0;
@@ -115,68 +121,98 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                 size = l.positionSizes[current][strike];
 
                 total = total + price * size;
-
             }
 
             current = l.maturities.next(current);
-
         }
 
         return total;
     }
 
     function _getTotalLockedSpread() internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-
-        uint256 current = l.minMaturity;
-        uint256 next = l.maturities.next(current);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 last = l.lastMaturity;
+        uint256 next = l.maturities.next(last);
+        // todo: fix this later
+        next = block.timestamp + 1;
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
         // TODO: double check handling of negative total locked spread
         uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (block.timestamp >= current) {
-            totalLockedSpread -= (next - lastSpreadUnlockUpdate) * spreadUnlockingRate;
+        while (block.timestamp >= next) {
+            totalLockedSpread -=
+                (next - lastSpreadUnlockUpdate) *
+                spreadUnlockingRate;
             spreadUnlockingRate -= l.spreadUnlockingTicks[next];
             lastSpreadUnlockUpdate = next;
-            next = l.maturities.next(current);
+            last = next;
+            next = l.maturities.next(last);
         }
-        totalLockedSpread -= (block.timestamp - lastSpreadUnlockUpdate) * spreadUnlockingRate;
-
+        totalLockedSpread -=
+            (block.timestamp - lastSpreadUnlockUpdate) *
+            spreadUnlockingRate;
         return totalLockedSpread;
     }
 
-    function _getAvailable() internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    function _availableAssets() internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
         return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
     }
 
-    function _getPricePerShare() internal pure returns (uint256) {
+    function _getPricePerShare() internal view returns (uint256) {
         // TODO: change function to view once hydrated
-        // UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        // return (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue()) / l.totalSupply;
-        return 1;
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        console.log(l.totalAssets); // 2
+        console.log(_getTotalLockedSpread()); // 0.5
+        console.log(_getTotalFairValue()); // 0
+        console.log(_totalSupply()); // 2
+
+        // (2 - 0.5) / 2 = 3 / 4
+        // uint256 a = (l.totalAssets - _getTotalLockedSpread()) / _totalSupply();
+        uint256 b = (l.totalAssets - _getTotalLockedSpread()) /
+            (_totalSupply());
+
+        uint256 a = l.totalAssets - _getTotalLockedSpread();
+        console.log(b);
+
+        console.log(a);
+        console.log(_totalSupply());
+        console.log(a.div(_totalSupply()));
+
+        return
+            (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue())
+                .div(_totalSupply());
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-        uint256 current = l.minMaturity;
-        uint256 next = l.maturities.next(current);
+        uint256 last = l.minMaturity;
+        uint256 next = l.maturities.next(last);
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
         uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (block.timestamp >= current) {
-            totalLockedSpread -= (next - lastSpreadUnlockUpdate) * spreadUnlockingRate;
+        while (block.timestamp >= next) {
+            totalLockedSpread -=
+                (next - lastSpreadUnlockUpdate) *
+                spreadUnlockingRate;
             spreadUnlockingRate -= l.spreadUnlockingTicks[next];
             lastSpreadUnlockUpdate = next;
-            next = l.maturities.next(current);
+            last = next;
+            next = l.maturities.next(last);
         }
-        totalLockedSpread -= (block.timestamp - lastSpreadUnlockUpdate) * spreadUnlockingRate;
+        totalLockedSpread -=
+            (block.timestamp - lastSpreadUnlockUpdate) *
+            spreadUnlockingRate;
 
         l.totalLockedSpread = totalLockedSpread;
         l.spreadUnlockingRate = spreadUnlockingRate;
@@ -185,7 +221,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
     function _convertToShares(
         uint256 assetAmount
-    ) override internal view returns (uint256 shareAmount) {
+    ) internal view override returns (uint256 shareAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -195,14 +231,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
             if (totalAssets == 0) {
                 shareAmount = assetAmount;
             } else {
-                shareAmount = assetAmount / _getPricePerShare();
+                shareAmount = assetAmount.div(_getPricePerShare());
             }
         }
     }
 
     function _convertToAssets(
         uint256 shareAmount
-    ) override internal view virtual returns (uint256 assetAmount) {
+    ) internal view virtual override returns (uint256 assetAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -215,34 +251,34 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
     function _maxWithdraw(
         address owner
-    ) override internal view virtual returns (uint256) {
-        if (owner == address(0)){
+    ) internal view virtual override returns (uint256) {
+        if (owner == address(0)) {
             revert Vault__AddressZero();
         }
-        return _getAvailable();
+        return _availableAssets();
     }
 
     function _maxRedeem(
         address owner
-    ) override internal view virtual returns (uint256) {
-        return _convertToShares(_maxWithdraw(owner)); 
+    ) internal view virtual override returns (uint256) {
+        return _convertToShares(_maxWithdraw(owner));
     }
 
     function _previewDeposit(
         uint256 assetAmount
-    ) override  internal view virtual returns (uint256) {
+    ) internal view virtual override returns (uint256) {
         return _convertToShares(assetAmount);
     }
 
     function _previewMint(
         uint256 shareAmount
-    ) override internal view virtual returns (uint256) {
-        return _convertToAssets(shareAmount); 
+    ) internal view virtual override returns (uint256) {
+        return _convertToAssets(shareAmount);
     }
 
     function _previewWithdraw(
         uint256 assetAmount
-    ) override internal view virtual returns (uint256 shareAmount) {
+    ) internal view virtual override returns (uint256 shareAmount) {
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
@@ -254,8 +290,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                 shareAmount = assetAmount;
             } else {
                 shareAmount =
-                (assetAmount * supply + totalAssets - 1) /
-                totalAssets;
+                    (assetAmount * supply + totalAssets - 1) /
+                    totalAssets;
             }
         }
     }
@@ -264,71 +300,75 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         address receiver,
         uint256 assetAmount,
         uint256 shareAmount
-    ) override internal virtual {
-
-        if (receiver == address(0)){
+    ) internal virtual override {
+        if (receiver == address(0)) {
             revert Vault__AddressZero();
         }
-        if (assetAmount == 0){
+        if (assetAmount == 0) {
             revert Vault__ZeroAsset();
         }
-        if (shareAmount == 0){
+        if (shareAmount == 0) {
             revert Vault__ZEROShares();
         }
+        UnderwriterVaultStorage.layout().totalAssets += assetAmount;
     }
 
     function _beforeWithdraw(
         address owner,
         uint256 assetAmount,
         uint256 shareAmount
-    ) override internal virtual {
-        if (owner == address(0)){
+    ) internal virtual override {
+        if (owner == address(0)) {
             revert Vault__AddressZero();
         }
-        if (assetAmount == 0){
+        if (assetAmount == 0) {
             revert Vault__ZeroAsset();
         }
-        if (shareAmount == 0){
+        if (shareAmount == 0) {
             revert Vault__ZEROShares();
         }
     }
 
     function _isValidListing(
-        uint256 strike, 
+        uint256 strike,
         uint256 maturity
-    ) internal view returns (bool){
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    ) internal view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-        if (strike == 0){
+        if (strike == 0) {
             revert Vault__AddressZero();
         }
-        if (maturity == 0){
+        if (maturity == 0) {
             revert Vault__MaturityZero();
         }
 
         // generate struct to grab pool address
-         IPoolFactory.PoolKey memory _poolKey;
-         _poolKey.base = l.base;
-         _poolKey.quote = l.quote;
-         _poolKey.baseOracle = l.priceOracle;
-         _poolKey.quoteOracle = l.quoteOracle;
-         _poolKey.strike = strike;
-         _poolKey.maturity = uint64(maturity);
-         _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey;
+        _poolKey.base = l.base;
+        _poolKey.quote = l.quote;
+        _poolKey.baseOracle = l.priceOracle;
+        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.strike = strike;
+        _poolKey.maturity = uint64(maturity);
+        _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+            _poolKey
+        );
 
         // NOTE: query returns address(0) if no listing exists
-        if (listingAddr == address(0)){
+        if (listingAddr == address(0)) {
             revert Vault__OptionPoolNotListed();
         }
-        
+
         //TODO: check the delta and dte are within our trader vault range
         return true;
     }
 
     function _addListing(uint256 strike, uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
@@ -346,12 +386,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     }
 
     function _handleTradeFees(
-        uint256 premium, 
-        uint256 spread, 
-        uint256 size, 
+        uint256 premium,
+        uint256 spread,
+        uint256 size,
         uint256 timeToMaturity
     ) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
         // below code could belong to the _handleTradeFees function
         l.totalLockedSpread += spread;
         uint256 spreadRate = spread / timeToMaturity;
@@ -370,25 +411,22 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // Validate listing
         // Check if not expired
-        if (block.timestamp >= maturity)
-            revert Vault__OptionExpired();
+        if (block.timestamp >= maturity) revert Vault__OptionExpired();
 
-        // Check if this listing is supported by the vault. 
+        // Check if this listing is supported by the vault.
         if (!_isValidListing(strike, maturity))
             revert Vault__OptionPoolNotSupported();
-        else
-            _addListing(strike, maturity);
-
+        else _addListing(strike, maturity);
 
         // Check if the vault has sufficient funds
-        uint256 availableAssets = _getAvailable();
+        uint256 availableAssets = _availableAssets();
 
-        if (size >= availableAssets)
-            revert Vault__InsufficientFunds();
+        if (size >= availableAssets) revert Vault__InsufficientFunds();
 
         // Compute premium and the spread collected
         //TODO: set up spot oracle
@@ -419,7 +457,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         );
 
         uint256 premium = size * uint256(price);
-        
+
         // TODO: enso / professors function call do determine the spread
         // TODO: embed the trading fee into the spread (requires calculating fee)
         uint256 spread = 0;
@@ -427,20 +465,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         // TODO: call mint function to receive shorts + longs
 
         // Handle the premiums and spread capture generated
-        _handleTradeFees(
-            premium, 
-            spread, 
-            size, 
-            timeToMaturity
-        );
+        _handleTradeFees(premium, spread, size, timeToMaturity);
 
         return premium;
     }
 
     /// @inheritdoc IUnderwriterVault
-    function settle() override external pure returns (uint256) {
+    function settle() external pure override returns (uint256) {
         //TODO: remove pure when hydrated
         return 0;
     }
-
 }
