@@ -635,7 +635,7 @@ describe('Pool', () => {
   describe('#writeFrom', () => {
     it('should successfully write 500 options', async () => {
       const size = parseEther('500');
-      const fee = await callPool.takerFee(size, 0);
+      const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
 
@@ -659,7 +659,7 @@ describe('Pool', () => {
 
     it('should successfully write 500 options on behalf of another address', async () => {
       const size = parseEther('500');
-      const fee = await callPool.takerFee(size, 0);
+      const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
 
