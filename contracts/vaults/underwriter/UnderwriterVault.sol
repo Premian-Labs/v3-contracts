@@ -305,41 +305,44 @@ contract UnderwriterVault is
         }
     }
 
- function _isValidListing(
-        uint256 strike, 
+    function _isValidListing(
+        uint256 strike,
         uint256 maturity,
         uint256 sigma
-    ) internal view returns (bool){
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    ) internal view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-        if (strike == 0){
+        if (strike == 0) {
             revert Vault__AddressZero();
             //TODO: should just return false
         }
-        if (maturity == 0){
+        if (maturity == 0) {
             revert Vault__MaturityZero();
             //TODO: should just return false
         }
 
         // generate struct to grab pool address
-         IPoolFactory.PoolKey memory _poolKey;
-         _poolKey.base = l.base;
-         _poolKey.quote = l.quote;
-         _poolKey.baseOracle = l.priceOracle;
-         _poolKey.quoteOracle = l.quoteOracle;
-         _poolKey.strike = strike;
-         _poolKey.maturity = uint64(maturity);
-         _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey;
+        _poolKey.base = l.base;
+        _poolKey.quote = l.quote;
+        _poolKey.baseOracle = l.priceOracle;
+        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.strike = strike;
+        _poolKey.maturity = uint64(maturity);
+        _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+            _poolKey
+        );
 
         // NOTE: query returns address(0) if no listing exists
-        if (listingAddr == address(0)){
+        if (listingAddr == address(0)) {
             revert Vault__OptionPoolNotListed();
             //TODO: should just return false
         }
 
-        if (sigma == 0){
+        if (sigma == 0) {
             revert Vault__ZeroVol();
         }
 
@@ -350,10 +353,10 @@ contract UnderwriterVault is
 
         return true;
     }
-	
 
     function _addListing(uint256 strike, uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
@@ -390,20 +393,26 @@ contract UnderwriterVault is
         l.totalLockedAssets += size;
     }
 
-    function _getFactoryAddress(uint256 strike, uint256 maturity) internal view returns (address){
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    function _getFactoryAddress(
+        uint256 strike,
+        uint256 maturity
+    ) internal view returns (address) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // generate struct to grab pool address
-         IPoolFactory.PoolKey memory _poolKey;
-         _poolKey.base = l.base;
-         _poolKey.quote = l.quote;
-         _poolKey.baseOracle = l.priceOracle;
-         _poolKey.quoteOracle = l.quoteOracle;
-         _poolKey.strike = strike;
-         _poolKey.maturity = uint64(maturity);
-         _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey;
+        _poolKey.base = l.base;
+        _poolKey.quote = l.quote;
+        _poolKey.baseOracle = l.priceOracle;
+        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.strike = strike;
+        _poolKey.maturity = uint64(maturity);
+        _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+            _poolKey
+        );
 
         return listingAddr;
     }
@@ -414,12 +423,12 @@ contract UnderwriterVault is
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // Validate listing
         // Check if not expired
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
-
 
         // Check if the vault has sufficient funds
         uint256 availableAssets = _availableAssets();

@@ -6,7 +6,6 @@ import {
   UnderwriterVaultMock,
   UnderwriterVaultMock__factory,
   UnderwriterVaultProxy__factory,
-  PoolFactory__factory
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 
@@ -59,9 +58,9 @@ describe('UnderwriterVault', () => {
     await baseOracle.mock.decimals.returns(8);
 
     volOracle = await deployMockContract(deployer as any, [
-      'function getVolatility(address, uint256, uint256, uint256) external view returns (int256)'
-    ])
-    await volOracle.mock.getVolatility.returns(parseUnits('1'))
+      'function getVolatility(address, uint256, uint256, uint256) external view returns (int256)',
+    ]);
+    await volOracle.mock.getVolatility.returns(parseUnits('1'));
 
     p = await PoolUtil.deploy(
       deployer,
@@ -75,21 +74,23 @@ describe('UnderwriterVault', () => {
 
     const vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
       volOracle.address,
-      volOracle.address
+      volOracle.address,
     );
     await vaultImpl.deployed();
 
     if (log)
       console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
-    const vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
+    const vaultProxy = await new UnderwriterVaultProxy__factory(
+      deployer,
+    ).deploy(
       vaultImpl.address,
       base.address,
       quote.address,
       baseOracle.address,
       'WETH Vault',
       'WETH',
-      true
+      true,
     );
     await vaultProxy.deployed();
 
@@ -112,10 +113,9 @@ describe('UnderwriterVault', () => {
         base.address,
         parseEther('2500'),
         parseEther('2000'),
-        parseEther('0.2')
-      )
-      expect(parseFloat(formatEther(iv))).to.eq(1)
-    })
+        parseEther('0.2'),
+      );
+      expect(parseFloat(formatEther(iv))).to.eq(1);
+    });
   });
-
 });
