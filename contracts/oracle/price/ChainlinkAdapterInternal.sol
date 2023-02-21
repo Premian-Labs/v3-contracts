@@ -147,8 +147,8 @@ abstract contract ChainlinkAdapterInternal is
             ? Denominations.USD
             : Denominations.ETH;
 
-        uint256 tokenInToBase = _callRegistry(tokenIn, base);
-        uint256 tokenOutToBase = _callRegistry(tokenOut, base);
+        uint256 tokenInToBase = _callPriceFeed(tokenIn, base);
+        uint256 tokenOutToBase = _callPriceFeed(tokenOut, base);
 
         uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
         uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
@@ -221,14 +221,14 @@ abstract contract ChainlinkAdapterInternal is
         address token
     ) internal view returns (uint256) {
         return
-            _isUSD(token) ? ONE_USD : _callRegistry(token, Denominations.USD);
+            _isUSD(token) ? ONE_USD : _callPriceFeed(token, Denominations.USD);
     }
 
     function _getPriceAgainstETH(
         address token
     ) internal view returns (uint256) {
         return
-            _isETH(token) ? ONE_ETH : _callRegistry(token, Denominations.ETH);
+            _isETH(token) ? ONE_ETH : _callPriceFeed(token, Denominations.ETH);
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
@@ -380,7 +380,7 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _callRegistry(
+    function _callPriceFeed(
         address base,
         address quote
     ) internal view returns (uint256) {
@@ -466,15 +466,15 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getETHUSD() internal view returns (uint256) {
-        return _callRegistry(Denominations.ETH, Denominations.USD);
+        return _callPriceFeed(Denominations.ETH, Denominations.USD);
     }
 
     function _getBTCUSD() internal view returns (uint256) {
-        return _callRegistry(Denominations.BTC, Denominations.USD);
+        return _callPriceFeed(Denominations.BTC, Denominations.USD);
     }
 
     function _getWBTCBTC() internal view returns (uint256) {
-        return _callRegistry(WRAPPED_BTC_TOKEN, Denominations.BTC);
+        return _callPriceFeed(WRAPPED_BTC_TOKEN, Denominations.BTC);
     }
 
     function _isUSD(address token) internal pure returns (bool) {
