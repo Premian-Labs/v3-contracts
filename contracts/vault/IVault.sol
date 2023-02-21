@@ -10,7 +10,7 @@ interface IVault {
         uint256 size,
         bool isBuy
     ) external view returns (uint256 maxSize, uint256 price);
-    
+
     function fillQuote(
         address pool,
         uint256 size,

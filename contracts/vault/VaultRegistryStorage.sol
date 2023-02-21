@@ -14,11 +14,10 @@ library VaultRegistryStorage {
         keccak256("premia.contracts.storage.VaultRegistry");
 
     struct Layout {
-        mapping (address => IVaultRegistry.TradeSide) vaultTradeSide;
-        mapping (address => IVaultRegistry.OptionType) vaultOptionType;
-
-        mapping (IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsPerTradeSide;
-        mapping (IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsPerOptionType;
+        mapping(address => IVaultRegistry.TradeSide) vaultTradeSide;
+        mapping(address => IVaultRegistry.OptionType) vaultOptionType;
+        mapping(IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsPerTradeSide;
+        mapping(IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsPerOptionType;
         EnumerableSet.AddressSet vaults;
     }
 

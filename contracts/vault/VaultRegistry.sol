@@ -26,19 +26,31 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-    function vaultsPerTradeSide(TradeSide side) external view returns (address[] memory) {
+    function vaultsPerTradeSide(
+        TradeSide side
+    ) external view returns (address[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        address[] memory vaultsToReturn = new address[](l.vaultsPerTradeSide[side].length());
+        address[] memory vaultsToReturn = new address[](
+            l.vaultsPerTradeSide[side].length()
+        );
         for (uint256 i = 0; i < l.vaultsPerTradeSide[side].length(); i++) {
             vaultsToReturn[i] = l.vaultsPerTradeSide[side].at(i);
         }
         return vaultsToReturn;
     }
 
-    function vaultsPerOptionType(OptionType optionType) external view returns (address[] memory) {
+    function vaultsPerOptionType(
+        OptionType optionType
+    ) external view returns (address[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        address[] memory vaultsToReturn = new address[](l.vaultsPerOptionType[optionType].length());
-        for (uint256 i = 0; i < l.vaultsPerOptionType[optionType].length(); i++) {
+        address[] memory vaultsToReturn = new address[](
+            l.vaultsPerOptionType[optionType].length()
+        );
+        for (
+            uint256 i = 0;
+            i < l.vaultsPerOptionType[optionType].length();
+            i++
+        ) {
             vaultsToReturn[i] = l.vaultsPerOptionType[optionType].at(i);
         }
         return vaultsToReturn;
@@ -49,21 +61,32 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return l.vaults.length();
     }
 
-    function vaultsPerTradeSideLength(IVaultRegistry.TradeSide side) external view returns (uint256) {
+    function vaultsPerTradeSideLength(
+        IVaultRegistry.TradeSide side
+    ) external view returns (uint256) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaultsPerTradeSide[side].length();
     }
 
-    function vaultsPerOptionTypeLength(IVaultRegistry.OptionType optionType) external view returns (uint256) {
+    function vaultsPerOptionTypeLength(
+        IVaultRegistry.OptionType optionType
+    ) external view returns (uint256) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaultsPerOptionType[optionType].length();
     }
 
-    function getVaults(IVaultRegistry.TradeSide side, IVaultRegistry.OptionType optionType) external view returns (address[] memory) {
+    function getVaults(
+        IVaultRegistry.TradeSide side,
+        IVaultRegistry.OptionType optionType
+    ) external view returns (address[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        EnumerableSet.AddressSet storage _vaultsPerTradeSide = l.vaultsPerTradeSide[side];
-        EnumerableSet.AddressSet storage _vaultsPerOptionType = l.vaultsPerOptionType[optionType];
-        address[] memory vaultsToReturn = new address[](_vaultsPerTradeSide.length() + _vaultsPerOptionType.length());
+        EnumerableSet.AddressSet storage _vaultsPerTradeSide = l
+            .vaultsPerTradeSide[side];
+        EnumerableSet.AddressSet storage _vaultsPerOptionType = l
+            .vaultsPerOptionType[optionType];
+        address[] memory vaultsToReturn = new address[](
+            _vaultsPerTradeSide.length() + _vaultsPerOptionType.length()
+        );
         uint256 index = 0;
         for (uint256 i = 0; i < _vaultsPerTradeSide.length(); i++) {
             vaultsToReturn[index] = _vaultsPerTradeSide.at(i);
@@ -84,14 +107,16 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         address[] memory vaultsToReturn = new address[](l.vaults.length());
         uint256 index = 0;
         for (uint256 i = 0; i < sides.length; i++) {
-            EnumerableSet.AddressSet storage _vaultsPerTradeSide = l.vaultsPerTradeSide[sides[i]];
+            EnumerableSet.AddressSet storage _vaultsPerTradeSide = l
+                .vaultsPerTradeSide[sides[i]];
             for (uint256 j = 0; j < _vaultsPerTradeSide.length(); j++) {
                 vaultsToReturn[index] = _vaultsPerTradeSide.at(j);
                 index++;
             }
         }
         for (uint256 i = 0; i < optionTypes.length; i++) {
-            EnumerableSet.AddressSet storage _vaultsPerOptionType = l.vaultsPerOptionType[optionTypes[i]];
+            EnumerableSet.AddressSet storage _vaultsPerOptionType = l
+                .vaultsPerOptionType[optionTypes[i]];
             for (uint256 j = 0; j < _vaultsPerOptionType.length(); j++) {
                 vaultsToReturn[index] = _vaultsPerOptionType.at(j);
                 index++;
@@ -100,9 +125,13 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-    function addVault(address _vault, IVaultRegistry.TradeSide side, IVaultRegistry.OptionType optionType) external onlyOwner {
+    function addVault(
+        address _vault,
+        IVaultRegistry.TradeSide side,
+        IVaultRegistry.OptionType optionType
+    ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        
+
         l.vaultTradeSide[_vault] = side;
         l.vaultOptionType[_vault] = optionType;
         l.vaultsPerTradeSide[side].add(_vault);
