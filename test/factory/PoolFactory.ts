@@ -17,6 +17,8 @@ import {
   revertToSnapshotAfterEach,
 } from '../../utils/time';
 
+import { tokens } from '../../utils/addresses';
+
 import { PoolKey } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 
@@ -27,8 +29,7 @@ describe('PoolFactory', () => {
 
   let base: ERC20Mock;
   let quote: ERC20Mock;
-  let baseOracle: MockContract;
-  let quoteOracle: MockContract;
+  let oracleAdapter: MockContract;
 
   let isCall = true;
   let strike = parseEther('1000'); // ATM
@@ -42,26 +43,16 @@ describe('PoolFactory', () => {
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    baseOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer() external view returns (int256)',
-      'function decimals () external view returns (uint8)',
+    oracleAdapter = await deployMockContract(deployer as any, [
+      'function quote(address,address) external view returns (uint256)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
-    await baseOracle.mock.decimals.returns(8);
-
-    quoteOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer() external view returns (int256)',
-      'function decimals () external view returns (uint8)',
-    ]);
-
-    await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
-    await quoteOracle.mock.decimals.returns(8);
+    await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
 
     p = await PoolUtil.deploy(
       deployer,
-      base.address,
-      baseOracle.address,
+      tokens.WETH.address,
+      oracleAdapter.address,
       deployer.address,
       parseEther('0.1'), // 10%
       true,
@@ -76,8 +67,7 @@ describe('PoolFactory', () => {
     poolKey = {
       base: base.address,
       quote: quote.address,
-      baseOracle: baseOracle.address,
-      quoteOracle: quoteOracle.address,
+      oracleAdapter: oracleAdapter.address,
       strike,
       maturity: BigNumber.from(maturity),
       isCallPool: isCall,
@@ -97,6 +87,7 @@ describe('PoolFactory', () => {
       const tx = await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
       });
+
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;
 
@@ -119,17 +110,14 @@ describe('PoolFactory', () => {
       expect([
         poolSettings.base,
         poolSettings.quote,
-        poolSettings.baseOracle,
-        poolSettings.quoteOracle,
+        poolSettings.oracleAdapter,
         poolSettings.strike,
         poolSettings.maturity,
         poolSettings.isCallPool,
       ]).to.deep.eq([
         base.address,
         quote.address,
-
-        baseOracle.address,
-        quoteOracle.address,
+        oracleAdapter.address,
         strike,
         maturity,
         isCall,
@@ -150,44 +138,12 @@ describe('PoolFactory', () => {
       );
     });
 
-    it('should revert if quoteOracle and baseOracle are identical', async () => {
-      await expect(
-        p.poolFactory.deployPool(
-          {
-            ...poolKey,
-            baseOracle: quoteOracle.address,
-          },
-          {
-            value: parseEther('1'),
-          },
-        ),
-      ).to.be.revertedWithCustomError(
-        p.poolFactory,
-        'PoolFactory__IdenticalAddresses',
-      );
-    });
-
-    it('should revert if base, base, quoteOracle, or baseOracle are zero address', async () => {
+    it('should revert if base, base, or oracleAdapter are zero address', async () => {
       await expect(
         p.poolFactory.deployPool(
           {
             ...poolKey,
             quote: ethers.constants.AddressZero,
-          },
-          {
-            value: parseEther('1'),
-          },
-        ),
-      ).to.be.revertedWithCustomError(
-        p.poolFactory,
-        'PoolFactory__ZeroAddress',
-      );
-
-      await expect(
-        p.poolFactory.deployPool(
-          {
-            ...poolKey,
-            quoteOracle: ethers.constants.AddressZero,
           },
           {
             value: parseEther('1'),
@@ -217,7 +173,7 @@ describe('PoolFactory', () => {
         p.poolFactory.deployPool(
           {
             ...poolKey,
-            baseOracle: ethers.constants.AddressZero,
+            oracleAdapter: ethers.constants.AddressZero,
           },
           {
             value: parseEther('1'),

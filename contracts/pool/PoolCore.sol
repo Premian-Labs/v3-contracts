@@ -34,8 +34,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         returns (
             address base,
             address quote,
-            address baseOracle,
-            address quoteOracle,
+            address oracleAdapter,
             uint256 strike,
             uint64 maturity,
             bool isCallPool
@@ -45,8 +44,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         return (
             l.base,
             l.quote,
-            l.baseOracle,
-            l.quoteOracle,
+            l.oracleAdapter,
             l.strike,
             l.maturity,
             l.isCallPool
