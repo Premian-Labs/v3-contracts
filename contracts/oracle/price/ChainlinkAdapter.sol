@@ -59,16 +59,16 @@ contract ChainlinkAdapter is
             PricingPath path,
             address mappedTokenIn,
             address mappedTokenOut
-        ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
+        ) = _pathForPair(tokenIn, tokenOut, false);
 
         if (path == PricingPath.NONE) {
             _upsertPair(tokenIn, tokenOut);
 
-            (
-                path,
-                mappedTokenIn,
-                mappedTokenOut
-            ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
+            (path, mappedTokenIn, mappedTokenOut) = _pathForPair(
+                tokenIn,
+                tokenOut,
+                false
+            );
         }
 
         return _quote(path, mappedTokenIn, mappedTokenOut);
@@ -83,7 +83,7 @@ contract ChainlinkAdapter is
             PricingPath path,
             address mappedTokenIn,
             address mappedTokenOut
-        ) = _pathForPairAndUnsortedMappedTokens(tokenIn, tokenOut);
+        ) = _pathForPair(tokenIn, tokenOut, false);
 
         if (path == PricingPath.NONE)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
@@ -96,7 +96,8 @@ contract ChainlinkAdapter is
         address tokenA,
         address tokenB
     ) external view returns (PricingPath) {
-        return _pathForPair(tokenA, tokenB);
+        (PricingPath path, , ) = _pathForPair(tokenA, tokenB, false);
+        return path;
     }
 
     /// @inheritdoc IChainlinkAdapter
