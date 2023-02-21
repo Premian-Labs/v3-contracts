@@ -323,15 +323,18 @@ contract UnderwriterVault is
 
  function _isValidListing(
         uint256 strike, 
-        uint256 maturity
+        uint256 maturity,
+        uint256 sigma
     ) internal view returns (bool){
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         if (strike == 0){
             revert Vault__AddressZero();
+            //TODO: should just return false
         }
         if (maturity == 0){
             revert Vault__MaturityZero();
+            //TODO: should just return false
         }
 
         // generate struct to grab pool address
@@ -349,9 +352,18 @@ contract UnderwriterVault is
         // NOTE: query returns address(0) if no listing exists
         if (listingAddr == address(0)){
             revert Vault__OptionPoolNotListed();
+            //TODO: should just return false
         }
 
-        //TODO: check the delta and dte are within our trader vault range
+        if (sigma == 0){
+            revert Vault__ZeroVol();
+        }
+
+        //TODO: check the delta and dte are within our vault trading range
+        //TODO: get implied volatility (for delta)
+        //TODO: get delta of option ( .10 < l.delta < .70)
+        //TODO: calculate DTE (< 30 days)
+        
         return true;
     }
 	
@@ -418,17 +430,11 @@ contract UnderwriterVault is
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Validate listing
         // Check if not expired
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
-
-        // Check if this listing is supported by the vault.
-        if (!_isValidListing(strike, maturity))
-            revert Vault__OptionPoolNotSupported();
-        else _addListing(strike, maturity);
 
         // Check if the vault has sufficient funds
         uint256 availableAssets = _availableAssets();
@@ -440,10 +446,10 @@ contract UnderwriterVault is
         //TODO: should we use now or block timestamp?
         uint256 spotPrice = _getSpotPrice(block.timestamp);
 
-        // TODO: check if Dte need to be converted for getVolatility()
+        //TODO: check if Dte need to be converted for getVolatility()
         uint256 timeToMaturity = maturity - block.timestamp;
 
-        // TODO: check to see if getVol should return uint instead of int256?
+        //TODO: check to see if getVol should return uint instead of int256?
         int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
             _asset(),
             spotPrice,
@@ -454,6 +460,11 @@ contract UnderwriterVault is
         //TODO: remove once getvolatility() is uint256
         uint256 volAnnualized = uint256(sigma);
 
+        // Check if this listing is supported by the vault.
+        if (!_isValidListing(strike, maturity, volAnnualized))
+            revert Vault__OptionPoolNotSupported();
+        else _addListing(strike, maturity);
+
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
             strike,
@@ -463,7 +474,7 @@ contract UnderwriterVault is
             l.isCall
         );
 
-        uint256 premium = size * uint256(price);
+        uint256 totalPremium = size * uint256(price);
 
         // TODO: enso / professors function call do determine the spread
         // TODO: embed the trading fee into the spread (requires calculating fee)
@@ -472,9 +483,9 @@ contract UnderwriterVault is
         // TODO: call mint function to receive shorts + longs
 
         // Handle the premiums and spread capture generated
-        _handleTradeFees(premium, spread, size, timeToMaturity);
+        _handleTradeFees(totalPremium, spread, size, timeToMaturity);
 
-        return premium;
+        return totalPremium;
     }
 
     /// @inheritdoc IUnderwriterVault
