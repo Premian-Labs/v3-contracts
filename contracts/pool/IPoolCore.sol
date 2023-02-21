@@ -11,12 +11,14 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
-    /// @param normalizedPremium The total cost of option(s) for a purchase (Normalized by strike)
-    /// @return The taker fee for an option trade
+    /// @param premium The total cost of option(s) for a purchase
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike is a raw collateral amount
+    /// @return The taker fee for an option trade denormalized
     function takerFee(
         uint256 size,
-        uint256 normalizedPremium
-    ) external pure returns (uint256);
+        uint256 premium,
+        bool isPremiumNormalized
+    ) external view returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
@@ -235,7 +237,7 @@ interface IPoolCore is IPoolInternal {
         bytes32 r,
         bytes32 s
     ) external view returns (bool, InvalidQuoteError);
-    
+
     /// @notice Returns the size already filled for a given quote
     /// @param provider Provider of the quote
     /// @param tradeQuoteHash Hash of the quote
