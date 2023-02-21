@@ -22,6 +22,7 @@ library UnderwriterVaultStorage {
         address quote;
 
         address priceOracle;
+        address quoteOracle;
 
         // Whether the vault is underwriting calls or puts
         bool isCall;

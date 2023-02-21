@@ -24,23 +24,23 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    address public IV_ORACLE;
-    address public FACTORY;
+    address public IV_ORACLE_ADDR;
+    address public FACTORY_ADDR;
 
     constructor (
         address oracleAddress, 
         address factoryAddress
     ) {
-        IV_ORACLE = oracleAddress;
-        FACTORY = factoryAddress;
+        IV_ORACLE_ADDR = oracleAddress;
+        FACTORY_ADDR = factoryAddress;
     }
 
     function setOracleAddr(address oracleAddress) external onlyOwner {
-        IV_ORACLE = oracleAddress;
+        IV_ORACLE_ADDR = oracleAddress;
     }
 
     function setFactoryAddr(address factoryAddress) external onlyOwner {
-        FACTORY = factoryAddress;
+        FACTORY_ADDR = factoryAddress;
     }
 
     function setVariable(uint256 value) external onlyOwner {
@@ -90,7 +90,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
                 if (block.timestamp < current) {
                     spot = _getSpotPrice(block.timestamp);
                     timeToMaturity = current - block.timestamp;
-                    sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
+                    sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
                         _asset(),
                         spot,
                         strike,
@@ -296,16 +296,33 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
     function _isValidListing(
         uint256 strike, 
         uint256 maturity
-    ) internal pure returns (bool){
-        //TODO: channge function to view once hydrated
+    ) internal view returns (bool){
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
         if (strike == 0){
             revert Vault__AddressZero();
         }
         if (maturity == 0){
             revert Vault__MaturityZero();
         }
-        //TODO: query base layer factory => getPoolAddress(PoolKey memory k) external view returns (address)
-        //NOTE: query returns address(0) if no listing exists
+
+        // generate struct to grab pool address
+         IPoolFactory.PoolKey memory _poolKey;
+         _poolKey.base = l.base;
+         _poolKey.quote = l.quote;
+         _poolKey.baseOracle = l.priceOracle;
+         _poolKey.quoteOracle = l.quoteOracle;
+         _poolKey.strike = strike;
+         _poolKey.maturity = uint64(maturity);
+         _poolKey.isCallPool = l.isCall;
+
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+
+        // NOTE: query returns address(0) if no listing exists
+        if (listingAddr == address(0)){
+            revert Vault__OptionPoolNotListed();
+        }
+        
         //TODO: check the delta and dte are within our trader vault range
         return true;
     }
@@ -372,8 +389,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
 
         if (size >= availableAssets)
             revert Vault__InsufficientFunds();
-        // Check if this listing has a pool deployed
-        // revert Vault__OptionPoolNotListed();
 
         // Compute premium and the spread collected
         //TODO: set up spot oracle
@@ -384,7 +399,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, OwnableIntern
         uint256 timeToMaturity = maturity - block.timestamp;
 
         // TODO: check to see if getVol should return uint instead of int256?
-        int256 sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
+        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
             _asset(),
             spotPrice,
             strike,
