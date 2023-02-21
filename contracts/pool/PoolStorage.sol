@@ -58,8 +58,8 @@ library PoolStorage {
         uint256 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Gets incremented everytime `fillQuote` is called successfully
-        mapping(address => uint256) tradeQuoteNonce;
+        // Size of quotes already filled (provider -> quoteHash -> amountFilled)
+        mapping(address => mapping(bytes32 => uint256)) tradeQuoteAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }
