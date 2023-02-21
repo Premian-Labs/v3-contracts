@@ -414,17 +414,12 @@ contract UnderwriterVault is
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Validate listing
         // Check if not expired
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
 
-        // Check if this listing is supported by the vault.
-        if (!_isValidListing(strike, maturity))
-            revert Vault__OptionPoolNotSupported();
-        else _addListing(strike, maturity);
 
         // Check if the vault has sufficient funds
         uint256 availableAssets = _availableAssets();
@@ -449,6 +444,11 @@ contract UnderwriterVault is
 
         //TODO: remove once getvolatility() is uint256
         uint256 volAnnualized = uint256(sigma);
+
+        // Check if this listing is supported by the vault.
+        if (!_isValidListing(strike, maturity, volAnnualized))
+            revert Vault__OptionPoolNotSupported();
+        else _addListing(strike, maturity);
 
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
