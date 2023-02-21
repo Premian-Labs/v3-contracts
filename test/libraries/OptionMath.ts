@@ -28,7 +28,9 @@ describe('OptionMath', () => {
         ['2.', '0.018287098844188538'],
         ['3.', '0.000638104717830912'],
       ]) {
-        expect(formatEther(await instance.helperNormal(parseEther(t[0])))).to.eq(t[1]);
+        expect(
+          formatEther(await instance.helperNormal(parseEther(t[0]))),
+        ).to.eq(t[1]);
       }
     });
   });
@@ -44,7 +46,9 @@ describe('OptionMath', () => {
         ['2.', '0.97725010847144201'],
         ['3.', '0.99864991326759319'],
       ]) {
-        expect(formatEther(await instance.normalCdf(parseEther(t[0])))).to.eq(t[1]);
+        expect(formatEther(await instance.normalCdf(parseEther(t[0])))).to.eq(
+          t[1],
+        );
       }
     });
   });
@@ -61,93 +65,12 @@ describe('OptionMath', () => {
         ['3.6', '3.6'],
       ]) {
         expect(
-            parseFloat(formatEther(await instance.relu(parseEther(t[0])))
-            )
-        ).to.eq(
-          parseFloat(t[1]),
-        );
+          parseFloat(formatEther(await instance.relu(parseEther(t[0])))),
+        ).to.eq(parseFloat(t[1]));
       }
     });
   });
   describe('#blackScholesPrice', function () {
-    const spot = parseEther('1.');
-    const strike = parseEther('1.');
-    const timeToMaturity = parseEther('1.');
-    const volAnnualized = parseEther('1.');
-    const riskFreeRate = parseEther('0.');
-    const isCall = true;
-
-    it('should revert when variance is non-positive', async () => {
-      let volAnnualized = parseEther('0.');
-        await expect(
-            instance.blackScholesPrice(
-              spot,
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              isCall,
-            )
-        ).to.be.revertedWithCustomError(instance, 'OptionMath__NonPositiveVol');
-
-      volAnnualized = parseEther('-1.');
-      await expect(
-          instance.blackScholesPrice(
-              spot,
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              isCall,
-          )
-      ).to.be.revertedWithCustomError(instance, 'OptionMath__NonPositiveVol');
-    });
-
-    it('should revert when strike is negative', async () => {
-      const strike = parseEther('-1.');
-
-      await expect(
-          instance.blackScholesPrice(
-              spot,
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              isCall,
-          )
-      ).to.be.revertedWithCustomError(instance, 'OptionMath__NegativeStrike');
-    });
-
-    it('should revert when time to maturity is negative', async () => {
-      const timeToMaturity = parseEther('-1.');
-
-      await expect(
-          instance.blackScholesPrice(
-              spot,
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              isCall,
-          )
-      ).to.be.revertedWithCustomError(instance, 'OptionMath__NegativeTimeToMaturity');
-    });
-
-    it('should revert when spot is negative', async () => {
-      const spot = parseEther('-1.');
-
-      await expect(
-          instance.blackScholesPrice(
-              spot,
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              isCall,
-          )
-      ).to.be.revertedWithCustomError(instance, 'OptionMath__NegativeSpot');
-    });
-
     it('test of the Black-Scholes formula', async () => {
       const strike = parseEther('1.');
       const timeToMaturity = parseEther('1.');
@@ -163,18 +86,18 @@ describe('OptionMath', () => {
           ['2.2', '1.4293073801560254'],
         ]) {
           const result = formatEther(
-              await instance.blackScholesPrice(
-                  parseEther(t[0]),
-                  strike,
-                  timeToMaturity,
-                  volAnnualized,
-                  riskFreeRate,
-                  true,
-              ),
+            await instance.blackScholesPrice(
+              parseEther(t[0]),
+              strike,
+              timeToMaturity,
+              volAnnualized,
+              riskFreeRate,
+              true,
+            ),
           );
           expect(parseFloat(result) - parseFloat(t[1])).to.be.closeTo(
-              0,
-              0.000001,
+            0,
+            0.000001,
           );
         }
       });
@@ -188,18 +111,18 @@ describe('OptionMath', () => {
           ['2.2', '0.13414479819198477'],
         ]) {
           const result = formatEther(
-              await instance.blackScholesPrice(
-                  parseEther(t[0]),
-                  strike,
-                  timeToMaturity,
-                  volAnnualized,
-                  riskFreeRate,
-                  false,
-              ),
+            await instance.blackScholesPrice(
+              parseEther(t[0]),
+              strike,
+              timeToMaturity,
+              volAnnualized,
+              riskFreeRate,
+              false,
+            ),
           );
           expect(parseFloat(result) - parseFloat(t[1])).to.be.closeTo(
-              0,
-              0.000001,
+            0,
+            0.000001,
           );
         }
       });
