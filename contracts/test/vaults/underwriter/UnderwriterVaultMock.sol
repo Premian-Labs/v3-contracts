@@ -17,8 +17,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
-    constructor(address oracleAddress, address factoryAddress)
-        UnderwriterVault(oracleAddress, factoryAddress) {}
+    constructor(
+        address oracleAddress,
+        address factoryAddress
+    ) UnderwriterVault(oracleAddress, factoryAddress) {}
 
     function getTotalFairValue() external view returns (uint256) {
         return _getTotalFairValue();
@@ -46,12 +48,27 @@ contract UnderwriterVaultMock is UnderwriterVault {
         );
     }
 
+    function setSpreadUnlockingRate(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().spreadUnlockingRate = value;
+    }
+
+    function setSpreadUnlockingTick(
+        uint256 maturity,
+        uint256 value
+    ) external onlyOwner {
+        UnderwriterVaultStorage.layout().spreadUnlockingTicks[maturity] = value;
+    }
+
     function setTotalLockedAssets(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().totalLockedAssets = value;
     }
 
     function setTotalLockedSpread(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().totalLockedSpread = value;
+    }
+
+    function setTotalAssets(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().totalAssets = value;
     }
 
     function lastMaturity() external view returns (uint256) {

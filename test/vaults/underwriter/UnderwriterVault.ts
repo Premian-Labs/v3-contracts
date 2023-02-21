@@ -18,7 +18,7 @@ import {
 import { BigNumber } from 'ethers';
 import { IERC20 } from '../../../typechain';
 import { SafeERC20 } from '../../../typechain';
-
+import { now, ONE_DAY } from '../../../utils/time';
 import { parseEther, parseUnits, formatEther } from 'ethers/lib/utils';
 import {
   deployMockContract,
@@ -31,11 +31,13 @@ describe('UnderwriterVault', () => {
   let deployer: SignerWithAddress;
   let caller: SignerWithAddress;
   let receiver: SignerWithAddress;
+  let trader: SignerWithAddress;
 
   let vault: UnderwriterVaultMock;
 
   let base: ERC20Mock;
   let quote: ERC20Mock;
+  let long: ERC20Mock;
 
   let baseOracle: MockContract;
 
@@ -56,13 +58,15 @@ describe('UnderwriterVault', () => {
   const log = true;
 
   before(async () => {
-    [deployer, caller, receiver] = await ethers.getSigners();
+    [deployer, caller, receiver, trader] = await ethers.getSigners();
 
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+    long = await new ERC20Mock__factory(deployer).deploy('Short', 18);
 
     await base.deployed();
     await quote.deployed();
+    await long.deployed();
 
     await base.mint(caller.address, parseEther('1000'));
     await quote.mint(caller.address, parseEther('1000000'));
@@ -152,11 +156,36 @@ describe('UnderwriterVault', () => {
     if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
   });
 
-  describe('#setting up the environment', () => {
-    it('', async () => {
+  describe('#vault environment after a single trade', () => {
+    const prepareVault = async () => {
       const assetAmount = parseEther('2');
-      const shareAmount = await vault.convertToShares(assetAmount);
-      expect(shareAmount).to.eq(assetAmount);
+      await base.connect(caller).approve(vault.address, assetAmount);
+      await vault.connect(caller).deposit(assetAmount, receiver.address);
+
+      // description of environment / fixture
+      // deposit: 2 collateral
+      // trade: buys 1 option contract, 0.5 premium, spread 0.1, maturity 10 (days), dte 10,
+      // premium
+
+      // get block time, set min maturity as the block time + 10 days
+      let currentTime = await now();
+      const minMaturity = currentTime + 10 * ONE_DAY;
+      await vault.setMinMaturity(minMaturity.toString());
+      await vault.insertMaturity(0, minMaturity);
+      await vault.setTotalLockedSpread(parseEther('0.1'));
+      await vault.setSpreadUnlockingRate(parseEther('2.5'));
+      await vault.setSpreadUnlockingTick(minMaturity, parseEther('2.5'));
+      await vault.setTotalLockedAssets(parseEther('1'));
+      // deposited 2 assets, 0.5 premiums, 0.1 spread
+      await vault.setTotalAssets(parseEther('2.6'));
+      // mint long token - necessary?
+      //await base.mint(trader, parseEther('1'));
+      //await long.mint(trader.address, parseEther('1'));
+    };
+
+    it('prepare Vault', async () => {
+      await prepareVault();
+      console.log(await vault.getPricePerShare());
     });
   });
 
@@ -229,12 +258,6 @@ describe('UnderwriterVault', () => {
       // modify the price per share to (1 - 0.5) / 1 = 0.5
       await vault.connect(deployer).setTotalLockedSpread(parseEther('0.5'));
       await vault.connect(deployer).setMinMaturity(parseEther('1'));
-      console.log(await vault.totalAssets());
-      console.log(await vault.totalLockedSpread());
-      console.log(await vault.totalSupply());
-      console.log(await vault.getPricePerShare());
-      console.log(await vault.getTotalFairValue());
-
       await vault.connect(caller).deposit(assetAmount, receiver.address);
 
       expect(await base.balanceOf(vault.address)).to.eq(allowedAssetAmount);
@@ -243,9 +266,9 @@ describe('UnderwriterVault', () => {
       );
       expect(await base.balanceOf(receiver.address)).to.eq(baseBalanceReceiver);
       expect(await vault.balanceOf(caller.address)).to.eq(parseEther('0'));
-      expect(formatEther(await vault.balanceOf(receiver.address))).to.eq(
-        (2 + 2 / 0.75).toString(),
-      );
+      expect(
+        parseFloat(formatEther(await vault.balanceOf(receiver.address))),
+      ).to.be.closeTo(2 + 2 / 0.75, 0.00001);
     });
   });
 

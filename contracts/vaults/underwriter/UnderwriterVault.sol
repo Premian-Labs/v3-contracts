@@ -159,22 +159,6 @@ contract UnderwriterVault is
         // TODO: change function to view once hydrated
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        console.log(l.totalAssets); // 2
-        console.log(_getTotalLockedSpread()); // 0.5
-        console.log(_getTotalFairValue()); // 0
-        console.log(_totalSupply()); // 2
-
-        // (2 - 0.5) / 2 = 3 / 4
-        // uint256 a = (l.totalAssets - _getTotalLockedSpread()) / _totalSupply();
-        uint256 b = (l.totalAssets - _getTotalLockedSpread()) /
-            (_totalSupply());
-
-        uint256 a = l.totalAssets - _getTotalLockedSpread();
-        console.log(b);
-
-        console.log(a);
-        console.log(_totalSupply());
-        console.log(a.div(_totalSupply()));
 
         return
             (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue())
@@ -321,43 +305,46 @@ contract UnderwriterVault is
         }
     }
 
- function _isValidListing(
-        uint256 strike, 
+    function _isValidListing(
+        uint256 strike,
         uint256 maturity
-    ) internal view returns (bool){
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    ) internal view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-        if (strike == 0){
+        if (strike == 0) {
             revert Vault__AddressZero();
         }
-        if (maturity == 0){
+        if (maturity == 0) {
             revert Vault__MaturityZero();
         }
 
         // generate struct to grab pool address
-         IPoolFactory.PoolKey memory _poolKey;
-         _poolKey.base = l.base;
-         _poolKey.quote = l.quote;
-         _poolKey.baseOracle = l.priceOracle;
-         _poolKey.quoteOracle = l.quoteOracle;
-         _poolKey.strike = strike;
-         _poolKey.maturity = uint64(maturity);
-         _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey;
+        _poolKey.base = l.base;
+        _poolKey.quote = l.quote;
+        _poolKey.baseOracle = l.priceOracle;
+        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.strike = strike;
+        _poolKey.maturity = uint64(maturity);
+        _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+            _poolKey
+        );
 
         // NOTE: query returns address(0) if no listing exists
-        if (listingAddr == address(0)){
+        if (listingAddr == address(0)) {
             revert Vault__OptionPoolNotListed();
         }
 
         //TODO: check the delta and dte are within our trader vault range
         return true;
     }
-	
 
     function _addListing(uint256 strike, uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
@@ -394,20 +381,26 @@ contract UnderwriterVault is
         l.totalLockedAssets += size;
     }
 
-    function _getFactoryAddress(uint256 strike, uint256 maturity) internal view returns (address){
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+    function _getFactoryAddress(
+        uint256 strike,
+        uint256 maturity
+    ) internal view returns (address) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
         // generate struct to grab pool address
-         IPoolFactory.PoolKey memory _poolKey;
-         _poolKey.base = l.base;
-         _poolKey.quote = l.quote;
-         _poolKey.baseOracle = l.priceOracle;
-         _poolKey.quoteOracle = l.quoteOracle;
-         _poolKey.strike = strike;
-         _poolKey.maturity = uint64(maturity);
-         _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey;
+        _poolKey.base = l.base;
+        _poolKey.quote = l.quote;
+        _poolKey.baseOracle = l.priceOracle;
+        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.strike = strike;
+        _poolKey.maturity = uint64(maturity);
+        _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(_poolKey);
+        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+            _poolKey
+        );
 
         return listingAddr;
     }
