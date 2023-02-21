@@ -84,22 +84,8 @@ abstract contract ChainlinkAdapterInternal is
 
     function _pathForPair(
         address tokenA,
-        address tokenB
-    ) internal view returns (PricingPath) {
-        (
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
-
-        return
-            ChainlinkAdapterStorage.layout().pathForPair[
-                _keyForSortedPair(mappedTokenA, mappedTokenB)
-            ];
-    }
-
-    function _pathForPairAndUnsortedMappedTokens(
-        address tokenA,
-        address tokenB
+        address tokenB,
+        bool sortTokens
     )
         internal
         view
@@ -107,9 +93,19 @@ abstract contract ChainlinkAdapterInternal is
     {
         (mappedTokenA, mappedTokenB) = _mapPairToDenomination(tokenA, tokenB);
 
+        (address sortedA, address sortedB) = TokenSorting.sortTokens(
+            mappedTokenA,
+            mappedTokenB
+        );
+
         path = ChainlinkAdapterStorage.layout().pathForPair[
-            _keyForUnsortedPair(mappedTokenA, mappedTokenB)
+            _keyForSortedPair(sortedA, sortedB)
         ];
+
+        if (sortTokens) {
+            mappedTokenA = sortedA;
+            mappedTokenB = sortedB;
+        }
     }
 
     /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
