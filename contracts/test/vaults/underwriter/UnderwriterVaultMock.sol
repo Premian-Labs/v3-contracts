@@ -64,7 +64,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().maturities.next(last);
     }
 
-    function getPricePerShare() external pure returns (uint256) {
+    function getPricePerShare() external view returns (uint256) {
         return _getPricePerShare();
     }
 
