@@ -12,11 +12,13 @@ interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
     /// @param premium The total cost of option(s) for a purchase
-    /// @return The taker fee for an option trade
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @return The taker fee for an option trade denormalized
     function takerFee(
         uint256 size,
-        uint256 premium
-    ) external pure returns (uint256);
+        uint256 premium,
+        bool isPremiumNormalized
+    ) external view returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
@@ -123,15 +125,21 @@ interface IPoolCore is IPoolInternal {
     ///         fully while having the price guaranteed.
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote
-    /// @param v secp256k1 'v' value
-    /// @param r secp256k1 'r' value
-    /// @param s secp256k1 's' value
+    /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
     function fillQuote(
         TradeQuote memory tradeQuote,
         uint256 size,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        Signature memory signature
+    ) external;
+
+    /// @notice Underwrite an option by depositing collateral
+    /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
+    /// @param longReceiver The address which will receive the long token
+    /// @param size The number of contracts being underwritten
+    function writeFrom(
+        address underwriter,
+        address longReceiver,
+        uint256 size
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -216,8 +224,27 @@ interface IPoolCore is IPoolInternal {
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
 
-    /// @notice Get the current quote nonce for the given user
-    /// @param user User for which to return the current quote nonce
-    /// @return The current quote nonce
-    function getTradeQuoteNonce(address user) external view returns (uint256);
+    /// @notice Cancel given trade quotes
+    /// @dev No check is done to ensure the given hash correspond to a quote provider by msg.sender,
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a quote created by another provider
+    /// @param hashes The hashes of the quotes to cancel
+    function cancelTradeQuotes(bytes32[] calldata hashes) external;
+
+    /// @notice Returns whether or not a quote is valid, given a fill size
+    /// @param tradeQuote The quote to check
+    /// @param size Size to fill from the quote
+    /// @param sig secp256k1 Signature
+    function isTradeQuoteValid(
+        TradeQuote memory tradeQuote,
+        uint256 size,
+        Signature memory sig
+    ) external view returns (bool, InvalidQuoteError);
+
+    /// @notice Returns the size already filled for a given quote
+    /// @param provider Provider of the quote
+    /// @param tradeQuoteHash Hash of the quote
+    function getTradeQuoteFilledAmount(
+        address provider,
+        bytes32 tradeQuoteHash
+    ) external view returns (uint256);
 }
