@@ -102,15 +102,16 @@ library OptionMath {
         uint256 volAnnualized,
         uint256 riskFreeRate
     ) internal pure returns (int256 d1, int256 d2) {
-        uint256 timeScaledVol = timeToMaturity.mul(volAnnualized);
-        uint256 timeScaledVar = timeScaledVol.pow(TWO);
-        uint256 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
+        uint256 timeScaledRiskFreeRate = riskFreeRate.mul(timeToMaturity);
+        uint256 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(timeToMaturity);
+        uint256 timeScaledStd = volAnnualized.mul(timeToMaturity.sqrt());
+        int256 lnSpot = spot.div(strike).toInt256().ln();
 
         d1 =
-            spot.div(strike).toInt256().ln() +
-            timeScaledVar.div(TWO).toInt256() +
-            timeScaledRiskFreeRate.div(timeScaledVol).toInt256();
-        d2 = d1 - timeScaledVol.toInt256();
+            (lnSpot + timeScaledVariance.toInt256() + timeScaledRiskFreeRate.toInt256())
+            .div(timeScaledStd.toInt256());
+
+        d2 = d1 - timeScaledStd.toInt256();
     }
 
     /// @notice Calculate option delta
@@ -139,7 +140,7 @@ library OptionMath {
         if (isCall) {
             return normalCdf(d1);
         } else {
-            return normalCdf(-d1);
+            return -normalCdf(-d1);
         }
     }
 
