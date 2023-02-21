@@ -216,8 +216,17 @@ interface IPoolCore is IPoolInternal {
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
 
-    /// @notice Get the current quote nonce for the given user
-    /// @param user User for which to return the current quote nonce
-    /// @return The current quote nonce
-    function getTradeQuoteNonce(address user) external view returns (uint256);
+    /// @notice Cancel given trade quotes
+    /// @dev No check is done to ensure the given hash correspond to a quote provider by msg.sender,
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a quote created by another provider
+    /// @param hashes The hashes of the quotes to cancel
+    function cancelTradeQuotes(bytes32[] calldata hashes) external;
+
+    /// @notice Returns the size already filled for a given quote
+    /// @param provider Provider of the quote
+    /// @param tradeQuoteHash Hash of the quote
+    function getTradeQuoteFilledAmount(
+        address provider,
+        bytes32 tradeQuoteHash
+    ) external view returns (uint256);
 }

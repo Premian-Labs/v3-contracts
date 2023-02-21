@@ -1,23 +1,12 @@
 import { signData } from './rpc';
 import { Provider } from '@ethersproject/providers';
-import { IPool__factory } from '../../typechain';
-
-interface TradeQuoteBase {
-  provider: string;
-  taker: string;
-  price: number | string;
-  size: number | string;
-  isBuy: boolean;
-  deadline: number;
-}
-
-export interface TradeQuote extends TradeQuoteBase {
-  nonce: number;
-}
-
-export interface TradeQuoteNonceOptional extends TradeQuoteBase {
-  nonce?: number;
-}
+import { TradeQuote } from './types';
+import {
+  defaultAbiCoder,
+  keccak256,
+  solidityPack,
+  toUtf8Bytes,
+} from 'ethers/lib/utils';
 
 interface Domain {
   name: string;
@@ -36,7 +25,7 @@ const EIP712Domain = [
 export async function signQuote(
   w3Provider: Provider,
   poolAddress: string,
-  quote: TradeQuoteNonceOptional,
+  quote: TradeQuote,
 ) {
   const domain: Domain = {
     name: 'Premia',
@@ -45,18 +34,13 @@ export async function signQuote(
     verifyingContract: poolAddress,
   };
 
-  // Query current nonce for taker from contract, if nonce is not specified
-  if (quote.nonce === undefined) {
-    quote.nonce = (
-      await IPool__factory.connect(poolAddress, w3Provider).getTradeQuoteNonce(
-        quote.taker,
-      )
-    ).toNumber();
-  }
-
-  const message: TradeQuote = {
-    ...(quote as TradeQuote),
+  const message: any = {
+    ...quote,
   };
+
+  message.price = quote.price.toString();
+  message.size = quote.size.toString();
+  message.deadline = quote.deadline.toString();
 
   const typedData = {
     types: {
@@ -67,8 +51,8 @@ export async function signQuote(
         { name: 'price', type: 'uint256' },
         { name: 'size', type: 'uint256' },
         { name: 'isBuy', type: 'bool' },
-        { name: 'nonce', type: 'uint256' },
         { name: 'deadline', type: 'uint256' },
+        { name: 'salt', type: 'uint256' },
       ],
     },
     primaryType: 'FillQuote',
@@ -78,4 +62,74 @@ export async function signQuote(
   const sig = await signData(w3Provider, quote.provider, typedData);
 
   return { ...sig, ...message };
+}
+
+export async function calculateQuoteHash(
+  w3Provider: Provider,
+  quote: TradeQuote,
+  poolAddress: string,
+) {
+  const FILL_QUOTE_TYPE_HASH = keccak256(
+    toUtf8Bytes(
+      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
+    ),
+  );
+
+  const EIP712_TYPE_HASH = keccak256(
+    toUtf8Bytes(
+      'EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)',
+    ),
+  );
+
+  const domain: Domain = {
+    name: 'Premia',
+    version: '1',
+    chainId: (await w3Provider.getNetwork()).chainId,
+    verifyingContract: poolAddress,
+  };
+
+  const domainHash = keccak256(
+    defaultAbiCoder.encode(
+      ['bytes32', 'bytes32', 'bytes32', 'uint256', 'address'],
+      [
+        EIP712_TYPE_HASH,
+        keccak256(toUtf8Bytes(domain.name)),
+        keccak256(toUtf8Bytes(domain.version)),
+        domain.chainId,
+        domain.verifyingContract,
+      ],
+    ),
+  );
+
+  const structHash = keccak256(
+    defaultAbiCoder.encode(
+      [
+        'bytes32',
+        'address',
+        'address',
+        'uint256',
+        'uint256',
+        'bool',
+        'uint256',
+        'uint256',
+      ],
+      [
+        FILL_QUOTE_TYPE_HASH,
+        quote.provider,
+        quote.taker,
+        quote.price,
+        quote.size,
+        quote.isBuy,
+        quote.deadline,
+        quote.salt,
+      ],
+    ),
+  );
+
+  return keccak256(
+    solidityPack(
+      ['string', 'bytes32', 'bytes32'],
+      ['\x19\x01', domainHash, structHash],
+    ),
+  );
 }
