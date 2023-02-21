@@ -12,7 +12,7 @@ interface IPoolCore is IPoolInternal {
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
     /// @param premium The total cost of option(s) for a purchase
-    /// @param isPremiumNormalized Whether the premium given is already normalized by strike is a raw collateral amount
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
     /// @return The taker fee for an option trade denormalized
     function takerFee(
         uint256 size,
