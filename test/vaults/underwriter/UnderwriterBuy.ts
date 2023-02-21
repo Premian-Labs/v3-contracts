@@ -6,7 +6,9 @@ import {
   UnderwriterVaultMock,
   UnderwriterVaultMock__factory,
   UnderwriterVaultProxy__factory,
+  PoolFactory__factory
 } from '../../../typechain';
+import { PoolUtil } from '../../../utils/PoolUtil';
 
 import { parseEther, parseUnits, formatEther } from 'ethers/lib/utils';
 import {
@@ -19,7 +21,7 @@ describe('UnderwriterVault', () => {
   let deployer: SignerWithAddress;
   let caller: SignerWithAddress;
   let receiver: SignerWithAddress;
-
+  let p: PoolUtil;
   let vault: UnderwriterVaultMock;
 
   let base: ERC20Mock;
@@ -59,28 +61,35 @@ describe('UnderwriterVault', () => {
     volOracle = await deployMockContract(deployer as any, [
       'function getVolatility(address, uint256, uint256, uint256) external view returns (int256)'
     ])
-
     await volOracle.mock.getVolatility.returns(parseUnits('1'))
+
+    p = await PoolUtil.deploy(
+      deployer,
+      base.address,
+      baseOracle.address,
+      deployer.address,
+      parseEther('0.1'), // 10%
+      true,
+      true,
+    );
 
     const vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
       volOracle.address,
-      volOracle.address,
+      volOracle.address
     );
     await vaultImpl.deployed();
 
     if (log)
       console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
-    const vaultProxy = await new UnderwriterVaultProxy__factory(
-      deployer,
-    ).deploy(
+    const vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
       vaultImpl.address,
       base.address,
       quote.address,
       baseOracle.address,
       'WETH Vault',
       'WETH',
-      true,
+      true
     );
     await vaultProxy.deployed();
 
