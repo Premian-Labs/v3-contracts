@@ -18,7 +18,7 @@ import {
 import { BigNumber } from 'ethers';
 import { IERC20 } from '../../../typechain';
 import { SafeERC20 } from '../../../typechain';
-import { now, ONE_DAY } from '../../../utils/time';
+import { now, ONE_DAY, increaseTo } from '../../../utils/time';
 import { parseEther, parseUnits, formatEther } from 'ethers/lib/utils';
 import {
   deployMockContract,
@@ -157,6 +157,8 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#vault environment after a single trade', () => {
+    let minMaturity: any;
+
     const prepareVault = async () => {
       const assetAmount = parseEther('2');
       await base.connect(caller).approve(vault.address, assetAmount);
@@ -169,9 +171,9 @@ describe('UnderwriterVault', () => {
 
       // get block time, set min maturity as the block time + 10 days
       let currentTime = await now();
-      const strike = await parseEther('100');
+      const strike = await parseEther('1000');
       const positionSize = await parseEther('1');
-      const minMaturity = currentTime + 10 * ONE_DAY;
+      minMaturity = currentTime + 10 * ONE_DAY;
       await vault.setMinMaturity(minMaturity.toString());
       await vault.setMaxMaturity(minMaturity.toString());
       await vault.insertMaturity(0, minMaturity);
@@ -183,13 +185,18 @@ describe('UnderwriterVault', () => {
       await vault.setSpreadUnlockingTick(minMaturity, '115740740740');
       await vault.setTotalLockedAssets(parseEther('1'));
       // deposited 2 assets, 0.5 premiums, 0.1 spread
-      await vault.setTotalAssets(parseEther('2.6'));
+      await vault.setTotalAssets(parseEther('2.742857219778989'));
       await vault.setPositionSize(minMaturity, strike, positionSize);
-      console.log(await vault.getTotalFairValue());
+      console.log(minMaturity - currentTime);
+      console.log(minMaturity);
     };
 
     it('prepare Vault', async () => {
       await prepareVault();
+      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
+      await increaseTo(minMaturity);
+      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
+      await increaseTo(1678948660);
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
     });
   });

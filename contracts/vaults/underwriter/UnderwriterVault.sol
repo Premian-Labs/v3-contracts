@@ -18,6 +18,7 @@ import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
 import "hardhat/console.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
+import {SD59x18} from "../../libraries/prbMath/SD59x18.sol";
 
 contract UnderwriterVault is
     IUnderwriterVault,
@@ -29,6 +30,7 @@ contract UnderwriterVault is
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
     using UD60x18 for uint256;
+    using SD59x18 for int256;
 
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
@@ -85,7 +87,6 @@ contract UnderwriterVault is
                 i++
             ) {
                 strike = l.maturityToStrikes[current].at(i);
-
                 if (block.timestamp < current) {
                     spot = _getSpotPrice(block.timestamp);
                     uint256 secondsToExpiration = current - block.timestamp;
@@ -100,7 +101,7 @@ contract UnderwriterVault is
                 } else {
                     spot = _getSpotPrice(current);
                     timeToMaturity = 0;
-                    sigma = 0;
+                    sigma = 1;
                 }
 
                 price = OptionMath.blackScholesPrice(
@@ -114,7 +115,7 @@ contract UnderwriterVault is
 
                 size = l.positionSizes[current][strike];
 
-                total = total + price * size;
+                total = total + price.mul(size).div(spot);
             }
 
             current = l.maturities.next(current);

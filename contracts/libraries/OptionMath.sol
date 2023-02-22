@@ -64,7 +64,13 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x)
     /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
     function normalCdf(int256 x) internal pure returns (int256 result) {
-        result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
+        if (x <= ONE_I.div(S1)) {
+            result = int256(0);
+        } else if (x >= -ONE_I.div(S1)) {
+            result = ONE_I;
+        } else {
+            result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
+        }
     }
 
     /// @notice Normal Distribution Probability Density Function.
@@ -103,13 +109,15 @@ library OptionMath {
         uint256 riskFreeRate
     ) internal pure returns (int256 d1, int256 d2) {
         uint256 timeScaledRiskFreeRate = riskFreeRate.mul(timeToMaturity);
-        uint256 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(timeToMaturity);
+        uint256 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(
+            timeToMaturity
+        );
         uint256 timeScaledStd = volAnnualized.mul(timeToMaturity.sqrt());
         int256 lnSpot = spot.div(strike).toInt256().ln();
 
-        d1 =
-            (lnSpot + timeScaledVariance.toInt256() + timeScaledRiskFreeRate.toInt256())
-            .div(timeScaledStd.toInt256());
+        d1 = (lnSpot +
+            timeScaledVariance.toInt256() +
+            timeScaledRiskFreeRate.toInt256()).div(timeScaledStd.toInt256());
 
         d2 = d1 - timeScaledStd.toInt256();
     }
