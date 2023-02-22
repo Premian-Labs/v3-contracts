@@ -31,7 +31,7 @@ export class PoolUtil {
   static async deploy(
     deployer: SignerWithAddress,
     wrappedNativeToken: string,
-    nativeUsdOracle: string,
+    chainlinkAdapter: string,
     feeReceiver: string,
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
@@ -51,8 +51,10 @@ export class PoolUtil {
 
     const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
       premiaDiamond.address,
-      nativeUsdOracle,
+      chainlinkAdapter,
+      wrappedNativeToken,
     );
+
     await poolFactoryImpl.deployed();
 
     if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);

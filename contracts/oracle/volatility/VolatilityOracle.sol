@@ -9,7 +9,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
-import {SD59x18} from "../libraries/prbMath/SD59x18.sol";
+import {SD59x18} from "../../libraries/prbMath/SD59x18.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {

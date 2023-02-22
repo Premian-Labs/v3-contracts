@@ -9,6 +9,8 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
 
+import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
+
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
@@ -33,11 +35,11 @@ library PoolStorage {
         // ERC20 token addresses
         address base;
         address quote;
-        // AggregatorV3Interface oracle addresses
-        address baseOracle;
-        address quoteOracle;
+        address oracleAdapter;
         // token metadata
+        // TODO: Remove if not used
         uint8 baseDecimals;
+        // TODO: Remove if not used
         uint8 quoteDecimals;
         uint64 maturity;
         // Whether its a call or put pool
@@ -76,27 +78,16 @@ library PoolStorage {
         return l.isCallPool ? l.base : l.quote;
     }
 
-    function getSpotPrice(Layout storage l) internal returns (uint256 price) {
+    // TODO: Fetch price at maturity
+    function fetchQuote(Layout storage l) internal returns (uint256) {
         if (l.spot == 0) {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
-            uint256 quotePrice = getSpotPrice(l.quoteOracle);
-            uint256 basePrice = getSpotPrice(l.baseOracle);
-
-            l.spot = basePrice.div(quotePrice);
+            l.spot = IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote);
         }
 
         return l.spot;
-    }
-
-    function getSpotPrice(address oracle) internal view returns (uint256) {
-        // TODO: Add spot price validation
-
-        int256 price = AggregatorInterface(oracle).latestAnswer();
-        if (price < 0) revert IPoolInternal.Pool__NegativeSpotPrice();
-
-        return price.toUint256();
     }
 
     /// @notice calculate ERC1155 token id for given option parameters

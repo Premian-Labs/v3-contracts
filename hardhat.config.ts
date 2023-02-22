@@ -26,6 +26,16 @@ const {
   CACHE_PATH,
 } = process.env;
 
+const UNISWAP_SETTING = {
+  version: '0.7.6',
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
+  },
+};
+
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
 const pkeyMainnet =
   PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
@@ -49,7 +59,16 @@ export default {
           },
         },
       },
+      UNISWAP_SETTING,
     ],
+    overrides: {
+      '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol':
+        UNISWAP_SETTING,
+      '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol':
+        UNISWAP_SETTING,
+      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol':
+        UNISWAP_SETTING,
+    },
   },
   paths: {
     cache: CACHE_PATH ?? './cache',
