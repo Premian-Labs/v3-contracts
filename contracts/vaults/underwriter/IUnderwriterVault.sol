@@ -2,12 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-
 import "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
-
 interface IUnderwriterVault is ISolidStateERC4626 {
-
     // Errors
     error Vault__InsufficientFunds();
     error Vault__OptionExpired();
@@ -18,7 +15,7 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__ZeroAsset();
     error Vault__StrikeZero();
     error Vault__MaturityZero();
-    error Vault__ZeroTimestamp();
+    error Vault__ZeroPrice();
     error Vault__ZeroVol();
 
     // @notice Facilitates the purchase of an option for a LT
@@ -35,5 +32,4 @@ interface IUnderwriterVault is ISolidStateERC4626 {
 
     // @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);
-
 }

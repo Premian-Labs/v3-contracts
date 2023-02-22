@@ -58,11 +58,11 @@ describe('UnderwriterVault', () => {
     await quote.mint(deployer.address, parseEther('1000000'));
 
     baseOracle = await deployMockContract(deployer as any, [
-      'function latestPrice() external view returns (int256)',
+      'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
 
-    await baseOracle.mock.latestPrice.returns(parseUnits('1500', 8));
+    await baseOracle.mock.latestAnswer.returns(parseUnits('1500', 8));
     await baseOracle.mock.decimals.returns(8);
 
     volOracle = await deployMockContract(deployer as any, [
@@ -124,7 +124,7 @@ describe('UnderwriterVault', () => {
       expect(parseFloat(formatEther(iv))).to.eq(1);
     });
     it('responds to mock BASE oracle query', async () => {
-      const price = await baseOracle.latestPrice();
+      const price = await baseOracle.latestAnswer();
       expect(parseFloat(formatUnits(price, 8))).to.eq(1500);
     });
   });

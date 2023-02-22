@@ -6,9 +6,11 @@ import "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 import "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
@@ -16,6 +18,7 @@ import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
+
 import "hardhat/console.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
@@ -28,6 +31,7 @@ contract UnderwriterVault is
     using EnumerableSet for EnumerableSet.UintSet;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
+    using SafeCast for int256;
     using UD60x18 for uint256;
 
     address internal immutable IV_ORACLE_ADDR;
@@ -56,13 +60,11 @@ contract UnderwriterVault is
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _getSpotPrice(uint256 timestamp) internal pure returns (uint256) {
-        //TODO: change function to view once hydrated
-        if (timestamp == 0) {
-            revert Vault__ZeroTimestamp();
-        }
-        //TODO: implement spot oracle
-        return 2800000000000000000000;
+    function _getSpotPrice(address oracle) internal view returns (uint256) {
+        // TODO: Add spot price validation
+        int256 price = AggregatorInterface(oracle).latestAnswer();
+        if (price < 0) revert Vault__ZeroPrice();
+        return price.toUint256();
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
@@ -87,7 +89,7 @@ contract UnderwriterVault is
                 strike = l.maturityToStrikes[current].at(i);
 
                 if (block.timestamp < current) {
-                    spot = _getSpotPrice(block.timestamp);
+                    spot = _getSpotPrice(l.priceOracle);
                     uint256 secondsToExpiration = current - block.timestamp;
                     uint256 secondsInAYear = 365 * 24 * 60 * 60;
                     timeToMaturity = secondsToExpiration.div(secondsInAYear);
@@ -98,7 +100,7 @@ contract UnderwriterVault is
                         timeToMaturity
                     );
                 } else {
-                    spot = _getSpotPrice(current);
+                    spot = _getSpotPrice(l.priceOracle);
                     timeToMaturity = 0;
                     sigma = 0;
                 }
@@ -436,9 +438,7 @@ contract UnderwriterVault is
         if (size >= availableAssets) revert Vault__InsufficientFunds();
 
         // Compute premium and the spread collected
-        //TODO: set up spot oracle
-        //TODO: should we use now or block timestamp?
-        uint256 spotPrice = _getSpotPrice(block.timestamp);
+        uint256 spotPrice = _getSpotPrice(l.priceOracle);
 
         // TODO: check if Dte need to be converted for getVolatility()
         uint256 timeToMaturity = maturity - block.timestamp;
