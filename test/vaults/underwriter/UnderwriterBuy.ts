@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
+import { getContractAddress } from 'ethers/lib/utils';
 import {
   ERC20Mock,
   ERC20Mock__factory,
@@ -36,6 +37,7 @@ describe('UnderwriterVault', () => {
 
   let baseOracle: MockContract;
   let volOracle: MockContract;
+  let factory: MockContract;
 
   const log = true;
 
@@ -57,38 +59,48 @@ describe('UnderwriterVault', () => {
     await base.mint(deployer.address, parseEther('1000'));
     await quote.mint(deployer.address, parseEther('1000000'));
 
-    baseOracle = await deployMockContract(deployer as any, [
+    // Mock Base Oracle setup
+    baseOracle = await deployMockContract(deployer, [
       'function latestAnswer() external view returns (int256)',
       'function decimals () external view returns (uint8)',
     ]);
-
     await baseOracle.mock.latestAnswer.returns(parseUnits('1500', 8));
     await baseOracle.mock.decimals.returns(8);
+    if (log)
+      console.log(`Mock baseOracle Implementation : ${baseOracle.address}`);
 
-    volOracle = await deployMockContract(deployer as any, [
+    // Mock Vol Oracle setup
+    volOracle = await deployMockContract(deployer, [
       'function getVolatility(address, uint256, uint256, uint256) external view returns (int256)',
     ]);
     await volOracle.mock.getVolatility.returns(parseUnits('1'));
+    if (log)
+      console.log(`Mock volOracle Implementation : ${volOracle.address}`);
 
-    pool = await PoolUtil.deploy(
-      deployer,
-      base.address,
-      baseOracle.address,
-      deployer.address,
-      parseEther('0.1'), // 10%
-      true,
-      true,
-    );
+    // Mock Pool setup
+    const transactionCount = await deployer.getTransactionCount();
+    const poolAddress = getContractAddress({
+      from: deployer.address,
+      nonce: transactionCount,
+    });
 
+    // Mock Option Pool setup
+    factory = await deployMockContract(deployer, [
+      'function getPoolAddress () external view returns (address)',
+    ]);
+    await factory.mock.getPoolAddress.returns(poolAddress);
+    if (log) console.log(`Mock Pool Implementation : ${poolAddress}`);
+
+    // Mock Vault setup
     vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
       volOracle.address,
-      pool.poolFactory.address,
+      factory.address,
     );
     await vaultImpl.deployed();
-
     if (log)
       console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
+    // Vault Proxy setup
     vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
       vaultImpl.address,
       base.address,
@@ -99,14 +111,12 @@ describe('UnderwriterVault', () => {
       true,
     );
     await vaultProxy.deployed();
-
     vault = UnderwriterVaultMock__factory.connect(vaultProxy.address, deployer);
-
     if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
   });
 
   describe('#setting up the environment', () => {
-    it('responds to basic funciton call', async () => {
+    it('responds to basic function call', async () => {
       const assetAmount = parseEther('2');
       const shareAmount = await vault.convertToShares(assetAmount);
       expect(shareAmount).to.eq(assetAmount);
