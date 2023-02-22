@@ -30,6 +30,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalLockedSpread();
     }
 
+    function setPositionSize(
+        uint256 maturity,
+        uint256 strike,
+        uint256 positionSize
+    ) external onlyOwner {
+        UnderwriterVaultStorage.layout().positionSizes[maturity][
+            strike
+        ] = positionSize;
+    }
+
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
     }
@@ -49,6 +59,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().maturities.insertAfter(
             maturity,
             newMaturity
+        );
+    }
+
+    function insertStrike(uint256 maturity, uint256 strike) external onlyOwner {
+        UnderwriterVaultStorage.layout().maturityToStrikes[maturity].add(
+            strike
         );
     }
 

@@ -62,7 +62,7 @@ contract UnderwriterVault is
             revert Vault__ZeroTimestamp();
         }
         //TODO: implement spot oracle
-        return 2800;
+        return 2800000000000000000000;
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
@@ -88,7 +88,9 @@ contract UnderwriterVault is
 
                 if (block.timestamp < current) {
                     spot = _getSpotPrice(block.timestamp);
-                    timeToMaturity = current - block.timestamp;
+                    uint256 secondsToExpiration = current - block.timestamp;
+                    uint256 secondsInAYear = 365 * 24 * 60 * 60;
+                    timeToMaturity = secondsToExpiration.div(secondsInAYear);
                     sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
                         _asset(),
                         spot,

@@ -164,15 +164,19 @@ describe('UnderwriterVault', () => {
 
       // description of environment / fixture
       // deposit: 2 collateral
-      // trade: buys 1 option contract, 0.5 premium, spread 0.1, maturity 10 (days), dte 10,
+      // trade: buys 1 option contract, 0.5 premium, spread 0.1, maturity 10 (days), dte 10, strike 100
       // premium
 
       // get block time, set min maturity as the block time + 10 days
       let currentTime = await now();
-      console.log(currentTime);
+      const strike = await parseEther('100');
+      const positionSize = await parseEther('1');
       const minMaturity = currentTime + 10 * ONE_DAY;
       await vault.setMinMaturity(minMaturity.toString());
+      await vault.setMaxMaturity(minMaturity.toString());
       await vault.insertMaturity(0, minMaturity);
+      await vault.insertMaturity(minMaturity, 2 * minMaturity);
+      await vault.insertStrike(minMaturity, strike);
       await vault.setTotalLockedSpread(parseEther('0.1'));
       await vault.setLastSpreadUnlockUpdate(currentTime);
       await vault.setSpreadUnlockingRate('115740740740');
@@ -180,6 +184,8 @@ describe('UnderwriterVault', () => {
       await vault.setTotalLockedAssets(parseEther('1'));
       // deposited 2 assets, 0.5 premiums, 0.1 spread
       await vault.setTotalAssets(parseEther('2.6'));
+      await vault.setPositionSize(minMaturity, strike, positionSize);
+      console.log(await vault.getTotalFairValue());
     };
 
     it('prepare Vault', async () => {
