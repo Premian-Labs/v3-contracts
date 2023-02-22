@@ -30,6 +30,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalLockedSpread();
     }
 
+    function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
+    }
+
     function setMinMaturity(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().minMaturity = value;
     }
@@ -83,6 +87,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function getPricePerShare() external view returns (uint256) {
         return _getPricePerShare();
+    }
+
+    function lastSpreadUnlockUpdate() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate;
+    }
+
+    function spreadUnlockingRate() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().spreadUnlockingRate;
     }
 
     function totalLockedAssets() external view returns (uint256) {

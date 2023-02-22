@@ -126,8 +126,6 @@ contract UnderwriterVault is
             .layout();
         uint256 last = l.lastMaturity;
         uint256 next = l.maturities.next(last);
-        // todo: fix this later
-        next = block.timestamp + 1;
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;

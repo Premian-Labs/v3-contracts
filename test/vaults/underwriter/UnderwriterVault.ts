@@ -169,23 +169,22 @@ describe('UnderwriterVault', () => {
 
       // get block time, set min maturity as the block time + 10 days
       let currentTime = await now();
+      console.log(currentTime);
       const minMaturity = currentTime + 10 * ONE_DAY;
       await vault.setMinMaturity(minMaturity.toString());
       await vault.insertMaturity(0, minMaturity);
       await vault.setTotalLockedSpread(parseEther('0.1'));
-      await vault.setSpreadUnlockingRate(parseEther('2.5'));
-      await vault.setSpreadUnlockingTick(minMaturity, parseEther('2.5'));
+      await vault.setLastSpreadUnlockUpdate(currentTime);
+      await vault.setSpreadUnlockingRate('115740740740');
+      await vault.setSpreadUnlockingTick(minMaturity, '115740740740');
       await vault.setTotalLockedAssets(parseEther('1'));
       // deposited 2 assets, 0.5 premiums, 0.1 spread
       await vault.setTotalAssets(parseEther('2.6'));
-      // mint long token - necessary?
-      //await base.mint(trader, parseEther('1'));
-      //await long.mint(trader.address, parseEther('1'));
     };
 
     it('prepare Vault', async () => {
       await prepareVault();
-      console.log(await vault.getPricePerShare());
+      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
     });
   });
 
