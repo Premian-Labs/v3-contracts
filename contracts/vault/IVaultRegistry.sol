@@ -16,6 +16,12 @@ interface IVaultRegistry {
         Both
     }
 
+    struct Vault {
+        address vault;
+        TradeSide side;
+        OptionType optionType;
+    }
+
     event VaultAdded(
         address indexed vault,
         TradeSide side,
@@ -23,45 +29,20 @@ interface IVaultRegistry {
     );
     event VaultRemoved(address indexed vault);
 
-    function vault(uint256 index) external view returns (address);
-
-    function vaults() external view returns (address[] memory);
-
-    function vaultsPerTradeSide(
-        TradeSide side
-    ) external view returns (address[] memory);
-
-    function vaultsPerOptionType(
-        OptionType optionType
-    ) external view returns (address[] memory);
-
+    function vault(address vaultAddress) external view returns (Vault memory);
+    function vaultAddress(uint256 index) external view returns (address);
+    function vaults() external view returns (Vault[] memory);
     function vaultsLength() external view returns (uint256);
-
-    function vaultsPerTradeSideLength(
-        TradeSide side
-    ) external view returns (uint256);
-
-    function vaultsPerOptionTypeLength(
-        OptionType optionType
-    ) external view returns (uint256);
-
-    function getVaults(
-        TradeSide side,
-        OptionType optionType
-    ) external view returns (address[] memory);
 
     function getVaults(
         TradeSide[] memory sides,
         OptionType[] memory optionTypes
-    ) external view returns (address[] memory);
+    ) external view returns (Vault[] memory);
 
     function addVault(
-        address _vault,
+        address vault,
         TradeSide side,
         OptionType optionType
     ) external;
-
-    function removeVault(uint256 index) external;
-
-    function removeVault(address _vault) external;
+    function removeVault(address vault) external;
 }
