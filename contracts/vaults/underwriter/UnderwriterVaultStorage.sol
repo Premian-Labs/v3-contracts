@@ -24,6 +24,17 @@ library UnderwriterVaultStorage {
         // The total assets that have been included in the pool.
         uint256 totalAssets;
         uint256 totalLockedAssets;
+        // Trading Parameters
+        uint256 maxDTE;
+        uint256 minDTE;
+        int256 minDelta;
+        int256 maxDelta;
+        uint256 rfRate;
+        // C-Level Parameters
+        uint256 minClevel;
+        uint256 maxClevel;
+        uint256 alphaClevel;
+        uint256 lastTradeTimestamp;
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
         // SortedLinkedList for maturities
