@@ -137,7 +137,7 @@ library OptionMath {
         uint256 riskFreeRate,
         bool isCall
     ) internal pure returns (int256) {
-        (int256 d1, int256 d2) = d1d2(
+        (int256 d1, ) = d1d2(
             spot,
             strike,
             timeToMaturity,
