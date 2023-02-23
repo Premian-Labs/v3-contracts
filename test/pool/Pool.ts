@@ -36,6 +36,8 @@ import {
 } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
+import { tokens } from '../../utils/addresses';
+
 const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
 
@@ -51,8 +53,7 @@ describe('Pool', () => {
   let base: ERC20Mock;
   let quote: ERC20Mock;
 
-  let baseOracle: MockContract;
-  let quoteOracle: MockContract;
+  let oracleAdapter: MockContract;
 
   const protocolFeePercentage = 0.5;
   let strike = parseEther('1000'); // ATM
@@ -71,26 +72,16 @@ describe('Pool', () => {
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    baseOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer() external view returns (int256)',
-      'function decimals () external view returns (uint8)',
+    oracleAdapter = await deployMockContract(deployer as any, [
+      'function quote(address,address) external view returns (uint256)',
     ]);
 
-    await baseOracle.mock.latestAnswer.returns(parseUnits('1000', 8));
-    await baseOracle.mock.decimals.returns(8);
-
-    quoteOracle = await deployMockContract(deployer as any, [
-      'function latestAnswer() external view returns (int256)',
-      'function decimals () external view returns (uint8)',
-    ]);
-
-    await quoteOracle.mock.latestAnswer.returns(parseUnits('1', 8));
-    await quoteOracle.mock.decimals.returns(8);
+    await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
 
     p = await PoolUtil.deploy(
       deployer,
-      base.address,
-      baseOracle.address,
+      tokens.WETH.address,
+      oracleAdapter.address,
       deployer.address,
       parseEther('0.1'), // 10%
       true,
@@ -104,8 +95,7 @@ describe('Pool', () => {
         {
           base: base.address,
           quote: quote.address,
-          baseOracle: baseOracle.address,
-          quoteOracle: quoteOracle.address,
+          oracleAdapter: oracleAdapter.address,
           strike: strike,
           maturity: maturity,
           isCallPool: isCall,
@@ -635,7 +625,7 @@ describe('Pool', () => {
   describe('#writeFrom', () => {
     it('should successfully write 500 options', async () => {
       const size = parseEther('500');
-      const fee = await callPool.takerFee(size, 0);
+      const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
 
@@ -659,7 +649,7 @@ describe('Pool', () => {
 
     it('should successfully write 500 options on behalf of another address', async () => {
       const size = parseEther('500');
-      const fee = await callPool.takerFee(size, 0);
+      const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
 
@@ -881,7 +871,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.exercise(trader.address);
@@ -925,7 +915,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.exercise(trader.address);
@@ -986,7 +976,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, false);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settle(trader.address);
@@ -1042,7 +1032,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, false);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.settle(trader.address);
@@ -1100,7 +1090,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('1250', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settlePosition(pKey);
@@ -1154,7 +1144,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await baseOracle.mock.latestAnswer.returns(parseUnits('999', 8));
+      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.settlePosition(pKey);

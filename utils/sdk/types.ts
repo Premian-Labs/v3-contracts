@@ -24,8 +24,7 @@ export interface PositionKey {
 export interface PoolKey {
   base: string;
   quote: string;
-  baseOracle: string;
-  quoteOracle: string;
+  oracleAdapter: string;
   strike: BigNumber;
   maturity: BigNumber;
   isCallPool: boolean;

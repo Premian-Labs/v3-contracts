@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
@@ -9,6 +10,7 @@ import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol"
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
+import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
 import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
 
@@ -22,12 +24,19 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     using UD60x18 for uint256;
 
     address internal immutable DIAMOND;
-    // Chainlink price oracle for the Native/USD (ETH/USD) pair
-    address internal immutable NATIVE_USD_ORACLE;
+    // Chainlink price oracle for the WrappedNative/USD pair
+    address internal immutable CHAINLINK_ADAPTER;
+    // Wrapped native token address (eg WETH, FTM, AVAX, etc) pair
+    address internal immutable WRAPPED_NATIVE_TOKEN;
 
-    constructor(address diamond, address nativeUsdOracle) {
+    constructor(
+        address diamond,
+        address chainlinkAdapter,
+        address wrappedNativeToken
+    ) {
         DIAMOND = diamond;
-        NATIVE_USD_ORACLE = nativeUsdOracle;
+        CHAINLINK_ADAPTER = chainlinkAdapter;
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
     }
 
     /// @inheritdoc IPoolFactory
@@ -45,15 +54,17 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
+
         uint256 discount = (OptionMath.ONE - l.discountPerPool)
             .toInt256()
             .pow(discountFactor.toInt256())
             .toUint256();
-        uint256 spot = _getSpotPrice(k.baseOracle, k.quoteOracle);
-        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 nativeUsdPrice = _getSpotPrice(NATIVE_USD_ORACLE);
 
-        return fee.mul(discount).div(nativeUsdPrice);
+        uint256 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
+        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+        uint256 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
+
+        return fee.mul(discount).div(wrappedNativeUSDPrice);
     }
 
     /// @inheritdoc IPoolFactory
@@ -74,17 +85,15 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     function deployPool(
         PoolKey memory k
     ) external payable returns (address poolAddress) {
-        if (k.base == k.quote || k.baseOracle == k.quoteOracle)
-            revert PoolFactory__IdenticalAddresses();
+        if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
 
         if (
             k.base == address(0) ||
-            k.baseOracle == address(0) ||
             k.quote == address(0) ||
-            k.quoteOracle == address(0)
+            k.oracleAdapter == address(0)
         ) revert PoolFactory__ZeroAddress();
 
-        _ensureOptionStrikeIsValid(k.strike, k.baseOracle, k.quoteOracle);
+        _ensureOptionStrikeIsValid(k.strike, k.oracleAdapter, k.base, k.quote);
         _ensureOptionMaturityIsValid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
@@ -92,6 +101,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         if (_getPoolAddress(poolKey) != address(0))
             revert PoolFactory__PoolAlreadyDeployed();
+
         if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
 
         payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
@@ -105,8 +115,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
                 DIAMOND,
                 k.base,
                 k.quote,
-                k.baseOracle,
-                k.quoteOracle,
+                k.oracleAdapter,
                 k.strike,
                 k.maturity,
                 k.isCallPool
@@ -120,8 +129,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         emit PoolDeployed(
             k.base,
             k.quote,
-            k.baseOracle,
-            k.quoteOracle,
+            k.oracleAdapter,
             k.strike,
             k.maturity,
             k.isCallPool,
@@ -140,35 +148,32 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
-    function _getSpotPrice(
-        address baseOracle,
-        address quoteOracle
-    ) internal view returns (uint256 price) {
-        uint256 quotePrice = _getSpotPrice(quoteOracle);
-        uint256 basePrice = _getSpotPrice(baseOracle);
-        return basePrice.div(quotePrice);
+    function _fetchQuote(
+        address oracleAdapter,
+        address base,
+        address quote
+    ) internal view returns (uint256) {
+        return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
-    function _getSpotPrice(address oracle) internal view returns (uint256) {
-        // TODO: Add spot price validation
-
-        int256 price = AggregatorInterface(oracle).latestAnswer();
-        if (price < 0) revert PoolFactory__NegativeSpotPrice();
-
-        // TODO Replace with adapter, decimals should not be hard-coded
-
-        return price.toUint256() * 1e10;
+    function _fetchWrappedNativeUSDQuote() internal view returns (uint256) {
+        return
+            IOracleAdapter(CHAINLINK_ADAPTER).quote(
+                WRAPPED_NATIVE_TOKEN,
+                Denominations.USD
+            );
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
     function _ensureOptionStrikeIsValid(
         uint256 strike,
-        address baseOracle,
-        address quoteOracle
+        address oracleAdapter,
+        address base,
+        address quote
     ) internal view {
         if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
 
-        uint256 spot = _getSpotPrice(baseOracle, quoteOracle);
+        uint256 spot = _fetchQuote(oracleAdapter, base, quote);
         uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != 0)
