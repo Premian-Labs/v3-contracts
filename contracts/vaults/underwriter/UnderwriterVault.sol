@@ -36,6 +36,8 @@ contract UnderwriterVault is
     using UD60x18 for uint256;
     using SD59x18 for int256;
 
+    uint256 SECONDSINAYEAR = 365 * 24 * 60 * 60;
+
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
 
@@ -92,8 +94,7 @@ contract UnderwriterVault is
                 if (block.timestamp < current) {
                     spot = _getSpotPrice(l.priceOracle);
                     uint256 secondsToExpiration = current - block.timestamp;
-                    uint256 secondsInAYear = 365 * 24 * 60 * 60;
-                    timeToMaturity = secondsToExpiration.div(secondsInAYear);
+                    timeToMaturity = secondsToExpiration.div(SECONDSINAYEAR);
                     sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
                         _asset(),
                         spot,
@@ -377,21 +378,22 @@ contract UnderwriterVault is
     }
 
     function _handleTradeFees(
+        uint256 maturity,
         uint256 premium,
-        uint256 spread,
+        uint256 secondsToExpiration,
         uint256 size,
-        uint256 timeToMaturity
+        uint256 spread
     ) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        // below code could belong to the _handleTradeFees function
-        l.totalLockedSpread += spread;
-        uint256 spreadRate = spread / timeToMaturity;
-        // TODO: we need to update totalLockedSpread before updating the spreadUnlockingRate (!)
-        // TODO: otherwise there will be an inconsistency and too much spread will be deducted since lastSpreadUpdate
-        // TODO: call _updateState()
+        // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
+        // we can make this function more efficient later on by not writing twice to storage, i.e.
+        // compute the updated state, then increment values, then write to storage
+        _updateState();
+        uint256 spreadRate = spread.div(secondsToExpiration);
         l.spreadUnlockingRate += spreadRate;
-
+        l.spreadUnlockingTicks[maturity] += spreadRate;
+        l.totalLockedSpread += spread;
         l.totalAssets += premium + spread;
         l.totalLockedAssets += size;
     }
@@ -441,8 +443,8 @@ contract UnderwriterVault is
         // Compute premium and the spread collected
         uint256 spotPrice = _getSpotPrice(l.priceOracle);
 
-        // TODO: check if Dte need to be converted for getVolatility()
-        uint256 timeToMaturity = maturity - block.timestamp;
+        uint256 secondsToExpiration = maturity - block.timestamp;
+        uint256 timeToMaturity = secondsToExpiration.div(SECONDSINAYEAR);
 
         // TODO: check to see if getVol should return uint instead of int256?
         int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
@@ -478,7 +480,7 @@ contract UnderwriterVault is
         // TODO: call mint function to receive shorts + longs
 
         // Handle the premiums and spread capture generated
-        _handleTradeFees(premium, spread, size, timeToMaturity);
+        _handleTradeFees(maturity, premium, secondsToExpiration, size, spread);
 
         return premium;
     }
