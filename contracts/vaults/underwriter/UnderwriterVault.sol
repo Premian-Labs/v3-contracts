@@ -121,7 +121,7 @@ contract UnderwriterVault is
                     strike,
                     timeToMaturity,
                     uint256(sigma),
-                    0,
+                    l.rfRate,
                     l.isCall
                 );
 
@@ -169,7 +169,6 @@ contract UnderwriterVault is
     }
 
     function _getPricePerShare() internal view returns (uint256) {
-        // TODO: change function to view once hydrated
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -312,52 +311,36 @@ contract UnderwriterVault is
     }
 
     function _isValidListing(
+        uint256 spotPrice,
         uint256 strike,
         uint256 maturity,
+        uint256 tau,
         uint256 sigma
-    ) internal view returns (bool) {
+    ) internal view returns (address) {
+        uint256 dte = tau.mul(365);
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        if (strike == 0) {
-            revert Vault__AddressZero();
-            //TODO: should just return false
-        }
-        if (maturity == 0) {
-            revert Vault__MaturityZero();
-            //TODO: should just return false
-        }
+        // DTE filter
+        if (dte > l.maxDTE || dte < l.minDTE) revert Vault__MaturityBounds();
 
-        // generate struct to grab pool address
-        IPoolFactory.PoolKey memory _poolKey;
-        _poolKey.base = l.base;
-        _poolKey.quote = l.quote;
-        _poolKey.baseOracle = l.priceOracle;
-        _poolKey.quoteOracle = l.quoteOracle;
-        _poolKey.strike = strike;
-        _poolKey.maturity = uint64(maturity);
-        _poolKey.isCallPool = l.isCall;
-
-        address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
-            _poolKey
+        // Delta filter
+        int256 delta = OptionMath.optionDelta(
+            spotPrice,
+            strike,
+            tau,
+            sigma,
+            l.rfRate,
+            l.isCall
         );
+        if (delta < l.minDelta || delta > l.maxDelta)
+            revert Vault__DeltaBounds();
 
         // NOTE: query returns address(0) if no listing exists
-        if (listingAddr == address(0)) {
-            revert Vault__OptionPoolNotListed();
-            //TODO: should just return false
-        }
+        address listingAddr = _getFactoryAddress(strike, maturity);
+        if (listingAddr == address(0)) revert Vault__OptionPoolNotListed();
 
-        if (sigma == 0) {
-            revert Vault__ZeroVol();
-        }
-
-        //TODO: check the delta and dte are within our vault trading range
-        //TODO: get implied volatility (for delta)
-        //TODO: get delta of option ( .10 < l.delta < .70)
-        //TODO: calculate DTE (< 30 days)
-
-        return true;
+        return listingAddr;
     }
 
     function _addListing(uint256 strike, uint256 maturity) internal {
@@ -420,6 +403,14 @@ contract UnderwriterVault is
         return listingAddr;
     }
 
+    function _calculateClevel() internal pure returns (uint256) {
+        // Utilization rate will be vol global for entire surface
+        // TODO: need to calculation utilization of capital
+        // TODO: check the last time there was a transaction
+        // TODO: return c-level AFTER the impact of the trade
+        return 1;
+    }
+
     /// @inheritdoc IUnderwriterVault
     function buy(
         uint256 strike,
@@ -429,64 +420,90 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        // Validate listing
-        // Check if not expired
-        if (block.timestamp >= maturity) revert Vault__OptionExpired();
-
-        // Check if the vault has sufficient funds
-        if (size >= _availableAssets()) revert Vault__InsufficientFunds();
-
-        // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice(l.priceOracle);
-
-        uint256 secondsToExpiration = maturity - block.timestamp;
-        uint256 timeToMaturity = secondsToExpiration.div(SECONDSINAYEAR);
-
-        // TODO: check to see if getVol should return uint instead of int256?
-        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
-            _asset(),
-            spotPrice,
+        // Get pool address, price and c-level
+        (address poolAddr, uint256 price, uint256 cLevel) = quote(
             strike,
-            timeToMaturity
+            maturity,
+            size
         );
 
-        //TODO: remove once getvolatility() is uint256
-        uint256 volAnnualized = uint256(sigma);
+        // Add listing
+        _addListing(strike, maturity);
 
-        // Check if this listing is supported by the vault.
-        if (!_isValidListing(strike, maturity, volAnnualized))
-            revert Vault__OptionPoolNotSupported();
-        else _addListing(strike, maturity);
+        uint256 totalPremium = size * price;
 
-        uint256 price = OptionMath.blackScholesPrice(
-            spotPrice,
-            strike,
-            timeToMaturity,
-            volAnnualized,
-            0,
-            l.isCall
-        );
-
-        uint256 premium = size * uint256(price);
-
-        // TODO: enso / professors function call do determine the spread
         // TODO: embed the trading fee into the spread (requires calculating fee)
         uint256 spread = 0;
 
-        // TODO: call mint function to receive shorts + longs
+        // Mint option and allocate long token
+        IPool(poolAddr).writeFrom(address(this), msg.sender, size);
 
+        // Log trade time stamp for c-level decay
+        l.lastTradeTimestamp = block.timestamp;
+
+        uint256 secondsToExpiration = maturity - block.timestamp;
         // Handle the premiums and spread capture generated
         afterBuyStruct memory intel = afterBuyStruct(
             maturity,
-            premium,
+            totalPremium,
             secondsToExpiration,
             size,
             spread,
             strike
         );
+
         _afterBuy(intel);
 
-        return premium;
+        return totalPremium;
+    }
+
+    function quote(
+        uint256 strike,
+        uint256 maturity,
+        uint256 size
+    ) public view returns (address, uint256, uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        // Check non Zero Strike
+        if (strike == 0) revert Vault__AddressZero();
+        // Check valid maturity
+        if (block.timestamp >= maturity) revert Vault__OptionExpired();
+        // Check if the vault has sufficient funds
+        if (size >= _availableAssets()) revert Vault__InsufficientFunds();
+        // Compute premium and the spread collected
+        uint256 spotPrice = _getSpotPrice(l.priceOracle);
+
+        uint256 secondsToExpiration = maturity - block.timestamp;
+        uint256 tau = secondsToExpiration.div(SECONDSINAYEAR);
+
+        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
+            _asset(),
+            spotPrice,
+            strike,
+            tau
+        );
+        uint256 iv = uint256(sigma);
+
+        address poolAddr = _isValidListing(
+            spotPrice,
+            strike,
+            maturity,
+            tau,
+            iv
+        );
+
+        uint256 price = OptionMath.blackScholesPrice(
+            spotPrice,
+            strike,
+            tau,
+            iv,
+            l.rfRate,
+            l.isCall
+        );
+
+        uint256 cLevel = _calculateClevel();
+
+        return (poolAddr, price, cLevel);
     }
 
     /// @inheritdoc IUnderwriterVault
