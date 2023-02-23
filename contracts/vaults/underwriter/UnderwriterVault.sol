@@ -252,12 +252,6 @@ contract UnderwriterVault is
         return _convertToShares(_maxWithdraw(owner));
     }
 
-    function _previewDeposit(
-        uint256 assetAmount
-    ) internal view virtual override returns (uint256) {
-        return _convertToShares(assetAmount);
-    }
-
     function _previewMint(
         uint256 shareAmount
     ) internal view virtual override returns (uint256) {
