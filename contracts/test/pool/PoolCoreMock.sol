@@ -5,19 +5,19 @@ pragma solidity ^0.8.0;
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
-import {PoolCore} from "../../pool/PoolCore.sol";
+import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
-contract PoolCoreMock is IPoolCoreMock, PoolCore {
+contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
         address factory,
         address exchangeHelper,
         address wrappedNativeToken
-    ) PoolCore(factory, exchangeHelper, wrappedNativeToken) {}
+    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
 
     function _getPricing(
         bool isBuy
