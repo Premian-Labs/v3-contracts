@@ -141,6 +141,7 @@ describe('UnderwriterVault', () => {
     if (log)
       console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
+    // TODO: change base oracle address to oracle adapter
     const vaultProxy = await new UnderwriterVaultProxy__factory(
       deployer,
     ).deploy(
@@ -148,6 +149,7 @@ describe('UnderwriterVault', () => {
       base.address,
       quote.address,
       baseOracle.address,
+      baseOracle.address, // OracleAdapter
       'WETH Vault',
       'WETH',
       true,

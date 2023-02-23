@@ -14,7 +14,7 @@ import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/Aggr
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol";
+import {IVolatilityOracle} from "../../oracle/volatility/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
@@ -75,6 +75,7 @@ contract UnderwriterVault is
 
     function _getSpotPrice(address oracle) internal view returns (uint256) {
         // TODO: Add spot price validation
+        // TODO: change price oracle to oracle adapter
         int256 price = AggregatorInterface(oracle).latestAnswer();
         if (price < 0) revert Vault__ZeroPrice();
         return price.toUint256();
@@ -457,8 +458,7 @@ contract UnderwriterVault is
         IPoolFactory.PoolKey memory _poolKey;
         _poolKey.base = l.base;
         _poolKey.quote = l.quote;
-        _poolKey.baseOracle = l.priceOracle;
-        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.oracleAdapter = l.oracleAdapter;
         _poolKey.strike = strike;
         _poolKey.maturity = uint64(maturity);
         _poolKey.isCallPool = l.isCall;
