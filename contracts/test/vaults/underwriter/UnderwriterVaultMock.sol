@@ -30,14 +30,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalLockedSpread();
     }
 
-    function setPositionSize(
+    function increasePositionSize(
         uint256 maturity,
         uint256 strike,
         uint256 positionSize
     ) external onlyOwner {
         UnderwriterVaultStorage.layout().positionSizes[maturity][
             strike
-        ] = positionSize;
+        ] += positionSize;
     }
 
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
@@ -68,27 +68,29 @@ contract UnderwriterVaultMock is UnderwriterVault {
         );
     }
 
-    function setSpreadUnlockingRate(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().spreadUnlockingRate = value;
+    function increaseSpreadUnlockingRate(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().spreadUnlockingRate += value;
     }
 
-    function setSpreadUnlockingTick(
+    function increaseSpreadUnlockingTick(
         uint256 maturity,
         uint256 value
     ) external onlyOwner {
-        UnderwriterVaultStorage.layout().spreadUnlockingTicks[maturity] = value;
+        UnderwriterVaultStorage.layout().spreadUnlockingTicks[
+            maturity
+        ] += value;
     }
 
-    function setTotalLockedAssets(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().totalLockedAssets = value;
+    function increaseTotalLockedAssets(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().totalLockedAssets += value;
     }
 
-    function setTotalLockedSpread(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().totalLockedSpread = value;
+    function increaseTotalLockedSpread(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().totalLockedSpread += value;
     }
 
-    function setTotalAssets(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().totalAssets = value;
+    function increaseTotalAssets(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().totalAssets += value;
     }
 
     function lastMaturity() external view returns (uint256) {
@@ -105,6 +107,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getPricePerShare();
     }
 
+    function positionSize(
+        uint256 maturity,
+        uint256 strike
+    ) external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().positionSizes[maturity][strike];
+    }
+
     function lastSpreadUnlockUpdate() external view returns (uint256) {
         return UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate;
     }
@@ -113,11 +122,36 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().spreadUnlockingRate;
     }
 
+    function spreadUnlockingTicks(
+        uint256 maturity
+    ) external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().spreadUnlockingTicks[maturity];
+    }
+
     function totalLockedAssets() external view returns (uint256) {
         return UnderwriterVaultStorage.layout().totalLockedAssets;
     }
 
     function totalLockedSpread() external view returns (uint256) {
         return UnderwriterVaultStorage.layout().totalLockedSpread;
+    }
+
+    function afterBuy(
+        uint256 maturity,
+        uint256 premium,
+        uint256 secondsToExpiration,
+        uint256 size,
+        uint256 spread,
+        uint256 strike
+    ) external {
+        afterBuyStruct memory intel = afterBuyStruct(
+            maturity,
+            premium,
+            secondsToExpiration,
+            size,
+            spread,
+            strike
+        );
+        _afterBuy(intel);
     }
 }

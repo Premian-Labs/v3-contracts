@@ -74,6 +74,9 @@ describe('UnderwriterVault', () => {
     await base.mint(receiver.address, parseEther('1000'));
     await quote.mint(receiver.address, parseEther('1000000'));
 
+    await base.mint(trader.address, parseEther('1000'));
+    await quote.mint(trader.address, parseEther('1000000'));
+
     await base.mint(deployer.address, parseEther('1000'));
     await quote.mint(deployer.address, parseEther('1000000'));
 
@@ -156,47 +159,73 @@ describe('UnderwriterVault', () => {
     if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
   });
 
-  describe('#vault environment after a single trade', () => {
-    let minMaturity: any;
+  let startTime: number;
+  let spot: number;
+  let minMaturity: number;
+  let maxMaturity: number;
 
-    const prepareVault = async () => {
-      const assetAmount = parseEther('2');
+  async function setupVault() {
+    startTime = await now();
+    spot = 2800;
+    minMaturity = startTime + 10 * ONE_DAY;
+    maxMaturity = startTime + 20 * ONE_DAY;
+
+    await vault.setMinMaturity(minMaturity.toString());
+    await vault.setMaxMaturity(maxMaturity.toString());
+    await vault.insertMaturity(0, minMaturity);
+    await vault.insertMaturity(minMaturity, 2 * maxMaturity);
+  }
+
+  describe('#vault environment after a single trade', () => {
+    async function addDeposit(
+      caller: SignerWithAddress,
+      receiver: SignerWithAddress,
+      amount: number,
+    ) {
+      const assetAmount = parseEther(amount.toString());
       await base.connect(caller).approve(vault.address, assetAmount);
       await vault.connect(caller).deposit(assetAmount, receiver.address);
-
-      // description of environment / fixture
-      // deposit: 2 collateral
+    }
+    async function addTrade(
+      trader: SignerWithAddress,
+      maturity: number,
+      strike: number,
+      amount: number,
+      tradeTime: number,
+      spread: number,
+    ) {
       // trade: buys 1 option contract, 0.5 premium, spread 0.1, maturity 10 (days), dte 10, strike 100
-      // premium
+      const strikeParsed = await parseEther(strike.toString());
+      const amountParsed = await parseEther(amount.toString());
+      //
+      await vault.insertStrike(minMaturity, strikeParsed);
 
-      // get block time, set min maturity as the block time + 10 days
-      let currentTime = await now();
-      const strike = await parseEther('1000');
-      const positionSize = await parseEther('1');
-      minMaturity = currentTime + 10 * ONE_DAY;
-      await vault.setMinMaturity(minMaturity.toString());
-      await vault.setMaxMaturity(minMaturity.toString());
-      await vault.insertMaturity(0, minMaturity);
-      await vault.insertMaturity(minMaturity, 2 * minMaturity);
-      await vault.insertStrike(minMaturity, strike);
-      await vault.setTotalLockedSpread(parseEther('0.1'));
-      await vault.setLastSpreadUnlockUpdate(currentTime);
-      await vault.setSpreadUnlockingRate('115740740740');
-      await vault.setSpreadUnlockingTick(minMaturity, '115740740740');
-      await vault.setTotalLockedAssets(parseEther('1'));
-      // deposited 2 assets, 0.5 premiums, 0.1 spread
-      await vault.setTotalAssets(parseEther('2.742857219778989'));
-      await vault.setPositionSize(minMaturity, strike, positionSize);
-      console.log(minMaturity - currentTime);
-      console.log(minMaturity);
-    };
+      await vault.increaseTotalLockedSpread(parseEther(spread.toString()));
+      const additionalSpreadRate = (spread / (maturity - tradeTime)) * 10 ** 18;
+      const spreadRate = additionalSpreadRate.toFixed(0).toString();
+      await vault.setLastSpreadUnlockUpdate(tradeTime);
+      await vault.increaseSpreadUnlockingRate(spreadRate);
+      await vault.increaseSpreadUnlockingTick(minMaturity, spreadRate);
+      await vault.increaseTotalLockedAssets(amountParsed);
+      // we assume that the premium is just the exercise value for now
+      const premium: number = (spot - strike) / spot;
+      await vault.increaseTotalAssets(parseEther(premium.toString()));
+      await vault.increaseTotalAssets(parseEther(spread.toString()));
+      await vault.increasePositionSize(minMaturity, strikeParsed, amountParsed);
+    }
 
     it('prepare Vault', async () => {
-      await prepareVault();
+      await setupVault();
+      await addDeposit(caller, receiver, 2);
+      await addTrade(trader, minMaturity, 1000, 1, startTime, 0.1);
+      console.log(await vault.getTotalFairValue());
+
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
       await increaseTo(minMaturity);
+      console.log(await vault.getTotalFairValue());
+      console.log(await vault.getTotalLockedSpread());
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
-      await increaseTo(1678948660);
+      await increaseTo(maxMaturity);
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
     });
   });
@@ -268,7 +297,9 @@ describe('UnderwriterVault', () => {
       expect(await vault.totalSupply()).to.eq(assetAmount);
 
       // modify the price per share to (1 - 0.5) / 1 = 0.5
-      await vault.connect(deployer).setTotalLockedSpread(parseEther('0.5'));
+      await vault
+        .connect(deployer)
+        .increaseTotalLockedSpread(parseEther('0.5'));
       await vault.connect(deployer).setMinMaturity(parseEther('1'));
       await vault.connect(caller).deposit(assetAmount, receiver.address);
 
@@ -284,48 +315,76 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#mint', () => {
-    it('two consecutive mints', async () => {
-      const shareAmount = parseEther('2');
-      const baseBalanceCaller = await base.balanceOf(caller.address);
-      const baseBalanceReceiver = await base.balanceOf(receiver.address);
+  describe('#afterBuy', () => {
+    const premium = 0.5;
+    const spread = 0.1;
+    const size = 1;
+    const strike = 100;
+    let maturity: number;
+    let totalAssets: number;
+    let spreadUnlockingRate: number;
+    let afterBuyTimestamp: number;
 
-      const allowedAssetAmount = parseEther('4');
-      await base.connect(caller).approve(vault.address, allowedAssetAmount);
-      await vault.connect(caller).deposit(shareAmount, receiver.address);
+    beforeEach(async () => {
+      await setupVault();
+      totalAssets = parseFloat(formatEther(await vault.totalAssets()));
+      console.log('Setup vault.');
 
-      expect(await base.balanceOf(vault.address)).to.eq(shareAmount);
-      expect(await base.balanceOf(caller.address)).to.eq(
-        baseBalanceCaller.sub(shareAmount),
+      maturity = minMaturity;
+      spreadUnlockingRate = spread / (minMaturity - startTime);
+
+      await vault.afterBuy(
+        minMaturity,
+        parseEther(premium.toString()),
+        maturity - startTime,
+        parseEther(size.toString()),
+        parseEther(spread.toString()),
+        parseEther(strike.toString()),
       );
-      expect(await base.balanceOf(receiver.address)).to.eq(baseBalanceReceiver);
-      expect(await vault.balanceOf(caller.address)).to.eq(parseEther('0'));
-      expect(await vault.balanceOf(receiver.address)).to.eq(shareAmount);
-      expect(await vault.totalAssets()).to.eq(shareAmount);
-      expect(await vault.totalSupply()).to.eq(shareAmount);
-
-      await vault.connect(caller).deposit(shareAmount, receiver.address);
-      expect(await base.balanceOf(vault.address)).to.eq(allowedAssetAmount);
-      expect(await base.balanceOf(caller.address)).to.eq(
-        baseBalanceCaller.sub(allowedAssetAmount),
-      );
-      expect(await base.balanceOf(receiver.address)).to.eq(baseBalanceReceiver);
-      expect(await vault.balanceOf(caller.address)).to.eq(parseEther('0'));
-      expect(await vault.balanceOf(receiver.address)).to.eq(allowedAssetAmount);
+      afterBuyTimestamp = await now();
+      console.log('Processed afterBuy.');
     });
-  });
 
-  describe('#withdraw', () => {
-    it('simple withdraw', async () => {
-      const withdrawAssetAmount = parseEther('3');
-      const allowedAssetAmount = parseEther('4');
-      await base.connect(receiver).approve(vault.address, allowedAssetAmount);
-      await vault
-        .connect(receiver)
-        .deposit(allowedAssetAmount, receiver.address);
-      await vault
-        .connect(receiver)
-        .withdraw(withdrawAssetAmount, receiver.address, receiver.address);
+    it('lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there', async () => {
+      expect(await vault.lastSpreadUnlockUpdate()).to.eq(afterBuyTimestamp);
+    });
+
+    it('spreadUnlockingRates should equal', async () => {
+      expect(
+        parseFloat(formatEther(await vault.spreadUnlockingRate())),
+      ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
+    });
+
+    it('total assets should equal', async () => {
+      expect(parseFloat(formatEther(await vault.totalAssets()))).to.eq(
+        totalAssets + premium + spread,
+      );
+    });
+
+    it('positionSize should equal should equal', async () => {
+      const positionSize = await vault.positionSize(
+        maturity,
+        parseEther(strike.toString()),
+      );
+      expect(parseFloat(formatEther(positionSize))).to.eq(size);
+    });
+
+    it('spreadUnlockingRate / ticks', async () => {
+      expect(
+        parseFloat(formatEther(await vault.spreadUnlockingTicks(maturity))),
+      ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
+    });
+
+    it('totalLockedAssets should equal', async () => {
+      expect(parseFloat(formatEther(await vault.totalLockedAssets()))).to.eq(
+        size,
+      );
+    });
+
+    it('totalLockedSpread should equa', async () => {
+      expect(parseFloat(formatEther(await vault.totalLockedSpread()))).to.eq(
+        spread,
+      );
     });
   });
 });

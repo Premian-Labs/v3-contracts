@@ -41,6 +41,15 @@ contract UnderwriterVault is
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
 
+    struct afterBuyStruct {
+        uint256 maturity;
+        uint256 premium;
+        uint256 secondsToExpiration;
+        uint256 size;
+        uint256 spread;
+        uint256 strike;
+    }
+
     constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE_ADDR = oracleAddress;
         FACTORY_ADDR = factoryAddress;
@@ -377,25 +386,21 @@ contract UnderwriterVault is
         }
     }
 
-    function _handleTradeFees(
-        uint256 maturity,
-        uint256 premium,
-        uint256 secondsToExpiration,
-        uint256 size,
-        uint256 spread
-    ) internal {
+    function _afterBuy(afterBuyStruct memory a) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
         _updateState();
-        uint256 spreadRate = spread.div(secondsToExpiration);
+        uint256 spreadRate = a.spread / a.secondsToExpiration;
+
         l.spreadUnlockingRate += spreadRate;
-        l.spreadUnlockingTicks[maturity] += spreadRate;
-        l.totalLockedSpread += spread;
-        l.totalAssets += premium + spread;
-        l.totalLockedAssets += size;
+        l.spreadUnlockingTicks[a.maturity] += spreadRate;
+        l.totalLockedSpread += a.spread;
+        l.totalAssets += a.premium + a.spread;
+        l.totalLockedAssets += a.size;
+        l.positionSizes[a.maturity][a.strike] += a.size;
     }
 
     function _getFactoryAddress(
@@ -436,9 +441,7 @@ contract UnderwriterVault is
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
 
         // Check if the vault has sufficient funds
-        uint256 availableAssets = _availableAssets();
-
-        if (size >= availableAssets) revert Vault__InsufficientFunds();
+        if (size >= _availableAssets()) revert Vault__InsufficientFunds();
 
         // Compute premium and the spread collected
         uint256 spotPrice = _getSpotPrice(l.priceOracle);
@@ -480,7 +483,15 @@ contract UnderwriterVault is
         // TODO: call mint function to receive shorts + longs
 
         // Handle the premiums and spread capture generated
-        _handleTradeFees(maturity, premium, secondsToExpiration, size, spread);
+        afterBuyStruct memory intel = afterBuyStruct(
+            maturity,
+            premium,
+            secondsToExpiration,
+            size,
+            spread,
+            strike
+        );
+        _afterBuy(intel);
 
         return premium;
     }
