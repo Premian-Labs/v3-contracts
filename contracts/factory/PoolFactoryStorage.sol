@@ -38,8 +38,7 @@ library PoolFactoryStorage {
                 abi.encode(
                     k.base,
                     k.quote,
-                    k.baseOracle,
-                    k.quoteOracle,
+                    k.oracleAdapter,
                     k.strike,
                     k.maturity,
                     k.isCallPool
@@ -55,8 +54,7 @@ library PoolFactoryStorage {
                 abi.encode(
                     k.base,
                     k.quote,
-                    k.baseOracle,
-                    k.quoteOracle,
+                    k.oracleAdapter,
                     k.strike,
                     k.isCallPool
                 )
@@ -71,8 +69,7 @@ library PoolFactoryStorage {
                 abi.encode(
                     k.base,
                     k.quote,
-                    k.baseOracle,
-                    k.quoteOracle,
+                    k.oracleAdapter,
                     k.maturity,
                     k.isCallPool
                 )

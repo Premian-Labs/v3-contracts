@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {VolatilityOracle} from "../../oracle/VolatilityOracle.sol";
+import {VolatilityOracle} from "../../oracle/volatility/VolatilityOracle.sol";
 
 contract VolatilityOracleMock is VolatilityOracle {
     function findInterval(

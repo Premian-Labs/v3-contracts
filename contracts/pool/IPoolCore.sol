@@ -23,8 +23,7 @@ interface IPoolCore is IPoolInternal {
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
     /// @return quote Address of quote token
-    /// @return baseOracle Address of base token price feed
-    /// @return quoteOracle Address of quote token price feed
+    /// @return oracleAdapter Address of oracle adapter
     /// @return strike The strike of the option
     /// @return maturity The maturity timestamp of the option
     /// @return isCallPool Whether the pool is for call or put options
@@ -34,8 +33,7 @@ interface IPoolCore is IPoolInternal {
         returns (
             address base,
             address quote,
-            address baseOracle,
-            address quoteOracle,
+            address oracleAdapter,
             uint256 strike,
             uint64 maturity,
             bool isCallPool

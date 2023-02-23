@@ -1137,7 +1137,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (uint256) {
         if (size == 0) return 0;
 
-        uint256 spot = l.getSpotPrice();
+        uint256 spot = l.fetchQuote();
         uint256 strike = l.strike;
         bool isCall = l.isCallPool;
 
@@ -1696,8 +1696,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IPoolFactory.PoolKey(
                 l.base,
                 l.quote,
-                l.baseOracle,
-                l.quoteOracle,
+                l.oracleAdapter,
                 l.strike,
                 l.maturity,
                 l.isCallPool

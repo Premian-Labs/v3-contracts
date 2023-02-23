@@ -7,8 +7,7 @@ interface IPoolFactoryEvents {
     event PoolDeployed(
         address indexed base,
         address indexed quote,
-        address baseOracle,
-        address quoteOracle,
+        address oracleAdapter,
         uint256 strike,
         uint64 maturity,
         bool isCallPool,
