@@ -305,7 +305,7 @@ describe('ChainlinkAdapter', () => {
       );
 
       const coingeckoPrice = await getPriceBetweenTokens(
-        'ethereum',
+        { tokenIn: 'ethereum', tokenOut: 'ethereum' },
         tokenIn,
         tokenOut,
       );
@@ -408,7 +408,7 @@ describe('ChainlinkAdapter', () => {
               let _tokenIn = Object.assign({}, tokenIn);
               let _tokenOut = Object.assign({}, tokenOut);
 
-              let network = 'ethereum';
+              let networks = { tokenIn: 'ethereum', tokenOut: 'ethereum' };
 
               const quote = await instance.quote(
                 _tokenIn.address,
@@ -416,27 +416,27 @@ describe('ChainlinkAdapter', () => {
               );
 
               if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
-                network = 'coingecko';
+                networks.tokenIn = 'coingecko';
                 _tokenIn.address = 'ethereum';
               }
 
               if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
-                network = 'coingecko';
-                _tokenIn.address = 'ethereum';
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'ethereum';
               }
 
               if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
-                network = 'coingecko';
+                networks.tokenIn = 'coingecko';
                 _tokenIn.address = 'bitcoin';
               }
 
               if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
-                network = 'coingecko';
+                networks.tokenOut = 'coingecko';
                 _tokenOut.address = 'bitcoin';
               }
 
               const coingeckoPrice = await getPriceBetweenTokens(
-                network,
+                networks,
                 _tokenIn,
                 _tokenOut,
               );
@@ -474,30 +474,44 @@ function validateQuote(quote: BigNumber, expected: BigNumber) {
 }
 
 async function getPriceBetweenTokens(
-  network: string,
-  tokenA: Token,
-  tokenB: Token,
+  networks: { tokenIn: string; tokenOut: string },
+  tokenIn: Token,
+  tokenOut: Token,
+  target: number = 0,
 ) {
-  if (tokenA.address === tokens.CHAINLINK_USD.address) {
-    return 1 / (await fetchPrice(network, tokenB.address));
+  if (tokenIn.address === tokens.CHAINLINK_USD.address) {
+    return 1 / (await fetchPrice(networks.tokenOut, tokenOut.address, target));
   }
-  if (tokenB.address === tokens.CHAINLINK_USD.address) {
-    return await fetchPrice(network, tokenA.address);
+  if (tokenOut.address === tokens.CHAINLINK_USD.address) {
+    return await fetchPrice(networks.tokenIn, tokenIn.address, target);
   }
 
-  let tokenAPrice = await fetchPrice(network, tokenA.address);
-  let tokenBPrice = await fetchPrice(network, tokenB.address);
+  let tokenInPrice = await fetchPrice(
+    networks.tokenIn,
+    tokenIn.address,
+    target,
+  );
+  let tokenOutPrice = await fetchPrice(
+    networks.tokenOut,
+    tokenOut.address,
+    target,
+  );
 
-  return tokenAPrice / tokenBPrice;
+  return tokenInPrice / tokenOutPrice;
 }
 
-let priceCache: Map<string, number> = new Map();
+let cache: { [address: string]: { [target: number]: number } } = {};
 
-async function fetchPrice(network: string, address: string): Promise<number> {
-  if (!priceCache.has(address)) {
-    const timestamp = await now();
-    const price = await getPrice(network, address, timestamp);
-    priceCache.set(address, price);
+async function fetchPrice(
+  network: string,
+  address: string,
+  target: number = 0,
+): Promise<number> {
+  if (!cache[address]) cache[address] = {};
+  if (!cache[address][target]) {
+    if (target == 0) target = await now();
+    const price = await getPrice(network, address, target);
+    cache[address][target] = price;
   }
-  return priceCache.get(address)!;
+  return cache[address][target];
 }
