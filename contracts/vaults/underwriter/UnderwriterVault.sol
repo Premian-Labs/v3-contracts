@@ -231,10 +231,9 @@ contract UnderwriterVault is
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
-            // if the total shares that were minted is zero, we should revert
-            assetAmount = shareAmount;
+            revert Vault__ZEROShares();
         } else {
-            assetAmount = shareAmount * _getPricePerShare();
+            assetAmount = shareAmount.mul(_getPricePerShare());
         }
     }
 
