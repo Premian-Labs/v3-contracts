@@ -58,6 +58,12 @@ contract UnderwriterVault is
         uint256[] maturities;
     }
 
+    struct TradeParams {
+        uint256 strike;
+        uint256 maturity;
+        uint256 size;
+    }
+
     constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE_ADDR = oracleAddress;
         FACTORY_ADDR = factoryAddress;
@@ -530,27 +536,32 @@ contract UnderwriterVault is
     }
 
     // Utilization rate will be vol global for entire surface
-    function _getClevel() internal view returns (uint256) {
+    function _getClevel(uint256 collateralAmt) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         if (l.maxClevel == 0) revert Vault__CLevelBounds();
         if (l.alphaClevel == 0) revert Vault__CLevelBounds();
 
-        // TODO: need to calculation utilization of capital
-        uint256 utilisation = 0.5e18;
+        uint256 postUtilisation = (l.totalLockedAssets + collateralAmt).div(
+            l.totalAssets
+        );
+
+        if (postUtilisation > 1) revert Vault__UtilEstError();
+
         uint256 hoursSinceLastTx = (block.timestamp - l.lastTradeTimestamp).div(
             SECONDSINAHOUR
         );
 
-        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
         uint256 cLevel = _calculateClevel(
-            utilisation,
+            postUtilisation,
             l.alphaClevel,
             l.minClevel,
             l.maxClevel
         );
-        // TODO: return c-level AFTER the impact of the trade
+
+        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
+
         if (cLevel - discount < l.minClevel) return l.minClevel;
 
         return cLevel - discount;
@@ -558,110 +569,130 @@ contract UnderwriterVault is
 
     //  Calculate the price of an option using the Black-Scholes model
     function _calculateClevel(
-        uint256 utilisation,
+        uint256 postUtilisation,
         uint256 alphaClevel,
         uint256 minClevel,
         uint256 maxClevel
     ) internal pure returns (uint256) {
         uint256 k = alphaClevel * minClevel;
-        uint256 positiveExp = (alphaClevel * utilisation).exp();
-        uint256 negativeExp = (-alphaClevel.toInt256() * utilisation.toInt256())
-            .exp()
-            .toUint256();
+        uint256 positiveExp = (alphaClevel * postUtilisation).exp();
+        uint256 negativeExp = (-alphaClevel.toInt256() *
+            postUtilisation.toInt256()).exp().toUint256();
         return
-            (negativeExp * (k * positiveExp + maxClevel * alphaClevel - k)) /
-            alphaClevel;
+            (negativeExp * (k * positiveExp + maxClevel * alphaClevel - k)).div(
+                alphaClevel
+            );
     }
 
-    /// @inheritdoc IUnderwriterVault
-    function buy(
-        uint256 strike,
-        uint256 maturity,
-        uint256 size
-    ) external returns (uint256) {
+    function _quote(
+        TradeParams memory params
+    ) internal view returns (address, uint256, uint256, uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 collateralAmt = l.isCall
+            ? params.size
+            : params.size.mul(params.strike);
+
+        // Check non Zero Strike
+        if (params.strike == 0) revert Vault__AddressZero();
+        // Check valid maturity
+        if (block.timestamp >= params.maturity) revert Vault__OptionExpired();
+        // Compute premium and the spread collected
+        uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
+
+        uint256 tau = (params.maturity - block.timestamp).div(SECONDSINAYEAR);
+
+        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
+            _asset(),
+            spotPrice,
+            params.strike,
+            tau
+        );
+
+        address poolAddr = _isValidListing(
+            spotPrice,
+            params.strike,
+            params.maturity,
+            tau,
+            uint256(sigma)
+        );
+
+        // returns USD price for calls & puts
+        uint256 price = OptionMath.blackScholesPrice(
+            l.isCall ? OptionMath.ONE : spotPrice,
+            l.isCall ? params.strike.div(spotPrice) : params.strike,
+            tau,
+            uint256(sigma),
+            l.rfRate,
+            l.isCall
+        );
+
+        // call denominated in base, put denominated in quote
+        uint256 mintingFee = IPool(poolAddr).takerFee(params.size, 0, false);
+        // Check if the vault has sufficient funds
+        if ((collateralAmt + mintingFee) >= _availableAssets())
+            revert Vault__InsufficientFunds();
+
+        return (poolAddr, price, mintingFee, _getClevel(collateralAmt));
+    }
+
+    function _buy(TradeParams memory params) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
         // Get pool address, price and c-level
         (
             address poolAddr,
             uint256 price,
             uint256 mintingFee,
             uint256 cLevel
-        ) = quote(strike, maturity, size);
+        ) = _quote(params);
 
         // Add listing
-        _addListing(strike, maturity);
+        _addListing(params.strike, params.maturity);
 
-        uint256 totalPremium = size * price;
-
-        // TODO: embed the trading fee into the spread (requires calculating fee)
-        uint256 spread = 0;
+        uint256 totalSpread = (cLevel - l.minClevel).mul(price).mul(
+            params.size
+        ) + mintingFee;
 
         // Mint option and allocate long token
-        IPool(poolAddr).writeFrom(address(this), msg.sender, size);
+        IPool(poolAddr).writeFrom(address(this), msg.sender, params.size);
 
-        uint256 secondsToExpiration = maturity - block.timestamp;
+        uint256 secondsToExpiration = params.maturity - block.timestamp;
         // Handle the premiums and spread capture generated
         afterBuyStruct memory intel = afterBuyStruct(
-            maturity,
-            totalPremium,
+            params.maturity,
+            params.size * price,
             secondsToExpiration,
-            size,
-            spread,
-            strike
+            params.size,
+            totalSpread,
+            params.strike
         );
 
         _afterBuy(intel);
-
-        return totalPremium;
     }
 
+    /// @inheritdoc IUnderwriterVault
+    function buy(uint256 strike, uint256 maturity, uint256 size) external {
+        TradeParams memory params;
+        params.strike = strike;
+        params.maturity = maturity;
+        params.size = size;
+        return _buy(params);
+    }
+
+    /// @inheritdoc IUnderwriterVault
     function quote(
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) public view returns (address, uint256, uint256, uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        // Check non Zero Strike
-        if (strike == 0) revert Vault__AddressZero();
-        // Check valid maturity
-        if (block.timestamp >= maturity) revert Vault__OptionExpired();
-        // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
-
-        uint256 tau = (maturity - block.timestamp).div(SECONDSINAYEAR);
-
-        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
-            _asset(),
-            spotPrice,
-            strike,
-            tau
-        );
-        uint256 iv = uint256(sigma);
-
-        address poolAddr = _isValidListing(
-            spotPrice,
-            strike,
-            maturity,
-            tau,
-            iv
-        );
-
-        uint256 price = OptionMath.blackScholesPrice(
-            spotPrice,
-            strike,
-            tau,
-            iv,
-            l.rfRate,
-            l.isCall
-        );
-
-        // call denominated in base, put denominated in quote
-        uint256 mintingFee = IPool(poolAddr).takerFee(size, 0, false);
-        // Check if the vault has sufficient funds
-        if ((size + mintingFee) >= _availableAssets())
-            revert Vault__InsufficientFunds();
-
-        return (poolAddr, price, mintingFee, _getClevel());
+    ) external view returns (address, uint256, uint256, uint256) {
+        TradeParams memory params;
+        params.strike = strike;
+        params.maturity = maturity;
+        params.size = size;
+        return _quote(params);
     }
 
     /// @inheritdoc IUnderwriterVault

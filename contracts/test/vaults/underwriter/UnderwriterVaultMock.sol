@@ -45,11 +45,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function increasePositionSize(
         uint256 maturity,
         uint256 strike,
-        uint256 positionSize
+        uint256 posSize
     ) external onlyOwner {
         UnderwriterVaultStorage.layout().positionSizes[maturity][
             strike
-        ] += positionSize;
+        ] += posSize;
     }
 
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
@@ -246,8 +246,33 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 alphaClevel,
         uint256 minClevel,
         uint256 maxClevel
-    ) internal pure returns (uint256) {
+    ) external pure returns (uint256) {
         return _calculateClevel(utilisation, alphaClevel, minClevel, maxClevel);
+    }
+
+    function getClevel(uint256 collateralAmt) external view returns (uint256) {
+        return _getClevel(collateralAmt);
+    }
+
+    function addListing(uint256 strike, uint256 maturity) external {
+        return _addListing(strike, maturity);
+    }
+
+    function getFactoryAddress(
+        uint256 strike,
+        uint256 maturity
+    ) external view returns (address) {
+        return _getFactoryAddress(strike, maturity);
+    }
+
+    function isValidListing(
+        uint256 spotPrice,
+        uint256 strike,
+        uint256 maturity,
+        uint256 tau,
+        uint256 sigma
+    ) external view returns (address) {
+        return _isValidListing(spotPrice, strike, maturity, tau, sigma);
     }
 
     function afterBuy(
