@@ -10,7 +10,7 @@ import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { parseEther, solidityPack } from 'ethers/lib/utils';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
-import { increase, ONE_DAY } from '../../utils/time';
+import { increase, ONE_DAY, revertToSnapshotAfterEach } from '../../utils/time';
 import { getEventArgs } from '../../utils/events';
 
 /* Example to decode packed target data
@@ -45,8 +45,6 @@ const poolAddresses = [
 ];
 
 describe('VxPremia', () => {
-  let snapshotId: number;
-
   before(async () => {
     [deployer, alice, bob] = await ethers.getSigners();
 
@@ -81,13 +79,7 @@ describe('VxPremia', () => {
     }
   });
 
-  beforeEach(async () => {
-    snapshotId = await ethers.provider.send('evm_snapshot', []);
-  });
-
-  afterEach(async () => {
-    await ethers.provider.send('evm_revert', [snapshotId]);
-  });
+  revertToSnapshotAfterEach(async () => {});
 
   describe('#getUserVotes', () => {
     it('should successfully return user votes', async () => {

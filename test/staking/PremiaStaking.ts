@@ -13,7 +13,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { signERC2612Permit } from 'eth-permit';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from 'ethers';
-import { increase, ONE_YEAR } from '../../utils/time';
+import {
+  increase,
+  ONE_YEAR,
+  revertToSnapshotAfterEach,
+} from '../../utils/time';
 import { bnToNumber } from '../../utils/sdk/math';
 
 let admin: SignerWithAddress;
@@ -73,8 +77,6 @@ async function bridge(
 }
 
 describe('PremiaStaking', () => {
-  let snapshotId: number;
-
   before(async () => {
     [admin, alice, bob, carol] = await ethers.getSigners();
 
@@ -118,13 +120,7 @@ describe('PremiaStaking', () => {
       .approve(premiaStaking.address, ethers.constants.MaxUint256);
   });
 
-  beforeEach(async () => {
-    snapshotId = await ethers.provider.send('evm_snapshot', []);
-  });
-
-  afterEach(async () => {
-    await ethers.provider.send('evm_revert', [snapshotId]);
-  });
+  revertToSnapshotAfterEach(async () => {});
 
   describe('#getTotalVotingPower', () => {
     it('should successfully return total voting power', async () => {
