@@ -141,7 +141,6 @@ describe('UnderwriterVault', () => {
       vaultImpl.address,
       base.address,
       quote.address,
-      baseOracle.address,
       baseOracle.address, // OracleAdapter
       'WETH Vault',
       'WETH',
@@ -181,6 +180,64 @@ describe('UnderwriterVault', () => {
     await base.connect(caller).approve(vault.address, assetAmount);
     await vault.connect(caller).deposit(assetAmount, receiver.address);
   }
+
+  describe('#_getMaturityAfterTimestamp', () => {
+    it('works for maturities with length 0', async () => {
+      await expect(
+        vault.getMaturityAfterTimestamp('50000'),
+      ).to.be.revertedWithCustomError(vault, 'Vault__GreaterThanMaxMaturity');
+    });
+
+    it('works for maturities with length greater than 1', async () => {
+      const infos = [
+        {
+          maturity: '100000',
+          strikes: [],
+          sizes: [],
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+
+      expect(infos[0]['maturity']).to.eq(
+        await vault.getMaturityAfterTimestamp('50000'),
+      );
+
+      await vault.clearListingsAndSizes();
+    });
+
+    it('works for maturities with length greater than 1', async () => {
+      const infos = [
+        {
+          maturity: '100000',
+          strikes: [],
+          sizes: [],
+        },
+        {
+          maturity: '200000',
+          strikes: [],
+          sizes: [],
+        },
+        {
+          maturity: '300000',
+          strikes: [],
+          sizes: [],
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+
+      expect(infos[0]['maturity']).to.eq(
+        await vault.getMaturityAfterTimestamp('50000'),
+      );
+      expect(infos[1]['maturity']).to.eq(
+        await vault.getMaturityAfterTimestamp('150000'),
+      );
+      expect(infos[2]['maturity']).to.eq(
+        await vault.getMaturityAfterTimestamp('250000'),
+      );
+
+      await vault.clearListingsAndSizes();
+    });
+  });
 
   describe('#vault environment after a single trade', () => {
     async function addTrade(

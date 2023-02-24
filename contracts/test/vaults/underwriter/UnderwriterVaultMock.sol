@@ -56,6 +56,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
     }
 
+    function getMinMaturity() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().minMaturity;
+    }
+
     function setMinMaturity(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().minMaturity = value;
     }
@@ -64,11 +68,99 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().maxMaturity = value;
     }
 
-    function setListingsAndSizes(MaturityInfo[] memory infos) {
+    function logListingsAndSizes() internal view {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        console.log("Min. Maturity: ", l.minMaturity);
+
+        uint256 current = l.minMaturity;
+
+        while (current <= l.maxMaturity) {
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                console.log("Maturity: ", current);
+                console.log("Strike: ", l.maturityToStrikes[current].at(i));
+                console.log(
+                    "Size: ",
+                    l.positionSizes[current][l.maturityToStrikes[current].at(i)]
+                );
+            }
+
+            if (current > l.maturities.next(current)) {
+                break;
+            }
+
+            current = l.maturities.next(current);
+        }
+
+        console.log("Max. Maturity: ", l.maxMaturity);
+    }
+
+    function setListingsAndSizes(
+        MaturityInfo[] memory infos
+    ) external onlyOwner {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         uint256 n = infos.length;
+
+        // Setup data
+        l.minMaturity = infos[0].maturity;
+        uint256 current = 0;
+
+        for (uint256 i = 0; i < n; i++) {
+            l.maturities.insertAfter(current, infos[i].maturity);
+            current = infos[i].maturity;
+
+            for (uint256 j = 0; j < infos[i].strikes.length; j++) {
+                l.maturityToStrikes[current].add(infos[i].strikes[j]);
+                l.positionSizes[current][infos[i].strikes[j]] += infos[i].sizes[
+                    j
+                ];
+            }
+        }
+
+        l.maxMaturity = current;
+    }
+
+    function clearListingsAndSizes() external onlyOwner {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 current = l.minMaturity;
+
+        uint256 next;
+
+        while (current <= l.maxMaturity) {
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                l.positionSizes[current][
+                    l.maturityToStrikes[current].at(i)
+                ] = 0;
+
+                l.maturityToStrikes[current].remove(
+                    l.maturityToStrikes[current].at(i)
+                );
+            }
+
+            next = l.maturities.next(current);
+            if (current > next) {
+                l.maturities.remove(current);
+                break;
+            }
+
+            l.maturities.remove(current);
+            current = next;
+        }
+
+        l.maxMaturity = 0;
     }
 
     function insertMaturity(
