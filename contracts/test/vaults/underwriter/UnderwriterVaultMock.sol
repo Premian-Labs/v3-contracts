@@ -17,10 +17,22 @@ contract UnderwriterVaultMock is UnderwriterVault {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
+    struct MaturityInfo {
+        uint256 maturity;
+        uint256[] strikes;
+        uint256[] sizes;
+    }
+
     constructor(
         address oracleAddress,
         address factoryAddress
     ) UnderwriterVault(oracleAddress, factoryAddress) {}
+
+    function getMaturityAfterTimestamp(
+        uint256 timestamp
+    ) external view returns (uint256) {
+        return _getMaturityAfterTimestamp(timestamp);
+    }
 
     function getTotalFairValue() external view returns (uint256) {
         return _getTotalFairValue();
@@ -50,6 +62,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function setMaxMaturity(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().maxMaturity = value;
+    }
+
+    function setListingsAndSizes(MaturityInfo[] memory infos) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 n = infos.length;
     }
 
     function insertMaturity(

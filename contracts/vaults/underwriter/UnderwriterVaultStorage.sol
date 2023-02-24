@@ -14,7 +14,6 @@ library UnderwriterVaultStorage {
         keccak256("premia.contracts.storage.UnderwriterVaultStorage");
 
     struct Layout {
-        uint256 variable;
         address base;
         address quote;
         address oracleAdapter;

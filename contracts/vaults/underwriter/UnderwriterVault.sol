@@ -88,6 +88,25 @@ contract UnderwriterVault is
         return price;
     }
 
+    function _getMaturityAfterTimestamp(
+        uint256 timestamp
+    ) internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 current = l.minMaturity;
+
+        // Handle case where length(maturities) == 0
+        // Handle case where there is no maturity after timestamp
+
+        while (current <= timestamp) {
+            if (l.maturities.next(current) < current)
+                revert Vault__NonMonotonicMaturities();
+            current = l.maturities.next(current);
+        }
+        return current;
+    }
+
     function _getNumberOfUnexpiredListings() internal view returns (uint256) {
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -225,25 +244,6 @@ contract UnderwriterVault is
 
     function _getTotalFairValue() internal view returns (uint256) {
         return _getTotalFairValueUnexpired() + _getTotalFairValueExpired();
-    }
-
-    function _getMaturityAfterTimestamp(
-        uint256 timestamp
-    ) internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        uint256 current = l.minMaturity;
-
-        // Handle case where length(maturities) == 0
-        // Handle case where there is no maturity after timestamp
-
-        while (current <= timestamp) {
-            if (l.maturities.next(current) < current)
-                revert Vault__NonMonotonicMaturities();
-            current = l.maturities.next(current);
-        }
-        return current;
     }
 
     function _getTotalLockedSpread() internal view returns (uint256) {
