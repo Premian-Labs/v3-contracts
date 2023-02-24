@@ -148,18 +148,19 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
+    // @notice We use the given oracle adapter to fetch the price of the base/quote pair.
+    //         This is used in the calculation of the initializationFee and to check the strike increment
     function _fetchQuote(
         address oracleAdapter,
         address base,
         address quote
     ) internal view returns (uint256) {
-        // We use the given oracle adapter to fetch the price of the base/quote pair to calculate the initializationFee
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
+    // @notice We use the Premia Chainlink Adapter to fetch the price of the wrapped native token.
+    //         This is used to convert the initializationFee from USD to native token
     function _fetchWrappedNativeUSDQuote() internal view returns (uint256) {
-        // We use the Premia Chainlink Adapter to fetch the price of the wrapped native token,
-        // to convert the initializationFee from USD to native token
         return
             IOracleAdapter(CHAINLINK_ADAPTER).quote(
                 WRAPPED_NATIVE_TOKEN,
