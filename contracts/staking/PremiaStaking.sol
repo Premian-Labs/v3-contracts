@@ -798,10 +798,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
     {
         stakeLevels = new IPremiaStaking.StakeLevel[](4);
 
-        stakeLevels[0] = IPremiaStaking.StakeLevel(5000 * 1e18, 1000); // -10%
-        stakeLevels[1] = IPremiaStaking.StakeLevel(50000 * 1e18, 2500); // -25%
-        stakeLevels[2] = IPremiaStaking.StakeLevel(500000 * 1e18, 3500); // -35%
-        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000 * 1e18, 6000); // -60%
+        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 1000); // -10%
+        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 2500); // -25%
+        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 3500); // -35%
+        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 6000); // -60%
     }
 
     function _getStakePeriodMultiplierBPS(
