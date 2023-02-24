@@ -88,19 +88,21 @@ contract UnderwriterVault is
         return _getSpotPrice(oracle);
     }
 
-    function _getNumberOfListings() internal view returns (uint256) {
+    function _getNumberOfUnexpiredListings() internal view returns (uint256) {
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         uint256 current = l.minMaturity;
 
         while (current <= l.maxMaturity) {
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                n += 1;
+            if (current > block.timestamp) {
+                for (
+                    uint256 i = 0;
+                    i < l.maturityToStrikes[current].length();
+                    i++
+                ) {
+                    n += 1;
+                }
             }
 
             current = l.maturities.next(current);
@@ -151,7 +153,7 @@ contract UnderwriterVault is
         }
 
         // Compute fair value for options that have not expired
-        uint256 n = _getNumberOfListings();
+        uint256 n = _getNumberOfUnexpiredListings();
 
         uint256[] memory strikes = new uint256[](n);
         uint256[] memory timeToMaturities = new uint256[](n);
