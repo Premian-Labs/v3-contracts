@@ -175,7 +175,8 @@ describe('UnderwriterVault', () => {
     await vault.setMinMaturity(minMaturity.toString());
     await vault.setMaxMaturity(maxMaturity.toString());
     await vault.insertMaturity(0, minMaturity);
-    await vault.insertMaturity(minMaturity, 2 * maxMaturity);
+    await vault.insertMaturity(minMaturity, maxMaturity);
+    await vault.insertMaturity(maxMaturity, 2 * maxMaturity);
   }
 
   async function addDeposit(
@@ -205,7 +206,7 @@ describe('UnderwriterVault', () => {
 
       await vault.increaseTotalLockedSpread(parseEther(spread.toString()));
       const additionalSpreadRate = (spread / (maturity - tradeTime)) * 10 ** 18;
-      const spreadRate = additionalSpreadRate.toFixed(0).toString();
+      const spreadRate = Math.trunc(additionalSpreadRate).toString();
       await vault.setLastSpreadUnlockUpdate(tradeTime);
       await vault.increaseSpreadUnlockingRate(spreadRate);
       await vault.increaseSpreadUnlockingTick(minMaturity, spreadRate);
@@ -221,11 +222,14 @@ describe('UnderwriterVault', () => {
       await setupVault();
       await addDeposit(caller, receiver, 2);
       await addTrade(trader, minMaturity, 1000, 1, startTime, 0.1);
+      console.log('Computing totalFairValue');
       console.log(await vault.getTotalFairValue());
-
+      console.log('Computing pricePerShare');
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
       await increaseTo(minMaturity);
+      console.log('Computing totalFairValue');
       console.log(await vault.getTotalFairValue());
+      console.log('Computing pricePerShare');
       console.log(await vault.getTotalLockedSpread());
       console.log(parseFloat(formatEther(await vault.getPricePerShare())));
       await increaseTo(maxMaturity);
