@@ -75,8 +75,10 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         IVaultRegistry.OptionType[] memory optionTypes
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        Vault[] memory vaultsToReturn = new Vault[](l.vaultAddresses.length());
-    
+
+        uint256 length = l.vaultAddresses.length();
+        Vault[] memory vaultsToReturn = new Vault[](length);
+
         uint256 index = 0;
         bool breakToVaultAddress;
         for (uint256 i = 0; i < l.vaultAddresses.length(); i++) {
@@ -89,8 +91,6 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
                 if (breakToVaultAddress) break;
 
                 if (_vault.side == sides[j]) {
-                    if (breakToVaultAddress) break;
-
                     for (uint256 k = 0; k < optionTypes.length; k++) {
                         if (_vault.optionType == optionTypes[k]) {
                             vaultsToReturn[index] = _vault;
@@ -103,6 +103,19 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
                 }
             }
         }
+
+        // Remove empty elements from array
+        if (index < length) {
+            assembly {
+                mstore(
+                    vaultsToReturn,
+                    sub(mload(vaultsToReturn), sub(length, index))
+                )
+            }
+        }
+
+        return vaultsToReturn;
+    }
 
         return vaultsToReturn;
     }
