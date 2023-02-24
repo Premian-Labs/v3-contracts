@@ -38,7 +38,6 @@ library UnderwriterVaultStorage {
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
         // SortedLinkedList for maturities
-        uint256 lastMaturity;
         uint256 minMaturity;
         uint256 maxMaturity;
         DoublyLinkedList.Uint256List maturities;

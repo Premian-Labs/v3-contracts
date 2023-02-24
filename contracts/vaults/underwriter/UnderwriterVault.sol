@@ -92,133 +92,69 @@ contract UnderwriterVault is
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        uint256 current = l.minMaturity;
+        uint256 current = _getMaturityAfterTimestamp(block.timestamp);
 
         while (current <= l.maxMaturity) {
-            if (current > block.timestamp) {
-                for (
-                    uint256 i = 0;
-                    i < l.maturityToStrikes[current].length();
-                    i++
-                ) {
-                    n += 1;
-                }
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                n += 1;
             }
 
-            current = l.maturities.next(current);
+            uint256 next = l.maturities.next(current);
+            if (next < current) revert Vault__NonMonotonicMaturities();
+            current = next;
         }
 
         return n;
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
-        uint256 spot;
-        uint256 strike;
-        uint256 timeToMaturity;
+        return _getTotalFairValueUnexpired() + _getTotalFairValueExpired();
+    }
 
-        uint256 price;
-        uint256 size;
-
+    function _getMaturityAfterTimestamp(
+        uint256 timestamp
+    ) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
         uint256 current = l.minMaturity;
-        uint256 total = 0;
 
-        // Compute fair value for expired unsettled options
-        while (current <= block.timestamp) {
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                strike = l.maturityToStrikes[current].at(i);
+        // Handle case where length(maturities) == 0
+        // Handle case where there is no maturity after timestamp
 
-                spot = _getSpotPrice(l.priceOracle, current);
-
-                price = OptionMath.blackScholesPrice(
-                    spot,
-                    strike,
-                    0,
-                    1,
-                    l.rfRate,
-                    l.isCall
-                );
-
-                size = l.positionSizes[current][strike];
-
-                total += price.mul(size).div(spot);
-            }
-
+        while (current <= timestamp) {
+            if (l.maturities.next(current) < current)
+                revert Vault__NonMonotonicMaturities();
             current = l.maturities.next(current);
         }
-
-        // Compute fair value for options that have not expired
-        uint256 n = _getNumberOfUnexpiredListings();
-
-        uint256[] memory strikes = new uint256[](n);
-        uint256[] memory timeToMaturities = new uint256[](n);
-        uint256[] memory maturities = new uint256[](n);
-
-        spot = _getSpotPrice(l.priceOracle);
-
-        while (current <= l.maxMaturity) {
-            timeToMaturity = (current - block.timestamp).div(
-                365 * 24 * 60 * 60
-            );
-
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                strikes[i] = l.maturityToStrikes[current].at(i);
-                timeToMaturities[i] = timeToMaturity;
-                maturities[i] = current;
-            }
-
-            current = l.maturities.next(current);
-        }
-
-        int256[] memory sigmas = IVolatilityOracle(IV_ORACLE_ADDR)
-            .getVolatility(_asset(), spot, strikes, timeToMaturities);
-
-        for (uint256 i; i < sigmas.length; i++) {
-            price = OptionMath.blackScholesPrice(
-                spot,
-                strikes[i],
-                timeToMaturities[i],
-                uint256(sigmas[i]),
-                0,
-                l.isCall
-            );
-
-            size = l.positionSizes[maturities[i]][strikes[i]];
-
-            total += price.mul(size).div(spot);
-        }
-
-        return total;
+        return current;
     }
 
     function _getTotalLockedSpread() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        uint256 last = l.lastMaturity;
-        uint256 next = l.maturities.next(last);
+        uint256 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
+        uint256 next;
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
         // TODO: double check handling of negative total locked spread
         uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (block.timestamp >= next) {
+        while (current <= block.timestamp) {
             totalLockedSpread -=
-                (next - lastSpreadUnlockUpdate) *
+                (current - lastSpreadUnlockUpdate) *
                 spreadUnlockingRate;
-            spreadUnlockingRate -= l.spreadUnlockingTicks[next];
-            lastSpreadUnlockUpdate = next;
-            last = next;
-            next = l.maturities.next(last);
+
+            spreadUnlockingRate -= l.spreadUnlockingTicks[current];
+            lastSpreadUnlockUpdate = current;
+            next = l.maturities.next(current);
+            if (next < current) revert Vault__NonMonotonicMaturities();
+            current = next;
         }
         totalLockedSpread -=
             (block.timestamp - lastSpreadUnlockUpdate) *
@@ -246,21 +182,23 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        uint256 last = l.minMaturity;
-        uint256 next = l.maturities.next(last);
+        uint256 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
+        uint256 next;
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
         uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (block.timestamp >= next) {
+        while (current <= block.timestamp) {
             totalLockedSpread -=
                 (next - lastSpreadUnlockUpdate) *
                 spreadUnlockingRate;
             spreadUnlockingRate -= l.spreadUnlockingTicks[next];
             lastSpreadUnlockUpdate = next;
-            last = next;
-            next = l.maturities.next(last);
+
+            next = l.maturities.next(current);
+            if (next < current) revert Vault__NonMonotonicMaturities();
+            current = next;
         }
         totalLockedSpread -=
             (block.timestamp - lastSpreadUnlockUpdate) *
@@ -302,11 +240,19 @@ contract UnderwriterVault is
 
     function _maxWithdraw(
         address owner
-    ) internal view virtual override returns (uint256) {
+    ) internal view virtual override returns (uint256 withdrawableAssets) {
         if (owner == address(0)) {
             revert Vault__AddressZero();
         }
-        return _availableAssets();
+
+        uint256 assetsOwner = _convertToAssets(_balanceOf(owner));
+        uint256 availableAssets = _availableAssets();
+
+        if (assetsOwner >= availableAssets) {
+            withdrawableAssets = availableAssets;
+        } else {
+            withdrawableAssets = assetsOwner;
+        }
     }
 
     function _maxRedeem(
@@ -317,8 +263,14 @@ contract UnderwriterVault is
 
     function _previewMint(
         uint256 shareAmount
-    ) internal view virtual override returns (uint256) {
-        return _convertToAssets(shareAmount);
+    ) internal view virtual override returns (uint256 assetAmount) {
+        uint256 supply = _totalSupply();
+
+        if (supply == 0) {
+            assetAmount = shareAmount;
+        } else {
+            assetAmount = shareAmount.mul(_getPricePerShare());
+        }
     }
 
     function _previewWithdraw(
@@ -327,16 +279,14 @@ contract UnderwriterVault is
         uint256 supply = _totalSupply();
 
         if (supply == 0) {
-            shareAmount = assetAmount;
+            revert Vault__ZEROShares();
         } else {
             uint256 totalAssets = _totalAssets();
 
             if (totalAssets == 0) {
-                shareAmount = assetAmount;
+                revert Vault__InsufficientFunds();
             } else {
-                shareAmount =
-                    (assetAmount * supply + totalAssets - 1) /
-                    totalAssets;
+                shareAmount = assetAmount.div(_getPricePerShare());
             }
         }
     }
