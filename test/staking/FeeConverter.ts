@@ -78,7 +78,10 @@ describe('FeeConverter', () => {
         ethers.constants.AddressZero,
         '0x',
       ),
-    ).to.be.revertedWith('Not authorized');
+    ).to.be.revertedWithCustomError(
+      feeConverter,
+      'FeeConverter__NotAuthorized',
+    );
   });
 
   it('should convert fees successfully', async () => {
