@@ -10,7 +10,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
@@ -18,6 +17,7 @@ import {IVolatilityOracle} from "../../oracle/volatility/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
+import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
 
 import "hardhat/console.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
@@ -33,6 +33,7 @@ contract UnderwriterVault is
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
     using SafeCast for int256;
+    using SafeCast for uint256;
     using UD60x18 for uint256;
     using SD59x18 for int256;
 
@@ -75,19 +76,16 @@ contract UnderwriterVault is
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _getSpotPrice(address oracle) internal view returns (uint256) {
-        // TODO: Add spot price validation
-        // TODO: change price oracle to oracle adapter
-        int256 price = AggregatorInterface(oracle).latestAnswer();
-        if (price < 0) revert Vault__ZeroPrice();
-        return price.toUint256();
-    }
-
     function _getSpotPrice(
-        address oracle,
-        uint256 timestamp
+        address oracleAdapterAddr
     ) internal view returns (uint256) {
-        return _getSpotPrice(oracle);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
+            l.base,
+            l.quote
+        );
+        return price;
     }
 
     function _getNumberOfUnexpiredListings() internal view returns (uint256) {
@@ -134,7 +132,7 @@ contract UnderwriterVault is
             ) {
                 strike = l.maturityToStrikes[current].at(i);
 
-                spot = _getSpotPrice(l.priceOracle, current);
+                spot = _getSpotPrice(l.oracleAdapter);
 
                 price = OptionMath.blackScholesPrice(
                     spot,
@@ -177,7 +175,7 @@ contract UnderwriterVault is
             maturities: new uint256[](n)
         });
 
-        uint256 spot = _getSpotPrice(l.priceOracle);
+        uint256 spot = _getSpotPrice(l.oracleAdapter);
 
         while (current <= l.maxMaturity) {
             timeToMaturity = ((current - block.timestamp)).div(
@@ -530,12 +528,49 @@ contract UnderwriterVault is
         return listingAddr;
     }
 
-    function _calculateClevel() internal pure returns (uint256) {
-        // Utilization rate will be vol global for entire surface
+    // Utilization rate will be vol global for entire surface
+    function _getClevel() internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (l.maxClevel == 0) revert Vault__CLevelBounds();
+        if (l.alphaClevel == 0) revert Vault__CLevelBounds();
+
         // TODO: need to calculation utilization of capital
         // TODO: check the last time there was a transaction
         // TODO: return c-level AFTER the impact of the trade
-        return 1;
+
+        uint256 utilisation = 0.5e18;
+        uint256 hoursSinceLastTx = 1e18;
+
+        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
+        uint256 cLevel = _calculateClevel(
+            utilisation,
+            l.alphaClevel,
+            l.minClevel,
+            l.maxClevel
+        );
+
+        if (cLevel - discount < l.minClevel) return l.minClevel;
+
+        return cLevel - discount;
+    }
+
+    //  Calculate the price of an option using the Black-Scholes model
+    function _calculateClevel(
+        uint256 utilisation,
+        uint256 alphaClevel,
+        uint256 minClevel,
+        uint256 maxClevel
+    ) internal pure returns (uint256) {
+        uint256 k = alphaClevel * minClevel;
+        uint256 positiveExp = (alphaClevel * utilisation).exp();
+        uint256 negativeExp = (-alphaClevel.toInt256() * utilisation.toInt256())
+            .exp()
+            .toUint256();
+        return
+            (negativeExp * (k * positiveExp + maxClevel * alphaClevel - k)) /
+            alphaClevel;
     }
 
     /// @inheritdoc IUnderwriterVault
@@ -548,11 +583,12 @@ contract UnderwriterVault is
             .layout();
 
         // Get pool address, price and c-level
-        (address poolAddr, uint256 price, uint256 cLevel) = quote(
-            strike,
-            maturity,
-            size
-        );
+        (
+            address poolAddr,
+            uint256 price,
+            uint256 mintingFee,
+            uint256 cLevel
+        ) = quote(strike, maturity, size);
 
         // Add listing
         _addListing(strike, maturity);
@@ -588,17 +624,15 @@ contract UnderwriterVault is
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) public view returns (address, uint256, uint256) {
+    ) public view returns (address, uint256, uint256, uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Check non Zero Strike
         if (strike == 0) revert Vault__AddressZero();
         // Check valid maturity
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
-        // Check if the vault has sufficient funds
-        if (size >= _availableAssets()) revert Vault__InsufficientFunds();
         // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice(l.priceOracle);
+        uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
 
         uint256 secondsToExpiration = maturity - block.timestamp;
         uint256 tau = secondsToExpiration.div(SECONDSINAYEAR);
@@ -619,6 +653,12 @@ contract UnderwriterVault is
             iv
         );
 
+        // call denominated in base, put denominated in quote
+        uint256 mintingFee = IPool(poolAddr).takerFee(size, 0, false);
+        // Check if the vault has sufficient funds
+        if ((size + mintingFee) >= _availableAssets())
+            revert Vault__InsufficientFunds();
+
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
             strike,
@@ -628,9 +668,9 @@ contract UnderwriterVault is
             l.isCall
         );
 
-        uint256 cLevel = _calculateClevel();
+        uint256 cLevel = _getClevel();
 
-        return (poolAddr, price, cLevel);
+        return (poolAddr, price, mintingFee, cLevel);
     }
 
     /// @inheritdoc IUnderwriterVault

@@ -17,7 +17,6 @@ library UnderwriterVaultStorage {
         uint256 variable;
         address base;
         address quote;
-        address priceOracle;
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;
@@ -34,6 +33,7 @@ library UnderwriterVaultStorage {
         uint256 minClevel;
         uint256 maxClevel;
         uint256 alphaClevel;
+        uint256 hourlyDecayDiscount;
         uint256 lastTradeTimestamp;
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
