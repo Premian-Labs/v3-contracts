@@ -519,11 +519,12 @@ contract UnderwriterVault is
             .layout();
 
         // Get pool address, price and c-level
-        (address poolAddr, uint256 price, uint256 cLevel) = quote(
-            strike,
-            maturity,
-            size
-        );
+        (
+            address poolAddr,
+            uint256 price,
+            uint256 mintingFee,
+            uint256 cLevel
+        ) = quote(strike, maturity, size);
 
         // Add listing
         _addListing(strike, maturity);
@@ -559,15 +560,13 @@ contract UnderwriterVault is
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) public view returns (address, uint256, uint256) {
+    ) public view returns (address, uint256, uint256, uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Check non Zero Strike
         if (strike == 0) revert Vault__AddressZero();
         // Check valid maturity
         if (block.timestamp >= maturity) revert Vault__OptionExpired();
-        // Check if the vault has sufficient funds
-        if (size >= _availableAssets()) revert Vault__InsufficientFunds();
         // Compute premium and the spread collected
         uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
 
@@ -590,6 +589,12 @@ contract UnderwriterVault is
             iv
         );
 
+        // call denominated in base, put denominated in quote
+        uint256 mintingFee = IPool(poolAddr).takerFee(size, 0, false);
+        // Check if the vault has sufficient funds
+        if ((size + mintingFee) >= _availableAssets())
+            revert Vault__InsufficientFunds();
+
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
             strike,
@@ -601,7 +606,7 @@ contract UnderwriterVault is
 
         uint256 cLevel = _getClevel();
 
-        return (poolAddr, price, cLevel);
+        return (poolAddr, price, mintingFee, cLevel);
     }
 
     /// @inheritdoc IUnderwriterVault
