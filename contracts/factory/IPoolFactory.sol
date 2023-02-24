@@ -27,10 +27,8 @@ interface IPoolFactory is IPoolFactoryEvents {
         address base;
         // Address of quote token
         address quote;
-        // Address of base token price feed
-        address baseOracle;
-        // Address of quote token price feed
-        address quoteOracle;
+        // Address of oracle adapter
+        address oracleAdapter;
         // The strike of the option
         uint256 strike;
         // The maturity timestamp of the option

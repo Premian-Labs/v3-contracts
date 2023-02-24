@@ -14,7 +14,7 @@ import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/Aggr
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-import {IVolatilityOracle} from "../../oracle/IVolatilityOracle.sol";
+import {IVolatilityOracle} from "../../oracle/volatility/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
@@ -75,16 +75,45 @@ contract UnderwriterVault is
 
     function _getSpotPrice(address oracle) internal view returns (uint256) {
         // TODO: Add spot price validation
+        // TODO: change price oracle to oracle adapter
         int256 price = AggregatorInterface(oracle).latestAnswer();
         if (price < 0) revert Vault__ZeroPrice();
         return price.toUint256();
+    }
+
+    function _getSpotPrice(
+        address oracle,
+        uint256 timestamp
+    ) internal view returns (uint256) {
+        return _getSpotPrice(oracle);
+    }
+
+    function _getNumberOfListings() internal view returns (uint256) {
+        uint256 n = 0;
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 current = l.minMaturity;
+
+        while (current <= l.maxMaturity) {
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                n += 1;
+            }
+
+            current = l.maturities.next(current);
+        }
+
+        return n;
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
         uint256 spot;
         uint256 strike;
         uint256 timeToMaturity;
-        int256 sigma;
+
         uint256 price;
         uint256 size;
 
@@ -93,44 +122,77 @@ contract UnderwriterVault is
         uint256 current = l.minMaturity;
         uint256 total = 0;
 
-        while (current <= l.maxMaturity) {
+        // Compute fair value for expired unsettled options
+        while (current <= block.timestamp) {
             for (
                 uint256 i = 0;
                 i < l.maturityToStrikes[current].length();
                 i++
             ) {
                 strike = l.maturityToStrikes[current].at(i);
-                if (block.timestamp < current) {
-                    spot = _getSpotPrice(l.priceOracle);
-                    uint256 secondsToExpiration = current - block.timestamp;
-                    timeToMaturity = secondsToExpiration.div(SECONDSINAYEAR);
-                    sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
-                        _asset(),
-                        spot,
-                        strike,
-                        timeToMaturity
-                    );
-                } else {
-                    spot = _getSpotPrice(l.priceOracle);
-                    timeToMaturity = 0;
-                    sigma = 1;
-                }
+
+                spot = _getSpotPrice(l.priceOracle, current);
 
                 price = OptionMath.blackScholesPrice(
                     spot,
                     strike,
-                    timeToMaturity,
-                    uint256(sigma),
+                    0,
+                    1,
                     l.rfRate,
                     l.isCall
                 );
 
                 size = l.positionSizes[current][strike];
 
-                total = total + price.mul(size).div(spot);
+                total += price.mul(size).div(spot);
             }
 
             current = l.maturities.next(current);
+        }
+
+        // Compute fair value for options that have not expired
+        uint256 n = _getNumberOfListings();
+
+        uint256[] memory strikes = new uint256[](n);
+        uint256[] memory timeToMaturities = new uint256[](n);
+        uint256[] memory maturities = new uint256[](n);
+
+        spot = _getSpotPrice(l.priceOracle);
+
+        while (current <= l.maxMaturity) {
+            timeToMaturity = (current - block.timestamp).div(
+                365 * 24 * 60 * 60
+            );
+
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                strikes[i] = l.maturityToStrikes[current].at(i);
+                timeToMaturities[i] = timeToMaturity;
+                maturities[i] = current;
+            }
+
+            current = l.maturities.next(current);
+        }
+
+        int256[] memory sigmas = IVolatilityOracle(IV_ORACLE_ADDR)
+            .getVolatility(_asset(), spot, strikes, timeToMaturities);
+
+        for (uint256 i; i < sigmas.length; i++) {
+            price = OptionMath.blackScholesPrice(
+                spot,
+                strikes[i],
+                timeToMaturities[i],
+                uint256(sigmas[i]),
+                0,
+                l.isCall
+            );
+
+            size = l.positionSizes[maturities[i]][strikes[i]];
+
+            total += price.mul(size).div(spot);
         }
 
         return total;
@@ -390,8 +452,7 @@ contract UnderwriterVault is
         IPoolFactory.PoolKey memory _poolKey;
         _poolKey.base = l.base;
         _poolKey.quote = l.quote;
-        _poolKey.baseOracle = l.priceOracle;
-        _poolKey.quoteOracle = l.quoteOracle;
+        _poolKey.oracleAdapter = l.oracleAdapter;
         _poolKey.strike = strike;
         _poolKey.maturity = uint64(maturity);
         _poolKey.isCallPool = l.isCall;

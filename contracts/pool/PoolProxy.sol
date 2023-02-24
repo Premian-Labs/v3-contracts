@@ -26,8 +26,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         address diamond,
         address base,
         address quote,
-        address baseOracle,
-        address quoteOracle,
+        address oracleAdapter,
         uint256 strike,
         uint64 maturity,
         bool isCallPool
@@ -42,9 +41,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.quote = quote;
 
             // TODO : Add checks for oracle
-
-            l.baseOracle = baseOracle;
-            l.quoteOracle = quoteOracle;
+            l.oracleAdapter = oracleAdapter;
 
             l.strike = strike;
             l.maturity = maturity;

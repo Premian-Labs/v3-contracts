@@ -18,7 +18,7 @@ library UnderwriterVaultStorage {
         address base;
         address quote;
         address priceOracle;
-        address quoteOracle;
+        address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;
         // The total assets that have been included in the pool.

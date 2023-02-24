@@ -7,18 +7,20 @@ import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC46
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
-contract UnderwriterVaultProxy is ProxyUpgradeableOwnable, ERC20MetadataInternal {
-    
+contract UnderwriterVaultProxy is
+    ProxyUpgradeableOwnable,
+    ERC20MetadataInternal
+{
     constructor(
         address implementation,
         address base,
         address quote,
         address priceOracle,
+        address oracleAdapter,
         string memory name,
         string memory symbol,
         bool isCall
     ) ProxyUpgradeableOwnable(implementation) {
-
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 
         _setName(name);
@@ -29,6 +31,6 @@ contract UnderwriterVaultProxy is ProxyUpgradeableOwnable, ERC20MetadataInternal
         UnderwriterVaultStorage.layout().base = base;
         UnderwriterVaultStorage.layout().quote = quote;
         UnderwriterVaultStorage.layout().priceOracle = priceOracle;
+        UnderwriterVaultStorage.layout().oracleAdapter = oracleAdapter;
     }
-
 }
