@@ -117,9 +117,6 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-        return vaultsToReturn;
-    }
-
     function addVault(
         address _vault,
         IVaultRegistry.TradeSide side,
