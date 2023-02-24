@@ -10,7 +10,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
 import "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
@@ -18,6 +17,7 @@ import {IVolatilityOracle} from "../../oracle/volatility/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
+import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
 
 import "hardhat/console.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
@@ -74,19 +74,16 @@ contract UnderwriterVault is
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _getSpotPrice(address oracle) internal view returns (uint256) {
-        // TODO: Add spot price validation
-        // TODO: change price oracle to oracle adapter
-        int256 price = AggregatorInterface(oracle).latestAnswer();
-        if (price < 0) revert Vault__ZeroPrice();
-        return price.toUint256();
-    }
-
     function _getSpotPrice(
-        address oracle,
-        uint256 timestamp
+        address oracleAdapterAddr
     ) internal view returns (uint256) {
-        return _getSpotPrice(oracle);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
+            l.base,
+            l.quote
+        );
+        return price;
     }
 
     function _getNumberOfUnexpiredListings() internal view returns (uint256) {
@@ -134,7 +131,7 @@ contract UnderwriterVault is
             ) {
                 strike = l.maturityToStrikes[current].at(i);
 
-                spot = _getSpotPrice(l.priceOracle, current);
+                spot = _getSpotPrice(l.oracleAdapter);
 
                 price = OptionMath.blackScholesPrice(
                     spot,
@@ -160,7 +157,7 @@ contract UnderwriterVault is
         uint256[] memory timeToMaturities = new uint256[](n);
         uint256[] memory maturities = new uint256[](n);
 
-        spot = _getSpotPrice(l.priceOracle);
+        spot = _getSpotPrice(l.oracleAdapter);
 
         while (current <= l.maxMaturity) {
             timeToMaturity = (current - block.timestamp).div(
@@ -572,7 +569,7 @@ contract UnderwriterVault is
         // Check if the vault has sufficient funds
         if (size >= _availableAssets()) revert Vault__InsufficientFunds();
         // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice(l.priceOracle);
+        uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
 
         uint256 secondsToExpiration = maturity - block.timestamp;
         uint256 tau = secondsToExpiration.div(SECONDSINAYEAR);

@@ -17,7 +17,6 @@ library UnderwriterVaultStorage {
         uint256 variable;
         address base;
         address quote;
-        address priceOracle;
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;

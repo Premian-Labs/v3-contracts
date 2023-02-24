@@ -15,7 +15,6 @@ contract UnderwriterVaultProxy is
         address implementation,
         address base,
         address quote,
-        address priceOracle,
         address oracleAdapter,
         string memory name,
         string memory symbol,
@@ -30,7 +29,6 @@ contract UnderwriterVaultProxy is
         UnderwriterVaultStorage.layout().isCall = isCall;
         UnderwriterVaultStorage.layout().base = base;
         UnderwriterVaultStorage.layout().quote = quote;
-        UnderwriterVaultStorage.layout().priceOracle = priceOracle;
         UnderwriterVaultStorage.layout().oracleAdapter = oracleAdapter;
     }
 }
