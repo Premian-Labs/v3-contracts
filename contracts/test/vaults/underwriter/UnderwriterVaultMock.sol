@@ -93,16 +93,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().totalAssets += value;
     }
 
-    function lastMaturity() external view returns (uint256) {
-        return UnderwriterVaultStorage.layout().lastMaturity;
-    }
-
-    function nextMaturity() external view returns (uint256) {
-        uint256 last = UnderwriterVaultStorage.layout().lastMaturity;
-
-        return UnderwriterVaultStorage.layout().maturities.next(last);
-    }
-
     function getAvailableAssets() external view returns (uint256) {
         return _availableAssets();
     }
