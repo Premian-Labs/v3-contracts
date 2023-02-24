@@ -46,13 +46,6 @@ describe('UnderwriterVault', () => {
   let volOracle: VolatilityOracleMock;
   let volOracleProxy: ProxyUpgradeableOwnable;
 
-  const paramsFormatted =
-    '0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8';
-  const params = [
-    0.839159148341129, -0.05957422656606383, 0.02004706385514592,
-    0.14895038484273854, 0.034026549310791646,
-  ].map((el) => Math.floor(el * 10 ** 12).toString());
-
   // ==================================================================
 
   const log = true;
