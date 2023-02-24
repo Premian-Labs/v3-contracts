@@ -29,7 +29,15 @@ contract OptionMathMock {
         uint256 riskFreeRate,
         bool isCall
     ) external pure returns (int256) {
-        return OptionMath.optionDelta(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
+        return
+            OptionMath.optionDelta(
+                spot,
+                strike,
+                timeToMaturity,
+                volAnnualized,
+                riskFreeRate,
+                isCall
+            );
     }
 
     function blackScholesPrice(

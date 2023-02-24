@@ -315,7 +315,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256[] memory strike,
         uint256[] memory timeToMaturity
     ) external view returns (int256[] memory) {
-
         if (strike.length != timeToMaturity.length)
             revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 

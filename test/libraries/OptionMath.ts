@@ -6,7 +6,7 @@ import { formatEther, parseEther } from 'ethers/lib/utils';
 import { ONE_WEEK, now, weekOfMonth } from '../../utils/time';
 
 import moment from 'moment-timezone';
-import {BigNumber} from "ethers";
+import { BigNumber } from 'ethers';
 moment.tz.setDefault('UTC');
 
 describe('OptionMath', () => {
@@ -165,10 +165,7 @@ describe('OptionMath', () => {
             t[1],
           ),
         );
-        expect(parseFloat(result) - t[2]).to.be.closeTo(
-          0,
-          0.000001,
-        );
+        expect(parseFloat(result) - t[2]).to.be.closeTo(0, 0.000001);
       }
     });
   });
