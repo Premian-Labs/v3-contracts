@@ -35,10 +35,8 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     //////////////////////////////////////////////////
 
     modifier onlyAuthorized() {
-        require(
-            FeeConverterStorage.layout().isAuthorized[msg.sender] == true,
-            "Not authorized"
-        );
+        if (FeeConverterStorage.layout().isAuthorized[msg.sender] == false)
+            revert FeeConverter__NotAuthorized();
         _;
     }
 
