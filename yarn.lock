@@ -1705,13 +1705,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"abdk-libraries-solidity@npm:^3.2.0":
-  version: 3.2.0
-  resolution: "abdk-libraries-solidity@npm:3.2.0"
-  checksum: e5b8f1445cca23408a866be4769b77aae6bc6641e29f8207b4cfb8c811515bb5be87b1f1e54d00406696ef040ed2a0cfe54b6cff81ed8ef12ec4b32752839fdd
-  languageName: node
-  linkType: hard
-
 "abort-controller@npm:^3.0.0":
   version: 3.0.0
   resolution: "abort-controller@npm:3.0.0"
@@ -6657,7 +6650,6 @@ __metadata:
     "@types/node": ^18.13.0
     "@uniswap/v3-core": ^1.0.1
     "@uniswap/v3-periphery": ^1.4.3
-    abdk-libraries-solidity: ^3.2.0
     axios: ^1.3.2
     chai: ^4.3.7
     dotenv: ^16.0.3

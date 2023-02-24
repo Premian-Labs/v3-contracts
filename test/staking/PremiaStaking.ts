@@ -608,11 +608,11 @@ describe('PremiaStaking', () => {
     const oneMonth = 30 * ONE_DAY;
     expect(
       bnToNumber(await premiaStaking.decay(parseEther('100'), 0, oneMonth)),
-    ).to.eq(49.66647168725192);
+    ).to.eq(49.66647168721973);
 
     expect(
       bnToNumber(await premiaStaking.decay(parseEther('100'), 0, oneMonth * 2)),
-    ).to.eq(24.667584098605968);
+    ).to.eq(24.667584098573993);
   });
 
   it('should correctly bridge to other contract', async () => {
