@@ -410,6 +410,47 @@ describe('UnderwriterVault', () => {
       expect(await vault.balanceOf(receiver.address)).to.eq(assetAmount);
       expect(await vault.totalSupply()).to.eq(assetAmount);
     });
+
+    it('deposit into a non-empty vault with a pricePerShare unequal to 1', async () => {
+      setupVault();
+      const assetAmount = parseEther('2');
+      const baseBalanceCaller = await base.balanceOf(caller.address);
+      const baseBalanceReceiver = await base.balanceOf(receiver.address);
+
+      const allowedAssetAmount = parseEther('4');
+      await base.connect(caller).approve(vault.address, allowedAssetAmount);
+      await vault.connect(caller).deposit(assetAmount, receiver.address);
+
+      // modify the price per share to (2 - 0.5) / 2 = 0.75
+      await vault
+        .connect(deployer)
+        .increaseTotalLockedSpread(parseEther('0.5'));
+      await vault.connect(deployer).setMinMaturity(parseEther('1'));
+      await vault.connect(caller).deposit(assetAmount, receiver.address);
+
+      expect(await base.balanceOf(vault.address)).to.eq(allowedAssetAmount);
+      expect(await base.balanceOf(caller.address)).to.eq(
+        baseBalanceCaller.sub(allowedAssetAmount),
+      );
+      expect(await base.balanceOf(receiver.address)).to.eq(baseBalanceReceiver);
+      expect(await vault.balanceOf(caller.address)).to.eq(parseEther('0'));
+      expect(
+        parseFloat(formatEther(await vault.balanceOf(receiver.address))),
+      ).to.be.closeTo(2 + 2 / 0.75, 0.00001);
+    });
+
+    it('revert when receiver has zero address', async () => {
+      setupVault();
+      const assetAmount = parseEther('2');
+      await base.connect(caller).approve(vault.address, assetAmount);
+      await vault.connect(caller).deposit(assetAmount, receiver.address);
+      await expect(
+        vault
+          .connect(caller)
+          .deposit(assetAmount, ethers.constants.AddressZero),
+      ).to.be.revertedWith('ERC20Base__MintToZeroAddress');
+    });
+    it('test deposit after trade', async () => {});
   });
 
   describe('#afterBuy', () => {

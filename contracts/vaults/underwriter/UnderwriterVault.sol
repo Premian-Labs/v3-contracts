@@ -50,13 +50,15 @@ contract UnderwriterVault is
         uint256 strike;
     }
 
+    struct UnexpiredListingVars {
+        uint256[] strikes;
+        uint256[] timeToMaturities;
+        uint256[] maturities;
+    }
+
     constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE_ADDR = oracleAddress;
         FACTORY_ADDR = factoryAddress;
-    }
-
-    function setVariable(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().variable = value;
     }
 
     function _asset() internal view virtual override returns (address) {
@@ -109,6 +111,118 @@ contract UnderwriterVault is
         }
 
         return n;
+    }
+
+    function _getTotalFairValueExpired() internal view returns (uint256) {
+        uint256 spot;
+        uint256 strike;
+
+        uint256 price;
+        uint256 size;
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 current = l.minMaturity;
+        uint256 total = 0;
+
+        // Compute fair value for expired unsettled options
+        while (current <= block.timestamp) {
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                strike = l.maturityToStrikes[current].at(i);
+
+                spot = _getSpotPrice(l.priceOracle, current);
+
+                price = OptionMath.blackScholesPrice(
+                    spot,
+                    strike,
+                    0,
+                    1,
+                    l.rfRate,
+                    l.isCall
+                );
+
+                size = l.positionSizes[current][strike];
+
+                total += price.mul(size).div(spot);
+            }
+
+            if (l.maturities.next(current) < current)
+                revert Vault__NonMonotonicMaturities();
+            current = l.maturities.next(current);
+        }
+
+        return total;
+    }
+
+    function _getTotalFairValueUnexpired() internal view returns (uint256) {
+        uint256 price;
+        uint256 size;
+        uint256 timeToMaturity;
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 current = _getMaturityAfterTimestamp(block.timestamp);
+        uint256 total = 0;
+
+        // Compute fair value for options that have not expired
+        uint256 n = _getNumberOfUnexpiredListings();
+
+        UnexpiredListingVars memory listings = UnexpiredListingVars({
+            strikes: new uint256[](n),
+            timeToMaturities: new uint256[](n),
+            maturities: new uint256[](n)
+        });
+
+        uint256 spot = _getSpotPrice(l.priceOracle);
+
+        while (current <= l.maxMaturity) {
+            timeToMaturity = ((current - block.timestamp)).div(
+                365 * 24 * 60 * 60
+            );
+
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                listings.strikes[i] = l.maturityToStrikes[current].at(i);
+                listings.timeToMaturities[i] = timeToMaturity;
+                listings.maturities[i] = current;
+            }
+
+            if (l.maturities.next(current) < current)
+                revert Vault__NonMonotonicMaturities();
+            current = l.maturities.next(current);
+        }
+
+        int256[] memory sigmas = IVolatilityOracle(IV_ORACLE_ADDR)
+            .getVolatility(
+                _asset(),
+                spot,
+                listings.strikes,
+                listings.timeToMaturities
+            );
+
+        for (uint256 i; i < sigmas.length; i++) {
+            price = OptionMath.blackScholesPrice(
+                spot,
+                listings.strikes[i],
+                listings.timeToMaturities[i],
+                uint256(sigmas[i]),
+                0,
+                l.isCall
+            );
+
+            size = l.positionSizes[listings.maturities[i]][listings.strikes[i]];
+
+            total += price.mul(size).div(spot);
+        }
+
+        return total;
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
