@@ -11,8 +11,9 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     constructor(
         address factory,
         address exchangeHelper,
-        address wrappedNativeToken
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
+        address wrappedNativeToken,
+        address feeReceiver
+    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
 
     /// @inheritdoc IPoolTrade
     function getTradeQuote(
