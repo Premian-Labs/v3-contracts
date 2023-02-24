@@ -38,6 +38,7 @@ contract UnderwriterVault is
     using SD59x18 for int256;
 
     uint256 SECONDSINAYEAR = 365 * 24 * 60 * 60;
+    uint256 SECONDSINAHOUR = 60 * 60;
 
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
@@ -503,6 +504,7 @@ contract UnderwriterVault is
         l.totalAssets += a.premium + a.spread;
         l.totalLockedAssets += a.size;
         l.positionSizes[a.maturity][a.strike] += a.size;
+        l.lastTradeTimestamp = block.timestamp;
     }
 
     function _getFactoryAddress(
@@ -537,11 +539,10 @@ contract UnderwriterVault is
         if (l.alphaClevel == 0) revert Vault__CLevelBounds();
 
         // TODO: need to calculation utilization of capital
-        // TODO: check the last time there was a transaction
-        // TODO: return c-level AFTER the impact of the trade
-
         uint256 utilisation = 0.5e18;
-        uint256 hoursSinceLastTx = 1e18;
+        uint256 hoursSinceLastTx = (block.timestamp - l.lastTradeTimestamp).div(
+            SECONDSINAHOUR
+        );
 
         uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
         uint256 cLevel = _calculateClevel(
@@ -550,7 +551,7 @@ contract UnderwriterVault is
             l.minClevel,
             l.maxClevel
         );
-
+        // TODO: return c-level AFTER the impact of the trade
         if (cLevel - discount < l.minClevel) return l.minClevel;
 
         return cLevel - discount;
@@ -579,9 +580,6 @@ contract UnderwriterVault is
         uint256 maturity,
         uint256 size
     ) external returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
         // Get pool address, price and c-level
         (
             address poolAddr,
@@ -600,9 +598,6 @@ contract UnderwriterVault is
 
         // Mint option and allocate long token
         IPool(poolAddr).writeFrom(address(this), msg.sender, size);
-
-        // Log trade time stamp for c-level decay
-        l.lastTradeTimestamp = block.timestamp;
 
         uint256 secondsToExpiration = maturity - block.timestamp;
         // Handle the premiums and spread capture generated
@@ -634,8 +629,7 @@ contract UnderwriterVault is
         // Compute premium and the spread collected
         uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
 
-        uint256 secondsToExpiration = maturity - block.timestamp;
-        uint256 tau = secondsToExpiration.div(SECONDSINAYEAR);
+        uint256 tau = (maturity - block.timestamp).div(SECONDSINAYEAR);
 
         int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
             _asset(),
@@ -653,12 +647,6 @@ contract UnderwriterVault is
             iv
         );
 
-        // call denominated in base, put denominated in quote
-        uint256 mintingFee = IPool(poolAddr).takerFee(size, 0, false);
-        // Check if the vault has sufficient funds
-        if ((size + mintingFee) >= _availableAssets())
-            revert Vault__InsufficientFunds();
-
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
             strike,
@@ -668,9 +656,13 @@ contract UnderwriterVault is
             l.isCall
         );
 
-        uint256 cLevel = _getClevel();
+        // call denominated in base, put denominated in quote
+        uint256 mintingFee = IPool(poolAddr).takerFee(size, 0, false);
+        // Check if the vault has sufficient funds
+        if ((size + mintingFee) >= _availableAssets())
+            revert Vault__InsufficientFunds();
 
-        return (poolAddr, price, mintingFee, cLevel);
+        return (poolAddr, price, mintingFee, _getClevel());
     }
 
     /// @inheritdoc IUnderwriterVault
