@@ -153,10 +153,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         address base,
         address quote
     ) internal view returns (uint256) {
+        // We use the given oracle adapter to fetch the price of the base/quote pair to calculate the initializationFee
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
     function _fetchWrappedNativeUSDQuote() internal view returns (uint256) {
+        // We use the Premia Chainlink Adapter to fetch the price of the wrapped native token,
+        // to convert the initializationFee from USD to native token
         return
             IOracleAdapter(CHAINLINK_ADAPTER).quote(
                 WRAPPED_NATIVE_TOKEN,
