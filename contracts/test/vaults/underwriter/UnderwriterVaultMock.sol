@@ -140,6 +140,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
+    function calculateClevel(
+        uint256 utilisation,
+        uint256 alphaClevel,
+        uint256 minClevel,
+        uint256 maxClevel
+    ) internal pure returns (uint256) {
+        return _calculateClevel(utilisation, alphaClevel, minClevel, maxClevel);
+    }
+
     function afterBuy(
         uint256 maturity,
         uint256 premium,

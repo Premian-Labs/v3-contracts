@@ -19,6 +19,7 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__ZeroVol();
     error Vault__MaturityBounds();
     error Vault__DeltaBounds();
+    error Vault__CLevelBounds();
 
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option

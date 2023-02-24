@@ -33,6 +33,7 @@ contract UnderwriterVault is
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
     using SafeCast for int256;
+    using SafeCast for uint256;
     using UD60x18 for uint256;
     using SD59x18 for int256;
 
@@ -466,12 +467,49 @@ contract UnderwriterVault is
         return listingAddr;
     }
 
-    function _calculateClevel() internal pure returns (uint256) {
-        // Utilization rate will be vol global for entire surface
+    // Utilization rate will be vol global for entire surface
+    function _getClevel() internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (l.maxClevel == 0) revert Vault__CLevelBounds();
+        if (l.alphaClevel == 0) revert Vault__CLevelBounds();
+
         // TODO: need to calculation utilization of capital
         // TODO: check the last time there was a transaction
         // TODO: return c-level AFTER the impact of the trade
-        return 1;
+
+        uint256 utilisation = 0.5e18;
+        uint256 hoursSinceLastTx = 1e18;
+
+        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
+        uint256 cLevel = _calculateClevel(
+            utilisation,
+            l.alphaClevel,
+            l.minClevel,
+            l.maxClevel
+        );
+
+        if (cLevel - discount < l.minClevel) return l.minClevel;
+
+        return cLevel - discount;
+    }
+
+    //  Calculate the price of an option using the Black-Scholes model
+    function _calculateClevel(
+        uint256 utilisation,
+        uint256 alphaClevel,
+        uint256 minClevel,
+        uint256 maxClevel
+    ) internal pure returns (uint256) {
+        uint256 k = alphaClevel * minClevel;
+        uint256 positiveExp = (alphaClevel * utilisation).exp();
+        uint256 negativeExp = (-alphaClevel.toInt256() * utilisation.toInt256())
+            .exp()
+            .toUint256();
+        return
+            (negativeExp * (k * positiveExp + maxClevel * alphaClevel - k)) /
+            alphaClevel;
     }
 
     /// @inheritdoc IUnderwriterVault
@@ -564,7 +602,7 @@ contract UnderwriterVault is
             l.isCall
         );
 
-        uint256 cLevel = _calculateClevel();
+        uint256 cLevel = _getClevel();
 
         return (poolAddr, price, cLevel);
     }

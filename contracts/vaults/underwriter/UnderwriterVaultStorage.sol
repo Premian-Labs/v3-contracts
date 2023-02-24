@@ -34,6 +34,7 @@ library UnderwriterVaultStorage {
         uint256 minClevel;
         uint256 maxClevel;
         uint256 alphaClevel;
+        uint256 hourlyDecayDiscount;
         uint256 lastTradeTimestamp;
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
