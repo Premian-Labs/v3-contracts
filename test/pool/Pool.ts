@@ -400,7 +400,50 @@ describe('Pool', () => {
         ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
       });
 
-      it('should revert if above max slippage'); // ToDo
+      it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
+        const tokenId = await callPool.formatTokenId(
+          pKey.operator,
+          pKey.lower,
+          pKey.upper,
+          pKey.orderType,
+        );
+
+        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+
+        const nearestBelow = await callPool.getNearestTicksBelow(
+          pKey.lower,
+          pKey.upper,
+        );
+        const size = parseEther('1000');
+
+        await base.mint(lp.address, size);
+        await base.connect(lp).approve(callPool.address, size);
+
+        await callPool
+          .connect(lp)
+          [fnSig](
+            pKey,
+            nearestBelow.nearestBelowLower,
+            nearestBelow.nearestBelowUpper,
+            size,
+            0,
+            parseEther('1'),
+          );
+
+        expect(await callPool.marketPrice()).to.eq(pKey.upper);
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](pKey, 0, 0, 0, pKey.upper.add(1), pKey.upper),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
+
+        await expect(
+          callPool
+            .connect(lp)
+            [fnSig](pKey, 0, 0, 0, pKey.upper.sub(10), pKey.upper.sub(1)),
+        ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
+      });
 
       it('should revert if zero size', async () => {
         await expect(
@@ -579,7 +622,42 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
     });
 
-    it('should revert if above max slippage'); // ToDo
+    it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const size = parseEther('1000');
+
+      const depositCollateralValue = parseEther('200');
+      await base.mint(lp.address, depositCollateralValue);
+      await base.connect(lp).approve(callPool.address, depositCollateralValue);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          pKey,
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          size,
+          0,
+          parseEther('1'),
+        );
+
+      expect(await callPool.marketPrice()).to.eq(pKey.upper);
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw(pKey, THREE_ETHER, pKey.upper.add(1), pKey.upper),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
+
+      await expect(
+        callPool
+          .connect(lp)
+          .withdraw(pKey, THREE_ETHER, pKey.upper.sub(10), pKey.upper.sub(1)),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
+    });
 
     it('should revert if zero size', async () => {
       await expect(
