@@ -6,6 +6,10 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolCore is IPoolInternal {
+    /// @notice Get the current market price as normalized price
+    /// @return The current market price as normalized price
+    function marketPrice() external view returns (uint256);
+
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
     /// @param size The size of a trade (number of contracts)
     /// @param premium The total cost of option(s) for a purchase

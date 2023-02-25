@@ -18,6 +18,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
 
     /// @inheritdoc IPoolCore
+    function marketPrice() external view returns (uint256) {
+        return PoolStorage.layout().marketPrice;
+    }
+
+    /// @inheritdoc IPoolCore
     function takerFee(
         uint256 size,
         uint256 premium,
