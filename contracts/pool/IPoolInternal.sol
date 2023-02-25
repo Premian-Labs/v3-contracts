@@ -129,14 +129,14 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 belowUpper;
         // The position size to deposit
         uint256 size;
-        // Max slippage (Percentage with 18 decimals -> 1% = 1e16)
-        uint256 maxSlippage;
+        // minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+        uint256 minMarketPrice;
+        // maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+        uint256 maxMarketPrice;
         // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
         uint256 collateralCredit;
         // The address to which refund excess credit
         address refundAddress;
-        // Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
-        bool isBidIfStrandedMarketPrice;
     }
 
     struct WithdrawVarsInternal {

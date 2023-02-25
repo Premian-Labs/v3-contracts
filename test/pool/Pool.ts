@@ -34,7 +34,7 @@ import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { tokens } from '../../utils/addresses';
 
 const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)';
+  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
 
 describe('Pool', () => {
   let deployer: SignerWithAddress;
@@ -181,14 +181,13 @@ describe('Pool', () => {
 
         await callPool
           .connect(lp)
-          [
-            'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)'
-          ](
+          [depositFnSig](
             position,
             nearestBelow.nearestBelowLower,
             nearestBelow.nearestBelowUpper,
             parseEther('2000'),
             0,
+            parseEther('1'),
           );
 
         args = await callPool._getPricing(isBuy);
@@ -238,6 +237,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -273,6 +273,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -308,6 +309,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           size,
           0,
+          parseEther('1'),
         );
 
       await expect(
@@ -333,6 +335,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           size,
           0,
+          parseEther('1'),
         );
 
       await expect(
@@ -373,6 +376,7 @@ describe('Pool', () => {
               nearestBelow.nearestBelowUpper,
               size,
               0,
+              parseEther('1'),
             );
 
           const averagePrice = average(pKey.lower, pKey.upper);
@@ -390,7 +394,9 @@ describe('Pool', () => {
 
       it('should revert if msg.sender != p.operator', async () => {
         await expect(
-          callPool.connect(deployer)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
+          callPool
+            .connect(deployer)
+            [fnSig](pKey, 0, 0, THREE_ETHER, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
       });
 
@@ -398,14 +404,16 @@ describe('Pool', () => {
 
       it('should revert if zero size', async () => {
         await expect(
-          callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0),
+          callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
       });
 
       it('should revert if option is expired', async () => {
         await increaseTo(maturity);
         await expect(
-          callPool.connect(lp)[fnSig](pKey, 0, 0, THREE_ETHER, 0),
+          callPool
+            .connect(lp)
+            [fnSig](pKey, 0, 0, THREE_ETHER, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
       });
 
@@ -413,13 +421,27 @@ describe('Pool', () => {
         await expect(
           callPool
             .connect(lp)
-            [fnSig]({ ...pKey, lower: 0 }, 0, 0, THREE_ETHER, 0),
+            [fnSig](
+              { ...pKey, lower: 0 },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+              parseEther('1'),
+            ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
         await expect(
           callPool
             .connect(lp)
-            [fnSig]({ ...pKey, upper: 0 }, 0, 0, THREE_ETHER, 0),
+            [fnSig](
+              { ...pKey, upper: 0 },
+              0,
+              0,
+              THREE_ETHER,
+              0,
+              parseEther('1'),
+            ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
         await expect(
@@ -431,6 +453,7 @@ describe('Pool', () => {
               0,
               THREE_ETHER,
               0,
+              parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
@@ -443,6 +466,7 @@ describe('Pool', () => {
               0,
               THREE_ETHER,
               0,
+              parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
@@ -455,6 +479,7 @@ describe('Pool', () => {
               0,
               THREE_ETHER,
               0,
+              parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
       });
@@ -469,6 +494,7 @@ describe('Pool', () => {
               0,
               THREE_ETHER,
               0,
+              parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
 
@@ -481,6 +507,7 @@ describe('Pool', () => {
               0,
               THREE_ETHER,
               0,
+              parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
       });
@@ -511,14 +538,13 @@ describe('Pool', () => {
 
         await callPool
           .connect(lp)
-          [
-            'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256)'
-          ](
+          [depositFnSig](
             pKey,
             nearestBelow.nearestBelowLower,
             nearestBelow.nearestBelowUpper,
             size,
             0,
+            parseEther('1'),
           );
 
         expect(await base.balanceOf(lp.address)).to.eq(0);
@@ -531,7 +557,9 @@ describe('Pool', () => {
           .mul(averagePrice)
           .div(ONE_ETHER);
 
-        await callPool.connect(lp).withdraw(pKey, withdrawSize, 0);
+        await callPool
+          .connect(lp)
+          .withdraw(pKey, withdrawSize, 0, parseEther('1'));
         expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
           parseEther('250'),
         );
@@ -545,7 +573,9 @@ describe('Pool', () => {
 
     it('should revert if msg.sender != p.operator', async () => {
       await expect(
-        callPool.connect(deployer).withdraw(pKey, THREE_ETHER, 0),
+        callPool
+          .connect(deployer)
+          .withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
     });
 
@@ -553,30 +583,34 @@ describe('Pool', () => {
 
     it('should revert if zero size', async () => {
       await expect(
-        callPool.connect(lp).withdraw(pKey, 0, 0),
+        callPool.connect(lp).withdraw(pKey, 0, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
     });
 
     it('should revert if option is expired', async () => {
       await increaseTo(maturity);
       await expect(
-        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
     });
 
     it('should revert if position does not exists', async () => {
       await expect(
-        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0),
+        callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__PositionDoesNotExist');
     });
 
     it('should revert if range is not valid', async () => {
       await expect(
-        callPool.connect(lp).withdraw({ ...pKey, lower: 0 }, THREE_ETHER, 0),
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, lower: 0 }, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
-        callPool.connect(lp).withdraw({ ...pKey, upper: 0 }, THREE_ETHER, 0),
+        callPool
+          .connect(lp)
+          .withdraw({ ...pKey, upper: 0 }, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
@@ -586,19 +620,30 @@ describe('Pool', () => {
             { ...pKey, lower: parseEther('0.5'), upper: parseEther('0.25') },
             THREE_ETHER,
             0,
+            parseEther('1'),
           ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
         callPool
           .connect(lp)
-          .withdraw({ ...pKey, lower: parseEther('0.0001') }, THREE_ETHER, 0),
+          .withdraw(
+            { ...pKey, lower: parseEther('0.0001') },
+            THREE_ETHER,
+            0,
+            parseEther('1'),
+          ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
 
       await expect(
         callPool
           .connect(lp)
-          .withdraw({ ...pKey, upper: parseEther('1.01') }, THREE_ETHER, 0),
+          .withdraw(
+            { ...pKey, upper: parseEther('1.01') },
+            THREE_ETHER,
+            0,
+            parseEther('1'),
+          ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidRange');
     });
 
@@ -606,13 +651,23 @@ describe('Pool', () => {
       await expect(
         callPool
           .connect(lp)
-          .withdraw({ ...pKey, lower: parseEther('0.2501') }, THREE_ETHER, 0),
+          .withdraw(
+            { ...pKey, lower: parseEther('0.2501') },
+            THREE_ETHER,
+            0,
+            parseEther('1'),
+          ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
 
       await expect(
         callPool
           .connect(lp)
-          .withdraw({ ...pKey, upper: parseEther('0.7501') }, THREE_ETHER, 0),
+          .withdraw(
+            { ...pKey, upper: parseEther('0.7501') },
+            THREE_ETHER,
+            0,
+            parseEther('1'),
+          ),
       ).to.be.revertedWithCustomError(callPool, 'Pool__TickWidthInvalid');
     });
   });
@@ -710,6 +765,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -749,6 +805,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -788,6 +845,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -819,6 +877,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = parseEther('500');
@@ -850,6 +909,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       await expect(
@@ -878,6 +938,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       await expect(
@@ -922,6 +983,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;
@@ -966,6 +1028,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;
@@ -1018,6 +1081,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = depositSize;
@@ -1075,6 +1139,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = depositSize;
@@ -1141,6 +1206,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;
@@ -1195,6 +1261,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;
@@ -1439,6 +1506,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;
@@ -1486,6 +1554,7 @@ describe('Pool', () => {
           nearestBelow.nearestBelowUpper,
           depositSize,
           0,
+          parseEther('1'),
         );
 
       const tradeSize = ONE_ETHER;

@@ -54,13 +54,15 @@ interface IPoolCore is IPoolInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
     function deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -68,14 +70,16 @@ interface IPoolCore is IPoolInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function deposit(
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage,
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice,
         bool isBidIfStrandedMarketPrice
     ) external;
 
@@ -85,24 +89,28 @@ interface IPoolCore is IPoolInternal {
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param size The position size to deposit
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     /// @param p The position key
     /// @param size The position size to withdraw
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
     function withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external;
 
     /// @notice Underwrite an option by depositing collateral
