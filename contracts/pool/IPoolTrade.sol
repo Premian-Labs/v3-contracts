@@ -31,24 +31,28 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
     /// @return totalPremium The premium paid or received by the taker for the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param s The swap arguments
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
     /// @return totalPremium The premium paid or received by the taker for the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap
     function swapAndTrade(
         IPoolInternal.SwapArgs memory s,
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     )
         external
         payable
@@ -62,6 +66,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param s The swap arguments
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
     /// @return totalPremium The premium received by the taker of the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return collateralReceived The amount of un-swapped collateral received from the trade.
@@ -69,7 +74,8 @@ interface IPoolTrade is IPoolInternal {
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     )
         external
         returns (

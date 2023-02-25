@@ -718,7 +718,9 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool
+        .connect(trader)
+        .trade(tradeSize, true, totalPremium.add(totalPremium.div(10)));
 
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         tradeSize,
@@ -755,7 +757,9 @@ describe('Pool', () => {
       await base.mint(trader.address, tradeSize);
       await base.connect(trader).approve(callPool.address, tradeSize);
 
-      await callPool.connect(trader).trade(tradeSize, false);
+      await callPool
+        .connect(trader)
+        .trade(tradeSize, false, totalPremium.sub(totalPremium.div(10)));
 
       expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
         tradeSize,
@@ -764,6 +768,68 @@ describe('Pool', () => {
         tradeSize,
       );
       expect(await base.balanceOf(trader.address)).to.eq(totalPremium);
+    });
+
+    it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.CS },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
+
+      await base.mint(trader.address, totalPremium);
+      await base.connect(trader).approve(callPool.address, totalPremium);
+
+      await expect(
+        callPool.connect(trader).trade(tradeSize, true, totalPremium.sub(1)),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
+    });
+
+    it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
+      const nearestBelow = await callPool.getNearestTicksBelow(
+        pKey.lower,
+        pKey.upper,
+      );
+      const depositSize = parseEther('1000');
+
+      await base.mint(lp.address, depositSize);
+      await base.connect(lp).approve(callPool.address, depositSize);
+
+      await callPool
+        .connect(lp)
+        [depositFnSig](
+          { ...pKey, orderType: OrderType.LC },
+          nearestBelow.nearestBelowLower,
+          nearestBelow.nearestBelowUpper,
+          depositSize,
+          0,
+        );
+
+      const tradeSize = parseEther('500');
+      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
+
+      await base.mint(trader.address, tradeSize);
+      await base.connect(trader).approve(callPool.address, tradeSize);
+
+      await expect(
+        callPool.connect(trader).trade(tradeSize, false, totalPremium.add(1)),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__AboveMaxSlippage');
     });
 
     it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
@@ -787,7 +853,7 @@ describe('Pool', () => {
         );
 
       await expect(
-        callPool.connect(trader).trade(depositSize.add(1), true),
+        callPool.connect(trader).trade(depositSize.add(1), true, 0),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pool__InsufficientAskLiquidity',
@@ -815,7 +881,7 @@ describe('Pool', () => {
         );
 
       await expect(
-        callPool.connect(trader).trade(depositSize.add(1), false),
+        callPool.connect(trader).trade(depositSize.add(1), false, 0),
       ).to.be.revertedWithCustomError(
         callPool,
         'Pool__InsufficientBidLiquidity',
@@ -824,7 +890,7 @@ describe('Pool', () => {
 
     it('should revert if trade size is 0', async () => {
       await expect(
-        callPool.connect(trader).trade(0, true),
+        callPool.connect(trader).trade(0, true, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
     });
 
@@ -832,7 +898,7 @@ describe('Pool', () => {
       await increaseTo(maturity);
 
       await expect(
-        callPool.connect(trader).trade(1, true),
+        callPool.connect(trader).trade(1, true, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OptionExpired');
     });
   });
@@ -864,7 +930,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
@@ -908,7 +974,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
@@ -969,7 +1035,7 @@ describe('Pool', () => {
       await base.mint(trader.address, ONE_ETHER);
       await base.connect(trader).approve(callPool.address, ONE_ETHER);
 
-      await callPool.connect(trader).trade(tradeSize, false);
+      await callPool.connect(trader).trade(tradeSize, false, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
@@ -1025,7 +1091,7 @@ describe('Pool', () => {
       await base.mint(trader.address, ONE_ETHER);
       await base.connect(trader).approve(callPool.address, ONE_ETHER);
 
-      await callPool.connect(trader).trade(tradeSize, false);
+      await callPool.connect(trader).trade(tradeSize, false, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
@@ -1083,7 +1149,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
@@ -1137,7 +1203,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
@@ -1389,7 +1455,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       expect(await callPool.connect(lp).getClaimableFees(pKey)).to.eq(
         takerFee
@@ -1428,7 +1494,7 @@ describe('Pool', () => {
       await base.mint(trader.address, totalPremium);
       await base.connect(trader).approve(callPool.address, totalPremium);
 
-      await callPool.connect(trader).trade(tradeSize, true);
+      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
 
       const claimableFees = await callPool.getClaimableFees(pKey);
 

@@ -773,6 +773,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
+        _ensureBelowMaxSlippage(totalPremium, args.premiumLimit, args.isBuy);
+
         delta = _updateUserAssets(
             l,
             args.user,
@@ -1865,6 +1867,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+    }
+
+    function _ensureBelowMaxSlippage(
+        uint256 totalPremium,
+        uint256 premiumLimit,
+        bool isBuy
+    ) internal pure {
+        if (isBuy && totalPremium > premiumLimit)
+            revert Pool__AboveMaxSlippage();
+        if (!isBuy && totalPremium < premiumLimit)
+            revert Pool__AboveMaxSlippage();
     }
 
     function _ensureBelowMaxSlippage(

@@ -107,6 +107,8 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 size;
         // Whether the taker is buying or selling
         bool isBuy;
+        // Tx will revert if total premium is above this value when buying, or below this value when selling.
+        uint256 premiumLimit;
         // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
