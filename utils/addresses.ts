@@ -2,9 +2,9 @@ import goerli from './deployment/goerli.json';
 
 export type Token = { address: string; decimals: number; symbol: string };
 
-const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
-const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
+export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
+export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
 
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
@@ -60,7 +60,7 @@ export const feeds = [
 
 export const goerliFeeds = [
   {
-    token: goerli.tokens.WETH,
+    token: CHAINLINK_ETH,
     denomination: CHAINLINK_USD,
     feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
   },
