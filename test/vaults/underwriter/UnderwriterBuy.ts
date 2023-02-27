@@ -27,7 +27,6 @@ describe('UnderwriterVault', () => {
   let trader: SignerWithAddress;
   let lp: SignerWithAddress;
 
-  let pool: PoolUtil;
   let vaultImpl: UnderwriterVaultMock;
   let vaultProxy: UnderwriterVaultProxy;
   let vault: UnderwriterVaultMock;
@@ -35,7 +34,7 @@ describe('UnderwriterVault', () => {
   let base: ERC20Mock;
   let quote: ERC20Mock;
 
-  let baseOracle: MockContract;
+  let oracleAdapter: MockContract;
   let volOracle: MockContract;
   let factory: MockContract;
 
@@ -59,15 +58,17 @@ describe('UnderwriterVault', () => {
     await base.mint(deployer.address, parseEther('1000'));
     await quote.mint(deployer.address, parseEther('1000000'));
 
-    // Mock Base Oracle setup
-    baseOracle = await deployMockContract(deployer, [
-      'function latestAnswer() external view returns (int256)',
-      'function decimals () external view returns (uint8)',
+    // Mock Oracle Adapter setup
+    oracleAdapter = await deployMockContract(deployer, [
+      'function quote(address, address) external view returns (uint256)',
     ]);
-    await baseOracle.mock.latestAnswer.returns(parseUnits('1500', 8));
-    await baseOracle.mock.decimals.returns(8);
+
+    await oracleAdapter.mock.quote.returns(parseUnits('1500', 8));
+
     if (log)
-      console.log(`Mock baseOracle Implementation : ${baseOracle.address}`);
+      console.log(
+        `Mock oracelAdapter Implementation : ${oracleAdapter.address}`,
+      );
 
     // Mock Vol Oracle setup
     volOracle = await deployMockContract(deployer, [
@@ -105,7 +106,7 @@ describe('UnderwriterVault', () => {
       vaultImpl.address,
       base.address,
       quote.address,
-      baseOracle.address,
+      oracleAdapter.address,
       'WETH Vault',
       'WETH',
       true,
@@ -133,8 +134,8 @@ describe('UnderwriterVault', () => {
       );
       expect(parseFloat(formatEther(iv))).to.eq(1);
     });
-    it('responds to mock BASE oracle query', async () => {
-      const price = await baseOracle.latestAnswer();
+    it('responds to mock oracle adapter query', async () => {
+      const price = await oracleAdapter.quote(base.address, quote.address);
       expect(parseFloat(formatUnits(price, 8))).to.eq(1500);
     });
   });

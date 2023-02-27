@@ -89,13 +89,11 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        // TODO
-        /* uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
+        uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
             l.base,
             l.quote
         );
-        */
-        uint256 price = 1000000000000000000;
+
         return price;
     }
 
