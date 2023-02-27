@@ -58,6 +58,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalFairValue();
     }
 
+    function updateState() external {
+        return _updateState();
+    }
+
     function getTotalLockedSpread() external view returns (uint256) {
         return _getTotalLockedSpread();
     }

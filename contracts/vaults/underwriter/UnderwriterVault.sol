@@ -89,13 +89,11 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        // TODO
-        /* uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
+        uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
             l.base,
             l.quote
         );
-        */
-        uint256 price = 1000000000000000000;
+
         return price;
     }
 
@@ -508,12 +506,13 @@ contract UnderwriterVault is
         // compute the updated state, then increment values, then write to storage
         _updateState();
         uint256 spreadRate = a.spread / a.secondsToExpiration;
+        uint256 newLockedAssets = l.isCall ? a.size : a.size.mul(a.strike);
 
         l.spreadUnlockingRate += spreadRate;
         l.spreadUnlockingTicks[a.maturity] += spreadRate;
         l.totalLockedSpread += a.spread;
         l.totalAssets += a.premium + a.spread;
-        l.totalLockedAssets += a.size;
+        l.totalLockedAssets += newLockedAssets;
         l.positionSizes[a.maturity][a.strike] += a.size;
         l.lastTradeTimestamp = block.timestamp;
     }
@@ -601,7 +600,7 @@ contract UnderwriterVault is
             : params.size.mul(params.strike);
 
         // Check non Zero Strike
-        if (params.strike == 0) revert Vault__AddressZero();
+        if (params.strike == 0) revert Vault__StrikeZero();
         // Check valid maturity
         if (block.timestamp >= params.maturity) revert Vault__OptionExpired();
         // Compute premium and the spread collected
