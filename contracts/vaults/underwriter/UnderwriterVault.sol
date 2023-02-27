@@ -172,9 +172,9 @@ contract UnderwriterVault is
                     l.isCall
                 );
 
+                if (l.isCall) price = price.div(spot);
                 size = l.positionSizes[current][strike];
-
-                total += price.mul(size).div(spot);
+                total += price.mul(size);
             }
 
             if (l.maturities.next(current) < current)
@@ -243,10 +243,9 @@ contract UnderwriterVault is
                 0,
                 l.isCall
             );
-
+            if (l.isCall) price = price.div(spot);
             size = l.positionSizes[listings.maturities[i]][listings.strikes[i]];
-
-            total += price.mul(size).div(spot);
+            total += price.mul(size);
         }
 
         return total;
@@ -624,13 +623,15 @@ contract UnderwriterVault is
 
         // returns USD price for calls & puts
         uint256 price = OptionMath.blackScholesPrice(
-            l.isCall ? OptionMath.ONE : spotPrice,
-            l.isCall ? params.strike.div(spotPrice) : params.strike,
+            spotPrice,
+            params.strike,
             tau,
             uint256(sigma),
             l.rfRate,
             l.isCall
         );
+
+        if (l.isCall) price = price.div(spotPrice);
 
         // call denominated in base, put denominated in quote
         uint256 mintingFee = IPool(poolAddr).takerFee(params.size, 0, false);
