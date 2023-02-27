@@ -657,7 +657,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#getTotalLockedSpread', () => {
+  describe('test getTotalLockedSpread and updateState', () => {
     /*
     Example
 
@@ -685,6 +685,7 @@ describe('UnderwriterVault', () => {
     let spreadUnlockingRatet0: number;
     let spreadUnlockingRatet1: number;
     let spreadUnlockingRatet2: number;
+    let spreadUnlockingRate: number;
 
     beforeEach(async () => {
       startTime = await now();
@@ -740,67 +741,210 @@ describe('UnderwriterVault', () => {
       await vault.increaseSpreadUnlockingTick(t0, surt0);
       await vault.increaseSpreadUnlockingTick(t1, surt1);
       await vault.increaseSpreadUnlockingTick(t2, surt2);
-      const spreadUnlockingRate =
+      spreadUnlockingRate =
         spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
       await vault.increaseSpreadUnlockingRate(
         parseEther(spreadUnlockingRate.toFixed(18).toString()),
       );
       await vault.increaseTotalLockedSpread(totalLockedFormatted);
     });
+    describe('#getTotalLockedSpread', () => {
+      it('At startTime + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        await increaseTo(startTime + ONE_DAY);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(16.4668, 0.001);
+      });
 
-    it('At startTime + 1 day totalLockedSpread should approximately equal 7.268', async () => {
-      await increaseTo(startTime + ONE_DAY);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(16.4668, 0.001);
+      it('At maturity t0 totalLockedSpread should approximately equal 7.268', async () => {
+        // 7 / 14 * 11.2 + 3 / 10 * 5.56 = 7.268
+        await increaseTo(t0);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(7.268, 0.001);
+      });
+
+      it('At t0 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        // 6 / 14 * 11.2 + 2 / 10 * 5.56 = 5.912
+        await increaseTo(t0 + ONE_DAY);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(5.912, 0.001);
+      });
+
+      it('At maturity t1 totalLockedSpread should approximately equal 3.2', async () => {
+        // 11.2 * 3 / 14 = 3.2
+        await increaseTo(t1);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(3.2, 0.001);
+      });
+
+      it('At t1 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        // 3 / 14 * 11.2 = 2.4
+        await increaseTo(t1 + ONE_DAY);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(2.4, 0.001);
+      });
+
+      it('At maturity t2 totalLockedSpread should approximately equal 0.0', async () => {
+        // 0
+        await increaseTo(t2);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(0.0, 0.0000001);
+      });
+
+      it('At maturity t2 + 7 days totalLockedSpread should approximately equal 0.0', async () => {
+        // 0
+        await increaseTo(t0 + 7 * ONE_DAY);
+        expect(
+          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+        ).to.be.closeTo(0.0, 0.0000001);
+      });
     });
 
-    it('At maturity t0 totalLockedSpread should approximately equal 7.268', async () => {
-      // 7 / 14 * 11.2 + 3 / 10 * 5.56 = 7.268
-      await increaseTo(t0);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(7.268, 0.001);
-    });
+    describe('#updateState', () => {
+      it('At startTime + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        await increaseTo(startTime + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(16.4668, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
 
-    it('At t0 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
-      // 6 / 14 * 11.2 + 2 / 10 * 5.56 = 5.912
-      await increaseTo(t0 + ONE_DAY);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(5.912, 0.001);
-    });
+      it('At maturity t0 totalLockedSpread should approximately equal 7.268', async () => {
+        // 7 / 14 * 11.2 + 3 / 10 * 5.56 = 7.268
+        await increaseTo(t0);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(7.268, 0.001);
+        spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
 
-    it('At maturity t1 totalLockedSpread should approximately equal 3.2', async () => {
-      // 11.2 * 3 / 14 = 3.2
-      await increaseTo(t1);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(3.2, 0.001);
-    });
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
 
-    it('At t1 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
-      // 3 / 14 * 11.2 = 2.4
-      await increaseTo(t1 + ONE_DAY);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(2.4, 0.001);
-    });
+      it('At t0 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        // 6 / 14 * 11.2 + 2 / 10 * 5.56 = 5.912
+        await increaseTo(t0 + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(5.912, 0.001);
+        spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
 
-    it('At maturity t2 totalLockedSpread should approximately equal 0.0', async () => {
-      // 0
-      await increaseTo(t2);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(0.0, 0.0000001);
-    });
+      it('At maturity t1 totalLockedSpread should approximately equal 3.2', async () => {
+        // 11.2 * 3 / 14 = 3.2
+        await increaseTo(t1);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(3.2, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
 
-    it('At maturity t2 + 7 days totalLockedSpread should approximately equal 0.0', async () => {
-      // 0
-      await increaseTo(t0 + 7 * ONE_DAY);
-      expect(
-        parseFloat(formatEther(await vault.getTotalLockedSpread())),
-      ).to.be.closeTo(0.0, 0.0000001);
+      it('At t1 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
+        // 3 / 14 * 11.2 = 2.4
+        await increaseTo(t1 + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(2.4, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
+
+      it('At maturity t2 totalLockedSpread should approximately equal 0.0', async () => {
+        await increaseTo(t2);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(0.0, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(0.0, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
+
+      it('Run through all of the above', async () => {
+        // 0
+        await increaseTo(startTime + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(16.4668, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        await increaseTo(t0);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(7.268, 0.001);
+        spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
+
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        await increaseTo(t0 + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(5.912, 0.001);
+        spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRate, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        await increaseTo(t1);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(3.2, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        await increaseTo(t1 + ONE_DAY);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(2.4, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        await increaseTo(t2);
+        await vault.updateState();
+        expect(
+          parseFloat(formatEther(await vault.totalLockedSpread())),
+        ).to.be.closeTo(0.0, 0.001);
+        expect(
+          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        ).to.be.closeTo(0.0, 0.001);
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+      });
     });
   });
 });

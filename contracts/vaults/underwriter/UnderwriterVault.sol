@@ -306,11 +306,11 @@ contract UnderwriterVault is
 
         while (current <= block.timestamp) {
             totalLockedSpread -=
-                (next - lastSpreadUnlockUpdate) *
+                (current - lastSpreadUnlockUpdate) *
                 spreadUnlockingRate;
-            spreadUnlockingRate -= l.spreadUnlockingTicks[next];
-            lastSpreadUnlockUpdate = next;
 
+            spreadUnlockingRate -= l.spreadUnlockingTicks[current];
+            lastSpreadUnlockUpdate = current;
             next = l.maturities.next(current);
             if (next < current) revert Vault__NonMonotonicMaturities();
             current = next;
