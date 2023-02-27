@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
-// For further clarification please see https://license.premia.legal
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
 
@@ -13,10 +12,8 @@ import {IFeeConverter} from "./IFeeConverter.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 
-/**
- * @author Premia
- * @title A contract receiving all protocol fees, swapping them for premia
- */
+/// @author Premia
+/// @title A contract receiving all protocol fees, swapping them for premia
 contract FeeConverter is IFeeConverter, OwnableInternal {
     using SafeERC20 for IERC20;
     using UD60x18 for uint256;
@@ -58,9 +55,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
 
     receive() external payable {}
 
-    /**
-     * @inheritdoc IFeeConverter
-     */
+    /// @inheritdoc IFeeConverter
     function getExchangeHelper()
         external
         view
@@ -73,11 +68,9 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     // Admin //
     ///////////
 
-    /**
-     * @notice Set authorization for address to use the convert function
-     * @param account The account for which to set new authorization status
-     * @param isAuthorized Whether the account is authorized or not
-     */
+    /// @notice Set authorization for address to use the convert function
+    /// @param account The account for which to set new authorization status
+    /// @param isAuthorized Whether the account is authorized or not
     function setAuthorized(
         address account,
         bool isAuthorized
@@ -89,9 +82,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
 
     //////////////////////////
 
-    /**
-     * @inheritdoc IFeeConverter
-     */
+    /// @inheritdoc IFeeConverter
     function convert(
         address sourceToken,
         address callee,

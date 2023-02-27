@@ -9,10 +9,8 @@ import {IVxPremia} from "./IVxPremia.sol";
 
 import {IProxyManager} from "./IProxyManager.sol";
 
-/**
- * @author Premia
- * @title A contract allowing you to use your locked Premia as voting power for mining weights
- */
+/// @author Premia
+/// @title A contract allowing you to use your locked Premia as voting power for mining weights
 contract VxPremia is IVxPremia, PremiaStaking {
     address private immutable PROXY_MANAGER;
 
@@ -39,9 +37,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
         );
     }
 
-    /**
-     * @notice subtract user votes, starting from the end of the list, if not enough voting power is left after amountUnstaked is unstaked
-     */
+    /// @notice subtract user votes, starting from the end of the list, if not enough voting power is left after amountUnstaked is unstaked
     function _subtractExtraUserVotes(
         VxPremiaStorage.Layout storage l,
         address user,
@@ -65,9 +61,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
         }
     }
 
-    /**
-     * @notice subtract user votes, starting from the end of the list
-     */
+    /// @notice subtract user votes, starting from the end of the list
     function _subtractUserVotes(
         VxPremiaStorage.Layout storage l,
         address user,
@@ -113,9 +107,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
         }
     }
 
-    /**
-     * @inheritdoc IVxPremia
-     */
+    /// @inheritdoc IVxPremia
     function getPoolVotes(
         VxPremiaStorage.VoteVersion version,
         bytes memory target
@@ -123,18 +115,14 @@ contract VxPremia is IVxPremia, PremiaStaking {
         return VxPremiaStorage.layout().votes[version][target];
     }
 
-    /**
-     * @inheritdoc IVxPremia
-     */
+    /// @inheritdoc IVxPremia
     function getUserVotes(
         address user
     ) external view returns (VxPremiaStorage.Vote[] memory) {
         return VxPremiaStorage.layout().userVotes[user];
     }
 
-    /**
-     * @inheritdoc IVxPremia
-     */
+    /// @inheritdoc IVxPremia
     function castVotes(VxPremiaStorage.Vote[] memory votes) external {
         VxPremiaStorage.Layout storage l = VxPremiaStorage.layout();
 

@@ -65,9 +65,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         revert PremiaStaking__CantTransfer();
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getRewardToken() external view returns (address) {
         return REWARD_TOKEN;
     }
@@ -237,9 +235,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         }
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function addRewards(uint256 amount) external {
         _updateRewards();
 
@@ -253,9 +249,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         emit RewardsAdded(amount);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getAvailableRewards()
         external
         view
@@ -268,9 +262,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         unstakeRewards = l.availableUnstakeRewards;
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getPendingRewards() public view returns (uint256) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         return
@@ -303,9 +295,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         l.lastRewardUpdate = block.timestamp;
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function stakeWithPermit(
         uint256 amount,
         uint64 period,
@@ -329,17 +319,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
         _stake(msg.sender, amount, period);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function stake(uint256 amount, uint64 period) external {
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount);
         _stake(msg.sender, amount, period);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function updateLock(uint64 period) external {
         if (period > MAX_PERIOD) revert PremiaStaking__ExcessiveStakePeriod();
 
@@ -376,9 +362,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         emit UpdateLock(msg.sender, oldPeriod, period);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function harvestAndStake(
         IPremiaStaking.SwapArgs memory s,
         uint64 stakePeriod
@@ -434,9 +418,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         }
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getPendingUserRewards(
         address user
     ) external view returns (uint256 reward, uint256 unstakeReward) {
@@ -511,9 +493,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     function _beforeUnstake(address user, uint256 amount) internal virtual {}
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function earlyUnstake(uint256 amount) external {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
@@ -525,9 +505,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         );
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getEarlyUnstakeFeeBPS(
         address user
     ) public view returns (uint256 feePercentageBPS) {
@@ -551,9 +529,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         }
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function startWithdraw(uint256 amount) external {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[msg.sender];
@@ -611,9 +587,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         emit Unstake(msg.sender, amount, fee, block.timestamp);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function withdraw() external {
         _updateRewards();
 
@@ -637,16 +611,12 @@ contract PremiaStaking is IPremiaStaking, OFT {
         emit Withdraw(msg.sender, amount);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getTotalPower() external view returns (uint256) {
         return PremiaStakingStorage.layout().totalPower;
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getUserPower(address user) external view returns (uint256) {
         return
             _calculateUserPower(
@@ -655,9 +625,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             );
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getDiscountBPS(address user) external view returns (uint256) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
@@ -719,9 +687,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         }
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getUserInfo(
         address user
     ) external view returns (PremiaStakingStorage.UserInfo memory) {
@@ -761,9 +727,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             );
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getStakeLevels()
         public
         pure
@@ -777,9 +741,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 6000); // -60%
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getStakePeriodMultiplierBPS(
         uint256 period
     ) public pure returns (uint256) {
@@ -877,9 +839,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         _updateTotalPower(l, args.oldPower, args.newPower);
     }
 
-    /**
-     * @inheritdoc IPremiaStaking
-     */
+    /// @inheritdoc IPremiaStaking
     function getAvailablePremiaAmount() public view returns (uint256) {
         return
             IERC20(PREMIA).balanceOf(address(this)) -
