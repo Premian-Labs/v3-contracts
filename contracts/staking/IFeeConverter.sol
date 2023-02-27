@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 interface IFeeConverter {
+    error FeeConverter__NotAuthorized();
+
     event Converted(
         address indexed account,
         address indexed token,

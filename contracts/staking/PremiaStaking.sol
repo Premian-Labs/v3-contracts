@@ -7,8 +7,6 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC2612} from "@solidstate/contracts/token/ERC20/permit/IERC2612.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
-// ToDo : Remove ABDKMath dependency
-import {ABDKMath64x64} from "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
@@ -17,20 +15,20 @@ import {OFT} from "../layerZero/token/oft/OFT.sol";
 import {OFTCore} from "../layerZero/token/oft/OFTCore.sol";
 import {IOFTCore} from "../layerZero/token/oft/IOFTCore.sol";
 import {BytesLib} from "../layerZero/util/BytesLib.sol";
+import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 
 contract PremiaStaking is IPremiaStaking, OFT {
     using SafeERC20 for IERC20;
-    // ToDo : Remove ABDKMath dependency
-    using ABDKMath64x64 for int128;
     using AddressUtils for address;
     using BytesLib for bytes;
+    using UD60x18 for uint256;
 
     address internal immutable PREMIA;
     address internal immutable REWARD_TOKEN;
     address internal immutable EXCHANGE_HELPER;
 
-    int128 internal constant ONE_64x64 = 0x10000000000000000;
-    int128 internal constant DECAY_RATE_64x64 = 0x487a423b63e; // 2.7e-7 -> Distribute around half of the current balance over a month
+    uint256 internal constant ONE = 1e18;
+    uint256 internal constant DECAY_RATE = 270000000000; // 2.7e-7 -> Distribute around half of the current balance over a month
     uint256 internal constant INVERSE_BASIS_POINT = 1e4;
     uint64 internal constant MAX_PERIOD = 4 * 365 days;
     uint256 internal constant ACC_REWARD_PRECISION = 1e30;
@@ -788,10 +786,9 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 newTimestamp
     ) internal pure returns (uint256) {
         return
-            ONE_64x64
-                .sub(DECAY_RATE_64x64)
-                .pow(newTimestamp - oldTimestamp)
-                .mulu(pendingRewards);
+            (ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp).mul(
+                pendingRewards
+            );
     }
 
     function _getStakeLevels()
@@ -801,10 +798,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
     {
         stakeLevels = new IPremiaStaking.StakeLevel[](4);
 
-        stakeLevels[0] = IPremiaStaking.StakeLevel(5000 * 1e18, 1000); // -10%
-        stakeLevels[1] = IPremiaStaking.StakeLevel(50000 * 1e18, 2500); // -25%
-        stakeLevels[2] = IPremiaStaking.StakeLevel(500000 * 1e18, 3500); // -35%
-        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000 * 1e18, 6000); // -60%
+        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 1000); // -10%
+        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 2500); // -25%
+        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 3500); // -35%
+        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 6000); // -60%
     }
 
     function _getStakePeriodMultiplierBPS(
