@@ -6,6 +6,10 @@ import {
   ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 
+import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
+import goerliAddresses from '../../utils/deployment/goerli.json';
+import { goerliFeeds } from '../../utils/addresses';
+
 async function main() {
   const [deployer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
@@ -19,37 +23,43 @@ async function main() {
 
   if (chainId === 42161) {
     // Arbitrum addresses
-    weth = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
-    wbtc = '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f';
-    chainlinkAdapter = '';
+    weth = arbitrumAddresses.tokens.WETH;
+    wbtc = arbitrumAddresses.tokens.WBTC;
     feeReceiver = '';
   } else if (chainId === 5) {
     // Goerli addresses
-    weth = '';
-    wbtc = '';
-    chainlinkAdapter = '';
-    feeReceiver = '';
+    weth = goerliAddresses.tokens.WETH;
+    wbtc = goerliAddresses.tokens.WBTC;
+    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
   } else {
     throw new Error('ChainId not implemented');
   }
   //////////////////////////
   // Deploy ChainlinkAdapter
 
-  if (chainlinkAdapter === '') {
-    const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
+  const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
+    deployer,
+  ).deploy(weth, wbtc);
+  await chainlinkAdapterImpl.deployed();
+  console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
+
+  const chainlinkAdapterProxy = await new ChainlinkAdapterProxy__factory(
+    deployer,
+  ).deploy(chainlinkAdapterImpl.address);
+  await chainlinkAdapterProxy.deployed();
+
+  console.log(`ChainlinkAdapter proxy : ${chainlinkAdapterProxy.address}`);
+
+  chainlinkAdapter = chainlinkAdapterProxy.address;
+
+  if (chainId === 5) {
+    // Goerli
+    await ChainlinkAdapter__factory.connect(
+      chainlinkAdapter,
       deployer,
-    ).deploy(weth, wbtc);
-    await chainlinkAdapterImpl.deployed();
-    console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
-
-    const chainlinkAdapterProxy = await new ChainlinkAdapterProxy__factory(
-      deployer,
-    ).deploy(chainlinkAdapterImpl.address);
-    await chainlinkAdapterProxy.deployed();
-
-    console.log(`ChainlinkAdapter proxy : ${chainlinkAdapterProxy.address}`);
-
-    chainlinkAdapter = chainlinkAdapterProxy.address;
+    ).batchRegisterFeedMappings(goerliFeeds);
+  } else {
+    throw new Error('ChainId not implemented');
   }
 
   //////////////////////////
