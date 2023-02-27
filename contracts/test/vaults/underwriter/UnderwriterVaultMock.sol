@@ -34,6 +34,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getMaturityAfterTimestamp(timestamp);
     }
 
+    function getNumberOfUnexpiredListings() external view returns (uint256) {
+        return _getNumberOfUnexpiredListings();
+    }
+
     function getTotalFairValue() external view returns (uint256) {
         return _getTotalFairValue();
     }
@@ -68,7 +72,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().maxMaturity = value;
     }
 
-    function logListingsAndSizes() internal view {
+    function logListingsAndSizes() external view {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
