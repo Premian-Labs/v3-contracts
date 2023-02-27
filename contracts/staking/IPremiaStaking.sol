@@ -43,7 +43,7 @@ interface IPremiaStaking is IERC2612, IOFT {
 
     struct StakeLevel {
         uint256 amount; // Amount to stake
-        uint256 discountBPS; // Discount when amount is reached
+        uint256 discount; // Discount when amount is reached
     }
 
     struct SwapArgs {
@@ -157,8 +157,8 @@ interface IPremiaStaking is IERC2612, IOFT {
 
     /// @notice get early unstake fee for given user
     /// @param user address of the user
-    /// @return feePercentage % fee to pay for early unstake (1e4 = 100%)
-    function getEarlyUnstakeFeeBPS(
+    /// @return feePercentage % fee to pay for early unstake (1e18 = 100%)
+    function getEarlyUnstakeFee(
         address user
     ) external view returns (uint256 feePercentage);
 
@@ -184,20 +184,20 @@ interface IPremiaStaking is IERC2612, IOFT {
 
     /// @notice Calculate the % of fee discount for user, based on his stake
     /// @param user The _user for which the discount is for
-    /// @return Percentage of protocol fee discount (in basis point)
-    ///         Ex : 1000 = 10% fee discount
-    function getDiscountBPS(address user) external view returns (uint256);
+    /// @return Percentage of protocol fee discount
+    ///         Ex : 1e17 = 10% fee discount
+    function getDiscount(address user) external view returns (uint256);
 
     /// @notice Get stake levels
     /// @return Stake levels
-    ///         Ex : 2500 = -25%
+    ///         Ex : 25e16 = -25%
     function getStakeLevels() external returns (StakeLevel[] memory);
 
     /// @notice Get stake period multiplier
     /// @param period The duration (in seconds) for which tokens are locked
     /// @return The multiplier for this staking period
-    ///         Ex : 20000 = x2
-    function getStakePeriodMultiplierBPS(
+    ///         Ex : 2e18 = x2
+    function getStakePeriodMultiplier(
         uint256 period
     ) external returns (uint256);
 

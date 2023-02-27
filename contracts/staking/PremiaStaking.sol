@@ -29,10 +29,9 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     uint256 internal constant ONE = 1e18;
     uint256 internal constant DECAY_RATE = 270000000000; // 2.7e-7 -> Distribute around half of the current balance over a month
-    uint256 internal constant INVERSE_BASIS_POINT = 1e4;
     uint64 internal constant MAX_PERIOD = 4 * 365 days;
     uint256 internal constant ACC_REWARD_PRECISION = 1e30;
-    uint256 internal constant MAX_CONTRACT_DISCOUNT = 3000; // -30%
+    uint256 internal constant MAX_CONTRACT_DISCOUNT = 0.3 ether; // -30%
     uint256 internal constant WITHDRAWAL_DELAY = 10 days;
 
     struct UpdateArgsInternal {
@@ -501,14 +500,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
             l,
             l.userInfo[msg.sender],
             amount,
-            (amount * getEarlyUnstakeFeeBPS(msg.sender)) / INVERSE_BASIS_POINT
+            amount.mul(getEarlyUnstakeFee(msg.sender))
         );
     }
 
     /// @inheritdoc IPremiaStaking
-    function getEarlyUnstakeFeeBPS(
+    function getEarlyUnstakeFee(
         address user
-    ) public view returns (uint256 feePercentageBPS) {
+    ) public view returns (uint256 feePercentage) {
         uint256 lockedUntil = PremiaStakingStorage
             .layout()
             .userInfo[user]
@@ -521,12 +520,19 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
         unchecked {
             lockLeft = lockedUntil - block.timestamp;
-            feePercentageBPS = (lockLeft * 2500) / 365 days; // 25% fee per year left
+            feePercentage = (lockLeft * 0.25 ether) / 365 days; // 25% fee per year left
         }
 
-        if (feePercentageBPS > 7500) {
-            feePercentageBPS = 7500; // Capped at 75%
+        if (feePercentage > 0.75 ether) {
+            feePercentage = 0.75 ether; // Capped at 75%
         }
+    }
+
+    // @dev `getEarlyUnstakeFee` is preferred as it is more precise. This function is kept for backwards compatibility.
+    function getEarlyUnstakeFeeBPS(
+        address user
+    ) external view returns (uint256 feePercentageBPS) {
+        return getEarlyUnstakeFee(user) / 1e14;
     }
 
     /// @inheritdoc IPremiaStaking
@@ -626,7 +632,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function getDiscountBPS(address user) external view returns (uint256) {
+    function getDiscount(address user) public view returns (uint256) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
         uint256 userPower = _calculateUserPower(
@@ -655,36 +661,38 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
                 if (userPower < level.amount) {
                     uint256 amountPrevLevel;
-                    uint256 discountPrevLevelBPS;
+                    uint256 discountPrevLevel;
 
                     // If stake is lower, user is in this level, and we need to LERP with prev level to get discount value
                     if (i > 0) {
                         amountPrevLevel = stakeLevels[i - 1].amount;
-                        discountPrevLevelBPS = stakeLevels[i - 1].discountBPS;
+                        discountPrevLevel = stakeLevels[i - 1].discount;
                     } else {
                         // If this is the first level, prev level is 0 / 0
                         amountPrevLevel = 0;
-                        discountPrevLevelBPS = 0;
+                        discountPrevLevel = 0;
                     }
 
-                    uint256 remappedDiscountBPS = level.discountBPS -
-                        discountPrevLevelBPS;
+                    uint256 remappedDiscount = level.discount -
+                        discountPrevLevel;
 
                     uint256 remappedAmount = level.amount - amountPrevLevel;
                     uint256 remappedPower = userPower - amountPrevLevel;
-                    uint256 levelProgressBPS = (remappedPower *
-                        INVERSE_BASIS_POINT) / remappedAmount;
+                    uint256 levelProgress = remappedPower.div(remappedAmount);
 
                     return
-                        discountPrevLevelBPS +
-                        ((remappedDiscountBPS * levelProgressBPS) /
-                            INVERSE_BASIS_POINT);
+                        discountPrevLevel + remappedDiscount.mul(levelProgress);
                 }
             }
 
             // If no match found it means user is >= max possible stake, and therefore has max discount possible
-            return stakeLevels[length - 1].discountBPS;
+            return stakeLevels[length - 1].discount;
         }
+    }
+
+    // @dev `getDiscount` is preferred as it is more precise. This function is kept for backwards compatibility.
+    function getDiscountBPS(address user) external view returns (uint256) {
+        return getDiscount(user) / 1e14;
     }
 
     /// @inheritdoc IPremiaStaking
@@ -735,33 +743,38 @@ contract PremiaStaking is IPremiaStaking, OFT {
     {
         stakeLevels = new IPremiaStaking.StakeLevel[](4);
 
-        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 1000); // -10%
-        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 2500); // -25%
-        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 3500); // -35%
-        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 6000); // -60%
+        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 0.1 ether); // -10%
+        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 0.25 ether); // -25%
+        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 0.35 ether); // -35%
+        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 0.6 ether); // -60%
     }
 
     /// @inheritdoc IPremiaStaking
-    function getStakePeriodMultiplierBPS(
+    function getStakePeriodMultiplier(
         uint256 period
     ) public pure returns (uint256) {
         unchecked {
             uint256 oneYear = 365 days;
 
-            if (period == 0) return 2500; // x0.25
-            if (period >= 4 * oneYear) return 42500; // x4.25
+            if (period == 0) return 0.25 ether; // x0.25
+            if (period >= 4 * oneYear) return 4.25 ether; // x4.25
 
-            return 2500 + (period * 1e4) / oneYear; // 0.25x + 1.0x per year lockup
+            return 0.25 ether + (period * ONE) / oneYear; // 0.25x + 1.0x per year lockup
         }
+    }
+
+    /// @dev `getStakePeriodMultiplier` is preferred as it is more precise. This function is kept for backwards compatibility.
+    function getStakePeriodMultiplierBPS(
+        uint256 period
+    ) external pure returns (uint256) {
+        return getStakePeriodMultiplier(period) / 1e14;
     }
 
     function _calculateUserPower(
         uint256 balance,
         uint64 stakePeriod
     ) internal pure returns (uint256) {
-        return
-            (balance * getStakePeriodMultiplierBPS(stakePeriod)) /
-            INVERSE_BASIS_POINT;
+        return balance.mul(getStakePeriodMultiplier(stakePeriod));
     }
 
     function _calculateReward(

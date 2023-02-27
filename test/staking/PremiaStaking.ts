@@ -648,10 +648,10 @@ describe('PremiaStaking', () => {
   describe('#getStakeLevels', () => {
     it('should correctly return stake levels', async () => {
       expect(await premiaStaking.getStakeLevels()).to.deep.eq([
-        [parseEther('5000'), BigNumber.from(1000)],
-        [parseEther('50000'), BigNumber.from(2500)],
-        [parseEther('500000'), BigNumber.from(3500)],
-        [parseEther('2500000'), BigNumber.from(6000)],
+        [parseEther('5000'), parseEther('0.1')],
+        [parseEther('50000'), parseEther('0.25')],
+        [parseEther('500000'), parseEther('0.35')],
+        [parseEther('2500000'), parseEther('0.6')],
       ]);
     });
   });
@@ -794,7 +794,7 @@ describe('PremiaStaking', () => {
       expect(
         (await premiaStaking.connect(alice).getPendingWithdrawal(alice.address))
           .amount,
-      ).to.eq(parseEther('50.01')); // Small difference due to block timestamp increase by 1 second on new block mined
+      ).to.eq(parseEther('50.0000007927447996')); // Small difference due to block timestamp increase by 1 second on new block mined
 
       const totalFee = parseEther('100').sub(parseEther('50.01'));
       const bobFeeReward = totalFee.div(3);
