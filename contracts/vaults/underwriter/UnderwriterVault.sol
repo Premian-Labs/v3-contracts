@@ -117,14 +117,16 @@ contract UnderwriterVault is
         return current;
     }
 
-    function _getNumberOfUnexpiredListings() internal view returns (uint256) {
+    function _getNumberOfUnexpiredListings(
+        uint256 timestamp
+    ) internal view returns (uint256) {
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        if (l.maxMaturity < block.timestamp) return 0;
+        if (l.maxMaturity <= timestamp) return 0;
 
-        uint256 current = _getMaturityAfterTimestamp(block.timestamp);
+        uint256 current = _getMaturityAfterTimestamp(timestamp);
 
         while (current <= l.maxMaturity && current != 0) {
             n += l.maturityToStrikes[current].length();
@@ -134,28 +136,29 @@ contract UnderwriterVault is
         return n;
     }
 
-    function _getTotalFairValueExpired() internal view returns (uint256) {
-        uint256 spot;
-        uint256 strike;
+    function _getTotalFairValueExpired(
+        uint256 timestamp,
+        uint256 spot
+    ) internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
+        //uint256 spot = _getSpotPrice(l.oracleAdapter);
+        uint256 strike;
         uint256 price;
         uint256 size;
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+        // Compute fair value for expired unsettled options
         uint256 current = l.minMaturity;
         uint256 total = 0;
 
-        // Compute fair value for expired unsettled options
-        while (current <= block.timestamp) {
+        while (current <= timestamp && current != 0) {
             for (
                 uint256 i = 0;
                 i < l.maturityToStrikes[current].length();
                 i++
             ) {
                 strike = l.maturityToStrikes[current].at(i);
-
-                spot = _getSpotPrice(l.oracleAdapter);
 
                 price = OptionMath.blackScholesPrice(
                     spot,
@@ -166,31 +169,34 @@ contract UnderwriterVault is
                     l.isCall
                 );
 
-                if (l.isCall) price = price.div(spot);
                 size = l.positionSizes[current][strike];
                 total += price.mul(size);
             }
 
-            if (l.maturities.next(current) < current)
-                revert Vault__NonMonotonicMaturities();
             current = l.maturities.next(current);
         }
 
-        return total;
+        return l.isCall ? total.div(spot) : total;
     }
 
-    function _getTotalFairValueUnexpired() internal view returns (uint256) {
+    function _getTotalFairValueUnexpired(
+        uint256 timestamp,
+        uint256 spot
+    ) internal view returns (uint256) {
         uint256 price;
         uint256 size;
         uint256 timeToMaturity;
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        uint256 current = _getMaturityAfterTimestamp(block.timestamp);
+
+        if (l.maxMaturity < timestamp) return 0;
+
+        uint256 current = _getMaturityAfterTimestamp(timestamp);
         uint256 total = 0;
 
         // Compute fair value for options that have not expired
-        uint256 n = _getNumberOfUnexpiredListings();
+        uint256 n = _getNumberOfUnexpiredListings(timestamp);
 
         UnexpiredListingVars memory listings = UnexpiredListingVars({
             strikes: new uint256[](n),
@@ -198,25 +204,22 @@ contract UnderwriterVault is
             maturities: new uint256[](n)
         });
 
-        uint256 spot = _getSpotPrice(l.oracleAdapter);
-
-        while (current <= l.maxMaturity) {
-            timeToMaturity = ((current - block.timestamp)).div(
-                365 * 24 * 60 * 60
-            );
+        uint256 i = 0;
+        while (current <= l.maxMaturity && current != 0) {
+            timeToMaturity = (current - timestamp).div(365 * 24 * 60 * 60);
 
             for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
+                uint256 j = 0;
+                j < l.maturityToStrikes[current].length();
+                j++
             ) {
-                listings.strikes[i] = l.maturityToStrikes[current].at(i);
+                listings.strikes[i] = l.maturityToStrikes[current].at(j);
                 listings.timeToMaturities[i] = timeToMaturity;
                 listings.maturities[i] = current;
+
+                i++;
             }
 
-            if (l.maturities.next(current) < current)
-                revert Vault__NonMonotonicMaturities();
             current = l.maturities.next(current);
         }
 
@@ -228,7 +231,7 @@ contract UnderwriterVault is
                 listings.timeToMaturities
             );
 
-        for (uint256 i; i < sigmas.length; i++) {
+        for (uint256 i = 0; i < n; i++) {
             price = OptionMath.blackScholesPrice(
                 spot,
                 listings.strikes[i],
@@ -237,16 +240,22 @@ contract UnderwriterVault is
                 0,
                 l.isCall
             );
-            if (l.isCall) price = price.div(spot);
+
             size = l.positionSizes[listings.maturities[i]][listings.strikes[i]];
             total += price.mul(size);
         }
 
-        return total;
+        return l.isCall ? total.div(spot) : total;
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
-        return _getTotalFairValueUnexpired() + _getTotalFairValueExpired();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 spot = _getSpotPrice(l.oracleAdapter);
+        uint256 timestamp = block.timestamp;
+        return
+            _getTotalFairValueUnexpired(timestamp, spot) +
+            _getTotalFairValueExpired(timestamp, spot);
     }
 
     function _getTotalLockedSpread() internal view returns (uint256) {

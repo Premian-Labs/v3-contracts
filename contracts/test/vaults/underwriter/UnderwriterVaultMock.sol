@@ -34,8 +34,24 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getMaturityAfterTimestamp(timestamp);
     }
 
-    function getNumberOfUnexpiredListings() external view returns (uint256) {
-        return _getNumberOfUnexpiredListings();
+    function getNumberOfUnexpiredListings(
+        uint256 timestamp
+    ) external view returns (uint256) {
+        return _getNumberOfUnexpiredListings(timestamp);
+    }
+
+    function getTotalFairValueExpired(
+        uint256 timestamp,
+        uint256 spot
+    ) external view returns (uint256) {
+        return _getTotalFairValueExpired(timestamp, spot);
+    }
+
+    function getTotalFairValueUnexpired(
+        uint256 timestamp,
+        uint256 spot
+    ) external view returns (uint256) {
+        return _getTotalFairValueUnexpired(timestamp, spot);
     }
 
     function getTotalFairValue() external view returns (uint256) {
@@ -72,6 +88,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().maxMaturity = value;
     }
 
+    function setIsCall(bool value) external onlyOwner {
+        UnderwriterVaultStorage.layout().isCall = value;
+    }
+
     function logListingsAndSizes() external view {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -80,7 +100,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
         uint256 current = l.minMaturity;
 
-        while (current <= l.maxMaturity) {
+        while (current <= l.maxMaturity && current != 0) {
             for (
                 uint256 i = 0;
                 i < l.maturityToStrikes[current].length();
@@ -164,6 +184,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             current = next;
         }
 
+        l.minMaturity = 0;
         l.maxMaturity = 0;
     }
 

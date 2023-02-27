@@ -11,6 +11,8 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 import {SD59x18} from "../../libraries/prbMath/SD59x18.sol";
 
+import "hardhat/console.sol";
+
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
@@ -223,6 +225,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 strike,
         uint256 timeToMaturity
     ) internal view returns (int256) {
+        if (spot == 0) revert VolatilityOracle__SpotIsZero();
+        if (strike == 0) revert VolatilityOracle__StrikeIsZero();
+        if (timeToMaturity == 0)
+            revert VolatilityOracle__TimeToMaturityIsZero();
+
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);

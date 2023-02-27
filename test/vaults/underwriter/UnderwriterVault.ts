@@ -26,6 +26,8 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { access } from 'fs';
+import Dict = NodeJS.Dict;
+import { bnToNumber } from '../../../utils/sdk/math';
 
 describe('UnderwriterVault', () => {
   let deployer: SignerWithAddress;
@@ -279,44 +281,197 @@ describe('UnderwriterVault', () => {
     it('returns 0 when there are no existing listings', async () => {
       await vault.clearListingsAndSizes();
 
-      let result = await vault.getNumberOfUnexpiredListings();
+      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
       let expected = 0;
 
       expect(result).to.eq(expected);
     });
 
     it('returns 12 when no options have expired yet', async () => {
-      let result = await vault.getNumberOfUnexpiredListings();
+      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
       let expected = 12;
 
       expect(result).to.eq(expected);
     });
 
     it('returns 8 when the t0 is passed', async () => {
-      await increaseTo(t0 + ONE_DAY);
-
-      let result = await vault.getNumberOfUnexpiredListings();
+      let result = await vault.getNumberOfUnexpiredListings(t0 + ONE_DAY);
       let expected = 8;
 
       expect(result).to.eq(expected);
     });
 
     it('returns 2 when t2 is passed', async () => {
-      await increaseTo(t2 + ONE_DAY);
-
-      let result = await vault.getNumberOfUnexpiredListings();
+      let result = await vault.getNumberOfUnexpiredListings(t2 + ONE_DAY);
       let expected = 2;
 
       expect(result).to.eq(expected);
     });
 
     it('returns 0 when all options are expired', async () => {
-      await increaseTo(2 * t2 + ONE_DAY);
-
-      let result = await vault.getNumberOfUnexpiredListings();
+      let result = await vault.getNumberOfUnexpiredListings(2 * t2 + ONE_DAY);
       let expected = 0;
 
       expect(result).to.eq(expected);
+    });
+  });
+
+  describe('#_getTotalFairValueExpired()', () => {
+    let startTime = bnToNumber(BigNumber.from('100000'));
+
+    let t0 = startTime + 7 * ONE_DAY;
+    let t1 = startTime + 10 * ONE_DAY;
+    let t2 = startTime + 14 * ONE_DAY;
+    let t3 = startTime + 30 * ONE_DAY;
+    let spot = parseEther('1000');
+
+    beforeEach(async () => {
+      const infos = [
+        {
+          maturity: t0,
+          strikes: [800, 900, 1500, 2000].map((el) =>
+            parseEther(el.toString()),
+          ),
+          sizes: [1, 2, 2, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t1,
+          strikes: [700, 900, 1500].map((el) => parseEther(el.toString())),
+          sizes: [1, 5, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t2,
+          strikes: [800, 1500, 2000].map((el) => parseEther(el.toString())),
+          sizes: [1, 2, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t3,
+          strikes: [900, 1500].map((el) => parseEther(el.toString())),
+          sizes: [2, 2].map((el) => parseEther(el.toString())),
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getTotalFairValueExpired(t0 - ONE_DAY, spot);
+      let expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+
+      await vault.setIsCall(false);
+
+      result = await vault.getTotalFairValueExpired(t0 - ONE_DAY, spot);
+      expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+    });
+
+    let tests = [
+      { isCall: true, timestamp: t0 - ONE_DAY, expected: 0 },
+      { isCall: false, timestamp: t0 - ONE_DAY, expected: 0 },
+      { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.4 },
+      { isCall: false, timestamp: t0 + ONE_DAY, expected: 2000 },
+      { isCall: true, timestamp: t2 + ONE_DAY, expected: 1.4 },
+      { isCall: false, timestamp: t2 + ONE_DAY, expected: 4500 },
+      { isCall: true, timestamp: t3 + ONE_DAY, expected: 1.6 },
+      { isCall: false, timestamp: t3 + ONE_DAY, expected: 5500 },
+    ];
+
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
+        await vault.setIsCall(test.isCall);
+        let result = await vault.getTotalFairValueExpired(test.timestamp, spot);
+        let expected = parseEther(test.expected.toString());
+
+        expect(result).to.eq(expected);
+      });
+    });
+  });
+
+  describe('#_getTotalFairValueUnexpired()', () => {
+    let startTime = 100000;
+
+    console.log(startTime);
+
+    let t0 = startTime + 7 * ONE_DAY;
+    let t1 = startTime + 10 * ONE_DAY;
+    let t2 = startTime + 14 * ONE_DAY;
+    let t3 = startTime + 30 * ONE_DAY;
+    let spot = parseEther('1000');
+
+    beforeEach(async () => {
+      const infos = [
+        {
+          maturity: t0,
+          strikes: [800, 900, 1500, 2000].map((el) =>
+            parseEther(el.toString()),
+          ),
+          sizes: [1, 2, 2, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t1,
+          strikes: [700, 900, 1500].map((el) => parseEther(el.toString())),
+          sizes: [1, 5, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t2,
+          strikes: [800, 1500, 2000].map((el) => parseEther(el.toString())),
+          sizes: [1, 2, 1].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t3,
+          strikes: [900, 1500].map((el) => parseEther(el.toString())),
+          sizes: [2, 2].map((el) => parseEther(el.toString())),
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      let expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+
+      await vault.setIsCall(false);
+
+      result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+    });
+
+    let tests = [
+      { isCall: true, timestamp: t0 - ONE_DAY, expected: 1.697282885495867 },
+      { isCall: false, timestamp: t0 - ONE_DAY, expected: 5597.282885495868 },
+      { isCall: true, timestamp: t0 + ONE_DAY, expected: 1.2755281851488665 },
+      { isCall: false, timestamp: t0 + ONE_DAY, expected: 3575.528185148866 },
+      { isCall: true, timestamp: t2 + ONE_DAY, expected: 0.24420148996961677 },
+      { isCall: false, timestamp: t2 + ONE_DAY, expected: 1044.2014899696167 },
+      { isCall: true, timestamp: t3 + ONE_DAY, expected: 0 },
+      { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
+    ];
+
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
+        await vault.setIsCall(test.isCall);
+        let result = await vault.getTotalFairValueUnexpired(
+          test.timestamp,
+          spot,
+        );
+
+        let delta = test.isCall ? 0.0001 : 0.01;
+
+        expect(parseFloat(formatEther(result))).to.be.closeTo(
+          test.expected,
+          delta,
+        );
+      });
     });
   });
 
