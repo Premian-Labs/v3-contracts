@@ -31,8 +31,9 @@ contract PremiaStaking is IPremiaStaking, OFT {
     uint256 internal constant DECAY_RATE = 270000000000; // 2.7e-7 -> Distribute around half of the current balance over a month
     uint64 internal constant MAX_PERIOD = 4 * 365 days;
     uint256 internal constant ACC_REWARD_PRECISION = 1e30;
-    uint256 internal constant MAX_CONTRACT_DISCOUNT = 0.3 ether; // -30%
+    uint256 internal constant MAX_CONTRACT_DISCOUNT = 0.3e18; // -30%
     uint256 internal constant WITHDRAWAL_DELAY = 10 days;
+    uint256 internal constant BPS_CONVERSION = 1e14; // 1e18 / 1e4
 
     struct UpdateArgsInternal {
         address user;
@@ -520,11 +521,11 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
         unchecked {
             lockLeft = lockedUntil - block.timestamp;
-            feePercentage = (lockLeft * 0.25 ether) / 365 days; // 25% fee per year left
+            feePercentage = (lockLeft * 0.25e18) / 365 days; // 25% fee per year left
         }
 
-        if (feePercentage > 0.75 ether) {
-            feePercentage = 0.75 ether; // Capped at 75%
+        if (feePercentage > 0.75e18) {
+            feePercentage = 0.75e18; // Capped at 75%
         }
     }
 
@@ -532,7 +533,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     function getEarlyUnstakeFeeBPS(
         address user
     ) external view returns (uint256 feePercentageBPS) {
-        return getEarlyUnstakeFee(user) / 1e14;
+        return getEarlyUnstakeFee(user) / BPS_CONVERSION;
     }
 
     /// @inheritdoc IPremiaStaking
@@ -692,7 +693,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     // @dev `getDiscount` is preferred as it is more precise. This function is kept for backwards compatibility.
     function getDiscountBPS(address user) external view returns (uint256) {
-        return getDiscount(user) / 1e14;
+        return getDiscount(user) / BPS_CONVERSION;
     }
 
     /// @inheritdoc IPremiaStaking
@@ -743,10 +744,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
     {
         stakeLevels = new IPremiaStaking.StakeLevel[](4);
 
-        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 0.1 ether); // -10%
-        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 0.25 ether); // -25%
-        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 0.35 ether); // -35%
-        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 0.6 ether); // -60%
+        stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 0.1e18); // -10%
+        stakeLevels[1] = IPremiaStaking.StakeLevel(50000e18, 0.25e18); // -25%
+        stakeLevels[2] = IPremiaStaking.StakeLevel(500000e18, 0.35e18); // -35%
+        stakeLevels[3] = IPremiaStaking.StakeLevel(2500000e18, 0.6e18); // -60%
     }
 
     /// @inheritdoc IPremiaStaking
@@ -756,10 +757,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
         unchecked {
             uint256 oneYear = 365 days;
 
-            if (period == 0) return 0.25 ether; // x0.25
-            if (period >= 4 * oneYear) return 4.25 ether; // x4.25
+            if (period == 0) return 0.25e18; // x0.25
+            if (period >= 4 * oneYear) return 4.25e18; // x4.25
 
-            return 0.25 ether + (period * ONE) / oneYear; // 0.25x + 1.0x per year lockup
+            return 0.25e18 + (period * ONE) / oneYear; // 0.25x + 1.0x per year lockup
         }
     }
 
@@ -767,7 +768,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     function getStakePeriodMultiplierBPS(
         uint256 period
     ) external pure returns (uint256) {
-        return getStakePeriodMultiplier(period) / 1e14;
+        return getStakePeriodMultiplier(period) / BPS_CONVERSION;
     }
 
     function _calculateUserPower(
