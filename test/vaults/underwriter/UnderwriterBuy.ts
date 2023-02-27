@@ -180,7 +180,7 @@ describe('UnderwriterVault', () => {
         minClevel: parseEther('1.0'),
         maxClevel: parseEther('1.2'),
         alphaClevel: parseEther('3.0'),
-        hourlyDecayDiscount: parseEther('0.0005'),
+        hourlyDecayDiscount: parseEther('0.005'),
       };
 
       const _tradeBounds: TradeBounds = {
@@ -215,11 +215,33 @@ describe('UnderwriterVault', () => {
       return { base, quote, vault, volOracle, oracleAdapter };
     }
 
-    it('responds to basic function call', async () => {
+    it('initializes vault variables', async () => {
       const { vault } = await loadFixture(vaultSetup);
-      const assetAmount = parseEther('2');
-      const shareAmount = await vault.convertToShares(assetAmount);
-      expect(shareAmount).to.eq(assetAmount);
+
+      let minClevel: BigNumberish;
+      let maxClevel: BigNumberish;
+      let alphaClevel: BigNumberish;
+      let hourlyDecayDiscount: BigNumberish;
+
+      [minClevel, maxClevel, alphaClevel, hourlyDecayDiscount] =
+        await vault.getClevelParams();
+
+      expect(parseFloat(formatEther(minClevel))).to.eq(1.0);
+      expect(parseFloat(formatEther(maxClevel))).to.eq(1.2);
+      expect(parseFloat(formatEther(alphaClevel))).to.eq(3.0);
+      expect(parseFloat(formatEther(hourlyDecayDiscount))).to.eq(0.005);
+
+      let minDTE: BigNumberish;
+      let maxDTE: BigNumberish;
+      let minDelta: BigNumberish;
+      let maxDelta: BigNumberish;
+
+      [minDTE, maxDTE, minDelta, maxDelta] = await vault.getTradeBounds();
+
+      expect(parseFloat(formatEther(minDTE))).to.eq(3.0);
+      expect(parseFloat(formatEther(maxDTE))).to.eq(30.0);
+      expect(parseFloat(formatEther(minDelta))).to.eq(0.1);
+      expect(parseFloat(formatEther(maxDelta))).to.eq(0.7);
     });
 
     describe('#buy functionality', () => {

@@ -322,4 +322,24 @@ contract UnderwriterVaultMock is UnderwriterVault {
         );
         _afterBuy(intel);
     }
+
+    function getTradeBounds()
+        public
+        view
+        returns (uint256, uint256, int256, int256)
+    {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return (l.minDTE, l.maxDTE, l.minDelta, l.maxDelta);
+    }
+
+    function getClevelParams()
+        public
+        view
+        returns (uint256, uint256, uint256, uint256)
+    {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return (l.minClevel, l.maxClevel, l.alphaClevel, l.hourlyDecayDiscount);
+    }
 }
