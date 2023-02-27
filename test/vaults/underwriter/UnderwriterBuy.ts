@@ -25,6 +25,7 @@ import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
+import { BigNumberish } from 'ethers';
 
 describe('UnderwriterVault', () => {
   let deployer: SignerWithAddress;
@@ -36,6 +37,20 @@ describe('UnderwriterVault', () => {
   let vaultImpl: UnderwriterVaultMock;
   let vaultProxy: UnderwriterVaultProxy;
   let vault: UnderwriterVaultMock;
+
+  interface Clevel {
+    minClevel: BigNumberish;
+    maxClevel: BigNumberish;
+    alphaClevel: BigNumberish;
+    hourlyDecayDiscount: BigNumberish;
+  }
+
+  interface TradeBounds {
+    maxDTE: BigNumberish;
+    minDTE: BigNumberish;
+    minDelta: BigNumberish;
+    maxDelta: BigNumberish;
+  }
 
   let base: ERC20Mock;
   let quote: ERC20Mock;
@@ -161,6 +176,21 @@ describe('UnderwriterVault', () => {
       if (log)
         console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
+      const _cLevelParams: Clevel = {
+        minClevel: parseEther('1.0'),
+        maxClevel: parseEther('1.2'),
+        alphaClevel: parseEther('3.0'),
+        hourlyDecayDiscount: parseEther('0.0005'),
+      };
+
+      const _tradeBounds: TradeBounds = {
+        maxDTE: parseEther('30'),
+        minDTE: parseEther('3'),
+        minDelta: parseEther('0.1'),
+        maxDelta: parseEther('0.7'),
+      };
+
+      const timeStamp = new Date().getTime();
       // Vault Proxy setup
       vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
         vaultImpl.address,
@@ -170,6 +200,10 @@ describe('UnderwriterVault', () => {
         'WETH Vault',
         'WETH',
         true,
+        _cLevelParams,
+        _tradeBounds,
+        0,
+        timeStamp,
       );
       await vaultProxy.deployed();
       vault = UnderwriterVaultMock__factory.connect(

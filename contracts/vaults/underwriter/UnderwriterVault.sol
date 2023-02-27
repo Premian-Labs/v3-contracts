@@ -591,7 +591,7 @@ contract UnderwriterVault is
             : params.size.mul(params.strike);
 
         // Check non Zero Strike
-        if (params.strike == 0) revert Vault__AddressZero();
+        if (params.strike == 0) revert Vault__StrikeZero();
         // Check valid maturity
         if (block.timestamp >= params.maturity) revert Vault__OptionExpired();
         // Compute premium and the spread collected
