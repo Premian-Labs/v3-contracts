@@ -112,6 +112,7 @@ export class PoolUtil {
       poolFactory.address,
       exchangeHelper.address,
       wrappedNativeToken,
+      feeReceiver,
     );
     await poolCoreImpl.deployed();
 
@@ -133,6 +134,7 @@ export class PoolUtil {
       poolFactory.address,
       exchangeHelper.address,
       wrappedNativeToken,
+      feeReceiver,
     );
     await poolTradeImpl.deployed();
 
@@ -157,6 +159,7 @@ export class PoolUtil {
         poolFactory.address,
         exchangeHelper.address,
         wrappedNativeToken,
+        feeReceiver,
       );
       await poolCoreMockImpl.deployed();
 

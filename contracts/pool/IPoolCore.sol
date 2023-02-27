@@ -40,7 +40,8 @@ interface IPoolCore is IPoolInternal {
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.
     /// @param p The position key
-    function claim(Position.Key memory p) external;
+    /// @return The amount of claimed fees
+    function claim(Position.Key memory p) external returns (uint256);
 
     /// @notice Returns total claimable fees for the position
     /// @param p The position key

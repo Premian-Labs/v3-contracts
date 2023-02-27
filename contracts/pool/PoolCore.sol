@@ -14,8 +14,9 @@ contract PoolCore is IPoolCore, PoolInternal {
     constructor(
         address factory,
         address exchangeHelper,
-        address wrappedNativeToken
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken) {}
+        address wrappedNativeToken,
+        address feeReceiver
+    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
 
     /// @inheritdoc IPoolCore
     function takerFee(
@@ -52,8 +53,8 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function claim(Position.Key memory p) external {
-        _claim(p);
+    function claim(Position.Key memory p) external returns (uint256) {
+        return _claim(p);
     }
 
     /// @inheritdoc IPoolCore
