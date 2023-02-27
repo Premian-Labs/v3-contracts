@@ -505,12 +505,13 @@ contract UnderwriterVault is
         // compute the updated state, then increment values, then write to storage
         _updateState();
         uint256 spreadRate = a.spread / a.secondsToExpiration;
+        uint256 newLockedAssets = l.isCall ? a.size : a.size.mul(a.strike);
 
         l.spreadUnlockingRate += spreadRate;
         l.spreadUnlockingTicks[a.maturity] += spreadRate;
         l.totalLockedSpread += a.spread;
         l.totalAssets += a.premium + a.spread;
-        l.totalLockedAssets += a.size;
+        l.totalLockedAssets += newLockedAssets;
         l.positionSizes[a.maturity][a.strike] += a.size;
         l.lastTradeTimestamp = block.timestamp;
     }
