@@ -121,20 +121,14 @@ contract UnderwriterVault is
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        if (l.maxMaturity < block.timestamp) return 0;
+
         uint256 current = _getMaturityAfterTimestamp(block.timestamp);
 
-        while (current <= l.maxMaturity) {
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                n += 1;
-            }
-
-            uint256 next = l.maturities.next(current);
-            if (next < current) revert Vault__NonMonotonicMaturities();
-            current = next;
+        while (current <= l.maxMaturity && current != 0) {
+            n += l.maturityToStrikes[current].length();
+            current = l.maturities.next(current);
         }
 
         return n;

@@ -239,6 +239,87 @@ describe('UnderwriterVault', () => {
     });
   });
 
+  describe('#_getNumberOfUnexpiredListings', () => {
+    let startTime: number;
+    let t0: number;
+    let t1: number;
+    let t2: number;
+
+    beforeEach(async () => {
+      startTime = await now();
+      t0 = startTime + 7 * ONE_DAY;
+      t1 = startTime + 10 * ONE_DAY;
+      t2 = startTime + 14 * ONE_DAY;
+
+      const infos = [
+        {
+          maturity: t0,
+          strikes: [500, 1000, 1500, 2000],
+          sizes: [1, 1, 1, 1],
+        },
+        {
+          maturity: t1,
+          strikes: [1000, 1500, 2000],
+          sizes: [1, 1, 1],
+        },
+        {
+          maturity: t2,
+          strikes: [1000, 1500, 2000],
+          sizes: [1, 1, 1],
+        },
+        {
+          maturity: 2 * t2,
+          strikes: [1200, 1500],
+          sizes: [1, 1],
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getNumberOfUnexpiredListings();
+      let expected = 0;
+
+      expect(result).to.eq(expected);
+    });
+
+    it('returns 12 when no options have expired yet', async () => {
+      let result = await vault.getNumberOfUnexpiredListings();
+      let expected = 12;
+
+      expect(result).to.eq(expected);
+    });
+
+    it('returns 8 when the t0 is passed', async () => {
+      await increaseTo(t0 + ONE_DAY);
+
+      let result = await vault.getNumberOfUnexpiredListings();
+      let expected = 8;
+
+      expect(result).to.eq(expected);
+    });
+
+    it('returns 2 when t2 is passed', async () => {
+      await increaseTo(t2 + ONE_DAY);
+
+      let result = await vault.getNumberOfUnexpiredListings();
+      let expected = 2;
+
+      expect(result).to.eq(expected);
+    });
+
+    it('returns 0 when all options are expired', async () => {
+      await increaseTo(2 * t2 + ONE_DAY);
+
+      let result = await vault.getNumberOfUnexpiredListings();
+      let expected = 0;
+
+      expect(result).to.eq(expected);
+    });
+  });
+
   describe('#vault environment after a single trade', () => {
     async function addTrade(
       trader: SignerWithAddress,
