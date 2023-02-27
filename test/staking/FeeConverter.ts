@@ -227,9 +227,9 @@ describe('FeeConverter', () => {
       '0x',
     );
 
-    expect(await usdc.balanceOf(treasury.address)).to.eq(parseEther('2'));
+    expect(await usdc.balanceOf(treasury.address)).to.eq(parseEther('5'));
     expect(await usdc.balanceOf(feeConverter.address)).to.eq(0);
-    expect(await usdc.balanceOf(vxPremia.address)).to.eq(parseEther('8'));
-    expect(bnToNumber((await vxPremia.getAvailableRewards())[0])).to.eq(8);
+    expect(await usdc.balanceOf(vxPremia.address)).to.eq(parseEther('5'));
+    expect(bnToNumber((await vxPremia.getAvailableRewards())[0])).to.eq(5);
   });
 });
