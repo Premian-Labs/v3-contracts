@@ -88,6 +88,24 @@ contract ChainlinkAdapter is
         return _quote(path, mappedTokenIn, mappedTokenOut);
     }
 
+    /// @inheritdoc IOracleAdapter
+    function quoteFrom(
+        address tokenIn,
+        address tokenOut,
+        uint256 timestamp
+    ) external view returns (uint256) {
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPair(tokenIn, tokenOut, false);
+
+        if (path == PricingPath.NONE)
+            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+
+        return _quote(path, mappedTokenIn, mappedTokenOut);
+    }
+
     /// @inheritdoc IChainlinkAdapter
     function pathForPair(
         address tokenA,

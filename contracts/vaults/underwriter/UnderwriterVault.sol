@@ -135,8 +135,7 @@ contract UnderwriterVault is
     }
 
     function _getTotalFairValueExpired(
-        uint256 timestamp,
-        uint256 spot
+        uint256 timestamp
     ) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -152,6 +151,8 @@ contract UnderwriterVault is
         uint256 total = 0;
 
         while (current <= timestamp && current != 0) {
+            spot = _getSpotPrice(current);
+
             for (
                 uint256 i = 0;
                 i < l.maturityToStrikes[current].length();
@@ -176,7 +177,7 @@ contract UnderwriterVault is
             current = l.maturities.next(current);
         }
 
-        return l.isCall ? total.div(spot) : total;
+        return total;
     }
 
     function _getTotalFairValueUnexpired(
@@ -251,11 +252,11 @@ contract UnderwriterVault is
     function _getTotalFairValue() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        uint256 spot = _getSpotPrice(l.oracleAdapter);
+        uint256 spot = _getSpotPrice();
         uint256 timestamp = block.timestamp;
         return
             _getTotalFairValueUnexpired(timestamp, spot) +
-            _getTotalFairValueExpired(timestamp, spot);
+            _getTotalFairValueExpired(timestamp);
     }
 
     function _getTotalLockedSpread() internal view returns (uint256) {
@@ -608,7 +609,7 @@ contract UnderwriterVault is
         // Check valid maturity
         if (block.timestamp >= params.maturity) revert Vault__OptionExpired();
         // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice(l.oracleAdapter);
+        uint256 spotPrice = _getSpotPrice();
 
         uint256 tau = (params.maturity - block.timestamp).div(SECONDSINAYEAR);
 
