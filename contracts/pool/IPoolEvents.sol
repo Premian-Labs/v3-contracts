@@ -38,6 +38,8 @@ interface IPoolEvents {
         uint256 lastFeeRate
     );
 
+    event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
+
     event FillQuote(
         bytes32 indexed tradeQuoteHash,
         address indexed user,

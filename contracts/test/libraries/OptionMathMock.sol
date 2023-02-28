@@ -22,22 +22,38 @@ contract OptionMathMock {
     }
 
     function blackScholesPrice(
-        uint256 spot60x18,
-        uint256 strike60x18,
-        uint256 timeToMaturity60x18,
-        uint256 volAnnualized60x18,
-        uint256 riskFreeRate60x18,
+        uint256 spot,
+        uint256 strike,
+        uint256 timeToMaturity,
+        uint256 volAnnualized,
+        uint256 riskFreeRate,
         bool isCall
     ) external pure returns (uint256) {
         return
             OptionMath.blackScholesPrice(
-                spot60x18,
-                strike60x18,
-                timeToMaturity60x18,
-                volAnnualized60x18,
-                riskFreeRate60x18,
+                spot,
+                strike,
+                timeToMaturity,
+                volAnnualized,
+                riskFreeRate,
                 isCall
             );
+    }
+
+    function d1d2(
+        uint256 spot,
+        uint256 strike,
+        uint256 timeToMaturity,
+        uint256 volAnnualized,
+        uint256 riskFreeRate
+    ) external pure returns (int256 d1, int256 d2) {
+        (d1, d2) = OptionMath.d1d2(
+            spot,
+            strike,
+            timeToMaturity,
+            volAnnualized,
+            riskFreeRate
+        );
     }
 
     function isFriday(uint64 maturity) external pure returns (bool) {

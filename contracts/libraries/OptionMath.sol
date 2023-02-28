@@ -39,6 +39,7 @@ library OptionMath {
     int256 internal constant ONE_I = 1e18;
     int256 internal constant TWO_I = 2e18;
     int256 internal constant FOUR_I = 4e18;
+    int256 internal constant EIGHT_I = 8e18;
     int256 internal constant TEN_I = 10e18;
     int256 internal constant ALPHA = -6.37309208e18;
     int256 internal constant LAMBDA = -0.61228883e18;
@@ -64,7 +65,13 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x)
     /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
     function normalCdf(int256 x) internal pure returns (int256 result) {
-        result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
+        if (x <= -EIGHT_I) {
+            result = int256(0);
+        } else if (x >= EIGHT_I) {
+            result = ONE_I;
+        } else {
+            result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
+        }
     }
 
     /// @notice Approximation of the Probability Density Function.
@@ -102,15 +109,18 @@ library OptionMath {
         uint256 volAnnualized,
         uint256 riskFreeRate
     ) internal pure returns (int256 d1, int256 d2) {
-        uint256 timeScaledVol = timeToMaturity.mul(volAnnualized);
-        uint256 timeScaledVar = timeScaledVol.pow(TWO);
-        uint256 timeScaledRiskFreeRate = timeToMaturity.mul(riskFreeRate);
+        uint256 timeScaledRiskFreeRate = riskFreeRate.mul(timeToMaturity);
+        uint256 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(
+            timeToMaturity
+        );
+        uint256 timeScaledStd = volAnnualized.mul(timeToMaturity.sqrt());
+        int256 lnSpot = spot.div(strike).toInt256().ln();
 
-        d1 =
-            spot.div(strike).toInt256().ln() +
-            timeScaledVar.div(TWO).toInt256() +
-            timeScaledRiskFreeRate.div(timeScaledVol).toInt256();
-        d2 = d1 - timeScaledVol.toInt256();
+        d1 = (lnSpot +
+            timeScaledVariance.toInt256() +
+            timeScaledRiskFreeRate.toInt256()).div(timeScaledStd.toInt256());
+
+        d2 = d1 - timeScaledStd.toInt256();
     }
 
     /// @notice Calculate the price of an option using the Black-Scholes model

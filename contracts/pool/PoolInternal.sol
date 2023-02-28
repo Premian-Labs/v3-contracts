@@ -43,6 +43,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable FACTORY;
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
+    address internal immutable FEE_RECEIVER;
 
     uint256 private constant ONE = 1e18;
 
@@ -59,11 +60,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     constructor(
         address factory,
         address exchangeHelper,
-        address wrappedNativeToken
+        address wrappedNativeToken,
+        address feeReceiver
     ) {
         FACTORY = factory;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+        FEE_RECEIVER = feeReceiver;
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
@@ -266,6 +269,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Position.Key memory p
     ) internal returns (uint256 claimedFees) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.protocolFees > 0) _claimProtocolFees();
+
         Position.Data storage pData = l.positions[p.keyHash()];
         _updateClaimableFees(l, p, pData);
         claimedFees = pData.claimableFees;
@@ -284,6 +290,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             claimedFees,
             pData.lastFeeRate
         );
+    }
+
+    function _claimProtocolFees() internal returns (uint256 claimedFees) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        claimedFees = l.protocolFees;
+
+        if (claimedFees == 0) return 0;
+
+        l.protocolFees = 0;
+        IERC20(l.getPoolToken()).safeTransfer(FEE_RECEIVER, claimedFees);
+        emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -1176,6 +1193,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
 
+        if (l.protocolFees > 0) _claimProtocolFees();
+
         uint256 size = _balanceOf(holder, PoolStorage.LONG);
         if (size == 0) return 0;
 
@@ -1199,6 +1218,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
+
+        if (l.protocolFees > 0) _claimProtocolFees();
 
         uint256 size = _balanceOf(holder, PoolStorage.SHORT);
         if (size == 0) return 0;
@@ -1229,6 +1250,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
         _removeFromFactory(l);
+
+        if (l.protocolFees > 0) _claimProtocolFees();
 
         p.strike = l.strike;
         p.isCall = l.isCallPool;
