@@ -212,6 +212,47 @@ describe('ChainlinkAdapter', () => {
 
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
     });
+
+    it('should only emit UpdatedPathForPair when path is updated', async () => {
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      let [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.not.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: tokens.DAI.address,
+          denomination: tokens.CHAINLINK_ETH.address,
+          feed: bnToAddress(BigNumber.from(0)),
+        },
+      ]);
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+    });
   });
 
   describe('#bathRegisterFeedMappings', async () => {

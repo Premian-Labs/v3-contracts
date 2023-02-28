@@ -93,8 +93,10 @@ abstract contract ChainlinkAdapterInternal is
             }
         }
 
-        l.pathForPair[keyForPair] = path;
-        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
+        if (l.pathForPair[keyForPair] != path) {
+            l.pathForPair[keyForPair] = path;
+            emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
+        }
     }
 
     function _pathForPair(
