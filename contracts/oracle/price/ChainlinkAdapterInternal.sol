@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorInterface, AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -425,7 +425,7 @@ abstract contract ChainlinkAdapterInternal is
         address quote
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
-        int256 price = AggregatorInterface(feed).latestAnswer();
+        (, int256 price, , , ) = AggregatorV3Interface(feed).latestRoundData();
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
         return price.toUint256();
     }

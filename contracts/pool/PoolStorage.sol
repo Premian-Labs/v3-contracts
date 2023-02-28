@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
