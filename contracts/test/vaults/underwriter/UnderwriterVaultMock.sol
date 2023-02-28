@@ -41,10 +41,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function getTotalFairValueExpired(
-        uint256 timestamp,
-        uint256 spot
+        uint256 timestamp
     ) external view returns (uint256) {
-        return _getTotalFairValueExpired(timestamp, spot);
+        return _getTotalFairValueExpired(timestamp);
     }
 
     function getTotalFairValueUnexpired(
@@ -268,6 +267,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function totalLockedSpread() external view returns (uint256) {
         return UnderwriterVaultStorage.layout().totalLockedSpread;
+    }
+
+    function settleMaturity(uint256 maturity) external {
+        return _settleMaturity(maturity);
     }
 
     function calculateClevel(

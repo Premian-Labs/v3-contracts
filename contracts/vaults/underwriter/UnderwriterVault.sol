@@ -83,18 +83,20 @@ contract UnderwriterVault is
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
-    function _getSpotPrice(
-        address oracleAdapterAddr
-    ) internal view returns (uint256) {
+    function _getSpotPrice() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+        return
+            IOracleAdapter(UnderwriterVaultStorage.layout().oracleAdapter)
+                .quote(l.base, l.quote);
+    }
 
-        uint256 price = IOracleAdapter(oracleAdapterAddr).quote(
-            l.base,
-            l.quote
-        );
-
-        return price;
+    function _getSpotPrice(uint256 timestamp) internal view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return
+            IOracleAdapter(UnderwriterVaultStorage.layout().oracleAdapter)
+                .quoteFrom(l.base, l.quote, timestamp);
     }
 
     function _getMaturityAfterTimestamp(
@@ -139,9 +141,10 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        //uint256 spot = _getSpotPrice(l.oracleAdapter);
+        uint256 spot;
         uint256 strike;
         uint256 price;
+        uint256 premium;
         uint256 size;
 
         // Compute fair value for expired unsettled options
@@ -166,7 +169,8 @@ contract UnderwriterVault is
                 );
 
                 size = l.positionSizes[current][strike];
-                total += price.mul(size);
+                premium = l.isCall ? price.div(spot) : price;
+                total += premium.mul(size);
             }
 
             current = l.maturities.next(current);
@@ -702,9 +706,80 @@ contract UnderwriterVault is
         return _quote(params);
     }
 
+    function _settleMaturity(uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 unlockedCollateral;
+        uint256 settlementValue;
+        uint256 positionSize;
+        uint256 strike;
+
+        address listingAddr;
+
+        for (uint256 i = 0; i < l.maturityToStrikes[maturity].length(); i++) {
+            strike = l.maturityToStrikes[maturity].at(i);
+            positionSize = l.positionSizes[maturity][strike];
+            unlockedCollateral = l.isCall
+                ? positionSize
+                : positionSize.mul(strike);
+            l.totalLockedAssets -= unlockedCollateral;
+
+            listingAddr = _getFactoryAddress(strike, maturity);
+            settlementValue = IPool(listingAddr).settle(address(this));
+            l.totalAssets += settlementValue;
+        }
+        // collateral = strike
+        // l.totalLocked
+    }
+
     /// @inheritdoc IUnderwriterVault
-    function settle() external pure override returns (uint256) {
+    function settle() external override returns (uint256) {
         //TODO: remove pure when hydrated
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        // Get last maturity that is greater than the current time
+        uint256 lastExpired;
+
+        if (block.timestamp >= l.maxMaturity) {
+            lastExpired = l.maxMaturity;
+        } else {
+            lastExpired = _getMaturityAfterTimestamp(block.timestamp);
+            lastExpired = l.maturities.prev(lastExpired);
+        }
+
+        uint256 current = l.minMaturity;
+        uint256 next;
+
+        while (current <= lastExpired && current != 0) {
+            _settleMaturity(current);
+
+            // Remove maturity from data structure
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[current].length();
+                i++
+            ) {
+                l.positionSizes[current][
+                    l.maturityToStrikes[current].at(i)
+                ] = 0;
+                l.maturityToStrikes[current].remove(
+                    l.maturityToStrikes[current].at(i)
+                );
+            }
+            l.minMaturity = l.maturities.next(current);
+
+            next = l.maturities.next(current);
+            l.minMaturity = next;
+            l.maturities.remove(current);
+            current = next;
+        }
+
+        // Update max maturities
+        if (lastExpired >= l.maxMaturity) {
+            l.maxMaturity = 0;
+        }
+
         return 0;
     }
 }

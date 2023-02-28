@@ -13,6 +13,8 @@ import {
   vault,
   base,
   vaultSetup,
+  oracleAdapter,
+  quote,
 } from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
@@ -182,10 +184,23 @@ describe('UnderwriterVault', () => {
     let t1 = startTime + 10 * ONE_DAY;
     let t2 = startTime + 14 * ONE_DAY;
     let t3 = startTime + 30 * ONE_DAY;
-    let spot = parseEther('1000');
 
-    beforeEach(async () => {
+    before(async () => {
       const { vault } = await loadFixture(vaultSetup);
+
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t0)
+        .returns(parseUnits('1000', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t1)
+        .returns(parseUnits('1400', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t2)
+        .returns(parseUnits('1600', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t3)
+        .returns(parseUnits('1000', 18));
+
       const infos = [
         {
           maturity: t0,
@@ -213,22 +228,6 @@ describe('UnderwriterVault', () => {
       await vault.setListingsAndSizes(infos);
     });
 
-    it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
-
-      let result = await vault.getTotalFairValueExpired(t0 - ONE_DAY, spot);
-      let expected = 0;
-
-      expect(result).to.eq(parseEther(expected.toString()));
-
-      await vault.setIsCall(false);
-
-      result = await vault.getTotalFairValueExpired(t0 - ONE_DAY, spot);
-      expected = 0;
-
-      expect(result).to.eq(parseEther(expected.toString()));
-    });
-
     let tests = [
       { isCall: true, timestamp: t0 - ONE_DAY, expected: 0 },
       { isCall: false, timestamp: t0 - ONE_DAY, expected: 0 },
@@ -236,22 +235,53 @@ describe('UnderwriterVault', () => {
       { isCall: false, timestamp: t0, expected: 2000 },
       { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.4 },
       { isCall: false, timestamp: t0 + ONE_DAY, expected: 2000 },
-      { isCall: true, timestamp: t2 + ONE_DAY, expected: 1.4 },
-      { isCall: false, timestamp: t2 + ONE_DAY, expected: 4500 },
-      { isCall: true, timestamp: t3, expected: 1.6 },
-      { isCall: false, timestamp: t3, expected: 5500 },
-      { isCall: true, timestamp: t3 + ONE_DAY, expected: 1.6 },
-      { isCall: false, timestamp: t3 + ONE_DAY, expected: 5500 },
+      { isCall: true, timestamp: t1, expected: 0.4 + 2.28571428571 },
+      { isCall: false, timestamp: t1, expected: 2000 + 100 },
+      { isCall: true, timestamp: t1 + ONE_DAY, expected: 0.4 + 2.28571428571 },
+      { isCall: false, timestamp: t1 + ONE_DAY, expected: 2000 + 100 },
+      {
+        isCall: true,
+        timestamp: t2 + ONE_DAY,
+        expected: 2.68571428571 + 0.625,
+      },
+      { isCall: false, timestamp: t2 + ONE_DAY, expected: 2100 + 400 },
+      { isCall: true, timestamp: t3, expected: 2.68571428571 + 0.625 + 0.2 },
+      { isCall: false, timestamp: t3, expected: 2100 + 400 + 1000 },
+      {
+        isCall: true,
+        timestamp: t3 + ONE_DAY,
+        expected: 2.68571428571 + 0.625 + 0.2,
+      },
+      { isCall: false, timestamp: t3 + ONE_DAY, expected: 2100 + 400 + 1000 },
     ];
 
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
         await vault.setIsCall(test.isCall);
-        let result = await vault.getTotalFairValueExpired(test.timestamp, spot);
-        let expected = parseEther(test.expected.toString());
+        let result = await vault.getTotalFairValueExpired(test.timestamp);
+        let delta = test.isCall ? 0.00001 : 0.0;
 
-        expect(result).to.eq(expected);
+        expect(parseFloat(formatEther(result))).to.be.closeTo(
+          test.expected,
+          delta,
+        );
       });
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      let expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+
+      await vault.setIsCall(false);
+
+      result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
     });
   });
 
@@ -264,7 +294,7 @@ describe('UnderwriterVault', () => {
     let t3 = startTime + 30 * ONE_DAY;
     let spot = parseEther('1000');
 
-    beforeEach(async () => {
+    before(async () => {
       const { vault } = await loadFixture(vaultSetup);
       const infos = [
         {
@@ -291,22 +321,6 @@ describe('UnderwriterVault', () => {
         },
       ];
       await vault.setListingsAndSizes(infos);
-    });
-
-    it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
-
-      let result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
-      let expected = 0;
-
-      expect(result).to.eq(parseEther(expected.toString()));
-
-      await vault.setIsCall(false);
-
-      result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
-      expected = 0;
-
-      expect(result).to.eq(parseEther(expected.toString()));
     });
 
     let tests = [
@@ -339,6 +353,22 @@ describe('UnderwriterVault', () => {
           delta,
         );
       });
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      let expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
+
+      await vault.setIsCall(false);
+
+      result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      expected = 0;
+
+      expect(result).to.eq(parseEther(expected.toString()));
     });
   });
 
@@ -472,7 +502,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_maxWithdraw', () => {
+  describe('#maxWithdraw', () => {
     it('maxWithdraw should revert for a zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
@@ -518,7 +548,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_maxRedeem', () => {
+  describe('#maxRedeem', () => {
     it('maxRedeem should revert for a zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
@@ -705,6 +735,10 @@ describe('UnderwriterVault', () => {
       });
     }
   });
+
+  describe('#settle', () => {});
+
+  describe('#settleMaturity', () => {});
 
   describe('test getTotalLockedSpread and updateState', () => {
     /*

@@ -86,6 +86,7 @@ export async function vaultSetup() {
   // Mock Oracle Adapter setup
   oracleAdapter = await deployMockContract(deployer, [
     'function quote(address, address) external view returns (uint256)',
+    'function quoteFrom(address, address, uint256) external view returns (uint256)',
   ]);
 
   await oracleAdapter.mock.quote.returns(parseUnits('1500', 8));
