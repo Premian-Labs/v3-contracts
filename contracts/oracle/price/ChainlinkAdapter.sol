@@ -48,30 +48,6 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IOracleAdapter
-    function tryQuote(
-        address tokenIn,
-        address tokenOut
-    ) external returns (uint256) {
-        (
-            PricingPath path,
-            address mappedTokenIn,
-            address mappedTokenOut
-        ) = _pathForPair(tokenIn, tokenOut, false);
-
-        if (path == PricingPath.NONE) {
-            _upsertPair(tokenIn, tokenOut);
-
-            (path, mappedTokenIn, mappedTokenOut) = _pathForPair(
-                tokenIn,
-                tokenOut,
-                false
-            );
-        }
-
-        return _quoteFrom(path, mappedTokenIn, mappedTokenOut, 0);
-    }
-
-    /// @inheritdoc IOracleAdapter
     function quote(
         address tokenIn,
         address tokenOut

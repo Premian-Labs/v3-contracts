@@ -30,16 +30,6 @@ interface IOracleAdapter {
     /// @param tokenB The token to quote against (quote token)
     function upsertPair(address tokenA, address tokenB) external;
 
-    /// @notice Returns a quote, based on the given token pair. If the pair has not been added
-    ///         the adapter will attempt to add it
-    /// @param tokenIn The exchange token (base token)
-    /// @param tokenOut The token to quote against (quote token)
-    /// @return Spot price of base denominated in quote token
-    function tryQuote(
-        address tokenIn,
-        address tokenOut
-    ) external returns (uint256);
-
     /// @notice Returns a quote, based on the given token pair
     /// @dev Will revert if pair isn't supported
     /// @param tokenIn The exchange token (base token)

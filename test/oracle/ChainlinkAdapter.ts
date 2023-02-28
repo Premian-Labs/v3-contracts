@@ -268,58 +268,6 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#tryQuote', async () => {
-    it('should revert if pair not already supported and there is no feed', async () => {
-      await expect(
-        instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'OracleAdapter__PairCannotBeSupported',
-      );
-    });
-
-    it('should add pair if they are not already supported', async () => {
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      let [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.false;
-
-      await instance.tryQuote(tokenIn.address, tokenOut.address);
-
-      [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.true;
-    });
-
-    it('should return quote for pair', async () => {
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      const quote = await instance.callStatic['tryQuote(address,address)'](
-        tokenIn.address,
-        tokenOut.address,
-      );
-
-      const coingeckoPrice = await getPriceBetweenTokens(
-        { tokenIn: 'ethereum', tokenOut: 'ethereum' },
-        tokenIn,
-        tokenOut,
-      );
-
-      const expected = convertPriceToBigNumberWithDecimals(coingeckoPrice, 18);
-
-      validateQuote(quote, expected);
-    });
-  });
-
   describe('#quote', async () => {
     it('should revert if pair is not supported yet', async () => {
       await expect(
