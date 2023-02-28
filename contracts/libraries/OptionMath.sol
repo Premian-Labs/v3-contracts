@@ -39,6 +39,7 @@ library OptionMath {
     int256 internal constant ONE_I = 1e18;
     int256 internal constant TWO_I = 2e18;
     int256 internal constant FOUR_I = 4e18;
+    int256 internal constant EIGHT_I = 8e18;
     int256 internal constant TEN_I = 10e18;
     int256 internal constant ALPHA = -6.37309208e18;
     int256 internal constant LAMBDA = -0.61228883e18;

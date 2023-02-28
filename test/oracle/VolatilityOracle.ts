@@ -46,9 +46,9 @@ describe('VolatilityOracle', () => {
     it('should fail if a variable is out of bounds', async () => {
       const newParams = [...params];
       newParams[4] = BigNumber.from(1).shl(51).toString();
-      await expect(oracle.formatParams(newParams as any)).to.be.revertedWith(
-        'Out of bounds',
-      );
+      await expect(
+        oracle.formatParams(newParams as any),
+      ).to.be.revertedWithCustomError(oracle, 'VolatilityOracle__OutOfBounds');
     });
   });
 
