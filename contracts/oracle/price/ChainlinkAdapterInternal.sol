@@ -360,13 +360,10 @@ abstract contract ChainlinkAdapterInternal is
         uint256 amount,
         int256 factor
     ) internal pure returns (uint256) {
-        uint256 ten = 10E18;
-        factor = factor * 1E18;
-
         if (factor < 0) {
-            return amount.div(ten.pow((-factor).toUint256()));
+            return amount / (10 ** (-factor).toUint256());
         } else {
-            return amount.mul(ten.pow(factor.toUint256()));
+            return amount * (10 ** factor.toUint256());
         }
     }
 
