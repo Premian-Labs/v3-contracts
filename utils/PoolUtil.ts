@@ -8,6 +8,7 @@ import {
   Premia,
   Premia__factory,
   ExchangeHelper__factory,
+  PoolTrade__factory,
 } from '../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
@@ -73,37 +74,23 @@ export class PoolUtil {
 
     //////////////////////////////////////////////
 
-    /////////////////
+    //////////
     // Pool //
-    /////////////////
+    //////////
+
+    // ExchangeHelper
+    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
+    await exchangeHelper.deployed();
+
+    if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
+
+    // PoolBase
 
     const poolBaseFactory = new PoolBase__factory(deployer);
     const poolBaseImpl = await poolBaseFactory.deploy();
     await poolBaseImpl.deployed();
 
     if (log) console.log(`PoolBase : ${poolBaseImpl.address}`);
-
-    let poolCoreFactory: PoolCore__factory | PoolCoreMock__factory;
-
-    if (isDevMode) {
-      poolCoreFactory = new PoolCoreMock__factory(deployer);
-    } else {
-      poolCoreFactory = new PoolCore__factory(deployer);
-    }
-
-    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-
-    const poolCoreImpl = await poolCoreFactory.deploy(
-      poolFactory.address,
-      exchangeHelper.address,
-      wrappedNativeToken,
-    );
-    await poolCoreImpl.deployed();
-
-    if (log)
-      console.log(
-        `${isDevMode ? 'PoolCoreMock' : 'PoolCore'} : ${poolCoreImpl.address}`,
-      );
 
     let registeredSelectors = [
       premiaDiamond.interface.getSighash('supportsInterface(bytes4)'),
@@ -118,6 +105,19 @@ export class PoolUtil {
       ),
     );
 
+    // PoolCore
+
+    const poolCoreFactory = new PoolCore__factory(deployer);
+    const poolCoreImpl = await poolCoreFactory.deploy(
+      poolFactory.address,
+      exchangeHelper.address,
+      wrappedNativeToken,
+      feeReceiver,
+    );
+    await poolCoreImpl.deployed();
+
+    if (log) console.log(`PoolCore : ${poolCoreImpl.address}`);
+
     registeredSelectors = registeredSelectors.concat(
       await diamondCut(
         premiaDiamond,
@@ -126,6 +126,54 @@ export class PoolUtil {
         registeredSelectors,
       ),
     );
+
+    // PoolTrade
+
+    const poolTradeFactory = new PoolTrade__factory(deployer);
+    const poolTradeImpl = await poolTradeFactory.deploy(
+      poolFactory.address,
+      exchangeHelper.address,
+      wrappedNativeToken,
+      feeReceiver,
+    );
+    await poolTradeImpl.deployed();
+
+    if (log) {
+      console.log(`PoolTrade : ${poolTradeImpl.address}`);
+    }
+
+    registeredSelectors = registeredSelectors.concat(
+      await diamondCut(
+        premiaDiamond,
+        poolTradeImpl.address,
+        poolTradeFactory,
+        registeredSelectors,
+      ),
+    );
+
+    // PoolCoreMock
+
+    if (isDevMode) {
+      const poolCoreMockFactory = new PoolCoreMock__factory(deployer);
+      const poolCoreMockImpl = await poolCoreMockFactory.deploy(
+        poolFactory.address,
+        exchangeHelper.address,
+        wrappedNativeToken,
+        feeReceiver,
+      );
+      await poolCoreMockImpl.deployed();
+
+      if (log) console.log(`PoolCoreMock : ${poolCoreMockImpl.address}`);
+
+      registeredSelectors = registeredSelectors.concat(
+        await diamondCut(
+          premiaDiamond,
+          poolCoreMockImpl.address,
+          poolCoreMockFactory,
+          registeredSelectors,
+        ),
+      );
+    }
 
     return new PoolUtil({ premiaDiamond, poolFactory });
   }
