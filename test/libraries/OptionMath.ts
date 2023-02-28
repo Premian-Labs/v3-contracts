@@ -20,17 +20,34 @@ describe('OptionMath', () => {
   describe('#helperNormal', function () {
     it('test of the normal CDF approximation helper. should equal the expected value', async () => {
       for (const t of [
-        ['-3.0', '0.997937931253017293'],
-        ['-2.', '0.972787315787072559'],
-        ['-1.', '0.836009939237039072'],
-        ['0.', '0.5'],
-        ['1.', '0.153320858106603138'],
-        ['2.', '0.018287098844188538'],
-        ['3.', '0.000638104717830912'],
+        ['-12.0', '1.0000000000000000000'],
+        ['-11.0', '1.0000000000000000000'],
+        ['-10.0', '1.0000000000000000000'],
+        ['-9.0', '1.0000000000000000000'],
+        ['-8.0', '1.0000000000000000000'],
+        ['-7.0', '0.9999999999998924194'],
+        ['-6.0', '0.9999999993614843152'],
+        ['-5.0', '0.9999995540985257003'],
+        ['-4.0', '0.9999419975714723963'],
+        ['-3.0', '0.9979379312530173296'],
+        ['-2.0', '0.9727873157870725596'],
+        ['-1.0', '0.8360099392370390348'],
+        ['0.0', '0.5000000000000000000'],
+        ['1.0', '0.1533208581066031195'],
+        ['2.0', '0.0182870988441885367'],
+        ['3.0', '0.0006381047178309129'],
+        ['4.0', '0.0000041315846469876'],
+        ['5.0', '0.0000000021829044820'],
+        ['6.0', '0.0000000000000231217'],
+        ['7.0', '0.0000000000000000000'],
+        ['8.0', '0.0000000000000000000'],
+        ['9.0', '0.0000000000000000000'],
       ]) {
         expect(
-          formatEther(await instance.helperNormal(parseEther(t[0]))),
-        ).to.eq(t[1]);
+          parseFloat(
+            formatEther(await instance.helperNormal(parseEther(t[0]))),
+          ),
+        ).to.be.closeTo(parseFloat(t[1]), 0.0000000000000001);
       }
     });
   });
@@ -38,17 +55,35 @@ describe('OptionMath', () => {
   describe('#normalCDF', function () {
     it('test of the normal CDF approximation. should equal the expected value', async () => {
       for (const t of [
-        ['-3.0', '0.001350086732406809'],
-        ['-2.', '0.022749891528557989'],
-        ['-1.', '0.158655459434782033'],
-        ['0.', '0.5'],
-        ['1.', '0.841344540565217967'],
-        ['2.', '0.97725010847144201'],
-        ['3.', '0.99864991326759319'],
+        ['-12.0', '0.0000000000000000000'],
+        ['-11.0', '0.0000000000000000000'],
+        ['-10.0', '0.0000000000000000000'],
+        ['-9.0', '0.0000000000000000000'],
+        ['-8.0', '0.0000000000000000000'],
+        ['-7.0', '0.0000000000000537700'],
+        ['-6.0', '0.0000000003192694170'],
+        ['-5.0', '0.0000002240421894160'],
+        ['-4.0', '0.0000310670065872710'],
+        ['-3.0', '0.0013500867324068089'],
+        ['-2.0', '0.0227498915285579868'],
+        ['-1.0', '0.1586554594347820146'],
+        ['0.0', '0.5000000000000000000'],
+        ['1.0', '0.8413445405652180131'],
+        ['2.0', '0.9772501084714420028'],
+        ['3.0', '0.9986499132675932255'],
+        ['4.0', '0.9999689329934127180'],
+        ['5.0', '0.9999997759578105327'],
+        ['6.0', '0.9999999996807306113'],
+        ['7.0', '0.9999999999999462652'],
+        ['8.0', '1.0000000000000000000'],
+        ['9.0', '1.0000000000000000000'],
+        ['10.0', '1.0000000000000000000'],
+        ['11.0', '1.0000000000000000000'],
+        ['12.0', '1.0000000000000000000'],
       ]) {
-        expect(formatEther(await instance.normalCdf(parseEther(t[0])))).to.eq(
-          t[1],
-        );
+        expect(
+          parseFloat(formatEther(await instance.normalCdf(parseEther(t[0])))),
+        ).to.be.closeTo(parseFloat(t[1]), 0.0000000000000001);
       }
     });
   });
@@ -70,62 +105,113 @@ describe('OptionMath', () => {
       }
     });
   });
+
   describe('#blackScholesPrice', function () {
-    it('test of the Black-Scholes formula', async () => {
-      const strike = parseEther('1.');
-      const timeToMaturity = parseEther('1.');
-      const volAnnualized = parseEther('1.');
-      const riskFreeRate = parseEther('0.1');
+    const spot = parseEther('1.3');
+    const strike = parseEther('0.8');
+    const timeToMaturity = parseEther('0.53');
+    const volAnnualized = parseEther('0.732');
+    const riskFreeRate = parseEther('0.13');
+    let cases: [string, string, boolean][];
+    it('test of the Black-Scholes formula for varying spot prices', async () => {
+      cases = [
+        // call
+        ['0.001', '0.0', true],
+        ['0.5', '0.041651656896334266', true],
+        ['0.8', '0.19044728282561157', true],
+        ['1.0', '0.3361595989775169', true],
+        ['1.2', '0.5037431520530627', true],
+        ['2.2', '1.45850009070196', true],
+        ['11.000', '10.253264047161903', true],
+        // put
+        ['0.001', '0.745736013930399', false],
+        ['0.5', '0.28838767082673333', false],
+        ['0.8', '0.1371832967560106', false],
+        ['1.0', '0.08289561290791586', false],
+        ['1.2', '0.05047916598346175', false],
+        ['2.2', '0.005236104632358806', false],
+        ['11.000', '6.109230231221387e-08', false],
+      ];
+      for (const t of cases) {
+        const result = formatEther(
+          await instance.blackScholesPrice(
+            parseEther(t[0]),
+            strike,
+            timeToMaturity,
+            volAnnualized,
+            riskFreeRate,
+            t[2],
+          ),
+        );
+        expect(parseFloat(result)).to.be.closeTo(parseFloat(t[1]), 0.00001);
+      }
+    });
+    it('test of the Black-Scholes formula for varying vols', async () => {
+      cases = [
+        // call
+        ['0.001', '0.553263986069601', true],
+        ['0.5', '0.5631148171877948', true],
+        ['0.8', '0.6042473564031341', true],
+        ['1.0', '0.6420186597956653', true],
+        ['1.2', '0.6834990708190316', true],
+        ['2.2', '0.8941443650200548', true],
+        ['11.0', '1.2999387852636883', true],
+        // put
+        ['0.001', '0.0', false],
+        ['0.5', '0.009850831118193633', false],
+        ['0.8', '0.05098337033353306', false],
+        ['1.0', '0.08875467372606433', false],
+        ['1.2', '0.13023508474943063', false],
+        ['2.2', '0.34088037895045364', false],
+        ['11.0', '0.7466747991940875', false],
+      ];
+      for (const t of cases) {
+        const result = formatEther(
+          await instance.blackScholesPrice(
+            spot,
+            strike,
+            timeToMaturity,
+            parseEther(t[0]),
+            riskFreeRate,
+            t[2],
+          ),
+        );
+        expect(parseFloat(result)).to.be.closeTo(parseFloat(t[1]), 0.00001);
+      }
+    });
+  });
 
-      it('call', async () => {
-        for (const t of [
-          ['0.5', '0.10733500381254471'],
-          ['0.8', '0.27626266618753637'],
-          ['1.0', '0.4139595806172845'],
-          ['1.2', '0.5651268636770026'],
-          ['2.2', '1.4293073801560254'],
-        ]) {
-          const result = formatEther(
-            await instance.blackScholesPrice(
-              parseEther(t[0]),
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              true,
-            ),
-          );
-          expect(parseFloat(result) - parseFloat(t[1])).to.be.closeTo(
-            0,
-            0.000001,
-          );
-        }
-      });
-
-      it('put', async () => {
-        for (const t of [
-          ['0.5', '0.5121724218485042'],
-          ['0.8', '0.3811000842234958'],
-          ['1.0', '0.3187969986532439'],
-          ['1.2', '0.26996428171296216'],
-          ['2.2', '0.13414479819198477'],
-        ]) {
-          const result = formatEther(
-            await instance.blackScholesPrice(
-              parseEther(t[0]),
-              strike,
-              timeToMaturity,
-              volAnnualized,
-              riskFreeRate,
-              false,
-            ),
-          );
-          expect(parseFloat(result) - parseFloat(t[1])).to.be.closeTo(
-            0,
-            0.000001,
-          );
-        }
-      });
+  describe('#d1d2', function () {
+    const strike = parseEther('0.8');
+    const timeToMaturity = parseEther('0.95');
+    const volAnnualized = parseEther('1.61');
+    const riskFreeRate = parseEther('0.021');
+    it('test of the d1d2 function for varying spot prices', async () => {
+      let cases: [string, string, string][];
+      cases = [
+        ['0.5', '0.49781863364936835', '-1.0714152558648748'],
+        ['0.8', '0.7973301547720898', '-0.7719037347421535'],
+        ['1.0', '0.9395291939371717', '-0.6297046955770715'],
+        ['1.2', '1.0557142687129861', '-0.5135196208012571'],
+        ['2.2', '1.441976512742106', '-0.12725737677213722'],
+      ];
+      for (const t of cases) {
+        let [d1, d2] = await instance.d1d2(
+          parseEther(t[0]),
+          strike,
+          timeToMaturity,
+          volAnnualized,
+          riskFreeRate,
+        );
+        expect(parseFloat(formatEther(d1)) - parseFloat(t[1])).to.be.closeTo(
+          0,
+          0.00000000000001,
+        );
+        expect(parseFloat(formatEther(d2)) - parseFloat(t[2])).to.be.closeTo(
+          0,
+          0.00000000000001,
+        );
+      }
     });
   });
 

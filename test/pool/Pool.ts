@@ -8,12 +8,7 @@ import {
   IPoolMock__factory,
 } from '../../typechain';
 import { BigNumber } from 'ethers';
-import {
-  keccak256,
-  parseEther,
-  parseUnits,
-  toUtf8Bytes,
-} from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
   deployMockContract,
@@ -45,6 +40,7 @@ describe('Pool', () => {
   let deployer: SignerWithAddress;
   let lp: SignerWithAddress;
   let trader: SignerWithAddress;
+  let feeReceiver: SignerWithAddress;
 
   let callPool: IPoolMock;
   let putPool: IPoolMock;
@@ -67,7 +63,7 @@ describe('Pool', () => {
   let getTradeQuote: () => Promise<TradeQuote>;
 
   before(async () => {
-    [deployer, lp, trader] = await ethers.getSigners();
+    [deployer, lp, trader, feeReceiver] = await ethers.getSigners();
 
     base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
@@ -82,7 +78,7 @@ describe('Pool', () => {
       deployer,
       tokens.WETH.address,
       oracleAdapter.address,
-      deployer.address,
+      feeReceiver.address,
       parseEther('0.1'), // 10%
       true,
       true,
@@ -874,13 +870,15 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.exercise(trader.address);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
       expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(callPool.address)).to.eq(
-        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
       expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
         ONE_ETHER,
@@ -918,13 +916,15 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.exercise(trader.address);
 
       const exerciseValue = 0;
       expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(callPool.address)).to.eq(
-        ONE_ETHER.add(totalPremium).sub(exerciseValue),
+        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
       expect(await callPool.balanceOf(callPool.address, TokenType.SHORT)).to.eq(
         ONE_ETHER,
@@ -979,6 +979,7 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.settle(trader.address);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
@@ -986,8 +987,9 @@ describe('Pool', () => {
         ONE_ETHER.add(totalPremium).sub(exerciseValue),
       );
       expect(await base.balanceOf(callPool.address)).to.eq(
-        exerciseValue.add(takerFee),
+        exerciseValue.add(takerFee).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
       expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
         0,
       );
@@ -1035,6 +1037,7 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.settle(trader.address);
 
       const exerciseValue = BigNumber.from(0);
@@ -1042,8 +1045,9 @@ describe('Pool', () => {
         ONE_ETHER.add(totalPremium).sub(exerciseValue),
       );
       expect(await base.balanceOf(callPool.address)).to.eq(
-        exerciseValue.add(takerFee),
+        exerciseValue.add(takerFee).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
       expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
         0,
       );
@@ -1093,18 +1097,17 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.settlePosition(pKey);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
-      const protocolFees = await callPool.protocolFees();
 
       expect(await base.balanceOf(trader.address)).to.eq(0);
-      expect(await base.balanceOf(callPool.address)).to.eq(
-        exerciseValue.add(protocolFees),
-      );
+      expect(await base.balanceOf(callPool.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(pKey.operator)).to.eq(
         ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
 
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         ONE_ETHER,
@@ -1147,18 +1150,17 @@ describe('Pool', () => {
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
+      const protocolFees = await callPool.protocolFees();
       await callPool.settlePosition(pKey);
 
       const exerciseValue = BigNumber.from(0);
-      const protocolFees = await callPool.protocolFees();
 
       expect(await base.balanceOf(trader.address)).to.eq(0);
-      expect(await base.balanceOf(callPool.address)).to.eq(
-        exerciseValue.add(protocolFees),
-      );
+      expect(await base.balanceOf(callPool.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(pKey.operator)).to.eq(
         ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
 
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         ONE_ETHER,
@@ -1437,12 +1439,15 @@ describe('Pool', () => {
 
       const claimableFees = await callPool.getClaimableFees(pKey);
 
+      const protocolFees = await callPool.protocolFees();
       await callPool.connect(lp).claim(pKey);
 
       expect(await base.balanceOf(pKey.operator)).to.eq(claimableFees);
       expect(await base.balanceOf(callPool.address)).to.eq(
-        ONE_ETHER.add(totalPremium).sub(claimableFees),
+        ONE_ETHER.add(totalPremium).sub(claimableFees).sub(protocolFees),
       );
+      expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         ONE_ETHER,
       );
