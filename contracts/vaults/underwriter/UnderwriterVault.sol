@@ -259,24 +259,24 @@ contract UnderwriterVault is
     function _getTotalLockedSpread() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        if (l.maxMaturity <= l.lastSpreadUnlockUpdate) return 0;
+
         uint256 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
-        uint256 next;
 
         uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         uint256 spreadUnlockingRate = l.spreadUnlockingRate;
         // TODO: double check handling of negative total locked spread
         uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (current <= block.timestamp) {
+        while (current <= block.timestamp && current != 0) {
             totalLockedSpread -=
                 (current - lastSpreadUnlockUpdate) *
                 spreadUnlockingRate;
 
             spreadUnlockingRate -= l.spreadUnlockingTicks[current];
             lastSpreadUnlockUpdate = current;
-            next = l.maturities.next(current);
-            if (next < current) revert Vault__NonMonotonicMaturities();
-            current = next;
+            current = l.maturities.next(current);
         }
         totalLockedSpread -=
             (block.timestamp - lastSpreadUnlockUpdate) *
@@ -304,31 +304,33 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        uint256 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
-        uint256 next;
+        // TODO: double check that l.maxMaturity is updated correctly during processing of a trade
+        if (l.maxMaturity > l.lastSpreadUnlockUpdate) {
+            uint256 current = _getMaturityAfterTimestamp(
+                l.lastSpreadUnlockUpdate
+            );
 
-        uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
-        uint256 spreadUnlockingRate = l.spreadUnlockingRate;
-        uint256 totalLockedSpread = l.totalLockedSpread;
+            uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
+            uint256 spreadUnlockingRate = l.spreadUnlockingRate;
+            uint256 totalLockedSpread = l.totalLockedSpread;
 
-        while (current <= block.timestamp) {
+            while (current <= block.timestamp && current != 0) {
+                totalLockedSpread -=
+                    (current - lastSpreadUnlockUpdate) *
+                    spreadUnlockingRate;
+
+                spreadUnlockingRate -= l.spreadUnlockingTicks[current];
+                lastSpreadUnlockUpdate = current;
+                current = l.maturities.next(current);
+            }
             totalLockedSpread -=
-                (current - lastSpreadUnlockUpdate) *
+                (block.timestamp - lastSpreadUnlockUpdate) *
                 spreadUnlockingRate;
 
-            spreadUnlockingRate -= l.spreadUnlockingTicks[current];
-            lastSpreadUnlockUpdate = current;
-            next = l.maturities.next(current);
-            if (next < current) revert Vault__NonMonotonicMaturities();
-            current = next;
+            l.totalLockedSpread = totalLockedSpread;
+            l.spreadUnlockingRate = spreadUnlockingRate;
+            l.lastSpreadUnlockUpdate = block.timestamp;
         }
-        totalLockedSpread -=
-            (block.timestamp - lastSpreadUnlockUpdate) *
-            spreadUnlockingRate;
-
-        l.totalLockedSpread = totalLockedSpread;
-        l.spreadUnlockingRate = spreadUnlockingRate;
-        l.lastSpreadUnlockUpdate = block.timestamp;
     }
 
     function _convertToShares(
