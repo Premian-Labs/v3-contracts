@@ -6,6 +6,8 @@ import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
+  ChainlinkOraclePriceStub,
+  ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
 
 import {
@@ -14,14 +16,15 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-import { now } from '../../utils/time';
+import { increaseTo, now, revertToSnapshotAfterEach } from '../../utils/time';
 import { Token, feeds, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16600000;
+const blockNumber = 16600000; // Fri Feb 10 2023 17:59:11 GMT+0000
+const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 enum PricingPath {
   NONE,
@@ -125,6 +128,7 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
   let instance: ChainlinkAdapter;
+  let stub: ChainlinkOraclePriceStub;
 
   before(async () => {
     await ethers.provider.send('hardhat_reset', [
@@ -352,6 +356,233 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
+  describe('#quoteFrom', async () => {
+    it('should revert if target is 0', async () => {
+      await expect(
+        instance.quoteFrom(tokens.WETH.address, tokens.DAI.address, 0),
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
+    });
+
+    it('should revert if target > block.timestamp', async () => {
+      const blockTimestamp = await now();
+
+      await expect(
+        instance.quoteFrom(
+          tokens.WETH.address,
+          tokens.DAI.address,
+          blockTimestamp + 1,
+        ),
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
+    });
+
+    const stubCoin = bnToAddress(BigNumber.from(100));
+
+    describe('#when price is stale', async () => {
+      revertToSnapshotAfterEach(async () => {
+        stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+        await instance.batchRegisterFeedMappings([
+          {
+            token: stubCoin,
+            denomination: tokens.CHAINLINK_USD.address,
+            feed: stub.address,
+          },
+        ]);
+
+        await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+      });
+
+      it('should revert when called within 12 hours of target time', async () => {
+        await stub.setup([100000000000], [target - 90000]);
+
+        await expect(
+          instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+        ).to.be.revertedWithCustomError(
+          instance,
+          'ChainlinkAdapter__PriceAfterTargetIsStale',
+        );
+      });
+
+      it('should return stale price when called 12 hours after target time', async () => {
+        await increaseTo(target + 43200);
+        await stub.setup([100000000000], [target - 90000]);
+
+        const stalePrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(stalePrice.mul(1e10)); // convert to 1E18
+      });
+    });
+
+    describe('#when price is fresh', async () => {
+      revertToSnapshotAfterEach(async () => {
+        stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+        await instance.batchRegisterFeedMappings([
+          {
+            token: stubCoin,
+            denomination: tokens.CHAINLINK_USD.address,
+            feed: stub.address,
+          },
+        ]);
+
+        await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+      });
+
+      it('should return price closest to target when called within 12 hours of target time', async () => {
+        await stub.setup([1000000000000], [target + 100]);
+        let freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [100000000000, 200000000000, 300000000000],
+          [target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 50, target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 100, target + 50, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000],
+          [target - 100, target - 50],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+      });
+
+      it('should return price closest to target when called 12 hours after target time', async () => {
+        await increaseTo(target + 43200);
+        await stub.setup([1000000000000], [target + 100]);
+        let freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [100000000000, 200000000000, 300000000000],
+          [target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 50, target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 100, target + 50, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          [50000000000, 100000000000],
+          [target - 100, target - 50],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+      });
+    });
+  });
+
   for (let i = 0; i < paths.length; i++) {
     describe(`${PricingPath[paths[i][0].path]}`, () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
@@ -449,13 +680,66 @@ describe('ChainlinkAdapter', () => {
               validateQuote(quote, expected);
             });
           });
+
+          describe('#quoteFrom', async () => {
+            it('should return quote for pair from target', async () => {
+              // although the adapter will attepmt to return the price closest to the target
+              // the time of the update will likely be before or after the target.
+              TRESHOLD_PERCENTAGE = 4;
+
+              let _tokenIn = Object.assign({}, tokenIn);
+              let _tokenOut = Object.assign({}, tokenOut);
+
+              let networks = { tokenIn: 'ethereum', tokenOut: 'ethereum' };
+
+              const quoteFrom = await instance.quoteFrom(
+                _tokenIn.address,
+                _tokenOut.address,
+                target,
+              );
+
+              if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
+                networks.tokenIn = 'coingecko';
+                _tokenIn.address = 'ethereum';
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'ethereum';
+              }
+
+              if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
+                networks.tokenIn = 'coingecko';
+                _tokenIn.address = 'bitcoin';
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'bitcoin';
+              }
+
+              const coingeckoPrice = await getPriceBetweenTokens(
+                networks,
+                _tokenIn,
+                _tokenOut,
+                target,
+              );
+
+              const expected = convertPriceToBigNumberWithDecimals(
+                coingeckoPrice,
+                18,
+              );
+
+              validateQuote(quoteFrom, expected);
+            });
+          });
         });
       }
     });
   }
 });
 
-const TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
+let TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
 
 function validateQuote(quote: BigNumber, expected: BigNumber) {
   const threshold = expected.mul(TRESHOLD_PERCENTAGE * 10).div(100 * 10);
