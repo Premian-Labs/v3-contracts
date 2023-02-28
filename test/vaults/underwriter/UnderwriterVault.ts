@@ -113,17 +113,15 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#_getNumberOfUnexpiredListings', () => {
-    let startTime: number;
-    let t0: number;
-    let t1: number;
-    let t2: number;
+    let startTime = 100000;
+
+    let t0 = startTime + 7 * ONE_DAY;
+    let t1 = startTime + 10 * ONE_DAY;
+    let t2 = startTime + 14 * ONE_DAY;
+    let t3 = startTime + 30 * ONE_DAY;
 
     beforeEach(async () => {
       const { vault } = await loadFixture(vaultSetup);
-      startTime = await now();
-      t0 = startTime + 7 * ONE_DAY;
-      t1 = startTime + 10 * ONE_DAY;
-      t2 = startTime + 14 * ONE_DAY;
 
       const infos = [
         {
@@ -159,37 +157,26 @@ describe('UnderwriterVault', () => {
       expect(result).to.eq(expected);
     });
 
-    it('returns 12 when no options have expired yet', async () => {
-      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
-      let expected = 12;
+    let tests = [
+      { timestamp: t0 - ONE_DAY, expected: 12 },
+      { timestamp: t0, expected: 8 },
+      { timestamp: t0 + ONE_DAY, expected: 8 },
+      { timestamp: t2 + ONE_DAY, expected: 2 },
+      { timestamp: t3, expected: 0 },
+      { timestamp: t3 + ONE_DAY, expected: 0 },
+    ];
 
-      expect(result).to.eq(expected);
-    });
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when timestamp=${test.timestamp}`, async () => {
+        let result = await vault.getNumberOfUnexpiredListings(test.timestamp);
 
-    it('returns 8 when the t0 is passed', async () => {
-      let result = await vault.getNumberOfUnexpiredListings(t0 + ONE_DAY);
-      let expected = 8;
-
-      expect(result).to.eq(expected);
-    });
-
-    it('returns 2 when t2 is passed', async () => {
-      let result = await vault.getNumberOfUnexpiredListings(t2 + ONE_DAY);
-      let expected = 2;
-
-      expect(result).to.eq(expected);
-    });
-
-    it('returns 0 when all options are expired', async () => {
-      let result = await vault.getNumberOfUnexpiredListings(2 * t2 + ONE_DAY);
-      let expected = 0;
-
-      expect(result).to.eq(expected);
+        expect(result).to.eq(test.expected);
+      });
     });
   });
 
-  describe('#_getTotalFairValueExpired()', () => {
-    let startTime = bnToNumber(BigNumber.from('100000'));
+  describe('#_getTotalFairValueExpired', () => {
+    let startTime = 100000;
 
     let t0 = startTime + 7 * ONE_DAY;
     let t1 = startTime + 10 * ONE_DAY;
@@ -245,10 +232,14 @@ describe('UnderwriterVault', () => {
     let tests = [
       { isCall: true, timestamp: t0 - ONE_DAY, expected: 0 },
       { isCall: false, timestamp: t0 - ONE_DAY, expected: 0 },
+      { isCall: true, timestamp: t0, expected: 0.4 },
+      { isCall: false, timestamp: t0, expected: 2000 },
       { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.4 },
       { isCall: false, timestamp: t0 + ONE_DAY, expected: 2000 },
       { isCall: true, timestamp: t2 + ONE_DAY, expected: 1.4 },
       { isCall: false, timestamp: t2 + ONE_DAY, expected: 4500 },
+      { isCall: true, timestamp: t3, expected: 1.6 },
+      { isCall: false, timestamp: t3, expected: 5500 },
       { isCall: true, timestamp: t3 + ONE_DAY, expected: 1.6 },
       { isCall: false, timestamp: t3 + ONE_DAY, expected: 5500 },
     ];
@@ -264,10 +255,8 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_getTotalFairValueUnexpired()', () => {
+  describe('#_getTotalFairValueUnexpired', () => {
     let startTime = 100000;
-
-    console.log(startTime);
 
     let t0 = startTime + 7 * ONE_DAY;
     let t1 = startTime + 10 * ONE_DAY;
@@ -323,10 +312,14 @@ describe('UnderwriterVault', () => {
     let tests = [
       { isCall: true, timestamp: t0 - ONE_DAY, expected: 1.697282885495867 },
       { isCall: false, timestamp: t0 - ONE_DAY, expected: 5597.282885495868 },
+      { isCall: true, timestamp: t0, expected: 1.2853079354050814 },
+      { isCall: false, timestamp: t0, expected: 3585.3079354050824 },
       { isCall: true, timestamp: t0 + ONE_DAY, expected: 1.2755281851488665 },
       { isCall: false, timestamp: t0 + ONE_DAY, expected: 3575.528185148866 },
       { isCall: true, timestamp: t2 + ONE_DAY, expected: 0.24420148996961677 },
       { isCall: false, timestamp: t2 + ONE_DAY, expected: 1044.2014899696167 },
+      { isCall: true, timestamp: t3, expected: 0 },
+      { isCall: false, timestamp: t3, expected: 0 },
       { isCall: true, timestamp: t3 + ONE_DAY, expected: 0 },
       { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
     ];
