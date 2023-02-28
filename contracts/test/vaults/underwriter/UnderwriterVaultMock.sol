@@ -345,4 +345,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
             .layout();
         return (l.minCLevel, l.maxCLevel, l.alphaCLevel, l.hourlyDecayDiscount);
     }
+
+    function getLastTradeTimestamp() public view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.lastTradeTimestamp;
+    }
 }

@@ -11,63 +11,79 @@ import {
   VolatilityOracleMock,
   VolatilityOracleMock__factory,
 } from '../../../typechain';
-import { BigNumberish } from 'ethers';
+import { PoolUtil } from '../../../utils/PoolUtil';
+import { getValidMaturity } from '../../../utils/time';
+import { OrderType, PoolKey } from '../../../utils/sdk/types';
+import { tokens } from '../../../utils/addresses';
+import { BigNumber, BigNumberish } from 'ethers';
 import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
-import { getContractAddress, parseEther, parseUnits } from 'ethers/lib/utils';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
 
-export let deployer: SignerWithAddress;
-export let caller: SignerWithAddress;
-export let receiver: SignerWithAddress;
-export let lp: SignerWithAddress;
-export let trader: SignerWithAddress;
+let deployer: SignerWithAddress;
+let caller: SignerWithAddress;
+let receiver: SignerWithAddress;
+let lp: SignerWithAddress;
+let trader: SignerWithAddress;
 
-export let vaultImpl: UnderwriterVaultMock;
-export let vaultProxy: UnderwriterVaultProxy;
-export let vault: UnderwriterVaultMock;
+let vaultImpl: UnderwriterVaultMock;
+let vaultProxy: UnderwriterVaultProxy;
+let vault: UnderwriterVaultMock;
 
-export interface Clevel {
+// Pool Specs
+let p: PoolUtil;
+let maturity: number;
+let strike: BigNumber;
+let isCall: boolean;
+let poolKey: PoolKey;
+
+interface Clevel {
   minClevel: BigNumberish;
   maxClevel: BigNumberish;
   alphaClevel: BigNumberish;
   hourlyDecayDiscount: BigNumberish;
 }
 
-export interface TradeBounds {
+interface TradeBounds {
   maxDTE: BigNumberish;
   minDTE: BigNumberish;
   minDelta: BigNumberish;
   maxDelta: BigNumberish;
 }
 
-export let base: ERC20Mock;
-export let quote: ERC20Mock;
-export let long: ERC20Mock;
-export let short: ERC20Mock;
+let base: ERC20Mock;
+let quote: ERC20Mock;
+let longCall: ERC20Mock;
+let shortCall: ERC20Mock;
 
-export let oracleAdapter: MockContract;
-export let factory: MockContract;
-export let volOracle: VolatilityOracleMock;
-export let volOracleProxy: ProxyUpgradeableOwnable;
+let oracleAdapter: MockContract;
+let volOracle: VolatilityOracleMock;
+let volOracleProxy: ProxyUpgradeableOwnable;
 
-export const log = true;
+const log = true;
+
 export async function vaultSetup() {
   [deployer, caller, receiver, lp, trader] = await ethers.getSigners();
 
+  //=====================================================================================
+  // Deploy ERC20's
+
   base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
   quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
-  long = await new ERC20Mock__factory(deployer).deploy('Long', 18);
-  short = await new ERC20Mock__factory(deployer).deploy('Short', 18);
+  longCall = await new ERC20Mock__factory(deployer).deploy('Long', 18);
+  shortCall = await new ERC20Mock__factory(deployer).deploy('Short', 18);
 
   await base.deployed();
   await quote.deployed();
-  await long.deployed();
-  await short.deployed();
+  await longCall.deployed();
+  await shortCall.deployed();
 
+  //=====================================================================================
   // Hydrate all accounts with WETH and USDC
+
   await base.mint(deployer.address, parseEther('1000'));
   await quote.mint(deployer.address, parseEther('1000000'));
 
@@ -83,18 +99,22 @@ export async function vaultSetup() {
   await base.mint(trader.address, parseEther('1000'));
   await quote.mint(trader.address, parseEther('1000000'));
 
+  //=====================================================================================
   // Mock Oracle Adapter setup
+
   oracleAdapter = await deployMockContract(deployer, [
     'function quote(address, address) external view returns (uint256)',
     'function quoteFrom(address, address, uint256) external view returns (uint256)',
   ]);
 
-  await oracleAdapter.mock.quote.returns(parseUnits('1500', 8));
+  await oracleAdapter.mock.quote.returns(parseUnits('1500', 18));
 
   if (log)
     console.log(`Mock oracelAdapter Implementation : ${oracleAdapter.address}`);
 
+  //=====================================================================================
   // Mock Volatility Oracle setup
+
   const impl = await new VolatilityOracleMock__factory(deployer).deploy();
 
   volOracleProxy = await new ProxyUpgradeableOwnable__factory(deployer).deploy(
@@ -139,24 +159,50 @@ export async function vaultSetup() {
 
   if (log) console.log(`volOracle Address : ${volOracle.address}`);
 
-  // Mock Pool setup
-  const transactionCount = await deployer.getTransactionCount();
-  const poolAddress = getContractAddress({
-    from: deployer.address,
-    nonce: transactionCount,
+  //=====================================================================================
+  // Mock Factory/Pool setup
+
+  strike = parseEther('1500'); // ATM
+  maturity = await getValidMaturity(2, 'weeks');
+  isCall = true;
+
+  poolKey = {
+    base: base.address,
+    quote: quote.address,
+    oracleAdapter: oracleAdapter.address,
+    strike,
+    maturity: BigNumber.from(maturity),
+    isCallPool: isCall,
+  };
+
+  // Helper function to launch v3
+  p = await PoolUtil.deploy(
+    deployer, // signer
+    tokens.WETH.address, // wrappedNativeToken
+    oracleAdapter.address, // chainlinkAdapter
+    deployer.address, // feeReceiver
+    parseEther('0.1'), // 10% discountPerPool
+    true, // log
+    true, // isDevMode
+  );
+
+  // Deploy Mock Pool WETH/USDC 1500 Call (ATM) exp. 2 weeks
+  const tx = await p.poolFactory.deployPool(poolKey, {
+    value: parseEther('10'),
   });
 
-  // Mock Option Pool setup
-  factory = await deployMockContract(deployer, [
-    'function getPoolAddress () external view returns (address)',
-  ]);
-  await factory.mock.getPoolAddress.returns(poolAddress);
-  if (log) console.log(`Mock Pool Address : ${poolAddress}`);
+  const r = await tx.wait(1);
+  const callPoolAddress = (r as any).events[0].args.poolAddress;
 
+  if (log)
+    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${callPoolAddress}`);
+
+  //=====================================================================================
   // Mock Vault setup
+
   vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
     volOracle.address,
-    factory.address,
+    p.poolFactory.address,
   );
   await vaultImpl.deployed();
   if (log)
@@ -176,7 +222,7 @@ export async function vaultSetup() {
     maxDelta: parseEther('0.7'),
   };
 
-  const timeStamp = new Date().getTime();
+  const lastTimeStamp = Math.floor(new Date().getTime() / 1000);
   // Vault Proxy setup
   vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
     vaultImpl.address,
@@ -189,11 +235,26 @@ export async function vaultSetup() {
     _cLevelParams,
     _tradeBounds,
     0,
-    timeStamp,
+    lastTimeStamp,
   );
   await vaultProxy.deployed();
   vault = UnderwriterVaultMock__factory.connect(vaultProxy.address, deployer);
   if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
 
-  return { base, quote, vault, volOracle, oracleAdapter };
+  return {
+    deployer,
+    caller,
+    receiver,
+    lp,
+    trader,
+    base,
+    quote,
+    vault,
+    volOracle,
+    oracleAdapter,
+    lastTimeStamp,
+    p,
+    poolKey,
+    callPoolAddress,
+  };
 }

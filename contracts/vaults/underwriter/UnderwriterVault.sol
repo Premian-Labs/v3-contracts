@@ -232,12 +232,12 @@ contract UnderwriterVault is
                 listings.timeToMaturities
             );
 
-        for (uint256 i = 0; i < n; i++) {
+        for (uint256 x = 0; x < n; x++) {
             price = OptionMath.blackScholesPrice(
                 spot,
-                listings.strikes[i],
-                listings.timeToMaturities[i],
-                uint256(sigmas[i]),
+                listings.strikes[x],
+                listings.timeToMaturities[x],
+                uint256(sigmas[x]),
                 0,
                 l.isCall
             );
@@ -250,8 +250,6 @@ contract UnderwriterVault is
     }
 
     function _getTotalFairValue() internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
         uint256 spot = _getSpotPrice();
         uint256 timestamp = block.timestamp;
         return
@@ -327,12 +325,12 @@ contract UnderwriterVault is
             l.maturityToStrikes[maturity].add(strike);
     }
 
-    function _removeListing(uint256 strike, uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+    // function _removeListing(uint256 strike, uint256 maturity) internal {
+    //     UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+    //         .layout();
 
-        // Remove maturity if there are no strikes left
-    }
+    //     // Remove maturity if there are no strikes left
+    // }
 
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
