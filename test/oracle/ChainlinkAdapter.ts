@@ -310,13 +310,17 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#quote', async () => {
-    it('should revert if pair is not supported yet', async () => {
+    it('should revert if pair is not supported', async () => {
       await expect(
-        instance.quote(tokens.WETH.address, tokens.DAI.address),
+        instance.quote(tokens.WETH.address, bnToAddress(BigNumber.from(0))),
       ).to.be.revertedWithCustomError(
         instance,
         'OracleAdapter__PairNotSupported',
       );
+    });
+
+    it('should find path if pair has not been added', async () => {
+      expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
     });
 
     it('should return quote using correct denomination', async () => {

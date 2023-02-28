@@ -27,7 +27,7 @@ abstract contract ChainlinkAdapterInternal is
     ///      MAX_DELAY before returning the stale price
     uint32 internal constant MAX_DELAY = 12 hours;
     /// @dev If the difference between target and last update is greater than the
-    /// PRICE_STALE_THRESHOLD, the price is considered stale
+    ///      PRICE_STALE_THRESHOLD, the price is considered stale
     uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     int256 private constant FOREX_DECIMALS = 8;
@@ -45,13 +45,24 @@ abstract contract ChainlinkAdapterInternal is
         WRAPPED_BTC_TOKEN = _wrappedBTCToken;
     }
 
-    /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
     function _quoteFrom(
-        PricingPath path,
-        address mappedTokenIn,
-        address mappedTokenOut,
+        address tokenIn,
+        address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPair(tokenIn, tokenOut, false);
+
+        path = path == PricingPath.NONE
+            ? _determinePricingPath(mappedTokenIn, mappedTokenOut)
+            : path;
+
+        if (path == PricingPath.NONE)
+            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+
         if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
