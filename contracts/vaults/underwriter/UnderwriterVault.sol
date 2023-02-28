@@ -103,13 +103,11 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        if (timestamp > l.maxMaturity) revert Vault__GreaterThanMaxMaturity();
+        if (timestamp >= l.maxMaturity) revert Vault__GreaterThanMaxMaturity();
 
         uint256 current = l.minMaturity;
 
-        while (current <= timestamp) {
-            if (l.maturities.next(current) < current)
-                revert Vault__NonMonotonicMaturities();
+        while (current <= timestamp && current != 0) {
             current = l.maturities.next(current);
         }
         return current;
@@ -188,7 +186,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        if (l.maxMaturity < timestamp) return 0;
+        if (l.maxMaturity <= timestamp) return 0;
 
         uint256 current = _getMaturityAfterTimestamp(timestamp);
         uint256 total = 0;
