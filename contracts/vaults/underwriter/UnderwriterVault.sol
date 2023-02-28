@@ -302,6 +302,38 @@ contract UnderwriterVault is
                 .div(_totalSupply());
     }
 
+    function _addListing(uint256 strike, uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        // Insert maturity if it doesn't exist
+        if (!l.maturities.contains(maturity)) {
+            if (maturity < l.minMaturity) {
+                l.maturities.insertBefore(l.minMaturity, maturity);
+                l.minMaturity = maturity;
+            } else if (
+                (l.minMaturity < maturity) && (maturity) < l.maxMaturity
+            ) {
+                uint256 next = _getMaturityAfterTimestamp(maturity);
+                l.maturities.insertBefore(next, maturity);
+            } else {
+                l.maturities.insertAfter(l.maxMaturity, maturity);
+                l.maxMaturity = maturity;
+            }
+        }
+
+        // Insert strike into the set of strikes for given maturity
+        if (!l.maturityToStrikes[maturity].contains(strike))
+            l.maturityToStrikes[maturity].add(strike);
+    }
+
+    function _removeListing(uint256 strike, uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        // Remove maturity if there are no strikes left
+    }
+
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -482,25 +514,6 @@ contract UnderwriterVault is
         if (listingAddr == address(0)) revert Vault__OptionPoolNotListed();
 
         return listingAddr;
-    }
-
-    function _addListing(uint256 strike, uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        // Insert maturity if it doesn't exist
-        if (!l.maturities.contains(maturity)) {
-            uint256 before = l.maturities.prev(maturity);
-            l.maturities.insertAfter(before, maturity);
-        }
-
-        // Insert strike into the set of strikes for given maturity
-        l.maturityToStrikes[maturity].add(strike);
-
-        // Set new max maturity for doubly-linked list
-        if (maturity > l.maxMaturity) {
-            l.maxMaturity = maturity;
-        }
     }
 
     function _afterBuy(AfterBuyArgs memory a) internal {
