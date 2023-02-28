@@ -30,9 +30,9 @@ library UnderwriterVaultStorage {
         //TODO: need getter function in IVol Oracle
         uint256 rfRate;
         // C-Level Parameters
-        uint256 minClevel; // 1
-        uint256 maxClevel; // 1.2
-        uint256 alphaClevel; // 3
+        uint256 minCLevel; // 1
+        uint256 maxCLevel; // 1.2
+        uint256 alphaCLevel; // 3
         uint256 hourlyDecayDiscount; // 0.005
         uint256 lastTradeTimestamp;
         // (strike, maturity) => number of short contracts

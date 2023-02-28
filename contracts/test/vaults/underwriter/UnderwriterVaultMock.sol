@@ -279,11 +279,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 minClevel,
         uint256 maxClevel
     ) external pure returns (uint256) {
-        return _calculateClevel(utilisation, alphaClevel, minClevel, maxClevel);
+        return _calculateCLevel(utilisation, alphaClevel, minClevel, maxClevel);
     }
 
     function getClevel(uint256 collateralAmt) external view returns (uint256) {
-        return _getClevel(collateralAmt);
+        return _getCLevel(collateralAmt);
     }
 
     function addListing(uint256 strike, uint256 maturity) external {
@@ -315,7 +315,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 spread,
         uint256 strike
     ) external {
-        afterBuyStruct memory intel = afterBuyStruct(
+        AfterBuyArgs memory intel = AfterBuyArgs(
             maturity,
             premium,
             secondsToExpiration,
@@ -343,6 +343,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
     {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        return (l.minClevel, l.maxClevel, l.alphaClevel, l.hourlyDecayDiscount);
+        return (l.minCLevel, l.maxCLevel, l.alphaCLevel, l.hourlyDecayDiscount);
     }
 }

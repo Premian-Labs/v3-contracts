@@ -51,9 +51,9 @@ contract UnderwriterVaultProxy is
         UnderwriterVaultStorage.layout().minDTE = tradeBounds.minDTE;
         UnderwriterVaultStorage.layout().minDelta = tradeBounds.minDelta;
         UnderwriterVaultStorage.layout().maxDelta = tradeBounds.maxDelta;
-        UnderwriterVaultStorage.layout().minClevel = cLevel.minClevel;
-        UnderwriterVaultStorage.layout().maxClevel = cLevel.maxClevel;
-        UnderwriterVaultStorage.layout().alphaClevel = cLevel.alphaClevel;
+        UnderwriterVaultStorage.layout().minCLevel = cLevel.minClevel;
+        UnderwriterVaultStorage.layout().maxCLevel = cLevel.maxClevel;
+        UnderwriterVaultStorage.layout().alphaCLevel = cLevel.alphaClevel;
         UnderwriterVaultStorage.layout().hourlyDecayDiscount = cLevel
             .hourlyDecayDiscount;
         UnderwriterVaultStorage.layout().rfRate = rfRate;
