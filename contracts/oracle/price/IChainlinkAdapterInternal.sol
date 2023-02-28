@@ -40,20 +40,8 @@ interface IChainlinkAdapterInternal {
         ToEthToToken // Token -> ETH -> Token
     }
 
-    // TODO: Delete if unused
-    /// @notice Thrown when the last price update exceeds the max delay
-    /// @param timestamp Current timestamp
-    /// @param updatedAt Timestamp of the last price update
-    error ChainlinkAdapter__PriceIsStale(uint256 timestamp, uint256 updatedAt);
-
-    // TODO: Delete if unused
-    /// @notice Thrown when the round id exceeds the answered round id
-    /// @param roundId Derived round id
-    /// @param answeredInRound Round of last price update
-    error ChainlinkAdapter__RoundIsStale(
-        uint80 roundId,
-        uint80 answeredInRound
-    );
+    /// @notice Thrown when the price after the target time is stale
+    error ChainlinkAdapter__PriceAfterTargetIsStale();
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA The exchange token (base token)

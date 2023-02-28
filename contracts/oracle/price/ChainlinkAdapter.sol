@@ -68,7 +68,7 @@ contract ChainlinkAdapter is
             );
         }
 
-        return _quote(path, mappedTokenIn, mappedTokenOut);
+        return _quoteFrom(path, mappedTokenIn, mappedTokenOut, 0);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -85,7 +85,27 @@ contract ChainlinkAdapter is
         if (path == PricingPath.NONE)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
-        return _quote(path, mappedTokenIn, mappedTokenOut);
+        return _quoteFrom(path, mappedTokenIn, mappedTokenOut, 0);
+    }
+
+    /// @inheritdoc IOracleAdapter
+    function quoteFrom(
+        address tokenIn,
+        address tokenOut,
+        uint256 target
+    ) external view returns (uint256) {
+        _ensureTargetNonZero(target);
+
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPair(tokenIn, tokenOut, false);
+
+        if (path == PricingPath.NONE)
+            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+
+        return _quoteFrom(path, mappedTokenIn, mappedTokenOut, target);
     }
 
     /// @inheritdoc IChainlinkAdapter

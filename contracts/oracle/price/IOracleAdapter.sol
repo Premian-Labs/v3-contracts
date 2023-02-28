@@ -49,4 +49,16 @@ interface IOracleAdapter {
         address tokenIn,
         address tokenOut
     ) external view returns (uint256);
+
+    /// @notice Returns a quote closest to the target timestamp, based on the given token pair
+    /// @dev Will revert if pair isn't supported
+    /// @param tokenIn The exchange token (base token)
+    /// @param tokenOut The token to quote against (quote token)
+    /// @param target Reference timestamp of the quote
+    /// @return Historical price of base denominated in quote token
+    function quoteFrom(
+        address tokenIn,
+        address tokenOut,
+        uint256 target
+    ) external view returns (uint256);
 }
