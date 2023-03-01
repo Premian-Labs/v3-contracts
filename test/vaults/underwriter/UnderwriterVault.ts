@@ -122,42 +122,35 @@ describe('UnderwriterVault', () => {
     let t2 = startTime + 14 * ONE_DAY;
     let t3 = startTime + 30 * ONE_DAY;
 
-    beforeEach(async () => {
+    async function setup() {
       const { vault } = await loadFixture(vaultSetup);
 
       const infos = [
         {
           maturity: t0,
-          strikes: [500, 1000, 1500, 2000],
-          sizes: [1, 1, 1, 1],
+          strikes: [500, 1000, 1500, 2000].map((el) =>
+            parseEther(el.toString()),
+          ),
+          sizes: [1, 1, 1, 1].map((el) => parseEther(el.toString())),
         },
         {
           maturity: t1,
-          strikes: [1000, 1500, 2000],
-          sizes: [1, 1, 1],
+          strikes: [1000, 1500, 2000].map((el) => parseEther(el.toString())),
+          sizes: [1, 1, 1].map((el) => parseEther(el.toString())),
         },
         {
           maturity: t2,
-          strikes: [1000, 1500, 2000],
-          sizes: [1, 1, 1],
+          strikes: [1000, 1500, 2000].map((el) => parseEther(el.toString())),
+          sizes: [1, 1, 1].map((el) => parseEther(el.toString())),
         },
         {
           maturity: 2 * t2,
-          strikes: [1200, 1500],
-          sizes: [1, 1],
+          strikes: [1200, 1500].map((el) => parseEther(el.toString())),
+          sizes: [1, 1].map((el) => parseEther(el.toString())),
         },
       ];
       await vault.setListingsAndSizes(infos);
-    });
-
-    it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
-
-      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
-      let expected = 0;
-
-      expect(result).to.eq(expected);
-    });
+    }
 
     let tests = [
       { timestamp: t0 - ONE_DAY, expected: 12 },
@@ -170,10 +163,20 @@ describe('UnderwriterVault', () => {
 
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when timestamp=${test.timestamp}`, async () => {
+        await loadFixture(setup);
         let result = await vault.getNumberOfUnexpiredListings(test.timestamp);
 
         expect(result).to.eq(test.expected);
       });
+    });
+
+    it('returns 0 when there are no existing listings', async () => {
+      await vault.clearListingsAndSizes();
+
+      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
+      let expected = 0;
+
+      expect(result).to.eq(expected);
     });
   });
 
