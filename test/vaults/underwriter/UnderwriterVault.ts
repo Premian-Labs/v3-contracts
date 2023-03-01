@@ -502,6 +502,60 @@ describe('UnderwriterVault', () => {
     });
   });
 
+  describe('#getPricePerShare', () => {
+    let tests = [
+      { expected: 1, deposit: 2, totalLockedSpread: 0, tradeSize: 0 },
+      { expected: 0.9, deposit: 2, totalLockedSpread: 0.2, tradeSize: 0 },
+      { expected: 0.98, deposit: 5, totalLockedSpread: 0.1, tradeSize: 0 },
+      {
+        expected: 0.56666666,
+        deposit: 2,
+        totalLockedSpread: 0.2,
+        tradeSize: 1,
+      },
+      {
+        expected: 0.66666666,
+        deposit: 2,
+        totalLockedSpread: 0,
+        tradeSize: 1,
+      },
+    ];
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when totalLockedSpread=${test.totalLockedSpread} and tradeSize=${test.tradeSize}`, async () => {
+        const { vault } = await loadFixture(vaultSetup);
+        // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
+        await addDeposit(caller, receiver, test.deposit);
+        let startTime = await now();
+        let t0 = startTime + 7 * ONE_DAY;
+        expect(await vault.totalAssets()).to.eq(
+          parseEther(test.deposit.toString()),
+        );
+        expect(await vault.totalSupply()).to.eq(
+          parseEther(test.deposit.toString()),
+        );
+        // mock vault
+        await vault.increaseTotalLockedSpread(
+          parseEther(test.totalLockedSpread.toString()),
+        );
+        await vault.setMaxMaturity(t0);
+        if (test.tradeSize > 0) {
+          const infos = [
+            {
+              maturity: t0,
+              strikes: [500].map((el) => parseEther(el.toString())),
+              sizes: [1].map((el) => parseEther(el.toString())),
+            },
+          ];
+          await vault.setListingsAndSizes(infos);
+        }
+        let pps: number = parseFloat(
+          formatEther(await vault.getPricePerShare()),
+        );
+        expect(pps).to.be.closeTo(test.expected, 0.00000001);
+      });
+    });
+  });
+
   describe('#maxWithdraw', () => {
     it('maxWithdraw should revert for a zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
