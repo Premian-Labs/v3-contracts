@@ -43,6 +43,8 @@ contract UnderwriterVault is
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
 
+    int256 internal constant ONE = 1e18;
+
     struct AfterBuyArgs {
         uint256 maturity;
         uint256 premium;
@@ -588,21 +590,26 @@ contract UnderwriterVault is
         return cLevel - discount;
     }
 
-    //  Calculate the price of an option using the Black-Scholes model
+    // https://www.desmos.com/calculator/0uzv50t7jy
     function _calculateCLevel(
         uint256 postUtilisation,
         uint256 alphaCLevel,
         uint256 minCLevel,
         uint256 maxCLevel
     ) internal pure returns (uint256) {
-        uint256 k = alphaCLevel * minCLevel;
-        uint256 positiveExp = (alphaCLevel * postUtilisation).exp();
-        uint256 negativeExp = (-alphaCLevel.toInt256() *
-            postUtilisation.toInt256()).exp().toUint256();
+        int256 freeCapitalRatio = ONE - postUtilisation.toInt256();
+        int256 positiveExp = alphaCLevel.toInt256().mul(freeCapitalRatio).exp();
+        int256 alphaCLevelExp = alphaCLevel.exp().toInt256();
+        int256 k = alphaCLevel
+            .toInt256()
+            .mul(
+                minCLevel.toInt256().mul(alphaCLevelExp - maxCLevel.toInt256())
+            )
+            .div(alphaCLevelExp - ONE);
         return
-            (negativeExp * (k * positiveExp + maxCLevel * alphaCLevel - k)).div(
-                alphaCLevel
-            );
+            (k.mul(positiveExp) + maxCLevel.mul(alphaCLevel).toInt256() - k)
+                .div(alphaCLevel.toInt256().mul(positiveExp))
+                .toUint256();
     }
 
     function _quote(

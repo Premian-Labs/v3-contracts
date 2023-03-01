@@ -188,11 +188,83 @@ describe('#buy functionality', () => {
     it('checks if the vault has sufficient funds', async () => {});
 
     describe('#cLevel functionality', () => {
-      it('should have a totalSpread that is positive', async () => {});
+      const strike = parseEther('1200.0');
+      const maturity = parseEther('0.2');
+      const size = parseEther('1.0');
 
-      it('reverts if maxCLevel is not set properly', async () => {});
+      describe('#cLevel calculation', () => {
+        it('will not exceed max c-level', async () => {
+          const { vault } = await loadFixture(vaultSetup);
+          const cLevel = await vault.calculateClevel(
+            parseEther('1.0'),
+            parseEther('3.0'),
+            parseEther('1.0'),
+            parseEther('1.2'),
+          );
+          expect(parseFloat(formatEther(cLevel))).to.eq(1.2);
+        });
 
-      it(' reverts if the C level alpha is not set properly', async () => {});
+        it('will not go below min c-level', async () => {
+          const { vault } = await loadFixture(vaultSetup);
+          const cLevel = await vault.calculateClevel(
+            parseEther('0.0'),
+            parseEther('3.0'),
+            parseEther('1.0'),
+            parseEther('1.2'),
+          );
+          expect(parseFloat(formatEther(cLevel))).to.eq(1.0);
+        });
+
+        it('will properly adjust based on utilization', async () => {
+          const { vault } = await loadFixture(vaultSetup);
+
+          let cLevel = await vault.calculateClevel(
+            parseEther('0.4'),
+            parseEther('3.0'),
+            parseEther('1.0'),
+            parseEther('1.2'),
+          );
+          expect(parseFloat(formatEther(cLevel))).to.approximately(
+            1.024,
+            0.001,
+          );
+
+          cLevel = await vault.calculateClevel(
+            parseEther('0.9'),
+            parseEther('3.0'),
+            parseEther('1.0'),
+            parseEther('1.2'),
+          );
+          expect(parseFloat(formatEther(cLevel))).to.approximately(
+            1.145,
+            0.001,
+          );
+        });
+      });
+
+      it('should have a totalSpread that is positive', async () => {
+        const { vault } = await loadFixture(vaultSetup);
+        await vault.buy(strike, maturity, size);
+        const spread = await vault.totalLockedSpread();
+
+        expect(parseFloat(formatEther(spread))).to.gte(0.0);
+      });
+
+      it('reverts if maxCLevel is not set properly', async () => {
+        const { vault } = await loadFixture(vaultSetup);
+        await vault.setMaxClevel(parseEther('0.0'));
+        expect(
+          vault.quote(strike, maturity, size),
+        ).to.be.revertedWithCustomError(vault, 'Vault__CLevelBounds');
+      });
+
+      it('reverts if the C level alpha is not set properly', async () => {
+        const { vault } = await loadFixture(vaultSetup);
+        await vault.setMaxClevel(parseEther('0.0'));
+        expect(
+          vault.quote(strike, maturity, size),
+        ).to.be.revertedWithCustomError(vault, 'Vault__CLevelBounds');
+      });
 
       it('used post quote/trade utilization', async () => {});
 
@@ -200,15 +272,7 @@ describe('#buy functionality', () => {
 
       it('properly checks for last trade timestamp', async () => {});
 
-      describe('#cLevel calculation', () => {
-        it('will not exceed max c Level', async () => {});
-
-        it('will properly adjust based on utilization', async () => {});
-      });
-
       it('properly decays the c Level over time', async () => {});
-
-      it('will not go below min c Level', async () => {});
     });
   });
 

@@ -355,4 +355,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
             .layout();
         return l.lastTradeTimestamp;
     }
+
+    function setMaxClevel(uint256 maxCLevel) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.maxCLevel = maxCLevel;
+    }
+
+    function setAlphaCLevel(uint256 alphaCLevel) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.alphaCLevel = alphaCLevel;
+    }
 }
