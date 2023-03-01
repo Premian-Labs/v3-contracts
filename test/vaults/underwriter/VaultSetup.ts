@@ -269,7 +269,7 @@ export async function vaultSetup() {
 export async function createPool(
   strike: BigNumber,
   // TODO: check whether we need to refactor code such that maturities are BigNumbers and not numbers
-  maturity: BigNumber | number,
+  maturity: number,
   isCall: boolean,
   deployer: SignerWithAddress,
   base: ERC20Mock,
@@ -284,7 +284,7 @@ export async function createPool(
     quote: quote.address,
     oracleAdapter: oracleAdapter.address,
     strike: strike,
-    maturity: maturity,
+    maturity: BigNumber.from(maturity),
     isCallPool: isCall,
   };
 
