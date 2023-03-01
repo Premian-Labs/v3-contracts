@@ -57,6 +57,37 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalFairValue();
     }
 
+    function getNumberOfListings() external view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 current = l.minMaturity;
+        uint256 n = 0;
+
+        while (current <= l.maxMaturity && current != 0) {
+            n += l.maturityToStrikes[current].length();
+            current = l.maturities.next(current);
+        }
+        return n;
+    }
+
+    function getNumberOfListingsOnMaturity(
+        uint256 maturity
+    ) external view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!l.maturities.contains(maturity)) return 0;
+        return l.maturityToStrikes[maturity].length();
+    }
+
+    function contains(
+        uint256 strike,
+        uint256 maturity
+    ) external view returns (bool) {
+        return _contains(strike, maturity);
+    }
+
     function updateState() external {
         return _updateState();
     }
@@ -75,6 +106,23 @@ contract UnderwriterVaultMock is UnderwriterVault {
         ] += posSize;
     }
 
+    function decreasePositionSize(
+        uint256 maturity,
+        uint256 strike,
+        uint256 posSize
+    ) external onlyOwner {
+        UnderwriterVaultStorage.layout().positionSizes[maturity][
+            strike
+        ] -= posSize;
+    }
+
+    function getPositionSize(
+        uint256 strike,
+        uint256 maturity
+    ) external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().positionSizes[maturity][strike];
+    }
+
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
     }
@@ -85,6 +133,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function setMinMaturity(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().minMaturity = value;
+    }
+
+    function getMaxMaturity() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().maxMaturity;
     }
 
     function setMaxMaturity(uint256 value) external onlyOwner {
@@ -288,6 +340,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function addListing(uint256 strike, uint256 maturity) external {
         return _addListing(strike, maturity);
+    }
+
+    function removeListing(uint256 strike, uint256 maturity) external {
+        return _removeListing(strike, maturity);
     }
 
     function getFactoryAddress(

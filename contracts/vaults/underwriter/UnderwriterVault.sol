@@ -300,9 +300,23 @@ contract UnderwriterVault is
                 .div(_totalSupply());
     }
 
+    function _contains(
+        uint256 strike,
+        uint256 maturity
+    ) internal view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!l.maturities.contains(maturity)) return false;
+
+        return l.maturityToStrikes[maturity].contains(strike);
+    }
+
     function _addListing(uint256 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        if (maturity <= block.timestamp) revert Vault__OptionExpired();
 
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
@@ -316,6 +330,9 @@ contract UnderwriterVault is
                 l.maturities.insertBefore(next, maturity);
             } else {
                 l.maturities.insertAfter(l.maxMaturity, maturity);
+
+                if (l.minMaturity == 0) l.minMaturity = maturity;
+
                 l.maxMaturity = maturity;
             }
         }
@@ -325,12 +342,24 @@ contract UnderwriterVault is
             l.maturityToStrikes[maturity].add(strike);
     }
 
-    // function _removeListing(uint256 strike, uint256 maturity) internal {
-    //     UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-    //         .layout();
+    function _removeListing(uint256 strike, uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-    //     // Remove maturity if there are no strikes left
-    // }
+        if (_contains(strike, maturity)) {
+            l.maturityToStrikes[maturity].remove(strike);
+
+            // Remove maturity if there are no strikes left
+            if (l.maturityToStrikes[maturity].length() == 0) {
+                if (maturity == l.minMaturity)
+                    l.minMaturity = l.maturities.next(maturity);
+                if (maturity == l.maxMaturity)
+                    l.maxMaturity = l.maturities.prev(maturity);
+
+                l.maturities.remove(maturity);
+            }
+        }
+    }
 
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
@@ -782,21 +811,9 @@ contract UnderwriterVault is
                 l.positionSizes[current][
                     l.maturityToStrikes[current].at(i)
                 ] = 0;
-                l.maturityToStrikes[current].remove(
-                    l.maturityToStrikes[current].at(i)
-                );
+
+                _removeListing(l.maturityToStrikes[current].at(i), current);
             }
-            l.minMaturity = l.maturities.next(current);
-
-            next = l.maturities.next(current);
-            l.minMaturity = next;
-            l.maturities.remove(current);
-            current = next;
-        }
-
-        // Update max maturities
-        if (lastExpired >= l.maxMaturity) {
-            l.maxMaturity = 0;
         }
 
         return 0;
