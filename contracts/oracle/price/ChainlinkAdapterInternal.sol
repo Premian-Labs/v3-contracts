@@ -521,7 +521,9 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
-    function _denomination(address token) internal view returns (address) {
+    function _tokenToDenomination(
+        address token
+    ) internal view returns (address) {
         return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
 
@@ -541,8 +543,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
-        mappedTokenA = _denomination(tokenA);
-        mappedTokenB = _denomination(tokenB);
+        mappedTokenA = _tokenToDenomination(tokenA);
+        mappedTokenB = _tokenToDenomination(tokenB);
     }
 
     function _keyForUnsortedPair(

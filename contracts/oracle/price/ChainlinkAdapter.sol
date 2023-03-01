@@ -79,7 +79,7 @@ contract ChainlinkAdapter is
         FeedMappingArgs[] memory args
     ) external onlyOwner {
         for (uint256 i = 0; i < args.length; i++) {
-            address token = args[i].token;
+            address token = _tokenToDenomination(args[i].token);
             address denomination = args[i].denomination;
 
             if (token == denomination)
