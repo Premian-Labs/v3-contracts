@@ -69,12 +69,13 @@ export let volOracleProxy: ProxyUpgradeableOwnable;
 export const log = true;
 
 export async function addDeposit(
+  vaultAddress: string,
   caller: SignerWithAddress,
-  receiver: SignerWithAddress,
   amount: number,
+  receiver: SignerWithAddress = caller,
 ) {
   const assetAmount = parseEther(amount.toString());
-  await base.connect(caller).approve(vault.address, assetAmount);
+  await base.connect(caller).approve(vaultAddress, assetAmount);
   await vault.connect(caller).deposit(assetAmount, receiver.address);
 }
 
