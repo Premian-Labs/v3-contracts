@@ -2,6 +2,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import {
   ERC20Mock,
   ERC20Mock__factory,
+  IPoolMock,
+  IPoolMock__factory,
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   UnderwriterVaultMock,
@@ -22,6 +24,7 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
@@ -64,6 +67,16 @@ export let volOracle: VolatilityOracleMock;
 export let volOracleProxy: ProxyUpgradeableOwnable;
 
 export const log = true;
+
+export async function addDeposit(
+  caller: SignerWithAddress,
+  receiver: SignerWithAddress,
+  amount: number,
+) {
+  const assetAmount = parseEther(amount.toString());
+  await base.connect(caller).approve(vault.address, assetAmount);
+  await vault.connect(caller).deposit(assetAmount, receiver.address);
+}
 
 export async function vaultSetup() {
   [deployer, caller, receiver, lp, trader] = await ethers.getSigners();
@@ -257,4 +270,31 @@ export async function vaultSetup() {
     poolKey,
     callPoolAddress,
   };
+}
+
+export async function createPool(
+  strike: string,
+  maturity: number,
+  isCall: boolean,
+) {
+  let pool: IPoolMock;
+
+  const tx = await p.poolFactory.deployPool(
+    {
+      base: base.address,
+      quote: quote.address,
+      oracleAdapter: oracleAdapter.address,
+      strike: strike,
+      maturity: maturity,
+      isCallPool: isCall,
+    },
+    {
+      value: parseEther('1'),
+    },
+  );
+
+  const r = await tx.wait(1);
+  const poolAddress = (r as any).events[0].args.poolAddress;
+  pool = await IPoolMock__factory.connect(poolAddress, deployer);
+  return { pool, poolAddress };
 }
