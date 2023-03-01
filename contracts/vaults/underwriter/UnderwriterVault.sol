@@ -679,6 +679,13 @@ contract UnderwriterVault is
         uint256 totalSpread = (cLevel - l.minCLevel).mul(price).mul(args.size) +
             mintingFee;
 
+        // Approve transfer of base / quote token
+        if (l.isCall) {
+            IERC20(l.base).approve(poolAddr, args.size + mintingFee);
+        } else {
+            IERC20(l.quote).approve(poolAddr, args.size + mintingFee);
+        }
+
         // Mint option and allocate long token
         IPool(poolAddr).writeFrom(address(this), msg.sender, args.size);
 
