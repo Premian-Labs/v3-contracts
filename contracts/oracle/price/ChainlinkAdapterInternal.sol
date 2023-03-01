@@ -56,13 +56,12 @@ abstract contract ChainlinkAdapterInternal is
             address mappedTokenOut
         ) = _pathForPair(tokenIn, tokenOut, false);
 
-        path = path == PricingPath.NONE
-            ? _determinePricingPath(mappedTokenIn, mappedTokenOut)
-            : path;
+        if (path == PricingPath.NONE) {
+            path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
 
-        if (path == PricingPath.NONE)
-            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
-
+            if (path == PricingPath.NONE)
+                revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+        }
         if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
