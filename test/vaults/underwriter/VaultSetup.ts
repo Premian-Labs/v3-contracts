@@ -15,7 +15,7 @@ import {
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity } from '../../../utils/time';
-import { OrderType, PoolKey } from '../../../utils/sdk/types';
+import { PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
 import {
@@ -24,11 +24,11 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
 export let receiver: SignerWithAddress;
+export let underwriter: SignerWithAddress;
 export let lp: SignerWithAddress;
 export let trader: SignerWithAddress;
 
@@ -80,7 +80,8 @@ export async function addDeposit(
 }
 
 export async function vaultSetup() {
-  [deployer, caller, receiver, lp, trader] = await ethers.getSigners();
+  [deployer, caller, receiver, underwriter, lp, trader] =
+    await ethers.getSigners();
 
   //=====================================================================================
   // Deploy ERC20's
@@ -106,6 +107,9 @@ export async function vaultSetup() {
 
   await base.mint(receiver.address, parseEther('1000'));
   await quote.mint(receiver.address, parseEther('1000000'));
+
+  await base.mint(underwriter.address, parseEther('1000'));
+  await quote.mint(underwriter.address, parseEther('1000000'));
 
   await base.mint(lp.address, parseEther('1000'));
   await quote.mint(lp.address, parseEther('1000000'));
@@ -201,6 +205,8 @@ export async function vaultSetup() {
     p,
   );
 
+  const factoryAddress = p.poolFactory.address;
+
   if (log)
     console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${poolAddress}`);
 
@@ -252,6 +258,7 @@ export async function vaultSetup() {
     deployer,
     caller,
     receiver,
+    underwriter,
     lp,
     trader,
     base,
@@ -261,14 +268,16 @@ export async function vaultSetup() {
     oracleAdapter,
     lastTimeStamp,
     p,
+    factoryAddress,
     poolAddress,
     poolKey,
+    maturity,
+    isCall,
   };
 }
 
 export async function createPool(
   strike: BigNumber,
-  // TODO: check whether we need to refactor code such that maturities are BigNumbers and not numbers
   maturity: number,
   isCall: boolean,
   deployer: SignerWithAddress,

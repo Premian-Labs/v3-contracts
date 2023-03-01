@@ -326,6 +326,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _afterBuy(intel);
     }
 
+    function getSpotPrice() public view returns (uint256) {
+        return _getSpotPrice();
+    }
+
     function getTradeBounds()
         public
         view

@@ -1,8 +1,13 @@
 import { expect } from 'chai';
+import { ethers } from 'hardhat';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { parseEther, formatEther, formatUnits } from 'ethers/lib/utils';
-import { BigNumberish } from 'ethers';
-import { vaultSetup } from './VaultSetup';
+import { BigNumberish, BigNumber } from 'ethers';
+import { vaultSetup, addDeposit } from './VaultSetup';
+import { IPoolMock__factory } from '../../../typechain';
+import { time } from '@nomicfoundation/hardhat-network-helpers';
+import { TokenType } from '../../../utils/sdk/types';
+import { getValidMaturity } from '../../../utils/time';
 
 describe('#Vault contract', () => {
   it('properly initializes vault variables', async () => {
@@ -46,13 +51,16 @@ describe('#Vault contract', () => {
   });
 
   it('should properly hydrate accounts with funds', async () => {
-    const { base, quote, deployer, caller, receiver, lp, trader } =
+    const { base, quote, deployer, caller, receiver, underwriter, trader } =
       await loadFixture(vaultSetup);
     expect(await base.balanceOf(deployer.address)).to.equal(parseEther('1000'));
     expect(await base.balanceOf(caller.address)).to.equal(parseEther('1000'));
     expect(await base.balanceOf(receiver.address)).to.equal(parseEther('1000'));
-    expect(await base.balanceOf(lp.address)).to.equal(parseEther('1000'));
+    expect(await base.balanceOf(underwriter.address)).to.equal(
+      parseEther('1000'),
+    );
     expect(await base.balanceOf(trader.address)).to.equal(parseEther('1000'));
+
     expect(await quote.balanceOf(deployer.address)).to.equal(
       parseEther('1000000'),
     );
@@ -62,7 +70,9 @@ describe('#Vault contract', () => {
     expect(await quote.balanceOf(receiver.address)).to.equal(
       parseEther('1000000'),
     );
-    expect(await quote.balanceOf(lp.address)).to.equal(parseEther('1000000'));
+    expect(await quote.balanceOf(underwriter.address)).to.equal(
+      parseEther('1000000'),
+    );
     expect(await quote.balanceOf(trader.address)).to.equal(
       parseEther('1000000'),
     );
@@ -87,15 +97,53 @@ describe('#buy functionality', () => {
   describe('#quote functionality', () => {
     it('determines the appropriate collateral amt', async () => {});
 
-    it('reverts on no strike input', async () => {});
+    it('reverts on no strike input', async () => {
+      const { lp, vault } = await loadFixture(vaultSetup);
+      const badStrike = parseEther('0'); // ATM
+      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+      const quoteSize = parseEther('1');
+      const lpDepositSize = 5; // units of base
+      await addDeposit(vault.address, lp, lpDepositSize);
+      await expect(
+        vault.quote(badStrike, maturity, quoteSize),
+      ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
+    });
 
-    it('checks that option has not expired', async () => {});
+    it('reverts on expired maturity input', async () => {
+      const { lp, vault } = await loadFixture(vaultSetup);
+      const badStrike = parseEther('1500'); // ATM
+      const maturity = await time.latest();
+      const quoteSize = parseEther('1');
+      const lpDepositSize = 5; // units of base
+      await addDeposit(vault.address, lp, lpDepositSize);
+      await expect(
+        vault.quote(badStrike, maturity, quoteSize),
+      ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
+    });
 
-    it('gets a valid spot price', async () => {});
+    it('gets a valid spot price via the vault', async () => {
+      const { vault } = await loadFixture(vaultSetup);
+      const spotPrice = await vault.getSpotPrice();
+      expect(parseFloat(formatEther(spotPrice))).to.be.equal(1500);
+    });
 
-    it('gets a valid iv value', async () => {});
+    it('gets a valid iv value via vault', async () => {
+      const { volOracle, base } = await loadFixture(vaultSetup);
+      const spot = parseEther('1500');
+      const strike = parseEther('1500'); // ATM
+      const maturity = parseEther('0.03835616'); // 2 weeks
+      const iv = await volOracle[
+        'getVolatility(address,uint256,uint256,uint256)'
+      ](base.address, spot, strike, maturity);
+
+      expect(parseFloat(formatEther(iv))).to.be.eq(0.7340403881444237);
+    });
 
     describe('#isValidListing functionality', () => {
+      it('returns a valid listing address', async () => {
+        const { vault } = await loadFixture(vaultSetup);
+      });
+
       it('reverts on invalid maturity bounds', async () => {});
 
       it('retrieves valid option delta', async () => {});
@@ -104,7 +152,33 @@ describe('#buy functionality', () => {
 
       it('receives a valid option address', async () => {});
 
-      it('returns addressZero for non existing pool', async () => {});
+      it('returns the proper pool address from factory', async () => {
+        const { p, poolKey, poolAddress } = await loadFixture(vaultSetup);
+        const listingAddr = await p.poolFactory.getPoolAddress(poolKey);
+        expect(listingAddr).to.be.eq(poolAddress);
+      });
+
+      it('returns addressZero from factory non existing pool', async () => {
+        const { base, quote, maturity, isCall, oracleAdapter, p } =
+          await loadFixture(vaultSetup);
+        const nonExistingPoolKey = {
+          base: base.address,
+          quote: quote.address,
+          oracleAdapter: oracleAdapter.address,
+          strike: parseEther('1600'), // ATM,
+          maturity: BigNumber.from(maturity),
+          isCallPool: isCall,
+        };
+        const listingAddr = await p.poolFactory.getPoolAddress(
+          nonExistingPoolKey,
+        );
+        expect(listingAddr).to.be.eq(ethers.constants.AddressZero);
+      });
+
+      it('reverts when factory returns addressZERO', async () => {
+        const { lp, vault } = await loadFixture(vaultSetup);
+        await loadFixture(vaultSetup);
+      });
     });
 
     it('returns the proper blackscholes price', async () => {});
@@ -146,14 +220,41 @@ describe('#buy functionality', () => {
     it('will update the doublylinked list max maturity if needed', async () => {});
   });
 
-  describe('#minting options', () => {
-    it('should charge a fee to mint options', async () => {});
-
-    it('should transfer collatera from the vault to the pool', async () => {});
-
-    it('should send long contracts to the buyer', async () => {});
-
-    it('should send short contracts to the vault', async () => {});
+  describe('#minting options from pool', () => {
+    it('allows writeFrom to mint options when directly called', async () => {
+      const { underwriter, trader, base, poolAddress } = await loadFixture(
+        vaultSetup,
+      );
+      const size = parseEther('5');
+      const callPool = IPoolMock__factory.connect(poolAddress, underwriter);
+      const fee = await callPool.takerFee(size, 0, true);
+      const totalSize = size.add(fee);
+      await base.connect(underwriter).approve(callPool.address, totalSize);
+      await callPool.writeFrom(underwriter.address, trader.address, size);
+      expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        size,
+      );
+      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+        0,
+      );
+      expect(
+        await callPool.balanceOf(underwriter.address, TokenType.LONG),
+      ).to.eq(0);
+      expect(
+        await callPool.balanceOf(underwriter.address, TokenType.SHORT),
+      ).to.eq(size);
+    });
+    it('allows the vault to mint options for the LP and Trader', async () => {
+      const { lp, trader, base, vault } = await loadFixture(vaultSetup);
+      const lpDepositSize = 5; // units of base
+      await addDeposit(vault.address, lp, lpDepositSize);
+      const strike = parseEther('1500');
+      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+      const tradeSize = parseEther('2');
+      // FIXME: divide by zero error (likely up stream)
+      // await vault.connect(trader).buy(strike, maturity, tradeSize);
+    });
   });
 
   describe('#afterBuy', () => {
