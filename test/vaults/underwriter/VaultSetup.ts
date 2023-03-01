@@ -23,22 +23,22 @@ import {
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 
-let deployer: SignerWithAddress;
-let caller: SignerWithAddress;
-let receiver: SignerWithAddress;
-let lp: SignerWithAddress;
-let trader: SignerWithAddress;
+export let deployer: SignerWithAddress;
+export let caller: SignerWithAddress;
+export let receiver: SignerWithAddress;
+export let lp: SignerWithAddress;
+export let trader: SignerWithAddress;
 
-let vaultImpl: UnderwriterVaultMock;
-let vaultProxy: UnderwriterVaultProxy;
-let vault: UnderwriterVaultMock;
+export let vaultImpl: UnderwriterVaultMock;
+export let vaultProxy: UnderwriterVaultProxy;
+export let vault: UnderwriterVaultMock;
 
 // Pool Specs
-let p: PoolUtil;
-let maturity: number;
-let strike: BigNumber;
-let isCall: boolean;
-let poolKey: PoolKey;
+export let p: PoolUtil;
+export let maturity: number;
+export let strike: BigNumber;
+export let isCall: boolean;
+export let poolKey: PoolKey;
 
 interface Clevel {
   minClevel: BigNumberish;
@@ -54,16 +54,16 @@ interface TradeBounds {
   maxDelta: BigNumberish;
 }
 
-let base: ERC20Mock;
-let quote: ERC20Mock;
-let longCall: ERC20Mock;
-let shortCall: ERC20Mock;
+export let base: ERC20Mock;
+export let quote: ERC20Mock;
+export let longCall: ERC20Mock;
+export let shortCall: ERC20Mock;
 
-let oracleAdapter: MockContract;
-let volOracle: VolatilityOracleMock;
-let volOracleProxy: ProxyUpgradeableOwnable;
+export let oracleAdapter: MockContract;
+export let volOracle: VolatilityOracleMock;
+export let volOracleProxy: ProxyUpgradeableOwnable;
 
-const log = true;
+export const log = true;
 
 export async function vaultSetup() {
   [deployer, caller, receiver, lp, trader] = await ethers.getSigners();
