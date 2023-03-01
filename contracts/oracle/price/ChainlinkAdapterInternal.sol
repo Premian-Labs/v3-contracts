@@ -510,26 +510,6 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _batchRegisterFeedMappings(
-        FeedMappingArgs[] memory args
-    ) internal {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = args[i].token;
-            address denomination = args[i].denomination;
-
-            if (token == denomination)
-                revert OracleAdapter__TokensAreSame(token, denomination);
-
-            if (token == address(0) || denomination == address(0))
-                revert OracleAdapter__ZeroAddress();
-
-            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
-            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
-        }
-
-        emit FeedMappingsRegistered(args);
-    }
-
     function _feed(
         address tokenA,
         address tokenB
