@@ -242,7 +242,7 @@ contract UnderwriterVault is
                 l.isCall
             );
 
-            size = l.positionSizes[listings.maturities[i]][listings.strikes[i]];
+            size = l.positionSizes[listings.maturities[x]][listings.strikes[x]];
             total += price.mul(size);
         }
 
