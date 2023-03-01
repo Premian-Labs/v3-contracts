@@ -78,7 +78,7 @@ library PoolStorage {
     }
 
     // TODO: Fetch price at maturity
-    function fetchQuote(Layout storage l) internal returns (uint256) {
+    function fetchAndCacheQuote(Layout storage l) internal returns (uint256) {
         if (l.spot == 0) {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();

@@ -182,8 +182,8 @@ abstract contract ChainlinkAdapterInternal is
             ? Denominations.USD
             : Denominations.ETH;
 
-        uint256 tokenInToBase = _fetchSpot(tokenIn, base, target);
-        uint256 tokenOutToBase = _fetchSpot(tokenOut, base, target);
+        uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
+        uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
         uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
         uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
@@ -260,7 +260,7 @@ abstract contract ChainlinkAdapterInternal is
         return
             _isUSD(token)
                 ? ONE_USD
-                : _fetchSpot(token, Denominations.USD, target);
+                : _fetchQuote(token, Denominations.USD, target);
     }
 
     function _getPriceAgainstETH(
@@ -270,7 +270,7 @@ abstract contract ChainlinkAdapterInternal is
         return
             _isETH(token)
                 ? ONE_ETH
-                : _fetchSpot(token, Denominations.ETH, target);
+                : _fetchQuote(token, Denominations.ETH, target);
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
@@ -419,18 +419,18 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _fetchSpot(
+    function _fetchQuote(
         address base,
         address quote,
         uint256 target
     ) internal view returns (uint256) {
         return
             target == 0
-                ? _fetchLatestSpot(base, quote)
-                : _fetchSpotFrom(base, quote, target);
+                ? _fetchLatestQuote(base, quote)
+                : _fetchQuoteFrom(base, quote, target);
     }
 
-    function _fetchLatestSpot(
+    function _fetchLatestQuote(
         address base,
         address quote
     ) internal view returns (uint256) {
@@ -440,7 +440,7 @@ abstract contract ChainlinkAdapterInternal is
         return price.toUint256();
     }
 
-    function _fetchSpotFrom(
+    function _fetchQuoteFrom(
         address base,
         address quote,
         uint256 target
@@ -567,15 +567,15 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getETHUSD(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(Denominations.ETH, Denominations.USD, target);
+        return _fetchQuote(Denominations.ETH, Denominations.USD, target);
     }
 
     function _getBTCUSD(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(Denominations.BTC, Denominations.USD, target);
+        return _fetchQuote(Denominations.BTC, Denominations.USD, target);
     }
 
     function _getWBTCBTC(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
+        return _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
     }
 
     function _isUSD(address token) internal pure returns (bool) {
