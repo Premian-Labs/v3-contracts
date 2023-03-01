@@ -180,17 +180,6 @@ export async function vaultSetup() {
   maturity = await getValidMaturity(2, 'weeks');
   isCall = true;
 
-  poolKey = {
-    base: base.address,
-    quote: quote.address,
-    oracleAdapter: oracleAdapter.address,
-    strike,
-    maturity: BigNumber.from(maturity),
-    isCallPool: isCall,
-  };
-
-  createPool(strike, maturity, true, deployer, base, quote, oracleAdapter);
-  // Helper function to launch v3
   p = await PoolUtil.deploy(
     deployer, // signer
     tokens.WETH.address, // wrappedNativeToken
@@ -201,16 +190,19 @@ export async function vaultSetup() {
     true, // isDevMode
   );
 
-  // Deploy Mock Pool WETH/USDC 1500 Call (ATM) exp. 2 weeks
-  const tx = await p.poolFactory.deployPool(poolKey, {
-    value: parseEther('10'),
-  });
-
-  const r = await tx.wait(1);
-  const callPoolAddress = (r as any).events[0].args.poolAddress;
+  const { poolAddress, poolKey } = await createPool(
+    strike,
+    maturity,
+    true,
+    deployer,
+    base,
+    quote,
+    oracleAdapter,
+    p,
+  );
 
   if (log)
-    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${callPoolAddress}`);
+    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${poolAddress}`);
 
   //=====================================================================================
   // Mock Vault setup
@@ -269,37 +261,39 @@ export async function vaultSetup() {
     oracleAdapter,
     lastTimeStamp,
     p,
-    callPoolAddress,
+    poolAddress,
+    poolKey,
   };
 }
 
 export async function createPool(
   strike: BigNumber,
-  maturity: number,
+  // TODO: check whether we need to refactor code such that maturities are BigNumbers and not numbers
+  maturity: BigNumber | number,
   isCall: boolean,
   deployer: SignerWithAddress,
   base: ERC20Mock,
   quote: ERC20Mock,
   oracleAdapter: MockContract,
+  p: PoolUtil,
 ) {
   let pool: IPoolMock;
 
-  const tx = await p.poolFactory.deployPool(
-    {
-      base: base.address,
-      quote: quote.address,
-      oracleAdapter: oracleAdapter.address,
-      strike: strike,
-      maturity: maturity,
-      isCallPool: isCall,
-    },
-    {
-      value: parseEther('1'),
-    },
-  );
+  poolKey = {
+    base: base.address,
+    quote: quote.address,
+    oracleAdapter: oracleAdapter.address,
+    strike: strike,
+    maturity: maturity,
+    isCallPool: isCall,
+  };
+
+  const tx = await p.poolFactory.deployPool(poolKey, {
+    value: parseEther('1'),
+  });
 
   const r = await tx.wait(1);
   const poolAddress = (r as any).events[0].args.poolAddress;
   pool = await IPoolMock__factory.connect(poolAddress, deployer);
-  return { pool, poolAddress };
+  return { pool, poolAddress, poolKey };
 }

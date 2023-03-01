@@ -41,8 +41,8 @@ describe('#Vault contract', () => {
   });
 
   it('should properly initialize a new option pool', async () => {
-    const { p, poolKey, callPoolAddress } = await loadFixture(vaultSetup);
-    expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(callPoolAddress);
+    const { p, poolKey, poolAddress } = await loadFixture(vaultSetup);
+    expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(poolAddress);
   });
 
   it('should properly hydrate accounts with funds', async () => {
