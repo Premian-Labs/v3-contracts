@@ -17,7 +17,7 @@ import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity } from '../../../utils/time';
 import { OrderType, PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, Signer } from 'ethers';
 import {
   deployMockContract,
   MockContract,
@@ -189,6 +189,7 @@ export async function vaultSetup() {
     isCallPool: isCall,
   };
 
+  createPool(strike, maturity, true, deployer, base, quote, oracleAdapter);
   // Helper function to launch v3
   p = await PoolUtil.deploy(
     deployer, // signer
@@ -268,15 +269,18 @@ export async function vaultSetup() {
     oracleAdapter,
     lastTimeStamp,
     p,
-    poolKey,
     callPoolAddress,
   };
 }
 
 export async function createPool(
-  strike: string,
+  strike: BigNumber,
   maturity: number,
   isCall: boolean,
+  deployer: SignerWithAddress,
+  base: ERC20Mock,
+  quote: ERC20Mock,
+  oracleAdapter: MockContract,
 ) {
   let pool: IPoolMock;
 
