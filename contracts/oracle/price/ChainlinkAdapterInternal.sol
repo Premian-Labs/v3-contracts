@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {TokenSorting} from "../../libraries/TokenSorting.sol";
@@ -31,10 +30,8 @@ abstract contract ChainlinkAdapterInternal is
     uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     int256 private constant FOREX_DECIMALS = 8;
-    int256 private constant ETH_DECIMALS = 18;
 
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
-    uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
     address private immutable WRAPPED_NATIVE_TOKEN;
@@ -78,35 +75,6 @@ abstract contract ChainlinkAdapterInternal is
         } else {
             return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
         }
-    }
-
-    function _upsertPair(address tokenA, address tokenB) internal {
-        (
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
-
-        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
-
-        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
-            .layout();
-
-        if (path == PricingPath.NONE) {
-            // Check if there is a current path. If there is, it means that the pair was supported and it
-            // lost support. In that case, we will remove the current path and continue working as expected.
-            // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pathForPair[keyForPair];
-
-            if (_currentPath == PricingPath.NONE) {
-                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
-            }
-        }
-
-        if (l.pathForPair[keyForPair] == path) return;
-
-        l.pathForPair[keyForPair] = path;
-        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
     function _pathForPair(
@@ -398,24 +366,13 @@ abstract contract ChainlinkAdapterInternal is
         return _feed(base, quote) != address(0);
     }
 
-    function _scale(
-        uint256 amount,
-        int256 factor
-    ) internal pure returns (uint256) {
-        if (factor < 0) {
-            return amount / (10 ** (-factor).toUint256());
-        } else {
-            return amount * (10 ** factor.toUint256());
-        }
-    }
-
-    function _decimals(address token) internal view returns (int256) {
+    function _decimals(address token) internal view override returns (int256) {
         if (_isETH(token)) {
             return ETH_DECIMALS;
         } else if (_isUSD(token) || _isWBTC(token)) {
             return FOREX_DECIMALS;
         } else {
-            return int256(uint256(IERC20Metadata(token).decimals()));
+            return super._decimals(token);
         }
     }
 
