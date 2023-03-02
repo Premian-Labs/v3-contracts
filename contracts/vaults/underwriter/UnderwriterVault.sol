@@ -519,7 +519,8 @@ contract UnderwriterVault is
         uint256 tau,
         uint256 sigma
     ) internal view returns (address) {
-        uint256 dte = tau.mul(365);
+        uint256 dte = tau.mul(365e18);
+
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 

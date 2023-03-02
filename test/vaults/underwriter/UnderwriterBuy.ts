@@ -112,12 +112,12 @@ describe('#buy functionality', () => {
     it('reverts on expired maturity input', async () => {
       const { lp, vault } = await loadFixture(vaultSetup);
       const strike = parseEther('1500'); // ATM
-      const maturity = await time.latest();
+      const badMaturity = await time.latest();
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
       await addDeposit(vault.address, lp, lpDepositSize);
       await expect(
-        vault.quote(strike, maturity, quoteSize),
+        vault.quote(strike, badMaturity, quoteSize),
       ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
     });
 
@@ -140,17 +140,76 @@ describe('#buy functionality', () => {
     });
 
     describe('#isValidListing functionality', () => {
-      it('returns a valid listing address', async () => {
-        const { vault } = await loadFixture(vaultSetup);
+      it('reverts on invalid maturity bounds', async () => {
+        const { volOracle, base, maturity, vault } = await loadFixture(
+          vaultSetup,
+        );
+        const spotPrice = await vault.getSpotPrice();
+        const strike = parseEther('1500');
+        const badTau = parseEther('0.12328767'); // 45 DTE
+        const sigma = await volOracle[
+          'getVolatility(address,uint256,uint256,uint256)'
+        ](base.address, spotPrice, strike, badTau);
+        await expect(
+          vault.isValidListing(spotPrice, strike, maturity, badTau, sigma),
+        ).to.be.revertedWithCustomError(vault, 'Vault__MaturityBounds');
       });
 
-      it('reverts on invalid maturity bounds', async () => {});
+      it('retrieves valid option delta', async () => {
+        const { isCall, vault, base, volOracle } = await loadFixture(
+          vaultSetup,
+        );
+        const spotPrice = await vault.getSpotPrice();
+        const strike = parseEther('1500');
+        const tau = parseEther('0.03835616'); // 14 DTE
+        const rfRate = 0;
+        const sigma = await volOracle[
+          'getVolatility(address,uint256,uint256,uint256)'
+        ](base.address, spotPrice, strike, tau);
+        const delta = await vault.getDelta(
+          spotPrice,
+          strike,
+          tau,
+          sigma,
+          rfRate,
+          isCall,
+        );
+        expect(parseFloat(formatEther(delta))).to.approximately(0.528, 0.001);
+      });
 
-      it('retrieves valid option delta', async () => {});
+      it('reverts on invalid option delta bounds', async () => {
+        const { volOracle, base, maturity, vault } = await loadFixture(
+          vaultSetup,
+        );
+        const spotPrice = await vault.getSpotPrice();
+        const itmStrike = parseEther('500');
+        const badTau = parseEther('0.03835616'); // 14 DTE
+        const sigma = await volOracle[
+          'getVolatility(address,uint256,uint256,uint256)'
+        ](base.address, spotPrice, itmStrike, badTau);
+        await expect(
+          vault.isValidListing(spotPrice, itmStrike, maturity, badTau, sigma),
+        ).to.be.revertedWithCustomError(vault, 'Vault__DeltaBounds');
+      });
 
-      it('reverts on invalid option delta bounds', async () => {});
-
-      it('receives a valid option address', async () => {});
+      it('receives a valid listing address', async () => {
+        const { volOracle, base, maturity, vault, poolAddress } =
+          await loadFixture(vaultSetup);
+        const spotPrice = await vault.getSpotPrice();
+        const unListedStrike = parseEther('1500');
+        const tau = parseEther('0.03835616'); // 14 DTE
+        const sigma = await volOracle[
+          'getVolatility(address,uint256,uint256,uint256)'
+        ](base.address, spotPrice, unListedStrike, tau);
+        const listingAddr = await vault.isValidListing(
+          spotPrice,
+          unListedStrike,
+          maturity,
+          tau,
+          sigma,
+        );
+        expect(listingAddr).to.be.eq(poolAddress);
+      });
 
       it('returns the proper pool address from factory', async () => {
         const { p, poolKey, poolAddress } = await loadFixture(vaultSetup);
@@ -176,8 +235,18 @@ describe('#buy functionality', () => {
       });
 
       it('reverts when factory returns addressZERO', async () => {
-        const { lp, vault } = await loadFixture(vaultSetup);
-        await loadFixture(vaultSetup);
+        const { volOracle, base, maturity, vault } = await loadFixture(
+          vaultSetup,
+        );
+        const spotPrice = await vault.getSpotPrice();
+        const unListedStrike = parseEther('1600');
+        const tau = parseEther('0.03835616'); // 14 DTE
+        const sigma = await volOracle[
+          'getVolatility(address,uint256,uint256,uint256)'
+        ](base.address, spotPrice, unListedStrike, tau);
+        await expect(
+          vault.isValidListing(spotPrice, unListedStrike, maturity, tau, sigma),
+        ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
       });
     });
 
@@ -239,7 +308,7 @@ describe('#buy functionality', () => {
       });
 
       it('returns proper quote parameters: price, mintingFee, cLevel', async () => {
-        const { lp, trader, base, vault } = await loadFixture(vaultSetup);
+        const { lp, vault } = await loadFixture(vaultSetup);
         const lpDepositSize = 5;
         const strike = parseEther('1500');
         await addDeposit(vault.address, lp, lpDepositSize);
@@ -277,7 +346,6 @@ describe('#buy functionality', () => {
           maturity,
           tradeSize,
         );
-        console.log(poolAddr, price, mintingFee, cLevel);
       });
 
       it('reverts if maxCLevel is not set properly', async () => {

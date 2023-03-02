@@ -10,6 +10,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {OptionMath} from "../../../libraries/OptionMath.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
@@ -422,5 +423,25 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.alphaCLevel = alphaCLevel;
+    }
+
+    function getDelta(
+        uint256 spotPrice,
+        uint256 strike,
+        uint256 tau,
+        uint256 sigma,
+        uint256 rfRate,
+        bool isCall
+    ) public pure returns (int256) {
+        int256 delta = OptionMath.optionDelta(
+            spotPrice,
+            strike,
+            tau,
+            sigma,
+            rfRate,
+            isCall
+        );
+
+        return delta;
     }
 }
