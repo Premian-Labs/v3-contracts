@@ -429,6 +429,7 @@ describe('#buy functionality', () => {
       const { vault, lp, deployer, trader, base, poolAddress } =
         await loadFixture(vaultSetup);
       const lpDepositSize = 5; // units of base
+      const lpDepositSizeBN = parseEther(lpDepositSize.toString());
       await addDeposit(vault.address, lp, lpDepositSize);
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
@@ -437,6 +438,7 @@ describe('#buy functionality', () => {
       const fee = await callPool.takerFee(tradeSize, 0, true);
       const totalSize = tradeSize.add(fee);
       await vault.connect(trader).buy(strike, maturity, tradeSize);
+      const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
 
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -444,6 +446,9 @@ describe('#buy functionality', () => {
       );
       expect(await callPool.balanceOf(vault.address, TokenType.SHORT)).to.eq(
         tradeSize,
+      );
+      expect(await base.balanceOf(vault.address)).to.be.eq(
+        vaultCollateralBalance,
       );
     });
   });
