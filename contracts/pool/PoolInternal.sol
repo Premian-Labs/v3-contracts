@@ -1140,7 +1140,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         } else {
             _burn(srcP.owner, srcTokenId, srcSize);
-            _mint(srcP.owner, dstTokenId, srcSize, "");
+            _mint(newOwner, dstTokenId, srcSize, "");
         }
 
         if (size == srcSize) delete l.positions[srcKey];
