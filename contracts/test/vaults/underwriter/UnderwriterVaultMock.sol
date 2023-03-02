@@ -444,4 +444,24 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
         return delta;
     }
+
+    function getBlackScholesPrice(
+        uint256 spotPrice,
+        uint256 strike,
+        uint256 tau,
+        uint256 sigma,
+        uint256 rfRate,
+        bool isCall
+    ) public pure returns (uint256) {
+        uint256 price = OptionMath.blackScholesPrice(
+            spotPrice,
+            strike,
+            tau,
+            sigma,
+            rfRate,
+            isCall
+        );
+
+        return price;
+    }
 }

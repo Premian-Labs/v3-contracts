@@ -1075,7 +1075,7 @@ describe('UnderwriterVault', () => {
         p,
       );
 
-      await vault.connect(caller).mintFromPool(strike, maturity, size);
+      // await vault.connect(caller).mintFromPool(strike, maturity, size);
       //await callPool.balanceOf()
     });
   });

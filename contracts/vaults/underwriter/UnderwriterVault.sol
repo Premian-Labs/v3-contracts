@@ -612,6 +612,7 @@ contract UnderwriterVault is
             l.minCLevel,
             l.maxCLevel
         );
+        if (cLevel < l.minCLevel) revert Vault__lowCLevel();
 
         uint256 discount = l.hourlyDecayDiscount.mul(hoursSinceLastTx);
 
@@ -790,7 +791,6 @@ contract UnderwriterVault is
 
     /// @inheritdoc IUnderwriterVault
     function settle() external override returns (uint256) {
-        //TODO: remove pure when hydrated
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -805,7 +805,8 @@ contract UnderwriterVault is
         }
 
         uint256 current = l.minMaturity;
-        uint256 next;
+
+        // TODO: uint256 next;
 
         while (current <= lastExpired && current != 0) {
             _settleMaturity(current);
