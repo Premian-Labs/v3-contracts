@@ -436,7 +436,7 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
         (, int256 price, , , ) = AggregatorV3Interface(feed).latestRoundData();
-        if (price <= 0) revert OracleAdapter__InvalidPrice(price);
+        _ensurePriceNonZero(price);
         return price.toUint256();
     }
 
