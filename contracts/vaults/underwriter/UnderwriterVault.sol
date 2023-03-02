@@ -37,8 +37,8 @@ contract UnderwriterVault is
     using UD60x18 for uint256;
     using SD59x18 for int256;
 
-    uint256 SECONDSINAYEAR = 365 * 24 * 60 * 60;
-    uint256 SECONDSINAHOUR = 60 * 60;
+    uint256 internal constant SECONDSINAYEAR = 31536000;
+    uint256 internal constant SECONDSINAHOUR = 3600;
 
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
@@ -599,7 +599,7 @@ contract UnderwriterVault is
             l.totalAssets
         );
 
-        if (postUtilisation > 1) revert Vault__UtilEstError();
+        if (postUtilisation > ONE.toUint256()) revert Vault__UtilEstError();
 
         uint256 hoursSinceLastTx = (block.timestamp - l.lastTradeTimestamp).div(
             SECONDSINAHOUR
@@ -612,7 +612,7 @@ contract UnderwriterVault is
             l.maxCLevel
         );
 
-        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
+        uint256 discount = l.hourlyDecayDiscount.mul(hoursSinceLastTx);
 
         if (cLevel - discount < l.minCLevel) return l.minCLevel;
 

@@ -228,9 +228,10 @@ export async function vaultSetup() {
     hourlyDecayDiscount: parseEther('0.005'),
   };
 
+  // TODO: unify/define parameters scaling
   const _tradeBounds: TradeBounds = {
-    maxDTE: parseEther('30'),
-    minDTE: parseEther('3'),
+    maxDTE: 30,
+    minDTE: 3,
     minDelta: parseEther('0.1'),
     maxDelta: parseEther('0.7'),
   };

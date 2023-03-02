@@ -111,13 +111,13 @@ describe('#buy functionality', () => {
 
     it('reverts on expired maturity input', async () => {
       const { lp, vault } = await loadFixture(vaultSetup);
-      const badStrike = parseEther('1500'); // ATM
+      const strike = parseEther('1500'); // ATM
       const maturity = await time.latest();
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
       await addDeposit(vault.address, lp, lpDepositSize);
       await expect(
-        vault.quote(badStrike, maturity, quoteSize),
+        vault.quote(strike, maturity, quoteSize),
       ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
     });
 
@@ -188,10 +188,6 @@ describe('#buy functionality', () => {
     it('checks if the vault has sufficient funds', async () => {});
 
     describe('#cLevel functionality', () => {
-      const strike = parseEther('1200.0');
-      const maturity = parseEther('0.2');
-      const size = parseEther('1.0');
-
       describe('#cLevel calculation', () => {
         it('will not exceed max c-level', async () => {
           const { vault } = await loadFixture(vaultSetup);
@@ -242,16 +238,53 @@ describe('#buy functionality', () => {
         });
       });
 
-      it('should have a totalSpread that is positive', async () => {
-        const { vault } = await loadFixture(vaultSetup);
-        await vault.buy(strike, maturity, size);
-        const spread = await vault.totalLockedSpread();
+      it('returns proper quote parameters: price, mintingFee, cLevel', async () => {
+        const { lp, trader, base, vault } = await loadFixture(vaultSetup);
+        const lpDepositSize = 5;
+        const strike = parseEther('1500');
+        await addDeposit(vault.address, lp, lpDepositSize);
 
-        expect(parseFloat(formatEther(spread))).to.gte(0.0);
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+        const [poolAddr, price, mintingFee, cLevel] = await vault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+
+        // Normalised price is in (0,1)
+        expect(parseFloat(formatEther(price))).to.lt(1);
+        expect(parseFloat(formatEther(price))).to.gt(0);
+
+        // mintingFee == trade fee
+        expect(parseFloat(formatEther(mintingFee))).to.eq(0.006);
+
+        // check c-level
+        expect(parseFloat(formatEther(cLevel))).to.approximately(1.024, 0.001);
+      });
+
+      // TODO: rewrite for buy
+      it('should have a totalSpread that is positive', async () => {
+        const { lp, trader, base, vault } = await loadFixture(vaultSetup);
+        const lpDepositSize = 5;
+        const strike = parseEther('1500');
+        await addDeposit(vault.address, lp, lpDepositSize);
+
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+        const [poolAddr, price, mintingFee, cLevel] = await vault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        console.log(poolAddr, price, mintingFee, cLevel);
       });
 
       it('reverts if maxCLevel is not set properly', async () => {
         const { vault } = await loadFixture(vaultSetup);
+        const strike = parseEther('1500');
+        const size = parseEther('2');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
         await vault.setMaxClevel(parseEther('0.0'));
         expect(
           vault.quote(strike, maturity, size),
@@ -260,6 +293,9 @@ describe('#buy functionality', () => {
 
       it('reverts if the C level alpha is not set properly', async () => {
         const { vault } = await loadFixture(vaultSetup);
+        const strike = parseEther('1500');
+        const size = parseEther('2');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
         await vault.setMaxClevel(parseEther('0.0'));
         expect(
           vault.quote(strike, maturity, size),
