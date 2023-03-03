@@ -796,34 +796,21 @@ contract UnderwriterVault is
 
         uint256 current = l.minMaturity;
         uint256 next;
+        uint256 numStrikes;
 
         while (current <= lastExpired && current != 0) {
             _settleMaturity(current);
 
             // Remove maturity from data structure
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                l.positionSizes[current][
-                    l.maturityToStrikes[current].at(i)
-                ] = 0;
-                l.maturityToStrikes[current].remove(
-                    l.maturityToStrikes[current].at(i)
-                );
-            }
-            l.minMaturity = l.maturities.next(current);
-
             next = l.maturities.next(current);
-            l.minMaturity = next;
-            l.maturities.remove(current);
+            numStrikes = l.maturityToStrikes[current].length();
+            for (uint256 i = 0; i < strikes; i++) {
+                l.positionSizes[current][
+                    l.maturityToStrikes[current].at(0)
+                ] = 0;
+                _removeListing(l.maturityToStrikes[current].at(0), current);
+            }
             current = next;
-        }
-
-        // Update max maturities
-        if (lastExpired >= l.maxMaturity) {
-            l.maxMaturity = 0;
         }
 
         return 0;
