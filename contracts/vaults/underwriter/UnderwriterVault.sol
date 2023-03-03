@@ -721,6 +721,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         uint256 unlockedCollateral;
+        uint256 exerciseValue;
         uint256 settlementValue;
         uint256 positionSize;
         uint256 strike;
@@ -734,10 +735,10 @@ contract UnderwriterVault is
                 ? positionSize
                 : positionSize.mul(strike);
             l.totalLockedAssets -= unlockedCollateral;
-
             listingAddr = _getFactoryAddress(strike, maturity);
             settlementValue = IPool(listingAddr).settle(address(this));
-            l.totalAssets += settlementValue;
+            exerciseValue = unlockedCollateral - settlementValue;
+            l.totalAssets -= exerciseValue;
         }
         // collateral = strike
         // l.totalLocked
