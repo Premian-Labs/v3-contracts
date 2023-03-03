@@ -174,7 +174,7 @@ describe('Pool', () => {
           strike: strike,
         };
 
-        await base.connect(lp).approve(callPool.address, collateral);
+        await base.connect(lp).approve(p.router.address, collateral);
 
         const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
 
@@ -229,7 +229,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -264,7 +264,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -299,7 +299,7 @@ describe('Pool', () => {
       const size = parseEther('1000');
 
       await base.mint(lp.address, size);
-      await base.connect(lp).approve(callPool.address, size);
+      await base.connect(lp).approve(p.router.address, size);
 
       await callPool
         .connect(lp)
@@ -324,7 +324,7 @@ describe('Pool', () => {
       const size = parseEther('1000');
 
       await base.mint(lp.address, size);
-      await base.connect(lp).approve(callPool.address, size);
+      await base.connect(lp).approve(p.router.address, size);
 
       await callPool
         .connect(lp)
@@ -364,7 +364,7 @@ describe('Pool', () => {
           const size = parseEther('1000');
 
           await base.mint(lp.address, size);
-          await base.connect(lp).approve(callPool.address, size);
+          await base.connect(lp).approve(p.router.address, size);
 
           await callPool
             .connect(lp)
@@ -508,7 +508,7 @@ describe('Pool', () => {
         await base.mint(lp.address, depositCollateralValue);
         await base
           .connect(lp)
-          .approve(callPool.address, depositCollateralValue);
+          .approve(p.router.address, depositCollateralValue);
 
         await callPool
           .connect(lp)
@@ -626,7 +626,7 @@ describe('Pool', () => {
       const totalSize = size.add(fee);
 
       await base.mint(lp.address, totalSize);
-      await base.connect(lp).approve(callPool.address, totalSize);
+      await base.connect(lp).approve(p.router.address, totalSize);
 
       await callPool
         .connect(lp)
@@ -650,7 +650,7 @@ describe('Pool', () => {
       const totalSize = size.add(fee);
 
       await base.mint(lp.address, totalSize);
-      await base.connect(lp).approve(callPool.address, totalSize);
+      await base.connect(lp).approve(p.router.address, totalSize);
 
       await callPool.connect(lp).setApprovalForAll(deployer.address, true);
 
@@ -701,7 +701,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -717,7 +717,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -738,7 +738,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -754,7 +754,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
       await base.mint(trader.address, tradeSize);
-      await base.connect(trader).approve(callPool.address, tradeSize);
+      await base.connect(trader).approve(p.router.address, tradeSize);
 
       await callPool.connect(trader).trade(tradeSize, false);
 
@@ -775,7 +775,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -803,7 +803,7 @@ describe('Pool', () => {
       const depositSize = parseEther('1000');
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -847,7 +847,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -863,7 +863,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -893,7 +893,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -909,7 +909,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -947,7 +947,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -972,7 +972,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
       await base.mint(trader.address, ONE_ETHER);
-      await base.connect(trader).approve(callPool.address, ONE_ETHER);
+      await base.connect(trader).approve(p.router.address, ONE_ETHER);
 
       await callPool.connect(trader).trade(tradeSize, false);
 
@@ -1006,7 +1006,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       await callPool
         .connect(lp)
@@ -1030,7 +1030,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
       await base.mint(trader.address, ONE_ETHER);
-      await base.connect(trader).approve(callPool.address, ONE_ETHER);
+      await base.connect(trader).approve(p.router.address, ONE_ETHER);
 
       await callPool.connect(trader).trade(tradeSize, false);
 
@@ -1072,7 +1072,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       pKey.orderType = OrderType.CS;
 
@@ -1090,7 +1090,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -1125,7 +1125,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       pKey.orderType = OrderType.CS;
 
@@ -1143,7 +1143,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -1189,10 +1189,10 @@ describe('Pool', () => {
 
       await base
         .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
       await base
         .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1274,10 +1274,10 @@ describe('Pool', () => {
 
       await base
         .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
       await base
         .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1336,10 +1336,10 @@ describe('Pool', () => {
 
       await base
         .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
       await base
         .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
+        .approve(p.router.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1368,7 +1368,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       pKey.orderType = OrderType.CS;
 
@@ -1394,7 +1394,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
@@ -1415,7 +1415,7 @@ describe('Pool', () => {
       const depositSize = ONE_ETHER;
 
       await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
+      await base.connect(lp).approve(p.router.address, depositSize);
 
       pKey.orderType = OrderType.CS;
 
@@ -1433,7 +1433,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(p.router.address, totalPremium);
 
       await callPool.connect(trader).trade(tradeSize, true);
 
