@@ -1617,4 +1617,17 @@ describe('UnderwriterVault', () => {
       });
     });
   });
+
+  describe('#asset', () => {
+    it('returns base asset for callVault', async () => {
+      const { vault } = await loadFixture(vaultSetup);
+      const asset = await vault.asset();
+      expect(asset).to.eq(base.address);
+    });
+    it('returns quote asset for putVault', async () => {
+      const { putVault } = await loadFixture(vaultSetup);
+      const asset = await putVault.asset();
+      expect(asset).to.eq(quote.address);
+    });
+  });
 });
