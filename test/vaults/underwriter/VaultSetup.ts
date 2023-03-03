@@ -35,7 +35,7 @@ export let trader: SignerWithAddress;
 export let vaultImpl: UnderwriterVaultMock;
 export let vaultProxy: UnderwriterVaultProxy;
 export let putVaultProxy: UnderwriterVaultProxy;
-export let vault: UnderwriterVaultMock;
+export let callVault: UnderwriterVaultMock;
 export let putVault: UnderwriterVaultMock;
 
 // Pool Specs
@@ -259,7 +259,10 @@ export async function vaultSetup() {
     lastTimeStamp,
   );
   await vaultProxy.deployed();
-  vault = UnderwriterVaultMock__factory.connect(vaultProxy.address, deployer);
+  callVault = UnderwriterVaultMock__factory.connect(
+    vaultProxy.address,
+    deployer,
+  );
   if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
 
   putVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
@@ -291,7 +294,7 @@ export async function vaultSetup() {
     trader,
     base,
     quote,
-    vault,
+    callVault,
     putVault,
     volOracle,
     oracleAdapter,

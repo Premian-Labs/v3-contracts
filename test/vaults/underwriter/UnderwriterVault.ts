@@ -17,7 +17,7 @@ import {
   caller,
   receiver,
   trader,
-  vault,
+  callVault,
   base,
   vaultSetup,
   oracleAdapter,
@@ -63,10 +63,13 @@ describe('UnderwriterVault', () => {
 
   describe('#_getMaturityAfterTimestamp', () => {
     it('works for maturities with length 0', async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
       await expect(
-        vault.getMaturityAfterTimestamp('50000'),
-      ).to.be.revertedWithCustomError(vault, 'Vault__GreaterThanMaxMaturity');
+        callVault.getMaturityAfterTimestamp('50000'),
+      ).to.be.revertedWithCustomError(
+        callVault,
+        'Vault__GreaterThanMaxMaturity',
+      );
     });
 
     it('works for maturities with length greater than 1', async () => {
@@ -77,13 +80,13 @@ describe('UnderwriterVault', () => {
           sizes: [],
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
 
       expect(infos[0]['maturity']).to.eq(
-        await vault.getMaturityAfterTimestamp('50000'),
+        await callVault.getMaturityAfterTimestamp('50000'),
       );
 
-      await vault.clearListingsAndSizes();
+      await callVault.clearListingsAndSizes();
     });
 
     it('works for maturities with length greater than 1', async () => {
@@ -104,19 +107,19 @@ describe('UnderwriterVault', () => {
           sizes: [],
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
 
       expect(infos[0]['maturity']).to.eq(
-        await vault.getMaturityAfterTimestamp('50000'),
+        await callVault.getMaturityAfterTimestamp('50000'),
       );
       expect(infos[1]['maturity']).to.eq(
-        await vault.getMaturityAfterTimestamp('150000'),
+        await callVault.getMaturityAfterTimestamp('150000'),
       );
       expect(infos[2]['maturity']).to.eq(
-        await vault.getMaturityAfterTimestamp('250000'),
+        await callVault.getMaturityAfterTimestamp('250000'),
       );
 
-      await vault.clearListingsAndSizes();
+      await callVault.clearListingsAndSizes();
     });
   });
 
@@ -129,7 +132,7 @@ describe('UnderwriterVault', () => {
     let t3 = startTime + 30 * ONE_DAY;
 
     async function setup() {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
 
       const infos = [
         {
@@ -155,7 +158,7 @@ describe('UnderwriterVault', () => {
           sizes: [1, 1].map((el) => parseEther(el.toString())),
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
     }
 
     let tests = [
@@ -170,16 +173,18 @@ describe('UnderwriterVault', () => {
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when timestamp=${test.timestamp}`, async () => {
         await loadFixture(setup);
-        let result = await vault.getNumberOfUnexpiredListings(test.timestamp);
+        let result = await callVault.getNumberOfUnexpiredListings(
+          test.timestamp,
+        );
 
         expect(result).to.eq(test.expected);
       });
     });
 
     it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
+      await callVault.clearListingsAndSizes();
 
-      let result = await vault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
+      let result = await callVault.getNumberOfUnexpiredListings(t0 - ONE_DAY);
       let expected = 0;
 
       expect(result).to.eq(expected);
@@ -195,7 +200,7 @@ describe('UnderwriterVault', () => {
     let t3 = startTime + 30 * ONE_DAY;
 
     before(async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
 
       await oracleAdapter.mock.quoteFrom
         .withArgs(base.address, quote.address, t0)
@@ -234,7 +239,7 @@ describe('UnderwriterVault', () => {
           sizes: [2, 2].map((el) => parseEther(el.toString())),
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
     });
 
     let tests = [
@@ -266,8 +271,8 @@ describe('UnderwriterVault', () => {
 
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
-        await vault.setIsCall(test.isCall);
-        let result = await vault.getTotalFairValueExpired(test.timestamp);
+        await callVault.setIsCall(test.isCall);
+        let result = await callVault.getTotalFairValueExpired(test.timestamp);
         let delta = test.isCall ? 0.00001 : 0.0;
 
         expect(parseFloat(formatEther(result))).to.be.closeTo(
@@ -278,16 +283,16 @@ describe('UnderwriterVault', () => {
     });
 
     it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
+      await callVault.clearListingsAndSizes();
 
-      let result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      let result = await callVault.getTotalFairValueExpired(t0 - ONE_DAY);
       let expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
 
-      await vault.setIsCall(false);
+      await callVault.setIsCall(false);
 
-      result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      result = await callVault.getTotalFairValueExpired(t0 - ONE_DAY);
       expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
@@ -304,7 +309,7 @@ describe('UnderwriterVault', () => {
     let spot = parseEther('1000');
 
     before(async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
       const infos = [
         {
           maturity: t0,
@@ -329,7 +334,7 @@ describe('UnderwriterVault', () => {
           sizes: [2, 2].map((el) => parseEther(el.toString())),
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
     });
 
     let tests = [
@@ -349,8 +354,8 @@ describe('UnderwriterVault', () => {
 
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
-        await vault.setIsCall(test.isCall);
-        let result = await vault.getTotalFairValueUnexpired(
+        await callVault.setIsCall(test.isCall);
+        let result = await callVault.getTotalFairValueUnexpired(
           test.timestamp,
           spot,
         );
@@ -365,16 +370,19 @@ describe('UnderwriterVault', () => {
     });
 
     it('returns 0 when there are no existing listings', async () => {
-      await vault.clearListingsAndSizes();
+      await callVault.clearListingsAndSizes();
 
-      let result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      let result = await callVault.getTotalFairValueUnexpired(
+        t0 - ONE_DAY,
+        spot,
+      );
       let expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
 
-      await vault.setIsCall(false);
+      await callVault.setIsCall(false);
 
-      result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      result = await callVault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
       expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
@@ -387,7 +395,7 @@ describe('UnderwriterVault', () => {
     let t1: number;
     let t2: number;
     before(async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
 
       startTime = await now();
       t0 = startTime + 7 * ONE_DAY;
@@ -399,18 +407,18 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('1000');
       let maturity = t1;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(0);
 
-      await vault.addListing(strike, maturity);
+      await callVault.addListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
 
       expect(c).to.be.true;
 
-      n = await vault.getNumberOfListings();
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListings();
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(1);
       expect(minMaturity).to.eq(t1);
@@ -418,21 +426,21 @@ describe('UnderwriterVault', () => {
     });
 
     it('adds a listing to an existing maturity', async () => {
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(1);
 
       let strike = parseEther('2000');
       let maturity = t1;
 
-      await vault.addListing(strike, maturity);
+      await callVault.addListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
 
       expect(c).to.be.true;
 
-      n = await vault.getNumberOfListings();
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListings();
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(2);
       expect(minMaturity).to.eq(t1);
@@ -440,20 +448,20 @@ describe('UnderwriterVault', () => {
     });
 
     it('adds a listing with a maturity before minMaturity', async () => {
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(2);
 
       let strike = parseEther('1000');
       let maturity = t0;
 
-      await vault.addListing(strike, maturity);
+      await callVault.addListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.true;
 
-      n = await vault.getNumberOfListings();
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListings();
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(3);
       expect(minMaturity).to.eq(t0);
@@ -461,20 +469,20 @@ describe('UnderwriterVault', () => {
     });
 
     it('adds a listing with a maturity after maxMaturity', async () => {
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(3);
 
       let strike = parseEther('1000');
       let maturity = t2;
 
-      await vault.addListing(strike, maturity);
+      await callVault.addListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.true;
 
-      n = await vault.getNumberOfListings();
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListings();
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(4);
       expect(minMaturity).to.eq(t0);
@@ -482,20 +490,20 @@ describe('UnderwriterVault', () => {
     });
 
     it('will not add a duplicate listing', async () => {
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(4);
 
       let strike = parseEther('1000');
       let maturity = t2;
 
-      await vault.addListing(strike, maturity);
+      await callVault.addListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.true;
 
-      n = await vault.getNumberOfListings();
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListings();
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(4);
       expect(minMaturity).to.eq(t0);
@@ -506,8 +514,8 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('1000');
 
       await expect(
-        vault.addListing(strike, startTime),
-      ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
+        callVault.addListing(strike, startTime),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__OptionExpired');
     });
   });
 
@@ -519,7 +527,7 @@ describe('UnderwriterVault', () => {
     let t2 = startTime + 14 * ONE_DAY;
 
     before(async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
 
       const infos = [
         {
@@ -538,24 +546,24 @@ describe('UnderwriterVault', () => {
           sizes: [0].map((el) => parseEther(el.toString())),
         },
       ];
-      await vault.setListingsAndSizes(infos);
+      await callVault.setListingsAndSizes(infos);
     });
 
     it('should adjust and remove maxMaturity when it becomes empty', async () => {
       let strike = parseEther('1000');
       let maturity = t2;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(5);
 
-      await vault.removeListing(strike, maturity);
+      await callVault.removeListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.false;
 
-      n = await vault.getNumberOfListingsOnMaturity(maturity);
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(0);
       expect(minMaturity).to.eq(t0);
@@ -566,17 +574,17 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('1000');
       let maturity = t0;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(4);
 
-      await vault.removeListing(strike, maturity);
+      await callVault.removeListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.false;
 
-      n = await vault.getNumberOfListingsOnMaturity(maturity);
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(1);
       expect(minMaturity).to.eq(t0);
@@ -587,17 +595,17 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('2000');
       let maturity = t0;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(3);
 
-      await vault.removeListing(strike, maturity);
+      await callVault.removeListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.false;
 
-      n = await vault.getNumberOfListingsOnMaturity(maturity);
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(0);
       expect(minMaturity).to.eq(t1);
@@ -608,17 +616,17 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('1000');
       let maturity = t1;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(2);
 
-      await vault.removeListing(strike, maturity);
+      await callVault.removeListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.false;
 
-      n = await vault.getNumberOfListingsOnMaturity(maturity);
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(1);
       expect(minMaturity).to.eq(t1);
@@ -629,20 +637,20 @@ describe('UnderwriterVault', () => {
       let strike = parseEther('2000');
       let maturity = t1;
 
-      let n = await vault.getNumberOfListings();
+      let n = await callVault.getNumberOfListings();
       expect(n).to.eq(1);
 
-      await vault.removeListing(strike, maturity);
+      await callVault.removeListing(strike, maturity);
 
-      let c = await vault.contains(strike, maturity);
+      let c = await callVault.contains(strike, maturity);
       expect(c).to.be.false;
 
-      n = await vault.getNumberOfListingsOnMaturity(maturity);
-      let minMaturity = await vault.getMinMaturity();
-      let maxMaturity = await vault.getMaxMaturity();
+      n = await callVault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await callVault.getMinMaturity();
+      let maxMaturity = await callVault.getMaxMaturity();
 
       expect(n).to.eq(0);
-      expect(await vault.getNumberOfListings()).to.eq(0);
+      expect(await callVault.getNumberOfListings()).to.eq(0);
       expect(minMaturity).to.eq(0);
       expect(maxMaturity).to.eq(0);
     });
@@ -650,28 +658,28 @@ describe('UnderwriterVault', () => {
 
   describe('#convertToShares', () => {
     it('if no shares have been minted, minted shares should equal deposited assets', async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
       const assetAmount = parseEther('2');
-      const shareAmount = await vault.convertToShares(assetAmount);
+      const shareAmount = await callVault.convertToShares(assetAmount);
       expect(shareAmount).to.eq(assetAmount);
     });
 
     it('if supply is non-zero and pricePerShare is one, minted shares equals the deposited assets', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 8, base, quote, receiver);
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 8, base, quote, receiver);
       const assetAmount = parseEther('2');
-      const shareAmount = await vault.convertToShares(assetAmount);
+      const shareAmount = await callVault.convertToShares(assetAmount);
       expect(shareAmount).to.eq(assetAmount);
     });
 
     it('if supply is non-zero, minted shares equals the deposited assets adjusted by the pricePerShare', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('1.0'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('1.0'));
       const assetAmount = 2;
-      const shareAmount = await vault.convertToShares(
+      const shareAmount = await callVault.convertToShares(
         parseEther(assetAmount.toString()),
       );
       expect(parseFloat(formatEther(shareAmount))).to.eq(2 * assetAmount);
@@ -680,28 +688,28 @@ describe('UnderwriterVault', () => {
 
   describe('#convertToAssets', () => {
     it('if total supply is zero, revert due to zero shares', async () => {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
       const shareAmount = parseEther('2');
       await expect(
-        vault.convertToAssets(shareAmount),
-      ).to.be.revertedWithCustomError(vault, 'Vault__ZEROShares');
+        callVault.convertToAssets(shareAmount),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZEROShares');
     });
 
     it('if supply is non-zero and pricePerShare is one, withdrawn assets equals share amount', async () => {
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
       const shareAmount = parseEther('2');
-      const assetAmount = await vault.convertToAssets(shareAmount);
+      const assetAmount = await callVault.convertToAssets(shareAmount);
       expect(shareAmount).to.eq(assetAmount);
     });
 
     it('if supply is non-zero and pricePerShare is 0.5, withdrawn assets equals half the share amount', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('1.0'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('1.0'));
       const shareAmount = 2;
-      const assetAmount = await vault.convertToAssets(
+      const assetAmount = await callVault.convertToAssets(
         parseEther(shareAmount.toString()),
       );
       expect(parseFloat(formatEther(assetAmount))).to.eq(0.5 * shareAmount);
@@ -712,18 +720,18 @@ describe('UnderwriterVault', () => {
     // availableAssets = totalAssets - totalLockedSpread - lockedAssets
     // totalAssets = totalDeposits + premiums + spread - exercise
     it('check formula for total available assets', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      expect(await vault.getAvailableAssets()).to.eq(parseEther('2'));
-      await vault.increaseTotalLockedSpread(parseEther('0.002'));
-      expect(await vault.getAvailableAssets()).to.eq(parseEther('1.998'));
-      await vault.increaseTotalLockedAssets(parseEther('0.5'));
-      expect(await vault.getAvailableAssets()).to.eq(parseEther('1.498'));
-      await vault.increaseTotalLockedSpread(parseEther('0.2'));
-      expect(await vault.getAvailableAssets()).to.eq(parseEther('1.298'));
-      await vault.increaseTotalLockedAssets(parseEther('0.0001'));
-      expect(await vault.getAvailableAssets()).to.eq(parseEther('1.2979'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      expect(await callVault.getAvailableAssets()).to.eq(parseEther('2'));
+      await callVault.increaseTotalLockedSpread(parseEther('0.002'));
+      expect(await callVault.getAvailableAssets()).to.eq(parseEther('1.998'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      expect(await callVault.getAvailableAssets()).to.eq(parseEther('1.498'));
+      await callVault.increaseTotalLockedSpread(parseEther('0.2'));
+      expect(await callVault.getAvailableAssets()).to.eq(parseEther('1.298'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.0001'));
+      expect(await callVault.getAvailableAssets()).to.eq(parseEther('1.2979'));
     });
   });
 
@@ -747,22 +755,29 @@ describe('UnderwriterVault', () => {
     ];
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when totalLockedSpread=${test.totalLockedSpread} and tradeSize=${test.tradeSize}`, async () => {
-        const { vault } = await loadFixture(vaultSetup);
+        const { callVault } = await loadFixture(vaultSetup);
         // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
-        await addDeposit(vault, caller, test.deposit, base, quote, receiver);
+        await addDeposit(
+          callVault,
+          caller,
+          test.deposit,
+          base,
+          quote,
+          receiver,
+        );
         let startTime = await now();
         let t0 = startTime + 7 * ONE_DAY;
-        expect(await vault.totalAssets()).to.eq(
+        expect(await callVault.totalAssets()).to.eq(
           parseEther(test.deposit.toString()),
         );
-        expect(await vault.totalSupply()).to.eq(
+        expect(await callVault.totalSupply()).to.eq(
           parseEther(test.deposit.toString()),
         );
         // mock vault
-        await vault.increaseTotalLockedSpread(
+        await callVault.increaseTotalLockedSpread(
           parseEther(test.totalLockedSpread.toString()),
         );
-        await vault.setMaxMaturity(t0);
+        await callVault.setMaxMaturity(t0);
         if (test.tradeSize > 0) {
           const infos = [
             {
@@ -771,10 +786,10 @@ describe('UnderwriterVault', () => {
               sizes: [1].map((el) => parseEther(el.toString())),
             },
           ];
-          await vault.setListingsAndSizes(infos);
+          await callVault.setListingsAndSizes(infos);
         }
         let pps: number = parseFloat(
-          formatEther(await vault.getPricePerShare()),
+          formatEther(await callVault.getPricePerShare()),
         );
         expect(pps).to.be.closeTo(test.expected, 0.00000001);
       });
@@ -783,45 +798,45 @@ describe('UnderwriterVault', () => {
 
   describe('#maxWithdraw', () => {
     it('maxWithdraw should revert for a zero address', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
       await expect(
-        vault.maxWithdraw(ethers.constants.AddressZero),
-      ).to.be.revertedWithCustomError(vault, 'Vault__AddressZero');
+        callVault.maxWithdraw(ethers.constants.AddressZero),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
     });
 
     it('maxWithdraw should return the available assets for a non-zero address', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 3, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('0.1'));
-      await vault.increaseTotalLockedAssets(parseEther('0.5'));
-      const assetAmount = await vault.maxWithdraw(receiver.address);
-      console.log(await vault.getPricePerShare());
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 3, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('0.1'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await callVault.maxWithdraw(receiver.address);
+      console.log(await callVault.getPricePerShare());
       expect(assetAmount).to.eq(parseEther('2.4'));
     });
 
     it('maxWithdraw should return the assets the receiver owns', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 8, base, quote, caller);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('0.0'));
-      await vault.increaseTotalLockedAssets(parseEther('0.5'));
-      const assetAmount = await vault.maxWithdraw(receiver.address);
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 8, base, quote, caller);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('0.0'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await callVault.maxWithdraw(receiver.address);
       expect(assetAmount).to.eq(parseEther('2'));
     });
 
     it('maxWithdraw should return the assets the receiver owns since there are sufficient funds', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 7, base, quote, caller);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('0.1'));
-      await vault.increaseTotalLockedAssets(parseEther('0.5'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 7, base, quote, caller);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('0.1'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = parseFloat(
-        formatEther(await vault.maxWithdraw(receiver.address)),
+        formatEther(await callVault.maxWithdraw(receiver.address)),
       );
       expect(assetAmount).to.be.closeTo(1.977777777777777, 0.00000001);
     });
@@ -829,40 +844,40 @@ describe('UnderwriterVault', () => {
 
   describe('#maxRedeem', () => {
     it('maxRedeem should revert for a zero address', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
       await expect(
-        vault.maxRedeem(ethers.constants.AddressZero),
-      ).to.be.revertedWithCustomError(vault, 'Vault__AddressZero');
+        callVault.maxRedeem(ethers.constants.AddressZero),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
     });
 
     it('maxRedeem should return the amount of shares that are redeemable', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 3, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('0.1'));
-      await vault.increaseTotalLockedAssets(parseEther('0.5'));
-      const assetAmount = await vault.maxWithdraw(receiver.address);
-      console.log(await vault.getPricePerShare());
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 3, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('0.1'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await callVault.maxWithdraw(receiver.address);
+      console.log(await callVault.getPricePerShare());
       expect(assetAmount).to.eq(parseEther('2.4'));
     });
   });
 
   describe('#previewMint', () => {
     it('previewMint should return amount of assets required to mint the amount of shares', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      const assetAmount = await vault.previewMint(parseEther('2.1'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      const assetAmount = await callVault.previewMint(parseEther('2.1'));
       expect(assetAmount).to.eq(parseEther('2.1'));
     });
 
     it('previewMint should return amount of assets required to mint', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
-      await vault.increaseTotalLockedSpread(parseEther('0.2'));
-      const assetAmount = await vault.previewMint(parseEther('4'));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await callVault.increaseTotalLockedSpread(parseEther('0.2'));
+      const assetAmount = await callVault.previewMint(parseEther('4'));
       expect(assetAmount).to.eq(parseEther('3.6'));
     });
   });
@@ -872,22 +887,22 @@ describe('UnderwriterVault', () => {
       describe(isCall ? 'call' : 'put', () => {
         describe('deposit into an empty vault', () => {
           let asset: any;
-          let vaultPlaceholder: UnderwriterVaultMock;
+          let vault: UnderwriterVaultMock;
           let assetAmount = 2;
           let assetAmountEth: BigNumber;
           let balanceCaller: BigNumber;
           let balanceReceiver: BigNumber;
           beforeEach(async () => {
-            const { vault, putVault, base, quote } = await loadFixture(
+            const { callVault, putVault, base, quote } = await loadFixture(
               vaultSetup,
             );
 
             if (isCall) {
               asset = base;
-              vaultPlaceholder = vault;
+              vault = callVault;
             } else {
               asset = quote;
-              vaultPlaceholder = putVault;
+              vault = putVault;
             }
 
             assetAmount = 2;
@@ -896,7 +911,7 @@ describe('UnderwriterVault', () => {
             balanceReceiver = await asset.balanceOf(receiver.address);
 
             await addDeposit(
-              vaultPlaceholder,
+              vault,
               caller,
               assetAmount,
               asset,
@@ -906,9 +921,7 @@ describe('UnderwriterVault', () => {
           });
 
           it('vault should have received two asset amounts', async () => {
-            expect(await asset.balanceOf(vaultPlaceholder.address)).to.eq(
-              assetAmountEth,
-            );
+            expect(await asset.balanceOf(vault.address)).to.eq(assetAmountEth);
           });
           it('asset balance of caller should have been reduced by the asset amount', async () => {
             expect(await asset.balanceOf(caller.address)).to.eq(
@@ -921,66 +934,50 @@ describe('UnderwriterVault', () => {
             );
           });
           it('caller should not have received any shares', async () => {
-            expect(await vaultPlaceholder.balanceOf(caller.address)).to.eq(
+            expect(await vault.balanceOf(caller.address)).to.eq(
               parseEther('0'),
             );
           });
           it('receiver should have received the outstanding shares', async () => {
-            expect(await vaultPlaceholder.balanceOf(receiver.address)).to.eq(
+            expect(await vault.balanceOf(receiver.address)).to.eq(
               assetAmountEth,
             );
           });
           it('total supply of the the vault should have increased by the asset amount ', async () => {
-            expect(await vaultPlaceholder.totalSupply()).to.eq(assetAmountEth);
+            expect(await vault.totalSupply()).to.eq(assetAmountEth);
           });
         });
 
         describe('deposit into a non-empty vault with a pricePerShare unequal to 1', () => {
           let asset: any;
-          let vaultPlaceholder: UnderwriterVaultMock;
+          let vault: UnderwriterVaultMock;
           let assetAmount = 2;
           let assetAmountEth: BigNumber;
           let balanceCaller: BigNumber;
           let balanceReceiver: BigNumber;
           beforeEach(async () => {
-            const { caller, receiver, vault, putVault, base, quote } =
+            const { caller, receiver, callVault, putVault, base, quote } =
               await loadFixture(vaultSetup);
             if (isCall) {
               asset = base;
-              vaultPlaceholder = vault;
+              vault = callVault;
             } else {
               asset = quote;
-              vaultPlaceholder = putVault;
+              vault = putVault;
             }
-            await setMaturities(vaultPlaceholder);
+            await setMaturities(vault);
             assetAmount = 2;
             assetAmountEth = parseEther(assetAmount.toString());
             balanceCaller = await asset.balanceOf(caller.address);
             balanceReceiver = await asset.balanceOf(receiver.address);
 
-            await addDeposit(
-              vaultPlaceholder,
-              caller,
-              2,
-              asset,
-              quote,
-              receiver,
-            );
-            await vaultPlaceholder.increaseTotalLockedSpread(parseEther('0.5'));
-            await addDeposit(
-              vaultPlaceholder,
-              caller,
-              2,
-              base,
-              quote,
-              receiver,
-            );
+            await addDeposit(vault, caller, 2, asset, quote, receiver);
+            await vault.increaseTotalLockedSpread(parseEther('0.5'));
+            await addDeposit(vault, caller, 2, base, quote, receiver);
           });
           it('vault should hold 4 units of the asset', async () => {
             // modify the price per share to (2 - 0.5) / 2 = 0.75
-            expect(await asset.balanceOf(vaultPlaceholder.address)).to.eq(
-              parseEther('4'),
-            );
+            expect(await asset.balanceOf(vault.address)).to.eq(parseEther('4'));
           });
           it('balance of the caller should be reduced by 4 units', async () => {
             expect(await asset.balanceOf(caller.address)).to.eq(
@@ -993,15 +990,13 @@ describe('UnderwriterVault', () => {
             );
           });
           it('balance of vault shares of the caller should be 0', async () => {
-            expect(await vaultPlaceholder.balanceOf(caller.address)).to.eq(
+            expect(await vault.balanceOf(caller.address)).to.eq(
               parseEther('0'),
             );
           });
           it('balance of vault shares of the receiver should be 4.6666666..', async () => {
             expect(
-              parseFloat(
-                formatEther(await vaultPlaceholder.balanceOf(receiver.address)),
-              ),
+              parseFloat(formatEther(await vault.balanceOf(receiver.address))),
             ).to.be.closeTo(2 + 2 / 0.75, 0.00001);
           });
         });
@@ -1036,16 +1031,16 @@ describe('UnderwriterVault', () => {
     let afterBuyTimestamp: number;
 
     async function setupAfterBuyVault(isCall: boolean) {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await vault.setIsCall(isCall);
-      totalAssets = parseFloat(formatEther(await vault.totalAssets()));
+      const { callVault } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await callVault.setIsCall(isCall);
+      totalAssets = parseFloat(formatEther(await callVault.totalAssets()));
       console.log('Setup vault.');
 
       maturity = minMaturity;
       spreadUnlockingRate = spread / (minMaturity - startTime);
 
-      await vault.afterBuy(
+      await callVault.afterBuy(
         minMaturity,
         parseEther(premium.toString()),
         maturity - startTime,
@@ -1055,7 +1050,7 @@ describe('UnderwriterVault', () => {
       );
       afterBuyTimestamp = await now();
       console.log('Processed afterBuy.');
-      return { vault };
+      return { vault: callVault };
     }
 
     it('lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there', async () => {
@@ -1065,18 +1060,18 @@ describe('UnderwriterVault', () => {
 
     it('spreadUnlockingRates should equal', async () => {
       expect(
-        parseFloat(formatEther(await vault.spreadUnlockingRate())),
+        parseFloat(formatEther(await callVault.spreadUnlockingRate())),
       ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
     });
 
     it('total assets should equal', async () => {
-      expect(parseFloat(formatEther(await vault.totalAssets()))).to.eq(
+      expect(parseFloat(formatEther(await callVault.totalAssets()))).to.eq(
         totalAssets + premium + spread,
       );
     });
 
     it('positionSize should equal ', async () => {
-      const positionSize = await vault.positionSize(
+      const positionSize = await callVault.positionSize(
         maturity,
         parseEther(strike.toString()),
       );
@@ -1085,14 +1080,14 @@ describe('UnderwriterVault', () => {
 
     it('spreadUnlockingRate / ticks', async () => {
       expect(
-        parseFloat(formatEther(await vault.spreadUnlockingTicks(maturity))),
+        parseFloat(formatEther(await callVault.spreadUnlockingTicks(maturity))),
       ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
     });
 
     it('totalLockedSpread should equa', async () => {
-      expect(parseFloat(formatEther(await vault.totalLockedSpread()))).to.eq(
-        spread,
-      );
+      expect(
+        parseFloat(formatEther(await callVault.totalLockedSpread())),
+      ).to.eq(spread);
     });
 
     for (const isCall of [true, false]) {
@@ -1118,7 +1113,7 @@ describe('UnderwriterVault', () => {
         let totalLockedAssets: any;
         let newLockedAfterSettlement: any;
         let newTotalAssets: any;
-        let vaultPlaceholder: UnderwriterVaultMock;
+        let vault: UnderwriterVaultMock;
         async function setup() {
           let { deployer, base, quote, oracleAdapter, p } = await loadFixture(
             vaultSetup,
@@ -1127,21 +1122,21 @@ describe('UnderwriterVault', () => {
 
           if (isCall) {
             deposit = 10;
-            vaultPlaceholder = vault;
+            vault = callVault;
             totalLockedAssets = parseEther('5');
             newLockedAfterSettlement = parseEther('1');
             newTotalAssets = 9.333333333333;
           } else {
             deposit = 10000;
-            vaultPlaceholder = putVault;
+            vault = putVault;
             totalLockedAssets = parseEther('7120');
             newLockedAfterSettlement = parseEther('1120');
             newTotalAssets = 9000;
           }
 
           console.log('Depositing assets.');
-          await addDeposit(vaultPlaceholder, caller, deposit, base, quote);
-          expect(await vaultPlaceholder.totalAssets()).to.eq(
+          await addDeposit(vault, caller, deposit, base, quote);
+          expect(await vault.totalAssets()).to.eq(
             parseEther(deposit.toString()),
           );
           console.log('Deposited assets.');
@@ -1153,8 +1148,8 @@ describe('UnderwriterVault', () => {
               sizes: [size, size],
             },
           ];
-          await vaultPlaceholder.setListingsAndSizes(infos);
-          await vaultPlaceholder.increaseTotalLockedAssets(totalLockedAssets);
+          await vault.setListingsAndSizes(infos);
+          await vault.increaseTotalLockedAssets(totalLockedAssets);
 
           for (const strike of [strike1, strike2]) {
             await createPool(
@@ -1168,23 +1163,19 @@ describe('UnderwriterVault', () => {
               p,
             );
           }
-          await vaultPlaceholder
-            .connect(caller)
-            .mintFromPool(strike1, maturity, size);
-          await vaultPlaceholder
-            .connect(caller)
-            .mintFromPool(strike2, maturity, size);
+          await vault.connect(caller).mintFromPool(strike1, maturity, size);
+          await vault.connect(caller).mintFromPool(strike2, maturity, size);
           await increaseTo(maturity);
-          await vaultPlaceholder.connect(caller).settleMaturity(maturity);
+          await vault.connect(caller).settleMaturity(maturity);
         }
         it('totalAssets should be reduced by the settlementValue and equal 9.986666666666', async () => {
           await loadFixture(setup);
           expect(
-            parseFloat(formatEther(await vaultPlaceholder.totalAssets())),
+            parseFloat(formatEther(await vault.totalAssets())),
           ).to.be.closeTo(newTotalAssets, 0.000000000001);
         });
         it('the position size should be reduced by the amount of settled options', async () => {
-          expect(await vaultPlaceholder.totalLockedAssets()).to.eq(
+          expect(await vault.totalLockedAssets()).to.eq(
             newLockedAfterSettlement,
           );
         });
@@ -1197,24 +1188,24 @@ describe('UnderwriterVault', () => {
     const t1 = t0 + ONE_WEEK;
     const t2 = t0 + 2 * ONE_WEEK;
     let strikedict = {};
-    let vaultPlaceholder: UnderwriterVaultMock;
+    let vault: UnderwriterVaultMock;
 
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         async function setupVaultForSettlement() {
-          let { vault, putVault, deployer, base, quote, oracleAdapter, p } =
+          let { callVault, putVault, deployer, base, quote, oracleAdapter, p } =
             await loadFixture(vaultSetup);
 
           let totalAssets: any;
           let totalLockedAssets: any;
 
           if (isCall) {
-            vaultPlaceholder = vault;
+            vault = callVault;
             totalAssets = 100;
             totalLockedAssets = parseEther('20');
           } else {
             totalAssets = 100000;
-            vaultPlaceholder = putVault;
+            vault = putVault;
             totalLockedAssets = parseEther('20000');
             quote.mint(caller.address, parseEther(totalAssets.toString()));
           }
@@ -1253,14 +1244,14 @@ describe('UnderwriterVault', () => {
           ];
 
           console.log('Depositing assets.');
-          await addDeposit(vaultPlaceholder, caller, totalAssets, base, quote);
-          expect(await vaultPlaceholder.totalAssets()).to.eq(
+          await addDeposit(vault, caller, totalAssets, base, quote);
+          expect(await vault.totalAssets()).to.eq(
             parseEther(totalAssets.toString()),
           );
           console.log('Deposited assets.');
 
-          await vaultPlaceholder.setListingsAndSizes(infos);
-          await vaultPlaceholder.increaseTotalLockedAssets(totalLockedAssets);
+          await vault.setListingsAndSizes(infos);
+          await vault.increaseTotalLockedAssets(totalLockedAssets);
           for (let info of infos) {
             for (const [i, strike] of info.strikes.entries()) {
               await createPool(
@@ -1276,7 +1267,7 @@ describe('UnderwriterVault', () => {
               console.log(
                 `Minting ${info.sizes[i]} options with strike ${strike} and maturity ${info.maturity}.`,
               );
-              await vaultPlaceholder
+              await vault
                 .connect(caller)
                 .mintFromPool(strike, info.maturity, info.sizes[i]);
             }
@@ -1321,35 +1312,32 @@ describe('UnderwriterVault', () => {
             it(`totalAssets equals ${amounts.newTotalAssets}`, async () => {
               await loadFixture(setupVaultForSettlement);
               await increaseTo(test.timestamp);
-              await vaultPlaceholder.settle();
+              await vault.settle();
 
               let delta = isCall ? 0.00001 : 0;
 
               expect(
-                parseFloat(formatEther(await vaultPlaceholder.totalAssets())),
+                parseFloat(formatEther(await vault.totalAssets())),
               ).to.be.closeTo(amounts.newTotalAssets, delta);
             });
             it(`totalLocked equals ${amounts.newLocked}`, async () => {
-              let totalLocked = await vaultPlaceholder.totalLockedAssets();
+              let totalLocked = await vault.totalLockedAssets();
               let expected = parseEther(amounts.newLocked.toString());
               expect(totalLocked).to.eq(expected);
             });
             it(`minMaturity equals ${test.minMaturity}`, async () => {
-              let minMaturity = await vaultPlaceholder.minMaturity();
+              let minMaturity = await vault.minMaturity();
               expect(minMaturity).to.eq(test.minMaturity);
             });
             it(`maxMaturity equals ${test.maxMaturity}`, async () => {
-              let maxMaturity = await vaultPlaceholder.maxMaturity();
+              let maxMaturity = await vault.maxMaturity();
               expect(maxMaturity).to.eq(test.maxMaturity);
             });
             it(`expired position sizes equal zero`, async () => {
               if ([t0, t1, t2].includes(test.timestamp)) {
                 let strikes = strikedict[test.timestamp];
                 strikes.forEach(async (strike) => {
-                  let size = await vaultPlaceholder.positionSize(
-                    test.timestamp,
-                    strike,
-                  );
+                  let size = await vault.positionSize(test.timestamp, strike);
                   expect(size).to.eq(parseEther('0'));
                 });
               }
@@ -1392,7 +1380,7 @@ describe('UnderwriterVault', () => {
     let spreadUnlockingRate: number;
 
     async function setupSpreadsVault() {
-      const { vault } = await loadFixture(vaultSetup);
+      const { callVault } = await loadFixture(vaultSetup);
       startTime = await now();
       t0 = startTime + 7 * ONE_DAY;
       t1 = startTime + 10 * ONE_DAY;
@@ -1424,8 +1412,8 @@ describe('UnderwriterVault', () => {
           sizes: [],
         },
       ];
-      await vault.setListingsAndSizes(infos);
-      await vault.setLastSpreadUnlockUpdate(startTime);
+      await callVault.setListingsAndSizes(infos);
+      await callVault.setLastSpreadUnlockUpdate(startTime);
       const totalLockedSpread = 1.24 + 5.56 + 11.2;
       console.log('totalLockedSpread', totalLockedSpread);
       const totalLockedFormatted = parseEther(totalLockedSpread.toString());
@@ -1443,15 +1431,15 @@ describe('UnderwriterVault', () => {
       console.log(parseEther(spreadUnlockingRatet1.toFixed(18).toString()));
       console.log(parseEther(spreadUnlockingRatet2.toFixed(18).toString()));
 
-      await vault.increaseSpreadUnlockingTick(t0, surt0);
-      await vault.increaseSpreadUnlockingTick(t1, surt1);
-      await vault.increaseSpreadUnlockingTick(t2, surt2);
+      await callVault.increaseSpreadUnlockingTick(t0, surt0);
+      await callVault.increaseSpreadUnlockingTick(t1, surt1);
+      await callVault.increaseSpreadUnlockingTick(t2, surt2);
       spreadUnlockingRate =
         spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
-      await vault.increaseSpreadUnlockingRate(
+      await callVault.increaseSpreadUnlockingRate(
         parseEther(spreadUnlockingRate.toFixed(18).toString()),
       );
-      await vault.increaseTotalLockedSpread(totalLockedFormatted);
+      await callVault.increaseTotalLockedSpread(totalLockedFormatted);
     }
 
     describe('#getTotalLockedSpread', () => {
@@ -1459,7 +1447,7 @@ describe('UnderwriterVault', () => {
         await loadFixture(setupSpreadsVault);
         await increaseTo(startTime + ONE_DAY);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(16.4668, 0.001);
       });
 
@@ -1467,7 +1455,7 @@ describe('UnderwriterVault', () => {
         // 7 / 14 * 11.2 + 3 / 10 * 5.56 = 7.268
         await increaseTo(t0);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(7.268, 0.001);
       });
 
@@ -1475,7 +1463,7 @@ describe('UnderwriterVault', () => {
         // 6 / 14 * 11.2 + 2 / 10 * 5.56 = 5.912
         await increaseTo(t0 + ONE_DAY);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(5.912, 0.001);
       });
 
@@ -1483,7 +1471,7 @@ describe('UnderwriterVault', () => {
         // 11.2 * 3 / 14 = 3.2
         await increaseTo(t1);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(3.2, 0.001);
       });
 
@@ -1491,7 +1479,7 @@ describe('UnderwriterVault', () => {
         // 3 / 14 * 11.2 = 2.4
         await increaseTo(t1 + ONE_DAY);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(2.4, 0.001);
       });
 
@@ -1499,7 +1487,7 @@ describe('UnderwriterVault', () => {
         // 0
         await increaseTo(t2);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(0.0, 0.0000001);
       });
 
@@ -1507,7 +1495,7 @@ describe('UnderwriterVault', () => {
         // 0
         await increaseTo(t0 + 7 * ONE_DAY);
         expect(
-          parseFloat(formatEther(await vault.getTotalLockedSpread())),
+          parseFloat(formatEther(await callVault.getTotalLockedSpread())),
         ).to.be.closeTo(0.0, 0.0000001);
       });
     });
@@ -1516,155 +1504,155 @@ describe('UnderwriterVault', () => {
       it('At startTime + 1 day totalLockedSpread should approximately equal 7.268', async () => {
         await loadFixture(setupSpreadsVault);
         await increaseTo(startTime + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(16.4668, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('At maturity t0 totalLockedSpread should approximately equal 7.268', async () => {
         // 7 / 14 * 11.2 + 3 / 10 * 5.56 = 7.268
         await loadFixture(setupSpreadsVault);
         await increaseTo(t0);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(7.268, 0.001);
         spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
 
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('At t0 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
         // 6 / 14 * 11.2 + 2 / 10 * 5.56 = 5.912
         await loadFixture(setupSpreadsVault);
         await increaseTo(t0 + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(5.912, 0.001);
         spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('At maturity t1 totalLockedSpread should approximately equal 3.2', async () => {
         // 11.2 * 3 / 14 = 3.2
         await loadFixture(setupSpreadsVault);
         await increaseTo(t1);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(3.2, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('At t1 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
         // 3 / 14 * 11.2 = 2.4
         await loadFixture(setupSpreadsVault);
         await increaseTo(t1 + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(2.4, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('At maturity t2 totalLockedSpread should approximately equal 0.0', async () => {
         await loadFixture(setupSpreadsVault);
         await increaseTo(t2);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(0.0, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(0.0, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
 
       it('Run through all of the above', async () => {
         await loadFixture(setupSpreadsVault);
         await increaseTo(startTime + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(16.4668, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
         await increaseTo(t0);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(7.268, 0.001);
         spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
 
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
         await increaseTo(t0 + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(5.912, 0.001);
         spreadUnlockingRate = spreadUnlockingRatet1 + spreadUnlockingRatet2;
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
         await increaseTo(t1);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(3.2, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
         await increaseTo(t1 + ONE_DAY);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(2.4, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
         await increaseTo(t2);
-        await vault.updateState();
+        await callVault.updateState();
         expect(
-          parseFloat(formatEther(await vault.totalLockedSpread())),
+          parseFloat(formatEther(await callVault.totalLockedSpread())),
         ).to.be.closeTo(0.0, 0.001);
         expect(
-          parseFloat(formatEther(await vault.spreadUnlockingRate())),
+          parseFloat(formatEther(await callVault.spreadUnlockingRate())),
         ).to.be.closeTo(0.0, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await callVault.lastSpreadUnlockUpdate()).to.eq(await now());
       });
     });
   });
 
   describe('#asset', () => {
     it('returns base asset for callVault', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      const asset = await vault.asset();
+      const { callVault } = await loadFixture(vaultSetup);
+      const asset = await callVault.asset();
       expect(asset).to.eq(base.address);
     });
     it('returns quote asset for putVault', async () => {
@@ -1672,5 +1660,10 @@ describe('UnderwriterVault', () => {
       const asset = await putVault.asset();
       expect(asset).to.eq(quote.address);
     });
+  });
+
+  describe('#_removeListing', () => {
+    beforeEach(async () => {});
+    it('returns base asset for callVault', async () => {});
   });
 });

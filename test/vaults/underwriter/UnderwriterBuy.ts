@@ -11,7 +11,7 @@ import { getValidMaturity } from '../../../utils/time';
 
 describe('#Vault contract', () => {
   it('properly initializes vault variables', async () => {
-    const { vault, lastTimeStamp } = await loadFixture(vaultSetup);
+    const { callVault, lastTimeStamp } = await loadFixture(vaultSetup);
 
     let minClevel: BigNumberish;
     let maxClevel: BigNumberish;
@@ -24,21 +24,21 @@ describe('#Vault contract', () => {
     let _lastTradeTimestamp: BigNumberish;
 
     [minClevel, maxClevel, alphaClevel, hourlyDecayDiscount] =
-      await vault.getClevelParams();
+      await callVault.getClevelParams();
 
     expect(parseFloat(formatEther(minClevel))).to.eq(1.0);
     expect(parseFloat(formatEther(maxClevel))).to.eq(1.2);
     expect(parseFloat(formatEther(alphaClevel))).to.eq(3.0);
     expect(parseFloat(formatEther(hourlyDecayDiscount))).to.eq(0.005);
 
-    [minDTE, maxDTE, minDelta, maxDelta] = await vault.getTradeBounds();
+    [minDTE, maxDTE, minDelta, maxDelta] = await callVault.getTradeBounds();
 
     expect(parseFloat(formatEther(minDTE))).to.eq(3.0);
     expect(parseFloat(formatEther(maxDTE))).to.eq(30.0);
     expect(parseFloat(formatEther(minDelta))).to.eq(0.1);
     expect(parseFloat(formatEther(maxDelta))).to.eq(0.7);
 
-    _lastTradeTimestamp = await vault.getLastTradeTimestamp();
+    _lastTradeTimestamp = await callVault.getLastTradeTimestamp();
     // check that a timestamp was set
     expect(_lastTradeTimestamp).to.eq(lastTimeStamp);
     // check timestamp is in seconds epoch
@@ -96,32 +96,32 @@ describe('#Vault contract', () => {
 describe('#buy functionality', () => {
   describe('#quote functionality', () => {
     it('reverts on no strike input', async () => {
-      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
       const badStrike = parseEther('0'); // ATM
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(vault, lp, lpDepositSize, base, quote);
+      await addDeposit(callVault, lp, lpDepositSize, base, quote);
       await expect(
-        vault.quote(badStrike, maturity, quoteSize),
-      ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
+        callVault.quote(badStrike, maturity, quoteSize),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__StrikeZero');
     });
 
     it('reverts on expired maturity input', async () => {
-      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
       const strike = parseEther('1500'); // ATM
       const badMaturity = await time.latest();
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(vault, lp, lpDepositSize, base, quote);
+      await addDeposit(callVault, lp, lpDepositSize, base, quote);
       await expect(
-        vault.quote(strike, badMaturity, quoteSize),
-      ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
+        callVault.quote(strike, badMaturity, quoteSize),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__OptionExpired');
     });
 
     it('gets a valid spot price via the vault', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      const spotPrice = await vault.getSpotPrice();
+      const { callVault } = await loadFixture(vaultSetup);
+      const spotPrice = await callVault.getSpotPrice();
       expect(parseFloat(formatEther(spotPrice))).to.be.equal(1500);
     });
 
@@ -138,15 +138,17 @@ describe('#buy functionality', () => {
     });
 
     it('returns the proper blackscholes price', async () => {
-      const { isCall, vault, base, volOracle } = await loadFixture(vaultSetup);
-      const spotPrice = await vault.getSpotPrice();
+      const { isCall, callVault, base, volOracle } = await loadFixture(
+        vaultSetup,
+      );
+      const spotPrice = await callVault.getSpotPrice();
       const strike = parseEther('1500');
       const tau = parseEther('0.03835616'); // 14 DTE
       const rfRate = 0;
       const sigma = await volOracle[
         'getVolatility(address,uint256,uint256,uint256)'
       ](base.address, spotPrice, strike, tau);
-      const price = await vault.getBlackScholesPrice(
+      const price = await callVault.getBlackScholesPrice(
         spotPrice,
         strike,
         tau,
@@ -166,28 +168,28 @@ describe('#buy functionality', () => {
     });
 
     it('checks if the vault has sufficient funds', async () => {
-      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
       const lpDepositSize = 5;
       const strike = parseEther('1500');
-      await addDeposit(vault, lp, lpDepositSize, base, quote);
+      await addDeposit(callVault, lp, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const largeTradeSize = parseEther('7');
 
       await expect(
-        vault.quote(strike, maturity, largeTradeSize),
-      ).to.be.revertedWithCustomError(vault, 'Vault__InsufficientFunds');
+        callVault.quote(strike, maturity, largeTradeSize),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
     });
 
     it('returns proper quote parameters: price, mintingFee, cLevel', async () => {
-      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
       const lpDepositSize = 5;
       const strike = parseEther('1500');
-      await addDeposit(vault, lp, lpDepositSize, base, quote);
+      await addDeposit(callVault, lp, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
-      const [poolAddr, price, mintingFee, cLevel] = await vault.quote(
+      const [poolAddr, price, mintingFee, cLevel] = await callVault.quote(
         strike,
         maturity,
         tradeSize,
@@ -206,32 +208,32 @@ describe('#buy functionality', () => {
 
     describe('#isValidListing functionality', () => {
       it('reverts on invalid maturity bounds', async () => {
-        const { volOracle, base, maturity, vault } = await loadFixture(
+        const { volOracle, base, maturity, callVault } = await loadFixture(
           vaultSetup,
         );
-        const spotPrice = await vault.getSpotPrice();
+        const spotPrice = await callVault.getSpotPrice();
         const strike = parseEther('1500');
         const badTau = parseEther('0.12328767'); // 45 DTE
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, badTau);
         await expect(
-          vault.isValidListing(spotPrice, strike, maturity, badTau, sigma),
-        ).to.be.revertedWithCustomError(vault, 'Vault__MaturityBounds');
+          callVault.isValidListing(spotPrice, strike, maturity, badTau, sigma),
+        ).to.be.revertedWithCustomError(callVault, 'Vault__MaturityBounds');
       });
 
       it('retrieves valid option delta', async () => {
-        const { isCall, vault, base, volOracle } = await loadFixture(
+        const { isCall, callVault, base, volOracle } = await loadFixture(
           vaultSetup,
         );
-        const spotPrice = await vault.getSpotPrice();
+        const spotPrice = await callVault.getSpotPrice();
         const strike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
         const rfRate = 0;
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, tau);
-        const delta = await vault.getDelta(
+        const delta = await callVault.getDelta(
           spotPrice,
           strike,
           tau,
@@ -243,30 +245,36 @@ describe('#buy functionality', () => {
       });
 
       it('reverts on invalid option delta bounds', async () => {
-        const { volOracle, base, maturity, vault } = await loadFixture(
+        const { volOracle, base, maturity, callVault } = await loadFixture(
           vaultSetup,
         );
-        const spotPrice = await vault.getSpotPrice();
+        const spotPrice = await callVault.getSpotPrice();
         const itmStrike = parseEther('500');
         const badTau = parseEther('0.03835616'); // 14 DTE
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, itmStrike, badTau);
         await expect(
-          vault.isValidListing(spotPrice, itmStrike, maturity, badTau, sigma),
-        ).to.be.revertedWithCustomError(vault, 'Vault__DeltaBounds');
+          callVault.isValidListing(
+            spotPrice,
+            itmStrike,
+            maturity,
+            badTau,
+            sigma,
+          ),
+        ).to.be.revertedWithCustomError(callVault, 'Vault__DeltaBounds');
       });
 
       it('receives a valid listing address', async () => {
-        const { volOracle, base, maturity, vault, poolAddress } =
+        const { volOracle, base, maturity, callVault, poolAddress } =
           await loadFixture(vaultSetup);
-        const spotPrice = await vault.getSpotPrice();
+        const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
-        const listingAddr = await vault.isValidListing(
+        const listingAddr = await callVault.isValidListing(
           spotPrice,
           unListedStrike,
           maturity,
@@ -300,26 +308,35 @@ describe('#buy functionality', () => {
       });
 
       it('reverts when factory returns addressZERO', async () => {
-        const { volOracle, base, maturity, vault } = await loadFixture(
+        const { volOracle, base, maturity, callVault } = await loadFixture(
           vaultSetup,
         );
-        const spotPrice = await vault.getSpotPrice();
+        const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1600');
         const tau = parseEther('0.03835616'); // 14 DTE
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
         await expect(
-          vault.isValidListing(spotPrice, unListedStrike, maturity, tau, sigma),
-        ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
+          callVault.isValidListing(
+            spotPrice,
+            unListedStrike,
+            maturity,
+            tau,
+            sigma,
+          ),
+        ).to.be.revertedWithCustomError(
+          callVault,
+          'Vault__OptionPoolNotListed',
+        );
       });
     });
 
     describe('#cLevel functionality', () => {
       describe('#cLevel calculation', () => {
         it('will not exceed max c-level', async () => {
-          const { vault } = await loadFixture(vaultSetup);
-          const cLevel = await vault.calculateClevel(
+          const { callVault } = await loadFixture(vaultSetup);
+          const cLevel = await callVault.calculateClevel(
             parseEther('1.0'),
             parseEther('3.0'),
             parseEther('1.0'),
@@ -329,8 +346,8 @@ describe('#buy functionality', () => {
         });
 
         it('will not go below min c-level', async () => {
-          const { vault } = await loadFixture(vaultSetup);
-          const cLevel = await vault.calculateClevel(
+          const { callVault } = await loadFixture(vaultSetup);
+          const cLevel = await callVault.calculateClevel(
             parseEther('0.0'),
             parseEther('3.0'),
             parseEther('1.0'),
@@ -340,9 +357,9 @@ describe('#buy functionality', () => {
         });
 
         it('will properly adjust based on utilization', async () => {
-          const { vault } = await loadFixture(vaultSetup);
+          const { callVault } = await loadFixture(vaultSetup);
 
-          let cLevel = await vault.calculateClevel(
+          let cLevel = await callVault.calculateClevel(
             parseEther('0.4'),
             parseEther('3.0'),
             parseEther('1.0'),
@@ -353,7 +370,7 @@ describe('#buy functionality', () => {
             0.001,
           );
 
-          cLevel = await vault.calculateClevel(
+          cLevel = await callVault.calculateClevel(
             parseEther('0.9'),
             parseEther('3.0'),
             parseEther('1.0'),
@@ -369,25 +386,25 @@ describe('#buy functionality', () => {
       it('should have a totalSpread that is positive', async () => {});
 
       it('reverts if maxCLevel is not set properly', async () => {
-        const { vault } = await loadFixture(vaultSetup);
+        const { callVault } = await loadFixture(vaultSetup);
         const strike = parseEther('1500');
         const size = parseEther('2');
         const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        await vault.setMaxClevel(parseEther('0.0'));
+        await callVault.setMaxClevel(parseEther('0.0'));
         expect(
-          vault.quote(strike, maturity, size),
-        ).to.be.revertedWithCustomError(vault, 'Vault__CLevelBounds');
+          callVault.quote(strike, maturity, size),
+        ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
       });
 
       it('reverts if the C level alpha is not set properly', async () => {
-        const { vault } = await loadFixture(vaultSetup);
+        const { callVault } = await loadFixture(vaultSetup);
         const strike = parseEther('1500');
         const size = parseEther('2');
         const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        await vault.setMaxClevel(parseEther('0.0'));
+        await callVault.setMaxClevel(parseEther('0.0'));
         expect(
-          vault.quote(strike, maturity, size),
-        ).to.be.revertedWithCustomError(vault, 'Vault__CLevelBounds');
+          callVault.quote(strike, maturity, size),
+        ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
       });
 
       it('used post quote/trade utilization', async () => {});
@@ -426,28 +443,28 @@ describe('#buy functionality', () => {
       ).to.eq(size);
     });
     it('allows the vault to mint options for the LP and Trader', async () => {
-      const { vault, lp, deployer, trader, base, quote, poolAddress } =
+      const { callVault, lp, deployer, trader, base, quote, poolAddress } =
         await loadFixture(vaultSetup);
       const lpDepositSize = 5; // units of base
       const lpDepositSizeBN = parseEther(lpDepositSize.toString());
-      await addDeposit(vault, lp, lpDepositSize, base, quote);
+      await addDeposit(callVault, lp, lpDepositSize, base, quote);
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
       const callPool = IPoolMock__factory.connect(poolAddress, deployer);
       const fee = await callPool.takerFee(tradeSize, 0, true);
       const totalSize = tradeSize.add(fee);
-      await vault.connect(trader).buy(strike, maturity, tradeSize);
+      await callVault.connect(trader).buy(strike, maturity, tradeSize);
       const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
 
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         tradeSize,
       );
-      expect(await callPool.balanceOf(vault.address, TokenType.SHORT)).to.eq(
-        tradeSize,
-      );
-      expect(await base.balanceOf(vault.address)).to.be.eq(
+      expect(
+        await callPool.balanceOf(callVault.address, TokenType.SHORT),
+      ).to.eq(tradeSize);
+      expect(await base.balanceOf(callVault.address)).to.be.eq(
         vaultCollateralBalance,
       );
     });
