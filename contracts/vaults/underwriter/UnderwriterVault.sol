@@ -548,7 +548,7 @@ contract UnderwriterVault is
         address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
             _poolKey
         );
-
+        if (listingAddr == address(0)) revert Vault__AddressZero();
         return listingAddr;
     }
 
