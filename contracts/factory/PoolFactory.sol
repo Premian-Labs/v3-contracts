@@ -40,9 +40,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function isPool(
-        address contractAddress
-    ) external view override returns (bool) {
+    function isPool(address contractAddress) external view returns (bool) {
         return PoolFactoryStorage.layout().isPool[contractAddress];
     }
 

@@ -40,9 +40,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @notice Returns whether the given address is a pool
     /// @param contractAddress The address to check
     /// @return Whether the given address is a pool
-    function isPool(
-        address contractAddress
-    ) external view override returns (bool);
+    function isPool(address contractAddress) external view returns (bool);
 
     /// @notice Returns the address of a pool if it has been deployed with those parameters (or address(0) if not)
     /// @param k The pool key
