@@ -804,7 +804,7 @@ contract UnderwriterVault is
             // Remove maturity from data structure
             next = l.maturities.next(current);
             numStrikes = l.maturityToStrikes[current].length();
-            for (uint256 i = 0; i < strikes; i++) {
+            for (uint256 i = 0; i < numStrikes; i++) {
                 l.positionSizes[current][
                     l.maturityToStrikes[current].at(0)
                 ] = 0;
