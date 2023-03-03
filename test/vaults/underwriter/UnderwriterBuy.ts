@@ -96,24 +96,24 @@ describe('#Vault contract', () => {
 describe('#buy functionality', () => {
   describe('#quote functionality', () => {
     it('reverts on no strike input', async () => {
-      const { lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
       const badStrike = parseEther('0'); // ATM
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(vault.address, lp, lpDepositSize);
+      await addDeposit(vault, lp, lpDepositSize, base, quote);
       await expect(
         vault.quote(badStrike, maturity, quoteSize),
       ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
     });
 
     it('reverts on expired maturity input', async () => {
-      const { lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
       const strike = parseEther('1500'); // ATM
       const badMaturity = await time.latest();
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(vault.address, lp, lpDepositSize);
+      await addDeposit(vault, lp, lpDepositSize, base, quote);
       await expect(
         vault.quote(strike, badMaturity, quoteSize),
       ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
@@ -166,10 +166,10 @@ describe('#buy functionality', () => {
     });
 
     it('checks if the vault has sufficient funds', async () => {
-      const { lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
       const lpDepositSize = 5;
       const strike = parseEther('1500');
-      await addDeposit(vault.address, lp, lpDepositSize);
+      await addDeposit(vault, lp, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const largeTradeSize = parseEther('7');
@@ -180,10 +180,10 @@ describe('#buy functionality', () => {
     });
 
     it('returns proper quote parameters: price, mintingFee, cLevel', async () => {
-      const { lp, vault } = await loadFixture(vaultSetup);
+      const { base, quote, lp, vault } = await loadFixture(vaultSetup);
       const lpDepositSize = 5;
       const strike = parseEther('1500');
-      await addDeposit(vault.address, lp, lpDepositSize);
+      await addDeposit(vault, lp, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
@@ -426,11 +426,11 @@ describe('#buy functionality', () => {
       ).to.eq(size);
     });
     it('allows the vault to mint options for the LP and Trader', async () => {
-      const { vault, lp, deployer, trader, base, poolAddress } =
+      const { vault, lp, deployer, trader, base, quote, poolAddress } =
         await loadFixture(vaultSetup);
       const lpDepositSize = 5; // units of base
       const lpDepositSizeBN = parseEther(lpDepositSize.toString());
-      await addDeposit(vault.address, lp, lpDepositSize);
+      await addDeposit(vault, lp, lpDepositSize, base, quote);
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
