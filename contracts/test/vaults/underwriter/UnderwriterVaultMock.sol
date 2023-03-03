@@ -434,7 +434,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 tau,
         uint256 sigma,
         uint256 rfRate,
-        bool isCall
+        bool isCallOption
     ) public pure returns (int256) {
         int256 delta = OptionMath.optionDelta(
             spotPrice,
@@ -442,7 +442,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             tau,
             sigma,
             rfRate,
-            isCall
+            isCallOption
         );
 
         return delta;
@@ -454,7 +454,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 tau,
         uint256 sigma,
         uint256 rfRate,
-        bool isCall
+        bool isCallOption
     ) public pure returns (uint256) {
         uint256 price = OptionMath.blackScholesPrice(
             spotPrice,
@@ -462,7 +462,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             tau,
             sigma,
             rfRate,
-            isCall
+            isCallOption
         );
 
         return price;
