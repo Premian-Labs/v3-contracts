@@ -397,6 +397,7 @@ describe('#buy functionality', () => {
         });
       });
 
+      // TODO:
       it('should have a totalSpread that is positive', async () => {});
 
       it('reverts if maxCLevel is not set properly', async () => {
@@ -421,12 +422,16 @@ describe('#buy functionality', () => {
         ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
       });
 
+      // TODO:
       it('used post quote/trade utilization', async () => {});
 
+      // TODO:
       it('ensures utilization never goes over 100%', async () => {});
 
+      // TODO:
       it('properly checks for last trade timestamp', async () => {});
 
+      // TODO:
       it('properly decays the c Level over time', async () => {});
     });
   });
@@ -456,6 +461,7 @@ describe('#buy functionality', () => {
         await callPool.balanceOf(underwriter.address, TokenType.SHORT),
       ).to.eq(size);
     });
+
     it('allows the vault to mint options for the LP and Trader', async () => {
       const { callVault, lp, deployer, trader, base, quote, poolAddress } =
         await loadFixture(vaultSetup);
