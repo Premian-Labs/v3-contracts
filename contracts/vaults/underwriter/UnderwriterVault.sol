@@ -37,11 +37,13 @@ contract UnderwriterVault is
     using UD60x18 for uint256;
     using SD59x18 for int256;
 
-    uint256 SECONDSINAYEAR = 365 * 24 * 60 * 60;
-    uint256 SECONDSINAHOUR = 60 * 60;
+    uint256 internal constant SECONDSINAYEAR = 31536000;
+    uint256 internal constant SECONDSINAHOUR = 3600;
 
     address internal immutable IV_ORACLE_ADDR;
     address internal immutable FACTORY_ADDR;
+
+    int256 internal constant ONE = 1e18;
 
     struct AfterBuyArgs {
         uint256 maturity;
@@ -296,9 +298,23 @@ contract UnderwriterVault is
                 .div(_totalSupply());
     }
 
+    function _contains(
+        uint256 strike,
+        uint256 maturity
+    ) internal view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!l.maturities.contains(maturity)) return false;
+
+        return l.maturityToStrikes[maturity].contains(strike);
+    }
+
     function _addListing(uint256 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        if (maturity <= block.timestamp) revert Vault__OptionExpired();
 
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
@@ -312,6 +328,9 @@ contract UnderwriterVault is
                 l.maturities.insertBefore(next, maturity);
             } else {
                 l.maturities.insertAfter(l.maxMaturity, maturity);
+
+                if (l.minMaturity == 0) l.minMaturity = maturity;
+
                 l.maxMaturity = maturity;
             }
         }
@@ -321,12 +340,24 @@ contract UnderwriterVault is
             l.maturityToStrikes[maturity].add(strike);
     }
 
-    // function _removeListing(uint256 strike, uint256 maturity) internal {
-    //     UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-    //         .layout();
+    function _removeListing(uint256 strike, uint256 maturity) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
 
-    //     // Remove maturity if there are no strikes left
-    // }
+        if (_contains(strike, maturity)) {
+            l.maturityToStrikes[maturity].remove(strike);
+
+            // Remove maturity if there are no strikes left
+            if (l.maturityToStrikes[maturity].length() == 0) {
+                if (maturity == l.minMaturity)
+                    l.minMaturity = l.maturities.next(maturity);
+                if (maturity == l.maxMaturity)
+                    l.maxMaturity = l.maturities.prev(maturity);
+
+                l.maturities.remove(maturity);
+            }
+        }
+    }
 
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState() internal {
@@ -484,7 +515,8 @@ contract UnderwriterVault is
         uint256 tau,
         uint256 sigma
     ) internal view returns (address) {
-        uint256 dte = tau.mul(365);
+        uint256 dte = tau.mul(365e18);
+
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -564,7 +596,7 @@ contract UnderwriterVault is
             l.totalAssets
         );
 
-        if (postUtilisation > 1) revert Vault__UtilEstError();
+        if (postUtilisation > ONE.toUint256()) revert Vault__UtilEstError();
 
         uint256 hoursSinceLastTx = (block.timestamp - l.lastTradeTimestamp).div(
             SECONDSINAHOUR
@@ -576,29 +608,35 @@ contract UnderwriterVault is
             l.minCLevel,
             l.maxCLevel
         );
+        if (cLevel < l.minCLevel) revert Vault__lowCLevel();
 
-        uint256 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
+        uint256 discount = l.hourlyDecayDiscount.mul(hoursSinceLastTx);
 
         if (cLevel - discount < l.minCLevel) return l.minCLevel;
 
         return cLevel - discount;
     }
 
-    //  Calculate the price of an option using the Black-Scholes model
+    // https://www.desmos.com/calculator/0uzv50t7jy
     function _calculateCLevel(
         uint256 postUtilisation,
         uint256 alphaCLevel,
         uint256 minCLevel,
         uint256 maxCLevel
     ) internal pure returns (uint256) {
-        uint256 k = alphaCLevel * minCLevel;
-        uint256 positiveExp = (alphaCLevel * postUtilisation).exp();
-        uint256 negativeExp = (-alphaCLevel.toInt256() *
-            postUtilisation.toInt256()).exp().toUint256();
+        int256 freeCapitalRatio = ONE - postUtilisation.toInt256();
+        int256 positiveExp = alphaCLevel.toInt256().mul(freeCapitalRatio).exp();
+        int256 alphaCLevelExp = alphaCLevel.exp().toInt256();
+        int256 k = alphaCLevel
+            .toInt256()
+            .mul(
+                minCLevel.toInt256().mul(alphaCLevelExp - maxCLevel.toInt256())
+            )
+            .div(alphaCLevelExp - ONE);
         return
-            (negativeExp * (k * positiveExp + maxCLevel * alphaCLevel - k)).div(
-                alphaCLevel
-            );
+            (k.mul(positiveExp) + maxCLevel.mul(alphaCLevel).toInt256() - k)
+                .div(alphaCLevel.toInt256().mul(positiveExp))
+                .toUint256();
     }
 
     function _quote(
@@ -746,7 +784,6 @@ contract UnderwriterVault is
 
     /// @inheritdoc IUnderwriterVault
     function settle() external override returns (uint256) {
-        //TODO: remove pure when hydrated
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -761,7 +798,8 @@ contract UnderwriterVault is
         }
 
         uint256 current = l.minMaturity;
-        uint256 next;
+
+        // TODO: uint256 next;
 
         while (current <= lastExpired && current != 0) {
             _settleMaturity(current);
@@ -775,21 +813,9 @@ contract UnderwriterVault is
                 l.positionSizes[current][
                     l.maturityToStrikes[current].at(i)
                 ] = 0;
-                l.maturityToStrikes[current].remove(
-                    l.maturityToStrikes[current].at(i)
-                );
+
+                _removeListing(l.maturityToStrikes[current].at(i), current);
             }
-            l.minMaturity = l.maturities.next(current);
-
-            next = l.maturities.next(current);
-            l.minMaturity = next;
-            l.maturities.remove(current);
-            current = next;
-        }
-
-        // Update max maturities
-        if (lastExpired >= l.maxMaturity) {
-            l.maxMaturity = 0;
         }
 
         return 0;

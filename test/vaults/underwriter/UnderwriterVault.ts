@@ -381,6 +381,273 @@ describe('UnderwriterVault', () => {
     });
   });
 
+  describe('#_addListing', async () => {
+    let startTime: number;
+    let t0: number;
+    let t1: number;
+    let t2: number;
+    before(async () => {
+      const { vault } = await loadFixture(vaultSetup);
+
+      startTime = await now();
+      t0 = startTime + 7 * ONE_DAY;
+      t1 = startTime + 10 * ONE_DAY;
+      t2 = startTime + 14 * ONE_DAY;
+    });
+
+    it('adds a listing when there are no listings', async () => {
+      let strike = parseEther('1000');
+      let maturity = t1;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(0);
+
+      await vault.addListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+
+      expect(c).to.be.true;
+
+      n = await vault.getNumberOfListings();
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(1);
+      expect(minMaturity).to.eq(t1);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('adds a listing to an existing maturity', async () => {
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(1);
+
+      let strike = parseEther('2000');
+      let maturity = t1;
+
+      await vault.addListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+
+      expect(c).to.be.true;
+
+      n = await vault.getNumberOfListings();
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(2);
+      expect(minMaturity).to.eq(t1);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('adds a listing with a maturity before minMaturity', async () => {
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(2);
+
+      let strike = parseEther('1000');
+      let maturity = t0;
+
+      await vault.addListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.true;
+
+      n = await vault.getNumberOfListings();
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(3);
+      expect(minMaturity).to.eq(t0);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('adds a listing with a maturity after maxMaturity', async () => {
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(3);
+
+      let strike = parseEther('1000');
+      let maturity = t2;
+
+      await vault.addListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.true;
+
+      n = await vault.getNumberOfListings();
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(4);
+      expect(minMaturity).to.eq(t0);
+      expect(maxMaturity).to.eq(t2);
+    });
+
+    it('will not add a duplicate listing', async () => {
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(4);
+
+      let strike = parseEther('1000');
+      let maturity = t2;
+
+      await vault.addListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.true;
+
+      n = await vault.getNumberOfListings();
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(4);
+      expect(minMaturity).to.eq(t0);
+      expect(maxMaturity).to.eq(t2);
+    });
+
+    it('will not add a listing with a maturity that is expired', async () => {
+      let strike = parseEther('1000');
+
+      await expect(
+        vault.addListing(strike, startTime),
+      ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
+    });
+  });
+
+  describe('#_removeListing', () => {
+    let startTime = 100000;
+
+    let t0 = startTime + 7 * ONE_DAY;
+    let t1 = startTime + 10 * ONE_DAY;
+    let t2 = startTime + 14 * ONE_DAY;
+
+    before(async () => {
+      const { vault } = await loadFixture(vaultSetup);
+
+      const infos = [
+        {
+          maturity: t0,
+          strikes: [1000, 2000].map((el) => parseEther(el.toString())),
+          sizes: [0, 0].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t1,
+          strikes: [1000, 2000].map((el) => parseEther(el.toString())),
+          sizes: [0, 0].map((el) => parseEther(el.toString())),
+        },
+        {
+          maturity: t2,
+          strikes: [1000].map((el) => parseEther(el.toString())),
+          sizes: [0].map((el) => parseEther(el.toString())),
+        },
+      ];
+      await vault.setListingsAndSizes(infos);
+    });
+
+    it('should adjust and remove maxMaturity when it becomes empty', async () => {
+      let strike = parseEther('1000');
+      let maturity = t2;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(5);
+
+      await vault.removeListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.false;
+
+      n = await vault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(0);
+      expect(minMaturity).to.eq(t0);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('should remove strike from minMaturity', async () => {
+      let strike = parseEther('1000');
+      let maturity = t0;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(4);
+
+      await vault.removeListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.false;
+
+      n = await vault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(1);
+      expect(minMaturity).to.eq(t0);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('should adjust and remove minMaturity when it becomes empty', async () => {
+      let strike = parseEther('2000');
+      let maturity = t0;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(3);
+
+      await vault.removeListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.false;
+
+      n = await vault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(0);
+      expect(minMaturity).to.eq(t1);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('should remove strike from single maturity', async () => {
+      let strike = parseEther('1000');
+      let maturity = t1;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(2);
+
+      await vault.removeListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.false;
+
+      n = await vault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(1);
+      expect(minMaturity).to.eq(t1);
+      expect(maxMaturity).to.eq(t1);
+    });
+
+    it('should remove strike from last maturity and leave 0 listings', async () => {
+      let strike = parseEther('2000');
+      let maturity = t1;
+
+      let n = await vault.getNumberOfListings();
+      expect(n).to.eq(1);
+
+      await vault.removeListing(strike, maturity);
+
+      let c = await vault.contains(strike, maturity);
+      expect(c).to.be.false;
+
+      n = await vault.getNumberOfListingsOnMaturity(maturity);
+      let minMaturity = await vault.getMinMaturity();
+      let maxMaturity = await vault.getMaxMaturity();
+
+      expect(n).to.eq(0);
+      expect(await vault.getNumberOfListings()).to.eq(0);
+      expect(minMaturity).to.eq(0);
+      expect(maxMaturity).to.eq(0);
+    });
+  });
+
   async function addTrade(
     trader: SignerWithAddress,
     maturity: number,

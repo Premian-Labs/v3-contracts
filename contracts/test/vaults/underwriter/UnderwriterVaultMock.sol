@@ -10,6 +10,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {IPool} from "../../../pool/IPool.sol";
 import {UD60x18} from "../../../libraries/prbMath/UD60x18.sol";
 
@@ -60,6 +61,37 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalFairValue();
     }
 
+    function getNumberOfListings() external view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 current = l.minMaturity;
+        uint256 n = 0;
+
+        while (current <= l.maxMaturity && current != 0) {
+            n += l.maturityToStrikes[current].length();
+            current = l.maturities.next(current);
+        }
+        return n;
+    }
+
+    function getNumberOfListingsOnMaturity(
+        uint256 maturity
+    ) external view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!l.maturities.contains(maturity)) return 0;
+        return l.maturityToStrikes[maturity].length();
+    }
+
+    function contains(
+        uint256 strike,
+        uint256 maturity
+    ) external view returns (bool) {
+        return _contains(strike, maturity);
+    }
+
     function updateState() external {
         return _updateState();
     }
@@ -78,6 +110,23 @@ contract UnderwriterVaultMock is UnderwriterVault {
         ] += posSize;
     }
 
+    function decreasePositionSize(
+        uint256 maturity,
+        uint256 strike,
+        uint256 posSize
+    ) external onlyOwner {
+        UnderwriterVaultStorage.layout().positionSizes[maturity][
+            strike
+        ] -= posSize;
+    }
+
+    function getPositionSize(
+        uint256 strike,
+        uint256 maturity
+    ) external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().positionSizes[maturity][strike];
+    }
+
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
     }
@@ -88,6 +137,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function setMinMaturity(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().minMaturity = value;
+    }
+
+    function getMaxMaturity() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().maxMaturity;
     }
 
     function setMaxMaturity(uint256 value) external onlyOwner {
@@ -293,6 +346,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _addListing(strike, maturity);
     }
 
+    function removeListing(uint256 strike, uint256 maturity) external {
+        return _removeListing(strike, maturity);
+    }
+
     function getFactoryAddress(
         uint256 strike,
         uint256 maturity
@@ -329,6 +386,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _afterBuy(intel);
     }
 
+    function getSpotPrice() public view returns (uint256) {
+        return _getSpotPrice();
+    }
+
     function getTradeBounds()
         public
         view
@@ -353,6 +414,58 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return l.lastTradeTimestamp;
+    }
+
+    function setMaxClevel(uint256 maxCLevel) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.maxCLevel = maxCLevel;
+    }
+
+    function setAlphaCLevel(uint256 alphaCLevel) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.alphaCLevel = alphaCLevel;
+    }
+
+    function getDelta(
+        uint256 spotPrice,
+        uint256 strike,
+        uint256 tau,
+        uint256 sigma,
+        uint256 rfRate,
+        bool isCall
+    ) public pure returns (int256) {
+        int256 delta = OptionMath.optionDelta(
+            spotPrice,
+            strike,
+            tau,
+            sigma,
+            rfRate,
+            isCall
+        );
+
+        return delta;
+    }
+
+    function getBlackScholesPrice(
+        uint256 spotPrice,
+        uint256 strike,
+        uint256 tau,
+        uint256 sigma,
+        uint256 rfRate,
+        bool isCall
+    ) public pure returns (uint256) {
+        uint256 price = OptionMath.blackScholesPrice(
+            spotPrice,
+            strike,
+            tau,
+            sigma,
+            rfRate,
+            isCall
+        );
+
+        return price;
     }
 
     function isCall() public view returns (bool) {
