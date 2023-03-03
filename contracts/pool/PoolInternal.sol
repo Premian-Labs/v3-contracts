@@ -662,11 +662,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.strike,
             l.isCallPool
         );
-        uint256 protocolFee = Position.contractsToCollateral(
-            _takerFee(l, size, 0, true),
-            l.strike,
-            l.isCallPool
-        );
+        uint256 protocolFee = _takerFee(l, size, 0, true);
 
         IERC20(l.getPoolToken()).safeTransferFrom(
             underwriter,
