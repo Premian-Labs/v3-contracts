@@ -69,10 +69,6 @@ contract UnderwriterVault is
         FACTORY_ADDR = factoryAddress;
     }
 
-    function _asset() internal view virtual override returns (address) {
-        return ERC4626BaseStorage.layout().asset;
-    }
-
     function _totalAssets() internal view override returns (uint256) {
         // total assets = deposits + premiums + spreads
         return UnderwriterVaultStorage.layout().totalAssets;
