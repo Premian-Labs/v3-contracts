@@ -10,12 +10,15 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {IPool} from "../../../pool/IPool.sol";
+import {UD60x18} from "../../../libraries/prbMath/UD60x18.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSet for EnumerableSet.UintSet;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
+    using UD60x18 for uint256;
 
     struct MaturityInfo {
         uint256 maturity;
@@ -270,7 +273,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function settleMaturity(uint256 maturity) external {
-        return _settleMaturity(maturity);
+        _settleMaturity(maturity);
     }
 
     function calculateClevel(
@@ -350,5 +353,35 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return l.lastTradeTimestamp;
+    }
+
+    function isCall() public view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.isCall;
+    }
+
+    function maxMaturity() public view returns (uint256) {
+        return UnderwriterVaultStorage.layout().maxMaturity;
+    }
+
+    function minMaturity() public view returns (uint256) {
+        return UnderwriterVaultStorage.layout().minMaturity;
+    }
+
+    function mintFromPool(
+        uint256 strike,
+        uint256 maturity,
+        uint256 size
+    ) public {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        address listingAddr = _getFactoryAddress(strike, maturity);
+        uint256 allowance = 2 * size;
+        if (!l.isCall) {
+            allowance = allowance.mul(strike);
+        }
+        IERC20(_asset()).approve(listingAddr, allowance);
+        IPool(listingAddr).writeFrom(address(this), msg.sender, size);
     }
 }

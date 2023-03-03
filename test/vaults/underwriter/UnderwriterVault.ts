@@ -1,7 +1,13 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { now, ONE_DAY, increaseTo } from '../../../utils/time';
+import {
+  now,
+  ONE_DAY,
+  ONE_HOUR,
+  ONE_WEEK,
+  increaseTo,
+} from '../../../utils/time';
 import { parseEther, parseUnits, formatEther } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { bnToNumber } from '../../../utils/sdk/math';
@@ -18,9 +24,15 @@ import {
   quote,
   createPool,
   vaultProxy,
+  putVault,
 } from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { IPoolMock__factory, IPoolMock } from '../../../typechain';
+import {
+  IPoolMock__factory,
+  IPoolMock,
+  UnderwriterVaultMock,
+} from '../../../typechain';
+import { parse } from 'path';
 
 describe('UnderwriterVault', () => {
   let startTime: number;
@@ -787,33 +799,257 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#settleMaturity', () => {
-    it('test settling an option', async () => {
-      const { vault, deployer, base, quote, oracleAdapter, p } =
-        await vaultSetup();
-      await addDeposit(vault.address, caller, 4);
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        const maturity = 1677830400;
+        const size = parseEther('2');
+        const strike1 = parseEther('1000');
+        const strike2 = parseEther('2000');
+        let totalLockedAssets: any;
+        let newLockedAfterSettlement: any;
+        let newTotalAssets: any;
+        let vaultPlaceholder: UnderwriterVaultMock;
 
-      const strike = parseEther('1000');
-      const maturity = 1677830400;
-      const size = parseEther('1');
-      const isCall = true;
+        before(async () => {
+          let { deployer, base, quote, oracleAdapter, p } = await loadFixture(
+            vaultSetup,
+          );
+          let deposit: any;
 
-      await createPool(
-        strike,
-        maturity,
-        isCall,
-        deployer,
-        base,
-        quote,
-        oracleAdapter,
-        p,
-      );
+          if (isCall) {
+            deposit = 10;
+            vaultPlaceholder = vault;
+            totalLockedAssets = parseEther('5');
+            newLockedAfterSettlement = parseEther('1');
+            newTotalAssets = 9.333333333333;
+          } else {
+            deposit = 10000;
+            vaultPlaceholder = putVault;
+            totalLockedAssets = parseEther('7120');
+            newLockedAfterSettlement = parseEther('1120');
+            newTotalAssets = 9000;
+          }
 
-      await vault.connect(caller).mintFromPool(strike, maturity, size);
-      //await callPool.balanceOf()
-    });
+          console.log('Depositing assets.');
+          await addDeposit(vaultPlaceholder, caller, deposit, base, quote);
+          expect(await vaultPlaceholder.totalAssets()).to.eq(
+            parseEther(deposit.toString()),
+          );
+          console.log('Deposited assets.');
+
+          const infos = [
+            {
+              maturity: maturity,
+              strikes: [strike1, strike2],
+              sizes: [size, size],
+            },
+          ];
+          await vaultPlaceholder.setListingsAndSizes(infos);
+          await vaultPlaceholder.increaseTotalLockedAssets(totalLockedAssets);
+
+          for (const strike of [strike1, strike2]) {
+            await createPool(
+              strike,
+              maturity,
+              isCall,
+              deployer,
+              base,
+              quote,
+              oracleAdapter,
+              p,
+            );
+          }
+          await vaultPlaceholder
+            .connect(caller)
+            .mintFromPool(strike1, maturity, size);
+          await vaultPlaceholder
+            .connect(caller)
+            .mintFromPool(strike2, maturity, size);
+          await increaseTo(maturity);
+          await vaultPlaceholder.connect(caller).settleMaturity(maturity);
+        });
+        it('totalAssets should be reduced by the settlementValue and equal 9.986666666666', async () => {
+          expect(
+            parseFloat(formatEther(await vaultPlaceholder.totalAssets())),
+          ).to.be.closeTo(newTotalAssets, 0.000000000001);
+        });
+        it('the position size should be reduced by the amount of settled options', async () => {
+          expect(await vaultPlaceholder.totalLockedAssets()).to.eq(
+            newLockedAfterSettlement,
+          );
+        });
+      });
+    }
   });
 
-  describe('#settle', () => {});
+  describe('#settle', () => {
+    const t0 = 1678435200;
+    const t1 = t0 + ONE_WEEK;
+    const t2 = t0 + 2 * ONE_WEEK;
+    let strikedict = {};
+    let vaultPlaceholder: UnderwriterVaultMock;
+
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        async function setupF() {
+          let { vault, putVault, deployer, base, quote, oracleAdapter, p } =
+            await loadFixture(vaultSetup);
+
+          let totalAssets: any;
+          let totalLockedAssets: any;
+
+          if (isCall) {
+            vaultPlaceholder = vault;
+            totalAssets = 100;
+            totalLockedAssets = parseEther('20');
+          } else {
+            totalAssets = 100000;
+            vaultPlaceholder = putVault;
+            totalLockedAssets = parseEther('20000');
+            quote.mint(caller.address, parseEther(totalAssets.toString()));
+          }
+
+          const striket00 = parseEther('1000');
+          const striket01 = parseEther('2000');
+          const striket10 = parseEther('1800');
+          const striket20 = parseEther('1200');
+          const striket21 = parseEther('1300');
+          const striket22 = parseEther('2000');
+
+          const strikest0 = [striket00, striket01];
+          const strikest1 = [striket10];
+          const strikest2 = [striket20, striket21, striket22];
+
+          strikedict[t0] = strikest0;
+          strikedict[t1] = strikest1;
+          strikedict[t2] = strikest2;
+
+          const infos = [
+            {
+              maturity: t0,
+              strikes: strikest0,
+              sizes: [2, 1].map((el) => parseEther(el.toString())),
+            },
+            {
+              maturity: t1,
+              strikes: strikest1,
+              sizes: [1].map((el) => parseEther(el.toString())),
+            },
+            {
+              maturity: t2,
+              strikes: strikest2,
+              sizes: [2, 3, 1].map((el) => parseEther(el.toString())),
+            },
+          ];
+
+          console.log('Depositing assets.');
+          await addDeposit(vaultPlaceholder, caller, totalAssets, base, quote);
+          expect(await vaultPlaceholder.totalAssets()).to.eq(
+            parseEther(totalAssets.toString()),
+          );
+          console.log('Deposited assets.');
+
+          await vaultPlaceholder.setListingsAndSizes(infos);
+          await vaultPlaceholder.increaseTotalLockedAssets(totalLockedAssets);
+          for (let info of infos) {
+            for (const [i, strike] of info.strikes.entries()) {
+              await createPool(
+                strike,
+                info.maturity,
+                isCall,
+                deployer,
+                base,
+                quote,
+                oracleAdapter,
+                p,
+              );
+              console.log(
+                `Minting ${info.sizes[i]} options with strike ${strike} and maturity ${info.maturity}.`,
+              );
+              await vaultPlaceholder
+                .connect(caller)
+                .mintFromPool(strike, info.maturity, info.sizes[i]);
+            }
+          }
+        }
+
+        const tests = [
+          { timestamp: t0 - ONE_HOUR, minMaturity: t0, maxMaturity: t2 },
+          { timestamp: t0, minMaturity: t1, maxMaturity: t2 },
+          { timestamp: t0 + ONE_HOUR, minMaturity: t1, maxMaturity: t2 },
+          { timestamp: t1, minMaturity: t2, maxMaturity: t2 },
+          { timestamp: t1 + ONE_HOUR, minMaturity: t2, maxMaturity: t2 },
+          { timestamp: t2, minMaturity: 0, maxMaturity: 0 },
+          { timestamp: t2 + ONE_DAY, minMaturity: 0, maxMaturity: 0 },
+        ];
+
+        const callTests = [
+          { newLocked: 20, newTotalAssets: 100 },
+          { newLocked: 17, newTotalAssets: 99.333333 },
+          { newLocked: 17, newTotalAssets: 99.333333 },
+          { newLocked: 16, newTotalAssets: 99.333333 },
+          { newLocked: 16, newTotalAssets: 99.333333 },
+          { newLocked: 10, newTotalAssets: 98.533333 },
+          { newLocked: 10, newTotalAssets: 98.533333 },
+        ];
+
+        const putTests = [
+          { newLocked: 20000, newTotalAssets: 100000 },
+          { newLocked: 16000, newTotalAssets: 99500 },
+          { newLocked: 16000, newTotalAssets: 99500 },
+          { newLocked: 14200, newTotalAssets: 99200 },
+          { newLocked: 14200, newTotalAssets: 99200 },
+          { newLocked: 5900, newTotalAssets: 98700 },
+          { newLocked: 5900, newTotalAssets: 98700 },
+        ];
+
+        const amountsList = isCall ? callTests : putTests;
+        let counter = 0;
+        tests.forEach(async (test) => {
+          let amounts = amountsList[counter];
+          describe(`timestamp ${test.timestamp}`, () => {
+            it(`totalAssets equals ${amounts.newTotalAssets}`, async () => {
+              await loadFixture(setupF);
+              await increaseTo(test.timestamp);
+              await vaultPlaceholder.settle();
+
+              let delta = isCall ? 0.00001 : 0;
+
+              expect(
+                parseFloat(formatEther(await vaultPlaceholder.totalAssets())),
+              ).to.be.closeTo(amounts.newTotalAssets, delta);
+            });
+            it(`totalLocked equals ${amounts.newLocked}`, async () => {
+              let totalLocked = await vaultPlaceholder.totalLockedAssets();
+              let expected = parseEther(amounts.newLocked.toString());
+              expect(totalLocked).to.eq(expected);
+            });
+            it(`minMaturity equals ${test.minMaturity}`, async () => {
+              let minMaturity = await vaultPlaceholder.minMaturity();
+              expect(minMaturity).to.eq(test.minMaturity);
+            });
+            it(`maxMaturity equals ${test.maxMaturity}`, async () => {
+              let maxMaturity = await vaultPlaceholder.maxMaturity();
+              expect(maxMaturity).to.eq(test.maxMaturity);
+            });
+            it(`expired position sizes equal zero`, async () => {
+              if ([t0, t1, t2].includes(test.timestamp)) {
+                let strikes = strikedict[test.timestamp];
+                strikes.forEach(async (strike) => {
+                  let size = await vaultPlaceholder.positionSize(
+                    test.timestamp,
+                    strike,
+                  );
+                  expect(size).to.eq(parseEther('0'));
+                });
+              }
+            });
+            counter++;
+          });
+        });
+      });
+    }
+  });
 
   describe('test getTotalLockedSpread and updateState', () => {
     /*
