@@ -648,56 +648,6 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  async function addTrade(
-    trader: SignerWithAddress,
-    maturity: number,
-    strike: number,
-    amount: number,
-    tradeTime: number,
-    spread: number,
-  ) {
-    // trade: buys 1 option contract, 0.5 premium, spread 0.1, maturity 10 (days), dte 10, strike 100
-    const strikeParsed = await parseEther(strike.toString());
-    const amountParsed = await parseEther(amount.toString());
-    //
-    await vault.insertStrike(minMaturity, strikeParsed);
-
-    await vault.increaseTotalLockedSpread(parseEther(spread.toString()));
-    const additionalSpreadRate = (spread / (maturity - tradeTime)) * 10 ** 18;
-    const spreadRate = Math.trunc(additionalSpreadRate).toString();
-    await vault.setLastSpreadUnlockUpdate(tradeTime);
-    await vault.increaseSpreadUnlockingRate(spreadRate);
-    await vault.increaseSpreadUnlockingTick(minMaturity, spreadRate);
-    await vault.increaseTotalLockedAssets(amountParsed);
-    // we assume that the premium is just the exercise value for now
-    const premium: number = (spot - strike) / spot;
-    await vault.increaseTotalAssets(parseEther(premium.toString()));
-    await vault.increaseTotalAssets(parseEther(spread.toString()));
-  }
-
-  describe('#vault environment after a single trade', () => {
-    it('setup Vault', async () => {
-      const { vault } = await loadFixture(vaultSetup);
-      await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote);
-      await addTrade(trader, minMaturity, 1000, 1, startTime, 0.1);
-      console.log('Computing totalFairValue');
-      console.log(await vault.getTotalFairValue());
-      console.log('Computing pricePerShare');
-      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
-      await increaseTo(minMaturity);
-      console.log('Computing totalFairValue');
-      console.log(await vault.getTotalFairValue());
-      console.log('Computing totalLockedSpread');
-      console.log(await vault.getTotalLockedSpread());
-      console.log('Computing pricePerShare');
-      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
-      await increaseTo(maxMaturity);
-      console.log('Computing pricePerShare');
-      console.log(parseFloat(formatEther(await vault.getPricePerShare())));
-    });
-  });
-
   describe('#convertToShares', () => {
     it('if no shares have been minted, minted shares should equal deposited assets', async () => {
       const { vault } = await loadFixture(vaultSetup);
