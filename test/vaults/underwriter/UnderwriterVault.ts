@@ -1068,7 +1068,7 @@ describe('UnderwriterVault', () => {
   describe('#settleMaturity', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        const maturity = 1677830400;
+        const maturity = 1678435200 + ONE_WEEK;
         const size = parseEther('2');
         const strike1 = parseEther('1000');
         const strike2 = parseEther('2000');
@@ -1076,8 +1076,7 @@ describe('UnderwriterVault', () => {
         let newLockedAfterSettlement: any;
         let newTotalAssets: any;
         let vaultPlaceholder: UnderwriterVaultMock;
-
-        before(async () => {
+        async function setup() {
           let { deployer, base, quote, oracleAdapter, p } = await loadFixture(
             vaultSetup,
           );
@@ -1134,8 +1133,9 @@ describe('UnderwriterVault', () => {
             .mintFromPool(strike2, maturity, size);
           await increaseTo(maturity);
           await vaultPlaceholder.connect(caller).settleMaturity(maturity);
-        });
+        }
         it('totalAssets should be reduced by the settlementValue and equal 9.986666666666', async () => {
+          await loadFixture(setup);
           expect(
             parseFloat(formatEther(await vaultPlaceholder.totalAssets())),
           ).to.be.closeTo(newTotalAssets, 0.000000000001);
@@ -1158,7 +1158,7 @@ describe('UnderwriterVault', () => {
 
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        async function setupF() {
+        async function setupVaultForSettlement() {
           let { vault, putVault, deployer, base, quote, oracleAdapter, p } =
             await loadFixture(vaultSetup);
 
@@ -1247,7 +1247,7 @@ describe('UnderwriterVault', () => {
           { timestamp: t1, minMaturity: t2, maxMaturity: t2 },
           { timestamp: t1 + ONE_HOUR, minMaturity: t2, maxMaturity: t2 },
           { timestamp: t2, minMaturity: 0, maxMaturity: 0 },
-          { timestamp: t2 + ONE_DAY, minMaturity: 0, maxMaturity: 0 },
+          { timestamp: t2 + ONE_HOUR, minMaturity: 0, maxMaturity: 0 },
         ];
 
         const callTests = [
@@ -1276,7 +1276,7 @@ describe('UnderwriterVault', () => {
           let amounts = amountsList[counter];
           describe(`timestamp ${test.timestamp}`, () => {
             it(`totalAssets equals ${amounts.newTotalAssets}`, async () => {
-              await loadFixture(setupF);
+              await loadFixture(setupVaultForSettlement);
               await increaseTo(test.timestamp);
               await vaultPlaceholder.settle();
 

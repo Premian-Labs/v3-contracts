@@ -778,15 +778,12 @@ contract UnderwriterVault is
             exerciseValue = unlockedCollateral - settlementValue;
             l.totalAssets -= exerciseValue;
         }
-        // collateral = strike
-        // l.totalLocked
     }
 
     /// @inheritdoc IUnderwriterVault
     function settle() external override returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-
         // Get last maturity that is greater than the current time
         uint256 lastExpired;
 
@@ -798,8 +795,7 @@ contract UnderwriterVault is
         }
 
         uint256 current = l.minMaturity;
-
-        // TODO: uint256 next;
+        uint256 next;
 
         while (current <= lastExpired && current != 0) {
             _settleMaturity(current);
@@ -813,9 +809,21 @@ contract UnderwriterVault is
                 l.positionSizes[current][
                     l.maturityToStrikes[current].at(i)
                 ] = 0;
-
-                _removeListing(l.maturityToStrikes[current].at(i), current);
+                l.maturityToStrikes[current].remove(
+                    l.maturityToStrikes[current].at(i)
+                );
             }
+            l.minMaturity = l.maturities.next(current);
+
+            next = l.maturities.next(current);
+            l.minMaturity = next;
+            l.maturities.remove(current);
+            current = next;
+        }
+
+        // Update max maturities
+        if (lastExpired >= l.maxMaturity) {
+            l.maxMaturity = 0;
         }
 
         return 0;
