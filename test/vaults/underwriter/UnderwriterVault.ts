@@ -9,30 +9,20 @@ import {
   increaseTo,
 } from '../../../utils/time';
 import { parseEther, parseUnits, formatEther } from 'ethers/lib/utils';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { bnToNumber } from '../../../utils/sdk/math';
 import {
   addDeposit,
-  deployer,
   caller,
   receiver,
-  trader,
   callVault,
   base,
   vaultSetup,
   oracleAdapter,
   quote,
   createPool,
-  vaultProxy,
   putVault,
 } from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  IPoolMock__factory,
-  IPoolMock,
-  UnderwriterVaultMock,
-} from '../../../typechain';
-import { parse } from 'path';
+import { UnderwriterVaultMock, ERC20Mock } from '../../../typechain';
 
 describe('UnderwriterVault', () => {
   let startTime: number;
@@ -886,7 +876,7 @@ describe('UnderwriterVault', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         describe('deposit into an empty vault', () => {
-          let asset: any;
+          let asset: ERC20Mock;
           let vault: UnderwriterVaultMock;
           let assetAmount = 2;
           let assetAmountEth: BigNumber;
@@ -949,7 +939,7 @@ describe('UnderwriterVault', () => {
         });
 
         describe('deposit into a non-empty vault with a pricePerShare unequal to 1', () => {
-          let asset: any;
+          let asset: ERC20Mock;
           let vault: UnderwriterVaultMock;
           let assetAmount = 2;
           let assetAmountEth: BigNumber;
@@ -1110,15 +1100,15 @@ describe('UnderwriterVault', () => {
         const size = parseEther('2');
         const strike1 = parseEther('1000');
         const strike2 = parseEther('2000');
-        let totalLockedAssets: any;
-        let newLockedAfterSettlement: any;
-        let newTotalAssets: any;
+        let totalLockedAssets: BigNumber;
+        let newLockedAfterSettlement: BigNumber;
+        let newTotalAssets: number;
         let vault: UnderwriterVaultMock;
         async function setup() {
           let { deployer, base, quote, oracleAdapter, p } = await loadFixture(
             vaultSetup,
           );
-          let deposit: any;
+          let deposit: number;
 
           if (isCall) {
             deposit = 10;
@@ -1184,10 +1174,10 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#settle', () => {
-    const t0 = 1678435200;
+    const t0: number = 1678435200;
     const t1 = t0 + ONE_WEEK;
     const t2 = t0 + 2 * ONE_WEEK;
-    let strikedict = {};
+    let strikedict: { [key: number]: BigNumber[] } = {};
     let vault: UnderwriterVaultMock;
 
     for (const isCall of [true, false]) {
@@ -1196,8 +1186,8 @@ describe('UnderwriterVault', () => {
           let { callVault, putVault, deployer, base, quote, oracleAdapter, p } =
             await loadFixture(vaultSetup);
 
-          let totalAssets: any;
-          let totalLockedAssets: any;
+          let totalAssets: number;
+          let totalLockedAssets: BigNumber;
 
           if (isCall) {
             vault = callVault;
