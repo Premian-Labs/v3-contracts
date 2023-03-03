@@ -69,13 +69,19 @@ export let volOracleProxy: ProxyUpgradeableOwnable;
 export const log = true;
 
 export async function addDeposit(
-  vaultAddress: string,
+  vault: UnderwriterVaultMock,
   caller: SignerWithAddress,
   amount: number,
+  base: ERC20Mock,
+  quote: ERC20Mock,
   receiver: SignerWithAddress = caller,
 ) {
   const assetAmount = parseEther(amount.toString());
-  await base.connect(caller).approve(vaultAddress, assetAmount);
+  if (await vault.isCall()) {
+    await base.connect(caller).approve(vault.address, assetAmount);
+  } else {
+    await quote.connect(caller).approve(vault.address, assetAmount);
+  }
   await vault.connect(caller).deposit(assetAmount, receiver.address);
 }
 

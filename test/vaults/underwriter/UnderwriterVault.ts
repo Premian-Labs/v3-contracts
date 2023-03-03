@@ -400,7 +400,7 @@ describe('UnderwriterVault', () => {
     it('setup Vault', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2);
+      await addDeposit(vault, caller, 2, base, quote);
       await addTrade(trader, minMaturity, 1000, 1, startTime, 0.1);
       console.log('Computing totalFairValue');
       console.log(await vault.getTotalFairValue());
@@ -430,7 +430,7 @@ describe('UnderwriterVault', () => {
     it('if supply is non-zero and pricePerShare is one, minted shares equals the deposited assets', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 8, receiver);
+      await addDeposit(vault, caller, 8, base, quote, receiver);
       const assetAmount = parseEther('2');
       const shareAmount = await vault.convertToShares(assetAmount);
       expect(shareAmount).to.eq(assetAmount);
@@ -439,7 +439,7 @@ describe('UnderwriterVault', () => {
     it('if supply is non-zero, minted shares equals the deposited assets adjusted by the pricePerShare', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('1.0'));
       const assetAmount = 2;
       const shareAmount = await vault.convertToShares(
@@ -460,7 +460,7 @@ describe('UnderwriterVault', () => {
 
     it('if supply is non-zero and pricePerShare is one, withdrawn assets equals share amount', async () => {
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       const shareAmount = parseEther('2');
       const assetAmount = await vault.convertToAssets(shareAmount);
       expect(shareAmount).to.eq(assetAmount);
@@ -469,7 +469,7 @@ describe('UnderwriterVault', () => {
     it('if supply is non-zero and pricePerShare is 0.5, withdrawn assets equals half the share amount', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('1.0'));
       const shareAmount = 2;
       const assetAmount = await vault.convertToAssets(
@@ -485,7 +485,7 @@ describe('UnderwriterVault', () => {
     it('check formula for total available assets', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       expect(await vault.getAvailableAssets()).to.eq(parseEther('2'));
       await vault.increaseTotalLockedSpread(parseEther('0.002'));
       expect(await vault.getAvailableAssets()).to.eq(parseEther('1.998'));
@@ -520,7 +520,7 @@ describe('UnderwriterVault', () => {
       it(`returns ${test.expected} when totalLockedSpread=${test.totalLockedSpread} and tradeSize=${test.tradeSize}`, async () => {
         const { vault } = await loadFixture(vaultSetup);
         // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
-        await addDeposit(vault.address, caller, test.deposit, receiver);
+        await addDeposit(vault, caller, test.deposit, base, quote, receiver);
         let startTime = await now();
         let t0 = startTime + 7 * ONE_DAY;
         expect(await vault.totalAssets()).to.eq(
@@ -556,7 +556,7 @@ describe('UnderwriterVault', () => {
     it('maxWithdraw should revert for a zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await expect(
         vault.maxWithdraw(ethers.constants.AddressZero),
       ).to.be.revertedWithCustomError(vault, 'Vault__AddressZero');
@@ -565,7 +565,7 @@ describe('UnderwriterVault', () => {
     it('maxWithdraw should return the available assets for a non-zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 3, receiver);
+      await addDeposit(vault, caller, 3, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('0.1'));
       await vault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await vault.maxWithdraw(receiver.address);
@@ -576,8 +576,8 @@ describe('UnderwriterVault', () => {
     it('maxWithdraw should return the assets the receiver owns', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 8, caller);
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 8, base, quote, caller);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('0.0'));
       await vault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await vault.maxWithdraw(receiver.address);
@@ -587,8 +587,8 @@ describe('UnderwriterVault', () => {
     it('maxWithdraw should return the assets the receiver owns since there are sufficient funds', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 7, caller);
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 7, base, quote, caller);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('0.1'));
       await vault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = parseFloat(
@@ -602,7 +602,7 @@ describe('UnderwriterVault', () => {
     it('maxRedeem should revert for a zero address', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await expect(
         vault.maxRedeem(ethers.constants.AddressZero),
       ).to.be.revertedWithCustomError(vault, 'Vault__AddressZero');
@@ -611,7 +611,7 @@ describe('UnderwriterVault', () => {
     it('maxRedeem should return the amount of shares that are redeemable', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 3, receiver);
+      await addDeposit(vault, caller, 3, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('0.1'));
       await vault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await vault.maxWithdraw(receiver.address);
@@ -631,7 +631,7 @@ describe('UnderwriterVault', () => {
     it('previewMint should return amount of assets required to mint', async () => {
       const { vault } = await loadFixture(vaultSetup);
       await setMaturities();
-      await addDeposit(vault.address, caller, 2, receiver);
+      await addDeposit(vault, caller, 2, base, quote, receiver);
       await vault.increaseTotalLockedSpread(parseEther('0.2'));
       const assetAmount = await vault.previewMint(parseEther('4'));
       expect(assetAmount).to.eq(parseEther('3.6'));
@@ -646,7 +646,7 @@ describe('UnderwriterVault', () => {
       const baseBalanceCaller = await base.balanceOf(caller.address);
       const baseBalanceReceiver = await base.balanceOf(receiver.address);
 
-      await addDeposit(vault.address, caller, assetAmount, receiver);
+      await addDeposit(vault, caller, assetAmount, base, quote, receiver);
 
       expect(await base.balanceOf(vault.address)).to.eq(assetAmountEth);
       expect(await base.balanceOf(caller.address)).to.eq(
@@ -667,13 +667,13 @@ describe('UnderwriterVault', () => {
       const fourFormatted = parseEther(four.toString());
       const baseBalanceCaller = await base.balanceOf(caller.address);
       const baseBalanceReceiver = await base.balanceOf(receiver.address);
-      await addDeposit(vault.address, caller, two, receiver);
+      await addDeposit(vault, caller, two, base, quote, receiver);
 
       // modify the price per share to (2 - 0.5) / 2 = 0.75
       await vault
         .connect(deployer)
         .increaseTotalLockedSpread(parseEther('0.5'));
-      await addDeposit(vault.address, caller, two, receiver);
+      await addDeposit(vault, caller, two, base, quote, receiver);
 
       expect(await base.balanceOf(vault.address)).to.eq(fourFormatted);
       expect(await base.balanceOf(caller.address)).to.eq(
