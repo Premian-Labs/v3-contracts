@@ -91,4 +91,6 @@ interface IVolatilityOracle {
         uint256[] memory strike,
         uint256[] memory timeToMaturity
     ) external view returns (int256[] memory);
+
+    function getrfRate() external pure returns (uint256);
 }

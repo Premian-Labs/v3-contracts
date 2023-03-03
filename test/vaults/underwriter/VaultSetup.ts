@@ -255,7 +255,6 @@ export async function vaultSetup() {
     true,
     _cLevelParams,
     _tradeBounds,
-    0,
     lastTimeStamp,
   );
   await vaultProxy.deployed();
@@ -275,7 +274,6 @@ export async function vaultSetup() {
     false,
     _cLevelParams,
     _tradeBounds,
-    0,
     lastTimeStamp,
   );
   await putVaultProxy.deployed();

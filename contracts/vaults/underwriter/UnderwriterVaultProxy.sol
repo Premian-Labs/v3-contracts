@@ -35,7 +35,6 @@ contract UnderwriterVaultProxy is
         bool isCall,
         Clevel memory cLevel,
         TradeBounds memory tradeBounds,
-        uint256 rfRate, //TODO: need to feed via oracle. Default ZERO
         uint256 lastTradeTimestamp
     ) ProxyUpgradeableOwnable(implementation) {
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
@@ -56,7 +55,6 @@ contract UnderwriterVaultProxy is
         UnderwriterVaultStorage.layout().alphaCLevel = cLevel.alphaClevel;
         UnderwriterVaultStorage.layout().hourlyDecayDiscount = cLevel
             .hourlyDecayDiscount;
-        UnderwriterVaultStorage.layout().rfRate = rfRate;
         UnderwriterVaultStorage
             .layout()
             .lastTradeTimestamp = lastTradeTimestamp;

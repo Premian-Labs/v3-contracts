@@ -362,9 +362,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 strike,
         uint256 maturity,
         uint256 tau,
-        uint256 sigma
+        uint256 sigma,
+        uint256 rfRate
     ) external view returns (address) {
-        return _isValidListing(spotPrice, strike, maturity, tau, sigma);
+        return _isValidListing(spotPrice, strike, maturity, tau, sigma, rfRate);
     }
 
     function afterBuy(

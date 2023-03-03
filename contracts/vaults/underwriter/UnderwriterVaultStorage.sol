@@ -27,8 +27,6 @@ library UnderwriterVaultStorage {
         uint256 minDTE; // 3
         int256 minDelta; // 0.10
         int256 maxDelta; // 0.70
-        //TODO: need getter function in IVol Oracle
-        uint256 rfRate;
         // C-Level Parameters
         uint256 minCLevel; // 1
         uint256 maxCLevel; // 1.2

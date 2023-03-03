@@ -214,11 +214,19 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const strike = parseEther('1500');
         const badTau = parseEther('0.12328767'); // 45 DTE
+        const rfRate = 0;
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, badTau);
         await expect(
-          callVault.isValidListing(spotPrice, strike, maturity, badTau, sigma),
+          callVault.isValidListing(
+            spotPrice,
+            strike,
+            maturity,
+            badTau,
+            sigma,
+            rfRate,
+          ),
         ).to.be.revertedWithCustomError(callVault, 'Vault__MaturityBounds');
       });
 
@@ -229,7 +237,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const strike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
-        const rfRate = 0;
+        const rfRate = await volOracle.getrfRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, tau);
@@ -251,6 +259,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const itmStrike = parseEther('500');
         const badTau = parseEther('0.03835616'); // 14 DTE
+        const rfRate = await volOracle.getrfRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, itmStrike, badTau);
@@ -261,6 +270,7 @@ describe('#buy functionality', () => {
             maturity,
             badTau,
             sigma,
+            rfRate,
           ),
         ).to.be.revertedWithCustomError(callVault, 'Vault__DeltaBounds');
       });
@@ -271,6 +281,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
+        const rfRate = await volOracle.getrfRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
@@ -280,6 +291,7 @@ describe('#buy functionality', () => {
           maturity,
           tau,
           sigma,
+          rfRate,
         );
         expect(listingAddr).to.be.eq(poolAddress);
       });
@@ -297,7 +309,7 @@ describe('#buy functionality', () => {
           base: base.address,
           quote: quote.address,
           oracleAdapter: oracleAdapter.address,
-          strike: parseEther('1600'), // ATM,
+          strike: parseEther('500'), // ATM,
           maturity: BigNumber.from(maturity),
           isCallPool: isCall,
         };
@@ -312,8 +324,9 @@ describe('#buy functionality', () => {
           vaultSetup,
         );
         const spotPrice = await callVault.getSpotPrice();
-        const unListedStrike = parseEther('1600');
+        const unListedStrike = parseEther('1550');
         const tau = parseEther('0.03835616'); // 14 DTE
+        const rfRate = await volOracle.getrfRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
@@ -324,6 +337,7 @@ describe('#buy functionality', () => {
             maturity,
             tau,
             sigma,
+            rfRate,
           ),
         ).to.be.revertedWithCustomError(
           callVault,

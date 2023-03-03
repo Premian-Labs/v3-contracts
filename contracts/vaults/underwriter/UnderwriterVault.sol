@@ -163,7 +163,7 @@ contract UnderwriterVault is
                     strike,
                     0,
                     1,
-                    l.rfRate,
+                    0,
                     l.isCall
                 );
 
@@ -513,7 +513,8 @@ contract UnderwriterVault is
         uint256 strike,
         uint256 maturity,
         uint256 tau,
-        uint256 sigma
+        uint256 sigma,
+        uint256 rfRate
     ) internal view returns (address) {
         uint256 dte = tau.mul(365e18);
 
@@ -529,7 +530,7 @@ contract UnderwriterVault is
             strike,
             tau,
             sigma,
-            l.rfRate,
+            rfRate,
             l.isCall
         );
         if (delta < l.minDelta || delta > l.maxDelta)
@@ -537,7 +538,6 @@ contract UnderwriterVault is
 
         // NOTE: query returns address(0) if no listing exists
         address listingAddr = _getFactoryAddress(strike, maturity);
-        if (listingAddr == address(0)) revert Vault__OptionPoolNotListed();
 
         return listingAddr;
     }
@@ -580,7 +580,7 @@ contract UnderwriterVault is
         address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
             _poolKey
         );
-        if (listingAddr == address(0)) revert Vault__AddressZero();
+        if (listingAddr == address(0)) revert Vault__OptionPoolNotListed();
         return listingAddr;
     }
 
@@ -665,12 +665,15 @@ contract UnderwriterVault is
             tau
         );
 
+        uint256 rfRate = IVolatilityOracle(IV_ORACLE_ADDR).getrfRate();
+
         address poolAddr = _isValidListing(
             spotPrice,
             args.strike,
             args.maturity,
             tau,
-            uint256(sigma)
+            uint256(sigma),
+            rfRate
         );
 
         // returns USD price for calls & puts
@@ -679,7 +682,7 @@ contract UnderwriterVault is
             args.strike,
             tau,
             uint256(sigma),
-            l.rfRate,
+            rfRate,
             l.isCall
         );
 
