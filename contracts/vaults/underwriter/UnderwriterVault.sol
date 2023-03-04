@@ -665,7 +665,7 @@ contract UnderwriterVault is
             tau
         );
 
-        uint256 rfRate = IVolatilityOracle(IV_ORACLE_ADDR).getrfRate();
+        uint256 rfRate = IVolatilityOracle(IV_ORACLE_ADDR).getRiskFreeRate();
 
         address poolAddr = _isValidListing(
             spotPrice,

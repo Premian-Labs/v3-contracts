@@ -340,7 +340,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     }
 
     //TODO: get risk free rate
-    function getrfRate() external pure returns (uint256) {
+    function getRiskFreeRate() external pure returns (uint256) {
         return 0;
     }
 }
