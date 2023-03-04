@@ -143,9 +143,6 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 diff = _decimals(tokenIn) - _decimals(tokenOut);
-        int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
-
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
             : Denominations.ETH;
@@ -153,10 +150,7 @@ abstract contract ChainlinkAdapterInternal is
         uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
         uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
-        uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
-        uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
-
-        return adjustedTokenInToBase.div(adjustedTokenOutToBase);
+        return tokenInToBase.div(tokenOutToBase);
     }
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
