@@ -4,14 +4,11 @@ pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
-
-import {TokenSorting} from "../../libraries/TokenSorting.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {SafeCast, TokenSorting, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
@@ -360,16 +357,6 @@ abstract contract ChainlinkAdapterInternal is
         return _feed(base, quote) != address(0);
     }
 
-    function _decimals(address token) internal view override returns (int256) {
-        if (_isETH(token)) {
-            return ETH_DECIMALS;
-        } else if (_isUSD(token) || _isWBTC(token)) {
-            return FOREX_DECIMALS;
-        } else {
-            return super._decimals(token);
-        }
-    }
-
     function _fetchQuote(
         address base,
         address quote,
@@ -495,26 +482,6 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
         mappedTokenA = _tokenToDenomination(tokenA);
         mappedTokenB = _tokenToDenomination(tokenB);
-    }
-
-    function _keyForUnsortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        (address mappedTokenA, address mappedTokenB) = TokenSorting.sortTokens(
-            tokenA,
-            tokenB
-        );
-
-        return _keyForSortedPair(mappedTokenA, mappedTokenB);
-    }
-
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _keyForSortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenA, tokenB));
     }
 
     function _getETHUSD(uint256 target) internal view returns (uint256) {

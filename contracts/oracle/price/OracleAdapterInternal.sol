@@ -2,9 +2,18 @@
 
 pragma solidity ^0.8.0;
 
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
+import {TokenSorting} from "../../libraries/TokenSorting.sol";
+
 /// @title Base oracle adapter internal implementation
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract OracleAdapterInternal {
+    using SafeCast for int256;
+
+    int256 internal constant ETH_DECIMALS = 18;
+    uint256 internal constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
+
     /// @notice Thrown when the target is zero or before the current block timestamp
     error OracleAdapter__InvalidTarget();
 
@@ -22,6 +31,37 @@ abstract contract OracleAdapterInternal {
 
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
+
+    function _keyForUnsortedPair(
+        address tokenA,
+        address tokenB
+    ) internal pure returns (bytes32) {
+        (address sortedA, address sortedTokenB) = TokenSorting.sortTokens(
+            tokenA,
+            tokenB
+        );
+
+        return _keyForSortedPair(sortedA, sortedTokenB);
+    }
+
+    /// @dev Expects `tokenA` and `tokenB` to be sorted
+    function _keyForSortedPair(
+        address tokenA,
+        address tokenB
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(tokenA, tokenB));
+    }
+
+    function _scale(
+        uint256 amount,
+        int256 factor
+    ) internal pure returns (uint256) {
+        if (factor < 0) {
+            return amount / (10 ** (-factor).toUint256());
+        } else {
+            return amount * (10 ** factor.toUint256());
+        }
+    }
 
     function _ensureTargetNonZero(uint256 target) internal view {
         if (target == 0 || target > block.timestamp)
