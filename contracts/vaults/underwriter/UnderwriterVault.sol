@@ -799,6 +799,8 @@ contract UnderwriterVault is
 
         uint256 current = l.minMaturity;
         uint256 next;
+
+        uint256 strike;
         uint256 numStrikes;
 
         while (current <= lastExpired && current != 0) {
@@ -808,10 +810,9 @@ contract UnderwriterVault is
             next = l.maturities.next(current);
             numStrikes = l.maturityToStrikes[current].length();
             for (uint256 i = 0; i < numStrikes; i++) {
-                l.positionSizes[current][
-                    l.maturityToStrikes[current].at(0)
-                ] = 0;
-                _removeListing(l.maturityToStrikes[current].at(0), current);
+                strike = l.maturityToStrikes[current].at(0);
+                l.positionSizes[current][strike] = 0;
+                _removeListing(strike, current);
             }
             current = next;
         }
