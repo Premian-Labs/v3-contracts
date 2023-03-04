@@ -993,10 +993,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:3.4.2-solc-0.7":
-  version: 3.4.2-solc-0.7
-  resolution: "@openzeppelin/contracts@npm:3.4.2-solc-0.7"
-  checksum: 1a6048f31ed560c34429a05e534102c51124ecaf113aca7ebeb7897cfaaf61007cdd7952374c282adaeb79b04ee86ee80b16eed28b62fc6d60e3ffcd7a696895
+"@openzeppelin/contracts@npm:4.6.0":
+  version: 4.6.0
+  resolution: "@openzeppelin/contracts@npm:4.6.0"
+  checksum: 1de06211b279d7aef2bb9abbdd58eb80c71256f7e888a10855ea23bb06ef8723b22fb550d06af60247dfbd7f0f23de9821732012d7541a823339070a8442d1db
   languageName: node
   linkType: hard
 
@@ -1454,13 +1454,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@uniswap/lib@npm:^4.0.1-alpha":
-  version: 4.0.1-alpha
-  resolution: "@uniswap/lib@npm:4.0.1-alpha"
-  checksum: d7bbacccef40966af16c7e215ab085f575686d316b2802c9e1cfd03f7ad351970e547535670a28b2279c3cfcc4fb02888614c46f94efe2987af2309f3ec86127
-  languageName: node
-  linkType: hard
-
 "@uniswap/v2-core@npm:1.0.1":
   version: 1.0.1
   resolution: "@uniswap/v2-core@npm:1.0.1"
@@ -1468,30 +1461,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@uniswap/v3-core@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@uniswap/v3-core@npm:1.0.0"
-  checksum: 0e7654cfbf9885f1ca94446c3b220aeddb039af7892bc4ae94669512570ceefdf1ce6c2b0703396927d5a203d7c6c5ccaf8bd61426e52372aafb6ada64141055
+"@uniswap/v3-core@https://github.com/Uniswap/v3-core.git#head=0.8":
+  version: 1.0.1-solc-0.8
+  resolution: "@uniswap/v3-core@https://github.com/Uniswap/v3-core.git#commit=6562c52e8f75f0c10f9deaf44861847585fc8129"
+  checksum: 8bc6a0ba277cfa9bbeb85649bde6c04babf9730a0e7911ceaa3f1e4c267332829ba36f420c125537a65619da3be78db133bcee185353a409131992183200472a
   languageName: node
   linkType: hard
 
-"@uniswap/v3-core@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "@uniswap/v3-core@npm:1.0.1"
-  checksum: 4bfd8b218391a3d9efde44e0f984cfec3bc25889cd4d1386766828521006e71b210a3583ee32b52f3c81d384af9e8c39f471f2229e9af4d50da6801446ecb3e4
+"@uniswap/v3-core@npm:1.0.2-solc-0.8-simulate":
+  version: 1.0.2-solc-0.8-simulate
+  resolution: "@uniswap/v3-core@npm:1.0.2-solc-0.8-simulate"
+  checksum: c2fefe8951062c6152d1cb56f19b9ecb1a20b6ee147534aaf2a710f5c619b9422d9d5661f42272d0e558356657e39ad44bb34114802f2371a2b243d956331b90
   languageName: node
   linkType: hard
 
-"@uniswap/v3-periphery@npm:^1.4.3":
-  version: 1.4.3
-  resolution: "@uniswap/v3-periphery@npm:1.4.3"
+"@uniswap/v3-periphery@https://github.com/Uniswap/v3-periphery.git#head=0.8":
+  version: 1.4.2-solc-0.8
+  resolution: "@uniswap/v3-periphery@https://github.com/Uniswap/v3-periphery.git#commit=b325bb0905d922ae61fcc7df85ee802e8df5e96c"
   dependencies:
-    "@openzeppelin/contracts": 3.4.2-solc-0.7
-    "@uniswap/lib": ^4.0.1-alpha
+    "@openzeppelin/contracts": 4.6.0
     "@uniswap/v2-core": 1.0.1
-    "@uniswap/v3-core": 1.0.0
-    base64-sol: 1.0.1
-  checksum: 50636951fc0a7737cfeef988ab38f4ddf26f6165a19df95b84294929088cc8b05fdbc7910168610ce9daebcce5d7a408fa5a02228ef9dfb73c23c695acc8b741
+    "@uniswap/v3-core": 1.0.2-solc-0.8-simulate
+    base64-sol: 1.1.0
+    hardhat-watcher: ^2.1.1
+  checksum: ed139a658b314bb9842ef40c76d6f27ead29be7a9c4ffe87a973d1f42784f79ba020e753ee8bd57b573d90b38fc4aece8549f95fa1242b109c2ec89dc8b85108
   languageName: node
   linkType: hard
 
@@ -2159,10 +2152,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"base64-sol@npm:1.0.1":
-  version: 1.0.1
-  resolution: "base64-sol@npm:1.0.1"
-  checksum: be0f9e8cf3c744256913223fbae8187773f530cc096e98a77f49ef0bd6cedeb294d15a784e439419f7cb99f07bf85b08999169feafafa1a9e29c3affc0bc6d0a
+"base64-sol@npm:1.1.0":
+  version: 1.1.0
+  resolution: "base64-sol@npm:1.1.0"
+  checksum: 9bea828af71e6adcf7c841cf0001e03bd1eae8cc1aef86daedb36f04117b2a626ac23631f700d56a24515f88c2021d7ebdbee4608369f66c53e51c0b4b39ee47
   languageName: node
   linkType: hard
 
@@ -2583,7 +2576,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chokidar@npm:3.5.3, chokidar@npm:^3.4.0":
+"chokidar@npm:3.5.3, chokidar@npm:^3.4.0, chokidar@npm:^3.5.3":
   version: 3.5.3
   resolution: "chokidar@npm:3.5.3"
   dependencies:
@@ -4457,6 +4450,17 @@ __metadata:
   peerDependencies:
     hardhat: ^2.0.0
   checksum: 2bc79a011e4bf0b4262ee6bd8823820eb09b7f1fc2dff0aa3704a52d7b5913c342f8d04cead6f461bbe5cfe38068719eb4e7ed1a189596bbf4eeb2ba2da490ed
+  languageName: node
+  linkType: hard
+
+"hardhat-watcher@npm:^2.1.1":
+  version: 2.5.0
+  resolution: "hardhat-watcher@npm:2.5.0"
+  dependencies:
+    chokidar: ^3.5.3
+  peerDependencies:
+    hardhat: ^2.0.0
+  checksum: e6c0d52865529653733b3fed6887b41a676fc5185eb835909b360e8cc24223a2fc4c398e3874b234fa918ec59be9de86d7fe92963022139c05cf07f027377cbb
   languageName: node
   linkType: hard
 
@@ -6648,8 +6652,8 @@ __metadata:
     "@types/chai": ^4.3.4
     "@types/mocha": ^10.0.1
     "@types/node": ^18.13.0
-    "@uniswap/v3-core": ^1.0.1
-    "@uniswap/v3-periphery": ^1.4.3
+    "@uniswap/v3-core": "https://github.com/Uniswap/v3-core.git#head=0.8"
+    "@uniswap/v3-periphery": "https://github.com/Uniswap/v3-periphery.git#head=0.8"
     axios: ^1.3.2
     chai: ^4.3.7
     dotenv: ^16.0.3
