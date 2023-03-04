@@ -224,7 +224,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 spot,
         uint256 strike,
         uint256 timeToMaturity
-    ) internal view returns (int256) {
+    ) internal view returns (uint256) {
         if (spot == 0) revert VolatilityOracle__SpotIsZero();
         if (strike == 0) revert VolatilityOracle__StrikeIsZero();
         if (timeToMaturity == 0)
@@ -302,7 +302,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         int256 w = info.theta.div(TWO);
         w = w.mul(ONE + info.rho.mul(phi).mul(k) + term.sqrt());
 
-        return w.div(_timeToMaturity).sqrt();
+        return uint256(w.div(_timeToMaturity).sqrt());
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -311,7 +311,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 spot,
         uint256 strike,
         uint256 timeToMaturity
-    ) external view returns (int256) {
+    ) external view returns (uint256) {
         return _getVolatility(token, spot, strike, timeToMaturity);
     }
 
@@ -321,11 +321,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 spot,
         uint256[] memory strike,
         uint256[] memory timeToMaturity
-    ) external view returns (int256[] memory) {
+    ) external view returns (uint256[] memory) {
         if (strike.length != timeToMaturity.length)
             revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 
-        int256[] memory sigma = new int256[](strike.length);
+        uint256[] memory sigma = new uint256[](strike.length);
 
         for (uint256 i = 0; i < sigma.length; i++) {
             sigma[i] = _getVolatility(

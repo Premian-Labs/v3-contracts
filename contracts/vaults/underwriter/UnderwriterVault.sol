@@ -222,7 +222,7 @@ contract UnderwriterVault is
             current = l.maturities.next(current);
         }
 
-        int256[] memory sigmas = IVolatilityOracle(IV_ORACLE_ADDR)
+        uint256[] memory sigmas = IVolatilityOracle(IV_ORACLE_ADDR)
             .getVolatility(
                 _asset(),
                 spot,
@@ -235,7 +235,7 @@ contract UnderwriterVault is
                 spot,
                 listings.strikes[x],
                 listings.timeToMaturities[x],
-                uint256(sigmas[x]),
+                sigmas[x],
                 0,
                 l.isCall
             );
@@ -658,7 +658,7 @@ contract UnderwriterVault is
 
         uint256 tau = (args.maturity - block.timestamp).div(SECONDSINAYEAR);
 
-        int256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
+        uint256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
             _asset(),
             spotPrice,
             args.strike,
@@ -672,7 +672,7 @@ contract UnderwriterVault is
             args.strike,
             args.maturity,
             tau,
-            uint256(sigma),
+            sigma,
             rfRate
         );
 
@@ -681,7 +681,7 @@ contract UnderwriterVault is
             spotPrice,
             args.strike,
             tau,
-            uint256(sigma),
+            sigma,
             rfRate,
             l.isCall
         );

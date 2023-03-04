@@ -77,7 +77,7 @@ interface IVolatilityOracle {
         uint256 spot,
         uint256 strike,
         uint256 timeToMaturity
-    ) external view returns (int256);
+    ) external view returns (uint256);
 
     /// @notice Calculate the annualized volatility for given set of parameters
     /// @param token The token address
@@ -90,7 +90,7 @@ interface IVolatilityOracle {
         uint256 spot,
         uint256[] memory strike,
         uint256[] memory timeToMaturity
-    ) external view returns (int256[] memory);
+    ) external view returns (uint256[] memory);
 
     function getrfRate() external pure returns (uint256);
 }
