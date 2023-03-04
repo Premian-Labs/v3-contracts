@@ -158,7 +158,7 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#isPairSupported', () => {
-    it('returns false if pair is not supported by adapter', async () => {
+    it('should return false if pair is not supported by adapter', async () => {
       const [isCached, _] = await instance.isPairSupported(
         tokens.WETH.address,
         tokens.DAI.address,
@@ -167,7 +167,7 @@ describe('ChainlinkAdapter', () => {
       expect(isCached).to.be.false;
     });
 
-    it('returns false if path for pair does not exist', async () => {
+    it('should return false if path for pair does not exist', async () => {
       const [_, hasPath] = await instance.isPairSupported(
         tokens.WETH.address,
         bnToAddress(BigNumber.from(0)),
@@ -210,7 +210,9 @@ describe('ChainlinkAdapter', () => {
 
       expect(isCached).to.be.true;
 
-      await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
+      expect(
+        await instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      );
     });
 
     it('should only emit UpdatedPathForPair when path is updated', async () => {
@@ -732,6 +734,7 @@ describe('ChainlinkAdapter', () => {
   }
 });
 
+// TODO: move to separate file
 let TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
 
 function validateQuote(quote: BigNumber, expected: BigNumber) {
