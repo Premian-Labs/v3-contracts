@@ -14,7 +14,7 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-import { now } from '../../utils/time';
+import { latest } from '../../utils/time';
 import { Token, feeds, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
@@ -495,7 +495,7 @@ let priceCache: Map<string, number> = new Map();
 
 async function fetchPrice(network: string, address: string): Promise<number> {
   if (!priceCache.has(address)) {
-    const timestamp = await now();
+    const timestamp = await latest();
     const price = await getPrice(network, address, timestamp);
     priceCache.set(address, price);
   }

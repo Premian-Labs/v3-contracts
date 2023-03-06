@@ -11,7 +11,7 @@ import {
 import {
   getLastFridayOfMonth,
   getValidMaturity,
-  now,
+  latest,
   ONE_DAY,
   ONE_WEEK,
   revertToSnapshotAfterEach,
@@ -60,7 +60,7 @@ describe('PoolFactory', () => {
     );
 
     maturity = await getValidMaturity(10, 'months');
-    blockTimestamp = await now();
+    blockTimestamp = await latest();
   });
 
   beforeEach(async () => {
@@ -306,7 +306,7 @@ describe('PoolFactory', () => {
         p.poolFactory.deployPool(
           {
             ...poolKey,
-            maturity: await getLastFridayOfMonth(await now(), 13),
+            maturity: await getLastFridayOfMonth(await latest(), 13),
           },
           {
             value: parseEther('1'),

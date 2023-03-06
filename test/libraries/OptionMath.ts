@@ -3,7 +3,7 @@ import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { OptionMathMock, OptionMathMock__factory } from '../../typechain';
 import { formatEther, parseEther } from 'ethers/lib/utils';
-import { ONE_WEEK, now, weekOfMonth } from '../../utils/time';
+import { ONE_WEEK, latest, weekOfMonth } from '../../utils/time';
 
 import moment from 'moment-timezone';
 moment.tz.setDefault('UTC');
@@ -288,7 +288,7 @@ describe('OptionMath', () => {
 
   describe('#calculateTimeToMaturity', async () => {
     it('should return the time until maturity', async () => {
-      let maturity = (await now()) + ONE_WEEK;
+      let maturity = (await latest()) + ONE_WEEK;
       expect(await instance.calculateTimeToMaturity(maturity)).to.eq(ONE_WEEK);
     });
   });

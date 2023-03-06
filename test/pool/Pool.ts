@@ -17,7 +17,7 @@ import {
 import {
   getValidMaturity,
   increaseTo,
-  now,
+  latest,
   ONE_HOUR,
   revertToSnapshotAfterEach,
 } from '../../utils/time';
@@ -114,7 +114,7 @@ describe('Pool', () => {
     }
 
     getTradeQuote = async () => {
-      const timestamp = BigNumber.from(await now());
+      const timestamp = BigNumber.from(await latest());
       return {
         provider: lp.address,
         taker: ethers.constants.AddressZero,
@@ -1437,7 +1437,7 @@ describe('Pool', () => {
 
     it('should revert if quote is expired', async () => {
       const quote = await getTradeQuote();
-      quote.deadline = BigNumber.from((await now()) - 1);
+      quote.deadline = BigNumber.from((await latest()) - 1);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
