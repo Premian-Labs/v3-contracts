@@ -1,80 +1,45 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import {
-  ERC20Mock,
-  ERC20Mock__factory,
-  IPoolMock,
-  IPoolMock__factory,
-} from '../../typechain';
+import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
-import {
-  deployMockContract,
-  MockContract,
-} from '@ethereum-waffle/mock-contract';
+import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import {
   getValidMaturity,
   increaseTo,
   latest,
   ONE_HOUR,
-  revertToSnapshotAfterEach,
 } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber } from '../../utils/sdk/math';
-import {
-  OrderType,
-  PositionKey,
-  TokenType,
-  TradeQuote,
-} from '../../utils/sdk/types';
+import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
 import { tokens } from '../../utils/addresses';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
 
 describe('Pool', () => {
-  let deployer: SignerWithAddress;
-  let lp: SignerWithAddress;
-  let trader: SignerWithAddress;
-  let feeReceiver: SignerWithAddress;
+  async function deploy() {
+    const strike = parseEther('1000');
+    const protocolFeePercentage = 0.5;
+    const isCall = true;
 
-  let callPool: IPoolMock;
-  let putPool: IPoolMock;
-  let p: PoolUtil;
+    const [deployer, lp, trader, feeReceiver] = await ethers.getSigners();
 
-  let base: ERC20Mock;
-  let quote: ERC20Mock;
+    const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-  let oracleAdapter: MockContract;
-
-  const protocolFeePercentage = 0.5;
-  let strike = parseEther('1000'); // ATM
-  let maturity: number;
-
-  let isCall: boolean;
-  let collateral: BigNumber;
-
-  let pKey: PositionKey;
-
-  let getTradeQuote: () => Promise<TradeQuote>;
-
-  before(async () => {
-    [deployer, lp, trader, feeReceiver] = await ethers.getSigners();
-
-    base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
-
-    oracleAdapter = await deployMockContract(deployer as any, [
+    const oracleAdapter = await deployMockContract(deployer as any, [
       'function quote(address,address) external view returns (uint256)',
     ]);
 
     await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
 
-    p = await PoolUtil.deploy(
+    const p = await PoolUtil.deploy(
       deployer,
       tokens.WETH.address,
       oracleAdapter.address,
@@ -84,17 +49,17 @@ describe('Pool', () => {
       true,
     );
 
-    maturity = await getValidMaturity(10, 'months');
+    const maturity = await getValidMaturity(10, 'months');
 
-    for (isCall of [true, false]) {
+    const deployPool = async (isCallPool: boolean) => {
       const tx = await p.poolFactory.deployPool(
         {
           base: base.address,
           quote: quote.address,
           oracleAdapter: oracleAdapter.address,
-          strike: strike,
-          maturity: maturity,
-          isCallPool: isCall,
+          strike,
+          maturity,
+          isCallPool,
         },
         {
           value: parseEther('1'),
@@ -104,16 +69,13 @@ describe('Pool', () => {
       const r = await tx.wait(1);
       const poolAddress = (r as any).events[0].args.poolAddress;
 
-      if (isCall) {
-        callPool = IPoolMock__factory.connect(poolAddress, deployer);
-        collateral = parseEther('10');
-      } else {
-        putPool = IPoolMock__factory.connect(poolAddress, deployer);
-        collateral = parseEther('1000');
-      }
-    }
+      return IPoolMock__factory.connect(poolAddress, deployer);
+    };
 
-    getTradeQuote = async () => {
+    const callPool = await deployPool(true);
+    const putPool = await deployPool(false);
+
+    const getTradeQuote = async () => {
       const timestamp = BigNumber.from(await latest());
       return {
         provider: lp.address,
@@ -125,10 +87,8 @@ describe('Pool', () => {
         salt: timestamp,
       };
     };
-  });
 
-  beforeEach(async () => {
-    pKey = {
+    const pKey = {
       owner: lp.address,
       operator: lp.address,
       lower: parseEther('0.1'),
@@ -137,13 +97,34 @@ describe('Pool', () => {
       isCall: isCall,
       strike: strike,
     };
-  });
 
-  revertToSnapshotAfterEach(async () => {});
+    return {
+      deployer,
+      lp,
+      trader,
+      feeReceiver,
+      callPool,
+      putPool,
+      p,
+      base,
+      quote,
+      oracleAdapter,
+      protocolFeePercentage,
+      strike,
+      maturity,
+      isCall,
+      pKey,
+      getTradeQuote,
+    };
+  }
 
   describe('__internal', function () {
     describe('#_getPricing', () => {
       it('should return pool state', async () => {
+        const { callPool, lp, isCall, strike, base } = await loadFixture(
+          deploy,
+        );
+
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
 
@@ -174,7 +155,7 @@ describe('Pool', () => {
           strike: strike,
         };
 
-        await base.connect(lp).approve(callPool.address, collateral);
+        await base.connect(lp).approve(callPool.address, parseEther('2000'));
 
         const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
 
@@ -211,6 +192,7 @@ describe('Pool', () => {
 
     describe('#_tradeQuoteHash', () => {
       it('should successfully calculate a trade quote hash', async () => {
+        const { getTradeQuote, callPool, lp } = await loadFixture(deploy);
         const quote = await getTradeQuote();
         expect(await callPool.tradeQuoteHash(quote)).to.eq(
           await calculateQuoteHash(lp.provider!, quote, callPool.address),
@@ -221,6 +203,8 @@ describe('Pool', () => {
 
   describe('#getTradeQuote', () => {
     it('should successfully return a buy trade quote', async () => {
+      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -257,6 +241,8 @@ describe('Pool', () => {
     });
 
     it('should successfully return a sell trade quote', async () => {
+      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -293,6 +279,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not enough liquidity to buy', async () => {
+      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -319,6 +307,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not enough liquidity to sell', async () => {
+      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -351,6 +341,8 @@ describe('Pool', () => {
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
         it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
+          const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
           const tokenId = await callPool.formatTokenId(
             pKey.operator,
             pKey.lower,
@@ -394,6 +386,8 @@ describe('Pool', () => {
       });
 
       it('should revert if msg.sender != p.operator', async () => {
+        const { callPool, deployer, pKey } = await loadFixture(deploy);
+
         await expect(
           callPool
             .connect(deployer)
@@ -402,6 +396,8 @@ describe('Pool', () => {
       });
 
       it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
+        const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
         const tokenId = await callPool.formatTokenId(
           pKey.operator,
           pKey.lower,
@@ -447,12 +443,14 @@ describe('Pool', () => {
       });
 
       it('should revert if zero size', async () => {
+        const { callPool, lp, pKey } = await loadFixture(deploy);
         await expect(
           callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
       });
 
       it('should revert if option is expired', async () => {
+        const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
         await increaseTo(maturity);
         await expect(
           callPool
@@ -462,6 +460,7 @@ describe('Pool', () => {
       });
 
       it('should revert if range is not valid', async () => {
+        const { callPool, lp, pKey } = await loadFixture(deploy);
         await expect(
           callPool
             .connect(lp)
@@ -529,6 +528,8 @@ describe('Pool', () => {
       });
 
       it('should revert if tick width is invalid', async () => {
+        const { callPool, lp, pKey } = await loadFixture(deploy);
+
         await expect(
           callPool
             .connect(lp)
@@ -561,6 +562,8 @@ describe('Pool', () => {
   describe('#withdraw', () => {
     describe('OrderType LC', () => {
       it('should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)', async () => {
+        const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
         const tokenId = await callPool.formatTokenId(
           pKey.operator,
           pKey.lower,
@@ -616,6 +619,8 @@ describe('Pool', () => {
     });
 
     it('should revert if msg.sender != p.operator', async () => {
+      const { callPool, deployer, pKey } = await loadFixture(deploy);
+
       await expect(
         callPool
           .connect(deployer)
@@ -624,6 +629,8 @@ describe('Pool', () => {
     });
 
     it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
+      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -661,12 +668,16 @@ describe('Pool', () => {
     });
 
     it('should revert if zero size', async () => {
+      const { callPool, lp, pKey } = await loadFixture(deploy);
+
       await expect(
         callPool.connect(lp).withdraw(pKey, 0, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
     });
 
     it('should revert if option is expired', async () => {
+      const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
+
       await increaseTo(maturity);
       await expect(
         callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
@@ -674,12 +685,16 @@ describe('Pool', () => {
     });
 
     it('should revert if position does not exists', async () => {
+      const { callPool, lp, pKey } = await loadFixture(deploy);
+
       await expect(
         callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(callPool, 'Pool__PositionDoesNotExist');
     });
 
     it('should revert if range is not valid', async () => {
+      const { callPool, lp, pKey } = await loadFixture(deploy);
+
       await expect(
         callPool
           .connect(lp)
@@ -727,6 +742,8 @@ describe('Pool', () => {
     });
 
     it('should revert if tick width is invalid', async () => {
+      const { callPool, lp, pKey } = await loadFixture(deploy);
+
       await expect(
         callPool
           .connect(lp)
@@ -753,6 +770,8 @@ describe('Pool', () => {
 
   describe('#writeFrom', () => {
     it('should successfully write 500 options', async () => {
+      const { callPool, lp, trader, base } = await loadFixture(deploy);
+
       const size = parseEther('500');
       const fee = await callPool.takerFee(size, 0, true);
 
@@ -777,6 +796,10 @@ describe('Pool', () => {
     });
 
     it('should successfully write 500 options on behalf of another address', async () => {
+      const { callPool, lp, trader, deployer, base } = await loadFixture(
+        deploy,
+      );
+
       const size = parseEther('500');
       const fee = await callPool.takerFee(size, 0, true);
 
@@ -803,6 +826,8 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to write options of behalf of another address without approval', async () => {
+      const { callPool, lp, deployer, trader } = await loadFixture(deploy);
+
       await expect(
         callPool
           .connect(deployer)
@@ -811,12 +836,15 @@ describe('Pool', () => {
     });
 
     it('should revert if size is zero', async () => {
+      const { callPool, lp, trader } = await loadFixture(deploy);
+
       await expect(
         callPool.connect(lp).writeFrom(lp.address, trader.address, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
     });
 
     it('should revert if option is expired', async () => {
+      const { callPool, lp, trader, maturity } = await loadFixture(deploy);
       await increaseTo(maturity);
 
       await expect(
@@ -827,6 +855,8 @@ describe('Pool', () => {
 
   describe('#trade', () => {
     it('should successfully buy 500 options', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -867,6 +897,8 @@ describe('Pool', () => {
     });
 
     it('should successfully sell 500 options', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -907,6 +939,8 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -939,6 +973,8 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -971,6 +1007,8 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1000,6 +1038,8 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and bid liquidity is insufficient', async () => {
+      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1029,12 +1069,15 @@ describe('Pool', () => {
     });
 
     it('should revert if trade size is 0', async () => {
+      const { callPool, trader } = await loadFixture(deploy);
+
       await expect(
         callPool.connect(trader).trade(0, true, 0),
       ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
     });
 
     it('should revert if expired', async () => {
+      const { callPool, trader, maturity } = await loadFixture(deploy);
       await increaseTo(maturity);
 
       await expect(
@@ -1045,6 +1088,17 @@ describe('Pool', () => {
 
   describe('#exercise', () => {
     it('should successfully exercise an ITM option', async () => {
+      const {
+        callPool,
+        lp,
+        trader,
+        pKey,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1092,6 +1146,17 @@ describe('Pool', () => {
     });
 
     it('should not pay any token when exercising an OTM option', async () => {
+      const {
+        callPool,
+        lp,
+        trader,
+        pKey,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1139,6 +1204,8 @@ describe('Pool', () => {
     });
 
     it('should revert if options is not expired', async () => {
+      const { callPool, trader } = await loadFixture(deploy);
+
       await expect(
         callPool.exercise(trader.address),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OptionNotExpired');
@@ -1147,6 +1214,17 @@ describe('Pool', () => {
 
   describe('#settle', () => {
     it('should successfully settle an ITM option', async () => {
+      const {
+        callPool,
+        lp,
+        trader,
+        pKey,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1207,6 +1285,17 @@ describe('Pool', () => {
     });
 
     it('should successfully settle an OTM option', async () => {
+      const {
+        callPool,
+        lp,
+        trader,
+        pKey,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1266,6 +1355,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not expired', async () => {
+      const { callPool, trader } = await loadFixture(deploy);
+
       await expect(
         callPool.settle(trader.address),
       ).to.be.revertedWithCustomError(callPool, 'Pool__OptionNotExpired');
@@ -1274,6 +1365,17 @@ describe('Pool', () => {
 
   describe('#settlePosition', () => {
     it('should successfully settle an ITM option position', async () => {
+      const {
+        base,
+        callPool,
+        feeReceiver,
+        lp,
+        maturity,
+        oracleAdapter,
+        pKey,
+        trader,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1328,6 +1430,17 @@ describe('Pool', () => {
     });
 
     it('should successfully settle an OTM option position', async () => {
+      const {
+        base,
+        callPool,
+        feeReceiver,
+        lp,
+        maturity,
+        oracleAdapter,
+        pKey,
+        trader,
+      } = await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1382,6 +1495,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not expired', async () => {
+      const { callPool, pKey } = await loadFixture(deploy);
+
       await expect(callPool.settlePosition(pKey)).to.be.revertedWithCustomError(
         callPool,
         'Pool__OptionNotExpired',
@@ -1391,6 +1506,10 @@ describe('Pool', () => {
 
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
+      const { base, callPool, lp, trader, getTradeQuote } = await loadFixture(
+        deploy,
+      );
+
       const quote = await getTradeQuote();
 
       const initialBalance = parseEther('10');
@@ -1436,6 +1555,8 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is expired', async () => {
+      const { callPool, lp, trader, getTradeQuote } = await loadFixture(deploy);
+
       const quote = await getTradeQuote();
       quote.deadline = BigNumber.from((await latest()) - 1);
 
@@ -1447,6 +1568,8 @@ describe('Pool', () => {
     });
 
     it('should revert if quote price is out of bounds', async () => {
+      const { callPool, lp, trader, getTradeQuote } = await loadFixture(deploy);
+
       const quote = await getTradeQuote();
       quote.price = BigNumber.from(1);
 
@@ -1465,6 +1588,9 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is used by someone else than taker', async () => {
+      const { callPool, lp, trader, deployer, getTradeQuote } =
+        await loadFixture(deploy);
+
       const quote = await getTradeQuote();
       quote.taker = trader.address;
 
@@ -1476,6 +1602,9 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is over filled', async () => {
+      const { base, callPool, lp, deployer, trader, getTradeQuote } =
+        await loadFixture(deploy);
+
       const quote = await getTradeQuote();
 
       const initialBalance = parseEther('10');
@@ -1502,6 +1631,8 @@ describe('Pool', () => {
     });
 
     it('should revert if signed message does not match quote', async () => {
+      const { callPool, lp, trader, getTradeQuote } = await loadFixture(deploy);
+
       const quote = await getTradeQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
@@ -1520,6 +1651,8 @@ describe('Pool', () => {
 
   describe('#cancelTradeQuotes', async () => {
     it('should successfully cancel a trade quote', async () => {
+      const { callPool, lp, trader, getTradeQuote } = await loadFixture(deploy);
+
       const quote = await getTradeQuote();
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
@@ -1538,6 +1671,10 @@ describe('Pool', () => {
 
   describe('#getTradeQuoteFilledAmount', async () => {
     it('should successfully return filled amount of a trade quote', async () => {
+      const { base, callPool, lp, trader, getTradeQuote } = await loadFixture(
+        deploy,
+      );
+
       const quote = await getTradeQuote();
 
       const initialBalance = parseEther('10');
@@ -1572,6 +1709,9 @@ describe('Pool', () => {
 
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
+      const { base, callPool, lp, trader, pKey, protocolFeePercentage } =
+        await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1620,6 +1760,9 @@ describe('Pool', () => {
 
   describe('#claim', () => {
     it('should successfully claim fees', async () => {
+      const { base, callPool, lp, trader, pKey, feeReceiver } =
+        await loadFixture(deploy);
+
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
         pKey.upper,
@@ -1672,6 +1815,8 @@ describe('Pool', () => {
 
   describe('#formatTokenId', () => {
     it('should properly format token id', async () => {
+      const { callPool } = await loadFixture(deploy);
+
       const operator = '0x1000000000000000000000000000000000000001';
       const tokenId = await callPool.formatTokenId(
         operator,
@@ -1692,6 +1837,8 @@ describe('Pool', () => {
 
   describe('#parseTokenId', () => {
     it('should properly parse token id', async () => {
+      const { callPool } = await loadFixture(deploy);
+
       const r = await callPool.parseTokenId(
         BigNumber.from(
           '0x10000000000000000021000000000000000000000000000000000000001fa001',
