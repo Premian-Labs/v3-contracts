@@ -87,7 +87,12 @@ export class PoolUtil {
     // PoolBase
 
     const poolBaseFactory = new PoolBase__factory(deployer);
-    const poolBaseImpl = await poolBaseFactory.deploy();
+    const poolBaseImpl = await poolBaseFactory.deploy(
+      poolFactory.address,
+      exchangeHelper.address,
+      wrappedNativeToken,
+      feeReceiver,
+    );
     await poolBaseImpl.deployed();
 
     if (log) console.log(`PoolBase : ${poolBaseImpl.address}`);
