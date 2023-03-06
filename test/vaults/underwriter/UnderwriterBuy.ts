@@ -467,8 +467,8 @@ describe('#buy functionality', () => {
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         await expect(
-          await callVault.connect(trader).buy(strike, maturity, tradeSize),
-        ).to.revertedWithCustomError(callVault, 'Vault__InsufficientFunds()');
+          callVault.connect(trader).buy(strike, maturity, tradeSize),
+        ).to.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
       });
 
       it('properly updates for last trade timestamp', async () => {
@@ -487,13 +487,11 @@ describe('#buy functionality', () => {
 
         // Initialized lastTradeTimestamp
         const lastTrade_t0 = await callVault.getLastTradeTimestamp();
-        console.log(lastTrade_t0);
 
         // Execute Trade
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         const lastTrade_t1 = await callVault.getLastTradeTimestamp();
-        console.log(lastTrade_t1);
 
         expect(lastTrade_t1).to.be.gt(lastTrade_t0);
       });
