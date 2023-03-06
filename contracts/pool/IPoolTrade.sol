@@ -29,6 +29,7 @@ interface IPoolTrade is IPoolInternal {
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
@@ -41,6 +42,7 @@ interface IPoolTrade is IPoolInternal {
     ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
+    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param s The swap arguments
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling
@@ -63,6 +65,7 @@ interface IPoolTrade is IPoolInternal {
         );
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
+    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param s The swap arguments
     /// @param size The number of contracts being traded
     /// @param isBuy Whether the taker is buying or selling

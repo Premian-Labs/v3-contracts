@@ -437,6 +437,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+    ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
     /// @param size The position size to withdraw
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)

@@ -54,6 +54,7 @@ interface IPoolCore is IPoolInternal {
     ) external view returns (uint256);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
@@ -70,6 +71,7 @@ interface IPoolCore is IPoolInternal {
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
@@ -88,6 +90,7 @@ interface IPoolCore is IPoolInternal {
     ) external;
 
     /// @notice Swap tokens and deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param s The swap arguments
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
@@ -106,6 +109,7 @@ interface IPoolCore is IPoolInternal {
     ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+    ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
     /// @param size The position size to withdraw
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
