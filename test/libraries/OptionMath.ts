@@ -6,19 +6,21 @@ import { formatEther, parseEther } from 'ethers/lib/utils';
 import { ONE_WEEK, latest, weekOfMonth } from '../../utils/time';
 
 import moment from 'moment-timezone';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 moment.tz.setDefault('UTC');
 
 describe('OptionMath', () => {
-  let deployer: SignerWithAddress;
-  let instance: OptionMathMock;
+  async function deploy() {
+    const [deployer] = await ethers.getSigners();
+    const instance = await new OptionMathMock__factory(deployer).deploy();
 
-  before(async function () {
-    [deployer] = await ethers.getSigners();
-    instance = await new OptionMathMock__factory(deployer).deploy();
-  });
+    return { deployer, instance };
+  }
 
   describe('#helperNormal', function () {
     it('test of the normal CDF approximation helper. should equal the expected value', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         ['-12.0', '1.0000000000000000000'],
         ['-11.0', '1.0000000000000000000'],
@@ -54,6 +56,8 @@ describe('OptionMath', () => {
 
   describe('#normalCDF', function () {
     it('test of the normal CDF approximation. should equal the expected value', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         ['-12.0', '0.0000000000000000000'],
         ['-11.0', '0.0000000000000000000'],
@@ -90,6 +94,8 @@ describe('OptionMath', () => {
 
   describe('#relu', function () {
     it('test of the relu function. should equal the expected value', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         ['-3.6', '0.'],
         ['-2.2', '0.'],
@@ -114,6 +120,8 @@ describe('OptionMath', () => {
     const riskFreeRate = parseEther('0.13');
     let cases: [string, string, boolean][];
     it('test of the Black-Scholes formula for varying spot prices', async () => {
+      const { instance } = await loadFixture(deploy);
+
       cases = [
         // call
         ['0.001', '0.0', true],
@@ -147,6 +155,8 @@ describe('OptionMath', () => {
       }
     });
     it('test of the Black-Scholes formula for varying vols', async () => {
+      const { instance } = await loadFixture(deploy);
+
       cases = [
         // call
         ['0.001', '0.553263986069601', true],
@@ -187,6 +197,8 @@ describe('OptionMath', () => {
     const volAnnualized = parseEther('1.61');
     const riskFreeRate = parseEther('0.021');
     it('test of the d1d2 function for varying spot prices', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let cases: [string, string, string][];
       cases = [
         ['0.5', '0.49781863364936835', '-1.0714152558648748'],
@@ -224,6 +236,8 @@ describe('OptionMath', () => {
         let formattedDayTime = moment.unix(c).format('ddd, h:mm a');
 
         it(`${formattedDayTime}`, async () => {
+          const { instance } = await loadFixture(deploy);
+
           expect(await instance.isFriday(c)).is.false;
         });
       }
@@ -234,6 +248,8 @@ describe('OptionMath', () => {
         let formattedDayTime = moment.unix(c).format('ddd, h:mm a');
 
         it(`${formattedDayTime}`, async () => {
+          const { instance } = await loadFixture(deploy);
+
           expect(await instance.isFriday(c)).is.true;
         });
       }
@@ -254,6 +270,8 @@ describe('OptionMath', () => {
         let monthLength = m.daysInMonth();
 
         it(`${day} week ${week} ${monthLength}-day month`, async () => {
+          const { instance } = await loadFixture(deploy);
+
           expect(await instance.isLastFriday(c)).is.false;
         });
       }
@@ -269,6 +287,8 @@ describe('OptionMath', () => {
         let monthLength = m.daysInMonth();
 
         it(`${day} ${monthLength}-day month`, async () => {
+          const { instance } = await loadFixture(deploy);
+
           expect(await instance.isLastFriday(c)).is.false;
         });
       }
@@ -280,6 +300,8 @@ describe('OptionMath', () => {
         let monthLength = m.daysInMonth();
 
         it(`${monthLength}-day month`, async () => {
+          const { instance } = await loadFixture(deploy);
+
           expect(await instance.isLastFriday(c)).is.true;
         });
       }
@@ -288,6 +310,8 @@ describe('OptionMath', () => {
 
   describe('#calculateTimeToMaturity', async () => {
     it('should return the time until maturity', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let maturity = (await latest()) + ONE_WEEK;
       expect(await instance.calculateTimeToMaturity(maturity)).to.eq(ONE_WEEK);
     });
@@ -296,6 +320,8 @@ describe('OptionMath', () => {
   describe('#calculateStrikeInterval', () => {
     for (let c of getStrikeIntervals()) {
       it(`should return ${c[1]} when spot price is ${c[0]}`, async () => {
+        const { instance } = await loadFixture(deploy);
+
         let spot = parseEther(c[0].toString());
         let interval = await instance.calculateStrikeInterval(spot);
 

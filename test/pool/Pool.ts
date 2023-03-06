@@ -23,11 +23,11 @@ const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
 
 describe('Pool', () => {
-  async function deploy() {
-    const strike = parseEther('1000');
-    const protocolFeePercentage = 0.5;
-    const isCall = true;
+  const strike = parseEther('1000');
+  const protocolFeePercentage = 0.5;
+  const isCall = true;
 
+  async function deploy() {
     const [deployer, lp, trader, feeReceiver] = await ethers.getSigners();
 
     const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
@@ -109,10 +109,7 @@ describe('Pool', () => {
       base,
       quote,
       oracleAdapter,
-      protocolFeePercentage,
-      strike,
       maturity,
-      isCall,
       pKey,
       getTradeQuote,
     };
@@ -121,9 +118,7 @@ describe('Pool', () => {
   describe('__internal', function () {
     describe('#_getPricing', () => {
       it('should return pool state', async () => {
-        const { callPool, lp, isCall, strike, base } = await loadFixture(
-          deploy,
-        );
+        const { callPool, lp, base } = await loadFixture(deploy);
 
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
@@ -1709,8 +1704,7 @@ describe('Pool', () => {
 
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
-      const { base, callPool, lp, trader, pKey, protocolFeePercentage } =
-        await loadFixture(deploy);
+      const { base, callPool, lp, trader, pKey } = await loadFixture(deploy);
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,

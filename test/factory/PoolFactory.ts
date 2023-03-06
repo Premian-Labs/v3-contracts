@@ -1,55 +1,38 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { ERC20Mock, ERC20Mock__factory, IPool__factory } from '../../typechain';
+import { ERC20Mock__factory, IPool__factory } from '../../typechain';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
-import {
-  deployMockContract,
-  MockContract,
-} from '@ethereum-waffle/mock-contract';
+import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import {
   getLastFridayOfMonth,
   getValidMaturity,
   latest,
   ONE_DAY,
   ONE_WEEK,
-  revertToSnapshotAfterEach,
 } from '../../utils/time';
 
 import { tokens } from '../../utils/addresses';
-
-import { PoolKey } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('PoolFactory', () => {
-  let deployer: SignerWithAddress;
+  const isCall = true;
+  const strike = parseEther('1000'); // ATM
 
-  let p: PoolUtil;
+  async function deploy() {
+    const [deployer] = await ethers.getSigners();
 
-  let base: ERC20Mock;
-  let quote: ERC20Mock;
-  let oracleAdapter: MockContract;
+    const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
+    const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-  let isCall = true;
-  let strike = parseEther('1000'); // ATM
-  let maturity: number;
-  let blockTimestamp: number;
-  let poolKey: PoolKey;
-
-  before(async () => {
-    [deployer] = await ethers.getSigners();
-
-    base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
-
-    oracleAdapter = await deployMockContract(deployer as any, [
+    const oracleAdapter = await deployMockContract(deployer as any, [
       'function quote(address,address) external view returns (uint256)',
     ]);
 
     await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
 
-    p = await PoolUtil.deploy(
+    const p = await PoolUtil.deploy(
       deployer,
       tokens.WETH.address,
       oracleAdapter.address,
@@ -59,12 +42,10 @@ describe('PoolFactory', () => {
       true,
     );
 
-    maturity = await getValidMaturity(10, 'months');
-    blockTimestamp = await latest();
-  });
+    const maturity = await getValidMaturity(10, 'months');
+    const blockTimestamp = await latest();
 
-  beforeEach(async () => {
-    poolKey = {
+    const poolKey = {
       base: base.address,
       quote: quote.address,
       oracleAdapter: oracleAdapter.address,
@@ -72,18 +53,29 @@ describe('PoolFactory', () => {
       maturity: BigNumber.from(maturity),
       isCallPool: isCall,
     };
-  });
 
-  revertToSnapshotAfterEach(async () => {});
+    return {
+      deployer,
+      p,
+      base,
+      quote,
+      oracleAdapter,
+      maturity,
+      blockTimestamp,
+      poolKey,
+    };
+  }
 
   describe('#getPoolAddress', () => {
     it('should return address(0) if no pool has been deployed with given parameters', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
       expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(
         ethers.constants.AddressZero,
       );
     });
 
     it('should return the pool address if a pool with given parameters has been deployed', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
       const tx = await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
       });
@@ -97,6 +89,9 @@ describe('PoolFactory', () => {
 
   describe('#deployPool', () => {
     it('should properly deploy the pool', async () => {
+      const { poolKey, p, deployer, base, quote, oracleAdapter, maturity } =
+        await loadFixture(deploy);
+
       const tx = await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
       });
@@ -125,6 +120,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if base and base are identical', async () => {
+      const { poolKey, p, quote } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           { ...poolKey, base: quote.address },
@@ -139,6 +136,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if base, base, or oracleAdapter are zero address', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           {
@@ -186,6 +185,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if pool has already been deployed', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
       });
@@ -201,6 +202,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if strike is zero', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           { ...poolKey, strike: 0 },
@@ -215,6 +218,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if strike price is not within strike interval', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       // strike interval: 100
       for (let strike of [
         parseEther('99990'),
@@ -237,6 +242,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if daily option maturity has expired', async () => {
+      const { poolKey, p, blockTimestamp } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           { ...poolKey, maturity: blockTimestamp },
@@ -251,6 +258,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if daily option maturity is not at 8AM UTC', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           {
@@ -268,6 +277,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if weekly option maturity not on Friday', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           {
@@ -285,6 +296,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if monthly option maturity not on last Friday', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           {
@@ -302,6 +315,8 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if monthly option maturity exceeds 365 days', async () => {
+      const { poolKey, p } = await loadFixture(deploy);
+
       await expect(
         p.poolFactory.deployPool(
           {
