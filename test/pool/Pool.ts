@@ -88,14 +88,18 @@ describe('Pool', () => {
       };
     };
 
-    const pKey = {
-      owner: lp.address,
-      operator: lp.address,
-      lower: parseEther('0.1'),
-      upper: parseEther('0.3'),
-      orderType: OrderType.LC,
-      isCall: isCall,
-      strike: strike,
+    // We are using a getter function here to avoid setting a value directly on the key object in a test,
+    // as any direct assignment of value would persist between tests
+    const getPositionKey = () => {
+      return {
+        owner: lp.address,
+        operator: lp.address,
+        lower: parseEther('0.1'),
+        upper: parseEther('0.3'),
+        orderType: OrderType.LC,
+        isCall: isCall,
+        strike: strike,
+      };
     };
 
     return {
@@ -110,7 +114,7 @@ describe('Pool', () => {
       quote,
       oracleAdapter,
       maturity,
-      pKey,
+      getPositionKey,
       getTradeQuote,
     };
   }
@@ -198,7 +202,8 @@ describe('Pool', () => {
 
   describe('#getTradeQuote', () => {
     it('should successfully return a buy trade quote', async () => {
-      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -236,7 +241,8 @@ describe('Pool', () => {
     });
 
     it('should successfully return a sell trade quote', async () => {
-      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -274,7 +280,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not enough liquidity to buy', async () => {
-      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -302,7 +309,8 @@ describe('Pool', () => {
     });
 
     it('should revert if not enough liquidity to sell', async () => {
-      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -336,7 +344,10 @@ describe('Pool', () => {
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
         it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
-          const { callPool, lp, pKey, base } = await loadFixture(deploy);
+          const { callPool, lp, getPositionKey, base } = await loadFixture(
+            deploy,
+          );
+          const pKey = getPositionKey();
 
           const tokenId = await callPool.formatTokenId(
             pKey.operator,
@@ -381,7 +392,10 @@ describe('Pool', () => {
       });
 
       it('should revert if msg.sender != p.operator', async () => {
-        const { callPool, deployer, pKey } = await loadFixture(deploy);
+        const { callPool, deployer, getPositionKey } = await loadFixture(
+          deploy,
+        );
+        const pKey = getPositionKey();
 
         await expect(
           callPool
@@ -391,7 +405,10 @@ describe('Pool', () => {
       });
 
       it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-        const { callPool, lp, pKey, base } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey, base } = await loadFixture(
+          deploy,
+        );
+        const pKey = getPositionKey();
 
         const tokenId = await callPool.formatTokenId(
           pKey.operator,
@@ -438,14 +455,20 @@ describe('Pool', () => {
       });
 
       it('should revert if zero size', async () => {
-        const { callPool, lp, pKey } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+        const pKey = getPositionKey();
+
         await expect(
           callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
       });
 
       it('should revert if option is expired', async () => {
-        const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey, maturity } = await loadFixture(
+          deploy,
+        );
+        const pKey = getPositionKey();
+
         await increaseTo(maturity);
         await expect(
           callPool
@@ -455,7 +478,9 @@ describe('Pool', () => {
       });
 
       it('should revert if range is not valid', async () => {
-        const { callPool, lp, pKey } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+        const pKey = getPositionKey();
+
         await expect(
           callPool
             .connect(lp)
@@ -523,7 +548,8 @@ describe('Pool', () => {
       });
 
       it('should revert if tick width is invalid', async () => {
-        const { callPool, lp, pKey } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+        const pKey = getPositionKey();
 
         await expect(
           callPool
@@ -557,7 +583,10 @@ describe('Pool', () => {
   describe('#withdraw', () => {
     describe('OrderType LC', () => {
       it('should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)', async () => {
-        const { callPool, lp, pKey, base } = await loadFixture(deploy);
+        const { callPool, lp, getPositionKey, base } = await loadFixture(
+          deploy,
+        );
+        const pKey = getPositionKey();
 
         const tokenId = await callPool.formatTokenId(
           pKey.operator,
@@ -614,7 +643,8 @@ describe('Pool', () => {
     });
 
     it('should revert if msg.sender != p.operator', async () => {
-      const { callPool, deployer, pKey } = await loadFixture(deploy);
+      const { callPool, deployer, getPositionKey } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       await expect(
         callPool
@@ -624,7 +654,8 @@ describe('Pool', () => {
     });
 
     it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-      const { callPool, lp, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -663,7 +694,8 @@ describe('Pool', () => {
     });
 
     it('should revert if zero size', async () => {
-      const { callPool, lp, pKey } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       await expect(
         callPool.connect(lp).withdraw(pKey, 0, 0, parseEther('1')),
@@ -671,7 +703,10 @@ describe('Pool', () => {
     });
 
     it('should revert if option is expired', async () => {
-      const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey, maturity } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       await increaseTo(maturity);
       await expect(
@@ -680,7 +715,8 @@ describe('Pool', () => {
     });
 
     it('should revert if position does not exists', async () => {
-      const { callPool, lp, pKey } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       await expect(
         callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
@@ -688,7 +724,8 @@ describe('Pool', () => {
     });
 
     it('should revert if range is not valid', async () => {
-      const { callPool, lp, pKey } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       await expect(
         callPool
@@ -737,7 +774,8 @@ describe('Pool', () => {
     });
 
     it('should revert if tick width is invalid', async () => {
-      const { callPool, lp, pKey } = await loadFixture(deploy);
+      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       await expect(
         callPool
@@ -850,7 +888,10 @@ describe('Pool', () => {
 
   describe('#trade', () => {
     it('should successfully buy 500 options', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -892,7 +933,10 @@ describe('Pool', () => {
     });
 
     it('should successfully sell 500 options', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -934,7 +978,10 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -968,7 +1015,10 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1002,7 +1052,10 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1033,7 +1086,10 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and bid liquidity is insufficient', async () => {
-      const { callPool, lp, trader, pKey, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
+        deploy,
+      );
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1087,12 +1143,14 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        pKey,
+        getPositionKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1145,12 +1203,13 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        pKey,
+        getPositionKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1213,12 +1272,13 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        pKey,
+        getPositionKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1284,12 +1344,14 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        pKey,
+        getPositionKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1367,9 +1429,11 @@ describe('Pool', () => {
         lp,
         maturity,
         oracleAdapter,
-        pKey,
+        getPositionKey,
         trader,
       } = await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1432,9 +1496,11 @@ describe('Pool', () => {
         lp,
         maturity,
         oracleAdapter,
-        pKey,
+        getPositionKey,
         trader,
       } = await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1490,7 +1556,9 @@ describe('Pool', () => {
     });
 
     it('should revert if not expired', async () => {
-      const { callPool, pKey } = await loadFixture(deploy);
+      const { callPool, getPositionKey } = await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       await expect(callPool.settlePosition(pKey)).to.be.revertedWithCustomError(
         callPool,
@@ -1704,7 +1772,11 @@ describe('Pool', () => {
 
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
-      const { base, callPool, lp, trader, pKey } = await loadFixture(deploy);
+      const { base, callPool, lp, trader, getPositionKey } = await loadFixture(
+        deploy,
+      );
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1754,8 +1826,10 @@ describe('Pool', () => {
 
   describe('#claim', () => {
     it('should successfully claim fees', async () => {
-      const { base, callPool, lp, trader, pKey, feeReceiver } =
+      const { base, callPool, lp, trader, getPositionKey, feeReceiver } =
         await loadFixture(deploy);
+
+      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
