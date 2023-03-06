@@ -119,6 +119,150 @@ describe('Pool', () => {
     };
   }
 
+  async function deployAndMintForLP() {
+    const f = await deploy();
+
+    const initialCollateral = parseEther('1000');
+
+    await f.base.mint(f.lp.address, initialCollateral);
+    await f.base.connect(f.lp).approve(f.callPool.address, initialCollateral);
+
+    return { ...f, initialCollateral };
+  }
+
+  async function deployAndMintForTraderAndLP() {
+    const f = await deploy();
+
+    const initialCollateral = parseEther('10');
+
+    for (const user of [f.lp, f.trader]) {
+      await f.base.mint(user.address, initialCollateral);
+      await f.base.connect(user).approve(f.callPool.address, initialCollateral);
+    }
+
+    return { ...f, initialCollateral };
+  }
+
+  async function deployAndDeposit_1000_CS() {
+    const f = await deployAndMintForLP();
+
+    const pKey = f.getPositionKey();
+    pKey.orderType = OrderType.CS;
+
+    const getPositionKey = () => {
+      return {
+        ...pKey,
+      };
+    };
+
+    const tokenId = await f.callPool.formatTokenId(
+      pKey.operator,
+      pKey.lower,
+      pKey.upper,
+      pKey.orderType,
+    );
+
+    const nearestBelow = await f.callPool.getNearestTicksBelow(
+      pKey.lower,
+      pKey.upper,
+    );
+
+    const depositSize = parseEther('1000');
+
+    await f.callPool
+      .connect(f.lp)
+      [depositFnSig](
+        pKey,
+        nearestBelow.nearestBelowLower,
+        nearestBelow.nearestBelowUpper,
+        depositSize,
+        0,
+        parseEther('1'),
+      );
+
+    return { ...f, depositSize, tokenId, getPositionKey };
+  }
+
+  async function deployAndDeposit_1_CS() {
+    const f = await deployAndMintForLP();
+
+    const pKey = f.getPositionKey();
+    pKey.orderType = OrderType.CS;
+
+    const getPositionKey = () => {
+      return {
+        ...pKey,
+      };
+    };
+
+    const tokenId = await f.callPool.formatTokenId(
+      pKey.operator,
+      pKey.lower,
+      pKey.upper,
+      pKey.orderType,
+    );
+
+    const nearestBelow = await f.callPool.getNearestTicksBelow(
+      pKey.lower,
+      pKey.upper,
+    );
+
+    const depositSize = ONE_ETHER;
+
+    await f.callPool
+      .connect(f.lp)
+      [depositFnSig](
+        pKey,
+        nearestBelow.nearestBelowLower,
+        nearestBelow.nearestBelowUpper,
+        depositSize,
+        0,
+        parseEther('1'),
+      );
+
+    return { ...f, depositSize, tokenId, getPositionKey };
+  }
+
+  async function deployAndDeposit_1000_LC() {
+    const f = await deployAndMintForLP();
+
+    const pKey = f.getPositionKey();
+    pKey.orderType = OrderType.LC;
+
+    const getPositionKey = () => {
+      return {
+        ...pKey,
+      };
+    };
+
+    const tokenId = await f.callPool.formatTokenId(
+      pKey.operator,
+      pKey.lower,
+      pKey.upper,
+      pKey.orderType,
+    );
+
+    const nearestBelow = await f.callPool.getNearestTicksBelow(
+      pKey.lower,
+      pKey.upper,
+    );
+
+    const depositSize = parseEther('1000');
+
+    await f.callPool
+      .connect(f.lp)
+      [depositFnSig](
+        { ...pKey, orderType: OrderType.LC },
+        nearestBelow.nearestBelowLower,
+        nearestBelow.nearestBelowUpper,
+        depositSize,
+        0,
+        parseEther('1'),
+      );
+
+    return { ...f, depositSize, tokenId, getPositionKey };
+  }
+
   describe('__internal', function () {
     describe('#_getPricing', () => {
       it('should return pool state', async () => {
@@ -202,28 +346,10 @@ describe('Pool', () => {
 
   describe('#getTradeQuote', () => {
     it('should successfully return a buy trade quote', async () => {
-      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
+      const { callPool, getPositionKey } = await loadFixture(
+        deployAndDeposit_1000_CS,
       );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+      const pKey = getPositionKey();
 
       const tradeSize = parseEther('500');
       const price = pKey.lower;
@@ -241,28 +367,10 @@ describe('Pool', () => {
     });
 
     it('should successfully return a sell trade quote', async () => {
-      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
+      const { callPool, getPositionKey } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+      const pKey = getPositionKey();
 
       const tradeSize = parseEther('500');
       const price = pKey.upper;
@@ -280,60 +388,22 @@ describe('Pool', () => {
     });
 
     it('should revert if not enough liquidity to buy', async () => {
-      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
+      const { callPool, depositSize } = await loadFixture(
+        deployAndDeposit_1000_CS,
       );
-      const size = parseEther('1000');
-
-      await base.mint(lp.address, size);
-      await base.connect(lp).approve(callPool.address, size);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          size,
-          0,
-          parseEther('1'),
-        );
 
       await expect(
-        callPool.getTradeQuote(size.add(1), true),
+        callPool.getTradeQuote(depositSize.add(1), true),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InsufficientLiquidity');
     });
 
     it('should revert if not enough liquidity to sell', async () => {
-      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
+      const { callPool, depositSize } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const size = parseEther('1000');
-
-      await base.mint(lp.address, size);
-      await base.connect(lp).approve(callPool.address, size);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          size,
-          0,
-          parseEther('1'),
-        );
 
       await expect(
-        callPool.getTradeQuote(size.add(1), false),
+        callPool.getTradeQuote(depositSize.add(1), false),
       ).to.be.revertedWithCustomError(callPool, 'Pool__InsufficientLiquidity');
     });
   });
@@ -344,48 +414,20 @@ describe('Pool', () => {
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
         it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
-          const { callPool, lp, getPositionKey, base } = await loadFixture(
-            deploy,
-          );
+          const { callPool, lp, getPositionKey, base, tokenId, depositSize } =
+            await loadFixture(deployAndDeposit_1000_LC);
           const pKey = getPositionKey();
 
-          const tokenId = await callPool.formatTokenId(
-            pKey.operator,
-            pKey.lower,
-            pKey.upper,
-            pKey.orderType,
-          );
-
-          expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
-
-          const nearestBelow = await callPool.getNearestTicksBelow(
-            pKey.lower,
-            pKey.upper,
-          );
-          const size = parseEther('1000');
-
-          await base.mint(lp.address, size);
-          await base.connect(lp).approve(callPool.address, size);
-
-          await callPool
-            .connect(lp)
-            [fnSig](
-              pKey,
-              nearestBelow.nearestBelowLower,
-              nearestBelow.nearestBelowUpper,
-              size,
-              0,
-              parseEther('1'),
-            );
-
           const averagePrice = average(pKey.lower, pKey.upper);
-          const collateralValue = size.mul(averagePrice).div(ONE_ETHER);
+          const collateralValue = depositSize.mul(averagePrice).div(ONE_ETHER);
 
-          expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(size);
-          expect(await callPool.totalSupply(tokenId)).to.eq(size);
+          expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
+            depositSize,
+          );
+          expect(await callPool.totalSupply(tokenId)).to.eq(depositSize);
           expect(await base.balanceOf(callPool.address)).to.eq(collateralValue);
           expect(await base.balanceOf(lp.address)).to.eq(
-            size.sub(collateralValue),
+            depositSize.sub(collateralValue),
           );
           expect(await callPool.marketPrice()).to.eq(pKey.upper);
         });
@@ -405,39 +447,10 @@ describe('Pool', () => {
       });
 
       it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-        const { callPool, lp, getPositionKey, base } = await loadFixture(
-          deploy,
+        const { callPool, lp, getPositionKey } = await loadFixture(
+          deployAndDeposit_1000_LC,
         );
         const pKey = getPositionKey();
-
-        const tokenId = await callPool.formatTokenId(
-          pKey.operator,
-          pKey.lower,
-          pKey.upper,
-          pKey.orderType,
-        );
-
-        expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
-
-        const nearestBelow = await callPool.getNearestTicksBelow(
-          pKey.lower,
-          pKey.upper,
-        );
-        const size = parseEther('1000');
-
-        await base.mint(lp.address, size);
-        await base.connect(lp).approve(callPool.address, size);
-
-        await callPool
-          .connect(lp)
-          [fnSig](
-            pKey,
-            nearestBelow.nearestBelowLower,
-            nearestBelow.nearestBelowUpper,
-            size,
-            0,
-            parseEther('1'),
-          );
 
         expect(await callPool.marketPrice()).to.eq(pKey.upper);
 
@@ -583,43 +596,26 @@ describe('Pool', () => {
   describe('#withdraw', () => {
     describe('OrderType LC', () => {
       it('should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)', async () => {
-        const { callPool, lp, getPositionKey, base } = await loadFixture(
-          deploy,
-        );
+        const {
+          callPool,
+          lp,
+          getPositionKey,
+          base,
+          tokenId,
+          depositSize,
+          initialCollateral,
+        } = await loadFixture(deployAndDeposit_1000_LC);
+
         const pKey = getPositionKey();
 
-        const tokenId = await callPool.formatTokenId(
-          pKey.operator,
-          pKey.lower,
-          pKey.upper,
-          pKey.orderType,
-        );
-
-        const nearestBelow = await callPool.getNearestTicksBelow(
-          pKey.lower,
-          pKey.upper,
-        );
-        const size = parseEther('1000');
-
         const depositCollateralValue = parseEther('200');
-        await base.mint(lp.address, depositCollateralValue);
-        await base
-          .connect(lp)
-          .approve(callPool.address, depositCollateralValue);
 
-        await callPool
-          .connect(lp)
-          [depositFnSig](
-            pKey,
-            nearestBelow.nearestBelowLower,
-            nearestBelow.nearestBelowUpper,
-            size,
-            0,
-            parseEther('1'),
-          );
-
-        expect(await base.balanceOf(lp.address)).to.eq(0);
-        expect(await base.balanceOf(callPool.address)).to.eq(parseEther('200'));
+        expect(await base.balanceOf(lp.address)).to.eq(
+          initialCollateral.sub(depositCollateralValue),
+        );
+        expect(await base.balanceOf(callPool.address)).to.eq(
+          depositCollateralValue,
+        );
 
         const withdrawSize = parseEther('750');
 
@@ -632,13 +628,19 @@ describe('Pool', () => {
           .connect(lp)
           .withdraw(pKey, withdrawSize, 0, parseEther('1'));
         expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
-          parseEther('250'),
+          depositSize.sub(withdrawSize),
         );
-        expect(await callPool.totalSupply(tokenId)).to.eq(parseEther('250'));
+        expect(await callPool.totalSupply(tokenId)).to.eq(
+          depositSize.sub(withdrawSize),
+        );
         expect(await base.balanceOf(callPool.address)).to.eq(
           depositCollateralValue.sub(withdrawCollateralValue),
         );
-        expect(await base.balanceOf(lp.address)).to.eq(withdrawCollateralValue);
+        expect(await base.balanceOf(lp.address)).to.eq(
+          initialCollateral
+            .sub(depositCollateralValue)
+            .add(withdrawCollateralValue),
+        );
       });
     });
 
@@ -654,29 +656,10 @@ describe('Pool', () => {
     });
 
     it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-      const { callPool, lp, getPositionKey, base } = await loadFixture(deploy);
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
+      const { callPool, lp, getPositionKey } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const size = parseEther('1000');
-
-      const depositCollateralValue = parseEther('200');
-      await base.mint(lp.address, depositCollateralValue);
-      await base.connect(lp).approve(callPool.address, depositCollateralValue);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          pKey,
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          size,
-          0,
-          parseEther('1'),
-        );
+      const pKey = getPositionKey();
 
       expect(await callPool.marketPrice()).to.eq(pKey.upper);
 
@@ -803,21 +786,20 @@ describe('Pool', () => {
 
   describe('#writeFrom', () => {
     it('should successfully write 500 options', async () => {
-      const { callPool, lp, trader, base } = await loadFixture(deploy);
+      const { callPool, lp, trader, base, initialCollateral } =
+        await loadFixture(deployAndMintForLP);
 
       const size = parseEther('500');
       const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
 
-      await base.mint(lp.address, totalSize);
-      await base.connect(lp).approve(callPool.address, totalSize);
-
-      await callPool
-        .connect(lp)
-        .writeFrom(lp.address, trader.address, parseEther('500'));
+      await callPool.connect(lp).writeFrom(lp.address, trader.address, size);
 
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      expect(await base.balanceOf(lp.address)).to.eq(
+        initialCollateral.sub(totalSize),
+      );
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         size,
       );
@@ -829,17 +811,13 @@ describe('Pool', () => {
     });
 
     it('should successfully write 500 options on behalf of another address', async () => {
-      const { callPool, lp, trader, deployer, base } = await loadFixture(
-        deploy,
-      );
+      const { callPool, lp, trader, deployer, base, initialCollateral } =
+        await loadFixture(deployAndMintForLP);
 
       const size = parseEther('500');
       const fee = await callPool.takerFee(size, 0, true);
 
       const totalSize = size.add(fee);
-
-      await base.mint(lp.address, totalSize);
-      await base.connect(lp).approve(callPool.address, totalSize);
 
       await callPool.connect(lp).setApprovalForAll(deployer.address, true);
 
@@ -848,6 +826,9 @@ describe('Pool', () => {
         .writeFrom(lp.address, trader.address, parseEther('500'));
 
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      expect(await base.balanceOf(lp.address)).to.eq(
+        initialCollateral.sub(totalSize),
+      );
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         size,
       );
@@ -888,30 +869,9 @@ describe('Pool', () => {
 
   describe('#trade', () => {
     it('should successfully buy 500 options', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, base } = await loadFixture(
+        deployAndDeposit_1000_CS,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = parseEther('500');
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -933,30 +893,9 @@ describe('Pool', () => {
     });
 
     it('should successfully sell 500 options', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, base } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = parseEther('500');
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
@@ -978,30 +917,9 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, base } = await loadFixture(
+        deployAndDeposit_1000_CS,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = parseEther('500');
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1015,30 +933,9 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, base } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = parseEther('500');
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
@@ -1052,30 +949,9 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and ask liquidity is insufficient', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, depositSize } = await loadFixture(
+        deployAndDeposit_1000_CS,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       await expect(
         callPool.connect(trader).trade(depositSize.add(1), true, 0),
@@ -1086,30 +962,9 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and bid liquidity is insufficient', async () => {
-      const { callPool, lp, trader, getPositionKey, base } = await loadFixture(
-        deploy,
+      const { callPool, trader, depositSize } = await loadFixture(
+        deployAndDeposit_1000_LC,
       );
-      const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = parseEther('1000');
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       await expect(
         callPool.connect(trader).trade(depositSize.add(1), false, 0),
@@ -1426,36 +1281,14 @@ describe('Pool', () => {
         base,
         callPool,
         feeReceiver,
-        lp,
+        initialCollateral,
         maturity,
         oracleAdapter,
         getPositionKey,
         trader,
-      } = await loadFixture(deploy);
+      } = await loadFixture(deployAndDeposit_1_CS);
 
       const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      pKey.orderType = OrderType.CS;
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          pKey,
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1476,7 +1309,10 @@ describe('Pool', () => {
       expect(await base.balanceOf(trader.address)).to.eq(0);
       expect(await base.balanceOf(callPool.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(pKey.operator)).to.eq(
-        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
+        initialCollateral
+          .add(totalPremium)
+          .sub(exerciseValue)
+          .sub(protocolFees),
       );
       expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
 
@@ -1493,36 +1329,14 @@ describe('Pool', () => {
         base,
         callPool,
         feeReceiver,
-        lp,
         maturity,
         oracleAdapter,
         getPositionKey,
         trader,
-      } = await loadFixture(deploy);
+        initialCollateral,
+      } = await loadFixture(deployAndDeposit_1_CS);
 
       const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      pKey.orderType = OrderType.CS;
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          pKey,
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1543,7 +1357,10 @@ describe('Pool', () => {
       expect(await base.balanceOf(trader.address)).to.eq(0);
       expect(await base.balanceOf(callPool.address)).to.eq(exerciseValue);
       expect(await base.balanceOf(pKey.operator)).to.eq(
-        ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
+        initialCollateral
+          .add(totalPremium)
+          .sub(exerciseValue)
+          .sub(protocolFees),
       );
       expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
 
@@ -1569,23 +1386,10 @@ describe('Pool', () => {
 
   describe('#fillQuote', () => {
     it('should successfully fill a valid quote', async () => {
-      const { base, callPool, lp, trader, getTradeQuote } = await loadFixture(
-        deploy,
-      );
+      const { base, callPool, lp, trader, getTradeQuote, initialCollateral } =
+        await loadFixture(deployAndMintForTraderAndLP);
 
       const quote = await getTradeQuote();
-
-      const initialBalance = parseEther('10');
-
-      await base.mint(lp.address, initialBalance);
-      await base.mint(trader.address, initialBalance);
-
-      await base
-        .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
-      await base
-        .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1598,21 +1402,21 @@ describe('Pool', () => {
       const protocolFee = await callPool.takerFee(quote.size, premium, true);
 
       expect(await base.balanceOf(lp.address)).to.eq(
-        initialBalance.sub(quote.size).add(premium).sub(protocolFee),
+        initialCollateral.sub(quote.size).add(premium).sub(protocolFee),
       );
       expect(await base.balanceOf(trader.address)).to.eq(
-        initialBalance.sub(premium),
+        initialCollateral.sub(premium),
       );
 
       expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
         0,
       );
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-        parseEther('10'),
+        quote.size,
       );
 
       expect(await callPool.balanceOf(lp.address, TokenType.SHORT)).to.eq(
-        parseEther('10'),
+        quote.size,
       );
       expect(await callPool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
     });
@@ -1665,22 +1469,10 @@ describe('Pool', () => {
     });
 
     it('should revert if quote is over filled', async () => {
-      const { base, callPool, lp, deployer, trader, getTradeQuote } =
-        await loadFixture(deploy);
+      const { callPool, lp, deployer, trader, getTradeQuote } =
+        await loadFixture(deployAndMintForTraderAndLP);
 
       const quote = await getTradeQuote();
-
-      const initialBalance = parseEther('10');
-
-      await base.mint(lp.address, initialBalance);
-      await base.mint(trader.address, initialBalance);
-
-      await base
-        .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
-      await base
-        .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1734,23 +1526,11 @@ describe('Pool', () => {
 
   describe('#getTradeQuoteFilledAmount', async () => {
     it('should successfully return filled amount of a trade quote', async () => {
-      const { base, callPool, lp, trader, getTradeQuote } = await loadFixture(
-        deploy,
+      const { callPool, lp, trader, getTradeQuote } = await loadFixture(
+        deployAndMintForTraderAndLP,
       );
 
       const quote = await getTradeQuote();
-
-      const initialBalance = parseEther('10');
-
-      await base.mint(lp.address, initialBalance);
-      await base.mint(trader.address, initialBalance);
-
-      await base
-        .connect(lp)
-        .approve(callPool.address, ethers.constants.MaxUint256);
-      await base
-        .connect(trader)
-        .approve(callPool.address, ethers.constants.MaxUint256);
 
       const sig = await signQuote(lp.provider!, callPool.address, quote);
 
@@ -1773,32 +1553,10 @@ describe('Pool', () => {
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
       const { base, callPool, lp, trader, getPositionKey } = await loadFixture(
-        deploy,
+        deployAndDeposit_1_CS,
       );
 
       const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      pKey.orderType = OrderType.CS;
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          pKey,
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = ONE_ETHER;
       const price = pKey.lower;
@@ -1826,32 +1584,17 @@ describe('Pool', () => {
 
   describe('#claim', () => {
     it('should successfully claim fees', async () => {
-      const { base, callPool, lp, trader, getPositionKey, feeReceiver } =
-        await loadFixture(deploy);
+      const {
+        base,
+        callPool,
+        lp,
+        trader,
+        getPositionKey,
+        feeReceiver,
+        initialCollateral,
+      } = await loadFixture(deployAndDeposit_1_CS);
 
       const pKey = getPositionKey();
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      pKey.orderType = OrderType.CS;
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          pKey,
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1866,7 +1609,9 @@ describe('Pool', () => {
       const protocolFees = await callPool.protocolFees();
       await callPool.connect(lp).claim(pKey);
 
-      expect(await base.balanceOf(pKey.operator)).to.eq(claimableFees);
+      expect(await base.balanceOf(pKey.operator)).to.eq(
+        initialCollateral.sub(tradeSize).add(claimableFees),
+      );
       expect(await base.balanceOf(callPool.address)).to.eq(
         ONE_ETHER.add(totalPremium).sub(claimableFees).sub(protocolFees),
       );
