@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// TODO:
-pragma solidity >=0.8.7 <0.9.0;
+pragma solidity ^0.8.0;
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
+/// @notice derived from https://github.com/Mean-Finance/oracles and
+///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3AdapterInternal {
-    /// @notice Thrown when trying to set an invalid period
-    error UniswapV3Adapter__InvalidPeriod(uint32 period);
+    /// @notice Thrown when trying to add an existing fee tier
+    error UniswapV3Adapter__FeeTierExists(uint24 feeTier);
+
+    /// @notice Thrown when the gas limit is so low that no pools can be initialized
+    error UniswapV3Adapter__GasTooLow();
+
+    /// @notice Thrown when trying to add an invalid fee tier
+    error UniswapV3Adapter__InvalidFeeTier(uint24 feeTier);
 
     /// @notice Thrown when trying to set an invalid cardinality
     error UniswapV3Adapter__InvalidCardinalityPerMinute();
@@ -17,8 +23,8 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when trying to set an invalid gas cost to support a pools
     error UniswapV3Adapter__InvalidGasCostToSupportPool();
 
-    /// @notice Thrown when the gas limit is so low that no pools can be initialized
-    error UniswapV3Adapter__GasTooLow();
+    /// @notice Thrown when current oberservation cardinality is below target cardinality
+    error UniswapV3Adapter__ObservationCardinalityTooLow();
 
     /// @notice Emitted when a new period is set
     /// @param period The new period

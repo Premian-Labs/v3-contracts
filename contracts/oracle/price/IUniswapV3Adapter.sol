@@ -1,24 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// TODO:
-pragma solidity >=0.8.7 <0.9.0;
+pragma solidity ^0.8.0;
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
+/// @notice derived from https://github.com/Mean-Finance/oracles and
+///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3Adapter is IOracleAdapter {
-    /// @notice When a pair is added to the oracle adapter, we will prepare all pools for the pair. Now, it could
-    ///         happen that certain pools are added for the pair at a later stage, and we can't be sure if those pools
-    ///         will be configured correctly. So be basically store the pools that ready for sure, and use only those
-    ///         for quotes. This functions returns this list of pools known to be prepared
-    /// @param tokenA One of the pair's tokens
-    /// @param tokenB The other of the pair's tokens
-    /// @return The list of pools that will be used for quoting
-    function getPoolsPreparedForPair(
-        address tokenA,
-        address tokenB
-    ) external view returns (address[] memory);
-
     // TODO: Add or remove support for getters
     // /// @notice Returns the address of the Uniswap oracle
     // /// @dev Cannot be modified
@@ -51,6 +39,22 @@ interface IUniswapV3Adapter is IOracleAdapter {
     // /// @return The gas cost to support a new pool
     // function gasCostToSupportPool() external view returns (uint112);
 
+    /// @notice Returns all supported fee tiers
+    /// @return The supported fee tiers
+    function supportedFeeTiers() external view returns (uint24[] memory);
+
+    /// @notice When a pair is added to the oracle adapter, we will prepare all pools for the pair. Now, it could
+    ///         happen that certain pools are added for the pair at a later stage, and we can't be sure if those pools
+    ///         will be configured correctly. So be basically store the pools that ready for sure, and use only those
+    ///         for quotes. This functions returns this list of pools known to be prepared
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
+    /// @return The list of pools that will be used for quoting
+    function poolsForPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address[] memory);
+
     /// @notice Sets the period to be used for the TWAP calculation
     /// @dev Will revert it is lower than the minimum period or greater than maximum period.
     ///      Can only be called by users with the admin role
@@ -76,4 +80,9 @@ interface IUniswapV3Adapter is IOracleAdapter {
     ///      Can only be called by users with the admin role
     /// @param gasCostToSupportPool The gas cost to set
     function setGasCostToSupportPool(uint112 gasCostToSupportPool) external;
+
+    /// @notice Inserts a new fee tier
+    /// @dev Will revert if the given tier is invalid, or already supported
+    /// @param feeTier The new fee tier to add
+    function insertFeeTier(uint24 feeTier) external;
 }

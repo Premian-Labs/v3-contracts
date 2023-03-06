@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-// TODO:
 pragma solidity ^0.8.0;
 
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
@@ -14,6 +13,7 @@ library UniswapV3AdapterStorage {
         uint32 period;
         uint104 gasPerCardinality;
         uint112 gasCostToSupportPool;
+        uint24[] knownFeeTiers;
         mapping(bytes32 => address[]) poolsForPair;
     }
 
