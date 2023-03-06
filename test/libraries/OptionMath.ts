@@ -1,12 +1,12 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { OptionMathMock, OptionMathMock__factory } from '../../typechain';
+import { OptionMathMock__factory } from '../../typechain';
 import { formatEther, parseEther } from 'ethers/lib/utils';
-import { ONE_WEEK, latest, weekOfMonth } from '../../utils/time';
+import { latest, ONE_WEEK, weekOfMonth } from '../../utils/time';
 
 import moment from 'moment-timezone';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+
 moment.tz.setDefault('UTC');
 
 describe('OptionMath', () => {

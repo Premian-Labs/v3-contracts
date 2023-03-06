@@ -1,10 +1,9 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { PositionMock, PositionMock__factory } from '../../typechain';
+import { PositionMock__factory } from '../../typechain';
 import { formatEther, parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/sdk/math';
-import { PositionKey, OrderType } from '../../utils/sdk/types';
+import { OrderType } from '../../utils/sdk/types';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Position', () => {

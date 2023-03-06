@@ -1,15 +1,12 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
-  VolatilityOracleMock,
   VolatilityOracleMock__factory,
 } from '../../typechain';
 
 import { BigNumber } from 'ethers';
-import { parseEther, formatEther } from 'ethers/lib/utils';
+import { formatEther, parseEther } from 'ethers/lib/utils';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('VolatilityOracle', () => {

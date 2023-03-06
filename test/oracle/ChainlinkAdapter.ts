@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
@@ -15,7 +14,7 @@ import {
 
 import { ONE_ETHER } from '../../utils/constants';
 import { latest } from '../../utils/time';
-import { Token, feeds, tokens } from '../../utils/addresses';
+import { feeds, Token, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
