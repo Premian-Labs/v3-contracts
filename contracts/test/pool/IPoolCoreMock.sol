@@ -35,7 +35,5 @@ interface IPoolCoreMock {
             Position.OrderType orderType
         );
 
-    function marketPrice() external view returns (uint256);
-
     function protocolFees() external view returns (uint256);
 }

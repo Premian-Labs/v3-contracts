@@ -305,52 +305,42 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
-    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param size The position size to deposit
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
-    /// @param collateralCredit Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
+    /// @param args The deposit parameters
     function _deposit(
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 maxSlippage,
-        uint256 collateralCredit,
-        address refundAddress
+        DepositArgsInternal memory args
     ) internal {
         _deposit(
             p,
-            DepositArgsInternal(
-                belowLower,
-                belowUpper,
-                size,
-                maxSlippage,
-                collateralCredit,
-                refundAddress,
-                p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
-            )
+            args,
+            p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
         );
     }
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param args The deposit parameters
+    /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function _deposit(
         Position.Key memory p,
-        DepositArgsInternal memory args
+        DepositArgsInternal memory args,
+        bool isBidIfStrandedMarketPrice
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
-        if (_isMarketPriceStranded(l, p, args.isBidIfStrandedMarketPrice)) {
+        if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
             l.marketPrice = _getStrandedMarketPriceUpdate(
                 p,
-                args.isBidIfStrandedMarketPrice
+                isBidIfStrandedMarketPrice
             );
         }
 
-        _ensureBelowMaxSlippage(l, args.maxSlippage);
+        _ensureBelowDepositWithdrawMaxSlippage(
+            l.marketPrice,
+            args.minMarketPrice,
+            args.maxMarketPrice
+        );
         _ensureNonZeroSize(args.size);
         _ensureNotExpired(l);
 
@@ -464,18 +454,25 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+    ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
     /// @param size The position size to withdraw
-    /// @param maxSlippage Max slippage (Percentage with 18 decimals -> 1% = 1e16)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
     function _withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureNotExpired(l);
 
-        _ensureBelowMaxSlippage(l, maxSlippage);
+        _ensureBelowDepositWithdrawMaxSlippage(
+            l.marketPrice,
+            minMarketPrice,
+            maxMarketPrice
+        );
         _ensureNonZeroSize(size);
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
@@ -789,6 +786,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 }
             }
         }
+
+        _ensureBelowTradeMaxSlippage(
+            totalPremium,
+            args.premiumLimit,
+            args.isBuy
+        );
 
         delta = _updateUserAssets(
             l,
@@ -1890,14 +1893,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
     }
 
-    function _ensureBelowMaxSlippage(
-        PoolStorage.Layout storage l,
-        uint256 maxSlippage
-    ) internal view {
-        uint256 lowerBound = (ONE - maxSlippage).mul(l.marketPrice);
-        uint256 upperBound = (ONE + maxSlippage).mul(l.marketPrice);
+    function _ensureBelowTradeMaxSlippage(
+        uint256 totalPremium,
+        uint256 premiumLimit,
+        bool isBuy
+    ) internal pure {
+        if (isBuy && totalPremium > premiumLimit)
+            revert Pool__AboveMaxSlippage();
+        if (!isBuy && totalPremium < premiumLimit)
+            revert Pool__AboveMaxSlippage();
+    }
 
-        if (lowerBound > l.marketPrice || l.marketPrice > upperBound)
+    function _ensureBelowDepositWithdrawMaxSlippage(
+        uint256 marketPrice,
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
+    ) internal pure {
+        if (marketPrice > maxMarketPrice || marketPrice < minMarketPrice)
             revert Pool__AboveMaxSlippage();
     }
 
