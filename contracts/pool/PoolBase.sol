@@ -81,7 +81,7 @@ contract PoolBase is
                 Position.OrderType orderType
             ) = PoolStorage.parseTokenId(ids[i]);
 
-            if (idVersion != version) revert PoolBase__InvalidVersion();
+            if (idVersion != version) revert Pool__InvalidVersion();
 
             Position.Key memory srcP = Position.Key({
                 owner: from,
