@@ -237,7 +237,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const strike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
-        const rfRate = await volOracle.getrfRate();
+        const rfRate = await volOracle.getRiskFreeRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, tau);
@@ -259,7 +259,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const itmStrike = parseEther('500');
         const badTau = parseEther('0.03835616'); // 14 DTE
-        const rfRate = await volOracle.getrfRate();
+        const rfRate = await volOracle.getRiskFreeRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, itmStrike, badTau);
@@ -281,7 +281,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1500');
         const tau = parseEther('0.03835616'); // 14 DTE
-        const rfRate = await volOracle.getrfRate();
+        const rfRate = await volOracle.getRiskFreeRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
@@ -326,7 +326,7 @@ describe('#buy functionality', () => {
         const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1550');
         const tau = parseEther('0.03835616'); // 14 DTE
-        const rfRate = await volOracle.getrfRate();
+        const rfRate = await volOracle.getRiskFreeRate();
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, unListedStrike, tau);
@@ -374,7 +374,7 @@ describe('#buy functionality', () => {
           const { callVault } = await loadFixture(vaultSetup);
 
           let cLevel = await callVault.calculateClevel(
-            parseEther('0.4'),
+            parseEther('0.4'), // 40% utilization
             parseEther('3.0'),
             parseEther('1.0'),
             parseEther('1.2'),
@@ -396,9 +396,6 @@ describe('#buy functionality', () => {
           );
         });
       });
-
-      // TODO:
-      it('should have a totalSpread that is positive', async () => {});
 
       it('reverts if maxCLevel is not set properly', async () => {
         const { callVault } = await loadFixture(vaultSetup);
@@ -422,17 +419,116 @@ describe('#buy functionality', () => {
         ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
       });
 
-      // TODO:
-      it('used post quote/trade utilization', async () => {});
+      it('used post quote/trade utilization', async () => {
+        const { callVault, lp, trader, base, quote } = await loadFixture(
+          vaultSetup,
+        );
 
-      // TODO:
-      it('ensures utilization never goes over 100%', async () => {});
+        // Hydrate Vault
+        const lpDepositSize = 5; // units of base
+        await addDeposit(callVault, lp, lpDepositSize, base, quote);
 
-      // TODO:
-      it('properly checks for last trade timestamp', async () => {});
+        // Trade Settings
+        const strike = parseEther('1500');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
 
-      // TODO:
-      it('properly decays the c Level over time', async () => {});
+        //PreTrade cLevel
+        const cLevel_preTrade = await callVault.getClevel(parseEther('0'));
+
+        // Execute Trade
+        const cLevel_postTrade = await callVault.getClevel(tradeSize);
+        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        const cLevel_postTrade_check = await callVault.getClevel(
+          parseEther('0'),
+        );
+        // Approx due to premium collection
+        expect(parseFloat(formatEther(cLevel_postTrade))).to.approximately(
+          parseFloat(formatEther(cLevel_postTrade_check)),
+          0.002,
+        );
+      });
+
+      it('ensures utilization never goes over 100%', async () => {
+        const { callVault, lp, trader, base, quote } = await loadFixture(
+          vaultSetup,
+        );
+
+        // Hydrate Vault
+        const lpDepositSize = 5; // units of base
+        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+
+        // Trade Settings
+        const strike = parseEther('1500');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('3');
+
+        // Execute Trades
+        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+
+        await expect(
+          await callVault.connect(trader).buy(strike, maturity, tradeSize),
+        ).to.revertedWithCustomError(callVault, 'Vault__InsufficientFunds()');
+      });
+
+      it('properly updates for last trade timestamp', async () => {
+        const { callVault, lp, trader, base, quote } = await loadFixture(
+          vaultSetup,
+        );
+
+        // Hydrate Vault
+        const lpDepositSize = 5; // units of base
+        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+
+        // Trade Settings
+        const strike = parseEther('1500');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+
+        // Initialized lastTradeTimestamp
+        const lastTrade_t0 = await callVault.getLastTradeTimestamp();
+        console.log(lastTrade_t0);
+
+        // Execute Trade
+        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+
+        const lastTrade_t1 = await callVault.getLastTradeTimestamp();
+        console.log(lastTrade_t1);
+
+        expect(lastTrade_t1).to.be.gt(lastTrade_t0);
+      });
+
+      it('properly decays the c Level over time', async () => {
+        const { callVault, lp, trader, base, quote } = await loadFixture(
+          vaultSetup,
+        );
+
+        // Hydrate Vault
+        const lpDepositSize = 5; // units of base
+        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+
+        // Trade Settings
+        const strike = parseEther('1500');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+
+        //PreTrade cLevel
+        const cLevel_t0 = await callVault.getClevel(parseEther('0'));
+
+        // Execute Trade
+        const cLevel_t1 = await callVault.getClevel(tradeSize);
+        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        const cLevel_t2 = await callVault.getClevel(tradeSize);
+        // Increase time by 2 hrs
+        await time.increase(7200);
+        // Check final c-level
+        const cLevel_t3 = await callVault.getClevel(tradeSize);
+
+        expect(parseFloat(formatEther(cLevel_t0))).to.be.eq(1);
+        expect(parseFloat(formatEther(cLevel_t1))).to.be.gt(1);
+        expect(cLevel_t2).to.be.gt(cLevel_t1);
+        expect(cLevel_t2).to.be.gt(cLevel_t3);
+      });
     });
   });
 
