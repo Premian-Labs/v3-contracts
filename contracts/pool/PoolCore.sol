@@ -181,4 +181,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     {
         return _getNearestTicksBelow(lower, upper);
     }
+
+    function transferPosition(
+        Position.Key memory srcP,
+        address newOwner,
+        address newOperator,
+        uint256 size
+    ) external {
+        _ensureOperator(srcP.operator);
+        _transferPosition(srcP, newOwner, newOperator, size);
+    }
 }
