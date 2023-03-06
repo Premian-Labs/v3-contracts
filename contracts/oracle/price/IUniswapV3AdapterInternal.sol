@@ -23,6 +23,9 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when trying to set an invalid gas cost to support a pools
     error UniswapV3Adapter__InvalidGasCostToSupportPool();
 
+    /// @notice Thrown when the time ranges are not valid
+    error UniswapV3Adapter__InvalidTimeRange();
+
     /// @notice Thrown when current oberservation cardinality is below target cardinality
     error UniswapV3Adapter__ObservationCardinalityTooLow();
 

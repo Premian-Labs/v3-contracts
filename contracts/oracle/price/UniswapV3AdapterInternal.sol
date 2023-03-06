@@ -305,8 +305,7 @@ contract UniswapV3AdapterInternal is
         returns (int24 arithmeticMeanTick, uint128 harmonicMeanLiquidity)
     {
         if (range.length != 2 || range[0] <= range[1])
-            // TODO: custom error
-            revert("UniswapV3Adapter__InvalidTimeRange");
+            revert UniswapV3Adapter__InvalidTimeRange();
 
         uint32 span = range[0] - range[1];
 
