@@ -45,18 +45,16 @@ describe('PoolFactory', () => {
     const maturity = await getValidMaturity(10, 'months');
     const blockTimestamp = await latest();
 
-    // We are using a getter function here to avoid setting a value directly on the key object in a test,
-    // as any direct assignment of value would persist between tests
-    const getPoolKey = () => {
-      return {
-        base: base.address,
-        quote: quote.address,
-        oracleAdapter: oracleAdapter.address,
-        strike,
-        maturity: BigNumber.from(maturity),
-        isCallPool: isCall,
-      };
-    };
+    const poolKey = {
+      base: base.address,
+      quote: quote.address,
+      oracleAdapter: oracleAdapter.address,
+      strike,
+      maturity: BigNumber.from(maturity),
+      isCallPool: isCall,
+    } as const;
+
+    Object.freeze(poolKey);
 
     return {
       deployer,
@@ -66,14 +64,13 @@ describe('PoolFactory', () => {
       oracleAdapter,
       maturity,
       blockTimestamp,
-      getPoolKey,
+      poolKey,
     };
   }
 
   describe('#getPoolAddress', () => {
     it('should return address(0) if no pool has been deployed with given parameters', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(
         ethers.constants.AddressZero,
@@ -81,8 +78,7 @@ describe('PoolFactory', () => {
     });
 
     it('should return the pool address if a pool with given parameters has been deployed', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       const tx = await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
@@ -97,9 +93,8 @@ describe('PoolFactory', () => {
 
   describe('#deployPool', () => {
     it('should properly deploy the pool', async () => {
-      const { getPoolKey, p, deployer, base, quote, oracleAdapter, maturity } =
+      const { poolKey, p, deployer, base, quote, oracleAdapter, maturity } =
         await loadFixture(deploy);
-      const poolKey = getPoolKey();
 
       const tx = await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
@@ -129,8 +124,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if base and base are identical', async () => {
-      const { getPoolKey, p, quote } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p, quote } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -146,8 +140,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if base, base, or oracleAdapter are zero address', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -196,8 +189,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if pool has already been deployed', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await p.poolFactory.deployPool(poolKey, {
         value: parseEther('1'),
@@ -214,8 +206,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if strike is zero', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -231,8 +222,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if strike price is not within strike interval', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       // strike interval: 100
       for (let strike of [
@@ -256,8 +246,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if daily option maturity has expired', async () => {
-      const { getPoolKey, p, blockTimestamp } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p, blockTimestamp } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -273,8 +262,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if daily option maturity is not at 8AM UTC', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -293,8 +281,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if weekly option maturity not on Friday', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -313,8 +300,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if monthly option maturity not on last Friday', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(
@@ -333,8 +319,7 @@ describe('PoolFactory', () => {
     });
 
     it('should revert if monthly option maturity exceeds 365 days', async () => {
-      const { getPoolKey, p } = await loadFixture(deploy);
-      const poolKey = getPoolKey();
+      const { poolKey, p } = await loadFixture(deploy);
 
       await expect(
         p.poolFactory.deployPool(

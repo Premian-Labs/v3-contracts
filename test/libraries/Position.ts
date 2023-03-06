@@ -15,27 +15,24 @@ describe('Position', () => {
     const [deployer] = await ethers.getSigners();
     const instance = await new PositionMock__factory(deployer).deploy();
 
-    // We are using a getter function here to avoid setting a value directly on the key object in a test,
-    // as any direct assignment of value would persist between tests
-    const getKey = () => {
-      return {
-        owner: deployer.address,
-        operator: deployer.address,
-        lower: parseEther('0.25'),
-        upper: parseEther('0.75'),
-        orderType: 0,
-        isCall: isCall,
-        strike: strike,
-      };
-    };
+    const key = {
+      owner: deployer.address,
+      operator: deployer.address,
+      lower: parseEther('0.25'),
+      upper: parseEther('0.75'),
+      orderType: 0,
+      isCall: isCall,
+      strike: strike,
+    } as const;
 
-    return { deployer, instance, getKey };
+    Object.freeze(key);
+
+    return { deployer, instance, key };
   }
 
   describe('#keyHash', () => {
     it('should return key hash', async () => {
-      const { getKey, instance } = await loadFixture(deploy);
-      const key = getKey();
+      const { key, instance } = await loadFixture(deploy);
 
       const keyHash = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
@@ -80,8 +77,7 @@ describe('Position', () => {
 
   describe('#pieceWiseLinear', () => {
     it('should return 0 if lower >= price', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
       expect(await instance.pieceWiseLinear(key, key.lower)).to.eq(0);
       expect(await instance.pieceWiseLinear(key, key.lower.sub(1))).to.eq(0);
@@ -93,8 +89,7 @@ describe('Position', () => {
       ['0.7', '0.9'],
     ]) {
       it(`should return ${c[1]} for price ${c[0]} if lower < price && price < upper`, async () => {
-        const { instance, getKey } = await loadFixture(deploy);
-        const key = getKey();
+        const { instance, key } = await loadFixture(deploy);
 
         expect(await instance.pieceWiseLinear(key, parseEther(c[0]))).to.eq(
           parseEther(c[1]),
@@ -103,30 +98,28 @@ describe('Position', () => {
     }
 
     it('should return WAD if price > upper', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
       expect(await instance.pieceWiseLinear(key, key.upper)).to.eq(WAD);
       expect(await instance.pieceWiseLinear(key, key.upper.add(1))).to.eq(WAD);
     });
 
     it('should revert if lower >= upper', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
-      key.lower = key.upper;
+      let newKey = { ...key, lower: key.upper };
 
       await expect(
-        instance.pieceWiseLinear(key, 0),
+        instance.pieceWiseLinear(newKey, 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Position__LowerGreaterOrEqualUpper',
       );
 
-      key.lower = key.upper.add(1);
+      newKey.lower = newKey.upper.add(1);
 
       await expect(
-        instance.pieceWiseLinear(key, 0),
+        instance.pieceWiseLinear(newKey, 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Position__LowerGreaterOrEqualUpper',
@@ -136,8 +129,7 @@ describe('Position', () => {
 
   describe('#pieceWiseQuadratic', async () => {
     it('should return 0 if lower >= price', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
       expect(await instance.pieceWiseQuadratic(key, key.lower)).to.eq(0);
       expect(await instance.pieceWiseQuadratic(key, key.lower.sub(1))).to.eq(0);
@@ -149,8 +141,7 @@ describe('Position', () => {
       ['0.7', '0.4275'],
     ]) {
       it(`should return ${c[1]} for price ${c[0]} if lower < price && price < upper`, async () => {
-        const { instance, getKey } = await loadFixture(deploy);
-        const key = getKey();
+        const { instance, key } = await loadFixture(deploy);
 
         expect(await instance.pieceWiseQuadratic(key, parseEther(c[0]))).to.eq(
           parseEther(c[1]),
@@ -159,8 +150,7 @@ describe('Position', () => {
     }
 
     it('should return average price if price >= upper', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
       expect(await instance.pieceWiseQuadratic(key, key.upper)).to.eq(
         average(key.lower, key.upper),
@@ -172,22 +162,21 @@ describe('Position', () => {
     });
 
     it('should revert if lower >= upper', async () => {
-      const { instance, getKey } = await loadFixture(deploy);
-      const key = getKey();
+      const { instance, key } = await loadFixture(deploy);
 
-      key.lower = key.upper;
+      const newKey = { ...key, lower: key.upper };
 
       await expect(
-        instance.pieceWiseQuadratic(key, 0),
+        instance.pieceWiseQuadratic(newKey, 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Position__LowerGreaterOrEqualUpper',
       );
 
-      key.lower = key.upper.add(1);
+      newKey.lower = newKey.upper.add(1);
 
       await expect(
-        instance.pieceWiseQuadratic(key, 0),
+        instance.pieceWiseQuadratic(newKey, 0),
       ).to.be.revertedWithCustomError(
         instance,
         'Position__LowerGreaterOrEqualUpper',
@@ -210,8 +199,7 @@ describe('Position', () => {
         let contracts = collateral;
 
         it(`should return ${c[0]} contract(s) for ${c[0]} uint(s) of collateral`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
+          const { instance, key } = await loadFixture(deploy);
 
           expect(
             await instance.collateralToContracts(collateral, strike, isCall),
@@ -285,15 +273,18 @@ describe('Position', () => {
       ['0.25', '0.75', '1000', '2'],
     ]) {
       it(`should return ${c[3]} for size ${c[2]} and range ${c[0]} - ${c[1]}`, async () => {
-        const { instance, getKey } = await loadFixture(deploy);
-        const key = getKey();
+        const { instance, key } = await loadFixture(deploy);
 
-        key.lower = parseEther(c[0]);
-        key.upper = parseEther(c[1]);
-
-        expect(await instance.liquidityPerTick(key, parseEther(c[2]))).to.eq(
-          parseEther(c[3]),
-        );
+        expect(
+          await instance.liquidityPerTick(
+            {
+              ...key,
+              lower: parseEther(c[0]),
+              upper: parseEther(c[1]),
+            },
+            parseEther(c[2]),
+          ),
+        ).to.eq(parseEther(c[3]));
       });
     }
   });
@@ -310,8 +301,7 @@ describe('Position', () => {
         let collateral = parseEther(c[2]);
 
         it(`should return ${c[2]} unit(s) of collateral for size ${c[0]} and price ${c[1]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
+          const { instance, key } = await loadFixture(deploy);
 
           expect(
             await instance.bid(key, parseEther(c[0]), parseEther(c[1])),
@@ -326,13 +316,14 @@ describe('Position', () => {
         let formattedCollateral = formatEther(collateral);
 
         it(`should return ${formattedCollateral} unit(s) of collateral for size ${c[0]} and price ${c[1]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.isCall = !isCall;
+          const { instance, key } = await loadFixture(deploy);
 
           expect(
-            await instance.bid(key, parseEther(c[0]), parseEther(c[1])),
+            await instance.bid(
+              { ...key, isCall: !key.isCall },
+              parseEther(c[0]),
+              parseEther(c[1]),
+            ),
           ).to.eq(collateral);
         });
       }
@@ -355,13 +346,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CSUP;
+          const { instance, key } = await loadFixture(deploy);
 
           let collateral = await instance.collateral(
-            key,
+            { ...key, orderType: OrderType.CSUP },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -384,13 +372,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CS;
+          const { instance, key } = await loadFixture(deploy);
 
           let collateral = await instance.collateral(
-            key,
+            { ...key, orderType: OrderType.CS },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -413,13 +398,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size}, and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.LC;
+          const { instance, key } = await loadFixture(deploy);
 
           let collateral = await instance.collateral(
-            key,
+            { ...key, orderType: OrderType.LC },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -446,13 +428,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CSUP;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.contracts(
-            key,
+            { ...key, orderType: OrderType.CSUP },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -475,13 +454,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CS;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.contracts(
-            key,
+            { ...key, orderType: OrderType.CS },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -504,13 +480,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for size ${size} and price ${c[0]}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.LC;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.contracts(
-            key,
+            { ...key, orderType: OrderType.LC },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -537,13 +510,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CSUP;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.long(
-            key,
+            { ...key, orderType: OrderType.CSUP },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -566,13 +536,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CS;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.long(
-            key,
+            { ...key, orderType: OrderType.CS },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -595,13 +562,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.LC;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.long(
-            key,
+            { ...key, orderType: OrderType.LC },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -628,13 +592,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CSUP;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.short(
-            key,
+            { ...key, orderType: OrderType.CSUP },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -657,13 +618,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.CS;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.short(
-            key,
+            { ...key, orderType: OrderType.CS },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -686,13 +644,10 @@ describe('Position', () => {
 
       for (let c of cases) {
         it(`should return ${c[1]} contracts for price ${c[0]}, and size ${size}`, async () => {
-          const { instance, getKey } = await loadFixture(deploy);
-          const key = getKey();
-
-          key.orderType = OrderType.LC;
+          const { instance, key } = await loadFixture(deploy);
 
           let contracts = await instance.short(
-            key,
+            { ...key, orderType: OrderType.LC },
             parseEther(size),
             parseEther(c[0]),
           );
@@ -742,10 +697,7 @@ describe('Position', () => {
         for (let deltaBalance of deltas) {
           for (let price of prices) {
             it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
-              const { instance, getKey } = await loadFixture(deploy);
-              const key = getKey();
-
-              key.orderType = OrderType.CSUP;
+              const { instance, key } = await loadFixture(deploy);
 
               let sign: number;
 
@@ -759,7 +711,7 @@ describe('Position', () => {
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                key,
+                { ...key, orderType: OrderType.CSUP },
                 currentBalance,
                 formattedDeltaBalance,
                 formattedPrice,
@@ -807,10 +759,7 @@ describe('Position', () => {
         for (let deltaBalance of deltas) {
           for (let price of prices) {
             it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
-              const { instance, getKey } = await loadFixture(deploy);
-              const key = getKey();
-
-              key.orderType = OrderType.CS;
+              const { instance, key } = await loadFixture(deploy);
 
               let sign: number;
 
@@ -824,7 +773,7 @@ describe('Position', () => {
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                key,
+                { ...key, orderType: OrderType.CS },
                 currentBalance,
                 formattedDeltaBalance,
                 formattedPrice,
@@ -872,10 +821,7 @@ describe('Position', () => {
         for (let deltaBalance of deltas) {
           for (let price of prices) {
             it(`price ${price}, amount ${deltaBalance}, is_deposit ${is_deposit}`, async () => {
-              const { instance, getKey } = await loadFixture(deploy);
-              const key = getKey();
-
-              key.orderType = OrderType.LC;
+              const { instance, key } = await loadFixture(deploy);
 
               let sign: number;
 
@@ -889,7 +835,7 @@ describe('Position', () => {
               let formattedPrice = parseEther(price);
 
               let delta = await instance.calculatePositionUpdate(
-                key,
+                { ...key, orderType: OrderType.LC },
                 currentBalance,
                 formattedDeltaBalance,
                 formattedPrice,

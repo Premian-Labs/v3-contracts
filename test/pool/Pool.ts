@@ -88,19 +88,16 @@ describe('Pool', () => {
       };
     };
 
-    // We are using a getter function here to avoid setting a value directly on the key object in a test,
-    // as any direct assignment of value would persist between tests
-    const getPositionKey = () => {
-      return {
-        owner: lp.address,
-        operator: lp.address,
-        lower: parseEther('0.1'),
-        upper: parseEther('0.3'),
-        orderType: OrderType.LC,
-        isCall: isCall,
-        strike: strike,
-      };
-    };
+    const pKey = {
+      owner: lp.address,
+      operator: lp.address,
+      lower: parseEther('0.1'),
+      upper: parseEther('0.3'),
+      orderType: OrderType.LC,
+      isCall: isCall,
+      strike: strike,
+    } as const;
+    Object.freeze(pKey);
 
     return {
       deployer,
@@ -114,7 +111,7 @@ describe('Pool', () => {
       quote,
       oracleAdapter,
       maturity,
-      getPositionKey,
+      pKey,
       getTradeQuote,
     };
   }
@@ -146,14 +143,8 @@ describe('Pool', () => {
   async function deployAndDeposit_1000_CS() {
     const f = await deployAndMintForLP();
 
-    const pKey = f.getPositionKey();
-    pKey.orderType = OrderType.CS;
-
-    const getPositionKey = () => {
-      return {
-        ...pKey,
-      };
-    };
+    const pKey = { ...f.pKey, orderType: OrderType.CS } as const;
+    Object.freeze(pKey);
 
     const tokenId = await f.callPool.formatTokenId(
       pKey.operator,
@@ -180,20 +171,14 @@ describe('Pool', () => {
         parseEther('1'),
       );
 
-    return { ...f, depositSize, tokenId, getPositionKey };
+    return { ...f, depositSize, tokenId, pKey };
   }
 
   async function deployAndDeposit_1_CS() {
     const f = await deployAndMintForLP();
 
-    const pKey = f.getPositionKey();
-    pKey.orderType = OrderType.CS;
-
-    const getPositionKey = () => {
-      return {
-        ...pKey,
-      };
-    };
+    const pKey = { ...f.pKey, orderType: OrderType.CS } as const;
+    Object.freeze(pKey);
 
     const tokenId = await f.callPool.formatTokenId(
       pKey.operator,
@@ -220,20 +205,14 @@ describe('Pool', () => {
         parseEther('1'),
       );
 
-    return { ...f, depositSize, tokenId, getPositionKey };
+    return { ...f, depositSize, tokenId, pKey };
   }
 
   async function deployAndDeposit_1000_LC() {
     const f = await deployAndMintForLP();
 
-    const pKey = f.getPositionKey();
-    pKey.orderType = OrderType.LC;
-
-    const getPositionKey = () => {
-      return {
-        ...pKey,
-      };
-    };
+    const pKey = { ...f.pKey, orderType: OrderType.LC } as const;
+    Object.freeze(pKey);
 
     const tokenId = await f.callPool.formatTokenId(
       pKey.operator,
@@ -260,7 +239,7 @@ describe('Pool', () => {
         parseEther('1'),
       );
 
-    return { ...f, depositSize, tokenId, getPositionKey };
+    return { ...f, depositSize, tokenId, pKey };
   }
 
   describe('__internal', function () {
@@ -346,10 +325,7 @@ describe('Pool', () => {
 
   describe('#getTradeQuote', () => {
     it('should successfully return a buy trade quote', async () => {
-      const { callPool, getPositionKey } = await loadFixture(
-        deployAndDeposit_1000_CS,
-      );
-      const pKey = getPositionKey();
+      const { callPool, pKey } = await loadFixture(deployAndDeposit_1000_CS);
 
       const tradeSize = parseEther('500');
       const price = pKey.lower;
@@ -367,10 +343,7 @@ describe('Pool', () => {
     });
 
     it('should successfully return a sell trade quote', async () => {
-      const { callPool, getPositionKey } = await loadFixture(
-        deployAndDeposit_1000_LC,
-      );
-      const pKey = getPositionKey();
+      const { callPool, pKey } = await loadFixture(deployAndDeposit_1000_LC);
 
       const tradeSize = parseEther('500');
       const price = pKey.upper;
@@ -414,9 +387,8 @@ describe('Pool', () => {
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
         it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
-          const { callPool, lp, getPositionKey, base, tokenId, depositSize } =
+          const { callPool, lp, pKey, base, tokenId, depositSize } =
             await loadFixture(deployAndDeposit_1000_LC);
-          const pKey = getPositionKey();
 
           const averagePrice = average(pKey.lower, pKey.upper);
           const collateralValue = depositSize.mul(averagePrice).div(ONE_ETHER);
@@ -434,10 +406,7 @@ describe('Pool', () => {
       });
 
       it('should revert if msg.sender != p.operator', async () => {
-        const { callPool, deployer, getPositionKey } = await loadFixture(
-          deploy,
-        );
-        const pKey = getPositionKey();
+        const { callPool, deployer, pKey } = await loadFixture(deploy);
 
         await expect(
           callPool
@@ -447,10 +416,9 @@ describe('Pool', () => {
       });
 
       it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-        const { callPool, lp, getPositionKey } = await loadFixture(
+        const { callPool, lp, pKey } = await loadFixture(
           deployAndDeposit_1000_LC,
         );
-        const pKey = getPositionKey();
 
         expect(await callPool.marketPrice()).to.eq(pKey.upper);
 
@@ -468,8 +436,7 @@ describe('Pool', () => {
       });
 
       it('should revert if zero size', async () => {
-        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-        const pKey = getPositionKey();
+        const { callPool, lp, pKey } = await loadFixture(deploy);
 
         await expect(
           callPool.connect(lp)[fnSig](pKey, 0, 0, 0, 0, parseEther('1')),
@@ -477,10 +444,7 @@ describe('Pool', () => {
       });
 
       it('should revert if option is expired', async () => {
-        const { callPool, lp, getPositionKey, maturity } = await loadFixture(
-          deploy,
-        );
-        const pKey = getPositionKey();
+        const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
 
         await increaseTo(maturity);
         await expect(
@@ -491,8 +455,7 @@ describe('Pool', () => {
       });
 
       it('should revert if range is not valid', async () => {
-        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-        const pKey = getPositionKey();
+        const { callPool, lp, pKey } = await loadFixture(deploy);
 
         await expect(
           callPool
@@ -561,8 +524,7 @@ describe('Pool', () => {
       });
 
       it('should revert if tick width is invalid', async () => {
-        const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-        const pKey = getPositionKey();
+        const { callPool, lp, pKey } = await loadFixture(deploy);
 
         await expect(
           callPool
@@ -599,14 +561,12 @@ describe('Pool', () => {
         const {
           callPool,
           lp,
-          getPositionKey,
+          pKey,
           base,
           tokenId,
           depositSize,
           initialCollateral,
         } = await loadFixture(deployAndDeposit_1000_LC);
-
-        const pKey = getPositionKey();
 
         const depositCollateralValue = parseEther('200');
 
@@ -645,8 +605,7 @@ describe('Pool', () => {
     });
 
     it('should revert if msg.sender != p.operator', async () => {
-      const { callPool, deployer, getPositionKey } = await loadFixture(deploy);
-      const pKey = getPositionKey();
+      const { callPool, deployer, pKey } = await loadFixture(deploy);
 
       await expect(
         callPool
@@ -656,10 +615,9 @@ describe('Pool', () => {
     });
 
     it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
-      const { callPool, lp, getPositionKey } = await loadFixture(
+      const { callPool, lp, pKey } = await loadFixture(
         deployAndDeposit_1000_LC,
       );
-      const pKey = getPositionKey();
 
       expect(await callPool.marketPrice()).to.eq(pKey.upper);
 
@@ -677,8 +635,7 @@ describe('Pool', () => {
     });
 
     it('should revert if zero size', async () => {
-      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-      const pKey = getPositionKey();
+      const { callPool, lp, pKey } = await loadFixture(deploy);
 
       await expect(
         callPool.connect(lp).withdraw(pKey, 0, 0, parseEther('1')),
@@ -686,10 +643,7 @@ describe('Pool', () => {
     });
 
     it('should revert if option is expired', async () => {
-      const { callPool, lp, getPositionKey, maturity } = await loadFixture(
-        deploy,
-      );
-      const pKey = getPositionKey();
+      const { callPool, lp, pKey, maturity } = await loadFixture(deploy);
 
       await increaseTo(maturity);
       await expect(
@@ -698,8 +652,7 @@ describe('Pool', () => {
     });
 
     it('should revert if position does not exists', async () => {
-      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-      const pKey = getPositionKey();
+      const { callPool, lp, pKey } = await loadFixture(deploy);
 
       await expect(
         callPool.connect(lp).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
@@ -707,8 +660,7 @@ describe('Pool', () => {
     });
 
     it('should revert if range is not valid', async () => {
-      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-      const pKey = getPositionKey();
+      const { callPool, lp, pKey } = await loadFixture(deploy);
 
       await expect(
         callPool
@@ -757,8 +709,7 @@ describe('Pool', () => {
     });
 
     it('should revert if tick width is invalid', async () => {
-      const { callPool, lp, getPositionKey } = await loadFixture(deploy);
-      const pKey = getPositionKey();
+      const { callPool, lp, pKey } = await loadFixture(deploy);
 
       await expect(
         callPool
@@ -998,14 +949,12 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        getPositionKey,
+        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
-
-      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1058,13 +1007,12 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        getPositionKey,
+        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
-      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1127,13 +1075,12 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        getPositionKey,
+        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
-      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1199,14 +1146,12 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        getPositionKey,
+        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
       } = await loadFixture(deploy);
-
-      const pKey = getPositionKey();
 
       const nearestBelow = await callPool.getNearestTicksBelow(
         pKey.lower,
@@ -1284,11 +1229,9 @@ describe('Pool', () => {
         initialCollateral,
         maturity,
         oracleAdapter,
-        getPositionKey,
+        pKey,
         trader,
       } = await loadFixture(deployAndDeposit_1_CS);
-
-      const pKey = getPositionKey();
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1331,12 +1274,10 @@ describe('Pool', () => {
         feeReceiver,
         maturity,
         oracleAdapter,
-        getPositionKey,
+        pKey,
         trader,
         initialCollateral,
       } = await loadFixture(deployAndDeposit_1_CS);
-
-      const pKey = getPositionKey();
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1373,9 +1314,7 @@ describe('Pool', () => {
     });
 
     it('should revert if not expired', async () => {
-      const { callPool, getPositionKey } = await loadFixture(deploy);
-
-      const pKey = getPositionKey();
+      const { callPool, pKey } = await loadFixture(deploy);
 
       await expect(callPool.settlePosition(pKey)).to.be.revertedWithCustomError(
         callPool,
@@ -1552,11 +1491,9 @@ describe('Pool', () => {
 
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
-      const { base, callPool, lp, trader, getPositionKey } = await loadFixture(
+      const { base, callPool, lp, trader, pKey } = await loadFixture(
         deployAndDeposit_1_CS,
       );
-
-      const pKey = getPositionKey();
 
       const tradeSize = ONE_ETHER;
       const price = pKey.lower;
@@ -1589,12 +1526,10 @@ describe('Pool', () => {
         callPool,
         lp,
         trader,
-        getPositionKey,
+        pKey,
         feeReceiver,
         initialCollateral,
       } = await loadFixture(deployAndDeposit_1_CS);
-
-      const pKey = getPositionKey();
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
