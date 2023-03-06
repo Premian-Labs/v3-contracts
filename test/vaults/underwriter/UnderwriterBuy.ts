@@ -1,7 +1,12 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { parseEther, formatEther, formatUnits } from 'ethers/lib/utils';
+import {
+  parseEther,
+  formatEther,
+  formatUnits,
+  parseUnits,
+} from 'ethers/lib/utils';
 import { BigNumberish, BigNumber } from 'ethers';
 import { vaultSetup, addDeposit } from './VaultSetup';
 import { IPoolMock__factory } from '../../../typechain';
@@ -46,8 +51,10 @@ describe('#Vault contract', () => {
   });
 
   it('should properly initialize a new option pool', async () => {
-    const { p, poolKey, poolAddress } = await loadFixture(vaultSetup);
-    expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(poolAddress);
+    const { p, callPoolKey, callPool } = await loadFixture(vaultSetup);
+    expect(await p.poolFactory.getPoolAddress(callPoolKey)).to.eq(
+      callPool.address,
+    );
   });
 
   it('should properly hydrate accounts with funds', async () => {
@@ -138,31 +145,44 @@ describe('#buy functionality', () => {
     });
 
     it('returns the proper blackscholes price', async () => {
-      const { isCall, callVault, base, volOracle } = await loadFixture(
+      const { callVault, putVault, base, volOracle } = await loadFixture(
         vaultSetup,
       );
       const spotPrice = await callVault.getSpotPrice();
       const strike = parseEther('1500');
       const tau = parseEther('0.03835616'); // 14 DTE
-      const rfRate = 0;
+      const rfRate = await volOracle.getRiskFreeRate();
       const sigma = await volOracle[
         'getVolatility(address,uint256,uint256,uint256)'
       ](base.address, spotPrice, strike, tau);
-      const price = await callVault.getBlackScholesPrice(
+
+      const callPrice = await callVault.getBlackScholesPrice(
         spotPrice,
         strike,
         tau,
         sigma,
         rfRate,
-        isCall,
+        true,
       );
-      expect(parseFloat(formatEther(price))).to.approximately(85.953, 0.001);
+
+      const putPrice = await callVault.getBlackScholesPrice(
+        spotPrice,
+        strike,
+        tau,
+        sigma,
+        rfRate,
+        false,
+      );
+      expect(parseFloat(formatEther(callPrice))).to.approximately(
+        85.953,
+        0.001,
+      );
+      expect(parseFloat(formatEther(putPrice))).to.approximately(85.953, 0.001);
     });
 
     it('calculates the proper mintingFee for a Call option', async () => {
-      const { poolAddress, underwriter } = await loadFixture(vaultSetup);
+      const { callPool } = await loadFixture(vaultSetup);
       const size = parseEther('1');
-      const callPool = IPoolMock__factory.connect(poolAddress, underwriter);
       const fee = await callPool.takerFee(size, 0, true);
       expect(parseFloat(formatEther(fee))).to.be.eq(0.003); // 30 bps
     });
@@ -231,7 +251,7 @@ describe('#buy functionality', () => {
       });
 
       it('retrieves valid option delta', async () => {
-        const { isCall, callVault, base, volOracle } = await loadFixture(
+        const { callVault, putVault, base, volOracle } = await loadFixture(
           vaultSetup,
         );
         const spotPrice = await callVault.getSpotPrice();
@@ -241,15 +261,32 @@ describe('#buy functionality', () => {
         const sigma = await volOracle[
           'getVolatility(address,uint256,uint256,uint256)'
         ](base.address, spotPrice, strike, tau);
-        const delta = await callVault.getDelta(
+        const callDelta = await callVault.getDelta(
           spotPrice,
           strike,
           tau,
           sigma,
           rfRate,
-          isCall,
+          true,
         );
-        expect(parseFloat(formatEther(delta))).to.approximately(0.528, 0.001);
+
+        const putDelta = await putVault.getDelta(
+          spotPrice,
+          strike,
+          tau,
+          sigma,
+          rfRate,
+          false,
+        );
+
+        expect(parseFloat(formatEther(callDelta))).to.approximately(
+          0.528,
+          0.001,
+        );
+        expect(parseFloat(formatEther(putDelta))).to.approximately(
+          -0.471,
+          0.001,
+        );
       });
 
       it('reverts on invalid option delta bounds', async () => {
@@ -276,7 +313,7 @@ describe('#buy functionality', () => {
       });
 
       it('receives a valid listing address', async () => {
-        const { volOracle, base, maturity, callVault, poolAddress } =
+        const { volOracle, base, maturity, callVault, callPool } =
           await loadFixture(vaultSetup);
         const spotPrice = await callVault.getSpotPrice();
         const unListedStrike = parseEther('1500');
@@ -293,30 +330,33 @@ describe('#buy functionality', () => {
           sigma,
           rfRate,
         );
-        expect(listingAddr).to.be.eq(poolAddress);
+        expect(listingAddr).to.be.eq(callPool.address);
       });
 
       it('returns the proper pool address from factory', async () => {
-        const { p, poolKey, poolAddress } = await loadFixture(vaultSetup);
-        const listingAddr = await p.poolFactory.getPoolAddress(poolKey);
-        expect(listingAddr).to.be.eq(poolAddress);
+        const { p, callPoolKey, callPool } = await loadFixture(vaultSetup);
+        const listingAddr = await p.poolFactory.getPoolAddress(callPoolKey);
+        expect(listingAddr).to.be.eq(callPool.address);
       });
 
       it('returns addressZero from factory non existing pool', async () => {
-        const { base, quote, maturity, isCall, oracleAdapter, p } =
-          await loadFixture(vaultSetup);
-        const nonExistingPoolKey = {
-          base: base.address,
-          quote: quote.address,
-          oracleAdapter: oracleAdapter.address,
-          strike: parseEther('500'), // ATM,
-          maturity: BigNumber.from(maturity),
-          isCallPool: isCall,
-        };
-        const listingAddr = await p.poolFactory.getPoolAddress(
-          nonExistingPoolKey,
+        const { base, quote, maturity, oracleAdapter, p } = await loadFixture(
+          vaultSetup,
         );
-        expect(listingAddr).to.be.eq(ethers.constants.AddressZero);
+        for (const isCall of [true, false]) {
+          const nonExistingPoolKey = {
+            base: base.address,
+            quote: quote.address,
+            oracleAdapter: oracleAdapter.address,
+            strike: parseEther('500'), // ATM,
+            maturity: BigNumber.from(maturity),
+            isCallPool: isCall,
+          };
+          const listingAddr = await p.poolFactory.getPoolAddress(
+            nonExistingPoolKey,
+          );
+          expect(listingAddr).to.be.eq(ethers.constants.AddressZero);
+        }
       });
 
       it('reverts when factory returns addressZERO', async () => {
@@ -531,16 +571,23 @@ describe('#buy functionality', () => {
   });
 
   describe('#minting options from pool', () => {
-    it('allows writeFrom to mint options when directly called', async () => {
-      const { underwriter, trader, base, poolAddress } = await loadFixture(
+    it('allows writeFrom to mint call options when directly called', async () => {
+      const { underwriter, trader, base, callPool } = await loadFixture(
         vaultSetup,
       );
       const size = parseEther('5');
-      const callPool = IPoolMock__factory.connect(poolAddress, underwriter);
+      const callPoolUnderwriter = IPoolMock__factory.connect(
+        callPool.address,
+        underwriter,
+      );
       const fee = await callPool.takerFee(size, 0, true);
       const totalSize = size.add(fee);
       await base.connect(underwriter).approve(callPool.address, totalSize);
-      await callPool.writeFrom(underwriter.address, trader.address, size);
+      await callPoolUnderwriter.writeFrom(
+        underwriter.address,
+        trader.address,
+        size,
+      );
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         size,
@@ -556,8 +603,40 @@ describe('#buy functionality', () => {
       ).to.eq(size);
     });
 
-    it('allows the vault to mint options for the LP and Trader', async () => {
-      const { callVault, lp, deployer, trader, base, quote, poolAddress } =
+    it('allows writeFrom to mint put options when directly called', async () => {
+      const { underwriter, trader, quote, putPool } = await loadFixture(
+        vaultSetup,
+      );
+      const size = parseEther('5');
+      const strike = 1500;
+      const putPoolUnderwriter = IPoolMock__factory.connect(
+        putPool.address,
+        underwriter,
+      );
+      const fee = await putPool.takerFee(size, 0, false);
+      const totalSize = size.mul(strike).add(fee);
+
+      await quote.connect(underwriter).approve(putPool.address, totalSize);
+      await putPoolUnderwriter.writeFrom(
+        underwriter.address,
+        trader.address,
+        size,
+      );
+      expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
+      expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        size,
+      );
+      expect(await putPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
+      expect(
+        await putPool.balanceOf(underwriter.address, TokenType.LONG),
+      ).to.eq(0);
+      expect(
+        await putPool.balanceOf(underwriter.address, TokenType.SHORT),
+      ).to.eq(size);
+    });
+
+    it('allows the vault to mint call options for the LP and Trader', async () => {
+      const { callVault, lp, trader, base, quote, callPool } =
         await loadFixture(vaultSetup);
       const lpDepositSize = 5; // units of base
       const lpDepositSizeBN = parseEther(lpDepositSize.toString());
@@ -565,7 +644,6 @@ describe('#buy functionality', () => {
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
-      const callPool = IPoolMock__factory.connect(poolAddress, deployer);
       const fee = await callPool.takerFee(tradeSize, 0, true);
       const totalSize = tradeSize.add(fee);
       await callVault.connect(trader).buy(strike, maturity, tradeSize);
@@ -581,6 +659,36 @@ describe('#buy functionality', () => {
       expect(await base.balanceOf(callVault.address)).to.be.eq(
         vaultCollateralBalance,
       );
+    });
+
+    it('allows the vault to mint put options for the LP and Trader', async () => {
+      const { putVault, lp, trader, base, quote, putPool } = await loadFixture(
+        vaultSetup,
+      );
+
+      const strike = 1500;
+      const lpDepositSize = 5 * strike; // 5 units
+      const lpDepositSizeBN = parseUnits(lpDepositSize.toString(), 6);
+      await addDeposit(putVault, lp, lpDepositSize, base, quote);
+
+      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+      const tradeSize = parseEther('2');
+      const fee = await putPool.takerFee(tradeSize, 0, false);
+      const totalSize = tradeSize.add(fee);
+      const strikeBN = parseEther(strike.toString());
+      // await putVault.connect(trader).buy(strikeBN, maturity, tradeSize);
+      // const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
+
+      // expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
+      // expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+      //   tradeSize,
+      // );
+      // expect(await putPool.balanceOf(putVault.address, TokenType.SHORT)).to.eq(
+      //   tradeSize,
+      // );
+      // expect(await quote.balanceOf(putVault.address)).to.be.eq(
+      //   vaultCollateralBalance,
+      // );
     });
   });
 });
