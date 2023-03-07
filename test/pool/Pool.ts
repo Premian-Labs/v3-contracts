@@ -198,6 +198,73 @@ describe('Pool', () => {
     return deposit(await deployAndMintForLP(), OrderType.LC, ONE_ETHER);
   }
 
+  async function deployAndBuy() {
+    const f = await deployAndDeposit_1_CS();
+
+    const tradeSize = ONE_ETHER;
+    const price = f.pKey.lower;
+    const nextPrice = f.pKey.upper;
+    const avgPrice = average(price, nextPrice);
+    const takerFee = await f.callPool.takerFee(
+      tradeSize,
+      tradeSize.mul(avgPrice).div(ONE_ETHER),
+      true,
+    );
+    const totalPremium = await f.callPool.getTradeQuote(tradeSize, true);
+
+    await f.base.mint(f.trader.address, totalPremium);
+    await f.base.connect(f.trader).approve(f.callPool.address, totalPremium);
+
+    await f.callPool.connect(f.trader).trade(tradeSize, true, totalPremium);
+
+    const protocolFees = await f.callPool.protocolFees();
+
+    return {
+      ...f,
+      tradeSize,
+      price,
+      nextPrice,
+      avgPrice,
+      takerFee,
+      totalPremium,
+      protocolFees,
+    };
+  }
+
+  async function deployAndSell() {
+    const f = await deployAndDeposit_1_LC();
+
+    const tradeSize = ONE_ETHER;
+    const price = f.pKey.upper;
+    const nextPrice = f.pKey.lower;
+    const avgPrice = average(price, nextPrice);
+    const takerFee = await f.callPool.takerFee(
+      tradeSize,
+      tradeSize.mul(avgPrice).div(ONE_ETHER),
+      true,
+    );
+
+    const totalPremium = await f.callPool.getTradeQuote(tradeSize, false);
+
+    await f.base.mint(f.trader.address, ONE_ETHER);
+    await f.base.connect(f.trader).approve(f.callPool.address, ONE_ETHER);
+
+    await f.callPool.connect(f.trader).trade(tradeSize, false, totalPremium);
+
+    const protocolFees = await f.callPool.protocolFees();
+
+    return {
+      ...f,
+      tradeSize,
+      price,
+      nextPrice,
+      avgPrice,
+      takerFee,
+      totalPremium,
+      protocolFees,
+    };
+  }
+
   describe('__internal', function () {
     describe('#_getPricing', () => {
       it('should return pool state', async () => {
@@ -901,21 +968,20 @@ describe('Pool', () => {
 
   describe('#exercise', () => {
     it('should successfully exercise an ITM option', async () => {
-      const { callPool, trader, base, oracleAdapter, maturity, feeReceiver } =
-        await loadFixture(deployAndDeposit_1_CS);
-
-      const tradeSize = ONE_ETHER;
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+      const {
+        callPool,
+        trader,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+        totalPremium,
+        protocolFees,
+      } = await loadFixture(deployAndBuy);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.exercise(trader.address);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
@@ -931,21 +997,20 @@ describe('Pool', () => {
     });
 
     it('should not pay any token when exercising an OTM option', async () => {
-      const { callPool, trader, base, oracleAdapter, maturity, feeReceiver } =
-        await loadFixture(deployAndDeposit_1_CS);
-
-      const tradeSize = ONE_ETHER;
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+      const {
+        callPool,
+        trader,
+        base,
+        oracleAdapter,
+        maturity,
+        feeReceiver,
+        totalPremium,
+        protocolFees,
+      } = await loadFixture(deployAndBuy);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.exercise(trader.address);
 
       const exerciseValue = 0;
@@ -974,35 +1039,18 @@ describe('Pool', () => {
       const {
         callPool,
         trader,
-        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
-        depositSize,
-      } = await loadFixture(deployAndDeposit_1_LC);
-
-      const tradeSize = depositSize;
-      const price = pKey.lower;
-      const nextPrice = pKey.upper;
-      const avgPrice = average(price, nextPrice);
-      const takerFee = await callPool.takerFee(
-        tradeSize,
-        tradeSize.mul(avgPrice).div(ONE_ETHER),
-        true,
-      );
-
-      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
-
-      await base.mint(trader.address, ONE_ETHER);
-      await base.connect(trader).approve(callPool.address, ONE_ETHER);
-
-      await callPool.connect(trader).trade(tradeSize, false, totalPremium);
+        totalPremium,
+        takerFee,
+        protocolFees,
+      } = await loadFixture(deployAndSell);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.settle(trader.address);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
@@ -1024,35 +1072,19 @@ describe('Pool', () => {
     it('should successfully settle an OTM option', async () => {
       const {
         callPool,
-        depositSize,
         trader,
-        pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
-      } = await loadFixture(deployAndDeposit_1_LC);
-
-      const tradeSize = depositSize;
-      const price = pKey.lower;
-      const nextPrice = pKey.upper;
-      const avgPrice = average(price, nextPrice);
-      const takerFee = await callPool.takerFee(
-        tradeSize,
-        tradeSize.mul(avgPrice).div(ONE_ETHER),
-        true,
-      );
-      const totalPremium = await callPool.getTradeQuote(tradeSize, false);
-
-      await base.mint(trader.address, ONE_ETHER);
-      await base.connect(trader).approve(callPool.address, ONE_ETHER);
-
-      await callPool.connect(trader).trade(tradeSize, false, totalPremium);
+        totalPremium,
+        takerFee,
+        protocolFees,
+      } = await loadFixture(deployAndSell);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.settle(trader.address);
 
       const exerciseValue = BigNumber.from(0);
@@ -1091,20 +1123,13 @@ describe('Pool', () => {
         oracleAdapter,
         pKey,
         trader,
-      } = await loadFixture(deployAndDeposit_1_CS);
-
-      const tradeSize = ONE_ETHER;
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+        totalPremium,
+        protocolFees,
+      } = await loadFixture(deployAndBuy);
 
       await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.settlePosition(pKey);
 
       const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
@@ -1137,20 +1162,13 @@ describe('Pool', () => {
         pKey,
         trader,
         initialCollateral,
-      } = await loadFixture(deployAndDeposit_1_CS);
-
-      const tradeSize = ONE_ETHER;
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+        totalPremium,
+        protocolFees,
+      } = await loadFixture(deployAndBuy);
 
       await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
 
       await increaseTo(maturity);
-      const protocolFees = await callPool.protocolFees();
       await callPool.settlePosition(pKey);
 
       const exerciseValue = BigNumber.from(0);
@@ -1351,25 +1369,7 @@ describe('Pool', () => {
 
   describe('#getClaimableFees', async () => {
     it('should successfully return amount of claimable fees', async () => {
-      const { base, callPool, lp, trader, pKey } = await loadFixture(
-        deployAndDeposit_1_CS,
-      );
-
-      const tradeSize = ONE_ETHER;
-      const price = pKey.lower;
-      const nextPrice = pKey.upper;
-      const avgPrice = average(price, nextPrice);
-      const takerFee = await callPool.takerFee(
-        tradeSize,
-        tradeSize.mul(avgPrice).div(ONE_ETHER),
-        true,
-      );
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+      const { callPool, lp, pKey, takerFee } = await loadFixture(deployAndBuy);
 
       expect(await callPool.connect(lp).getClaimableFees(pKey)).to.eq(
         takerFee
@@ -1389,19 +1389,13 @@ describe('Pool', () => {
         pKey,
         feeReceiver,
         initialCollateral,
-      } = await loadFixture(deployAndDeposit_1_CS);
-
-      const tradeSize = ONE_ETHER;
-      const totalPremium = await callPool.getTradeQuote(tradeSize, true);
-
-      await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
-
-      await callPool.connect(trader).trade(tradeSize, true, totalPremium);
+        tradeSize,
+        totalPremium,
+        protocolFees,
+      } = await loadFixture(deployAndBuy);
 
       const claimableFees = await callPool.getClaimableFees(pKey);
 
-      const protocolFees = await callPool.protocolFees();
       await callPool.connect(lp).claim(pKey);
 
       expect(await base.balanceOf(pKey.operator)).to.eq(
