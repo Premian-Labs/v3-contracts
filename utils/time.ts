@@ -126,3 +126,9 @@ export function revertToSnapshotAfterEach(
     await revertToSnapShot(snapshotId);
   });
 }
+
+export async function setBlockNumber(jsonRpcUrl: string, blockNumber: number) {
+  await ethers.provider.send('hardhat_reset', [
+    { forking: { jsonRpcUrl, blockNumber } },
+  ]);
+}

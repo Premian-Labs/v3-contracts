@@ -16,7 +16,11 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-import { now } from '../../utils/time';
+import {
+  increase,
+  revertToSnapshotAfterEach,
+  setBlockNumber,
+} from '../../utils/time';
 import { UNISWAP_V3_FACTORY, Token, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
@@ -50,12 +54,10 @@ describe('UniswapV3Adapter', () => {
   let instance: UniswapV3Adapter;
 
   before(async () => {
-    await ethers.provider.send('hardhat_reset', [
-      { forking: { jsonRpcUrl, blockNumber } },
-    ]);
+    await setBlockNumber(jsonRpcUrl, blockNumber);
   });
 
-  beforeEach(async () => {
+  revertToSnapshotAfterEach(async () => {
     [deployer] = await ethers.getSigners();
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(

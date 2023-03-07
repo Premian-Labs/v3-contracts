@@ -17,7 +17,12 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-import { increaseTo, now, revertToSnapshotAfterEach } from '../../utils/time';
+import {
+  increaseTo,
+  now,
+  revertToSnapshotAfterEach,
+  setBlockNumber,
+} from '../../utils/time';
 import { Token, feeds, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
@@ -132,12 +137,10 @@ describe('ChainlinkAdapter', () => {
   let stub: ChainlinkOraclePriceStub;
 
   before(async () => {
-    await ethers.provider.send('hardhat_reset', [
-      { forking: { jsonRpcUrl, blockNumber } },
-    ]);
+    await setBlockNumber(jsonRpcUrl, blockNumber);
   });
 
-  beforeEach(async () => {
+  revertToSnapshotAfterEach(async () => {
     [deployer] = await ethers.getSigners();
 
     const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
@@ -374,7 +377,7 @@ describe('ChainlinkAdapter', () => {
     const stubCoin = bnToAddress(BigNumber.from(100));
 
     describe('#when price is stale', async () => {
-      revertToSnapshotAfterEach(async () => {
+      beforeEach(async () => {
         stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
 
         await instance.batchRegisterFeedMappings([
@@ -416,7 +419,7 @@ describe('ChainlinkAdapter', () => {
     });
 
     describe('#when price is fresh', async () => {
-      revertToSnapshotAfterEach(async () => {
+      beforeEach(async () => {
         stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
 
         await instance.batchRegisterFeedMappings([
