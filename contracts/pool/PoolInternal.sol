@@ -2022,8 +2022,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (delta.collateral < 0) {
             IERC20 token = IERC20(l.getPoolToken());
             if (
-                token.allowance(args.user, address(this)) <
-                uint256(-delta.collateral)
+                token.allowance(args.user, ROUTER) < uint256(-delta.collateral)
             ) {
                 return (
                     false,
