@@ -140,10 +140,12 @@ describe('Pool', () => {
     return { ...f, initialCollateral };
   }
 
-  async function deployAndDeposit_1000_CS() {
-    const f = await deployAndMintForLP();
-
-    const pKey = { ...f.pKey, orderType: OrderType.CS } as const;
+  async function deposit(
+    f: Awaited<ReturnType<typeof deployAndMintForLP>>,
+    orderType: OrderType,
+    depositSize: BigNumber,
+  ) {
+    const pKey = { ...f.pKey, orderType } as const;
     Object.freeze(pKey);
 
     const tokenId = await f.callPool.formatTokenId(
@@ -158,8 +160,6 @@ describe('Pool', () => {
       pKey.upper,
     );
 
-    const depositSize = parseEther('1000');
-
     await f.callPool
       .connect(f.lp)
       [depositFnSig](
@@ -171,75 +171,31 @@ describe('Pool', () => {
         parseEther('1'),
       );
 
-    return { ...f, depositSize, tokenId, pKey };
+    return { ...f, tokenId, pKey, depositSize };
+  }
+
+  async function deployAndDeposit_1000_CS() {
+    return deposit(
+      await deployAndMintForLP(),
+      OrderType.CS,
+      parseEther('1000'),
+    );
   }
 
   async function deployAndDeposit_1_CS() {
-    const f = await deployAndMintForLP();
-
-    const pKey = { ...f.pKey, orderType: OrderType.CS } as const;
-    Object.freeze(pKey);
-
-    const tokenId = await f.callPool.formatTokenId(
-      pKey.operator,
-      pKey.lower,
-      pKey.upper,
-      pKey.orderType,
-    );
-
-    const nearestBelow = await f.callPool.getNearestTicksBelow(
-      pKey.lower,
-      pKey.upper,
-    );
-
-    const depositSize = ONE_ETHER;
-
-    await f.callPool
-      .connect(f.lp)
-      [depositFnSig](
-        pKey,
-        nearestBelow.nearestBelowLower,
-        nearestBelow.nearestBelowUpper,
-        depositSize,
-        0,
-        parseEther('1'),
-      );
-
-    return { ...f, depositSize, tokenId, pKey };
+    return deposit(await deployAndMintForLP(), OrderType.CS, ONE_ETHER);
   }
 
   async function deployAndDeposit_1000_LC() {
-    const f = await deployAndMintForLP();
-
-    const pKey = { ...f.pKey, orderType: OrderType.LC } as const;
-    Object.freeze(pKey);
-
-    const tokenId = await f.callPool.formatTokenId(
-      pKey.operator,
-      pKey.lower,
-      pKey.upper,
-      pKey.orderType,
+    return deposit(
+      await deployAndMintForLP(),
+      OrderType.LC,
+      parseEther('1000'),
     );
+  }
 
-    const nearestBelow = await f.callPool.getNearestTicksBelow(
-      pKey.lower,
-      pKey.upper,
-    );
-
-    const depositSize = parseEther('1000');
-
-    await f.callPool
-      .connect(f.lp)
-      [depositFnSig](
-        { ...pKey, orderType: OrderType.LC },
-        nearestBelow.nearestBelowLower,
-        nearestBelow.nearestBelowUpper,
-        depositSize,
-        0,
-        parseEther('1'),
-      );
-
-    return { ...f, depositSize, tokenId, pKey };
+  async function deployAndDeposit_1_LC() {
+    return deposit(await deployAndMintForLP(), OrderType.LC, ONE_ETHER);
   }
 
   describe('__internal', function () {
@@ -945,36 +901,8 @@ describe('Pool', () => {
 
   describe('#exercise', () => {
     it('should successfully exercise an ITM option', async () => {
-      const {
-        callPool,
-        lp,
-        trader,
-        pKey,
-        base,
-        oracleAdapter,
-        maturity,
-        feeReceiver,
-      } = await loadFixture(deploy);
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+      const { callPool, trader, base, oracleAdapter, maturity, feeReceiver } =
+        await loadFixture(deployAndDeposit_1_CS);
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1003,36 +931,8 @@ describe('Pool', () => {
     });
 
     it('should not pay any token when exercising an OTM option', async () => {
-      const {
-        callPool,
-        lp,
-        trader,
-        pKey,
-        base,
-        oracleAdapter,
-        maturity,
-        feeReceiver,
-      } = await loadFixture(deploy);
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.CS },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+      const { callPool, trader, base, oracleAdapter, maturity, feeReceiver } =
+        await loadFixture(deployAndDeposit_1_CS);
 
       const tradeSize = ONE_ETHER;
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
@@ -1073,34 +973,14 @@ describe('Pool', () => {
     it('should successfully settle an ITM option', async () => {
       const {
         callPool,
-        lp,
         trader,
         pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
-      } = await loadFixture(deploy);
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+        depositSize,
+      } = await loadFixture(deployAndDeposit_1_LC);
 
       const tradeSize = depositSize;
       const price = pKey.lower;
@@ -1144,34 +1024,14 @@ describe('Pool', () => {
     it('should successfully settle an OTM option', async () => {
       const {
         callPool,
-        lp,
+        depositSize,
         trader,
         pKey,
         base,
         oracleAdapter,
         maturity,
         feeReceiver,
-      } = await loadFixture(deploy);
-
-      const nearestBelow = await callPool.getNearestTicksBelow(
-        pKey.lower,
-        pKey.upper,
-      );
-      const depositSize = ONE_ETHER;
-
-      await base.mint(lp.address, depositSize);
-      await base.connect(lp).approve(callPool.address, depositSize);
-
-      await callPool
-        .connect(lp)
-        [depositFnSig](
-          { ...pKey, orderType: OrderType.LC },
-          nearestBelow.nearestBelowLower,
-          nearestBelow.nearestBelowUpper,
-          depositSize,
-          0,
-          parseEther('1'),
-        );
+      } = await loadFixture(deployAndDeposit_1_LC);
 
       const tradeSize = depositSize;
       const price = pKey.lower;
