@@ -676,6 +676,8 @@ describe('#buy functionality', () => {
       const fee = await putPool.takerFee(tradeSize, 0, false);
       const totalSize = tradeSize.add(fee);
       const strikeBN = parseEther(strike.toString());
+      // FIXME: these tests will not run because writeFrom decimalization for puts is incorrect
+
       // await putVault.connect(trader).buy(strikeBN, maturity, tradeSize);
       // const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
 
