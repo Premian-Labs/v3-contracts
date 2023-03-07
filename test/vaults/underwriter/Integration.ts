@@ -5,17 +5,22 @@ import {
   addDeposit,
   vaultSetup,
   caller,
-  base,
-  quote,
   receiver,
+  createPool,
 } from './VaultSetup';
 import { setMaturities } from './UnderwriterVault';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
-import { increaseTo, now, ONE_DAY } from '../../../utils/time';
+import {
+  getValidMaturity,
+  increaseTo,
+  now,
+  ONE_DAY,
+} from '../../../utils/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { ethers } from 'hardhat';
 import { MockContract } from '@ethereum-waffle/mock-contract';
+import { PoolUtil } from '../../../utils/PoolUtil';
 
 describe('#deposit', () => {
   for (const isCall of [true, false]) {
@@ -130,8 +135,50 @@ describe('#eventStream', () => {
   let depositor2: SignerWithAddress;
   let depositor3: SignerWithAddress;
 
+  async function setSpotPriceMaturities(
+    base: ERC20Mock,
+    quote: ERC20Mock,
+    oracleAdapter: MockContract,
+  ) {
+    const { t0, t1, t2, t3 } = await getNextMaturities();
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t0)
+      .returns(parseEther('1000'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t1)
+      .returns(parseEther('1200'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t2)
+      .returns(parseEther('1500'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t3)
+      .returns(parseEther('900'));
+  }
+
+  async function createPools(
+    deployer: SignerWithAddress,
+    base: ERC20Mock,
+    quote: ERC20Mock,
+    oracleAdapter: MockContract,
+    p: PoolUtil,
+  ) {
+    const { t0, t1, t2, t3 } = await getNextMaturities();
+    await createPool(
+      parseEther('1000'),
+      t0,
+      true,
+      deployer,
+      base,
+      quote,
+      oracleAdapter,
+      p,
+    );
+  }
+
   async function createEventStream() {
     startTime = await now();
+
+    const { t0, t1, t2, t3 } = await getNextMaturities();
 
     const events = [
       {
@@ -145,13 +192,15 @@ describe('#eventStream', () => {
         },
       },
       {
-        timestamp: startTime + 2 * ONE_DAY,
+        timestamp: null,
         spotPrice: 1000,
         config: {
           discriminator: 'buy',
           strike: 1000,
-          maturity: 130000,
+          maturity: t0,
           size: 1.2,
+          caller: buyer1,
+          receiver: buyer1,
         },
       },
     ];
@@ -209,7 +258,8 @@ describe('#eventStream', () => {
     console.log('Depositing assets.');
     await vault
       .connect(args.caller)
-      .deposit(args.assetAmount, args.receiver.address);
+      .deposit(assetAmount, args.receiver.address);
+    console.log('Deposited assets.');
   }
 
   async function makeMint(
@@ -245,15 +295,41 @@ describe('#eventStream', () => {
     vault: UnderwriterVaultMock,
   ) {
     const strike = parseEther(args.strike.toString());
-    const quote = await vault.quote(strike, args.maturity, args.size);
+    const size = parseEther(args.size.toString());
+    console.log('Get quote');
+    console.log(strike, size, args.maturity);
+
+    const quote = await vault.quote(
+      strike,
+      BigNumber.from(args.maturity),
+      size,
+    );
+    console.log(quote);
+    console.log('Increase allowance.');
     await asset
       .connect(args.caller)
-      .increaseAllowance(vault.address, parseEther(quote.toString()));
+      .increaseAllowance(vault.address, parseUnits(quote.toString(), 18));
+    console.log('Buy from vault.');
     await vault.connect(args.caller).buy(strike, args.maturity, args.size);
   }
 
   async function getNextMaturities() {
-    const currentTime = await now();
+    const diffs = [7, 14, 21, 28];
+
+    let arr = [];
+    let nextFriday: any;
+    let unixTime: number;
+
+    for (let diff of diffs) {
+      const t = new Date().getDate() + (6 - new Date().getDay() - 1) + diff;
+      nextFriday = new Date();
+      nextFriday.setDate(t);
+      nextFriday.setHours(8, 0, 0, 0);
+      unixTime = Math.floor(nextFriday.getTime() / 1000);
+      arr.push(unixTime);
+    }
+
+    return { t0: arr[0], t1: arr[1], t2: arr[2], t3: arr[3] };
   }
 
   async function createSigners(base: ERC20Mock) {
@@ -305,13 +381,11 @@ describe('#eventStream', () => {
 
     for (const event of events) {
       if (instanceOfEvent(event)) {
-        await increaseTo(event.timestamp);
+        if (typeof event.timestamp == 'number')
+          await increaseTo(event.timestamp);
         await oracleAdapter.mock.quote.returns(
           parseUnits(event.spotPrice.toString(), 18),
         );
-        await oracleAdapter.mock.quoteFrom
-          .withArgs(base.address, quote.address, event.timestamp)
-          .returns(parseUnits(event.spotPrice.toString(), 18));
 
         if (instanceOfDeposit(event.config)) {
           await makeDeposit(event.config, asset, vault);
@@ -331,8 +405,10 @@ describe('#eventStream', () => {
   }
 
   it('test event stream', async () => {
+    await getNextMaturities();
     console.log('Set up vault.');
-    const { callVault, base, quote, oracleAdapter } = await vaultSetup();
+    const { callVault, deployer, base, quote, oracleAdapter, p } =
+      await vaultSetup();
     console.log('Create signers.');
     let asset: ERC20Mock;
     if (await callVault.isCall()) {
@@ -341,9 +417,12 @@ describe('#eventStream', () => {
       asset = quote;
     }
     await createSigners(asset);
+    console.log('Set spot price maturities.');
+    await setSpotPriceMaturities(base, quote, oracleAdapter);
+    console.log('Create pools.');
+    await createPools(deployer, base, quote, oracleAdapter, p);
     console.log('Create event stream.');
     const { events } = await createEventStream();
-    console.log(events);
     console.log('Process events.');
     await processEvents(callVault, asset, oracleAdapter, events);
   });
