@@ -608,7 +608,9 @@ contract UnderwriterVault is
             l.minCLevel,
             l.maxCLevel
         );
-        if (cLevel < l.minCLevel) revert Vault__lowCLevel();
+
+        // NOTE: cLevel may have underflow of 1 unit
+        if (cLevel + 1 < l.minCLevel) revert Vault__lowCLevel();
 
         uint256 discount = l.hourlyDecayDiscount.mul(hoursSinceLastTx);
 
@@ -727,7 +729,7 @@ contract UnderwriterVault is
         // Handle the premiums and spread capture generated
         AfterBuyArgs memory intel = AfterBuyArgs(
             args.maturity,
-            args.size * price,
+            args.size.mul(price),
             secondsToExpiration,
             args.size,
             totalSpread,

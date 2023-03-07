@@ -33,7 +33,7 @@ export let lp: SignerWithAddress;
 export let trader: SignerWithAddress;
 
 export let vaultImpl: UnderwriterVaultMock;
-export let vaultProxy: UnderwriterVaultProxy;
+export let callVaultProxy: UnderwriterVaultProxy;
 export let putVaultProxy: UnderwriterVaultProxy;
 export let callVault: UnderwriterVaultMock;
 export let putVault: UnderwriterVaultMock;
@@ -42,7 +42,6 @@ export let putVault: UnderwriterVaultMock;
 export let p: PoolUtil;
 export let maturity: number;
 export let strike: BigNumber;
-export let isCall: boolean;
 export let poolKey: PoolKey;
 
 interface Clevel {
@@ -78,8 +77,12 @@ export async function addDeposit(
   quote: ERC20Mock,
   receiver: SignerWithAddress = caller,
 ) {
-  const assetAmount = parseEther(amount.toString());
-  if (await vault.isCall()) {
+  const isCall = await vault.isCall();
+  const assetAmount = isCall
+    ? parseEther(amount.toString())
+    : parseUnits(amount.toString(), 6);
+
+  if (isCall) {
     await base.connect(caller).approve(vault.address, assetAmount);
   } else {
     await quote.connect(caller).approve(vault.address, assetAmount);
@@ -190,7 +193,6 @@ export async function vaultSetup() {
 
   strike = parseEther('1500'); // ATM
   maturity = await getValidMaturity(2, 'weeks');
-  isCall = true;
 
   p = await PoolUtil.deploy(
     deployer, // signer
@@ -202,7 +204,7 @@ export async function vaultSetup() {
     true, // isDevMode
   );
 
-  const { poolAddress, poolKey } = await createPool(
+  const [callPool, callPoolAddress, callPoolKey] = await createPool(
     strike,
     maturity,
     true,
@@ -213,10 +215,24 @@ export async function vaultSetup() {
     p,
   );
 
-  const factoryAddress = p.poolFactory.address;
+  if (log)
+    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${callPoolAddress}`);
+
+  const [putPool, putPoolAddress, putPoolKey] = await createPool(
+    strike,
+    maturity,
+    false,
+    deployer,
+    base,
+    quote,
+    oracleAdapter,
+    p,
+  );
 
   if (log)
-    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${poolAddress}`);
+    console.log(`WETH/USDC 1500 Put (ATM) exp. 2 weeks : ${putPoolAddress}`);
+
+  const factoryAddress = p.poolFactory.address;
 
   //=====================================================================================
   // Mock Vault setup
@@ -245,7 +261,7 @@ export async function vaultSetup() {
 
   const lastTimeStamp = Math.floor(new Date().getTime() / 1000);
   // Vault Proxy setup
-  vaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
+  callVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
     vaultImpl.address,
     base.address,
     quote.address,
@@ -257,12 +273,12 @@ export async function vaultSetup() {
     _tradeBounds,
     lastTimeStamp,
   );
-  await vaultProxy.deployed();
+  await callVaultProxy.deployed();
   callVault = UnderwriterVaultMock__factory.connect(
-    vaultProxy.address,
+    callVaultProxy.address,
     deployer,
   );
-  if (log) console.log(`UnderwriterVaultProxy : ${vaultProxy.address}`);
+  if (log) console.log(`UnderwriterCallVaultProxy : ${callVaultProxy.address}`);
 
   putVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
     vaultImpl.address,
@@ -281,7 +297,7 @@ export async function vaultSetup() {
     putVaultProxy.address,
     deployer,
   );
-  if (log) console.log(`UnderwriterVaultProxy : ${putVaultProxy.address}`);
+  if (log) console.log(`UnderwriterPutVaultProxy : ${putVaultProxy.address}`);
 
   return {
     deployer,
@@ -298,11 +314,12 @@ export async function vaultSetup() {
     oracleAdapter,
     lastTimeStamp,
     p,
+    callPool,
+    putPool,
     factoryAddress,
-    poolAddress,
-    poolKey,
+    callPoolKey,
+    putPoolKey,
     maturity,
-    isCall,
   };
 }
 
@@ -315,7 +332,7 @@ export async function createPool(
   quote: ERC20Mock,
   oracleAdapter: MockContract,
   p: PoolUtil,
-) {
+): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
   let pool: IPoolMock;
 
   poolKey = {
@@ -333,6 +350,6 @@ export async function createPool(
 
   const r = await tx.wait(1);
   const poolAddress = (r as any).events[0].args.poolAddress;
-  pool = await IPoolMock__factory.connect(poolAddress, deployer);
-  return { pool, poolAddress, poolKey };
+  pool = IPoolMock__factory.connect(poolAddress, deployer);
+  return [pool, poolAddress, poolKey];
 }
