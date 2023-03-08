@@ -162,4 +162,16 @@ interface IPoolCore is IPoolInternal {
         external
         view
         returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
+
+    /// @notice Transfer a LP position to a new owner/operator
+    /// @param srcP The position key
+    /// @param newOwner The new owner
+    /// @param newOperator The new operator
+    /// @param size The size to transfer
+    function transferPosition(
+        Position.Key memory srcP,
+        address newOwner,
+        address newOperator,
+        uint256 size
+    ) external;
 }
