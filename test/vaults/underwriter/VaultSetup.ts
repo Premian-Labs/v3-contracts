@@ -78,15 +78,12 @@ export async function addDeposit(
   receiver: SignerWithAddress = caller,
 ) {
   const isCall = await vault.isCall();
+  const token = isCall ? base : quote;
   const assetAmount = isCall
     ? parseEther(amount.toString())
     : parseUnits(amount.toString(), 6);
 
-  if (isCall) {
-    await base.connect(caller).approve(vault.address, assetAmount);
-  } else {
-    await quote.connect(caller).approve(vault.address, assetAmount);
-  }
+  await token.connect(caller).approve(vault.address, assetAmount);
   await vault.connect(caller).deposit(assetAmount, receiver.address);
 }
 
