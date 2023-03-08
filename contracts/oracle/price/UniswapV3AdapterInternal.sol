@@ -13,8 +13,6 @@ import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 import {SafeCast, TokenSorting, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
-import "hardhat/console.sol";
-
 /// @notice derived from https://github.com/Mean-Finance/oracles and
 ///         https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3AdapterInternal is
@@ -238,16 +236,18 @@ contract UniswapV3AdapterInternal is
         }
     }
 
-    function _increaseCardinality(
+    function _tryIncreaseCardinality(
         address pool,
         uint16 targetCardinality,
         uint104 gasCostPerCardinality,
         uint112 gasCostToSupportPool
-    ) internal {
+    ) internal returns (bool, bool) {
         (
             bool increaseCardinality,
             uint16 currentCardinality
         ) = _increaseCardinality(pool, targetCardinality);
+
+        bool gasCostExceedsGasLeft = true;
 
         if (increaseCardinality) {
             uint112 gasCostToIncreaseAndAddSupport = uint112(
@@ -257,11 +257,14 @@ contract UniswapV3AdapterInternal is
                 gasCostToSupportPool;
 
             if (gasCostToIncreaseAndAddSupport <= gasleft()) {
+                gasCostExceedsGasLeft = false;
                 IUniswapV3Pool(pool).increaseObservationCardinalityNext(
                     targetCardinality
                 );
             }
         }
+
+        return (increaseCardinality, gasCostExceedsGasLeft);
     }
 
     function _increaseCardinality(

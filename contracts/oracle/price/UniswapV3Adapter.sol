@@ -60,12 +60,20 @@ contract UniswapV3Adapter is
         for (uint256 i; i < pools.length; i++) {
             address pool = pools[i];
 
-            _increaseCardinality(
-                pool,
-                targetCardinality,
-                _gasPerCardinality,
-                _gasCostToSupportPool
-            );
+            (
+                bool increaseCardinality,
+                bool gasCostExceedsGasLeft
+            ) = _tryIncreaseCardinality(
+                    pool,
+                    targetCardinality,
+                    _gasPerCardinality,
+                    _gasCostToSupportPool
+                );
+
+            if (increaseCardinality && gasCostExceedsGasLeft) {
+                // If the cardinality cannot be increased due to gas cost, then break
+                break;
+            }
 
             if (preparedPoolCount < cachedPoolsLength) {
                 // Rewrite storage

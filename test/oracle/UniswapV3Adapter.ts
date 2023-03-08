@@ -3,6 +3,7 @@ import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
+  IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
   UniswapV3Adapter,
   UniswapV3Adapter__factory,
@@ -146,6 +147,46 @@ describe('UniswapV3Adapter', () => {
       expect(
         await instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
       );
+    });
+
+    it('should not insert pool if the cardinality is not at target', async () => {
+      const pool500 = await IUniswapV3Factory__factory.connect(
+        UNISWAP_V3_FACTORY,
+        deployer,
+      ).getPool(tokens.WBTC.address, tokens.USDT.address, 500);
+
+      // most liquid pool
+      const pool3000 = await IUniswapV3Factory__factory.connect(
+        UNISWAP_V3_FACTORY,
+        deployer,
+      ).getPool(tokens.WBTC.address, tokens.USDT.address, 3000);
+
+      // least liquid pool
+      const pool10000 = await IUniswapV3Factory__factory.connect(
+        UNISWAP_V3_FACTORY,
+        deployer,
+      ).getPool(tokens.WBTC.address, tokens.USDT.address, 10000);
+
+      await instance.setGasPerCardinality(50000);
+      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
+
+      expect(
+        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
+      ).to.be.deep.eq([pool3000]);
+
+      await instance.setGasPerCardinality(22500);
+      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
+
+      expect(
+        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
+      ).to.be.deep.eq([pool3000, pool500]);
+
+      await instance.setGasPerCardinality(1);
+      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
+
+      expect(
+        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
+      ).to.be.deep.eq([pool3000, pool500, pool10000]);
     });
   });
 
