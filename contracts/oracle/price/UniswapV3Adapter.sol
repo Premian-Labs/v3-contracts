@@ -112,7 +112,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function UNISWAP_V3_ORACLE() external view returns (IUniswapV3Factory) {
+    function factory() external view returns (IUniswapV3Factory) {
         return UNISWAP_V3_FACTORY;
     }
 
@@ -149,41 +149,41 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function setCardinalityPerMinute(
-        uint8 cardinalityPerMinute
+        uint8 _cardinalityPerMinute
     ) external onlyOwner {
-        if (cardinalityPerMinute == 0)
+        if (_cardinalityPerMinute == 0)
             revert UniswapV3Adapter__InvalidCardinalityPerMinute();
 
         UniswapV3AdapterStorage
             .layout()
-            .cardinalityPerMinute = cardinalityPerMinute;
+            .cardinalityPerMinute = _cardinalityPerMinute;
 
-        emit CardinalityPerMinuteChanged(cardinalityPerMinute);
+        emit CardinalityPerMinuteChanged(_cardinalityPerMinute);
     }
 
     /// @inheritdoc IUniswapV3Adapter
     function setGasPerCardinality(
-        uint104 gasPerCardinality
+        uint104 _gasPerCardinality
     ) external onlyOwner {
-        if (gasPerCardinality == 0)
+        if (_gasPerCardinality == 0)
             revert UniswapV3Adapter__InvalidGasPerCardinality();
 
-        UniswapV3AdapterStorage.layout().gasPerCardinality = gasPerCardinality;
-        emit GasPerCardinalityChanged(gasPerCardinality);
+        UniswapV3AdapterStorage.layout().gasPerCardinality = _gasPerCardinality;
+        emit GasPerCardinalityChanged(_gasPerCardinality);
     }
 
     /// @inheritdoc IUniswapV3Adapter
     function setGasCostToSupportPool(
-        uint112 gasCostToSupportPool
+        uint112 _gasCostToSupportPool
     ) external onlyOwner {
-        if (gasCostToSupportPool == 0)
+        if (_gasCostToSupportPool == 0)
             revert UniswapV3Adapter__InvalidGasCostToSupportPool();
 
         UniswapV3AdapterStorage
             .layout()
-            .gasCostToSupportPool = gasCostToSupportPool;
+            .gasCostToSupportPool = _gasCostToSupportPool;
 
-        emit GasCostToSupportPoolChanged(gasCostToSupportPool);
+        emit GasCostToSupportPoolChanged(_gasCostToSupportPool);
     }
 
     /// @inheritdoc IUniswapV3Adapter

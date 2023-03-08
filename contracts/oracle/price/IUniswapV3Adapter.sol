@@ -9,10 +9,10 @@ import {IOracleAdapter} from "./IOracleAdapter.sol";
 /// @notice derived from https://github.com/Mean-Finance/oracles and
 ///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3Adapter is IOracleAdapter {
-    /// @notice Returns the address of the Uniswap oracle
-    /// @dev Cannot be modified
-    /// @return The address of the Uniswap oracle
-    function UNISWAP_V3_ORACLE() external view returns (IUniswapV3Factory);
+    /// @notice Returns the address of the Uniswap V3 factory
+    /// @dev This value is assigned during deployment and cannot be changed
+    /// @return The address of the Uniswap V3 factory
+    function factory() external view returns (IUniswapV3Factory);
 
     /// @notice Returns the period used for the TWAP calculation
     /// @return The period used for the TWAP
