@@ -362,15 +362,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getFactoryAddress(strike, maturity);
     }
 
-    function isValidListing(
+    function ensureSupportedListing(
         uint256 spotPrice,
         uint256 strike,
-        uint256 maturity,
         uint256 tau,
         uint256 sigma,
         uint256 rfRate
-    ) external view returns (address) {
-        return _isValidListing(spotPrice, strike, maturity, tau, sigma, rfRate);
+    ) external {
+        _ensureSupportedListing(spotPrice, strike, tau, sigma, rfRate);
     }
 
     function afterBuy(

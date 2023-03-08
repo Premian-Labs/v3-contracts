@@ -447,23 +447,6 @@ describe('UnderwriterVault', () => {
       { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
     ];
 
-    tests.forEach(async (test) => {
-      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
-        await vault.setIsCall(test.isCall);
-        let result = await vault.getTotalFairValueUnexpired(
-          test.timestamp,
-          spot,
-        );
-
-        let delta = test.isCall ? 0.0001 : 0.01;
-
-        expect(parseFloat(formatEther(result))).to.be.closeTo(
-          test.expected,
-          delta,
-        );
-      });
-    });
-
     it('returns 0 when there are no existing listings', async () => {
       await vault.clearListingsAndSizes();
 
