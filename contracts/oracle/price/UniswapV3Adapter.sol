@@ -49,8 +49,8 @@ contract UniswapV3Adapter is
         uint256 cachedPoolsLength = cachedPools.length;
         uint256 preparedPoolCount;
 
-        uint104 gasCostPerCardinality = l.gasPerCardinality;
-        uint112 gasCostToSupportPool = l.gasCostToSupportPool;
+        uint104 _gasPerCardinality = l.gasPerCardinality;
+        uint112 _gasCostToSupportPool = l.gasCostToSupportPool;
 
         uint16 targetCardinality = uint16(
             (l.period * l.cardinalityPerMinute) / 60
@@ -62,8 +62,8 @@ contract UniswapV3Adapter is
             _increaseCardinality(
                 pool,
                 targetCardinality,
-                gasCostPerCardinality,
-                gasCostToSupportPool
+                _gasPerCardinality,
+                _gasCostToSupportPool
             );
 
             if (preparedPoolCount < cachedPoolsLength) {
