@@ -1086,9 +1086,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         srcP.strike = l.strike;
         srcP.isCall = l.isCallPool;
 
-        Position.Key memory dstP = srcP;
-        dstP.owner = newOwner;
-        dstP.operator = newOwner;
+        Position.Key memory dstP = Position.Key({
+            owner: newOwner,
+            operator: newOperator,
+            lower: srcP.lower,
+            upper: srcP.upper,
+            orderType: srcP.orderType,
+            strike: srcP.strike,
+            isCall: srcP.isCall
+        });
 
         bytes32 srcKey = srcP.keyHash();
 
