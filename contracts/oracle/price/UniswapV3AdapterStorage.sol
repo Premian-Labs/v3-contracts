@@ -13,7 +13,7 @@ library UniswapV3AdapterStorage {
         uint32 period;
         uint104 gasPerCardinality;
         uint112 gasCostToSupportPool;
-        uint24[] knownFeeTiers;
+        uint24[] feeTiers;
         mapping(bytes32 => address[]) poolsForPair;
     }
 

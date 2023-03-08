@@ -22,9 +22,9 @@ contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
         l.gasPerCardinality = 22_250;
         l.gasCostToSupportPool = 30_000;
 
-        l.knownFeeTiers.push(500);
-        l.knownFeeTiers.push(3_000);
-        l.knownFeeTiers.push(10_000);
+        l.feeTiers.push(500);
+        l.feeTiers.push(3_000);
+        l.feeTiers.push(10_000);
 
         _setSupportsInterface(type(IERC165).interfaceId, true);
         _setSupportsInterface(type(Multicall).interfaceId, true);

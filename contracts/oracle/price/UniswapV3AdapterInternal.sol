@@ -206,15 +206,15 @@ contract UniswapV3AdapterInternal is
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        uint24[] memory knownFeeTiers = l.knownFeeTiers;
+        uint24[] memory feeTiers = l.feeTiers;
 
-        pools = new address[](knownFeeTiers.length);
+        pools = new address[](feeTiers.length);
         uint256 validPools;
 
-        for (uint256 i; i < knownFeeTiers.length; i++) {
+        for (uint256 i; i < feeTiers.length; i++) {
             address pool = _computeAddress(
                 address(UNISWAP_V3_FACTORY),
-                PoolAddress.getPoolKey(tokenA, tokenB, knownFeeTiers[i])
+                PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
             );
 
             if (AddressUtils.isContract(pool)) {

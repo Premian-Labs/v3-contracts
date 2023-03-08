@@ -128,7 +128,7 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function supportedFeeTiers() external view returns (uint24[] memory) {
-        return UniswapV3AdapterStorage.layout().knownFeeTiers;
+        return UniswapV3AdapterStorage.layout().feeTiers;
     }
 
     /// @inheritdoc IUniswapV3Adapter
@@ -181,17 +181,14 @@ contract UniswapV3Adapter is
         if (UNISWAP_V3_FACTORY.feeAmountTickSpacing(feeTier) == 0)
             revert UniswapV3Adapter__InvalidFeeTier(feeTier);
 
-        UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
-            .layout();
+        uint24[] storage feeTiers = UniswapV3AdapterStorage.layout().feeTiers;
+        uint256 feeTiersLength = feeTiers.length;
 
-        uint24[] storage knownFeeTiers = l.knownFeeTiers;
-        uint256 knownFeeTiersLength = knownFeeTiers.length;
-
-        for (uint256 i; i < knownFeeTiersLength; i++) {
-            if (knownFeeTiers[i] == feeTier)
+        for (uint256 i; i < feeTiersLength; i++) {
+            if (feeTiers[i] == feeTier)
                 revert UniswapV3Adapter__FeeTierExists(feeTier);
         }
 
-        knownFeeTiers.push(feeTier);
+        feeTiers.push(feeTier);
     }
 }
