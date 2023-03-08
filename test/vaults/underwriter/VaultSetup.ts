@@ -317,6 +317,9 @@ export async function vaultSetup() {
     callPoolKey,
     putPoolKey,
     maturity,
+    strike,
+    callPoolAddress,
+    putPoolAddress,
   };
 }
 

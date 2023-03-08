@@ -508,14 +508,13 @@ contract UnderwriterVault is
         }
     }
 
-    function _isValidListing(
+    function _ensureSupportedListing(
         uint256 spotPrice,
         uint256 strike,
-        uint256 maturity,
         uint256 tau,
         uint256 sigma,
         uint256 rfRate
-    ) internal view returns (address) {
+    ) internal view {
         uint256 dte = tau.mul(365e18);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -531,11 +530,6 @@ contract UnderwriterVault is
 
         if (delta < l.minDelta || delta > l.maxDelta)
             revert Vault__DeltaBounds();
-
-        // NOTE: query returns address(0) if no listing exists
-        address listingAddr = _getFactoryAddress(strike, maturity);
-
-        return listingAddr;
     }
 
     function _afterBuy(AfterBuyArgs memory a) internal {
@@ -665,14 +659,9 @@ contract UnderwriterVault is
 
         uint256 rfRate = IVolatilityOracle(IV_ORACLE_ADDR).getRiskFreeRate();
 
-        address poolAddr = _isValidListing(
-            spotPrice,
-            args.strike,
-            args.maturity,
-            tau,
-            sigma,
-            rfRate
-        );
+        _ensureSupportedListing(spotPrice, args.strike, tau, sigma, rfRate);
+
+        address poolAddr = _getFactoryAddress(args.strike, args.maturity);
 
         // returns USD price for calls & puts
         uint256 price = OptionMath.blackScholesPrice(
