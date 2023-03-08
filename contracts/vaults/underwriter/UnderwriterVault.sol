@@ -718,6 +718,13 @@ contract UnderwriterVault is
         uint256 totalSpread = (cLevel - l.minCLevel).mul(price).mul(args.size) +
             mintingFee;
 
+        // Collect option premium from buyer
+        IERC20(_asset()).safeTransferFrom(
+            msg.sender,
+            address(this),
+            price + mintingFee
+        );
+
         // Approve transfer of base / quote token
         IERC20(_asset()).approve(poolAddr, args.size + mintingFee);
 
