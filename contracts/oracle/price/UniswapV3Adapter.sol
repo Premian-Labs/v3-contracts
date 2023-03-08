@@ -34,6 +34,7 @@ contract UniswapV3Adapter is
         hasPath = _getAllPoolsForPair(tokenA, tokenB).length > 0;
     }
 
+    /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
         address[] memory pools = _getPoolsSortedByLiquidity(tokenA, tokenB);
 
@@ -94,6 +95,7 @@ contract UniswapV3Adapter is
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
+    /// @inheritdoc IOracleAdapter
     function quoteFrom(
         address tokenIn,
         address tokenOut,
