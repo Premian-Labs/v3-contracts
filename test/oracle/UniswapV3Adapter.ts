@@ -27,7 +27,7 @@ import { bnToAddress } from '@solidstate/library';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16600000; // Fri Feb 10 2023 17:59:11 GMT+0000
+const blockNumber = 16597500; // Fri Feb 10 2023 09:35:59 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 const period = 600;
@@ -41,6 +41,7 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
     {tokenIn: tokens.WETH, tokenOut: tokens.WBTC}, 
     {tokenIn: tokens.WBTC, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.WBTC, tokenOut: tokens.USDC}, 
+    {tokenIn: tokens.WBTC, tokenOut: tokens.USDT}, 
     {tokenIn: tokens.WETH, tokenOut: tokens.USDC}, 
     {tokenIn: tokens.USDC, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.WETH, tokenOut: tokens.DAI}, 
@@ -54,6 +55,8 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
     {tokenIn: tokens.UNI, tokenOut: tokens.USDT}, 
     {tokenIn: tokens.LINK, tokenOut: tokens.UNI}, 
     {tokenIn: tokens.MATIC, tokenOut: tokens.WETH}, 
+    {tokenIn: tokens.MATIC, tokenOut: tokens.USDC}, 
+    {tokenIn: tokens.DAI, tokenOut: tokens.USDT}, 
   ]
 }
 

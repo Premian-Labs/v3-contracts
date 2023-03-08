@@ -29,7 +29,7 @@ import { bnToAddress } from '@solidstate/library';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16600000; // Fri Feb 10 2023 17:59:11 GMT+0000
+const blockNumber = 16597500; // Fri Feb 10 2023 09:35:59 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 enum PricingPath {
@@ -725,9 +725,7 @@ describe('ChainlinkAdapter', () => {
                 18,
               );
 
-              // although the adapter will attempt to return the price closest to the target
-              // the time of the update will likely be before or after the target.
-              validateQuote(4, quoteFrom, expected);
+              validateQuote(3, quoteFrom, expected);
             });
           });
         });
