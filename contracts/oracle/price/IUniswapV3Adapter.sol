@@ -2,42 +2,25 @@
 
 pragma solidity ^0.8.0;
 
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles and
 ///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3Adapter is IOracleAdapter {
-    // TODO: Add or remove support for getters
-    // /// @notice Returns the address of the Uniswap oracle
-    // /// @dev Cannot be modified
-    // /// @return The address of the Uniswap oracle
-    // function UNISWAP_V3_ORACLE() external view returns (IStaticOracle);
+    /// @notice Returns the address of the Uniswap oracle
+    /// @dev Cannot be modified
+    /// @return The address of the Uniswap oracle
+    function UNISWAP_V3_ORACLE() external view returns (IUniswapV3Factory);
 
-    // /// @notice Returns the maximum possible period
-    // /// @dev Cannot be modified
-    // /// @return The maximum possible period
-    // function MAX_PERIOD() external view returns (uint32);
+    /// @notice Returns the period used for the TWAP calculation
+    /// @return The period used for the TWAP
+    function period() external view returns (uint32);
 
-    // /// @notice Returns the minimum possible period
-    // /// @dev Cannot be modified
-    // /// @return The minimum possible period
-    // function MIN_PERIOD() external view returns (uint32);
-
-    // /// @notice Returns the period used for the TWAP calculation
-    // /// @return The period used for the TWAP
-    // function period() external view returns (uint32);
-
-    // /// @notice Returns the cardinality per minute used for adding support to pairs
-    // /// @return The cardinality per minute used for increase cardinality calculations
-    // function cardinalityPerMinute() external view returns (uint8);
-
-    // /// @notice Returns the approximate gas cost per each increased cardinality
-    // /// @return The gas cost per cardinality increase
-    // function gasPerCardinality() external view returns (uint104);
-
-    // /// @notice Returns the approximate gas cost to add support for a new pool internally
-    // /// @return The gas cost to support a new pool
-    // function gasCostToSupportPool() external view returns (uint112);
+    /// @notice Returns the cardinality per minute used for adding support to pairs
+    /// @return The cardinality per minute used for increase cardinality calculations
+    function cardinalityPerMinute() external view returns (uint8);
 
     /// @notice Returns all supported fee tiers
     /// @return The supported fee tiers

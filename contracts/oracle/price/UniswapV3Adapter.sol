@@ -111,8 +111,22 @@ contract UniswapV3Adapter is
         return _poolsForPair(tokenA, tokenB);
     }
 
-    // TODO: Natspec
-    // /// @inheritdoc IUniswapV3Adapter
+    /// @inheritdoc IUniswapV3Adapter
+    function UNISWAP_V3_ORACLE() external view returns (IUniswapV3Factory) {
+        return UNISWAP_V3_FACTORY;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
+    function period() external view returns (uint32) {
+        return UniswapV3AdapterStorage.layout().period;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
+    function cardinalityPerMinute() external view returns (uint8) {
+        return UniswapV3AdapterStorage.layout().cardinalityPerMinute;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
     function supportedFeeTiers() external view returns (uint24[] memory) {
         return UniswapV3AdapterStorage.layout().knownFeeTiers;
     }
