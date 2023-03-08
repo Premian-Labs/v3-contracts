@@ -18,6 +18,7 @@ import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 
 import { tokens } from '../../utils/addresses';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
 
 const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
@@ -1427,6 +1428,16 @@ describe('Pool', () => {
         OrderType.LC,
       );
 
+      expect(
+        formatTokenId({
+          version: BigNumber.from(1),
+          operator,
+          lower: parseEther('0.001'),
+          upper: parseEther('1'),
+          orderType: OrderType.LC,
+        }),
+      ).to.eq(tokenId);
+
       console.log(tokenId.toHexString());
 
       expect(tokenId.mask(10)).to.eq(1);
@@ -1441,11 +1452,19 @@ describe('Pool', () => {
     it('should properly parse token id', async () => {
       const { callPool } = await loadFixture(deploy);
 
-      const r = await callPool.parseTokenId(
-        BigNumber.from(
-          '0x10000000000000000021000000000000000000000000000000000000001fa001',
-        ),
+      const tokenId = BigNumber.from(
+        '0x10000000000000000021000000000000000000000000000000000000001fa001',
       );
+
+      const r = await callPool.parseTokenId(tokenId);
+
+      const parsed = parseTokenId(tokenId);
+
+      expect(r.lower).to.eq(parsed.lower);
+      expect(r.upper).to.eq(parsed.upper);
+      expect(r.operator).to.eq(parsed.operator);
+      expect(r.orderType).to.eq(parsed.orderType);
+      expect(r.version).to.eq(parsed.version);
 
       expect(r.lower).to.eq(parseEther('0.001'));
       expect(r.upper).to.eq(parseEther('1'));

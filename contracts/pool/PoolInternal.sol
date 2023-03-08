@@ -25,6 +25,8 @@ import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
+import "hardhat/console.sol";
+
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
@@ -1108,7 +1110,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 srcP.orderType
             );
 
+        {
+            (
+                uint8 version,
+                address positionOperator,
+                uint256 lower,
+                uint256 upper,
+                Position.OrderType orderType
+            ) = PoolStorage.parseTokenId(srcTokenId);
+
+            console.log(version, lower, upper);
+        }
+
         uint256 srcSize = _balanceOf(srcP.owner, srcTokenId);
+        console.log(srcTokenId, srcSize, size);
         if (size > srcSize) revert Pool__NotEnoughTokens();
 
         uint256 proportionTransferred = size.div(srcSize);
