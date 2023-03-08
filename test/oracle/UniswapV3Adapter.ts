@@ -27,7 +27,7 @@ import { bnToAddress } from '@solidstate/library';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16598000; // Fri Feb 10 2023 09:35:59 GMT+0000
+const blockNumber = 16600000; // Fri Feb 10 2023 17:59:11 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 let pools: { tokenIn: Token; tokenOut: Token }[];
@@ -42,10 +42,15 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
     {tokenIn: tokens.USDC, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.WETH, tokenOut: tokens.DAI}, 
     {tokenIn: tokens.MKR, tokenOut: tokens.USDC}, 
-    {tokenIn: tokens.UNI, tokenOut: tokens.AAVE}, 
     {tokenIn: tokens.BOND, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.USDT, tokenOut: tokens.USDC}, 
     {tokenIn: tokens.DAI, tokenOut: tokens.USDC}, 
+    {tokenIn: tokens.FXS, tokenOut: tokens.FRAX}, 
+    {tokenIn: tokens.FRAX, tokenOut: tokens.FXS}, 
+    {tokenIn: tokens.FRAX, tokenOut: tokens.USDT}, 
+    {tokenIn: tokens.UNI, tokenOut: tokens.USDT}, 
+    {tokenIn: tokens.LINK, tokenOut: tokens.UNI}, 
+    {tokenIn: tokens.MATIC, tokenOut: tokens.WETH}, 
   ]
 }
 
@@ -215,8 +220,59 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
+  describe('#quoteFrom', () => {
+    beforeEach(async () => {
+      await setBlockNumber(jsonRpcUrl, 16597040);
+
+      [deployer] = await ethers.getSigners();
+
+      const implementation = await new UniswapV3Adapter__factory(
+        deployer,
+      ).deploy(UNISWAP_V3_FACTORY);
+
+      await implementation.deployed();
+
+      const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+        implementation.address,
+      );
+
+      await proxy.deployed();
+
+      instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
+
+      await instance.setPeriod(600);
+      await instance.setCardinalityPerMinute(4);
+    });
+
+    after(async () => {
+      await setBlockNumber(jsonRpcUrl, blockNumber);
+    });
+
+    it('should revert if the oldest observation is less the TWAP period', async () => {
+      await instance.upsertPair(tokens.UNI.address, tokens.AAVE.address);
+
+      await expect(
+        instance.quoteFrom(tokens.UNI.address, tokens.AAVE.address, target),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InsufficientObservationPeriod',
+      );
+
+      // oldest observation is ~490 seconds
+      // fast-forward so that the oldest observation is >= 600 seconds
+      await increase(120);
+
+      expect(
+        await instance.quoteFrom(
+          tokens.UNI.address,
+          tokens.AAVE.address,
+          target,
+        ),
+      );
+    });
+  });
+
   // TODO:
-  describe.skip('#quoteFrom', () => {});
   describe.skip('#supportedFeeTiers', () => {});
   describe.skip('#poolsForPair', () => {});
   describe.skip('#setPeriod', () => {});
@@ -257,26 +313,6 @@ describe('UniswapV3Adapter', () => {
             _tokenOut.address,
           );
 
-          if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
-            networks.tokenIn = 'coingecko';
-            _tokenIn.address = 'ethereum';
-          }
-
-          if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
-            networks.tokenOut = 'coingecko';
-            _tokenOut.address = 'ethereum';
-          }
-
-          if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
-            networks.tokenIn = 'coingecko';
-            _tokenIn.address = 'bitcoin';
-          }
-
-          if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
-            networks.tokenOut = 'coingecko';
-            _tokenOut.address = 'bitcoin';
-          }
-
           const coingeckoPrice = await getPriceBetweenTokens(
             networks,
             _tokenIn,
@@ -292,7 +328,7 @@ describe('UniswapV3Adapter', () => {
         });
       });
 
-      describe.skip('#quoteFrom', async () => {
+      describe('#quoteFrom', async () => {
         it('should return quote for pair from target', async () => {
           let _tokenIn = Object.assign({}, tokenIn);
           let _tokenOut = Object.assign({}, tokenOut);
@@ -304,26 +340,6 @@ describe('UniswapV3Adapter', () => {
             _tokenOut.address,
             target,
           );
-
-          if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
-            networks.tokenIn = 'coingecko';
-            _tokenIn.address = 'ethereum';
-          }
-
-          if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
-            networks.tokenOut = 'coingecko';
-            _tokenOut.address = 'ethereum';
-          }
-
-          if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
-            networks.tokenIn = 'coingecko';
-            _tokenIn.address = 'bitcoin';
-          }
-
-          if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
-            networks.tokenOut = 'coingecko';
-            _tokenOut.address = 'bitcoin';
-          }
 
           const coingeckoPrice = await getPriceBetweenTokens(
             networks,
