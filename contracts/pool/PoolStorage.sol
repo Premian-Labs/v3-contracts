@@ -84,7 +84,11 @@ library PoolStorage {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
-            l.spot = IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote);
+            l.spot = IOracleAdapter(l.oracleAdapter).quoteFrom(
+                l.base,
+                l.quote,
+                l.maturity
+            );
         }
 
         return l.spot;

@@ -13,6 +13,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {IPool} from "../../../pool/IPool.sol";
 import {UD60x18} from "../../../libraries/prbMath/UD60x18.sol";
+import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
@@ -62,6 +63,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function getNumberOfListings() external view returns (uint256) {
+        return _getNumberOfListings();
+    }
+
+    function _getNumberOfListings() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -497,5 +502,35 @@ contract UnderwriterVaultMock is UnderwriterVault {
         }
         IERC20(_asset()).approve(listingAddr, allowance);
         IPool(listingAddr).writeFrom(address(this), msg.sender, size);
+    }
+
+    function getPoolAddresses() public view returns (address[] memory) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        uint256 maturity = l.minMaturity;
+        uint256 n = _getNumberOfListings();
+        address[] memory addresses = new address[](n);
+
+        while (maturity != 0) {
+            for (
+                uint256 i = 0;
+                i < l.maturityToStrikes[maturity].length();
+                i++
+            ) {
+                IPoolFactory.PoolKey memory _poolKey;
+                _poolKey.base = l.base;
+                _poolKey.quote = l.quote;
+                _poolKey.oracleAdapter = l.oracleAdapter;
+                _poolKey.strike = l.maturityToStrikes[maturity].at(i);
+                _poolKey.maturity = uint64(maturity);
+                _poolKey.isCallPool = l.isCall;
+                address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+                    _poolKey
+                );
+                addresses[i] = listingAddr;
+            }
+            maturity = l.maturities.next(maturity);
+        }
+        return addresses;
     }
 }

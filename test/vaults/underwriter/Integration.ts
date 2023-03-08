@@ -1,4 +1,8 @@
-import { ERC20Mock, UnderwriterVaultMock } from '../../../typechain';
+import {
+  ERC20Mock,
+  IPoolMock__factory,
+  UnderwriterVaultMock,
+} from '../../../typechain';
 import { BigNumber, Signer } from 'ethers';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
@@ -7,6 +11,7 @@ import {
   caller,
   receiver,
   createPool,
+  poolKey,
 } from './VaultSetup';
 import { setMaturities } from './UnderwriterVault';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -135,46 +140,6 @@ describe('#eventStream', () => {
   let depositor2: SignerWithAddress;
   let depositor3: SignerWithAddress;
 
-  async function setSpotPriceMaturities(
-    base: ERC20Mock,
-    quote: ERC20Mock,
-    oracleAdapter: MockContract,
-  ) {
-    const { t0, t1, t2, t3 } = await getNextMaturities();
-    await oracleAdapter.mock.quoteFrom
-      .withArgs(base.address, quote.address, t0)
-      .returns(parseEther('1000'));
-    await oracleAdapter.mock.quoteFrom
-      .withArgs(base.address, quote.address, t1)
-      .returns(parseEther('1200'));
-    await oracleAdapter.mock.quoteFrom
-      .withArgs(base.address, quote.address, t2)
-      .returns(parseEther('1500'));
-    await oracleAdapter.mock.quoteFrom
-      .withArgs(base.address, quote.address, t3)
-      .returns(parseEther('900'));
-  }
-
-  async function createPools(
-    deployer: SignerWithAddress,
-    base: ERC20Mock,
-    quote: ERC20Mock,
-    oracleAdapter: MockContract,
-    p: PoolUtil,
-  ) {
-    const { t0, t1, t2, t3 } = await getNextMaturities();
-    await createPool(
-      parseEther('1000'),
-      t0,
-      true,
-      deployer,
-      base,
-      quote,
-      oracleAdapter,
-      p,
-    );
-  }
-
   async function createEventStream() {
     startTime = await now();
 
@@ -203,8 +168,71 @@ describe('#eventStream', () => {
           receiver: buyer1,
         },
       },
+      {
+        timestamp: null,
+        spotPrice: 1000,
+        config: {
+          discriminator: 'mint',
+          assetAmount: 10,
+          caller: depositor2,
+          receiver: depositor2,
+        },
+      },
+      {
+        timestamp: t0,
+        spotPrice: null,
+        config: {
+          discriminator: 'settle',
+        },
+      },
     ];
     return { events };
+  }
+
+  async function setSpotPriceMaturities(
+    base: ERC20Mock,
+    quote: ERC20Mock,
+    oracleAdapter: MockContract,
+  ) {
+    const { t0, t1, t2, t3 } = await getNextMaturities();
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t0)
+      .returns(parseEther('1100'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t1)
+      .returns(parseEther('1200'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t2)
+      .returns(parseEther('1500'));
+    await oracleAdapter.mock.quoteFrom
+      .withArgs(base.address, quote.address, t3)
+      .returns(parseEther('900'));
+  }
+
+  async function createPools(
+    deployer: SignerWithAddress,
+    base: ERC20Mock,
+    quote: ERC20Mock,
+    oracleAdapter: MockContract,
+    p: PoolUtil,
+  ) {
+    const { t0, t1, t2, t3 } = await getNextMaturities();
+    let strikes: any = {};
+    strikes[t0] = [500, 700, 1000, 1300, 1500];
+    strikes[t1] = [500, 700, 1000, 1300, 1500];
+    strikes[t2] = [500, 700, 1000, 1300, 1500];
+    strikes[t3] = [500, 700, 1000, 1300, 1500];
+
+    await createPool(
+      parseEther('1000'),
+      t0,
+      true,
+      deployer,
+      base,
+      quote,
+      oracleAdapter,
+      p,
+    );
   }
 
   interface Deposit {
@@ -250,16 +278,14 @@ describe('#eventStream', () => {
     asset: ERC20Mock,
     vault: UnderwriterVaultMock,
   ) {
+    console.log('Make deposit.');
     const assetAmount = parseEther(args.assetAmount.toString());
-    console.log('Increasing allowance.');
     await asset
       .connect(args.caller)
       .increaseAllowance(vault.address, assetAmount);
-    console.log('Depositing assets.');
     await vault
       .connect(args.caller)
       .deposit(assetAmount, args.receiver.address);
-    console.log('Deposited assets.');
   }
 
   async function makeMint(
@@ -267,6 +293,7 @@ describe('#eventStream', () => {
     asset: ERC20Mock,
     vault: UnderwriterVaultMock,
   ) {
+    console.log('Make mint.');
     const shareAmount = parseEther(args.shareAmount.toString());
     const assetAmount = await vault.convertToAssets(shareAmount);
     await asset
@@ -276,6 +303,7 @@ describe('#eventStream', () => {
   }
 
   async function makeWithraw(args: Withdraw, vault: UnderwriterVaultMock) {
+    console.log('Make withdraw.');
     const assetAmount = parseEther(args.assetAmount.toString());
     await vault
       .connect(args.caller)
@@ -283,6 +311,7 @@ describe('#eventStream', () => {
   }
 
   async function makeRedeem(args: Redeem, vault: UnderwriterVaultMock) {
+    console.log('Make redeem.');
     const shareAmount = parseEther(args.shareAmount.toString());
     await vault
       .connect(args.caller)
@@ -294,23 +323,28 @@ describe('#eventStream', () => {
     asset: ERC20Mock,
     vault: UnderwriterVaultMock,
   ) {
+    console.log('Make buy.');
     const strike = parseEther(args.strike.toString());
     const size = parseEther(args.size.toString());
-    console.log('Get quote');
-    console.log(strike, size, args.maturity);
-
-    const quote = await vault.quote(
+    const [, price, mintingFee] = await vault.quote(
       strike,
       BigNumber.from(args.maturity),
       size,
     );
-    console.log(quote);
-    console.log('Increase allowance.');
+    const allowance =
+      parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
     await asset
       .connect(args.caller)
-      .increaseAllowance(vault.address, parseUnits(quote.toString(), 18));
-    console.log('Buy from vault.');
-    await vault.connect(args.caller).buy(strike, args.maturity, args.size);
+      .increaseAllowance(vault.address, parseEther(allowance.toString()));
+    await vault.connect(args.caller).buy(strike, args.maturity, size);
+  }
+
+  async function makeSettle(
+    vault: UnderwriterVaultMock,
+    deployer: SignerWithAddress,
+  ) {
+    console.log('Make settle.');
+    await vault.connect(deployer).settle();
   }
 
   async function getNextMaturities() {
@@ -335,6 +369,13 @@ describe('#eventStream', () => {
   async function createSigners(base: ERC20Mock) {
     [buyer1, buyer2, buyer3, depositor1, depositor2, depositor3] =
       await ethers.getSigners();
+  }
+
+  async function checkTotalAssetsLeakage(
+    vault: UnderwriterVaultMock,
+    deployer: SignerWithAddress,
+    asset: ERC20Mock,
+  ) {
     const signers = [
       buyer1,
       buyer2,
@@ -343,15 +384,37 @@ describe('#eventStream', () => {
       depositor2,
       depositor3,
     ];
-    console.log('Mint base asset.');
+    console.log('Check totalAssets for leakage.');
+
+    let totalAssets: number = 0;
     for (let signer of signers) {
-      await base.mint(signer.address, parseEther('100'));
+      let balanceAsset = parseFloat(
+        formatEther(await asset.balanceOf(signer.address)),
+      );
+      console.log('signer', signer.address, balanceAsset);
+      totalAssets += balanceAsset;
     }
+    const poolAddresses = await vault.getPoolAddresses();
+    for (let poolAddress of poolAddresses) {
+      //IPoolMock__factory.connect(poolAddress, deployer);
+      let balanceAsset = parseFloat(
+        formatEther(await asset.balanceOf(poolAddress)),
+      );
+      console.log('pool', poolAddress, balanceAsset);
+      totalAssets += balanceAsset;
+    }
+    let balanceAsset = parseFloat(
+      formatEther(await asset.balanceOf(vault.address)),
+    );
+    console.log('vault', vault.address, balanceAsset);
+    totalAssets += balanceAsset;
+    expect(totalAssets).to.be.closeTo(6000, 0.1);
   }
 
   async function processEvents(
     vault: UnderwriterVaultMock,
     asset: ERC20Mock,
+    deployer: SignerWithAddress,
     oracleAdapter: MockContract,
     events: any,
   ) {
@@ -375,18 +438,23 @@ describe('#eventStream', () => {
       return object.discriminator == 'buy';
     }
 
+    function instanceOfSettle(object: any): object is Buy {
+      return object.discriminator == 'settle';
+    }
+
     function instanceOfEvent(object: any): object is Event {
       return 'timestamp' in object && 'spotPrice' in object;
     }
 
+    // the integration test is a zero-sum game - the total amount of assets is fixed
     for (const event of events) {
       if (instanceOfEvent(event)) {
         if (typeof event.timestamp == 'number')
           await increaseTo(event.timestamp);
-        await oracleAdapter.mock.quote.returns(
-          parseUnits(event.spotPrice.toString(), 18),
-        );
-
+        if (typeof event.spotPrice == 'number')
+          await oracleAdapter.mock.quote.returns(
+            parseUnits(event.spotPrice.toString(), 18),
+          );
         if (instanceOfDeposit(event.config)) {
           await makeDeposit(event.config, asset, vault);
         } else if (instanceOfMint(event.config)) {
@@ -397,10 +465,13 @@ describe('#eventStream', () => {
           await makeRedeem(event.config, vault);
         } else if (instanceOfBuy(event.config)) {
           await makeBuy(event.config, asset, vault);
+        } else if (instanceOfSettle(event.config)) {
+          await makeSettle(vault, deployer);
         }
       } else {
-        console.log('Invalid event!');
+        console.log('Invalid event!!!');
       }
+      await checkTotalAssetsLeakage(vault, deployer, asset);
     }
   }
 
@@ -424,6 +495,6 @@ describe('#eventStream', () => {
     console.log('Create event stream.');
     const { events } = await createEventStream();
     console.log('Process events.');
-    await processEvents(callVault, asset, oracleAdapter, events);
+    await processEvents(callVault, asset, deployer, oracleAdapter, events);
   });
 });
