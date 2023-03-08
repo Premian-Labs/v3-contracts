@@ -39,8 +39,8 @@ contract UniswapV3AdapterInternal is
         address tokenOut,
         uint32 target
     ) internal view returns (uint256) {
-        // TODO: Period Validation
-        // TODO: Cardinality Validation
+        _ensurePeriodSet();
+        _ensureObservationCardinalitySet();
 
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
@@ -51,69 +51,47 @@ contract UniswapV3AdapterInternal is
             pools = _tryFindPools(l, tokenIn, tokenOut);
         }
 
-        uint32 period = l.period;
-        uint32[] memory range = _calculateRange(period, target);
-
-        OracleLibrary.WeightedTickData[] memory tickData = target == 0
-            ? _fetchTickData(pools, range)
-            : _fetchTickDataFrom(pools, period, range, target);
-
-        int24 weightedTick = tickData.length == 1
-            ? tickData[0].tick
-            : OracleLibrary.getWeightedArithmeticMeanTick(tickData);
+        int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
 
         int256 factor = _decimals(tokenIn) - _decimals(tokenOut);
 
-        // TODO: Price validation
-        // TODO: Try calculating price without using `getQuoteAtTick`
+        uint256 price = _scale(
+            OracleLibrary.getQuoteAtTick(
+                weightedTick,
+                uint128(ONE_ETH),
+                tokenIn,
+                tokenOut
+            ),
+            factor
+        );
 
-        return
-            _scale(
-                OracleLibrary.getQuoteAtTick(
-                    weightedTick,
-                    uint128(ONE_ETH),
-                    tokenIn,
-                    tokenOut
-                ),
-                factor
-            );
+        _ensurePriceNonZero(price.toInt256());
+        return price;
     }
 
-    function _fetchTickData(
-        address[] memory pools,
-        uint32[] memory range
-    ) internal view returns (OracleLibrary.WeightedTickData[] memory) {
-        OracleLibrary.WeightedTickData[]
-            memory tickData = new OracleLibrary.WeightedTickData[](
-                pools.length
-            );
-
-        for (uint256 i; i < pools.length; i++) {
-            (tickData[i].tick, tickData[i].weight) = _consult(pools[i], range);
-        }
-
-        return tickData;
-    }
-
-    function _fetchTickDataFrom(
+    function _fetchWeightedTick(
         address[] memory pools,
         uint32 period,
-        uint32[] memory range,
         uint32 target
-    ) internal view returns (OracleLibrary.WeightedTickData[] memory) {
+    ) internal view returns (int24) {
         OracleLibrary.WeightedTickData[]
             memory tickData = new OracleLibrary.WeightedTickData[](
                 pools.length
             );
 
         for (uint256 i; i < pools.length; i++) {
+            uint32[] memory range = _calculateRange(pools[i], period, target);
             (tickData[i].tick, tickData[i].weight) = _consult(pools[i], range);
         }
 
-        return tickData;
+        return
+            tickData.length == 1
+                ? tickData[0].tick
+                : OracleLibrary.getWeightedArithmeticMeanTick(tickData);
     }
 
     function _calculateRange(
+        address pool,
         uint32 period,
         uint32 target
     ) internal view returns (uint32[] memory) {
@@ -122,17 +100,32 @@ contract UniswapV3AdapterInternal is
         range[0] = period;
         range[1] = 0;
 
+        uint32 blockTimestamp = block.timestamp.toUint32();
+
         if (target > 0) {
-            uint32 midPoint = (period / 2);
-            uint32 blockTimestamp = block.timestamp.toUint32();
+            range[0] = blockTimestamp - (target - period); // rangeStart
+            range[1] = blockTimestamp - target; // rangeEnd
+        }
 
-            range[0] = blockTimestamp - (target - midPoint);
+        uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(
+            pool
+        );
 
-            uint32 delta = target + midPoint;
+        if (range[0] > oldestObservation) {
+            // When the oldest obersvation is before the range start, restart range
+            // from oldest obeservation
+            //
+            //  end                 target   oldest         start
+            //   |                    v        |              |
+            //   |--|--|--|--|--|--|--o--|--|--|///////////|--|
+            //            ^           ^
+            //        rangeStart   rangeEnd
 
-            range[1] = delta >= blockTimestamp
-                ? blockTimestamp
-                : blockTimestamp - delta;
+            if (oldestObservation < period)
+                revert UniswapV3Adapter__InsufficientObservationPeriod();
+
+            range[0] = oldestObservation;
+            range[1] = oldestObservation - period;
         }
 
         return range;
@@ -181,7 +174,6 @@ contract UniswapV3AdapterInternal is
             poolLiquidity[i] = IUniswapV3Pool(pools[i]).liquidity();
         }
 
-        // TODO: call sorting algorithm function
         // Sort both arrays together
         for (uint256 i; i < pools.length - 1; i++) {
             uint256 biggestLiquidityIndex = i;
@@ -358,5 +350,15 @@ contract UniswapV3AdapterInternal is
                 )
             )
         );
+    }
+
+    function _ensurePeriodSet() internal view {
+        if (UniswapV3AdapterStorage.layout().period == 0)
+            revert UniswapV3Adapter__PeriodNotSet();
+    }
+
+    function _ensureObservationCardinalitySet() internal view {
+        if (UniswapV3AdapterStorage.layout().cardinalityPerMinute == 0)
+            revert UniswapV3Adapter__ObservationCardinalityNotSet();
     }
 }

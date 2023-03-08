@@ -11,6 +11,9 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when the gas limit is so low that no pools can be initialized
     error UniswapV3Adapter__GasTooLow();
 
+    /// @notice Thrown if the oldest observation is less than the TWAP period
+    error UniswapV3Adapter__InsufficientObservationPeriod();
+
     /// @notice Thrown when trying to add an invalid fee tier
     error UniswapV3Adapter__InvalidFeeTier(uint24 feeTier);
 
@@ -26,8 +29,14 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when the time ranges are not valid
     error UniswapV3Adapter__InvalidTimeRange();
 
+    /// @notice Thrown when current oberservation cardinality has not been set
+    error UniswapV3Adapter__ObservationCardinalityNotSet();
+
     /// @notice Thrown when current oberservation cardinality is below target cardinality
     error UniswapV3Adapter__ObservationCardinalityTooLow();
+
+    /// @notice Thrown when period has not been set
+    error UniswapV3Adapter__PeriodNotSet();
 
     /// @notice Emitted when a new period is set
     /// @param period The new period
