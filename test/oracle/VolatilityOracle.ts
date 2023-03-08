@@ -1,23 +1,15 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
-  VolatilityOracleMock,
   VolatilityOracleMock__factory,
 } from '../../typechain';
 
 import { BigNumber } from 'ethers';
-import { parseEther, formatEther } from 'ethers/lib/utils';
+import { formatEther, parseEther } from 'ethers/lib/utils';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('VolatilityOracle', () => {
-  let owner: SignerWithAddress;
-  let relayer: SignerWithAddress;
-  let user: SignerWithAddress;
-  let oracle: VolatilityOracleMock;
-  let proxy: ProxyUpgradeableOwnable;
-
   const paramsFormatted =
     '0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8';
   const params = [
@@ -25,68 +17,25 @@ describe('VolatilityOracle', () => {
     0.14895038484273854, 0.034026549310791646,
   ].map((el) => Math.floor(el * 10 ** 12).toString());
 
-  beforeEach(async () => {
-    [owner, relayer, user] = await ethers.getSigners();
+  beforeEach(async () => {});
+
+  async function deploy() {
+    const [owner, relayer, user] = await ethers.getSigners();
 
     const impl = await new VolatilityOracleMock__factory(owner).deploy();
-    proxy = await new ProxyUpgradeableOwnable__factory(owner).deploy(
+    const proxy = await new ProxyUpgradeableOwnable__factory(owner).deploy(
       impl.address,
     );
-    oracle = VolatilityOracleMock__factory.connect(proxy.address, owner);
+    const oracle = VolatilityOracleMock__factory.connect(proxy.address, owner);
 
     await oracle.connect(owner).addWhitelistedRelayers([relayer.address]);
-  });
 
-  describe('#formatParams', () => {
-    it('should correctly format parameters', async () => {
-      const params = await oracle.parseParams(paramsFormatted);
-      expect(await oracle.formatParams(params as any)).to.eq(paramsFormatted);
-    });
+    return { owner, relayer, user, oracle, proxy };
+  }
 
-    it('should fail if a variable is out of bounds', async () => {
-      const newParams = [...params];
-      newParams[4] = BigNumber.from(1).shl(51).toString();
-      await expect(
-        oracle.formatParams(newParams as any),
-      ).to.be.revertedWithCustomError(oracle, 'VolatilityOracle__OutOfBounds');
-    });
-  });
+  async function deployAndUpdateParams() {
+    const f = await deploy();
 
-  describe('#parseParams', () => {
-    it('should correctly parse parameters', async () => {
-      const result = await oracle.formatParams(params as any);
-      expect(
-        (await oracle.parseParams(result)).map((el) => el.toString()),
-      ).to.have.same.members(params);
-    });
-  });
-
-  describe('#findInterval', () => {
-    const maturities = [
-      0.00273972602739726, 0.03561643835616438, 0.09315068493150686,
-      0.16986301369863013, 0.4191780821917808,
-    ].map((el) => parseEther(el.toString()));
-
-    it('should correctly find value if in the first interval', async () => {
-      const v = parseEther('0.02');
-
-      const expected = 0;
-      const result = await oracle.findInterval(maturities, v);
-
-      expect(result).to.eq(expected);
-    });
-
-    it('should correctly find if a value is in the last interval', async () => {
-      const v = parseEther('0.3');
-
-      const expected = 3;
-      const result = await oracle.findInterval(maturities, v);
-
-      expect(result).to.eq(expected);
-    });
-  });
-
-  describe('#getVolatility', () => {
     const token = '0x0000000000000000000000000000000000000001';
     const tau = [
       0.0027397260273972603, 0.03561643835616438, 0.09315068493150686,
@@ -108,19 +57,80 @@ describe('VolatilityOracle', () => {
       0.0003768214425074357, 0.0002539234691761822,
     ].map((el) => Math.floor(el * 10 ** 12));
 
-    const prepareContractEnv = async () => {
-      const tauHex = await oracle.formatParams(tau as any);
-      const thetaHex = await oracle.formatParams(theta as any);
-      const psiHex = await oracle.formatParams(psi as any);
-      const rhoHex = await oracle.formatParams(rho as any);
+    const tauHex = await f.oracle.formatParams(tau as any);
+    const thetaHex = await f.oracle.formatParams(theta as any);
+    const psiHex = await f.oracle.formatParams(psi as any);
+    const rhoHex = await f.oracle.formatParams(rho as any);
 
-      await oracle
-        .connect(relayer)
-        .updateParams([token], [tauHex], [thetaHex], [psiHex], [rhoHex]);
-    };
+    await f.oracle
+      .connect(f.relayer)
+      .updateParams([token], [tauHex], [thetaHex], [psiHex], [rhoHex]);
 
+    return { ...f, tau, theta, psi, rho, token };
+  }
+
+  describe('#formatParams', () => {
+    it('should correctly format parameters', async () => {
+      const { oracle } = await loadFixture(deploy);
+
+      const params = await oracle.parseParams(paramsFormatted);
+      expect(await oracle.formatParams(params as any)).to.eq(paramsFormatted);
+    });
+
+    it('should fail if a variable is out of bounds', async () => {
+      const { oracle } = await loadFixture(deploy);
+
+      const newParams = [...params];
+      newParams[4] = BigNumber.from(1).shl(51).toString();
+      await expect(
+        oracle.formatParams(newParams as any),
+      ).to.be.revertedWithCustomError(oracle, 'VolatilityOracle__OutOfBounds');
+    });
+  });
+
+  describe('#parseParams', () => {
+    it('should correctly parse parameters', async () => {
+      const { oracle } = await loadFixture(deploy);
+
+      const result = await oracle.formatParams(params as any);
+      expect(
+        (await oracle.parseParams(result)).map((el) => el.toString()),
+      ).to.have.same.members(params);
+    });
+  });
+
+  describe('#findInterval', () => {
+    const maturities = [
+      0.00273972602739726, 0.03561643835616438, 0.09315068493150686,
+      0.16986301369863013, 0.4191780821917808,
+    ].map((el) => parseEther(el.toString()));
+
+    it('should correctly find value if in the first interval', async () => {
+      const { oracle } = await loadFixture(deploy);
+
+      const v = parseEther('0.02');
+
+      const expected = 0;
+      const result = await oracle.findInterval(maturities, v);
+
+      expect(result).to.eq(expected);
+    });
+
+    it('should correctly find if a value is in the last interval', async () => {
+      const { oracle } = await loadFixture(deploy);
+
+      const v = parseEther('0.3');
+
+      const expected = 3;
+      const result = await oracle.findInterval(maturities, v);
+
+      expect(result).to.eq(expected);
+    });
+  });
+
+  describe('#getVolatility', () => {
     it('should correctly perform short-term extrapolation', async () => {
-      await prepareContractEnv();
+      const { oracle, token } = await loadFixture(deployAndUpdateParams);
 
       const spot = parseEther('2800');
       const strike = parseEther('3500');
@@ -140,7 +150,7 @@ describe('VolatilityOracle', () => {
     });
 
     it('should correctly perform interpolation on first interval', async () => {
-      await prepareContractEnv();
+      const { oracle, token } = await loadFixture(deployAndUpdateParams);
 
       const spot = parseEther('2800');
       const strike = parseEther('3500');
@@ -160,7 +170,7 @@ describe('VolatilityOracle', () => {
     });
 
     it('should correctly perform interpolation on last interval', async () => {
-      await prepareContractEnv();
+      const { oracle, token } = await loadFixture(deployAndUpdateParams);
 
       const spot = parseEther('2800');
       const strike = parseEther('5000');
@@ -180,7 +190,7 @@ describe('VolatilityOracle', () => {
     });
 
     it('should correctly perform long-term extrapolation', async () => {
-      await prepareContractEnv();
+      const { oracle, token } = await loadFixture(deployAndUpdateParams);
 
       const spot = parseEther('2800');
       const strike = parseEther('7000');
