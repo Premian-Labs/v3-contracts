@@ -22,6 +22,14 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @return The cardinality per minute used for increase cardinality calculations
     function cardinalityPerMinute() external view returns (uint8);
 
+    /// @notice Returns the approximate gas cost per each increased cardinality
+    /// @return The gas cost per cardinality increase
+    function gasPerCardinality() external view returns (uint104);
+
+    /// @notice Returns the approximate gas cost to add support for a new pool internally
+    /// @return The gas cost to support a new pool
+    function gasCostToSupportPool() external view returns (uint112);
+
     /// @notice Returns all supported fee tiers
     /// @return The supported fee tiers
     function supportedFeeTiers() external view returns (uint24[] memory);

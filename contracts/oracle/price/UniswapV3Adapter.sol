@@ -127,6 +127,16 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
+    function gasPerCardinality() external view returns (uint104) {
+        return UniswapV3AdapterStorage.layout().gasPerCardinality;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
+    function gasCostToSupportPool() external view returns (uint112) {
+        return UniswapV3AdapterStorage.layout().gasCostToSupportPool;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
     function supportedFeeTiers() external view returns (uint24[] memory) {
         return UniswapV3AdapterStorage.layout().feeTiers;
     }
