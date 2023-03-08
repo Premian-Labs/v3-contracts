@@ -30,6 +30,9 @@ const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
 const blockNumber = 16600000; // Fri Feb 10 2023 17:59:11 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
+const period = 600;
+const cardinalityPerMinute = 4;
+
 let pools: { tokenIn: Token; tokenOut: Token }[];
 
 // prettier-ignore
@@ -56,6 +59,7 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
 
 describe('UniswapV3Adapter', () => {
   let deployer: SignerWithAddress;
+  let notOwner: SignerWithAddress;
   let instance: UniswapV3Adapter;
 
   before(async () => {
@@ -63,7 +67,7 @@ describe('UniswapV3Adapter', () => {
   });
 
   revertToSnapshotAfterEach(async () => {
-    [deployer] = await ethers.getSigners();
+    [deployer, notOwner] = await ethers.getSigners();
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
@@ -79,8 +83,8 @@ describe('UniswapV3Adapter', () => {
 
     instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
 
-    await instance.setPeriod(600);
-    await instance.setCardinalityPerMinute(4);
+    await instance.setPeriod(period);
+    await instance.setCardinalityPerMinute(cardinalityPerMinute);
   });
 
   describe('#isPairSupported', () => {
@@ -272,14 +276,181 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
-  // TODO:
-  describe.skip('#supportedFeeTiers', () => {});
-  describe.skip('#poolsForPair', () => {});
-  describe.skip('#setPeriod', () => {});
-  describe.skip('#setCardinalityPerMinute', () => {});
-  describe.skip('#setGasPerCardinality', () => {});
-  describe.skip('#setGasCostToSupportPool', () => {});
-  describe.skip('#insertFeeTier', () => {});
+  describe('#poolsForPair', () => {
+    it('should return pools for pair', async () => {
+      let pools = await instance.poolsForPair(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(pools.length).to.be.eq(0);
+
+      await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
+
+      pools = await instance.poolsForPair(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(pools).to.be.deep.eq([
+        '0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8',
+        '0x60594a405d53811d3bc4766596efd80fd545a270',
+        '0xa80964c5bbd1a0e95777094420555fead1a26c1e',
+      ]);
+    });
+  });
+
+  describe('#factory', () => {
+    it('should return correct UniswapV3 factory address', async () => {
+      expect(await instance.factory()).to.be.eq(UNISWAP_V3_FACTORY);
+    });
+  });
+
+  describe('#period', () =>
+    it('should return correct period', async () => {
+      expect(await instance.period()).to.be.eq(period);
+    }));
+
+  describe('#cardinalityPerMinute', () => {
+    it('should return correct cardinality per minute', async () => {
+      expect(await instance.cardinalityPerMinute()).to.be.eq(
+        cardinalityPerMinute,
+      );
+    });
+  });
+
+  describe('#gasPerCardinality', () => {
+    it('should return correct gas per cardinality', async () => {
+      expect(await instance.gasPerCardinality()).to.be.eq(22250);
+    });
+  });
+
+  describe('#gasCostToSupportPool', () => {
+    it('should return correct gas cost to add support for a new pool', async () => {
+      expect(await instance.gasCostToSupportPool()).to.be.eq(30000);
+    });
+  });
+
+  describe('#supportedFeeTiers', () => {
+    it('should return supported fee tiers', async () => {
+      const feeTiers = await instance.supportedFeeTiers();
+      expect(feeTiers).to.be.deep.eq([500, 3000, 10000]);
+    });
+  });
+
+  describe('#setPeriod', () => {
+    const newPeriod = 800;
+
+    it('should revert if not called by owner', async () => {
+      await expect(
+        instance.connect(notOwner).setPeriod(newPeriod),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should set period to new value', async () => {
+      await instance.setPeriod(newPeriod);
+      expect(await instance.period()).to.be.eq(newPeriod);
+    });
+  });
+
+  describe('#setCardinalityPerMinute', () => {
+    const newCardinalityPerMinute = 8;
+
+    it('should revert if not called by owner', async () => {
+      await expect(
+        instance
+          .connect(notOwner)
+          .setCardinalityPerMinute(newCardinalityPerMinute),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should set cardinality per minute to new value', async () => {
+      await instance.setCardinalityPerMinute(newCardinalityPerMinute);
+      expect(await instance.cardinalityPerMinute()).to.be.eq(
+        newCardinalityPerMinute,
+      );
+    });
+  });
+
+  describe('#setGasPerCardinality', () => {
+    const newGasPerCardinality = 10000;
+
+    it('should revert if not called by owner', async () => {
+      await expect(
+        instance.connect(notOwner).setGasPerCardinality(newGasPerCardinality),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should revert if gas per cardinality is 0', async () => {
+      await expect(
+        instance.setGasPerCardinality(0),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InvalidGasPerCardinality',
+      );
+    });
+
+    it('should set gas per cardinality to new value', async () => {
+      await instance.setGasPerCardinality(newGasPerCardinality);
+      expect(await instance.gasPerCardinality()).to.be.eq(newGasPerCardinality);
+    });
+  });
+
+  describe('#setGasCostToSupportPool', () => {
+    const newGasToSupportPool = 15000;
+
+    it('should revert if not called by owner', async () => {
+      await expect(
+        instance.connect(notOwner).setGasCostToSupportPool(newGasToSupportPool),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should revert if gas cost to support pool is 0', async () => {
+      await expect(
+        instance.setGasCostToSupportPool(0),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InvalidGasCostToSupportPool',
+      );
+    });
+
+    it('should set gas cost to support pool to new value', async () => {
+      await instance.setGasCostToSupportPool(newGasToSupportPool);
+      expect(await instance.gasCostToSupportPool()).to.be.eq(
+        newGasToSupportPool,
+      );
+    });
+  });
+
+  describe('#insertFeeTier', () => {
+    const newFeeTier = 100;
+
+    it('should revert if not called by owner', async () => {
+      await expect(
+        instance.connect(notOwner).insertFeeTier(newFeeTier),
+      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should revert if fee tier is invalid', async () => {
+      await expect(instance.insertFeeTier(15000)).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InvalidFeeTier',
+      );
+    });
+
+    it('should revert if fee tier exists', async () => {
+      await expect(instance.insertFeeTier(10000)).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__FeeTierExists',
+      );
+    });
+
+    it('should successfully add new fee tier', async () => {
+      await instance.insertFeeTier(100);
+      const feeTiers = await instance.supportedFeeTiers();
+      expect(feeTiers).to.be.deep.eq([500, 3000, 10000, 100]);
+    });
+  });
 
   for (let i = 0; i < pools.length; i++) {
     const { tokenIn, tokenOut } = pools[i];
