@@ -324,7 +324,7 @@ describe('#eventStream', () => {
       const t = new Date().getDate() + (6 - new Date().getDay() - 1) + diff;
       nextFriday = new Date();
       nextFriday.setDate(t);
-      nextFriday.setHours(8, 0, 0, 0);
+      nextFriday.setUTCHours(0, 0, 0, 0);
       unixTime = Math.floor(nextFriday.getTime() / 1000);
       arr.push(unixTime);
     }
