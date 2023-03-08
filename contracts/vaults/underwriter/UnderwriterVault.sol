@@ -525,14 +525,10 @@ contract UnderwriterVault is
         if (dte > l.maxDTE || dte < l.minDTE) revert Vault__MaturityBounds();
 
         // Delta filter
-        int256 delta = OptionMath.optionDelta(
-            spotPrice,
-            strike,
-            tau,
-            sigma,
-            rfRate,
-            l.isCall
-        );
+        int256 delta = OptionMath
+            .optionDelta(spotPrice, strike, tau, sigma, rfRate, l.isCall)
+            .abs();
+
         if (delta < l.minDelta || delta > l.maxDelta)
             revert Vault__DeltaBounds();
 
@@ -661,7 +657,7 @@ contract UnderwriterVault is
         uint256 tau = (args.maturity - block.timestamp).div(SECONDSINAYEAR);
 
         uint256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
-            _asset(),
+            l.base,
             spotPrice,
             args.strike,
             tau
