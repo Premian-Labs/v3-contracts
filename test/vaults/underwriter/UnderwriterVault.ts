@@ -13,12 +13,7 @@ import {
   formatEther,
   formatUnits,
 } from 'ethers/lib/utils';
-import {
-  addDeposit,
-  addMockDeposit,
-  vaultSetup,
-  createPool,
-} from './VaultSetup';
+import { addMockDeposit, vaultSetup, createPool } from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { UnderwriterVaultMock, ERC20Mock } from '../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -785,7 +780,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 8, base, quote, receiver);
+      await addMockDeposit(callVault, 8, base, quote);
       const assetAmount = parseEther('2');
       const shareAmount = await callVault.convertToShares(assetAmount);
       expect(shareAmount).to.eq(assetAmount);
@@ -796,7 +791,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('1.0'));
       const assetAmount = 2;
       const shareAmount = await callVault.convertToShares(
@@ -820,7 +815,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       const shareAmount = parseEther('2');
       const assetAmount = await callVault.convertToAssets(shareAmount);
       expect(shareAmount).to.eq(assetAmount);
@@ -831,7 +826,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('1.0'));
       const shareAmount = 2;
       const assetAmount = await callVault.convertToAssets(
@@ -850,7 +845,7 @@ describe('UnderwriterVault', () => {
       );
       vault = callVault;
       await setMaturities(vault);
-      await addDeposit(vault, caller, 2, base, quote, receiver);
+      await addMockDeposit(vault, 2, base, quote);
     });
     it('expected to equal totalAssets = 2', async () => {
       expect(await vault.getAvailableAssets()).to.eq(parseEther('2'));
@@ -897,14 +892,7 @@ describe('UnderwriterVault', () => {
           vaultSetup,
         );
         // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
-        await addDeposit(
-          callVault,
-          caller,
-          test.deposit,
-          base,
-          quote,
-          receiver,
-        );
+        await addMockDeposit(callVault, test.deposit, base, quote);
         let startTime = await now();
         let t0 = startTime + 7 * ONE_DAY;
         expect(await callVault.totalAssets()).to.eq(
@@ -942,7 +930,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       await expect(
         callVault.maxWithdraw(ethers.constants.AddressZero),
       ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
@@ -953,7 +941,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 3, base, quote, receiver);
+      await addMockDeposit(callVault, 3, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await callVault.maxWithdraw(receiver.address);
@@ -965,8 +953,8 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 8, base, quote, caller);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 8, base, quote);
+      await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('0.0'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await callVault.maxWithdraw(receiver.address);
@@ -978,8 +966,8 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 7, base, quote, caller);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 7, base, quote);
+      await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = parseFloat(
@@ -995,7 +983,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       await expect(
         callVault.maxRedeem(ethers.constants.AddressZero),
       ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
@@ -1006,7 +994,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 3, base, quote, receiver);
+      await addMockDeposit(callVault, 3, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await callVault.maxWithdraw(receiver.address);
@@ -1028,7 +1016,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addDeposit(callVault, caller, 2, base, quote, receiver);
+      await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('0.2'));
       const assetAmount = await callVault.previewMint(parseEther('4'));
       expect(assetAmount).to.eq(parseEther('3.6'));
@@ -1158,7 +1146,7 @@ describe('UnderwriterVault', () => {
           }
 
           console.log('Depositing assets.');
-          await addDeposit(vault, caller, deposit, base, quote);
+          await addMockDeposit(vault, deposit, base, quote);
           expect(await vault.totalAssets()).to.eq(
             parseEther(deposit.toString()),
           );
@@ -1278,7 +1266,7 @@ describe('UnderwriterVault', () => {
           ];
 
           console.log('Depositing assets.');
-          await addDeposit(vault, caller, totalAssets, base, quote);
+          await addMockDeposit(vault, totalAssets, base, quote);
           expect(await vault.totalAssets()).to.eq(
             parseEther(totalAssets.toString()),
           );
@@ -1884,7 +1872,7 @@ describe('UnderwriterVault', () => {
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(callVault, lp, lpDepositSize, base, quote);
+      await addMockDeposit(callVault, lpDepositSize, base, quote);
       await expect(
         callVault.quote(badStrike, maturity, quoteSize),
       ).to.be.revertedWithCustomError(callVault, 'Vault__StrikeZero');
@@ -1896,7 +1884,7 @@ describe('UnderwriterVault', () => {
       const badMaturity = await time.latest();
       const quoteSize = parseEther('1');
       const lpDepositSize = 5; // units of base
-      await addDeposit(callVault, lp, lpDepositSize, base, quote);
+      await addMockDeposit(callVault, lpDepositSize, base, quote);
       await expect(
         callVault.quote(strike, badMaturity, quoteSize),
       ).to.be.revertedWithCustomError(callVault, 'Vault__OptionExpired');
@@ -2159,30 +2147,22 @@ describe('UnderwriterVault', () => {
 
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
-        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+        await addMockDeposit(callVault, lpDepositSize, base, quote);
         // Trade Settings
         const strike = parseEther('1500');
         const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
         const tradeSize = parseEther('2');
 
-        //PreTrade cLevel
-        const cLevel_preTrade = await callVault.getClevel(parseEther('0'));
-
         // Execute Trade
         const cLevel_postTrade = await callVault.getClevel(tradeSize);
-        const [, price, mintingFee] = await callVault.quote(
+        const [, premium, mintingFee, spread] = await callVault.quote(
           strike,
           maturity,
           tradeSize,
         );
-        const totalFloat =
-          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
-        const total = parseEther(totalFloat.toString());
-        await base.connect(trader).approve(callVault.address, total);
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
-        console.log(totalFloat);
-        console.log(total);
-        console.log(price, mintingFee);
         const cLevel_postTrade_check = await callVault.getClevel(
           parseEther('0'),
         );
@@ -2201,7 +2181,7 @@ describe('UnderwriterVault', () => {
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
 
-        await addMockDeposit(lpDepositSize, base, callVault);
+        await addMockDeposit(callVault, lpDepositSize, base, quote);
 
         // Trade Settings
         const strike = parseEther('1500');
@@ -2210,16 +2190,13 @@ describe('UnderwriterVault', () => {
 
         // Execute Trades
         // todo: compute price + mintingFee without using quote
-        const [, price, mintingFee] = await callVault.quote(
+        const [, premium, mintingFee, spread] = await callVault.quote(
           strike,
           maturity,
           tradeSize,
         );
-        const total =
-          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
-        await base
-          .connect(trader)
-          .approve(callVault.address, parseEther(total.toString()));
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         await expect(
@@ -2234,7 +2211,7 @@ describe('UnderwriterVault', () => {
 
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
-        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+        await addMockDeposit(callVault, lpDepositSize, base, quote);
 
         // Trade Settings
         const strike = parseEther('1500');
@@ -2245,6 +2222,13 @@ describe('UnderwriterVault', () => {
         const lastTrade_t0 = await callVault.getLastTradeTimestamp();
 
         // Execute Trade
+        const [, premium, mintingFee, spread] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         const lastTrade_t1 = await callVault.getLastTradeTimestamp();
@@ -2259,7 +2243,7 @@ describe('UnderwriterVault', () => {
 
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
-        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+        await addMockDeposit(callVault, lpDepositSize, base, quote);
 
         // Trade Settings
         const strike = parseEther('1500');
@@ -2271,6 +2255,15 @@ describe('UnderwriterVault', () => {
 
         // Execute Trade
         const cLevel_t1 = await callVault.getClevel(tradeSize);
+
+        const [, premium, mintingFee, spread] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
+
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
         const cLevel_t2 = await callVault.getClevel(tradeSize);
         // Increase time by 2 hrs
@@ -2356,24 +2349,44 @@ describe('UnderwriterVault', () => {
         await loadFixture(vaultSetup);
       const lpDepositSize = 5; // units of base
       const lpDepositSizeBN = parseEther(lpDepositSize.toString());
-      await addDeposit(callVault, lp, lpDepositSize, base, quote);
+      await addMockDeposit(callVault, lpDepositSize, base, quote);
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
-      const fee = await callPool.takerFee(tradeSize, 0, true);
-      const totalSize = tradeSize.add(fee);
-      await callVault.connect(trader).buy(strike, maturity, tradeSize);
-      const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
 
-      expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+      const [, premium, mintingFee, , spread] = await callVault.quote(
+        strike,
+        maturity,
+        tradeSize,
+      );
+
+      const totalTransfer = premium.add(mintingFee).add(spread);
+
+      await base.connect(trader).approve(callVault.address, totalTransfer);
+      await callVault.connect(trader).buy(strike, maturity, tradeSize);
+      const vaultCollateralBalance = lpDepositSizeBN
+        .sub(tradeSize)
+        .add(premium)
+        .add(spread);
+
+      // todo: cover the put case
+      // collateral
+      expect(await base.balanceOf(callPool.address)).to.eq(
+        tradeSize.add(mintingFee),
+      );
+
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
         tradeSize,
       );
       expect(
         await callPool.balanceOf(callVault.address, TokenType.SHORT),
       ).to.eq(tradeSize);
-      expect(await base.balanceOf(callVault.address)).to.be.eq(
-        vaultCollateralBalance,
+      // as time passes the B-Sch. price and C-level change
+      expect(
+        parseFloat(formatEther(await base.balanceOf(callVault.address))),
+      ).to.be.closeTo(
+        parseFloat(formatEther(vaultCollateralBalance)),
+        0.000001,
       );
     });
 
@@ -2385,7 +2398,7 @@ describe('UnderwriterVault', () => {
       const strike = 1500;
       const lpDepositSize = 5 * strike; // 5 units
       const lpDepositSizeBN = parseUnits(lpDepositSize.toString(), 6);
-      await addDeposit(putVault, lp, lpDepositSize, base, quote);
+      await addMockDeposit(putVault, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
