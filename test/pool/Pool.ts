@@ -106,7 +106,7 @@ describe('Pool', () => {
       feeReceiver,
       callPool,
       putPool,
-      p,
+      ...p,
       base,
       quote,
       oracleAdapter,
@@ -122,7 +122,7 @@ describe('Pool', () => {
     const initialCollateral = parseEther('1000');
 
     await f.base.mint(f.lp.address, initialCollateral);
-    await f.base.connect(f.lp).approve(f.callPool.address, initialCollateral);
+    await f.base.connect(f.lp).approve(f.router.address, initialCollateral);
 
     return { ...f, initialCollateral };
   }
@@ -134,7 +134,7 @@ describe('Pool', () => {
 
     for (const user of [f.lp, f.trader]) {
       await f.base.mint(user.address, initialCollateral);
-      await f.base.connect(user).approve(f.callPool.address, initialCollateral);
+      await f.base.connect(user).approve(f.router.address, initialCollateral);
     }
 
     return { ...f, initialCollateral };
@@ -213,7 +213,7 @@ describe('Pool', () => {
     const totalPremium = await f.callPool.getTradeQuote(tradeSize, true);
 
     await f.base.mint(f.trader.address, totalPremium);
-    await f.base.connect(f.trader).approve(f.callPool.address, totalPremium);
+    await f.base.connect(f.trader).approve(f.router.address, totalPremium);
 
     await f.callPool.connect(f.trader).trade(tradeSize, true, totalPremium);
 
@@ -247,7 +247,7 @@ describe('Pool', () => {
     const totalPremium = await f.callPool.getTradeQuote(tradeSize, false);
 
     await f.base.mint(f.trader.address, ONE_ETHER);
-    await f.base.connect(f.trader).approve(f.callPool.address, ONE_ETHER);
+    await f.base.connect(f.trader).approve(f.router.address, ONE_ETHER);
 
     await f.callPool.connect(f.trader).trade(tradeSize, false, totalPremium);
 
@@ -268,7 +268,7 @@ describe('Pool', () => {
   describe('__internal', function () {
     describe('#_getPricing', () => {
       it('should return pool state', async () => {
-        const { callPool, lp, base } = await loadFixture(deploy);
+        const { callPool, lp, base, router } = await loadFixture(deploy);
 
         let isBuy = true;
         let args = await callPool._getPricing(isBuy);
@@ -300,7 +300,7 @@ describe('Pool', () => {
           strike: strike,
         };
 
-        await base.connect(lp).approve(callPool.address, parseEther('2000'));
+        await base.connect(lp).approve(router.address, parseEther('2000'));
 
         const nearestBelow = await callPool.getNearestTicksBelow(lower, upper);
 
@@ -843,7 +843,7 @@ describe('Pool', () => {
 
   describe('#trade', () => {
     it('should successfully buy 500 options', async () => {
-      const { callPool, trader, base } = await loadFixture(
+      const { callPool, trader, base, router } = await loadFixture(
         deployAndDeposit_1000_CS,
       );
 
@@ -851,7 +851,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(router.address, totalPremium);
 
       await callPool
         .connect(trader)
@@ -867,7 +867,7 @@ describe('Pool', () => {
     });
 
     it('should successfully sell 500 options', async () => {
-      const { callPool, trader, base } = await loadFixture(
+      const { callPool, trader, base, router } = await loadFixture(
         deployAndDeposit_1000_LC,
       );
 
@@ -875,7 +875,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
       await base.mint(trader.address, tradeSize);
-      await base.connect(trader).approve(callPool.address, tradeSize);
+      await base.connect(trader).approve(router.address, tradeSize);
 
       await callPool
         .connect(trader)
@@ -891,7 +891,7 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
-      const { callPool, trader, base } = await loadFixture(
+      const { callPool, trader, base, router } = await loadFixture(
         deployAndDeposit_1000_CS,
       );
 
@@ -899,7 +899,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, true);
 
       await base.mint(trader.address, totalPremium);
-      await base.connect(trader).approve(callPool.address, totalPremium);
+      await base.connect(trader).approve(router.address, totalPremium);
 
       await expect(
         callPool.connect(trader).trade(tradeSize, true, totalPremium.sub(1)),
@@ -907,7 +907,7 @@ describe('Pool', () => {
     });
 
     it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
-      const { callPool, trader, base } = await loadFixture(
+      const { callPool, trader, base, router } = await loadFixture(
         deployAndDeposit_1000_LC,
       );
 
@@ -915,7 +915,7 @@ describe('Pool', () => {
       const totalPremium = await callPool.getTradeQuote(tradeSize, false);
 
       await base.mint(trader.address, tradeSize);
-      await base.connect(trader).approve(callPool.address, tradeSize);
+      await base.connect(trader).approve(router.address, tradeSize);
 
       await expect(
         callPool.connect(trader).trade(tradeSize, false, totalPremium.add(1)),
