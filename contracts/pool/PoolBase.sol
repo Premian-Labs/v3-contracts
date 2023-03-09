@@ -62,38 +62,9 @@ contract PoolBase is
     {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        (uint8 idVersion, address newPositionOperator) = abi.decode(
-            data,
-            (uint8, address)
-        );
-
         for (uint256 i; i < ids.length; i++) {
-            if (ids[i] == PoolStorage.SHORT || ids[i] == PoolStorage.LONG)
-                continue;
-
-            if (from == address(0) || to == address(0)) continue;
-
-            (
-                uint8 version,
-                address positionOperator,
-                uint256 lower,
-                uint256 upper,
-                Position.OrderType orderType
-            ) = PoolStorage.parseTokenId(ids[i]);
-
-            if (idVersion != version) revert Pool__InvalidVersion();
-
-            Position.Key memory srcP = Position.Key({
-                owner: from,
-                operator: positionOperator,
-                lower: lower,
-                upper: upper,
-                orderType: orderType,
-                isCall: false, // Set inside _transferPosition call
-                strike: 0 // Set inside _transferPosition call
-            });
-
-            _transferPosition(srcP, to, newPositionOperator, amounts[i]);
+            if (ids[i] > PoolStorage.LONG)
+                revert Pool__UseTransferPositionToTransferLPTokens();
         }
     }
 }

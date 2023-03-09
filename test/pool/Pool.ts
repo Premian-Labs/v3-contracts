@@ -1602,4 +1602,87 @@ describe('Pool', () => {
       ).to.be.revertedWithCustomError(callPool, 'Pool__NotEnoughTokens');
     });
   });
+
+  describe('#safeTransferFrom', () => {
+    it('should successfully transfer a long token', async () => {
+      const f = await loadFixture(deployAndBuy);
+
+      expect(
+        await f.callPool.balanceOf(f.trader.address, TokenType.LONG),
+      ).to.eq(ONE_ETHER);
+      expect(
+        await f.callPool.balanceOf(f.deployer.address, TokenType.LONG),
+      ).to.eq(0);
+
+      const transferAmount = parseEther('0.3');
+
+      await f.callPool
+        .connect(f.trader)
+        .safeTransferFrom(
+          f.trader.address,
+          f.deployer.address,
+          TokenType.LONG,
+          transferAmount,
+          '0x',
+        );
+
+      expect(
+        await f.callPool.balanceOf(f.trader.address, TokenType.LONG),
+      ).to.eq(ONE_ETHER.sub(transferAmount));
+      expect(
+        await f.callPool.balanceOf(f.deployer.address, TokenType.LONG),
+      ).to.eq(transferAmount);
+    });
+
+    it('should successfully transfer a short token', async () => {
+      const f = await loadFixture(deployAndSell);
+
+      expect(
+        await f.callPool.balanceOf(f.trader.address, TokenType.SHORT),
+      ).to.eq(ONE_ETHER);
+      expect(
+        await f.callPool.balanceOf(f.deployer.address, TokenType.SHORT),
+      ).to.eq(0);
+
+      const transferAmount = parseEther('0.3');
+
+      await f.callPool
+        .connect(f.trader)
+        .safeTransferFrom(
+          f.trader.address,
+          f.deployer.address,
+          TokenType.SHORT,
+          transferAmount,
+          '0x',
+        );
+
+      expect(
+        await f.callPool.balanceOf(f.trader.address, TokenType.SHORT),
+      ).to.eq(ONE_ETHER.sub(transferAmount));
+      expect(
+        await f.callPool.balanceOf(f.deployer.address, TokenType.SHORT),
+      ).to.eq(transferAmount);
+    });
+
+    it('should revert if trying to transfer LP position', async () => {
+      const { callPool, lp, tokenId, trader } = await loadFixture(
+        deployAndDeposit_1000_CS,
+      );
+
+      await expect(
+        callPool
+          .connect(lp)
+          .safeTransferFrom(
+            lp.address,
+            trader.address,
+            tokenId,
+            parseEther('200'),
+            '0x',
+          ),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__UseTransferPositionToTransferLPTokens',
+      );
+    });
+  });
 });
