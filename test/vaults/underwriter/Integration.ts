@@ -163,19 +163,49 @@ describe('#eventStream', () => {
           discriminator: 'buy',
           strike: 1000,
           maturity: t0,
-          size: 1.2,
+          size: 5.4,
           caller: buyer1,
           receiver: buyer1,
         },
       },
       {
         timestamp: null,
-        spotPrice: 1000,
+        spotPrice: 1300,
         config: {
           discriminator: 'mint',
-          assetAmount: 10,
+          shareAmount: 7.5,
           caller: depositor2,
           receiver: depositor2,
+        },
+      },
+      {
+        timestamp: null,
+        spotPrice: 2000,
+        config: {
+          discriminator: 'deposit',
+          shareAmount: 12.5,
+          caller: depositor3,
+          receiver: depositor3,
+        },
+      },
+      {
+        timestamp: null,
+        spotPrice: 800,
+        config: {
+          discriminator: 'redeem',
+          shareAmount: 7.49,
+          caller: depositor2,
+          receiver: depositor2,
+        },
+      },
+      {
+        timestamp: null,
+        spotPrice: 3000,
+        config: {
+          discriminator: 'withdraw',
+          shareAmount: 12.5,
+          caller: depositor3,
+          receiver: depositor3,
         },
       },
       {
@@ -295,7 +325,10 @@ describe('#eventStream', () => {
   ) {
     console.log('Make mint.');
     const shareAmount = parseEther(args.shareAmount.toString());
-    const assetAmount = await vault.convertToAssets(shareAmount);
+    let assetAmount = await vault.convertToAssets(shareAmount);
+    assetAmount = parseEther(
+      (parseFloat(formatEther(assetAmount)) * 1.01).toString(),
+    );
     await asset
       .connect(args.caller)
       .increaseAllowance(vault.address, assetAmount);
@@ -313,6 +346,8 @@ describe('#eventStream', () => {
   async function makeRedeem(args: Redeem, vault: UnderwriterVaultMock) {
     console.log('Make redeem.');
     const shareAmount = parseEther(args.shareAmount.toString());
+    console.log(await vault.maxRedeem(args.caller.address));
+    console.log(shareAmount);
     await vault
       .connect(args.caller)
       .redeem(shareAmount, args.receiver.address, args.caller.address);
@@ -367,9 +402,30 @@ describe('#eventStream', () => {
   }
 
   async function createSigners(base: ERC20Mock) {
-    [buyer1, buyer2, buyer3, depositor1, depositor2, depositor3] =
+    [, , , , , , buyer1, buyer2, buyer3, depositor1, depositor2, depositor3] =
       await ethers.getSigners();
+    const signers = [
+      buyer1,
+      buyer2,
+      buyer3,
+      depositor1,
+      depositor2,
+      depositor3,
+    ];
+    for (let signer of signers) {
+      await base.mint(signer.address, parseEther('1000'));
+    }
   }
+
+  let balancesTS: any = {
+    deployer: [],
+    buyer1: [],
+    buyer2: [],
+    buyer3: [],
+    depositor1: [],
+    depositor2: [],
+    depositor3: [],
+  };
 
   async function checkTotalAssetsLeakage(
     vault: UnderwriterVaultMock,
@@ -377,6 +433,7 @@ describe('#eventStream', () => {
     asset: ERC20Mock,
   ) {
     const signers = [
+      deployer, // deployer receives protocol fees
       buyer1,
       buyer2,
       buyer3,
@@ -394,9 +451,11 @@ describe('#eventStream', () => {
       console.log('signer', signer.address, balanceAsset);
       totalAssets += balanceAsset;
     }
-    const poolAddresses = await vault.getPoolAddresses();
+    // update the list of employed pool addresses
+    await vault.getActivePoolAddresses();
+    // we need to check the employed pools for unexercised options
+    const poolAddresses = await vault.getEmployedPools();
     for (let poolAddress of poolAddresses) {
-      //IPoolMock__factory.connect(poolAddress, deployer);
       let balanceAsset = parseFloat(
         formatEther(await asset.balanceOf(poolAddress)),
       );
@@ -408,7 +467,7 @@ describe('#eventStream', () => {
     );
     console.log('vault', vault.address, balanceAsset);
     totalAssets += balanceAsset;
-    expect(totalAssets).to.be.closeTo(6000, 0.1);
+    expect(totalAssets).to.be.closeTo(7000, 0.000001);
   }
 
   async function processEvents(
@@ -423,7 +482,7 @@ describe('#eventStream', () => {
     }
 
     function instanceOfMint(object: any): object is Mint {
-      return object.discriminator == 'Mint';
+      return object.discriminator == 'mint';
     }
 
     function instanceOfWithdraw(object: any): object is Withdraw {
@@ -467,6 +526,8 @@ describe('#eventStream', () => {
           await makeBuy(event.config, asset, vault);
         } else if (instanceOfSettle(event.config)) {
           await makeSettle(vault, deployer);
+        } else {
+          console.log('Invalid event!!!');
         }
       } else {
         console.log('Invalid event!!!');
