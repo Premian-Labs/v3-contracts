@@ -2361,7 +2361,7 @@ describe('UnderwriterVault', () => {
       const strike = 1500;
       const lpDepositSize = 5 * strike; // 5 units
       const lpDepositSizeBN = parseUnits(lpDepositSize.toString(), 6);
-      await addDeposit(putVault, lp, lpDepositSize, base, quote);
+      await addMockDeposit(putVault, lpDepositSize, base, quote);
 
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
       const tradeSize = parseEther('2');
