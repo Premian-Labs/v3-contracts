@@ -15,13 +15,9 @@ import {
 
 import { ONE_ETHER } from '../../utils/constants';
 import { now } from '../../utils/time';
-import { Token, feeds, tokens } from '../../utils/addresses';
+import { feeds, Token, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
-
-const { API_KEY_ALCHEMY } = process.env;
-const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16600000;
 
 enum PricingPath {
   NONE,
@@ -125,12 +121,6 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 describe('ChainlinkAdapter', () => {
   let deployer: SignerWithAddress;
   let instance: ChainlinkAdapter;
-
-  before(async () => {
-    await ethers.provider.send('hardhat_reset', [
-      { forking: { jsonRpcUrl, blockNumber } },
-    ]);
-  });
 
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
