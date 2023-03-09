@@ -12,24 +12,17 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {Position} from "../libraries/Position.sol";
 
-import {PoolInternal} from "./PoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
 contract PoolBase is
     IPoolBase,
-    PoolInternal,
     ERC1155Base,
     ERC1155Enumerable,
     ERC165Base,
     Multicall
 {
-    constructor(
-        address factory,
-        address exchangeHelper,
-        address wrappedNativeToken,
-        address feeReceiver
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
+    constructor() {}
 
     /// @notice see IPoolBase; inheritance not possible due to linearization issues
     function name() external view returns (string memory) {

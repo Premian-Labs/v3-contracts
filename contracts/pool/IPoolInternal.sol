@@ -45,7 +45,6 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
-    error Pool__UseTransferPositionToTransferLPTokens();
     error Pool__ZeroSize();
 
     struct Tick {
