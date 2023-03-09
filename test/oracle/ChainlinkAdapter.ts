@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
@@ -14,10 +13,11 @@ import {
 } from '../../utils/defillama';
 
 import { ONE_ETHER } from '../../utils/constants';
-import { now } from '../../utils/time';
-import { Token, feeds, tokens } from '../../utils/addresses';
+import { latest } from '../../utils/time';
+import { feeds, Token, tokens } from '../../utils/addresses';
 
 import { bnToAddress } from '@solidstate/library';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 const { API_KEY_ALCHEMY } = process.env;
 const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
@@ -123,17 +123,8 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 }
 
 describe('ChainlinkAdapter', () => {
-  let deployer: SignerWithAddress;
-  let instance: ChainlinkAdapter;
-
-  before(async () => {
-    await ethers.provider.send('hardhat_reset', [
-      { forking: { jsonRpcUrl, blockNumber } },
-    ]);
-  });
-
-  beforeEach(async () => {
-    [deployer] = await ethers.getSigners();
+  async function deploy() {
+    const [deployer] = await ethers.getSigners();
 
     const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
       tokens.WETH.address,
@@ -148,13 +139,23 @@ describe('ChainlinkAdapter', () => {
 
     await proxy.deployed();
 
-    instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
+    const instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
 
     await instance.batchRegisterFeedMappings(feeds);
+
+    return { deployer, instance };
+  }
+
+  before(async () => {
+    await ethers.provider.send('hardhat_reset', [
+      { forking: { jsonRpcUrl, blockNumber } },
+    ]);
   });
 
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [isCached, _] = await instance.isPairSupported(
         tokens.WETH.address,
         tokens.DAI.address,
@@ -164,6 +165,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('returns false if path for pair does not exist', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [_, hasPath] = await instance.isPairSupported(
         tokens.WETH.address,
         bnToAddress(BigNumber.from(0)),
@@ -175,6 +178,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#upsertPair', () => {
     it('should revert if pair cannot be supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.upsertPair(
           bnToAddress(BigNumber.from(0)),
@@ -197,6 +202,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should not fail if called multiple times for same pair', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
 
       const [isCached, _] = await instance.isPairSupported(
@@ -212,6 +219,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#bathRegisterFeedMappings', async () => {
     it('should revert if token == denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.batchRegisterFeedMappings([
           {
@@ -224,6 +233,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should revert if token or denomination address is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.batchRegisterFeedMappings([
           {
@@ -246,6 +257,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('shoud return feed of mapped token and denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.batchRegisterFeedMappings(feeds);
 
       for (let i = 0; i < feeds.length; i++) {
@@ -258,6 +271,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#feed', async () => {
     it('should return zero address if feed has not been added', async () => {
+      const { instance } = await loadFixture(deploy);
+
       expect(
         await instance.feed(tokens.EUL.address, tokens.DAI.address),
       ).to.equal(bnToAddress(BigNumber.from(0)));
@@ -266,6 +281,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#tryQuote', async () => {
     it('should revert if pair not already supported and there is no feed', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
@@ -275,6 +292,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should add pair if they are not already supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const tokenIn = tokens.WETH;
       const tokenOut = tokens.DAI;
 
@@ -296,6 +315,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return quote for pair', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const tokenIn = tokens.WETH;
       const tokenOut = tokens.DAI;
 
@@ -318,6 +339,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#quote', async () => {
     it('should revert if pair is not supported yet', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
@@ -327,6 +350,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return quote using correct denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let tokenIn = tokens.WETH;
       let tokenOut = tokens.DAI;
 
@@ -355,8 +380,13 @@ describe('ChainlinkAdapter', () => {
   for (let i = 0; i < paths.length; i++) {
     describe(`${PricingPath[paths[i][0].path]}`, () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
+        let instance: ChainlinkAdapter;
+
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
+            const f = await loadFixture(deploy);
+            instance = f.instance;
+
             if (
               path == PricingPath.TOKEN_USD ||
               path == PricingPath.TOKEN_USD_TOKEN ||
@@ -495,7 +525,7 @@ let priceCache: Map<string, number> = new Map();
 
 async function fetchPrice(network: string, address: string): Promise<number> {
   if (!priceCache.has(address)) {
-    const timestamp = await now();
+    const timestamp = await latest();
     const price = await getPrice(network, address, timestamp);
     priceCache.set(address, price);
   }

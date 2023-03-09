@@ -1,5 +1,4 @@
 import {
-  ERC20Mock,
   ERC20Mock__factory,
   VxPremia,
   VxPremia__factory,
@@ -7,11 +6,11 @@ import {
 } from '../../typechain';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { parseEther, solidityPack } from 'ethers/lib/utils';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
-import { increase, ONE_DAY, revertToSnapshotAfterEach } from '../../utils/time';
+import { increase, ONE_DAY } from '../../utils/time';
 import { getEventArgs } from '../../utils/events';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 /* Example to decode packed target data
 
@@ -31,13 +30,6 @@ const isCallPool = hexDataSlice(
 
 ////////////////////
 
-let deployer: SignerWithAddress;
-let alice: SignerWithAddress;
-let bob: SignerWithAddress;
-
-let premia: ERC20Mock;
-let usdc: ERC20Mock;
-let vxPremia: VxPremia;
 const poolAddresses = [
   '0x000004354F938CF1aCC2414B68951ad7a8730fB6',
   '0x100004354F938CF1aCC2414B68951ad7a8730fB6',
@@ -45,11 +37,11 @@ const poolAddresses = [
 ];
 
 describe('VxPremia', () => {
-  before(async () => {
-    [deployer, alice, bob] = await ethers.getSigners();
+  async function deploy() {
+    const [deployer, alice, bob] = await ethers.getSigners();
 
-    premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
-    usdc = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+    const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+    const usdc = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
     const premiaDiamond = await deployMockContract(deployer as any, [
       'function getPoolList() external view returns (uint256[])',
@@ -69,7 +61,7 @@ describe('VxPremia', () => {
       vxPremiaImpl.address,
     );
 
-    vxPremia = VxPremia__factory.connect(vxPremiaProxy.address, deployer);
+    const vxPremia = VxPremia__factory.connect(vxPremiaProxy.address, deployer);
 
     for (const u of [alice, bob]) {
       await premia.mint(u.address, parseEther('100'));
@@ -77,12 +69,14 @@ describe('VxPremia', () => {
         .connect(u)
         .approve(vxPremia.address, ethers.constants.MaxUint256);
     }
-  });
 
-  revertToSnapshotAfterEach(async () => {});
+    return { deployer, alice, bob, premia, usdc, vxPremia, poolAddresses };
+  }
 
   describe('#getUserVotes', () => {
     it('should successfully return user votes', async () => {
+      const { vxPremia, alice } = await loadFixture(deploy);
+
       await vxPremia.connect(alice).stake(parseEther('10'), ONE_DAY * 365);
 
       const votes = [
@@ -119,6 +113,8 @@ describe('VxPremia', () => {
 
   describe('#castVotes', () => {
     it('should fail casting user vote if not enough voting power', async () => {
+      const { vxPremia, alice } = await loadFixture(deploy);
+
       await expect(
         vxPremia.connect(alice).castVotes([
           {
@@ -149,6 +145,8 @@ describe('VxPremia', () => {
     });
 
     it('should successfully cast user votes', async () => {
+      const { vxPremia, alice } = await loadFixture(deploy);
+
       await vxPremia.connect(alice).stake(parseEther('5'), ONE_DAY * 365);
 
       await vxPremia.connect(alice).castVotes([
@@ -237,6 +235,8 @@ describe('VxPremia', () => {
     });
 
     it('should remove some user votes if some tokens are withdrawn', async () => {
+      const { vxPremia, alice } = await loadFixture(deploy);
+
       await vxPremia.connect(alice).stake(parseEther('5'), ONE_DAY * 365);
 
       await vxPremia.connect(alice).castVotes([
@@ -306,6 +306,8 @@ describe('VxPremia', () => {
   });
 
   it('should successfully update total pool votes', async () => {
+    const { vxPremia, alice } = await loadFixture(deploy);
+
     await vxPremia.connect(alice).stake(parseEther('10'), ONE_DAY * 365);
 
     await vxPremia.connect(alice).castVotes([
@@ -327,6 +329,8 @@ describe('VxPremia', () => {
   });
 
   it('should properly remove all votes if unstaking all', async () => {
+    const { vxPremia, alice } = await loadFixture(deploy);
+
     await vxPremia.connect(alice).stake(parseEther('10'), ONE_DAY * 365);
 
     await vxPremia.connect(alice).castVotes([
@@ -352,6 +356,8 @@ describe('VxPremia', () => {
   });
 
   it('should emit RemoveVote event', async () => {
+    const { vxPremia, alice } = await loadFixture(deploy);
+
     await vxPremia.connect(alice).stake(parseEther('10'), ONE_DAY * 365);
 
     const target1 = solidityPack(['address', 'bool'], [poolAddresses[0], true]);
@@ -396,6 +402,8 @@ describe('VxPremia', () => {
   });
 
   it('should reset user votes', async () => {
+    const { vxPremia, alice, deployer } = await loadFixture(deploy);
+
     await vxPremia.connect(alice).stake(parseEther('10'), ONE_DAY * 365);
 
     const target1 = solidityPack(['address', 'bool'], [poolAddresses[0], true]);
@@ -445,6 +453,8 @@ describe('VxPremia', () => {
   });
 
   it('should fail resetting user votes if not called from owner', async () => {
+    const { vxPremia, alice } = await loadFixture(deploy);
+
     await expect(
       vxPremia.connect(alice).resetUserVotes(alice.address),
     ).to.be.revertedWithCustomError(vxPremia, 'Ownable__NotOwner');

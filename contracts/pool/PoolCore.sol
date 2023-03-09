@@ -28,6 +28,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     {}
 
     /// @inheritdoc IPoolCore
+    function marketPrice() external view returns (uint256) {
+        return PoolStorage.layout().marketPrice;
+    }
+
+    /// @inheritdoc IPoolCore
     function takerFee(
         uint256 size,
         uint256 premium,
@@ -84,10 +89,22 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external {
         _ensureOperator(p.operator);
-        _deposit(p, belowLower, belowUpper, size, maxSlippage, 0, address(0));
+        _deposit(
+            p,
+            DepositArgsInternal(
+                belowLower,
+                belowUpper,
+                size,
+                minMarketPrice,
+                maxMarketPrice,
+                0,
+                address(0)
+            )
+        );
     }
 
     /// @inheritdoc IPoolCore
@@ -96,7 +113,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage,
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice,
         bool isBidIfStrandedMarketPrice
     ) external {
         _ensureOperator(p.operator);
@@ -106,11 +124,12 @@ contract PoolCore is IPoolCore, PoolInternal {
                 belowLower,
                 belowUpper,
                 size,
-                maxSlippage,
+                minMarketPrice,
+                maxMarketPrice,
                 0,
-                address(0),
-                isBidIfStrandedMarketPrice
-            )
+                address(0)
+            ),
+            isBidIfStrandedMarketPrice
         );
     }
 
@@ -121,7 +140,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         uint256 belowLower,
         uint256 belowUpper,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external payable {
         _ensureOperator(p.operator);
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -131,12 +151,15 @@ contract PoolCore is IPoolCore, PoolInternal {
 
         _deposit(
             p,
-            belowLower,
-            belowUpper,
-            size,
-            maxSlippage,
-            creditAmount,
-            s.refundAddress
+            DepositArgsInternal(
+                belowLower,
+                belowUpper,
+                size,
+                minMarketPrice,
+                maxMarketPrice,
+                creditAmount,
+                s.refundAddress
+            )
         );
     }
 
@@ -144,10 +167,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     function withdraw(
         Position.Key memory p,
         uint256 size,
-        uint256 maxSlippage
+        uint256 minMarketPrice,
+        uint256 maxMarketPrice
     ) external {
         _ensureOperator(p.operator);
-        _withdraw(p, size, maxSlippage);
+        _withdraw(p, size, minMarketPrice, maxMarketPrice);
     }
 
     /// @inheritdoc IPoolCore

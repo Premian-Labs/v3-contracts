@@ -67,10 +67,6 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return PoolStorage.parseTokenId(tokenId);
     }
 
-    function marketPrice() external view returns (uint256) {
-        return PoolStorage.layout().marketPrice;
-    }
-
     function protocolFees() external view returns (uint256) {
         return PoolStorage.layout().protocolFees;
     }
