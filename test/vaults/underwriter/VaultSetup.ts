@@ -79,12 +79,20 @@ export async function addDeposit(
 ) {
   const isCall = await vault.isCall();
   const token = isCall ? base : quote;
-  const assetAmount = isCall
-    ? parseEther(amount.toString())
-    : parseUnits(amount.toString(), 6);
+  const assetAmount = parseUnits(amount.toString(), await token.decimals()); // todo
 
   await token.connect(caller).approve(vault.address, assetAmount);
   await vault.connect(caller).deposit(assetAmount, receiver.address);
+}
+
+export async function addMockDeposit(
+  depositSize: number,
+  token: ERC20Mock,
+  vault: UnderwriterVaultMock,
+) {
+  const size = parseEther(depositSize.toString());
+  await vault.increaseTotalAssets(size);
+  await token.mint(vault.address, size);
 }
 
 export async function vaultSetup() {

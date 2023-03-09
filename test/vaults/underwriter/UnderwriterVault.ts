@@ -13,7 +13,12 @@ import {
   formatEther,
   formatUnits,
 } from 'ethers/lib/utils';
-import { addDeposit, vaultSetup, createPool } from './VaultSetup';
+import {
+  addDeposit,
+  addMockDeposit,
+  vaultSetup,
+  createPool,
+} from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { UnderwriterVaultMock, ERC20Mock } from '../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -1886,6 +1891,7 @@ describe('UnderwriterVault', () => {
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
 
       await callVault.increaseTotalAssets(lpDepositSize);
+      // todo:
 
       const [, price, mintingFee, cLevel] = await callVault.quote(
         strike,
@@ -1929,6 +1935,7 @@ describe('UnderwriterVault', () => {
 
   describe('#_ensureSupportedListing', () => {
     const tests = [
+      // todo: hydrate delta values closer to bounds
       {
         spot: '1000',
         strike: '1200',
@@ -2121,7 +2128,6 @@ describe('UnderwriterVault', () => {
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
         await addDeposit(callVault, lp, lpDepositSize, base, quote);
-
         // Trade Settings
         const strike = parseEther('1500');
         const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
@@ -2132,7 +2138,19 @@ describe('UnderwriterVault', () => {
 
         // Execute Trade
         const cLevel_postTrade = await callVault.getClevel(tradeSize);
+        const [, price, mintingFee] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const totalFloat =
+          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
+        const total = parseEther(totalFloat.toString());
+        await base.connect(trader).approve(callVault.address, total);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        console.log(totalFloat);
+        console.log(total);
+        console.log(price, mintingFee);
         const cLevel_postTrade_check = await callVault.getClevel(
           parseEther('0'),
         );
@@ -2150,7 +2168,8 @@ describe('UnderwriterVault', () => {
 
         // Hydrate Vault
         const lpDepositSize = 5; // units of base
-        await addDeposit(callVault, lp, lpDepositSize, base, quote);
+
+        await addMockDeposit(lpDepositSize, base, callVault);
 
         // Trade Settings
         const strike = parseEther('1500');
@@ -2158,6 +2177,17 @@ describe('UnderwriterVault', () => {
         const tradeSize = parseEther('3');
 
         // Execute Trades
+        // todo: compute price + mintingFee without using quote
+        const [, price, mintingFee] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const total =
+          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
+        await base
+          .connect(trader)
+          .approve(callVault.address, parseEther(total.toString()));
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         await expect(
