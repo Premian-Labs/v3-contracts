@@ -54,6 +54,15 @@ contract UnderwriterVault is
         uint256 strike;
     }
 
+    struct BlackScholesArgs {
+        uint256 spot;
+        uint256 strike;
+        uint256 timeToMaturity;
+        uint256 volAnnualized;
+        uint256 riskFreeRate;
+        bool isCall;
+    }
+
     struct TradeArgs {
         uint256 strike;
         uint256 maturity;
@@ -672,15 +681,15 @@ contract UnderwriterVault is
 
         // returns USD price for calls & puts
         uint256 price = OptionMath.blackScholesPrice(
-            spotPrice,
-            args.strike,
-            tau,
-            sigma,
-            rfRate,
-            l.isCall
+            bsArgs.spot,
+            bsArgs.strike,
+            bsArgs.timeToMaturity,
+            bsArgs.volAnnualized,
+            bsArgs.riskFreeRate,
+            bsArgs.isCall
         );
 
-        if (l.isCall) price = price.div(spotPrice);
+        if (l.isCall) price = price.div(bsArgs.spot);
 
         // call denominated in base, put denominated in quote
         uint256 mintingFee = IPool(poolAddr).takerFee(
@@ -740,7 +749,7 @@ contract UnderwriterVault is
         // Handle the premiums and spread capture generated
         AfterBuyArgs memory intel = AfterBuyArgs(
             args.maturity,
-            args.size.mul(price),
+            premium,
             secondsToExpiration,
             args.size,
             totalSpread,
