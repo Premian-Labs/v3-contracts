@@ -762,7 +762,7 @@ contract UnderwriterVault is
             args.strike,
             args.maturity,
             args.size,
-            price,
+            premium,
             totalSpread
         );
     }
