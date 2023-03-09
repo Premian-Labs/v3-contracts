@@ -27,6 +27,16 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__UtilEstError();
     error Vault__PositionHasNotBeenClosed();
 
+    // Events
+    event Sell(
+        address indexed buyer,
+        uint256 strike,
+        uint256 maturity,
+        uint256 size,
+        uint256 premium,
+        uint256 vaultFee
+    );
+
     // @notice Facilitates the purchase of an option for a LT
     // @param taker The LT that is buying the option
     // @param strike The strike price the option

@@ -198,6 +198,44 @@ describe('UnderwriterVault', () => {
     });
   });
 
+  describe('#_getSpotPrice', () => {
+    it('should get the current spot price', async () => {
+      const { callVault } = await loadFixture(vaultSetup);
+      vault = callVault;
+
+      let spot = parseFloat(formatEther(await callVault['getSpotPrice()']()));
+      expect(spot).to.eq(1500);
+    });
+
+    it('should get the spot price at a particular timestamp', async () => {
+      const currentTime = 1878113571;
+      const t0 = currentTime + 7 * ONE_DAY;
+      const t1 = currentTime + 10 * ONE_DAY;
+
+      const { callVault, oracleAdapter, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      vault = callVault;
+
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t0)
+        .returns(parseUnits('1000', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t1)
+        .returns(parseUnits('1400', 18));
+
+      let spot = parseFloat(
+        formatEther(await callVault['getSpotPrice(uint256)'](t0)),
+      );
+      expect(spot).to.eq(1000);
+
+      spot = parseFloat(
+        formatEther(await callVault['getSpotPrice(uint256)'](t1)),
+      );
+      expect(spot).to.eq(1400);
+    });
+  });
+
   describe('#getTotalFairValue', () => {
     const currentTime = 1878113571;
     const t0 = currentTime + 7 * ONE_DAY;
@@ -1687,12 +1725,6 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#vaultSetup', () => {
-    it('#_getSpotPrice', async () => {
-      const { callVault } = await loadFixture(vaultSetup);
-      const spotPrice = await callVault.getSpotPrice();
-      expect(parseFloat(formatEther(spotPrice))).to.be.equal(1500);
-    });
-
     // TODO: what does this test?
     it('returns addressZero from factory non existing pool', async () => {
       const { base, quote, maturity, oracleAdapter, p } = await loadFixture(
@@ -1815,7 +1847,7 @@ describe('UnderwriterVault', () => {
       const { callVault, putVault, base, volOracle } = await loadFixture(
         vaultSetup,
       );
-      const spotPrice = await callVault.getSpotPrice();
+      const spotPrice = await callVault['getSpotPrice()']();
       const strike = parseEther('1500');
       const tau = parseEther('0.03835616'); // 14 DTE
       const rfRate = await volOracle.getRiskFreeRate();

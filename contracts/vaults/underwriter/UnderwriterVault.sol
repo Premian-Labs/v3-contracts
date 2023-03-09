@@ -728,6 +728,15 @@ contract UnderwriterVault is
             args.strike
         );
         _afterBuy(intel);
+
+        emit Sell(
+            msg.sender,
+            args.strike,
+            args.maturity,
+            args.size,
+            price,
+            totalSpread
+        );
     }
 
     /// @inheritdoc IUnderwriterVault
