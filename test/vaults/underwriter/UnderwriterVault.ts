@@ -2121,24 +2121,16 @@ describe('UnderwriterVault', () => {
         const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
         const tradeSize = parseEther('2');
 
-        //PreTrade cLevel
-        const cLevel_preTrade = await callVault.getClevel(parseEther('0'));
-
         // Execute Trade
         const cLevel_postTrade = await callVault.getClevel(tradeSize);
-        const [, price, mintingFee] = await callVault.quote(
+        const [, premium, mintingFee, spread] = await callVault.quote(
           strike,
           maturity,
           tradeSize,
         );
-        const totalFloat =
-          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
-        const total = parseEther(totalFloat.toString());
-        await base.connect(trader).approve(callVault.address, total);
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
-        console.log(totalFloat);
-        console.log(total);
-        console.log(price, mintingFee);
         const cLevel_postTrade_check = await callVault.getClevel(
           parseEther('0'),
         );
@@ -2166,16 +2158,13 @@ describe('UnderwriterVault', () => {
 
         // Execute Trades
         // todo: compute price + mintingFee without using quote
-        const [, price, mintingFee] = await callVault.quote(
+        const [, premium, mintingFee, spread] = await callVault.quote(
           strike,
           maturity,
           tradeSize,
         );
-        const total =
-          parseFloat(formatEther(price)) + parseFloat(formatEther(mintingFee));
-        await base
-          .connect(trader)
-          .approve(callVault.address, parseEther(total.toString()));
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         await expect(
@@ -2201,6 +2190,13 @@ describe('UnderwriterVault', () => {
         const lastTrade_t0 = await callVault.getLastTradeTimestamp();
 
         // Execute Trade
+        const [, premium, mintingFee, spread] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
 
         const lastTrade_t1 = await callVault.getLastTradeTimestamp();
@@ -2227,6 +2223,15 @@ describe('UnderwriterVault', () => {
 
         // Execute Trade
         const cLevel_t1 = await callVault.getClevel(tradeSize);
+
+        const [, premium, mintingFee, spread] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+        const totalTransfer = premium.add(mintingFee).add(spread);
+        await base.connect(trader).approve(callVault.address, totalTransfer);
+
         await callVault.connect(trader).buy(strike, maturity, tradeSize);
         const cLevel_t2 = await callVault.getClevel(tradeSize);
         // Increase time by 2 hrs
