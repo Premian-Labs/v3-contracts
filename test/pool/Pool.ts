@@ -1561,6 +1561,24 @@ describe('Pool', () => {
       );
     });
 
+    it('should revert if not operator', async () => {
+      const { callPool, lp, pKey, trader } = await loadFixture(
+        deployAndDeposit_1000_CS,
+      );
+
+      const transferAmount = parseEther('200');
+
+      await callPool
+        .connect(lp)
+        .transferPosition(pKey, trader.address, pKey.operator, transferAmount);
+
+      await expect(
+        callPool
+          .connect(trader)
+          .transferPosition(pKey, lp.address, pKey.operator, transferAmount),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__NotAuthorized');
+    });
+
     it('should revert if transferring to same owner and operator', async () => {
       const { callPool, depositSize, lp, pKey } = await loadFixture(
         deployAndDeposit_1000_CS,
