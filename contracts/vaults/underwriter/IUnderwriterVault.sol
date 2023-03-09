@@ -39,7 +39,7 @@ interface IUnderwriterVault is ISolidStateERC4626 {
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) external view returns (address, uint256, uint256, uint256);
+    ) external view returns (address, uint256, uint256, uint256, uint256);
 
     // @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);

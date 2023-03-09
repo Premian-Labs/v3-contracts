@@ -633,33 +633,40 @@ contract UnderwriterVault is
 
     function _quote(
         TradeArgs memory args
-    ) internal view returns (address, uint256, uint256, uint256) {
+    ) internal view returns (address, uint256, uint256, uint256, uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-
-        uint256 collateralAmt = l.isCall
-            ? args.size
-            : args.size.mul(args.strike);
 
         // Check non Zero Strike
         if (args.strike == 0) revert Vault__StrikeZero();
         // Check valid maturity
         if (block.timestamp >= args.maturity) revert Vault__OptionExpired();
-        // Compute premium and the spread collected
-        uint256 spotPrice = _getSpotPrice();
 
-        uint256 tau = (args.maturity - block.timestamp).div(SECONDSINAYEAR);
+        BlackScholesArgs memory bsArgs = BlackScholesArgs({
+            spot: _getSpotPrice(),
+            strike: args.strike,
+            timeToMaturity: (args.maturity - block.timestamp).div(
+                SECONDSINAYEAR
+            ),
+            volAnnualized: 0,
+            riskFreeRate: IVolatilityOracle(IV_ORACLE_ADDR).getRiskFreeRate(),
+            isCall: l.isCall
+        });
 
-        uint256 sigma = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
+        bsArgs.volAnnualized = IVolatilityOracle(IV_ORACLE_ADDR).getVolatility(
             l.base,
-            spotPrice,
-            args.strike,
-            tau
+            bsArgs.spot,
+            bsArgs.strike,
+            bsArgs.timeToMaturity
         );
 
-        uint256 rfRate = IVolatilityOracle(IV_ORACLE_ADDR).getRiskFreeRate();
-
-        _ensureSupportedListing(spotPrice, args.strike, tau, sigma, rfRate);
+        _ensureSupportedListing(
+            bsArgs.spot,
+            bsArgs.strike,
+            bsArgs.timeToMaturity,
+            bsArgs.volAnnualized,
+            bsArgs.riskFreeRate
+        );
 
         address poolAddr = _getFactoryAddress(args.strike, args.maturity);
 
@@ -676,13 +683,23 @@ contract UnderwriterVault is
         if (l.isCall) price = price.div(spotPrice);
 
         // call denominated in base, put denominated in quote
-        uint256 mintingFee = IPool(poolAddr).takerFee(args.size, 0, false);
+        uint256 mintingFee = IPool(poolAddr).takerFee(
+            args.size,
+            price.mul(args.size),
+            false
+        );
 
         // Check if the vault has sufficient funds
+        uint256 collateralAmt = l.isCall
+            ? args.size
+            : args.size.mul(args.strike);
         if ((collateralAmt + mintingFee) >= _availableAssets())
             revert Vault__InsufficientFunds();
 
-        return (poolAddr, price, mintingFee, _getCLevel(collateralAmt));
+        uint256 cLevel = _getCLevel(collateralAmt);
+        uint256 spread = (cLevel - l.minCLevel).mul(price).mul(args.size);
+
+        return (poolAddr, price.mul(args.size), mintingFee, cLevel, spread);
     }
 
     function _buy(TradeArgs memory args) internal {
@@ -692,26 +709,28 @@ contract UnderwriterVault is
         // Get pool address, price and c-level
         (
             address poolAddr,
-            uint256 price,
+            uint256 premium,
             uint256 mintingFee,
-            uint256 cLevel
+            uint256 cLevel,
+            uint256 totalSpread
         ) = _quote(args);
 
         // Add listing
         _addListing(args.strike, args.maturity);
 
-        uint256 totalSpread = (cLevel - l.minCLevel).mul(price).mul(args.size) +
-            mintingFee;
-
         // Collect option premium from buyer
         IERC20(_asset()).safeTransferFrom(
             msg.sender,
             address(this),
-            price + mintingFee
+            premium + totalSpread + mintingFee
         );
 
         // Approve transfer of base / quote token
-        IERC20(_asset()).approve(poolAddr, args.size + mintingFee);
+        IERC20(_asset()).approve(
+            poolAddr,
+            // todo: for puts multiply the size by the strike
+            args.size + totalSpread + mintingFee
+        );
 
         // Mint option and allocate long token
         IPool(poolAddr).writeFrom(address(this), msg.sender, args.size);
@@ -744,7 +763,7 @@ contract UnderwriterVault is
         uint256 strike,
         uint256 maturity,
         uint256 size
-    ) external view returns (address, uint256, uint256, uint256) {
+    ) external view returns (address, uint256, uint256, uint256, uint256) {
         TradeArgs memory args;
         args.strike = strike;
         args.maturity = maturity;
