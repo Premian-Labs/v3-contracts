@@ -10,10 +10,20 @@ import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enu
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
+import {Position} from "../libraries/Position.sol";
+
 import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
-contract PoolBase is ERC1155Base, ERC1155Enumerable, ERC165Base, Multicall {
+contract PoolBase is
+    IPoolBase,
+    ERC1155Base,
+    ERC1155Enumerable,
+    ERC165Base,
+    Multicall
+{
+    constructor() {}
+
     /// @notice see IPoolBase; inheritance not possible due to linearization issues
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -44,5 +54,10 @@ contract PoolBase is ERC1155Base, ERC1155Enumerable, ERC165Base, Multicall {
         override(ERC1155BaseInternal, ERC1155EnumerableInternal)
     {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        for (uint256 i; i < ids.length; i++) {
+            if (ids[i] > PoolStorage.LONG)
+                revert Pool__UseTransferPositionToTransferLPTokens();
+        }
     }
 }

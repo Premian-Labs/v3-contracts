@@ -341,7 +341,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.0":
+"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.0, @ethersproject/providers@npm:^5.7.2":
   version: 5.7.2
   resolution: "@ethersproject/providers@npm:5.7.2"
   dependencies:
@@ -6646,6 +6646,7 @@ __metadata:
   resolution: "premia-contracts-v3@workspace:."
   dependencies:
     "@chainlink/contracts": ^0.6.1
+    "@ethersproject/providers": ^5.7.2
     "@nomicfoundation/hardhat-chai-matchers": ^1.0.6
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.2
@@ -6687,7 +6688,6 @@ __metadata:
   peerDependencies:
     "@ethersproject/abi": "*"
     "@ethersproject/bytes": "*"
-    "@ethersproject/providers": "*"
   languageName: unknown
   linkType: soft
 
