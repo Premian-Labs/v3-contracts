@@ -26,7 +26,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
     address internal immutable CHAINLINK_ADAPTER;
-    // Wrapped native token address (eg WETH, FTM, AVAX, etc) pair
+    // Wrapped native token address (eg WETH, WFTM, etc)
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
     constructor(
@@ -37,6 +37,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+    }
+
+    /// @inheritdoc IPoolFactory
+    function isPool(address contractAddress) external view returns (bool) {
+        return PoolFactoryStorage.layout().isPool[contractAddress];
     }
 
     /// @inheritdoc IPoolFactory
@@ -122,9 +127,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             )
         );
 
-        PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
-        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] += 1;
-        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] += 1;
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.pools[poolKey] = poolAddress;
+        l.isPool[poolAddress] = true;
+        l.strikeCount[k.strikeKey()] += 1;
+        l.maturityCount[k.maturityKey()] += 1;
 
         emit PoolDeployed(
             k.base,

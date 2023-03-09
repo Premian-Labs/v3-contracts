@@ -14,6 +14,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
+import {IERC20Router} from "../router/IERC20Router.sol";
 
 import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
@@ -41,6 +42,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using UD60x18 for uint256;
 
     address internal immutable FACTORY;
+    address internal immutable ROUTER;
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
@@ -59,11 +61,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     constructor(
         address factory,
+        address router,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
     ) {
         FACTORY = factory;
+        ROUTER = router;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
@@ -610,7 +614,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     collateral - collateralCredit
                 );
             } else {
-                IERC20(poolToken).safeTransferFrom(
+                IERC20Router(ROUTER).safeTransferFrom(
+                    poolToken,
                     from,
                     to,
                     collateral - collateralCredit
@@ -665,7 +670,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        IERC20(l.getPoolToken()).safeTransferFrom(
+        IERC20Router(ROUTER).safeTransferFrom(
+            l.getPoolToken(),
             underwriter,
             address(this),
             collateral + protocolFee
@@ -924,7 +930,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         // Transfer collateral
         if (_deltaCollateral < 0) {
-            IERC20(l.getPoolToken()).safeTransferFrom(
+            IERC20Router(ROUTER).safeTransferFrom(
+                l.getPoolToken(),
                 user,
                 address(this),
                 uint256(-_deltaCollateral)
@@ -1356,7 +1363,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
         }
         if (s.amountInMax > 0) {
-            IERC20(s.tokenIn).safeTransferFrom(
+            IERC20Router(ROUTER).safeTransferFrom(
+                s.tokenIn,
                 msg.sender,
                 EXCHANGE_HELPER,
                 s.amountInMax
@@ -2026,8 +2034,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (delta.collateral < 0) {
             IERC20 token = IERC20(l.getPoolToken());
             if (
-                token.allowance(args.user, address(this)) <
-                uint256(-delta.collateral)
+                token.allowance(args.user, ROUTER) < uint256(-delta.collateral)
             ) {
                 return (
                     false,

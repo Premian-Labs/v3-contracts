@@ -13,10 +13,19 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     constructor(
         address factory,
+        address router,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
+    )
+        PoolInternal(
+            factory,
+            router,
+            exchangeHelper,
+            wrappedNativeToken,
+            feeReceiver
+        )
+    {}
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (uint256) {
