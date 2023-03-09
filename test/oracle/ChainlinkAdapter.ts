@@ -19,10 +19,6 @@ import { feeds, Token, tokens } from '../../utils/addresses';
 import { bnToAddress } from '@solidstate/library';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
-const { API_KEY_ALCHEMY } = process.env;
-const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16600000;
-
 enum PricingPath {
   NONE,
   ETH_USD,
@@ -145,12 +141,6 @@ describe('ChainlinkAdapter', () => {
 
     return { deployer, instance };
   }
-
-  before(async () => {
-    await ethers.provider.send('hardhat_reset', [
-      { forking: { jsonRpcUrl, blockNumber } },
-    ]);
-  });
 
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
