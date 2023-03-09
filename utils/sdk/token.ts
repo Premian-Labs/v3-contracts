@@ -5,7 +5,7 @@ import { OrderType } from './types';
 const MIN_TICK_DISTANCE = parseEther('0.001');
 
 export interface TokenIdParams {
-  version: BigNumber;
+  version: number;
   orderType: OrderType;
   operator: string;
   upper: BigNumber;
@@ -30,7 +30,7 @@ export function formatTokenId({
 
 export function parseTokenId(tokenId: BigNumber): TokenIdParams {
   return {
-    version: tokenId.shr(252),
+    version: tokenId.shr(252).toNumber(),
     orderType: tokenId
       .shr(180)
       .and('0xf') // 4 bits mask

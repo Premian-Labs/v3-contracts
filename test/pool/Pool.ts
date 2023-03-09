@@ -1430,7 +1430,7 @@ describe('Pool', () => {
 
       expect(
         formatTokenId({
-          version: BigNumber.from(1),
+          version: 1,
           operator,
           lower: parseEther('0.001'),
           upper: parseEther('1'),
@@ -1471,6 +1471,135 @@ describe('Pool', () => {
       expect(r.operator).to.eq('0x1000000000000000000000000000000000000001');
       expect(r.orderType).to.eq(OrderType.LC);
       expect(r.version).to.eq(1);
+    });
+  });
+
+  describe('#transferPosition', () => {
+    it('should successfully partially transfer position to new owner with same operator', async () => {
+      const { callPool, depositSize, lp, pKey, tokenId, trader } =
+        await loadFixture(deployAndDeposit_1000_CS);
+
+      const transferAmount = parseEther('200');
+
+      await callPool
+        .connect(lp)
+        .transferPosition(pKey, trader.address, pKey.operator, transferAmount);
+
+      expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
+        depositSize.sub(transferAmount),
+      );
+      expect(await callPool.balanceOf(trader.address, tokenId)).to.eq(
+        transferAmount,
+      );
+    });
+
+    it('should successfully partially transfer position to new owner with new operator', async () => {
+      const { callPool, depositSize, lp, pKey, tokenId, trader } =
+        await loadFixture(deployAndDeposit_1000_CS);
+
+      const transferAmount = parseEther('200');
+
+      await callPool
+        .connect(lp)
+        .transferPosition(pKey, trader.address, trader.address, transferAmount);
+
+      expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(
+        depositSize.sub(transferAmount),
+      );
+
+      expect(await callPool.balanceOf(trader.address, tokenId)).to.eq(0);
+
+      const newTokenId = formatTokenId({
+        version: 1,
+        orderType: pKey.orderType,
+        operator: trader.address,
+        upper: pKey.upper,
+        lower: pKey.lower,
+      });
+
+      expect(await callPool.balanceOf(trader.address, newTokenId)).to.eq(
+        transferAmount,
+      );
+    });
+
+    it('should successfully fully transfer position to new owner with same operator', async () => {
+      const { callPool, depositSize, lp, pKey, tokenId, trader } =
+        await loadFixture(deployAndDeposit_1000_CS);
+
+      await callPool
+        .connect(lp)
+        .transferPosition(pKey, trader.address, pKey.operator, depositSize);
+
+      expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+      expect(await callPool.balanceOf(trader.address, tokenId)).to.eq(
+        depositSize,
+      );
+    });
+
+    it('should successfully fully transfer position to new owner with new operator', async () => {
+      const { callPool, depositSize, lp, pKey, tokenId, trader } =
+        await loadFixture(deployAndDeposit_1000_CS);
+
+      await callPool
+        .connect(lp)
+        .transferPosition(pKey, trader.address, trader.address, depositSize);
+
+      expect(await callPool.balanceOf(lp.address, tokenId)).to.eq(0);
+
+      expect(await callPool.balanceOf(trader.address, tokenId)).to.eq(0);
+
+      const newTokenId = formatTokenId({
+        version: 1,
+        orderType: pKey.orderType,
+        operator: trader.address,
+        upper: pKey.upper,
+        lower: pKey.lower,
+      });
+
+      expect(await callPool.balanceOf(trader.address, newTokenId)).to.eq(
+        depositSize,
+      );
+    });
+
+    it('should revert if transferring to same owner and operator', async () => {
+      const { callPool, depositSize, lp, pKey } = await loadFixture(
+        deployAndDeposit_1000_CS,
+      );
+
+      await expect(
+        callPool
+          .connect(lp)
+          .transferPosition(pKey, lp.address, lp.address, depositSize),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__InvalidTransfer');
+    });
+
+    it('should revert if size is 0', async () => {
+      const { callPool, lp, trader, pKey } = await loadFixture(
+        deployAndDeposit_1000_CS,
+      );
+
+      await expect(
+        callPool
+          .connect(lp)
+          .transferPosition(pKey, trader.address, lp.address, 0),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__ZeroSize');
+    });
+
+    it('should revert if not enough tokens to transfer', async () => {
+      const { callPool, lp, trader, pKey, depositSize } = await loadFixture(
+        deployAndDeposit_1000_CS,
+      );
+
+      await expect(
+        callPool
+          .connect(lp)
+          .transferPosition(
+            pKey,
+            trader.address,
+            lp.address,
+            depositSize.add(1),
+          ),
+      ).to.be.revertedWithCustomError(callPool, 'Pool__NotEnoughTokens');
     });
   });
 });
