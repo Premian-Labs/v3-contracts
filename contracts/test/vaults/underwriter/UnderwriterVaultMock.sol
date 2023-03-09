@@ -17,7 +17,7 @@ import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
-    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for *;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
     using UD60x18 for uint256;
@@ -27,6 +27,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256[] strikes;
         uint256[] sizes;
     }
+
+    EnumerableSet.AddressSet internal employedPools;
 
     constructor(
         address oracleAddress,
@@ -503,7 +505,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         IPool(listingAddr).writeFrom(address(this), msg.sender, size);
     }
 
-    function getPoolAddresses() public view returns (address[] memory) {
+    function getActivePoolAddresses() public returns (address[] memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         uint256 maturity = l.minMaturity;
@@ -527,9 +529,19 @@ contract UnderwriterVaultMock is UnderwriterVault {
                     _poolKey
                 );
                 addresses[i] = listingAddr;
+                if (!employedPools.contains(listingAddr))
+                    employedPools.add(listingAddr);
             }
             maturity = l.maturities.next(maturity);
         }
+        return addresses;
+    }
+
+    function getEmployedPools() external view returns (address[] memory) {
+        uint256 n = employedPools.length();
+        address[] memory addresses = new address[](n);
+        for (uint256 i = 0; i < employedPools.length(); i++)
+            addresses[i] = employedPools.at(i);
         return addresses;
     }
 }
