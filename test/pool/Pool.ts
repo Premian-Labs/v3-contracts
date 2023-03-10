@@ -1,27 +1,28 @@
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { PoolUtil } from '../../utils/PoolUtil';
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
-import {
-  getValidMaturity,
-  increaseTo,
-  latest,
-  ONE_HOUR,
-} from '../../utils/time';
+import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
-
-import { tokens } from '../../utils/addresses';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
-
-const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
+import {
+  deploy_CALL,
+  deploy_PUT,
+  deployAndBuy_CALL,
+  deployAndDeposit_1000_CS_CALL,
+  deployAndDeposit_1000_CS_PUT,
+  deployAndDeposit_1000_LC_CALL,
+  deployAndDeposit_1000_LC_PUT,
+  deployAndMintForLP_CALL,
+  deployAndMintForTraderAndLP_CALL,
+  deployAndSell_CALL,
+  depositFnSig,
+  protocolFeePercentage,
+  strike,
+} from './Pool.fixture';
 
 type TestDefinition = {
   name: string;
@@ -43,326 +44,6 @@ function runCallAndPutTests(tests: Array<TestDefinition>) {
 }
 
 describe('Pool', () => {
-  const strike = parseEther('1000');
-  const protocolFeePercentage = 0.5;
-  const isCall = true;
-
-  async function _deploy(isCall: boolean) {
-    const [deployer, lp, trader, feeReceiver] = await ethers.getSigners();
-
-    const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
-    const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
-
-    const oracleAdapter = await deployMockContract(deployer as any, [
-      'function quote(address,address) external view returns (uint256)',
-    ]);
-
-    await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
-
-    const p = await PoolUtil.deploy(
-      deployer,
-      tokens.WETH.address,
-      oracleAdapter.address,
-      feeReceiver.address,
-      parseEther('0.1'), // 10%
-      true,
-      true,
-    );
-
-    const maturity = await getValidMaturity(10, 'months');
-
-    const deployPool = async (isCallPool: boolean) => {
-      const tx = await p.poolFactory.deployPool(
-        {
-          base: base.address,
-          quote: quote.address,
-          oracleAdapter: oracleAdapter.address,
-          strike,
-          maturity,
-          isCallPool,
-        },
-        {
-          value: parseEther('1'),
-        },
-      );
-
-      const r = await tx.wait(1);
-      const poolAddress = (r as any).events[0].args.poolAddress;
-
-      return IPoolMock__factory.connect(poolAddress, deployer);
-    };
-
-    const pool = await deployPool(isCall);
-
-    const getTradeQuote = async () => {
-      const timestamp = BigNumber.from(await latest());
-      return {
-        provider: lp.address,
-        taker: ethers.constants.AddressZero,
-        price: parseEther('0.1'),
-        size: parseEther('10'),
-        isBuy: false,
-        deadline: timestamp.add(ONE_HOUR),
-        salt: timestamp,
-      };
-    };
-
-    const pKey = {
-      owner: lp.address,
-      operator: lp.address,
-      lower: parseEther('0.1'),
-      upper: parseEther('0.3'),
-      orderType: OrderType.LC,
-      isCall: isCall,
-      strike: strike,
-    } as const;
-    Object.freeze(pKey);
-
-    return {
-      deployer,
-      lp,
-      trader,
-      feeReceiver,
-      pool,
-      ...p,
-      base,
-      quote,
-      oracleAdapter,
-      maturity,
-      pKey,
-      getTradeQuote,
-    };
-  }
-
-  async function deploy_CALL() {
-    return _deploy(true);
-  }
-
-  async function deploy_PUT() {
-    return _deploy(false);
-  }
-
-  async function _deployAndMintForLP(isCall: boolean) {
-    const f = await _deploy(isCall);
-
-    const initialCollateral = parseEther('1000');
-
-    const token = isCall ? f.base : f.quote;
-
-    await token.mint(f.lp.address, initialCollateral);
-    await token.connect(f.lp).approve(f.router.address, initialCollateral);
-
-    return { ...f, initialCollateral };
-  }
-
-  async function deployAndMintForLP_CALL() {
-    return _deployAndMintForLP(true);
-  }
-
-  async function deployAndMintForLP_PUT() {
-    return _deployAndMintForLP(false);
-  }
-
-  async function _deployAndMintForTraderAndLP(isCall: boolean) {
-    const f = await _deploy(isCall);
-
-    const initialCollateral = parseEther('10');
-
-    const token = isCall ? f.base : f.quote;
-
-    for (const user of [f.lp, f.trader]) {
-      await token.mint(user.address, initialCollateral);
-      await token.connect(user).approve(f.router.address, initialCollateral);
-    }
-
-    return { ...f, initialCollateral };
-  }
-
-  async function deployAndMintForTraderAndLP_CALL() {
-    return _deployAndMintForTraderAndLP(true);
-  }
-
-  async function deployAndMintForTraderAndLP_PUT() {
-    return _deployAndMintForTraderAndLP(false);
-  }
-
-  async function deposit(
-    f: Awaited<ReturnType<typeof _deployAndMintForTraderAndLP>>,
-    orderType: OrderType,
-    depositSize: BigNumber,
-  ) {
-    const pKey = { ...f.pKey, orderType } as const;
-    Object.freeze(pKey);
-
-    const tokenId = await f.pool.formatTokenId(
-      pKey.operator,
-      pKey.lower,
-      pKey.upper,
-      pKey.orderType,
-    );
-
-    const nearestBelow = await f.pool.getNearestTicksBelow(
-      pKey.lower,
-      pKey.upper,
-    );
-
-    await f.pool
-      .connect(f.lp)
-      [depositFnSig](
-        pKey,
-        nearestBelow.nearestBelowLower,
-        nearestBelow.nearestBelowUpper,
-        depositSize,
-        0,
-        parseEther('1'),
-      );
-
-    return { ...f, tokenId, pKey, depositSize };
-  }
-
-  async function _deployAndDeposit_1000_CS(isCall: boolean) {
-    return deposit(
-      await _deployAndMintForLP(isCall),
-      OrderType.CS,
-      parseEther('1000'),
-    );
-  }
-
-  async function deployAndDeposit_1000_CS_CALL() {
-    return _deployAndDeposit_1000_CS(true);
-  }
-
-  async function deployAndDeposit_1000_CS_PUT() {
-    return _deployAndDeposit_1000_CS(false);
-  }
-
-  async function _deployAndDeposit_1_CS(isCall: boolean) {
-    return deposit(await _deployAndMintForLP(isCall), OrderType.CS, ONE_ETHER);
-  }
-
-  async function deployAndDeposit_1_CS_CALL() {
-    return _deployAndDeposit_1_CS(true);
-  }
-
-  async function deployAndDeposit_1_CS_PUT() {
-    return _deployAndDeposit_1_CS(false);
-  }
-
-  async function _deployAndDeposit_1000_LC(isCall: boolean) {
-    return deposit(
-      await _deployAndMintForLP(isCall),
-      OrderType.LC,
-      parseEther('1000'),
-    );
-  }
-
-  async function deployAndDeposit_1000_LC_CALL() {
-    return _deployAndDeposit_1000_LC(true);
-  }
-
-  async function deployAndDeposit_1000_LC_PUT() {
-    return _deployAndDeposit_1000_LC(false);
-  }
-
-  async function _deployAndDeposit_1_LC(isCall: boolean) {
-    return deposit(await _deployAndMintForLP(isCall), OrderType.LC, ONE_ETHER);
-  }
-
-  async function deployAndDeposit_1_LC_CALL() {
-    return _deployAndDeposit_1_LC(true);
-  }
-
-  async function deployAndDeposit_1_LC_PUT() {
-    return _deployAndDeposit_1_LC(false);
-  }
-
-  async function _deployAndBuy(isCall: boolean) {
-    const f = await _deployAndDeposit_1_CS(isCall);
-
-    const tradeSize = ONE_ETHER;
-    const price = f.pKey.lower;
-    const nextPrice = f.pKey.upper;
-    const avgPrice = average(price, nextPrice);
-    const takerFee = await f.pool.takerFee(
-      tradeSize,
-      tradeSize.mul(avgPrice).div(ONE_ETHER),
-      true,
-    );
-    const totalPremium = await f.pool.getTradeQuote(tradeSize, true);
-
-    const token = isCall ? f.base : f.quote;
-
-    await token.mint(f.trader.address, totalPremium);
-    await token.connect(f.trader).approve(f.router.address, totalPremium);
-
-    await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
-
-    const protocolFees = await f.pool.protocolFees();
-
-    return {
-      ...f,
-      tradeSize,
-      price,
-      nextPrice,
-      avgPrice,
-      takerFee,
-      totalPremium,
-      protocolFees,
-    };
-  }
-
-  async function deployAndBuy_CALL() {
-    return _deployAndBuy(true);
-  }
-
-  async function deployAndBuy_PUT() {
-    return _deployAndBuy(false);
-  }
-
-  async function _deployAndSell(isCall: boolean) {
-    const f = await _deployAndDeposit_1_LC(isCall);
-
-    const tradeSize = ONE_ETHER;
-    const price = f.pKey.upper;
-    const nextPrice = f.pKey.lower;
-    const avgPrice = average(price, nextPrice);
-    const takerFee = await f.pool.takerFee(
-      tradeSize,
-      tradeSize.mul(avgPrice).div(ONE_ETHER),
-      true,
-    );
-
-    const totalPremium = await f.pool.getTradeQuote(tradeSize, false);
-
-    const token = isCall ? f.base : f.quote;
-
-    await token.mint(f.trader.address, ONE_ETHER);
-    await token.connect(f.trader).approve(f.router.address, ONE_ETHER);
-
-    await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
-
-    const protocolFees = await f.pool.protocolFees();
-
-    return {
-      ...f,
-      tradeSize,
-      price,
-      nextPrice,
-      avgPrice,
-      takerFee,
-      totalPremium,
-      protocolFees,
-    };
-  }
-
-  async function deployAndSell_CALL() {
-    return _deployAndSell(true);
-  }
-
-  async function deployAndSell_PUT() {
-    return _deployAndSell(false);
-  }
-
   describe('__internal', function () {
     describe('#_getPricing', () => {
       const tests: TestDefinition[] = [
@@ -405,7 +86,7 @@ describe('Pool', () => {
           operator: lp.address,
           owner: lp.address,
           orderType: OrderType.LC,
-          isCall: isCall,
+          isCall: isCallPool,
           strike: strike,
         };
 
@@ -571,14 +252,42 @@ describe('Pool', () => {
           name: 'should revert if marketPrice is below minMarketPrice or above maxMarketPrice',
           test: shouldRevertIfMarketPriceIsOutOfSlippageRange,
         },
+        { name: 'should revert if zero size', test: shouldRevertIfZeroSize },
+        {
+          name: 'should revert if option is expired',
+          test: shouldRevertIfExpired,
+        },
+        {
+          name: 'should revert if range is not valid',
+          test: shouldRevertIfRangeNotValid,
+        },
+        {
+          name: 'should revert if tick width is invalid',
+          test: shouldRevertIfInvalidTickWidth,
+        },
       ];
 
       runCallAndPutTests(tests);
 
       describe('OrderType LC', () => {
-        it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
+        const lcTests: TestDefinition[] = [
+          {
+            name: 'should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)',
+            test: shouldMint1000LpTokensAndDeposit200Collateral,
+          },
+        ];
+
+        runCallAndPutTests(lcTests);
+
+        async function shouldMint1000LpTokensAndDeposit200Collateral(
+          isCallPool: boolean,
+        ) {
           const { pool, lp, pKey, base, tokenId, depositSize } =
-            await loadFixture(deployAndDeposit_1000_LC_CALL);
+            await loadFixture(
+              isCallPool
+                ? deployAndDeposit_1000_LC_CALL
+                : deployAndDeposit_1000_LC_PUT,
+            );
 
           const averagePrice = average(pKey.lower, pKey.upper);
           const collateralValue = depositSize.mul(averagePrice).div(ONE_ETHER);
@@ -590,7 +299,7 @@ describe('Pool', () => {
             depositSize.sub(collateralValue),
           );
           expect(await pool.marketPrice()).to.eq(pKey.upper);
-        });
+        }
       });
 
       async function shouldRevertIfSenderIsNotOperator(isCallPool: boolean) {
@@ -627,25 +336,31 @@ describe('Pool', () => {
         ).to.be.revertedWithCustomError(pool, 'Pool__AboveMaxSlippage');
       }
 
-      it('should revert if zero size', async () => {
-        const { pool, lp, pKey } = await loadFixture(deploy_CALL);
+      async function shouldRevertIfZeroSize(isCallPool: boolean) {
+        const { pool, lp, pKey } = await loadFixture(
+          isCallPool ? deploy_CALL : deploy_PUT,
+        );
 
         await expect(
           pool.connect(lp)[fnSig](pKey, 0, 0, 0, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(pool, 'Pool__ZeroSize');
-      });
+      }
 
-      it('should revert if option is expired', async () => {
-        const { pool, lp, pKey, maturity } = await loadFixture(deploy_CALL);
+      async function shouldRevertIfExpired(isCallPool: boolean) {
+        const { pool, lp, pKey, maturity } = await loadFixture(
+          isCallPool ? deploy_CALL : deploy_PUT,
+        );
 
         await increaseTo(maturity);
         await expect(
           pool.connect(lp)[fnSig](pKey, 0, 0, THREE_ETHER, 0, parseEther('1')),
         ).to.be.revertedWithCustomError(pool, 'Pool__OptionExpired');
-      });
+      }
 
-      it('should revert if range is not valid', async () => {
-        const { pool, lp, pKey } = await loadFixture(deploy_CALL);
+      async function shouldRevertIfRangeNotValid(isCallPool: boolean) {
+        const { pool, lp, pKey } = await loadFixture(
+          isCallPool ? deploy_CALL : deploy_PUT,
+        );
 
         await expect(
           pool
@@ -711,10 +426,12 @@ describe('Pool', () => {
               parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(pool, 'Pool__InvalidRange');
-      });
+      }
 
-      it('should revert if tick width is invalid', async () => {
-        const { pool, lp, pKey } = await loadFixture(deploy_CALL);
+      async function shouldRevertIfInvalidTickWidth(isCallPool: boolean) {
+        const { pool, lp, pKey } = await loadFixture(
+          isCallPool ? deploy_CALL : deploy_PUT,
+        );
 
         await expect(
           pool
@@ -741,13 +458,33 @@ describe('Pool', () => {
               parseEther('1'),
             ),
         ).to.be.revertedWithCustomError(pool, 'Pool__TickWidthInvalid');
-      });
+      }
     });
   });
 
   describe('#withdraw', () => {
+    const tests: TestDefinition[] = [
+      {
+        name: 'should revert if msg.sender != p.operator',
+        test: shouldRevertIfNotOperator,
+      },
+    ];
+
+    runCallAndPutTests(tests);
+
     describe('OrderType LC', () => {
-      it('should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)', async () => {
+      const lcTests: TestDefinition[] = [
+        {
+          name: 'should burn 750 LP tokens and withdraw 150 collateral (lower: 0.1 | upper 0.3 | size: 750)',
+          test: shouldBurn750LpTokensAndWithdraw150Collateral,
+        },
+      ];
+
+      runCallAndPutTests(lcTests);
+
+      async function shouldBurn750LpTokensAndWithdraw150Collateral(
+        isCallPool: boolean,
+      ) {
         const {
           pool,
           lp,
@@ -756,7 +493,11 @@ describe('Pool', () => {
           tokenId,
           depositSize,
           initialCollateral,
-        } = await loadFixture(deployAndDeposit_1000_LC_CALL);
+        } = await loadFixture(
+          isCallPool
+            ? deployAndDeposit_1000_LC_CALL
+            : deployAndDeposit_1000_LC_PUT,
+        );
 
         const depositCollateralValue = parseEther('200');
 
@@ -789,16 +530,18 @@ describe('Pool', () => {
             .sub(depositCollateralValue)
             .add(withdrawCollateralValue),
         );
-      });
+      }
     });
 
-    it('should revert if msg.sender != p.operator', async () => {
-      const { pool, deployer, pKey } = await loadFixture(deploy_CALL);
+    async function shouldRevertIfNotOperator(isCallPool: boolean) {
+      const { pool, deployer, pKey } = await loadFixture(
+        isCallPool ? deploy_CALL : deploy_PUT,
+      );
 
       await expect(
         pool.connect(deployer).withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
       ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
-    });
+    }
 
     it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
       const { pool, lp, pKey } = await loadFixture(
