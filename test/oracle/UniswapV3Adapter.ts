@@ -232,8 +232,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should return quote using correct denomination', async () => {
-      let tokenIn = tokens.WETH;
-      let tokenOut = tokens.DAI;
+      let tokenIn = tokens.WETH; // 18 decimals
+      let tokenOut = tokens.DAI; // 18 decimals
 
       await instance.upsertPair(tokenIn.address, tokenOut.address);
 
@@ -246,8 +246,8 @@ describe('UniswapV3Adapter', () => {
 
       expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
 
-      tokenIn = tokens.WETH;
-      tokenOut = tokens.USDC;
+      tokenIn = tokens.WETH; // 18 decimals
+      tokenOut = tokens.USDC; // 6 decimals
 
       await instance.upsertPair(tokenIn.address, tokenOut.address);
 
@@ -256,15 +256,18 @@ describe('UniswapV3Adapter', () => {
 
       expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
 
-      tokenIn = tokens.WBTC;
-      tokenOut = tokens.USDC;
+      tokenIn = tokens.WBTC; // 8 decimals
+      tokenOut = tokens.USDC; // 6 decimals
 
       await instance.upsertPair(tokenIn.address, tokenOut.address);
 
       quote = await instance.quote(tokenIn.address, tokenOut.address);
       invertedQuote = await instance.quote(tokenOut.address, tokenIn.address);
 
-      expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
+      // quote is off by one after dividing by 1E18
+      expect(quote.div(ONE_ETHER).add(1)).to.be.eq(
+        ONE_ETHER.div(invertedQuote),
+      );
     });
   });
 

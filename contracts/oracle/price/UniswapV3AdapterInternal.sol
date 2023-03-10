@@ -51,12 +51,12 @@ contract UniswapV3AdapterInternal is
 
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
 
-        int256 factor = _decimals(tokenIn) - _decimals(tokenOut);
+        int256 factor = ETH_DECIMALS - _decimals(tokenOut);
 
         uint256 price = _scale(
             OracleLibrary.getQuoteAtTick(
                 weightedTick,
-                uint128(ONE_ETH),
+                uint128(10 ** uint256(_decimals(tokenIn))),
                 tokenIn,
                 tokenOut
             ),

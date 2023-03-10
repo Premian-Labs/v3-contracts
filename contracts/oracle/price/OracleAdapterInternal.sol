@@ -11,6 +11,8 @@ import {TokenSorting} from "../../libraries/TokenSorting.sol";
 abstract contract OracleAdapterInternal {
     using SafeCast for int256;
 
+    int256 internal constant ETH_DECIMALS = 18;
+
     uint256 internal constant ONE_ETH = 1 ether;
 
     /// @notice Thrown when the target is zero or before the current block timestamp
