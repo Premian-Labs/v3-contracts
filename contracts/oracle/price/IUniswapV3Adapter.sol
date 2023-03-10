@@ -48,7 +48,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
 
     /// @notice Sets the period to be used for the TWAP calculation
     /// @dev Will revert it is lower than the minimum period or greater than maximum period.
-    ///      Can only be called by users with the admin role
+    ///      Can only be called by owner
     ///      WARNING: increasing the period could cause big problems, because Uniswap V3 pools might not support a TWAP so old
     /// @param newPeriod The new period
     function setPeriod(uint32 newPeriod) external;
