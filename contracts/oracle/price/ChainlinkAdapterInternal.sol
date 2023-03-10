@@ -70,7 +70,8 @@ abstract contract ChainlinkAdapterInternal is
                     target
                 );
         } else {
-            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
+            return
+                _getPriceWBTCPrice(path, mappedTokenIn, mappedTokenOut, target);
         }
     }
 
@@ -107,8 +108,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = ETH_DECIMALS -
-            (path == PricingPath.TOKEN_ETH ? ETH_DECIMALS : FOREX_DECIMALS);
+        int256 factor = _factor(path);
 
         uint256 price;
         if (path == PricingPath.ETH_USD) {
@@ -140,6 +140,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
+        int256 factor = _factor(path);
+
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
             : Denominations.ETH;
@@ -147,7 +149,10 @@ abstract contract ChainlinkAdapterInternal is
         uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
         uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
-        return tokenInToBase.div(tokenOutToBase);
+        uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
+        uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
+
+        return adjustedTokenInToBase.div(adjustedTokenOutToBase);
     }
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
@@ -157,7 +162,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
+        int256 factor = _factor(path);
         uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(target), factor);
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
@@ -193,12 +198,13 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Handles prices when the pair is token/WBTC
     function _getPriceWBTCPrice(
+        PricingPath path,
         address tokenIn,
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
+        int256 factor = _factor(path);
         bool isTokenInWBTC = _isWBTC(tokenIn);
-        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
 
         uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(target), factor)
             .mul(_scale(_getBTCUSD(target), factor));
@@ -210,6 +216,21 @@ abstract contract ChainlinkAdapterInternal is
 
         uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
         return !isTokenInWBTC ? price.inv() : price;
+    }
+
+    function _factor(PricingPath path) internal pure returns (int256) {
+        if (
+            path == PricingPath.ETH_USD ||
+            path == PricingPath.TOKEN_USD ||
+            path == PricingPath.TOKEN_USD_TOKEN ||
+            path == PricingPath.A_USD_ETH_B ||
+            path == PricingPath.A_ETH_USD_B ||
+            path == PricingPath.TOKEN_USD_BTC_WBTC
+        ) {
+            return ETH_DECIMALS - FOREX_DECIMALS;
+        }
+
+        return 0;
     }
 
     function _getPriceAgainstUSD(
