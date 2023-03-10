@@ -435,7 +435,7 @@ abstract contract ChainlinkAdapterInternal is
         address quote
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
-        (, int256 price, , , ) = AggregatorV3Interface(feed).latestRoundData();
+        (, int256 price, , , ) = _latestRoundData(feed);
         _ensurePriceNonZero(price);
         return price.toUint256();
     }
@@ -453,7 +453,7 @@ abstract contract ChainlinkAdapterInternal is
             ,
             uint256 updatedAt,
 
-        ) = AggregatorV3Interface(feed).latestRoundData();
+        ) = _latestRoundData(feed);
 
         (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage
             .parseRoundId(roundId);
@@ -470,9 +470,7 @@ abstract contract ChainlinkAdapterInternal is
                 --aggregatorRoundId
             );
 
-            (, price, , updatedAt, ) = AggregatorV3Interface(feed).getRoundData(
-                roundId
-            );
+            (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
             if (target >= updatedAt) {
                 uint256 previousUpdateDistance = previousUpdatedAt - target;
@@ -493,6 +491,43 @@ abstract contract ChainlinkAdapterInternal is
         _ensurePriceAfterTargetIsFresh(target, updatedAt);
         _ensurePriceNonZero(price);
         return price.toUint256();
+    }
+
+    function _latestRoundData(
+        address feed
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__LatestRoundDataCallReverted(data);
+        }
+    }
+
+    function _getRoundData(
+        address feed,
+        uint80 roundId
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).getRoundData(roundId) returns (
+            uint80 _roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (_roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__GetRoundDataCallReverted(data);
+        }
     }
 
     function _ensurePriceAfterTargetIsFresh(
