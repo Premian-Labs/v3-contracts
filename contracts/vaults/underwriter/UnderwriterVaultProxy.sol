@@ -43,21 +43,21 @@ contract UnderwriterVaultProxy is
         _setSymbol(symbol);
         _setDecimals(18);
 
-        UnderwriterVaultStorage.layout().isCall = isCall;
-        UnderwriterVaultStorage.layout().base = base;
-        UnderwriterVaultStorage.layout().quote = quote;
-        UnderwriterVaultStorage.layout().maxDTE = tradeBounds.maxDTE;
-        UnderwriterVaultStorage.layout().minDTE = tradeBounds.minDTE;
-        UnderwriterVaultStorage.layout().minDelta = tradeBounds.minDelta;
-        UnderwriterVaultStorage.layout().maxDelta = tradeBounds.maxDelta;
-        UnderwriterVaultStorage.layout().minCLevel = cLevel.minClevel;
-        UnderwriterVaultStorage.layout().maxCLevel = cLevel.maxClevel;
-        UnderwriterVaultStorage.layout().alphaCLevel = cLevel.alphaClevel;
-        UnderwriterVaultStorage.layout().hourlyDecayDiscount = cLevel
-            .hourlyDecayDiscount;
-        UnderwriterVaultStorage
-            .layout()
-            .lastTradeTimestamp = lastTradeTimestamp;
-        UnderwriterVaultStorage.layout().oracleAdapter = oracleAdapter;
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultProxy
+            .layout();
+
+        l.isCall = isCall;
+        l.base = base;
+        l.quote = quote;
+        l.maxDTE = tradeBounds.maxDTE;
+        l.minDTE = tradeBounds.minDTE;
+        l.minDelta = tradeBounds.minDelta;
+        l.maxDelta = tradeBounds.maxDelta;
+        l.minCLevel = cLevel.minClevel;
+        l.maxCLevel = cLevel.maxClevel;
+        l.alphaCLevel = cLevel.alphaClevel;
+        l.hourlyDecayDiscount = cLevel.hourlyDecayDiscount;
+        l.lastTradeTimestamp = lastTradeTimestamp;
+        l.oracleAdapter = oracleAdapter;
     }
 }
