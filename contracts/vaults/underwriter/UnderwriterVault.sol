@@ -19,10 +19,11 @@ import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
 import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
 
-import "hardhat/console.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 import {SD59x18} from "../../libraries/prbMath/SD59x18.sol";
 
+/// @title An ERC-4626 implementation for underwriting call/put option
+///        contracts by using collateral deposited by users
 contract UnderwriterVault is
     IUnderwriterVault,
     SolidStateERC4626,
@@ -45,36 +46,58 @@ contract UnderwriterVault is
 
     int256 internal constant ONE = 1e18;
 
+    // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
     struct AfterBuyArgs {
+        // The maturity of a listing
         uint256 maturity;
+        // The vanilla Black-Scholes premium paid by the option buyer
         uint256 premium;
+        // The time until maturity (seconds) for the listing
         uint256 secondsToExpiration;
+        // The number of contracts for an option purchase
         uint256 size;
+        // The spread captured from selling an option
         uint256 spread;
+        // The strike of a listing
         uint256 strike;
     }
 
     struct BlackScholesArgs {
+        // The spot price
         uint256 spot;
+        // The strike price of the listing
         uint256 strike;
+        // The time until maturity (years)
         uint256 timeToMaturity;
+        // The implied volatility for the listing
         uint256 volAnnualized;
+        // The risk-free rate
         uint256 riskFreeRate;
+        // Whether the option is a buy or a sell
         bool isCall;
     }
 
     struct TradeArgs {
+        // The strike price of the listing
         uint256 strike;
+        // The maturity of the listing
         uint256 maturity;
+        // The number of contracts being traded
         uint256 size;
     }
 
     struct UnexpiredListingVars {
+        // A list of strikes for a set of listings
         uint256[] strikes;
+        // A list of time until maturity (years) for a set of listings
         uint256[] timeToMaturities;
+        // A list of maturities for a set of listings
         uint256[] maturities;
     }
 
+    /// @notice The constructor for this vault
+    /// @param oracleAddress The address for the volatility oracle
+    /// @param factoryAddress The pool factory address
     constructor(address oracleAddress, address factoryAddress) {
         IV_ORACLE = oracleAddress;
         FACTORY = factoryAddress;
@@ -86,11 +109,15 @@ contract UnderwriterVault is
         return UnderwriterVaultStorage.layout().totalAssets;
     }
 
+    /// @notice Gets the total locked spread currently stored in storage
+    /// @return The total locked spread in stored in storage
     function _totalLockedSpread() internal view returns (uint256) {
         // total assets = deposits + premiums + spreads
         return UnderwriterVaultStorage.layout().totalLockedSpread;
     }
 
+    /// @notice Gets the spot price at the current time
+    /// @return The spot price at the current time
     function _getSpotPrice() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -99,6 +126,9 @@ contract UnderwriterVault is
                 .quote(l.base, l.quote);
     }
 
+    /// @notice Gets the spot price at the given timestamp
+    /// @param timestamp The given timestamp
+    /// @return The spot price at the given timestamp
     function _getSpotPrice(uint256 timestamp) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -107,6 +137,10 @@ contract UnderwriterVault is
                 .quoteFrom(l.base, l.quote, timestamp);
     }
 
+    /// @notice Gets the nearest maturity after the given timestamp, exclusive
+    ///         of the timestamp being on a maturity
+    /// @param timestamp The given timestamp
+    /// @return The nearest maturity after the given timestamp
     function _getMaturityAfterTimestamp(
         uint256 timestamp
     ) internal view returns (uint256) {
@@ -123,6 +157,10 @@ contract UnderwriterVault is
         return current;
     }
 
+    /// @notice Gets the number of unexpired listings within the basket of
+    ///         options underwritten by this vault at the current time
+    /// @param timestamp The given timestamp
+    /// @return The number of unexpired listings
     function _getNumberOfUnexpiredListings(
         uint256 timestamp
     ) internal view returns (uint256) {
@@ -142,6 +180,10 @@ contract UnderwriterVault is
         return n;
     }
 
+    /// @notice Gets the total fair value of the basket of expired options underwritten
+    ///         by this vault at the current time
+    /// @param timestamp The given timestamp
+    /// @return The total fair value of the basket of expired options underwritten
     function _getTotalFairValueExpired(
         uint256 timestamp
     ) internal view returns (uint256) {
@@ -182,6 +224,11 @@ contract UnderwriterVault is
         return total;
     }
 
+    /// @notice Gets the total fair value of the basket of unexpired options underwritten
+    ///         by this vault at the current time
+    /// @param timestamp The given timestamp
+    /// @param spot The spot price
+    /// @return The total fair value of the basket of unexpired options underwritten
     function _getTotalFairValueUnexpired(
         uint256 timestamp,
         uint256 spot
@@ -250,6 +297,9 @@ contract UnderwriterVault is
         return l.isCall ? total.div(spot) : total;
     }
 
+    /// @notice Gets the total fair value of the basket of options underwritten
+    ///         by this vault at the current time
+    /// @return The total fair value of the basket of options underwritten
     function _getTotalFairValue() internal view returns (uint256) {
         uint256 spot = _getSpotPrice();
         uint256 timestamp = block.timestamp;
@@ -258,6 +308,8 @@ contract UnderwriterVault is
             _getTotalFairValueExpired(timestamp);
     }
 
+    /// @notice Gets the total locked spread for the vault
+    /// @return The total locked spread
     function _getTotalLockedSpread() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -286,12 +338,16 @@ contract UnderwriterVault is
         return totalLockedSpread;
     }
 
+    /// @notice Gets the current amount of available assets
+    /// @return The amount of available assets
     function _availableAssets() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
     }
 
+    /// @notice Gets the current price per share for the vault
+    /// @return The current price per share
     function _getPricePerShare() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -301,6 +357,10 @@ contract UnderwriterVault is
                 .div(_totalSupply());
     }
 
+    /// @notice Checks if a listing exists within internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
+    /// @return If listing exists, return true, otherwise false
     function _contains(
         uint256 strike,
         uint256 maturity
@@ -313,6 +373,9 @@ contract UnderwriterVault is
         return l.maturityToStrikes[maturity].contains(strike);
     }
 
+    /// @notice Adds a listing to the internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
     function _addListing(uint256 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -343,6 +406,9 @@ contract UnderwriterVault is
             l.maturityToStrikes[maturity].add(strike);
     }
 
+    /// @notice Removes a listing from internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
     function _removeListing(uint256 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -497,8 +563,15 @@ contract UnderwriterVault is
         if (shareAmount == 0) revert Vault__ZeroShares();
     }
 
+    /// @notice Ensures that the listing is supported by this vault to sell
+    ///         options for
+    /// @param spot The spot price
+    /// @param strike The strike price of the listing
+    /// @param tau The time until maturity (yrs) for corresponding to the listing
+    /// @param sigma The implied volatility for the listing
+    /// @param rfRate The risk-free rate
     function _ensureSupportedListing(
-        uint256 spotPrice,
+        uint256 spot,
         uint256 strike,
         uint256 tau,
         uint256 sigma,
@@ -514,32 +587,42 @@ contract UnderwriterVault is
 
         // Delta filter
         int256 delta = OptionMath
-            .optionDelta(spotPrice, strike, tau, sigma, rfRate, l.isCall)
+            .optionDelta(spot, strike, tau, sigma, rfRate, l.isCall)
             .abs();
 
         if (delta < l.minDelta || delta > l.maxDelta)
             revert Vault__DeltaBounds();
     }
 
-    function _afterBuy(AfterBuyArgs memory a) internal {
+    /// @notice An internal hook inside the buy function that is called after
+    ///         logic inside the buy function is run to update state variables
+    /// @param args The arguments struct for this function.
+    function _afterBuy(AfterBuyArgs memory args) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
         _updateState();
-        uint256 spreadRate = a.spread / a.secondsToExpiration;
-        uint256 newLockedAssets = l.isCall ? a.size : a.size.mul(a.strike);
+        uint256 spreadRate = args.spread / args.secondsToExpiration;
+        uint256 newLockedAssets = l.isCall
+            ? args.size
+            : args.size.mul(args.strike);
 
         l.spreadUnlockingRate += spreadRate;
-        l.spreadUnlockingTicks[a.maturity] += spreadRate;
-        l.totalLockedSpread += a.spread;
-        l.totalAssets += a.premium + a.spread;
+        l.spreadUnlockingTicks[args.maturity] += spreadRate;
+        l.totalLockedSpread += args.spread;
+        l.totalAssets += args.premium + args.spread;
         l.totalLockedAssets += newLockedAssets;
-        l.positionSizes[a.maturity][a.strike] += a.size;
+        l.positionSizes[args.maturity][args.strike] += args.size;
         l.lastTradeTimestamp = block.timestamp;
     }
 
+    /// @notice Gets the pool factory address corresponding to the given strike
+    ///         and maturity.
+    /// @param strike The strike price for the pool
+    /// @param maturity The maturity for the pool
+    /// @return The pool factory address
     function _getFactoryAddress(
         uint256 strike,
         uint256 maturity
@@ -561,7 +644,9 @@ contract UnderwriterVault is
         return listingAddr;
     }
 
-    // Utilization rate will be vol global for entire surface
+    /// @notice Gets the C-level given an increase in collateral amount.
+    /// @param collateralAmt The collateral amount the will be utilised.
+    /// @return The C-level after utilising `collateralAmt`
     function _getCLevel(uint256 collateralAmt) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -596,7 +681,13 @@ contract UnderwriterVault is
         return cLevel - discount;
     }
 
-    // https://www.desmos.com/calculator/0uzv50t7jy
+    /// @notice Calculates the C-level given a post-utilisation value.
+    ///         (https://www.desmos.com/calculator/0uzv50t7jy)
+    /// @param postUtilisation The utilisation after some collateral is utilised
+    /// @param alphaCLevel (needs to be filled in)
+    /// @param minCLevel The minimum C-level
+    /// @param maxCLevel The maximum C-level
+    /// @return The C-level corresponding to the post-utilisation value.
     function _calculateCLevel(
         uint256 postUtilisation,
         uint256 alphaCLevel,
@@ -618,6 +709,8 @@ contract UnderwriterVault is
                 .toUint256();
     }
 
+    /// @notice Gets a quote for a given trade request
+    /// @param args The trading arguments (documented in struct at top)
     function _quote(
         TradeArgs memory args
     ) internal view returns (address, uint256, uint256, uint256, uint256) {
@@ -687,6 +780,8 @@ contract UnderwriterVault is
         return (poolAddr, price.mul(args.size), mintingFee, cLevel, spread);
     }
 
+    /// @notice Fulfills an option purchase
+    /// @param args The trading arguments (documented in struct at top)
     function _buy(TradeArgs memory args) internal {
         // Get pool address, price and c-level
         (

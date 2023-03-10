@@ -12,16 +12,24 @@ contract UnderwriterVaultProxy is
     ERC20MetadataInternal
 {
     struct Clevel {
+        // The minimum C-levelm allowed by the C-level mechanism
         uint256 minClevel;
+        // The maximum C-levelm allowed by the C-level mechanism
         uint256 maxClevel;
+        // (fill in with better description)
         uint256 alphaClevel;
+        // The decay rate of the C-level back down to ordinary level
         uint256 hourlyDecayDiscount;
     }
 
     struct TradeBounds {
+        // The maximum time until maturity the vault will underwrite
         uint256 maxDTE;
+        // The minimum time until maturity the vault will underwrite
         uint256 minDTE;
+        // The maximum delta the vault will underwrite
         int256 minDelta;
+        // The minimum delta the vault will underwrite
         int256 maxDelta;
     }
 
