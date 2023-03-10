@@ -43,7 +43,7 @@ contract UnderwriterVaultProxy is
         _setSymbol(symbol);
         _setDecimals(18);
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultProxy
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         l.isCall = isCall;

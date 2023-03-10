@@ -529,7 +529,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
                 _poolKey.strike = l.maturityToStrikes[maturity].at(i);
                 _poolKey.maturity = uint64(maturity);
                 _poolKey.isCallPool = l.isCall;
-                address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+                address listingAddr = IPoolFactory(FACTORY).getPoolAddress(
                     _poolKey
                 );
                 addresses[i] = listingAddr;
