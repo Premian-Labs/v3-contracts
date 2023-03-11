@@ -11,10 +11,25 @@ contract ChainlinkOraclePriceStub {
     uint256[] updatedAtTimestamps;
     int256[] prices;
 
+    FailureMode failureMode;
+
+    enum FailureMode {
+        NONE,
+        GET_ROUND_DATA_REVERT_WITH_REASON,
+        GET_ROUND_DATA_REVERT,
+        LAST_ROUND_DATA_REVERT_WITH_REASON,
+        LAST_ROUND_DATA_REVERT
+    }
+
+    error ChainlinkOraclePriceStub__CallFailed();
+
     function setup(
+        FailureMode _failureMode,
         int256[] memory _prices,
         uint256[] memory _updatedAtTimestamps
     ) external {
+        failureMode = _failureMode;
+
         require(
             _prices.length == _updatedAtTimestamps.length,
             "length mismatch"
@@ -37,6 +52,14 @@ contract ChainlinkOraclePriceStub {
             roundId
         );
 
+        if (failureMode == FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON) {
+            require(false, "reverted with reason");
+        }
+
+        if (failureMode == FailureMode.GET_ROUND_DATA_REVERT) {
+            revert();
+        }
+
         return (
             roundId,
             prices[aggregatorRoundId],
@@ -56,6 +79,14 @@ contract ChainlinkOraclePriceStub {
             AGGREGATOR_ROUND_ID
         );
         uint64 aggregatorRoundId = AGGREGATOR_ROUND_ID - 1;
+
+        if (failureMode == FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON) {
+            require(false, "reverted with reason");
+        }
+
+        if (failureMode == FailureMode.LAST_ROUND_DATA_REVERT) {
+            revert();
+        }
 
         return (
             roundId,
