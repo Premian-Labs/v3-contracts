@@ -3,7 +3,7 @@ import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
-import { average, bnToNumber } from '../../utils/sdk/math';
+import { average, bnToNumber, scaleDecimals } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
@@ -25,25 +25,16 @@ import {
   deployAndSell_PUT,
   depositFnSig,
   protocolFeePercentage,
+  runCallAndPutTests,
   strike,
 } from './Pool.fixture';
-
-function runCallAndPutTests(tests: (isCallPool: boolean) => void) {
-  describe('Call', () => {
-    tests(true);
-  });
-
-  describe('Put', () => {
-    tests(false);
-  });
-}
 
 describe('Pool', () => {
   describe('__internal', function () {
     describe('#_getPricing', () => {
       runCallAndPutTests((isCallPool: boolean) => {
         it('should return pool state', async () => {
-          const { pool, lp, base, router } = await loadFixture(
+          const { pool, lp, poolToken, router } = await loadFixture(
             isCallPool ? deploy_CALL : deploy_PUT,
           );
 
@@ -77,11 +68,12 @@ describe('Pool', () => {
             strike: strike,
           };
 
-          await base.connect(lp).approve(router.address, parseEther('2000'));
+          await poolToken
+            .connect(lp)
+            .approve(router.address, parseEther('2000'));
+          await poolToken.mint(lp.address, parseEther('2000'));
 
           const nearestBelow = await pool.getNearestTicksBelow(lower, upper);
-
-          await base.mint(lp.address, parseEther('2000'));
 
           await pool
             .connect(lp)
@@ -208,15 +200,27 @@ describe('Pool', () => {
       describe('OrderType LC', () => {
         runCallAndPutTests((isCallPool: boolean) => {
           it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
-            const { pool, lp, pKey, base, tokenId, depositSize } =
-              await loadFixture(
-                isCallPool
-                  ? deployAndDeposit_1000_LC_CALL
-                  : deployAndDeposit_1000_LC_PUT,
-              );
+            const {
+              pool,
+              lp,
+              pKey,
+              poolToken,
+              poolTokenDecimals,
+              tokenId,
+              depositSize,
+            } = await loadFixture(
+              isCallPool
+                ? deployAndDeposit_1000_LC_CALL
+                : deployAndDeposit_1000_LC_PUT,
+            );
 
             const averagePrice = average(pKey.lower, pKey.upper);
-            const collateralValue = depositSize
+            const collateralPerContract = scaleDecimals(
+              isCallPool ? depositSize : depositSize.mul(strike).div(ONE_ETHER),
+              poolTokenDecimals,
+            );
+
+            const collateralValue = collateralPerContract
               .mul(averagePrice)
               .div(ONE_ETHER);
 
@@ -224,8 +228,10 @@ describe('Pool', () => {
               depositSize,
             );
             expect(await pool.totalSupply(tokenId)).to.eq(depositSize);
-            expect(await base.balanceOf(pool.address)).to.eq(collateralValue);
-            expect(await base.balanceOf(lp.address)).to.eq(
+            expect(await poolToken.balanceOf(pool.address)).to.eq(
+              collateralValue,
+            );
+            expect(await poolToken.balanceOf(lp.address)).to.eq(
               depositSize.sub(collateralValue),
             );
             expect(await pool.marketPrice()).to.eq(pKey.upper);
@@ -407,7 +413,7 @@ describe('Pool', () => {
             pool,
             lp,
             pKey,
-            base,
+            poolToken,
             tokenId,
             depositSize,
             initialCollateral,
@@ -419,10 +425,10 @@ describe('Pool', () => {
 
           const depositCollateralValue = parseEther('200');
 
-          expect(await base.balanceOf(lp.address)).to.eq(
+          expect(await poolToken.balanceOf(lp.address)).to.eq(
             initialCollateral.sub(depositCollateralValue),
           );
-          expect(await base.balanceOf(pool.address)).to.eq(
+          expect(await poolToken.balanceOf(pool.address)).to.eq(
             depositCollateralValue,
           );
 
@@ -442,10 +448,10 @@ describe('Pool', () => {
           expect(await pool.totalSupply(tokenId)).to.eq(
             depositSize.sub(withdrawSize),
           );
-          expect(await base.balanceOf(pool.address)).to.eq(
+          expect(await poolToken.balanceOf(pool.address)).to.eq(
             depositCollateralValue.sub(withdrawCollateralValue),
           );
-          expect(await base.balanceOf(lp.address)).to.eq(
+          expect(await poolToken.balanceOf(lp.address)).to.eq(
             initialCollateral
               .sub(depositCollateralValue)
               .add(withdrawCollateralValue),
@@ -604,9 +610,10 @@ describe('Pool', () => {
   describe('#writeFrom', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully write 500 options', async () => {
-        const { pool, lp, trader, base, initialCollateral } = await loadFixture(
-          isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
-        );
+        const { pool, lp, trader, poolToken, initialCollateral } =
+          await loadFixture(
+            isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
+          );
 
         const size = parseEther('500');
         const fee = await pool.takerFee(size, 0, true);
@@ -615,8 +622,8 @@ describe('Pool', () => {
 
         await pool.connect(lp).writeFrom(lp.address, trader.address, size);
 
-        expect(await base.balanceOf(pool.address)).to.eq(totalSize);
-        expect(await base.balanceOf(lp.address)).to.eq(
+        expect(await poolToken.balanceOf(pool.address)).to.eq(totalSize);
+        expect(await poolToken.balanceOf(lp.address)).to.eq(
           initialCollateral.sub(totalSize),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -628,7 +635,7 @@ describe('Pool', () => {
       });
 
       it('should successfully write 500 options on behalf of another address', async () => {
-        const { pool, lp, trader, deployer, base, initialCollateral } =
+        const { pool, lp, trader, deployer, poolToken, initialCollateral } =
           await loadFixture(
             isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
           );
@@ -644,8 +651,8 @@ describe('Pool', () => {
           .connect(deployer)
           .writeFrom(lp.address, trader.address, parseEther('500'));
 
-        expect(await base.balanceOf(pool.address)).to.eq(totalSize);
-        expect(await base.balanceOf(lp.address)).to.eq(
+        expect(await poolToken.balanceOf(pool.address)).to.eq(totalSize);
+        expect(await poolToken.balanceOf(lp.address)).to.eq(
           initialCollateral.sub(totalSize),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -693,7 +700,7 @@ describe('Pool', () => {
   describe('#trade', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully buy 500 options', async () => {
-        const { pool, trader, base, router } = await loadFixture(
+        const { pool, trader, poolToken, router } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_CS_CALL
             : deployAndDeposit_1000_CS_PUT,
@@ -702,8 +709,8 @@ describe('Pool', () => {
         const tradeSize = parseEther('500');
         const totalPremium = await pool.getTradeQuote(tradeSize, true);
 
-        await base.mint(trader.address, totalPremium);
-        await base.connect(trader).approve(router.address, totalPremium);
+        await poolToken.mint(trader.address, totalPremium);
+        await poolToken.connect(trader).approve(router.address, totalPremium);
 
         await pool
           .connect(trader)
@@ -715,11 +722,11 @@ describe('Pool', () => {
         expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
           tradeSize,
         );
-        expect(await base.balanceOf(trader.address)).to.eq(0);
+        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
       });
 
       it('should successfully sell 500 options', async () => {
-        const { pool, trader, base, router } = await loadFixture(
+        const { pool, trader, poolToken, router } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_LC_CALL
             : deployAndDeposit_1000_LC_PUT,
@@ -728,8 +735,8 @@ describe('Pool', () => {
         const tradeSize = parseEther('500');
         const totalPremium = await pool.getTradeQuote(tradeSize, false);
 
-        await base.mint(trader.address, tradeSize);
-        await base.connect(trader).approve(router.address, tradeSize);
+        await poolToken.mint(trader.address, tradeSize);
+        await poolToken.connect(trader).approve(router.address, tradeSize);
 
         await pool
           .connect(trader)
@@ -741,11 +748,11 @@ describe('Pool', () => {
         expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
           tradeSize,
         );
-        expect(await base.balanceOf(trader.address)).to.eq(totalPremium);
+        expect(await poolToken.balanceOf(trader.address)).to.eq(totalPremium);
       });
 
       it('should revert if trying to buy options and totalPremium is above premiumLimit', async () => {
-        const { pool, trader, base, router } = await loadFixture(
+        const { pool, trader, poolToken, router } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_CS_CALL
             : deployAndDeposit_1000_CS_PUT,
@@ -754,8 +761,8 @@ describe('Pool', () => {
         const tradeSize = parseEther('500');
         const totalPremium = await pool.getTradeQuote(tradeSize, true);
 
-        await base.mint(trader.address, totalPremium);
-        await base.connect(trader).approve(router.address, totalPremium);
+        await poolToken.mint(trader.address, totalPremium);
+        await poolToken.connect(trader).approve(router.address, totalPremium);
 
         await expect(
           pool.connect(trader).trade(tradeSize, true, totalPremium.sub(1)),
@@ -763,7 +770,7 @@ describe('Pool', () => {
       });
 
       it('should revert if trying to sell options and totalPremium is below premiumLimit', async () => {
-        const { pool, trader, base, router } = await loadFixture(
+        const { pool, trader, poolToken, router } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_LC_CALL
             : deployAndDeposit_1000_LC_PUT,
@@ -772,8 +779,8 @@ describe('Pool', () => {
         const tradeSize = parseEther('500');
         const totalPremium = await pool.getTradeQuote(tradeSize, false);
 
-        await base.mint(trader.address, tradeSize);
-        await base.connect(trader).approve(router.address, tradeSize);
+        await poolToken.mint(trader.address, tradeSize);
+        await poolToken.connect(trader).approve(router.address, tradeSize);
 
         await expect(
           pool.connect(trader).trade(tradeSize, false, totalPremium.add(1)),
@@ -833,7 +840,7 @@ describe('Pool', () => {
         const {
           pool,
           trader,
-          base,
+          poolToken,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -849,11 +856,13 @@ describe('Pool', () => {
         await pool.exercise(trader.address);
 
         const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
-        expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
-        expect(await base.balanceOf(pool.address)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(exerciseValue);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
           ONE_ETHER,
@@ -864,7 +873,7 @@ describe('Pool', () => {
         const {
           pool,
           trader,
-          base,
+          poolToken,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -880,11 +889,13 @@ describe('Pool', () => {
         await pool.exercise(trader.address);
 
         const exerciseValue = 0;
-        expect(await base.balanceOf(trader.address)).to.eq(exerciseValue);
-        expect(await base.balanceOf(pool.address)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(exerciseValue);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
           ONE_ETHER,
@@ -909,7 +920,7 @@ describe('Pool', () => {
         const {
           pool,
           trader,
-          base,
+          poolToken,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -926,13 +937,15 @@ describe('Pool', () => {
         await pool.settle(trader.address);
 
         const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
-        expect(await base.balanceOf(trader.address)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue),
         );
-        expect(await base.balanceOf(pool.address)).to.eq(
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
           exerciseValue.add(takerFee).sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
           ONE_ETHER,
@@ -943,7 +956,7 @@ describe('Pool', () => {
         const {
           pool,
           trader,
-          base,
+          poolToken,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -960,13 +973,15 @@ describe('Pool', () => {
         await pool.settle(trader.address);
 
         const exerciseValue = BigNumber.from(0);
-        expect(await base.balanceOf(trader.address)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue),
         );
-        expect(await base.balanceOf(pool.address)).to.eq(
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
           exerciseValue.add(takerFee).sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
           ONE_ETHER,
@@ -990,7 +1005,7 @@ describe('Pool', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully settle an ITM option position', async () => {
         const {
-          base,
+          poolToken,
           pool,
           feeReceiver,
           initialCollateral,
@@ -1011,15 +1026,17 @@ describe('Pool', () => {
 
         const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
 
-        expect(await base.balanceOf(trader.address)).to.eq(0);
-        expect(await base.balanceOf(pool.address)).to.eq(exerciseValue);
-        expect(await base.balanceOf(pKey.operator)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(exerciseValue);
+        expect(await poolToken.balanceOf(pKey.operator)).to.eq(
           initialCollateral
             .add(totalPremium)
             .sub(exerciseValue)
             .sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           ONE_ETHER,
@@ -1029,7 +1046,7 @@ describe('Pool', () => {
 
       it('should successfully settle an OTM option position', async () => {
         const {
-          base,
+          poolToken,
           pool,
           feeReceiver,
           maturity,
@@ -1050,15 +1067,17 @@ describe('Pool', () => {
 
         const exerciseValue = BigNumber.from(0);
 
-        expect(await base.balanceOf(trader.address)).to.eq(0);
-        expect(await base.balanceOf(pool.address)).to.eq(exerciseValue);
-        expect(await base.balanceOf(pKey.operator)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(exerciseValue);
+        expect(await poolToken.balanceOf(pKey.operator)).to.eq(
           initialCollateral
             .add(totalPremium)
             .sub(exerciseValue)
             .sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           ONE_ETHER,
@@ -1082,12 +1101,18 @@ describe('Pool', () => {
   describe('#fillQuote', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully fill a valid quote', async () => {
-        const { base, pool, lp, trader, getTradeQuote, initialCollateral } =
-          await loadFixture(
-            isCallPool
-              ? deployAndMintForTraderAndLP_CALL
-              : deployAndMintForTraderAndLP_PUT,
-          );
+        const {
+          poolToken,
+          pool,
+          lp,
+          trader,
+          getTradeQuote,
+          initialCollateral,
+        } = await loadFixture(
+          isCallPool
+            ? deployAndMintForTraderAndLP_CALL
+            : deployAndMintForTraderAndLP_PUT,
+        );
 
         const quote = await getTradeQuote();
 
@@ -1101,10 +1126,10 @@ describe('Pool', () => {
 
         const protocolFee = await pool.takerFee(quote.size, premium, true);
 
-        expect(await base.balanceOf(lp.address)).to.eq(
+        expect(await poolToken.balanceOf(lp.address)).to.eq(
           initialCollateral.sub(quote.size).add(premium).sub(protocolFee),
         );
-        expect(await base.balanceOf(trader.address)).to.eq(
+        expect(await poolToken.balanceOf(trader.address)).to.eq(
           initialCollateral.sub(premium),
         );
 
@@ -1284,7 +1309,7 @@ describe('Pool', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully claim fees', async () => {
         const {
-          base,
+          poolToken,
           pool,
           lp,
           trader,
@@ -1302,13 +1327,15 @@ describe('Pool', () => {
 
         await pool.connect(lp).claim(pKey);
 
-        expect(await base.balanceOf(pKey.operator)).to.eq(
+        expect(await poolToken.balanceOf(pKey.operator)).to.eq(
           initialCollateral.sub(tradeSize).add(claimableFees),
         );
-        expect(await base.balanceOf(pool.address)).to.eq(
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(claimableFees).sub(protocolFees),
         );
-        expect(await base.balanceOf(feeReceiver.address)).to.eq(protocolFees);
+        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
+          protocolFees,
+        );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           ONE_ETHER,

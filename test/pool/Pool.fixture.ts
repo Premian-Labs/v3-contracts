@@ -19,6 +19,19 @@ export const protocolFeePercentage = 0.5;
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
 
+export function runCallAndPutTests(tests: (isCallPool: boolean) => void) {
+  describe('Call', () => {
+    tests(true);
+  });
+
+  describe('Put', () => {
+    tests(false);
+  });
+}
+
+//////////////////////////////////////////////////////
+//////////////////////////////////////////////////////
+
 export async function deploy_CALL() {
   return _deploy(true);
 }
@@ -32,6 +45,8 @@ async function _deploy(isCall: boolean) {
 
   const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
   const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
+  const poolToken = isCall ? base : quote;
+  const poolTokenDecimals = isCall ? 18 : 6;
 
   const oracleAdapter = await deployMockContract(deployer as any, [
     'function quote(address,address) external view returns (uint256)',
@@ -110,6 +125,8 @@ async function _deploy(isCall: boolean) {
     oracleAdapter,
     maturity,
     pKey,
+    poolToken,
+    poolTokenDecimals,
     getTradeQuote,
   };
 }
