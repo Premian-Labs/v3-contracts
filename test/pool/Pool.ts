@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average, bnToNumber, scaleDecimals } from '../../utils/sdk/math';
@@ -24,10 +24,12 @@ import {
   deployAndSell_CALL,
   deployAndSell_PUT,
   depositFnSig,
+  getSettlementPrice,
   protocolFeePercentage,
   runCallAndPutTests,
   strike,
 } from './Pool.fixture';
+import { set } from 'husky';
 
 describe('Pool', () => {
   describe('__internal', function () {
@@ -850,12 +852,17 @@ describe('Pool', () => {
           isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, true);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.exercise(trader.address);
 
-        const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+        const exerciseValue = settlementPrice
+          .sub(strike)
+          .mul(ONE_ETHER)
+          .div(settlementPrice);
+
         expect(await poolToken.balanceOf(trader.address)).to.eq(exerciseValue);
         expect(await poolToken.balanceOf(pool.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue).sub(protocolFees),
@@ -883,7 +890,8 @@ describe('Pool', () => {
           isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, false);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.exercise(trader.address);
@@ -931,12 +939,16 @@ describe('Pool', () => {
           isCallPool ? deployAndSell_CALL : deployAndSell_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, true);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settle(trader.address);
 
-        const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+        const exerciseValue = settlementPrice
+          .sub(strike)
+          .mul(ONE_ETHER)
+          .div(settlementPrice);
         expect(await poolToken.balanceOf(trader.address)).to.eq(
           ONE_ETHER.add(totalPremium).sub(exerciseValue),
         );
@@ -967,7 +979,8 @@ describe('Pool', () => {
           isCallPool ? deployAndSell_CALL : deployAndSell_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, false);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settle(trader.address);
@@ -1019,12 +1032,16 @@ describe('Pool', () => {
           isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, true);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settlePosition(pKey);
 
-        const exerciseValue = parseEther(((1250 - 1000) / 1250).toString());
+        const exerciseValue = settlementPrice
+          .sub(strike)
+          .mul(ONE_ETHER)
+          .div(settlementPrice);
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(0);
         expect(await poolToken.balanceOf(pool.address)).to.eq(exerciseValue);
@@ -1060,7 +1077,8 @@ describe('Pool', () => {
           isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
         );
 
-        await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+        const settlementPrice = getSettlementPrice(isCallPool, false);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settlePosition(pKey);

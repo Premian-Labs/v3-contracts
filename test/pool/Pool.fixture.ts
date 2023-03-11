@@ -13,8 +13,16 @@ import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
 export const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
 
-export const strike = parseEther('1000');
+export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
+
+export function getSettlementPrice(isCall: boolean, isItm: boolean) {
+  if (isCall) {
+    return isItm ? parseEther('1300') : parseEther('1150');
+  }
+
+  return isItm ? parseEther('1150') : parseEther('1300');
+}
 
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
