@@ -73,6 +73,25 @@ library PoolStorage {
         }
     }
 
+    function getPoolTokenDecimals(
+        Layout storage l
+    ) internal view returns (uint8) {
+        return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
+    }
+
+    /// @notice Adjust decimals of a value to match the pool token decimals
+    function scaleDecimals(
+        Layout storage l,
+        uint256 value
+    ) internal view returns (uint256) {
+        uint256 decimals = l.getPoolTokenDecimals();
+
+        if (decimals == 18) return value;
+        if (decimals > 18) return value * (10 ** (decimals - 18));
+
+        return value / (10 ** (18 - decimals));
+    }
+
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
     function getPoolToken(Layout storage l) internal view returns (address) {
         return l.isCallPool ? l.base : l.quote;
