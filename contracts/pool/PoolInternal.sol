@@ -597,17 +597,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // ToDo : Add return values ?
     }
 
-    /// @notice Adjust decimals of a value
-    function _scale(
-        uint256 value,
-        uint256 decimals
-    ) internal pure returns (uint256) {
-        if (decimals == 18) return value;
-        if (decimals > 18) return value * (10 ** (decimals - 18));
-
-        return value / (10 ** (18 - decimals));
-    }
-
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
     ///         WARNING : `collateral` and `collateralCredit` must be scaled to the collateral token decimals
     function _transferTokens(
