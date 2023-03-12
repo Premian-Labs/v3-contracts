@@ -2,7 +2,7 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { OrderType } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 import { ONE_ETHER } from '../../utils/constants';
-import { average } from '../../utils/sdk/math';
+import { average, scaleDecimals } from '../../utils/sdk/math';
 import { ethers } from 'hardhat';
 import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
@@ -153,7 +153,10 @@ export async function deployAndMintForLP_PUT() {
 async function _deployAndMintForLP(isCall: boolean) {
   const f = await _deploy(isCall);
 
-  const initialCollateral = parseEther('1000');
+  let initialCollateral = parseUnits('1000', f.poolTokenDecimals);
+  if (!isCall) {
+    initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
+  }
 
   const token = isCall ? f.base : f.quote;
 
@@ -177,7 +180,7 @@ export async function deployAndMintForTraderAndLP_PUT() {
 async function _deployAndMintForTraderAndLP(isCall: boolean) {
   const f = await _deploy(isCall);
 
-  const initialCollateral = parseEther('10');
+  const initialCollateral = parseUnits('10', f.poolTokenDecimals);
 
   const token = isCall ? f.base : f.quote;
 
@@ -315,11 +318,14 @@ async function _deployAndBuy(isCall: boolean) {
     true,
   );
   const totalPremium = await f.pool.getTradeQuote(tradeSize, true);
+  const totalPremiumScaled = scaleDecimals(totalPremium, f.poolTokenDecimals);
 
   const token = isCall ? f.base : f.quote;
 
-  await token.mint(f.trader.address, totalPremium);
-  await token.connect(f.trader).approve(f.router.address, totalPremium);
+  await token.mint(f.trader.address, totalPremiumScaled);
+  await token.connect(f.trader).approve(f.router.address, totalPremiumScaled);
+
+  const collateral = isCall ? ONE_ETHER : strike;
 
   await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
 
@@ -334,6 +340,7 @@ async function _deployAndBuy(isCall: boolean) {
     takerFee,
     totalPremium,
     protocolFees,
+    collateral,
   };
 }
 
@@ -364,8 +371,11 @@ async function _deployAndSell(isCall: boolean) {
 
   const token = isCall ? f.base : f.quote;
 
-  await token.mint(f.trader.address, ONE_ETHER);
-  await token.connect(f.trader).approve(f.router.address, ONE_ETHER);
+  const mintAmount = parseUnits('1', f.poolTokenDecimals);
+  await token.mint(f.trader.address, mintAmount);
+  await token.connect(f.trader).approve(f.router.address, mintAmount);
+
+  const collateral = isCall ? ONE_ETHER : strike;
 
   await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
 
@@ -380,5 +390,6 @@ async function _deployAndSell(isCall: boolean) {
     takerFee,
     totalPremium,
     protocolFees,
+    collateral,
   };
 }

@@ -9,6 +9,10 @@ export function bnToNumber(bn: BigNumber, decimals = 18) {
   return Number(formatUnits(bn, decimals));
 }
 
-export function scaleDecimals(bn: BigNumber, decimals: number) {
-  return parseUnits(formatEther(bn), decimals);
+export function scaleDecimals(
+  bn: BigNumber,
+  decimals: number,
+  initialDecimals = 18,
+) {
+  return parseUnits(formatUnits(bn, initialDecimals), decimals);
 }
