@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
+import { parseEther } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
-import { average, bnToNumber, scaleDecimals } from '../../utils/sdk/math';
+import { average, scaleDecimals } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
@@ -29,8 +29,6 @@ import {
   runCallAndPutTests,
   strike,
 } from './Pool.fixture';
-import { set } from 'husky';
-import { isCall } from 'hardhat/internal/hardhat-network/stack-traces/opcodes';
 
 describe('Pool', () => {
   describe('__internal', function () {
@@ -127,7 +125,7 @@ describe('Pool', () => {
   describe('#getTradeQuote', () => {
     runCallAndPutTests((isCallPool: boolean) => {
       it('should successfully return a buy trade quote', async () => {
-        const { pool, pKey } = await loadFixture(
+        const { pool, pKey, contractsToCollateral } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_CS_CALL
             : deployAndDeposit_1000_CS_PUT,
@@ -143,23 +141,16 @@ describe('Pool', () => {
           true,
         );
 
-        let quote;
-        if (isCallPool) {
-          quote = tradeSize.mul(avgPrice).div(ONE_ETHER).add(takerFee);
-        } else {
-          quote = tradeSize
-            .mul(strike)
-            .div(ONE_ETHER)
-            .mul(avgPrice)
-            .div(ONE_ETHER)
-            .add(takerFee);
-        }
+        const quote = contractsToCollateral(tradeSize)
+          .mul(avgPrice)
+          .div(ONE_ETHER)
+          .add(takerFee);
 
         expect(await pool.getTradeQuote(tradeSize, true)).to.eq(quote);
       });
 
       it('should successfully return a sell trade quote', async () => {
-        const { pool, pKey } = await loadFixture(
+        const { pool, pKey, contractsToCollateral } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_LC_CALL
             : deployAndDeposit_1000_LC_PUT,
@@ -175,17 +166,10 @@ describe('Pool', () => {
           true,
         );
 
-        let quote;
-        if (isCallPool) {
-          quote = tradeSize.mul(avgPrice).div(ONE_ETHER).sub(takerFee);
-        } else {
-          quote = tradeSize
-            .mul(strike)
-            .div(ONE_ETHER)
-            .mul(avgPrice)
-            .div(ONE_ETHER)
-            .sub(takerFee);
-        }
+        const quote = contractsToCollateral(tradeSize)
+          .mul(avgPrice)
+          .div(ONE_ETHER)
+          .sub(takerFee);
 
         expect(await pool.getTradeQuote(tradeSize, false)).to.eq(quote);
       });
@@ -232,6 +216,7 @@ describe('Pool', () => {
               tokenId,
               depositSize,
               initialCollateral,
+              contractsToCollateral,
             } = await loadFixture(
               isCallPool
                 ? deployAndDeposit_1000_LC_CALL
@@ -239,9 +224,7 @@ describe('Pool', () => {
             );
 
             const averagePrice = average(pKey.lower, pKey.upper);
-            const collateral = isCallPool
-              ? depositSize
-              : depositSize.mul(strike).div(ONE_ETHER);
+            const collateral = contractsToCollateral(depositSize);
 
             const collateralValue = collateral.mul(averagePrice).div(ONE_ETHER);
 
@@ -441,18 +424,16 @@ describe('Pool', () => {
             tokenId,
             depositSize,
             initialCollateral,
+            contractsToCollateral,
           } = await loadFixture(
             isCallPool
               ? deployAndDeposit_1000_LC_CALL
               : deployAndDeposit_1000_LC_PUT,
           );
 
-          let depositCollateralValue = parseEther('200');
-          if (!isCallPool) {
-            depositCollateralValue = depositCollateralValue
-              .mul(strike)
-              .div(ONE_ETHER);
-          }
+          const depositCollateralValue = contractsToCollateral(
+            parseEther('200'),
+          );
 
           expect(await poolToken.balanceOf(lp.address)).to.eq(
             initialCollateral.sub(
@@ -466,15 +447,9 @@ describe('Pool', () => {
           const withdrawSize = parseEther('750');
 
           const averagePrice = average(pKey.lower, pKey.upper);
-          let withdrawCollateralValue = withdrawSize
-            .mul(averagePrice)
-            .div(ONE_ETHER);
-
-          if (!isCallPool) {
-            withdrawCollateralValue = withdrawCollateralValue
-              .mul(strike)
-              .div(ONE_ETHER);
-          }
+          const withdrawCollateralValue = contractsToCollateral(
+            withdrawSize.mul(averagePrice).div(ONE_ETHER),
+          );
 
           await pool
             .connect(lp)
@@ -660,6 +635,7 @@ describe('Pool', () => {
           poolToken,
           poolTokenDecimals,
           initialCollateral,
+          contractsToCollateral,
         } = await loadFixture(
           isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
         );
@@ -670,7 +646,7 @@ describe('Pool', () => {
         await pool.connect(lp).writeFrom(lp.address, trader.address, size);
 
         const collateral = scaleDecimals(
-          isCallPool ? size.add(fee) : size.mul(strike).div(ONE_ETHER).add(fee),
+          contractsToCollateral(size).add(fee),
           poolTokenDecimals,
         );
 
@@ -695,6 +671,7 @@ describe('Pool', () => {
           poolToken,
           poolTokenDecimals,
           initialCollateral,
+          contractsToCollateral,
         } = await loadFixture(
           isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
         );
@@ -705,7 +682,7 @@ describe('Pool', () => {
         await pool.connect(lp).setApprovalForAll(deployer.address, true);
 
         const collateral = scaleDecimals(
-          isCallPool ? size.add(fee) : size.mul(strike).div(ONE_ETHER).add(fee),
+          contractsToCollateral(size).add(fee),
           poolTokenDecimals,
         );
 
@@ -795,16 +772,22 @@ describe('Pool', () => {
       });
 
       it('should successfully sell 500 options', async () => {
-        const { pool, trader, poolToken, poolTokenDecimals, router } =
-          await loadFixture(
-            isCallPool
-              ? deployAndDeposit_1000_LC_CALL
-              : deployAndDeposit_1000_LC_PUT,
-          );
+        const {
+          pool,
+          trader,
+          poolToken,
+          poolTokenDecimals,
+          router,
+          contractsToCollateral,
+        } = await loadFixture(
+          isCallPool
+            ? deployAndDeposit_1000_LC_CALL
+            : deployAndDeposit_1000_LC_PUT,
+        );
 
         const tradeSize = parseEther('500');
         const collateral = scaleDecimals(
-          isCallPool ? tradeSize : tradeSize.mul(strike).div(ONE_ETHER),
+          contractsToCollateral(tradeSize),
           poolTokenDecimals,
         );
 
@@ -1266,6 +1249,7 @@ describe('Pool', () => {
           trader,
           getTradeQuote,
           initialCollateral,
+          contractsToCollateral,
         } = await loadFixture(
           isCallPool
             ? deployAndMintForTraderAndLP_CALL
@@ -1278,14 +1262,11 @@ describe('Pool', () => {
 
         await pool.connect(trader).fillQuote(quote, quote.size, sig);
 
-        let premium = quote.price.mul(quote.size).div(ONE_ETHER);
-        if (!isCallPool) {
-          premium = premium.mul(strike).div(ONE_ETHER);
-        }
+        let premium = contractsToCollateral(
+          quote.price.mul(quote.size).div(ONE_ETHER),
+        );
 
-        const collateral = isCallPool
-          ? quote.size
-          : quote.size.mul(strike).div(ONE_ETHER);
+        const collateral = contractsToCollateral(quote.size);
 
         const protocolFee = await pool.takerFee(quote.size, premium, false);
 
@@ -1488,6 +1469,7 @@ describe('Pool', () => {
           tradeSize,
           totalPremium,
           protocolFees,
+          contractsToCollateral,
         } = await loadFixture(
           isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
         );
@@ -1496,9 +1478,7 @@ describe('Pool', () => {
 
         await pool.connect(lp).claim(pKey);
 
-        const collateral = isCallPool
-          ? tradeSize
-          : tradeSize.mul(strike).div(ONE_ETHER);
+        const collateral = contractsToCollateral(tradeSize);
 
         expect(await poolToken.balanceOf(pKey.operator)).to.eq(
           initialCollateral.sub(

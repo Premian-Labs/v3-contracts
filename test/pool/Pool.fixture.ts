@@ -2,7 +2,7 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { OrderType } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 import { ONE_ETHER } from '../../utils/constants';
-import { average, scaleDecimals } from '../../utils/sdk/math';
+import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
 import { ethers } from 'hardhat';
 import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
@@ -110,6 +110,14 @@ async function _deploy(isCall: boolean) {
     };
   };
 
+  const contractsToCollateral = (size: BigNumber) => {
+    return isCall ? size : size.mul(strike).div(ONE_ETHER);
+  };
+
+  const scaleDecimals = (amount: BigNumber) => {
+    return _scaleDecimals(amount, poolTokenDecimals);
+  };
+
   const pKey = {
     owner: lp.address,
     operator: lp.address,
@@ -136,6 +144,8 @@ async function _deploy(isCall: boolean) {
     poolToken,
     poolTokenDecimals,
     getTradeQuote,
+    contractsToCollateral,
+    scaleDecimals,
   };
 }
 
@@ -321,7 +331,7 @@ async function _deployAndBuy(isCall: boolean) {
     true,
   );
   const totalPremium = await f.pool.getTradeQuote(tradeSize, true);
-  const totalPremiumScaled = scaleDecimals(totalPremium, f.poolTokenDecimals);
+  const totalPremiumScaled = f.scaleDecimals(totalPremium);
 
   const token = isCall ? f.base : f.quote;
 
