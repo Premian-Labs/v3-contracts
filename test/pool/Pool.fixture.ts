@@ -163,17 +163,19 @@ export async function deployAndMintForLP_PUT() {
 async function _deployAndMintForLP(isCall: boolean) {
   const f = await _deploy(isCall);
 
-  let initialCollateral = parseUnits('1000', f.poolTokenDecimals);
+  let initialCollateral = parseEther('1000');
   if (!isCall) {
     initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
   }
 
+  const initialCollateralScaled = f.scaleDecimals(initialCollateral);
+
   const token = isCall ? f.base : f.quote;
 
-  await token.mint(f.lp.address, initialCollateral);
-  await token.connect(f.lp).approve(f.router.address, initialCollateral);
+  await token.mint(f.lp.address, initialCollateralScaled);
+  await token.connect(f.lp).approve(f.router.address, initialCollateralScaled);
 
-  return { ...f, initialCollateral };
+  return { ...f, initialCollateral, initialCollateralScaled };
 }
 
 //////////////////////////////////////////////////////
@@ -190,19 +192,23 @@ export async function deployAndMintForTraderAndLP_PUT() {
 async function _deployAndMintForTraderAndLP(isCall: boolean) {
   const f = await _deploy(isCall);
 
-  let initialCollateral = parseUnits('10', f.poolTokenDecimals);
+  let initialCollateral = parseEther('10');
   if (!isCall) {
     initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
   }
 
+  const initialCollateralScaled = f.scaleDecimals(initialCollateral);
+
   const token = isCall ? f.base : f.quote;
 
   for (const user of [f.lp, f.trader]) {
-    await token.mint(user.address, initialCollateral);
-    await token.connect(user).approve(f.router.address, initialCollateral);
+    await token.mint(user.address, initialCollateralScaled);
+    await token
+      .connect(user)
+      .approve(f.router.address, initialCollateralScaled);
   }
 
-  return { ...f, initialCollateral };
+  return { ...f, initialCollateral, initialCollateralScaled };
 }
 
 //////////////////////////////////////////////////////
@@ -384,13 +390,13 @@ async function _deployAndSell(isCall: boolean) {
 
   const token = isCall ? f.base : f.quote;
 
-  let mintAmount = parseUnits('1', f.poolTokenDecimals);
+  let mintAmountScaled = parseUnits('1', f.poolTokenDecimals);
   if (!isCall) {
-    mintAmount = mintAmount.mul(strike).div(ONE_ETHER);
+    mintAmountScaled = mintAmountScaled.mul(strike).div(ONE_ETHER);
   }
 
-  await token.mint(f.trader.address, mintAmount);
-  await token.connect(f.trader).approve(f.router.address, mintAmount);
+  await token.mint(f.trader.address, mintAmountScaled);
+  await token.connect(f.trader).approve(f.router.address, mintAmountScaled);
 
   const collateral = isCall ? ONE_ETHER : strike;
 

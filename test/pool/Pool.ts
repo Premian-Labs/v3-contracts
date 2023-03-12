@@ -3,7 +3,7 @@ import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
-import { average, scaleDecimals } from '../../utils/sdk/math';
+import { average } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
@@ -212,7 +212,7 @@ describe('Pool', () => {
               lp,
               pKey,
               poolToken,
-              poolTokenDecimals,
+              scaleDecimals,
               tokenId,
               depositSize,
               initialCollateral,
@@ -233,12 +233,10 @@ describe('Pool', () => {
             );
             expect(await pool.totalSupply(tokenId)).to.eq(depositSize);
             expect(await poolToken.balanceOf(pool.address)).to.eq(
-              scaleDecimals(collateralValue, poolTokenDecimals),
+              scaleDecimals(collateralValue),
             );
             expect(await poolToken.balanceOf(lp.address)).to.eq(
-              initialCollateral.sub(
-                scaleDecimals(collateralValue, poolTokenDecimals),
-              ),
+              scaleDecimals(initialCollateral.sub(collateralValue)),
             );
             expect(await pool.marketPrice()).to.eq(pKey.upper);
           });
@@ -420,7 +418,7 @@ describe('Pool', () => {
             lp,
             pKey,
             poolToken,
-            poolTokenDecimals,
+            scaleDecimals,
             tokenId,
             depositSize,
             initialCollateral,
@@ -436,12 +434,10 @@ describe('Pool', () => {
           );
 
           expect(await poolToken.balanceOf(lp.address)).to.eq(
-            initialCollateral.sub(
-              scaleDecimals(depositCollateralValue, poolTokenDecimals),
-            ),
+            scaleDecimals(initialCollateral.sub(depositCollateralValue)),
           );
           expect(await poolToken.balanceOf(pool.address)).to.eq(
-            scaleDecimals(depositCollateralValue, poolTokenDecimals),
+            scaleDecimals(depositCollateralValue),
           );
 
           const withdrawSize = parseEther('750');
@@ -461,17 +457,13 @@ describe('Pool', () => {
             depositSize.sub(withdrawSize),
           );
           expect(await poolToken.balanceOf(pool.address)).to.eq(
-            scaleDecimals(
-              depositCollateralValue.sub(withdrawCollateralValue),
-              poolTokenDecimals,
-            ),
+            scaleDecimals(depositCollateralValue.sub(withdrawCollateralValue)),
           );
           expect(await poolToken.balanceOf(lp.address)).to.eq(
-            initialCollateral.sub(
-              scaleDecimals(
-                depositCollateralValue.sub(withdrawCollateralValue),
-                poolTokenDecimals,
-              ),
+            scaleDecimals(
+              initialCollateral
+                .sub(depositCollateralValue)
+                .add(withdrawCollateralValue),
             ),
           );
         });
@@ -633,7 +625,7 @@ describe('Pool', () => {
           lp,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           initialCollateral,
           contractsToCollateral,
         } = await loadFixture(
@@ -645,14 +637,13 @@ describe('Pool', () => {
 
         await pool.connect(lp).writeFrom(lp.address, trader.address, size);
 
-        const collateral = scaleDecimals(
-          contractsToCollateral(size).add(fee),
-          poolTokenDecimals,
-        );
+        const collateral = contractsToCollateral(size).add(fee);
 
-        expect(await poolToken.balanceOf(pool.address)).to.eq(collateral);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
+          scaleDecimals(collateral),
+        );
         expect(await poolToken.balanceOf(lp.address)).to.eq(
-          initialCollateral.sub(collateral),
+          scaleDecimals(initialCollateral.sub(collateral)),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           size,
@@ -669,7 +660,7 @@ describe('Pool', () => {
           trader,
           deployer,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           initialCollateral,
           contractsToCollateral,
         } = await loadFixture(
@@ -681,18 +672,17 @@ describe('Pool', () => {
 
         await pool.connect(lp).setApprovalForAll(deployer.address, true);
 
-        const collateral = scaleDecimals(
-          contractsToCollateral(size).add(fee),
-          poolTokenDecimals,
-        );
+        const collateral = contractsToCollateral(size).add(fee);
 
         await pool
           .connect(deployer)
           .writeFrom(lp.address, trader.address, parseEther('500'));
 
-        expect(await poolToken.balanceOf(pool.address)).to.eq(collateral);
+        expect(await poolToken.balanceOf(pool.address)).to.eq(
+          scaleDecimals(collateral),
+        );
         expect(await poolToken.balanceOf(lp.address)).to.eq(
-          initialCollateral.sub(collateral),
+          scaleDecimals(initialCollateral.sub(collateral)),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           size,
@@ -739,7 +729,7 @@ describe('Pool', () => {
   describe('#trade', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully buy 500 options', async () => {
-        const { pool, trader, poolToken, poolTokenDecimals, router } =
+        const { pool, trader, poolToken, scaleDecimals, router } =
           await loadFixture(
             isCallPool
               ? deployAndDeposit_1000_CS_CALL
@@ -748,10 +738,7 @@ describe('Pool', () => {
 
         const tradeSize = parseEther('500');
         const totalPremium = await pool.getTradeQuote(tradeSize, true);
-        const totalPremiumScaled = scaleDecimals(
-          totalPremium,
-          poolTokenDecimals,
-        );
+        const totalPremiumScaled = scaleDecimals(totalPremium);
 
         await poolToken.mint(trader.address, totalPremiumScaled);
         await poolToken
@@ -776,7 +763,7 @@ describe('Pool', () => {
           pool,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           router,
           contractsToCollateral,
         } = await loadFixture(
@@ -786,19 +773,17 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const collateral = scaleDecimals(
+        const collateralScaled = scaleDecimals(
           contractsToCollateral(tradeSize),
-          poolTokenDecimals,
         );
 
         const totalPremium = await pool.getTradeQuote(tradeSize, false);
-        const totalPremiumScaled = scaleDecimals(
-          totalPremium,
-          poolTokenDecimals,
-        );
+        const totalPremiumScaled = scaleDecimals(totalPremium);
 
-        await poolToken.mint(trader.address, collateral);
-        await poolToken.connect(trader).approve(router.address, collateral);
+        await poolToken.mint(trader.address, collateralScaled);
+        await poolToken
+          .connect(trader)
+          .approve(router.address, collateralScaled);
 
         await pool
           .connect(trader)
@@ -905,7 +890,7 @@ describe('Pool', () => {
           pool,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -934,16 +919,15 @@ describe('Pool', () => {
         }
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(
-          scaleDecimals(exerciseValue, poolTokenDecimals),
+          scaleDecimals(exerciseValue),
         );
         expect(await poolToken.balanceOf(pool.address)).to.eq(
           scaleDecimals(
             collateral.add(totalPremium).sub(exerciseValue).sub(protocolFees),
-            poolTokenDecimals,
           ),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
@@ -956,7 +940,7 @@ describe('Pool', () => {
           pool,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -976,16 +960,15 @@ describe('Pool', () => {
         const exerciseValue = BigNumber.from(0);
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(
-          scaleDecimals(exerciseValue, poolTokenDecimals),
+          scaleDecimals(exerciseValue),
         );
         expect(await poolToken.balanceOf(pool.address)).to.eq(
           scaleDecimals(
             collateral.add(totalPremium).sub(exerciseValue).sub(protocolFees),
-            poolTokenDecimals,
           ),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
@@ -1012,7 +995,7 @@ describe('Pool', () => {
           pool,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -1042,19 +1025,13 @@ describe('Pool', () => {
         }
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(
-          scaleDecimals(
-            collateral.add(totalPremium).sub(exerciseValue),
-            poolTokenDecimals,
-          ),
+          scaleDecimals(collateral.add(totalPremium).sub(exerciseValue)),
         );
         expect(await poolToken.balanceOf(pool.address)).to.eq(
-          scaleDecimals(
-            exerciseValue.add(takerFee).sub(protocolFees),
-            poolTokenDecimals,
-          ),
+          scaleDecimals(exerciseValue.add(takerFee).sub(protocolFees)),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
@@ -1067,7 +1044,7 @@ describe('Pool', () => {
           pool,
           trader,
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           oracleAdapter,
           maturity,
           feeReceiver,
@@ -1087,19 +1064,13 @@ describe('Pool', () => {
 
         const exerciseValue = BigNumber.from(0);
         expect(await poolToken.balanceOf(trader.address)).to.eq(
-          scaleDecimals(
-            collateral.add(totalPremium).sub(exerciseValue),
-            poolTokenDecimals,
-          ),
+          scaleDecimals(collateral.add(totalPremium).sub(exerciseValue)),
         );
         expect(await poolToken.balanceOf(pool.address)).to.eq(
-          scaleDecimals(
-            exerciseValue.add(takerFee).sub(protocolFees),
-            poolTokenDecimals,
-          ),
+          scaleDecimals(exerciseValue.add(takerFee).sub(protocolFees)),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
         expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
@@ -1125,7 +1096,7 @@ describe('Pool', () => {
       it('should successfully settle an ITM option position', async () => {
         const {
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           pool,
           feeReceiver,
           initialCollateral,
@@ -1158,18 +1129,18 @@ describe('Pool', () => {
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(0);
         expect(await poolToken.balanceOf(pool.address)).to.eq(
-          scaleDecimals(exerciseValue, poolTokenDecimals),
+          scaleDecimals(exerciseValue),
         );
         expect(await poolToken.balanceOf(pKey.operator)).to.eq(
-          initialCollateral.add(
-            scaleDecimals(
-              totalPremium.sub(exerciseValue).sub(protocolFees),
-              poolTokenDecimals,
-            ),
+          scaleDecimals(
+            initialCollateral
+              .add(totalPremium)
+              .sub(exerciseValue)
+              .sub(protocolFees),
           ),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -1181,7 +1152,7 @@ describe('Pool', () => {
       it('should successfully settle an OTM option position', async () => {
         const {
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           pool,
           feeReceiver,
           maturity,
@@ -1205,18 +1176,18 @@ describe('Pool', () => {
 
         expect(await poolToken.balanceOf(trader.address)).to.eq(0);
         expect(await poolToken.balanceOf(pool.address)).to.eq(
-          scaleDecimals(exerciseValue, poolTokenDecimals),
+          scaleDecimals(exerciseValue),
         );
         expect(await poolToken.balanceOf(pKey.operator)).to.eq(
-          initialCollateral.add(
-            scaleDecimals(
-              totalPremium.sub(exerciseValue).sub(protocolFees),
-              poolTokenDecimals,
-            ),
+          scaleDecimals(
+            initialCollateral
+              .add(totalPremium)
+              .sub(exerciseValue)
+              .sub(protocolFees),
           ),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -1243,7 +1214,7 @@ describe('Pool', () => {
       it('should successfully fill a valid quote', async () => {
         const {
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           pool,
           lp,
           trader,
@@ -1271,15 +1242,12 @@ describe('Pool', () => {
         const protocolFee = await pool.takerFee(quote.size, premium, false);
 
         expect(await poolToken.balanceOf(lp.address)).to.eq(
-          initialCollateral.sub(
-            scaleDecimals(
-              collateral.sub(premium).add(protocolFee),
-              poolTokenDecimals,
-            ),
+          scaleDecimals(
+            initialCollateral.sub(collateral).add(premium).sub(protocolFee),
           ),
         );
         expect(await poolToken.balanceOf(trader.address)).to.eq(
-          initialCollateral.sub(scaleDecimals(premium, poolTokenDecimals)),
+          scaleDecimals(initialCollateral.sub(premium)),
         );
 
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
@@ -1459,7 +1427,7 @@ describe('Pool', () => {
       it('should successfully claim fees', async () => {
         const {
           poolToken,
-          poolTokenDecimals,
+          scaleDecimals,
           pool,
           lp,
           trader,
@@ -1481,18 +1449,15 @@ describe('Pool', () => {
         const collateral = contractsToCollateral(tradeSize);
 
         expect(await poolToken.balanceOf(pKey.operator)).to.eq(
-          initialCollateral.sub(
-            scaleDecimals(collateral.sub(claimableFees), poolTokenDecimals),
-          ),
+          scaleDecimals(initialCollateral.sub(collateral).add(claimableFees)),
         );
         expect(await poolToken.balanceOf(pool.address)).to.eq(
           scaleDecimals(
             collateral.add(totalPremium).sub(claimableFees).sub(protocolFees),
-            poolTokenDecimals,
           ),
         );
         expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          scaleDecimals(protocolFees, poolTokenDecimals),
+          scaleDecimals(protocolFees),
         );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
