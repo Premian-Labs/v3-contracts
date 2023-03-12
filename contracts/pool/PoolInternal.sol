@@ -985,11 +985,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price.mul(size);
-        r.protocolFee = Position.contractsToCollateral(
-            _takerFee(l, size, r.premium, true),
-            l.strike,
-            l.isCallPool
-        );
+        r.protocolFee = _takerFee(l, size, r.premium, true);
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(

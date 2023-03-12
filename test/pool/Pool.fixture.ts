@@ -180,7 +180,10 @@ export async function deployAndMintForTraderAndLP_PUT() {
 async function _deployAndMintForTraderAndLP(isCall: boolean) {
   const f = await _deploy(isCall);
 
-  const initialCollateral = parseUnits('10', f.poolTokenDecimals);
+  let initialCollateral = parseUnits('10', f.poolTokenDecimals);
+  if (!isCall) {
+    initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
+  }
 
   const token = isCall ? f.base : f.quote;
 
@@ -371,7 +374,11 @@ async function _deployAndSell(isCall: boolean) {
 
   const token = isCall ? f.base : f.quote;
 
-  const mintAmount = parseUnits('1', f.poolTokenDecimals);
+  let mintAmount = parseUnits('1', f.poolTokenDecimals);
+  if (!isCall) {
+    mintAmount = mintAmount.mul(strike).div(ONE_ETHER);
+  }
+
   await token.mint(f.trader.address, mintAmount);
   await token.connect(f.trader).approve(f.router.address, mintAmount);
 
