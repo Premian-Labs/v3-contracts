@@ -6,6 +6,8 @@ import {IERC1155Base} from "@solidstate/contracts/token/ERC1155/base/IERC1155Bas
 import {IERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/IERC1155Enumerable.sol";
 
 interface IPoolBase is IERC1155Base, IERC1155Enumerable {
+    error Pool__UseTransferPositionToTransferLPTokens();
+
     /// @notice get token collection name
     /// @return collection name
     function name() external view returns (string memory);

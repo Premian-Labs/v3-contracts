@@ -15,10 +15,19 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     constructor(
         address factory,
+        address router,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
+    )
+        PoolInternal(
+            factory,
+            router,
+            exchangeHelper,
+            wrappedNativeToken,
+            feeReceiver
+        )
+    {}
 
     function _getPricing(
         bool isBuy
@@ -56,10 +65,6 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         )
     {
         return PoolStorage.parseTokenId(tokenId);
-    }
-
-    function marketPrice() external view returns (uint256) {
-        return PoolStorage.layout().marketPrice;
     }
 
     function protocolFees() external view returns (uint256) {
