@@ -60,7 +60,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         UD60x18 discount = (OptionMath.ONE - l.discountPerPool)
             .intoSD59x18()
             .powu(discountFactor)
-            .intoUD60x18(); // ToDo : Check with Froggie
+            .intoUD60x18();
 
         UD60x18 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
         UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);

@@ -7,7 +7,7 @@ import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/Aggr
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
-import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -46,7 +46,7 @@ library PoolStorage {
         // Whether its a call or put pool
         bool isCallPool;
         // Index of all existing ticks sorted
-        DoublyLinkedListUD60x18.UD60x18List tickIndex;
+        DoublyLinkedList.Bytes32List tickIndex;
         mapping(UD60x18 => IPoolInternal.Tick) ticks;
         UD60x18 marketPrice;
         UD60x18 globalFeeRate;
