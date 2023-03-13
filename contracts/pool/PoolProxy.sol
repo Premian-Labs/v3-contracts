@@ -12,14 +12,14 @@ import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
-import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
 /// @title Upgradeable proxy with centrally controlled Pool implementation
 contract PoolProxy is Proxy, ERC165BaseInternal {
-    using DoublyLinkedListUD60x18 for DoublyLinkedListUD60x18.UD60x18List;
+    using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
 
     address private immutable DIAMOND;

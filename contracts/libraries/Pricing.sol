@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Position} from "../libraries/Position.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
@@ -17,7 +17,7 @@ import {IPricing} from "./IPricing.sol";
 ///         Instead, the user should use the methods of this class to simplify
 ///         computations for more complex price calculations.
 library Pricing {
-    using DoublyLinkedListUD60x18 for DoublyLinkedListUD60x18.UD60x18List;
+    using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
 
     UD60x18 internal constant ZERO = UD60x18.wrap(0);

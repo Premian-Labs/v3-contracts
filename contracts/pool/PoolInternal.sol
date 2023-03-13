@@ -18,7 +18,7 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
 
-import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
@@ -32,7 +32,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
-    using DoublyLinkedListUD60x18 for DoublyLinkedListUD60x18.UD60x18List;
+    using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
     using PoolStorage for TradeQuote;
     using Position for Position.Key;
