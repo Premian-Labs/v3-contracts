@@ -953,6 +953,7 @@ describe('Pool', () => {
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
         await oracleAdapter.mock.quote.returns(settlementPrice);
+        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.exercise(trader.address);
@@ -1058,6 +1059,7 @@ describe('Pool', () => {
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
         await oracleAdapter.mock.quote.returns(settlementPrice);
+        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settle(trader.address);
@@ -1168,6 +1170,7 @@ describe('Pool', () => {
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
         await oracleAdapter.mock.quote.returns(settlementPrice);
+        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settlePosition(pKey);
