@@ -253,11 +253,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function increaseTotalLockedAssets(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().totalLockedAssets += value;
-        console.log("hello");
-        console.log(address(this));
-        console.log(IERC20(_asset()).balanceOf(address(this)));
         IERC20(_asset()).transfer(address(1), value);
-        console.log(IERC20(_asset()).balanceOf(address(this)));
     }
 
     function increaseTotalLockedSpread(uint256 value) external onlyOwner {
