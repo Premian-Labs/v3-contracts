@@ -182,11 +182,11 @@ contract UnderwriterVault is
         return n;
     }
 
-    /// @notice Gets the total fair value of the basket of expired options underwritten
-    ///         by this vault at the current time
+    /// @notice Gets the total liabilities value of the basket of expired
+    ///         options underwritten by this vault at the current time
     /// @param timestamp The given timestamp
-    /// @return The total fair value of the basket of expired options underwritten
-    function _getTotalFairValueExpired(
+    /// @return The total liabilities of the basket of expired options underwritten
+    function _getTotalLiabilitiesExpired(
         uint256 timestamp
     ) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -226,12 +226,12 @@ contract UnderwriterVault is
         return total;
     }
 
-    /// @notice Gets the total fair value of the basket of unexpired options underwritten
-    ///         by this vault at the current time
+    /// @notice Gets the total liabilities value of the basket of unexpired
+    ///         options underwritten by this vault at the current time
     /// @param timestamp The given timestamp
     /// @param spot The spot price
-    /// @return The total fair value of the basket of unexpired options underwritten
-    function _getTotalFairValueUnexpired(
+    /// @return The the total liabilities of the basket of unexpired options underwritten
+    function _getTotalLiabilitiesUnexpired(
         uint256 timestamp,
         uint256 spot
     ) internal view returns (uint256) {
@@ -299,15 +299,24 @@ contract UnderwriterVault is
         return l.isCall ? total.div(spot) : total;
     }
 
+    /// @notice Gets the total liabilities of the basket of options underwritten
+    ///         by this vault at the current time
+    /// @return The total liabilities of the basket of options underwritten
+    function _getTotalLiabilities() internal view returns (uint256) {
+        uint256 spot = _getSpotPrice();
+        uint256 timestamp = block.timestamp;
+        return
+            _getTotalLiabilitiesUnexpired(timestamp, spot) +
+            _getTotalLiabilitiesExpired(timestamp);
+    }
+
     /// @notice Gets the total fair value of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total fair value of the basket of options underwritten
     function _getTotalFairValue() internal view returns (uint256) {
-        uint256 spot = _getSpotPrice();
-        uint256 timestamp = block.timestamp;
-        return
-            _getTotalFairValueUnexpired(timestamp, spot) +
-            _getTotalFairValueExpired(timestamp);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.totalLockedAssets - _getTotalLiabilities();
     }
 
     /// @notice Gets the total locked spread for the vault

@@ -14,40 +14,53 @@ library UnderwriterVaultStorage {
         keccak256("premia.contracts.storage.UnderwriterVaultStorage");
 
     struct Layout {
+        // ERC20 token address for the base asset
         address base;
+        // ERC20 token address for the quote asset
         address quote;
+        // Address for the oracle adapter to get spot prices for base/quote
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;
-        // The total assets that have been included in the pool.
+        // The total assets that have been locked up as collateral for
+        // underwritten options.
         uint256 totalLockedAssets;
         // Trading Parameters
-        uint256 maxDTE; // 30
-        uint256 minDTE; // 3
-        int256 minDelta; // 0.10
-        int256 maxDelta; // 0.70
+        // Minimum days until maturity which can be underwritten by the vault, default 3
+        uint256 minDTE;
+        // Maximum days until maturity which can be underwritten by the vault, default 30
+        uint256 maxDTE;
+        // Minimum option delta which can be underwritten by the vault, default 0.1
+        int256 minDelta;
+        // Maximum option delta which can be underwritten by the vault, default 0.7
+        int256 maxDelta;
         // C-Level Parameters
         uint256 minCLevel; // 1
         uint256 maxCLevel; // 1.2
         uint256 alphaCLevel; // 3
         uint256 hourlyDecayDiscount; // 0.005
         uint256 lastTradeTimestamp;
+        // Data structures for information on listings
         // (strike, maturity) => number of short contracts
         mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
-        // SortedLinkedList for maturities
+        // The minimum maturity over all unsettled options
         uint256 minMaturity;
+        // The maximum maturity over all unsettled options
         uint256 maxMaturity;
+        // A SortedDoublyLinkedList for maturities
         DoublyLinkedList.Uint256List maturities;
         // maturity => set of strikes
         mapping(uint256 => EnumerableSet.UintSet) maturityToStrikes;
-        // tracks the total profits / spreads that are locked such that we can deduct it from the total assets
+        // Variables for dispersing profits across time
+        // Tracks the total profits/spreads that are locked such that we can
+        // deduct it from the total assets
         uint256 totalLockedSpread;
-        // tracks the rate at which ask spreads are dispersed
-        // why? the vault charges FV + spread, therefore the pps would increase.
-        // this would allow
+        // Tracks the rate at which ask spreads are dispersed
         uint256 spreadUnlockingRate;
+        // Tracks the time spreadUnlockingRate was updated
         uint256 lastSpreadUnlockUpdate;
         // we map maturities to the unlockingRate that needs to be deducted upon crossing
+        // maturity => spreadUnlockingRate
         mapping(uint256 => uint256) spreadUnlockingTicks;
     }
 
