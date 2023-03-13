@@ -1,7 +1,12 @@
-import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
+import {
+  SnapshotRestorer,
+  takeSnapshot,
+  time,
+} from '@nomicfoundation/hardhat-network-helpers';
 
 import moment from 'moment-timezone';
+import { NumberLike } from '@nomicfoundation/hardhat-network-helpers/dist/src/types';
+
 moment.tz.setDefault('UTC');
 
 export const ONE_HOUR = 3600;
@@ -11,21 +16,13 @@ export const ONE_MONTH = 30 * ONE_DAY;
 export const ONE_YEAR = 365 * ONE_DAY;
 
 // returns the current timestamp
-export async function now() {
-  return (await ethers.provider.getBlock('latest')).timestamp;
+export async function latest() {
+  return time.latest();
 }
 
 // Increases ganache time by the passed duration in seconds
-export async function increase(duration: number | BigNumber) {
-  if (!BigNumber.isBigNumber(duration)) {
-    duration = BigNumber.from(duration);
-  }
-
-  if (duration.lt(BigNumber.from('0')))
-    throw Error(`Cannot increase time by a negative amount (${duration})`);
-
-  await ethers.provider.send('evm_increaseTime', [duration.toNumber()]);
-  await ethers.provider.send('evm_mine', []);
+export async function increase(duration: NumberLike) {
+  return time.increase(duration);
 }
 
 /**
@@ -35,22 +32,8 @@ export async function increase(duration: number | BigNumber) {
  *
  * @param target time in seconds
  */
-export async function increaseTo(target: number | BigNumber) {
-  if (!BigNumber.isBigNumber(target)) {
-    target = BigNumber.from(target);
-  }
-
-  const now = BigNumber.from(
-    (await ethers.provider.getBlock('latest')).timestamp,
-  );
-
-  if (target.lt(now))
-    throw Error(
-      `Cannot increase current time (${now}) to a moment in the past (${target})`,
-    );
-
-  const diff = target.sub(now);
-  return increase(diff);
+export async function increaseTo(target: NumberLike) {
+  return time.increaseTo(target);
 }
 
 export function weekOfMonth(timestamp: number) {
@@ -81,7 +64,7 @@ export async function getLastFridayOfMonth(timestamp: number, interval: any) {
 }
 
 export async function getValidMaturity(interval: any, period: string) {
-  const timestamp = await now();
+  const timestamp = await time.latest();
   const currentTime = moment.unix(timestamp);
 
   if (period === 'days' && interval < 3) {
@@ -102,28 +85,19 @@ export async function getValidMaturity(interval: any, period: string) {
   throw new Error('Invalid Maturity Parameters');
 }
 
-export async function takeSnapshot() {
-  const snapshotId: string = await ethers.provider.send('evm_snapshot', []);
-  return snapshotId;
-}
-
-export async function revertToSnapShot(id: string) {
-  await ethers.provider.send('evm_revert', [id]);
-}
-
 export function revertToSnapshotAfterEach(
   beforeEachCallback = async () => {},
   afterEachCallback = async () => {},
 ) {
-  let snapshotId: string;
+  let snapshot: SnapshotRestorer;
 
   beforeEach(async function () {
-    snapshotId = await takeSnapshot();
+    snapshot = await takeSnapshot();
     await beforeEachCallback.bind(this)();
   });
   afterEach(async () => {
     await afterEachCallback.bind(this)();
-    await revertToSnapShot(snapshotId);
+    await snapshot.restore();
   });
 }
 

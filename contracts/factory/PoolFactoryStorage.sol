@@ -13,6 +13,8 @@ library PoolFactoryStorage {
     struct Layout {
         // Pool Key -> Address
         mapping(bytes32 => address) pools;
+        // Pool Address -> Whether this is a pool or not
+        mapping(address => bool) isPool;
         // Pool Key -> Count (Discount lattice for strike)
         mapping(bytes32 => uint256) strikeCount;
         // Pool Key -> Count (Discount lattice for maturity)

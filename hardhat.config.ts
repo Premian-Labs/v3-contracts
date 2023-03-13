@@ -68,6 +68,10 @@ export default {
   },
   networks: {
     hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
+        blockNumber: 16600000,
+      },
       allowUnlimitedContractSize: true,
       blockGasLimit: 180000000000,
     },

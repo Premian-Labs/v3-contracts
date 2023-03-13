@@ -341,7 +341,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.0":
+"@ethersproject/providers@npm:5.7.2, @ethersproject/providers@npm:^5.7.0, @ethersproject/providers@npm:^5.7.2":
   version: 5.7.2
   resolution: "@ethersproject/providers@npm:5.7.2"
   dependencies:
@@ -817,6 +817,17 @@ __metadata:
     ethers: ^5.0.0
     hardhat: ^2.9.4
   checksum: c388e5ed9068f2ba7c227737ab7312dd03405d5fab195247b061f2fa52e700fbd0fb65359c2d4f2086f2905bfca642c19a9122d034533edd936f89aea65ac7f2
+  languageName: node
+  linkType: hard
+
+"@nomicfoundation/hardhat-network-helpers@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "@nomicfoundation/hardhat-network-helpers@npm:1.0.8"
+  dependencies:
+    ethereumjs-util: ^7.1.4
+  peerDependencies:
+    hardhat: ^2.9.5
+  checksum: cf865301fa7a8cebf5c249bc872863d2e69f0f3d14cceadbc5d5761bd97745f38fdb17c9074d46ef0d3a75748f43c0e14d37a54a09ae3b7e0e981c7f437c8553
   languageName: node
   linkType: hard
 
@@ -3568,7 +3579,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethereumjs-util@npm:^7.1.0":
+"ethereumjs-util@npm:^7.1.0, ethereumjs-util@npm:^7.1.4":
   version: 7.1.5
   resolution: "ethereumjs-util@npm:7.1.5"
   dependencies:
@@ -6580,7 +6591,9 @@ __metadata:
   resolution: "premia-contracts-v3@workspace:."
   dependencies:
     "@chainlink/contracts": ^0.6.1
+    "@ethersproject/providers": ^5.7.2
     "@nomicfoundation/hardhat-chai-matchers": ^1.0.6
+    "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.2
     "@nomiclabs/hardhat-etherscan": ^3.1.6
     "@solidstate/contracts": ^0.0.52
@@ -6618,7 +6631,6 @@ __metadata:
   peerDependencies:
     "@ethersproject/abi": "*"
     "@ethersproject/bytes": "*"
-    "@ethersproject/providers": "*"
   languageName: unknown
   linkType: soft
 

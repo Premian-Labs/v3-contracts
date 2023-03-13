@@ -9,6 +9,8 @@ import {
   Premia__factory,
   ExchangeHelper__factory,
   PoolTrade__factory,
+  ERC20Router__factory,
+  ERC20Router,
 } from '../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { diamondCut } from '../scripts/utils/diamond';
@@ -18,15 +20,18 @@ import { parseEther } from 'ethers/lib/utils';
 interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
+  router: ERC20Router;
 }
 
 export class PoolUtil {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
+  router: ERC20Router;
 
   constructor(args: PoolUtilArgs) {
     this.premiaDiamond = args.premiaDiamond;
     this.poolFactory = args.poolFactory;
+    this.router = args.router;
   }
 
   static async deploy(
@@ -78,6 +83,14 @@ export class PoolUtil {
     // Pool //
     //////////
 
+    // ERC20Router
+    const router = await new ERC20Router__factory(deployer).deploy(
+      poolFactory.address,
+    );
+    await router.deployed();
+
+    if (log) console.log(`ERC20Router : ${router.address}`);
+
     // ExchangeHelper
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
     await exchangeHelper.deployed();
@@ -110,6 +123,7 @@ export class PoolUtil {
     const poolCoreFactory = new PoolCore__factory(deployer);
     const poolCoreImpl = await poolCoreFactory.deploy(
       poolFactory.address,
+      router.address,
       exchangeHelper.address,
       wrappedNativeToken,
       feeReceiver,
@@ -132,6 +146,7 @@ export class PoolUtil {
     const poolTradeFactory = new PoolTrade__factory(deployer);
     const poolTradeImpl = await poolTradeFactory.deploy(
       poolFactory.address,
+      router.address,
       exchangeHelper.address,
       wrappedNativeToken,
       feeReceiver,
@@ -157,6 +172,7 @@ export class PoolUtil {
       const poolCoreMockFactory = new PoolCoreMock__factory(deployer);
       const poolCoreMockImpl = await poolCoreMockFactory.deploy(
         poolFactory.address,
+        router.address,
         exchangeHelper.address,
         wrappedNativeToken,
         feeReceiver,
@@ -175,6 +191,6 @@ export class PoolUtil {
       );
     }
 
-    return new PoolUtil({ premiaDiamond, poolFactory });
+    return new PoolUtil({ premiaDiamond, poolFactory, router });
   }
 }

@@ -1,12 +1,14 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+
+import { bnToAddress } from '@solidstate/library';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
-  ChainlinkOraclePriceStub,
   ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
 
@@ -16,20 +18,10 @@ import {
   validateQuote,
 } from '../../utils/defillama';
 
+import { feeds, Token, tokens } from '../../utils/addresses';
 import { ONE_ETHER } from '../../utils/constants';
-import {
-  increaseTo,
-  now,
-  revertToSnapshotAfterEach,
-  setBlockNumber,
-} from '../../utils/time';
-import { Token, feeds, tokens } from '../../utils/addresses';
+import { increaseTo, latest } from '../../utils/time';
 
-import { bnToAddress } from '@solidstate/library';
-
-const { API_KEY_ALCHEMY } = process.env;
-const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16597500; // Fri Feb 10 2023 09:35:59 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 enum PricingPath {
@@ -42,6 +34,14 @@ enum PricingPath {
   A_USD_ETH_B,
   A_ETH_USD_B,
   TOKEN_USD_BTC_WBTC,
+}
+
+enum FailureMode {
+  NONE,
+  GET_ROUND_DATA_REVERT_WITH_REASON,
+  GET_ROUND_DATA_REVERT,
+  LAST_ROUND_DATA_REVERT_WITH_REASON,
+  LAST_ROUND_DATA_REVERT,
 }
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -132,16 +132,8 @@ let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 }
 
 describe('ChainlinkAdapter', () => {
-  let deployer: SignerWithAddress;
-  let instance: ChainlinkAdapter;
-  let stub: ChainlinkOraclePriceStub;
-
-  before(async () => {
-    await setBlockNumber(jsonRpcUrl, blockNumber);
-  });
-
-  revertToSnapshotAfterEach(async () => {
-    [deployer] = await ethers.getSigners();
+  async function deploy() {
+    const [deployer] = await ethers.getSigners();
 
     const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
       tokens.WETH.address,
@@ -156,13 +148,37 @@ describe('ChainlinkAdapter', () => {
 
     await proxy.deployed();
 
-    instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
+    const instance = ChainlinkAdapter__factory.connect(proxy.address, deployer);
 
     await instance.batchRegisterFeedMappings(feeds);
-  });
+
+    return { deployer, instance };
+  }
+
+  async function deployStub() {
+    const { deployer, instance } = await deploy();
+
+    const stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+    const stubCoin = bnToAddress(BigNumber.from(100));
+
+    await instance.batchRegisterFeedMappings([
+      {
+        token: stubCoin,
+        denomination: tokens.CHAINLINK_USD.address,
+        feed: stub.address,
+      },
+    ]);
+
+    await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+    return { deployer, instance, stub, stubCoin };
+  }
 
   describe('#isPairSupported', () => {
     it('should return false if pair is not supported by adapter', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [isCached, _] = await instance.isPairSupported(
         tokens.WETH.address,
         tokens.DAI.address,
@@ -172,6 +188,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should return false if path for pair does not exist', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [_, hasPath] = await instance.isPairSupported(
         tokens.WETH.address,
         bnToAddress(BigNumber.from(0)),
@@ -183,6 +201,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#upsertPair', () => {
     it('should revert if pair cannot be supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.upsertPair(
           bnToAddress(BigNumber.from(0)),
@@ -205,6 +225,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should not fail if called multiple times for same pair', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
 
       const [isCached, _] = await instance.isPairSupported(
@@ -220,6 +242,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should only emit UpdatedPathForPair when path is updated', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
       ).to.emit(instance, 'UpdatedPathForPair');
@@ -263,6 +287,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#bathRegisterFeedMappings', async () => {
     it('should revert if token == denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.batchRegisterFeedMappings([
           {
@@ -275,6 +301,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should revert if token or denomination address is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.batchRegisterFeedMappings([
           {
@@ -297,6 +325,8 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('shoud return feed of mapped token and denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.batchRegisterFeedMappings(feeds);
 
       for (let i = 0; i < feeds.length; i++) {
@@ -309,6 +339,8 @@ describe('ChainlinkAdapter', () => {
 
   describe('#feed', async () => {
     it('should return zero address if feed has not been added', async () => {
+      const { instance } = await loadFixture(deploy);
+
       expect(
         await instance.feed(tokens.EUL.address, tokens.DAI.address),
       ).to.equal(bnToAddress(BigNumber.from(0)));
@@ -316,7 +348,36 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#quote', async () => {
+    it('should catch revert', async () => {
+      const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000],
+        [target - 90000],
+      );
+
+      await expect(
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT,
+        [100000000000],
+        [target - 90000],
+      );
+
+      await expect(
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'ChainlinkAdapter__LatestRoundDataCallReverted',
+      );
+    });
+
     it('should revert if pair is not supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.quote(tokens.WETH.address, bnToAddress(BigNumber.from(0))),
       ).to.be.revertedWithCustomError(
@@ -326,10 +387,13 @@ describe('ChainlinkAdapter', () => {
     });
 
     it('should find path if pair has not been added', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
     });
 
     it('should return quote using correct denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let tokenIn = tokens.WETH;
       let tokenOut = tokens.DAI;
 
@@ -356,14 +420,47 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#quoteFrom', async () => {
+    it('should catch revert', async () => {
+      const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+      await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'ChainlinkAdapter__GetRoundDataCallReverted',
+      );
+    });
+
     it('should revert if target is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.quoteFrom(tokens.WETH.address, tokens.DAI.address, 0),
       ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
     });
 
     it('should revert if target > block.timestamp', async () => {
-      const blockTimestamp = await now();
+      const { instance } = await loadFixture(deploy);
+
+      const blockTimestamp = await latest();
 
       await expect(
         instance.quoteFrom(
@@ -374,25 +471,11 @@ describe('ChainlinkAdapter', () => {
       ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
     });
 
-    const stubCoin = bnToAddress(BigNumber.from(100));
-
     describe('#when price is stale', async () => {
-      beforeEach(async () => {
-        stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
-
-        await instance.batchRegisterFeedMappings([
-          {
-            token: stubCoin,
-            denomination: tokens.CHAINLINK_USD.address,
-            feed: stub.address,
-          },
-        ]);
-
-        await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
-      });
-
       it('should revert when called within 12 hours of target time', async () => {
-        await stub.setup([100000000000], [target - 90000]);
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
 
         await expect(
           instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
@@ -403,8 +486,10 @@ describe('ChainlinkAdapter', () => {
       });
 
       it('should return stale price when called 12 hours after target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
         await increaseTo(target + 43200);
-        await stub.setup([100000000000], [target - 90000]);
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
 
         const stalePrice = await stub.price(0);
 
@@ -419,22 +504,10 @@ describe('ChainlinkAdapter', () => {
     });
 
     describe('#when price is fresh', async () => {
-      beforeEach(async () => {
-        stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
-
-        await instance.batchRegisterFeedMappings([
-          {
-            token: stubCoin,
-            denomination: tokens.CHAINLINK_USD.address,
-            feed: stub.address,
-          },
-        ]);
-
-        await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
-      });
-
       it('should return price closest to target when called within 12 hours of target time', async () => {
-        await stub.setup([1000000000000], [target + 100]);
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
         let freshPrice = await stub.price(0);
 
         expect(
@@ -446,6 +519,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [100000000000, 200000000000, 300000000000],
           [target + 100, target + 300, target + 500],
         );
@@ -461,6 +535,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 50, target + 100, target + 300, target + 500],
         );
@@ -476,6 +551,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 100, target + 50, target + 300, target + 500],
         );
@@ -491,6 +567,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000],
           [target - 100, target - 50],
         );
@@ -507,8 +584,10 @@ describe('ChainlinkAdapter', () => {
       });
 
       it('should return price closest to target when called 12 hours after target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
         await increaseTo(target + 43200);
-        await stub.setup([1000000000000], [target + 100]);
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
         let freshPrice = await stub.price(0);
 
         expect(
@@ -520,6 +599,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [100000000000, 200000000000, 300000000000],
           [target + 100, target + 300, target + 500],
         );
@@ -535,6 +615,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 50, target + 100, target + 300, target + 500],
         );
@@ -550,6 +631,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 100, target + 50, target + 300, target + 500],
         );
@@ -565,6 +647,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000],
           [target - 100, target - 50],
         );
@@ -585,8 +668,13 @@ describe('ChainlinkAdapter', () => {
   for (let i = 0; i < paths.length; i++) {
     describe(`${PricingPath[paths[i][0].path]}`, () => {
       for (const { path, tokenIn, tokenOut } of paths[i]) {
+        let instance: ChainlinkAdapter;
+
         describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
           beforeEach(async () => {
+            const f = await loadFixture(deploy);
+            instance = f.instance;
+
             if (
               path == PricingPath.TOKEN_USD ||
               path == PricingPath.TOKEN_USD_TOKEN ||
