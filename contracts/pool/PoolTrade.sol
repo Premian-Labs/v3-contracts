@@ -30,8 +30,11 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) external view returns (UD60x18) {
-        return _getTradeQuote(size, isBuy);
+    ) external view returns (uint256) {
+        return
+            PoolStorage.layout().toPoolTokenDecimals(
+                _getTradeQuote(size, isBuy)
+            );
     }
 
     /// @inheritdoc IPoolTrade
@@ -50,19 +53,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function trade(
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
-    ) external returns (UD60x18 totalPremium, Delta memory delta) {
-        return
-            _trade(
-                TradeArgsInternal(
-                    msg.sender,
-                    size,
-                    isBuy,
-                    premiumLimit,
-                    0,
-                    true
-                )
-            );
+        uint256 premiumLimit
+    ) external returns (uint256 totalPremium, Delta memory delta) {
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true)
+        );
+
+        return (PoolStorage.layout().toPoolTokenDecimals(totalPremium), delta);
     }
 
     /// @inheritdoc IPoolTrade
@@ -70,12 +68,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
+        uint256 premiumLimit
     )
         external
         payable
         returns (
-            UD60x18 totalPremium,
+            uint256 totalPremium,
             Delta memory delta,
             uint256 swapOutAmount
         )
@@ -85,7 +83,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (swapOutAmount, ) = _swap(s);
 
-        (totalPremium, delta) = _trade(
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
             TradeArgsInternal(
                 msg.sender,
                 size,
@@ -96,7 +95,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             )
         );
 
-        return (totalPremium, delta, swapOutAmount);
+        return (l.toPoolTokenDecimals(totalPremium), delta, swapOutAmount);
     }
 
     /// @inheritdoc IPoolTrade
@@ -104,18 +103,19 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
+        uint256 premiumLimit
     )
         external
         returns (
-            UD60x18 totalPremium,
+            uint256 totalPremium,
             Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
         )
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        (totalPremium, delta) = _trade(
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false)
         );
 
@@ -126,7 +126,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
         (tokenOutReceived, collateralReceived) = _swap(s);
 
-        return (totalPremium, delta, collateralReceived, tokenOutReceived);
+        return (
+            l.toPoolTokenDecimals(totalPremium),
+            delta,
+            collateralReceived,
+            tokenOutReceived
+        );
     }
 
     /// @inheritdoc IPoolTrade

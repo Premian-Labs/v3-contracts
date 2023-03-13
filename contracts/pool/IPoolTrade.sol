@@ -15,7 +15,7 @@ interface IPoolTrade is IPoolInternal {
     function getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) external view returns (UD60x18);
+    ) external view returns (uint256);
 
     /// @notice Functionality to support the RFQ / OTC system.
     ///         An LP can create a quote for which he will do an OTC trade through
@@ -40,8 +40,8 @@ interface IPoolTrade is IPoolInternal {
     function trade(
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
-    ) external returns (UD60x18 totalPremium, Delta memory delta);
+        uint256 premiumLimit
+    ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -56,12 +56,12 @@ interface IPoolTrade is IPoolInternal {
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
+        uint256 premiumLimit
     )
         external
         payable
         returns (
-            UD60x18 totalPremium,
+            uint256 totalPremium,
             Delta memory delta,
             uint256 swapOutAmount
         );
@@ -80,11 +80,11 @@ interface IPoolTrade is IPoolInternal {
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        UD60x18 premiumLimit
+        uint256 premiumLimit
     )
         external
         returns (
-            UD60x18 totalPremium,
+            uint256 totalPremium,
             Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived

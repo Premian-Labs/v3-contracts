@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers';
-import { formatEther, formatUnits, parseUnits } from 'ethers/lib/utils';
+import { formatUnits, parseUnits } from 'ethers/lib/utils';
 
 export function average(a: BigNumber, b: BigNumber): BigNumber {
   return a.add(b).div(2);

@@ -6,7 +6,10 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
+
 import {Position} from "../libraries/Position.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
+
 import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
@@ -37,11 +40,20 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function takerFee(
         UD60x18 size,
-        UD60x18 premium,
+        uint256 premium,
         bool isPremiumNormalized
-    ) external view returns (UD60x18) {
+    ) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         return
-            _takerFee(PoolStorage.layout(), size, premium, isPremiumNormalized);
+            PoolStorage.layout().toPoolTokenDecimals(
+                _takerFee(
+                    PoolStorage.layout(),
+                    size,
+                    l.fromPoolTokenDecimals(premium),
+                    isPremiumNormalized
+                )
+            );
     }
 
     /// @inheritdoc IPoolCore
@@ -76,13 +88,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function getClaimableFees(
         Position.Key memory p
-    ) external view returns (UD60x18) {
+    ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
 
         (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p, pData);
 
-        return pData.claimableFees + pendingClaimableFees;
+        return
+            l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
     /// @inheritdoc IPoolCore
