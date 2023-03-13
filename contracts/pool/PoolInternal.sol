@@ -103,8 +103,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        UD60x18 premiumFee = premium.mul(PREMIUM_FEE_PERCENTAGE);
-        UD60x18 notionalFee = size.mul(COLLATERAL_FEE_PERCENTAGE);
+        UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
+        UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
 
         return
             Position.contractsToCollateral(
@@ -144,9 +144,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (liquidity == ZERO) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
-                UD60x18 priceDelta = (pricing.upper - pricing.lower).mul(
-                    tradeSize.div(liquidity)
-                );
+                UD60x18 priceDelta = ((pricing.upper - pricing.lower) *
+                    tradeSize) / liquidity;
 
                 nextPrice = isBuy
                     ? pricing.marketPrice + priceDelta
@@ -244,7 +243,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 lastFeeRate,
         UD60x18 liquidityPerTick
     ) internal pure returns (UD60x18) {
-        return (feeRate - lastFeeRate).mul(liquidityPerTick);
+        return (feeRate - lastFeeRate) * liquidityPerTick;
     }
 
     /// @notice Updates the amount of fees an LP can claim for a position (without claiming).
@@ -752,7 +751,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                             nextMarketPrice
                         );
 
-                        premium = tradeQuotePrice.mul(tradeSize);
+                        premium = tradeQuotePrice * tradeSize;
                     }
                     UD60x18 takerFee = _takerFee(l, tradeSize, premium, true);
 
@@ -764,7 +763,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     );
 
                     // Update price and liquidity variables
-                    UD60x18 protocolFee = takerFee.mul(PROTOCOL_FEE_PERCENTAGE);
+                    UD60x18 protocolFee = takerFee * PROTOCOL_FEE_PERCENTAGE;
 
                     {
                         UD60x18 makerRebate = takerFee - protocolFee;
@@ -790,10 +789,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                 vars.shortDelta =
                     vars.shortDelta +
-                    l.shortRate.mul(dist).div(PoolStorage.MIN_TICK_DISTANCE);
+                    (l.shortRate * dist) /
+                    PoolStorage.MIN_TICK_DISTANCE;
                 vars.longDelta =
                     vars.longDelta +
-                    l.longRate.mul(dist).div(PoolStorage.MIN_TICK_DISTANCE);
+                    (l.longRate * dist) /
+                    PoolStorage.MIN_TICK_DISTANCE;
 
                 if (maxSize >= remaining) {
                     remaining = ZERO;
@@ -1034,7 +1035,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 price,
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
-        r.premium = price.mul(size);
+        r.premium = price * size;
         r.protocolFee = _takerFee(l, size, r.premium, true);
 
         // Denormalize premium
@@ -1211,9 +1212,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         {
-            UD60x18 feesTransferred = (proportionTransferred).mul(
-                srcData.claimableFees
-            );
+            UD60x18 feesTransferred = proportionTransferred *
+                srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
             srcData.claimableFees = srcData.claimableFees + feesTransferred;
         }
@@ -1256,7 +1256,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             return ZERO;
         }
 
-        UD60x18 exerciseValue = size.mul(intrinsicValue);
+        UD60x18 exerciseValue = size * intrinsicValue;
 
         if (isCall) {
             exerciseValue = exerciseValue.div(spot);
@@ -1273,7 +1273,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return
             l.isCallPool
                 ? size - exerciseValue
-                : size.mul(l.strike) - exerciseValue;
+                : size * l.strike - exerciseValue;
     }
 
     /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
@@ -1397,10 +1397,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             claimableFees = pData.claimableFees;
             payoff = _calculateExerciseValue(l, ONE);
             collateral = p.collateral(size, l.marketPrice);
-            collateral = collateral + longs.mul(payoff);
+            collateral = collateral + longs * payoff;
             collateral =
                 collateral +
-                shorts.mul((l.isCallPool ? ONE : l.strike) - payoff);
+                shorts *
+                ((l.isCallPool ? ONE : l.strike) - payoff);
 
             collateral = collateral + claimableFees;
 
