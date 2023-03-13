@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 
 import {UnderwriterVault, SolidStateERC4626} from "../../../vaults/underwriter/UnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "../../../vaults/underwriter/UnderwriterVaultStorage.sol";
-import "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
-import "hardhat/console.sol";
+
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -157,38 +156,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function setIsCall(bool value) external onlyOwner {
         UnderwriterVaultStorage.layout().isCall = value;
-    }
-
-    function logListingsAndSizes() external view {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        console.log("Min. Maturity: ", l.minMaturity);
-
-        uint256 current = l.minMaturity;
-
-        while (current <= l.maxMaturity && current != 0) {
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[current].length();
-                i++
-            ) {
-                console.log("Maturity: ", current);
-                console.log("Strike: ", l.maturityToStrikes[current].at(i));
-                console.log(
-                    "Size: ",
-                    l.positionSizes[current][l.maturityToStrikes[current].at(i)]
-                );
-            }
-
-            if (current > l.maturities.next(current)) {
-                break;
-            }
-
-            current = l.maturities.next(current);
-        }
-
-        console.log("Max. Maturity: ", l.maxMaturity);
     }
 
     function setListingsAndSizes(
@@ -540,7 +507,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
                 _poolKey.strike = l.maturityToStrikes[maturity].at(i);
                 _poolKey.maturity = uint64(maturity);
                 _poolKey.isCallPool = l.isCall;
-                address listingAddr = IPoolFactory(FACTORY_ADDR).getPoolAddress(
+                address listingAddr = IPoolFactory(FACTORY).getPoolAddress(
                     _poolKey
                 );
                 addresses[i] = listingAddr;

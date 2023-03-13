@@ -85,7 +85,7 @@ export async function addDeposit(
   await vault.connect(caller).deposit(assetAmount, receiver.address);
 }
 
-export async function addMockDeposit(
+export async function increaseTotalAssets(
   vault: UnderwriterVaultMock,
   amount: number,
   base: ERC20Mock,
@@ -94,8 +94,36 @@ export async function addMockDeposit(
   const isCall = await vault.isCall();
   const token = isCall ? base : quote;
   const assetAmount = parseUnits(amount.toString(), await token.decimals());
-  await vault.increaseTotalAssets(assetAmount);
   await token.mint(vault.address, assetAmount);
+}
+
+export async function increaseTotalShares(
+  vault: UnderwriterVaultMock,
+  sharesAmount: number,
+  receiverAddress: any = null,
+) {
+  const sharesAmountParsed = parseEther(sharesAmount.toString());
+  if (typeof receiverAddress == 'string') {
+    console.log();
+    vault.mintMock(receiverAddress, sharesAmountParsed);
+  } else {
+    await vault.increaseTotalShares(sharesAmountParsed);
+  }
+  //await vault.approve(vault.address, sharesAmountParsed);
+  //await vault.mint(sharesAmountParsed, vault.address);
+}
+
+// standard deposit, pricePerShare after single call of addMockDeposit will always equal one
+export async function addMockDeposit(
+  vault: UnderwriterVaultMock,
+  amount: number,
+  base: ERC20Mock,
+  quote: ERC20Mock,
+  sharesAmount: number = amount,
+  receiverAddress: any = null,
+) {
+  await increaseTotalAssets(vault, amount, base, quote);
+  await increaseTotalShares(vault, sharesAmount, receiverAddress);
 }
 
 export async function vaultSetup() {

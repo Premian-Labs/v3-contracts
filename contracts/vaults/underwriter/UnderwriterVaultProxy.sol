@@ -12,16 +12,24 @@ contract UnderwriterVaultProxy is
     ERC20MetadataInternal
 {
     struct Clevel {
+        // The minimum C-levelm allowed by the C-level mechanism
         uint256 minClevel;
+        // The maximum C-levelm allowed by the C-level mechanism
         uint256 maxClevel;
+        // (fill in with better description)
         uint256 alphaClevel;
+        // The decay rate of the C-level back down to ordinary level
         uint256 hourlyDecayDiscount;
     }
 
     struct TradeBounds {
+        // The maximum time until maturity the vault will underwrite
         uint256 maxDTE;
+        // The minimum time until maturity the vault will underwrite
         uint256 minDTE;
+        // The maximum delta the vault will underwrite
         int256 minDelta;
+        // The minimum delta the vault will underwrite
         int256 maxDelta;
     }
 
@@ -43,21 +51,21 @@ contract UnderwriterVaultProxy is
         _setSymbol(symbol);
         _setDecimals(18);
 
-        UnderwriterVaultStorage.layout().isCall = isCall;
-        UnderwriterVaultStorage.layout().base = base;
-        UnderwriterVaultStorage.layout().quote = quote;
-        UnderwriterVaultStorage.layout().maxDTE = tradeBounds.maxDTE;
-        UnderwriterVaultStorage.layout().minDTE = tradeBounds.minDTE;
-        UnderwriterVaultStorage.layout().minDelta = tradeBounds.minDelta;
-        UnderwriterVaultStorage.layout().maxDelta = tradeBounds.maxDelta;
-        UnderwriterVaultStorage.layout().minCLevel = cLevel.minClevel;
-        UnderwriterVaultStorage.layout().maxCLevel = cLevel.maxClevel;
-        UnderwriterVaultStorage.layout().alphaCLevel = cLevel.alphaClevel;
-        UnderwriterVaultStorage.layout().hourlyDecayDiscount = cLevel
-            .hourlyDecayDiscount;
-        UnderwriterVaultStorage
-            .layout()
-            .lastTradeTimestamp = lastTradeTimestamp;
-        UnderwriterVaultStorage.layout().oracleAdapter = oracleAdapter;
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        l.isCall = isCall;
+        l.base = base;
+        l.quote = quote;
+        l.maxDTE = tradeBounds.maxDTE;
+        l.minDTE = tradeBounds.minDTE;
+        l.minDelta = tradeBounds.minDelta;
+        l.maxDelta = tradeBounds.maxDelta;
+        l.minCLevel = cLevel.minClevel;
+        l.maxCLevel = cLevel.maxClevel;
+        l.alphaCLevel = cLevel.alphaClevel;
+        l.hourlyDecayDiscount = cLevel.hourlyDecayDiscount;
+        l.lastTradeTimestamp = lastTradeTimestamp;
+        l.oracleAdapter = oracleAdapter;
     }
 }

@@ -182,7 +182,7 @@ describe('#eventStream', () => {
         timestamp: null,
         spotPrice: 2000,
         config: {
-          discriminator: 'deposit',
+          discriminator: 'mint',
           shareAmount: 12.5,
           caller: depositor3,
           receiver: depositor3,
@@ -193,7 +193,7 @@ describe('#eventStream', () => {
         spotPrice: 800,
         config: {
           discriminator: 'redeem',
-          shareAmount: 7.49,
+          shareAmount: 7.4,
           caller: depositor2,
           receiver: depositor2,
         },
@@ -202,8 +202,8 @@ describe('#eventStream', () => {
         timestamp: null,
         spotPrice: 3000,
         config: {
-          discriminator: 'withdraw',
-          shareAmount: 12.5,
+          discriminator: 'redeem',
+          shareAmount: 12.4,
           caller: depositor3,
           receiver: depositor3,
         },
@@ -425,6 +425,7 @@ describe('#eventStream', () => {
     depositor1: [],
     depositor2: [],
     depositor3: [],
+    vault: [],
   };
 
   async function checkTotalAssetsLeakage(
@@ -432,24 +433,25 @@ describe('#eventStream', () => {
     deployer: SignerWithAddress,
     asset: ERC20Mock,
   ) {
-    const signers = [
-      deployer, // deployer receives protocol fees
-      buyer1,
-      buyer2,
-      buyer3,
-      depositor1,
-      depositor2,
-      depositor3,
-    ];
+    const signers: any = {
+      deployer: deployer, // deployer receives protocol fees
+      buyer1: buyer1,
+      buyer2: buyer2,
+      buyer3: buyer3,
+      depositor1: depositor1,
+      depositor2: depositor2,
+      depositor3: depositor3,
+    };
     console.log('Check totalAssets for leakage.');
 
     let totalAssets: number = 0;
-    for (let signer of signers) {
+    for (let key in signers) {
       let balanceAsset = parseFloat(
-        formatEther(await asset.balanceOf(signer.address)),
+        formatEther(await asset.balanceOf(signers[key].address)),
       );
-      console.log('signer', signer.address, balanceAsset);
+      console.log('signer', signers[key].address, balanceAsset);
       totalAssets += balanceAsset;
+      balancesTS[key].push(balanceAsset);
     }
     // update the list of employed pool addresses
     await vault.getActivePoolAddresses();
@@ -461,13 +463,26 @@ describe('#eventStream', () => {
       );
       console.log('pool', poolAddress, balanceAsset);
       totalAssets += balanceAsset;
+      if (!(poolAddress in balancesTS)) {
+        /*balancesTS.push({
+          key: poolAddress,
+          value: [balanceAsset],
+        });*/
+      } else {
+        balancesTS[poolAddress].push(balanceAsset);
+      }
     }
     let balanceAsset = parseFloat(
       formatEther(await asset.balanceOf(vault.address)),
     );
     console.log('vault', vault.address, balanceAsset);
     totalAssets += balanceAsset;
+    balancesTS['vault'].push(balanceAsset);
     expect(totalAssets).to.be.closeTo(7000, 0.000001);
+
+    const balanceVault = await asset.balanceOf(vault.address);
+    const totalAvailable = await vault.getAvailableAssets();
+    expect(balanceVault).to.eq(totalAvailable);
   }
 
   async function processEvents(
@@ -534,6 +549,7 @@ describe('#eventStream', () => {
       }
       await checkTotalAssetsLeakage(vault, deployer, asset);
     }
+    console.log(balancesTS);
   }
 
   it('test event stream', async () => {

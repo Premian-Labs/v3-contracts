@@ -10,7 +10,7 @@ interface IUnderwriterVault is ISolidStateERC4626 {
     error Vault__OptionExpired();
     error Vault__OptionPoolNotListed();
     error Vault__OptionPoolNotSupported();
-    error Vault__ZEROShares();
+    error Vault__ZeroShares();
     error Vault__AddressZero();
     error Vault__ZeroAsset();
     error Vault__StrikeZero();

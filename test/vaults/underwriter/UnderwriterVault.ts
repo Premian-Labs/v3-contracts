@@ -13,7 +13,15 @@ import {
   formatEther,
   formatUnits,
 } from 'ethers/lib/utils';
-import { addMockDeposit, vaultSetup, createPool } from './VaultSetup';
+import {
+  addMockDeposit,
+  vaultSetup,
+  createPool,
+  increaseTotalAssets,
+  increaseTotalShares,
+  maturity,
+  oracleAdapter,
+} from './VaultSetup';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { UnderwriterVaultMock, ERC20Mock } from '../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -790,14 +798,13 @@ describe('UnderwriterVault', () => {
       const { callVault, caller, base, quote, receiver } = await loadFixture(
         vaultSetup,
       );
+      let assetAmount: any = 2;
       await setMaturities(callVault);
       await addMockDeposit(callVault, 2, base, quote);
       await callVault.increaseTotalLockedSpread(parseEther('1.0'));
-      const assetAmount = 2;
-      const shareAmount = await callVault.convertToShares(
-        parseEther(assetAmount.toString()),
-      );
-      expect(parseFloat(formatEther(shareAmount))).to.eq(2 * assetAmount);
+      assetAmount = parseEther(assetAmount.toString());
+      const shareAmount = await callVault.convertToShares(assetAmount);
+      expect(shareAmount).to.eq(2 * assetAmount);
     });
   });
 
@@ -937,14 +944,14 @@ describe('UnderwriterVault', () => {
     });
 
     it('maxWithdraw should return the available assets for a non-zero address', async () => {
-      const { callVault, caller, receiver, base, quote } = await loadFixture(
-        vaultSetup,
-      );
+      const { callVault, caller, deployer, receiver, base, quote } =
+        await loadFixture(vaultSetup);
       await setMaturities(callVault);
-      await addMockDeposit(callVault, 3, base, quote);
+      await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await callVault.maxWithdraw(receiver.address);
+
       expect(assetAmount).to.eq(parseEther('2.4'));
     });
 
@@ -953,8 +960,8 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addMockDeposit(callVault, 8, base, quote);
-      await addMockDeposit(callVault, 2, base, quote);
+      await addMockDeposit(callVault, 8, base, quote, 8, caller.address);
+      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
       await callVault.increaseTotalLockedSpread(parseEther('0.0'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = await callVault.maxWithdraw(receiver.address);
@@ -966,8 +973,8 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addMockDeposit(callVault, 7, base, quote);
-      await addMockDeposit(callVault, 2, base, quote);
+      await addMockDeposit(callVault, 7, base, quote, 7, caller.address);
+      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
       const assetAmount = parseFloat(
@@ -1110,7 +1117,7 @@ describe('UnderwriterVault', () => {
   describe('#settleMaturity', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        const maturity = 1678435200 + ONE_WEEK;
+        let maturity: number;
         const size = parseEther('2');
         const strike1 = parseEther('1000');
         const strike2 = parseEther('2000');
@@ -1130,13 +1137,14 @@ describe('UnderwriterVault', () => {
             p,
           } = await loadFixture(vaultSetup);
           let deposit: number;
+          maturity = await getValidMaturity(1, 'weeks');
 
           if (isCall) {
             deposit = 10;
             vault = callVault;
             totalLockedAssets = parseEther('5');
             newLockedAfterSettlement = parseEther('1');
-            newTotalAssets = 9.333333333333;
+            newTotalAssets = 10.333333333333;
           } else {
             deposit = 10000;
             vault = putVault;
@@ -1174,12 +1182,15 @@ describe('UnderwriterVault', () => {
               p,
             );
           }
+          await oracleAdapter.mock.quoteFrom
+            .withArgs(base.address, quote.address, maturity)
+            .returns(parseUnits('1500', 18));
           await vault.connect(caller).mintFromPool(strike1, maturity, size);
           await vault.connect(caller).mintFromPool(strike2, maturity, size);
           await increaseTo(maturity);
           await vault.connect(caller).settleMaturity(maturity);
         }
-        it('totalAssets should be reduced by the settlementValue and equal 9.986666666666', async () => {
+        it('totalAssets should be reduced by the exerciseValue and equal 9.986666666666', async () => {
           await loadFixture(setup);
           expect(
             parseFloat(formatEther(await vault.totalAssets())),
@@ -1897,7 +1908,7 @@ describe('UnderwriterVault', () => {
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
 
-      await callVault.increaseTotalAssets(lpDepositSize);
+      await increaseTotalAssets(lpDepositSize);
       await expect(
         callVault.quote(strike, maturity, largeTradeSize),
       ).to.be.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
@@ -1910,7 +1921,7 @@ describe('UnderwriterVault', () => {
       const strike = parseEther('1500');
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
 
-      await callVault.increaseTotalAssets(lpDepositSize);
+      await increaseTotalAssets(lpDepositSize);
       // todo:
 
       const [, price, mintingFee, cLevel] = await callVault.quote(
