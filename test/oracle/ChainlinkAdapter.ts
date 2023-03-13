@@ -38,6 +38,14 @@ enum PricingPath {
   TOKEN_USD_BTC_WBTC,
 }
 
+enum FailureMode {
+  NONE,
+  GET_ROUND_DATA_REVERT_WITH_REASON,
+  GET_ROUND_DATA_REVERT,
+  LAST_ROUND_DATA_REVERT_WITH_REASON,
+  LAST_ROUND_DATA_REVERT,
+}
+
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
 
 // prettier-ignore
@@ -212,6 +220,47 @@ describe('ChainlinkAdapter', () => {
 
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
     });
+
+    it('should only emit UpdatedPathForPair when path is updated', async () => {
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      let [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.not.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: tokens.DAI.address,
+          denomination: tokens.CHAINLINK_ETH.address,
+          feed: bnToAddress(BigNumber.from(0)),
+        },
+      ]);
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+    });
   });
 
   describe('#bathRegisterFeedMappings', async () => {
@@ -268,66 +317,57 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#tryQuote', async () => {
-    it('should revert if pair not already supported and there is no feed', async () => {
+  describe('#quote', async () => {
+    it('should catch revert', async () => {
+      stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+      const stubCoin = bnToAddress(BigNumber.from(100));
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: stubCoin,
+          denomination: tokens.CHAINLINK_USD.address,
+          feed: stub.address,
+        },
+      ]);
+
+      await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000],
+        [target - 90000],
+      );
+
       await expect(
-        instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT,
+        [100000000000],
+        [target - 90000],
+      );
+
+      await expect(
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'OracleAdapter__PairCannotBeSupported',
+        'ChainlinkAdapter__LatestRoundDataCallReverted',
       );
     });
 
-    it('should add pair if they are not already supported', async () => {
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      let [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.false;
-
-      await instance.tryQuote(tokenIn.address, tokenOut.address);
-
-      [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.true;
-    });
-
-    it('should return quote for pair', async () => {
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      const quote = await instance.callStatic['tryQuote(address,address)'](
-        tokenIn.address,
-        tokenOut.address,
-      );
-
-      const coingeckoPrice = await getPriceBetweenTokens(
-        { tokenIn: 'ethereum', tokenOut: 'ethereum' },
-        tokenIn,
-        tokenOut,
-      );
-
-      const expected = convertPriceToBigNumberWithDecimals(coingeckoPrice, 18);
-
-      validateQuote(quote, expected);
-    });
-  });
-
-  describe('#quote', async () => {
-    it('should revert if pair is not supported yet', async () => {
+    it('should revert if pair is not supported', async () => {
       await expect(
-        instance.quote(tokens.WETH.address, tokens.DAI.address),
+        instance.quote(tokens.WETH.address, bnToAddress(BigNumber.from(0))),
       ).to.be.revertedWithCustomError(
         instance,
         'OracleAdapter__PairNotSupported',
       );
+    });
+
+    it('should find path if pair has not been added', async () => {
+      expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
     });
 
     it('should return quote using correct denomination', async () => {
@@ -357,6 +397,45 @@ describe('ChainlinkAdapter', () => {
   });
 
   describe('#quoteFrom', async () => {
+    it('should catch revert', async () => {
+      stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+      const stubCoin = bnToAddress(BigNumber.from(100));
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: stubCoin,
+          denomination: tokens.CHAINLINK_USD.address,
+          feed: stub.address,
+        },
+      ]);
+
+      await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'ChainlinkAdapter__GetRoundDataCallReverted',
+      );
+    });
+
     it('should revert if target is 0', async () => {
       await expect(
         instance.quoteFrom(tokens.WETH.address, tokens.DAI.address, 0),
@@ -393,7 +472,7 @@ describe('ChainlinkAdapter', () => {
       });
 
       it('should revert when called within 12 hours of target time', async () => {
-        await stub.setup([100000000000], [target - 90000]);
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
 
         await expect(
           instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
@@ -405,7 +484,7 @@ describe('ChainlinkAdapter', () => {
 
       it('should return stale price when called 12 hours after target time', async () => {
         await increaseTo(target + 43200);
-        await stub.setup([100000000000], [target - 90000]);
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
 
         const stalePrice = await stub.price(0);
 
@@ -435,7 +514,7 @@ describe('ChainlinkAdapter', () => {
       });
 
       it('should return price closest to target when called within 12 hours of target time', async () => {
-        await stub.setup([1000000000000], [target + 100]);
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
         let freshPrice = await stub.price(0);
 
         expect(
@@ -447,6 +526,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [100000000000, 200000000000, 300000000000],
           [target + 100, target + 300, target + 500],
         );
@@ -462,6 +542,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 50, target + 100, target + 300, target + 500],
         );
@@ -477,6 +558,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 100, target + 50, target + 300, target + 500],
         );
@@ -492,6 +574,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000],
           [target - 100, target - 50],
         );
@@ -509,7 +592,7 @@ describe('ChainlinkAdapter', () => {
 
       it('should return price closest to target when called 12 hours after target time', async () => {
         await increaseTo(target + 43200);
-        await stub.setup([1000000000000], [target + 100]);
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
         let freshPrice = await stub.price(0);
 
         expect(
@@ -521,6 +604,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [100000000000, 200000000000, 300000000000],
           [target + 100, target + 300, target + 500],
         );
@@ -536,6 +620,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 50, target + 100, target + 300, target + 500],
         );
@@ -551,6 +636,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000, 200000000000, 300000000000],
           [target - 100, target + 50, target + 300, target + 500],
         );
@@ -566,6 +652,7 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
 
         await stub.setup(
+          FailureMode.NONE,
           [50000000000, 100000000000],
           [target - 100, target - 50],
         );

@@ -70,9 +70,13 @@ describe('Pool', () => {
 
     oracleAdapter = await deployMockContract(deployer as any, [
       'function quote(address,address) external view returns (uint256)',
+      'function quoteFrom(address,address,uint256) external view returns (uint256)',
+      'function upsertPair(address,address) external',
     ]);
 
     await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
+    await oracleAdapter.mock.quoteFrom.returns(parseUnits('1000', 18));
+    await oracleAdapter.mock.upsertPair.returns();
 
     p = await PoolUtil.deploy(
       deployer,
@@ -867,7 +871,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       const protocolFees = await callPool.protocolFees();
@@ -976,7 +980,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, false);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       const protocolFees = await callPool.protocolFees();
@@ -1094,7 +1098,7 @@ describe('Pool', () => {
 
       await callPool.connect(trader).trade(tradeSize, true);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       const protocolFees = await callPool.protocolFees();

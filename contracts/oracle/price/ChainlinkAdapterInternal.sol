@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorInterface, AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -27,7 +27,7 @@ abstract contract ChainlinkAdapterInternal is
     ///      MAX_DELAY before returning the stale price
     uint32 internal constant MAX_DELAY = 12 hours;
     /// @dev If the difference between target and last update is greater than the
-    /// PRICE_STALE_THRESHOLD, the price is considered stale
+    ///      PRICE_STALE_THRESHOLD, the price is considered stale
     uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     int256 private constant FOREX_DECIMALS = 8;
@@ -45,13 +45,23 @@ abstract contract ChainlinkAdapterInternal is
         WRAPPED_BTC_TOKEN = _wrappedBTCToken;
     }
 
-    /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
     function _quoteFrom(
-        PricingPath path,
-        address mappedTokenIn,
-        address mappedTokenOut,
+        address tokenIn,
+        address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPair(tokenIn, tokenOut, false);
+
+        if (path == PricingPath.NONE) {
+            path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
+
+            if (path == PricingPath.NONE)
+                revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+        }
         if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
@@ -92,6 +102,8 @@ abstract contract ChainlinkAdapterInternal is
                 revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
             }
         }
+
+        if (l.pathForPair[keyForPair] == path) return;
 
         l.pathForPair[keyForPair] = path;
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
@@ -170,8 +182,8 @@ abstract contract ChainlinkAdapterInternal is
             ? Denominations.USD
             : Denominations.ETH;
 
-        uint256 tokenInToBase = _fetchSpot(tokenIn, base, target);
-        uint256 tokenOutToBase = _fetchSpot(tokenOut, base, target);
+        uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
+        uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
         uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
         uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
@@ -248,7 +260,7 @@ abstract contract ChainlinkAdapterInternal is
         return
             _isUSD(token)
                 ? ONE_USD
-                : _fetchSpot(token, Denominations.USD, target);
+                : _fetchQuote(token, Denominations.USD, target);
     }
 
     function _getPriceAgainstETH(
@@ -258,7 +270,7 @@ abstract contract ChainlinkAdapterInternal is
         return
             _isETH(token)
                 ? ONE_ETH
-                : _fetchSpot(token, Denominations.ETH, target);
+                : _fetchQuote(token, Denominations.ETH, target);
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
@@ -407,28 +419,28 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _fetchSpot(
+    function _fetchQuote(
         address base,
         address quote,
         uint256 target
     ) internal view returns (uint256) {
         return
             target == 0
-                ? _fetchLatestSpot(base, quote)
-                : _fetchSpotFrom(base, quote, target);
+                ? _fetchLatestQuote(base, quote)
+                : _fetchQuoteFrom(base, quote, target);
     }
 
-    function _fetchLatestSpot(
+    function _fetchLatestQuote(
         address base,
         address quote
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
-        int256 price = AggregatorInterface(feed).latestAnswer();
-        if (price <= 0) revert OracleAdapter__InvalidPrice(price);
+        (, int256 price, , , ) = _latestRoundData(feed);
+        _ensurePriceNonZero(price);
         return price.toUint256();
     }
 
-    function _fetchSpotFrom(
+    function _fetchQuoteFrom(
         address base,
         address quote,
         uint256 target
@@ -441,7 +453,7 @@ abstract contract ChainlinkAdapterInternal is
             ,
             uint256 updatedAt,
 
-        ) = AggregatorV3Interface(feed).latestRoundData();
+        ) = _latestRoundData(feed);
 
         (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage
             .parseRoundId(roundId);
@@ -458,9 +470,7 @@ abstract contract ChainlinkAdapterInternal is
                 --aggregatorRoundId
             );
 
-            (, price, , updatedAt, ) = AggregatorV3Interface(feed).getRoundData(
-                roundId
-            );
+            (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
             if (target >= updatedAt) {
                 uint256 previousUpdateDistance = previousUpdatedAt - target;
@@ -483,6 +493,43 @@ abstract contract ChainlinkAdapterInternal is
         return price.toUint256();
     }
 
+    function _latestRoundData(
+        address feed
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__LatestRoundDataCallReverted(data);
+        }
+    }
+
+    function _getRoundData(
+        address feed,
+        uint80 roundId
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).getRoundData(roundId) returns (
+            uint80 _roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (_roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__GetRoundDataCallReverted(data);
+        }
+    }
+
     function _ensurePriceAfterTargetIsFresh(
         uint256 target,
         uint256 updatedAt
@@ -497,26 +544,6 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _batchRegisterFeedMappings(
-        FeedMappingArgs[] memory args
-    ) internal {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = args[i].token;
-            address denomination = args[i].denomination;
-
-            if (token == denomination)
-                revert OracleAdapter__TokensAreSame(token, denomination);
-
-            if (token == address(0) || denomination == address(0))
-                revert OracleAdapter__ZeroAddress();
-
-            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
-            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
-        }
-
-        emit FeedMappingsRegistered(args);
-    }
-
     function _feed(
         address tokenA,
         address tokenB
@@ -528,7 +555,9 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
-    function _denomination(address token) internal view returns (address) {
+    function _tokenToDenomination(
+        address token
+    ) internal view returns (address) {
         return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
 
@@ -548,8 +577,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
-        mappedTokenA = _denomination(tokenA);
-        mappedTokenB = _denomination(tokenB);
+        mappedTokenA = _tokenToDenomination(tokenA);
+        mappedTokenB = _tokenToDenomination(tokenB);
     }
 
     function _keyForUnsortedPair(
@@ -573,15 +602,15 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getETHUSD(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(Denominations.ETH, Denominations.USD, target);
+        return _fetchQuote(Denominations.ETH, Denominations.USD, target);
     }
 
     function _getBTCUSD(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(Denominations.BTC, Denominations.USD, target);
+        return _fetchQuote(Denominations.BTC, Denominations.USD, target);
     }
 
     function _getWBTCBTC(uint256 target) internal view returns (uint256) {
-        return _fetchSpot(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
+        return _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
     }
 
     function _isUSD(address token) internal pure returns (bool) {

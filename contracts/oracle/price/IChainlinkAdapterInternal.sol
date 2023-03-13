@@ -40,6 +40,12 @@ interface IChainlinkAdapterInternal {
         ToEthToToken // Token -> ETH -> Token
     }
 
+    /// @notice Thrown when the getRoundData call reverts without a reason
+    error ChainlinkAdapter__GetRoundDataCallReverted(bytes data);
+
+    /// @notice Thrown when the lastRoundData call reverts without a reason
+    error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
+
     /// @notice Thrown when the price after the target time is stale
     error ChainlinkAdapter__PriceAfterTargetIsStale();
 
