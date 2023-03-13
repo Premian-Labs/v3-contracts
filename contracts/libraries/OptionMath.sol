@@ -241,7 +241,7 @@ library OptionMath {
             ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
             : timeToMaturity;
         UD60x18 scaledT = (UD60x18.wrap(tBase * 1e18) /
-            UD60x18.wrap(ONE_YEAR_TTM * 1e18)).sqrt(); // ToDo : Check with Froggie
+            UD60x18.wrap(ONE_YEAR_TTM * 1e18)).sqrt();
 
         return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
     }
