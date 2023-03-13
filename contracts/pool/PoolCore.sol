@@ -88,13 +88,14 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function getClaimableFees(
         Position.Key memory p
-    ) external view returns (UD60x18) {
+    ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
 
         (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p, pData);
 
-        return pData.claimableFees + pendingClaimableFees;
+        return
+            l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
     /// @inheritdoc IPoolCore

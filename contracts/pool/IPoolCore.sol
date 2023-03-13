@@ -54,7 +54,7 @@ interface IPoolCore is IPoolInternal {
     /// @return The total claimable fees for the position
     function getClaimableFees(
         Position.Key memory p
-    ) external view returns (UD60x18);
+    ) external view returns (uint256);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
 

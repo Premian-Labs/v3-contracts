@@ -2,7 +2,11 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { OrderType } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 import { ONE_ETHER } from '../../utils/constants';
-import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
+import {
+  average,
+  scaleDecimals,
+  scaleDecimals as _scaleDecimals,
+} from '../../utils/sdk/math';
 import { ethers } from 'hardhat';
 import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
@@ -172,14 +176,14 @@ async function _deployAndMintForLP(isCall: boolean) {
     initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
   }
 
-  const initialCollateralScaled = f.scaleDecimals(initialCollateral);
+  initialCollateral = f.scaleDecimals(initialCollateral);
 
   const token = isCall ? f.base : f.quote;
 
-  await token.mint(f.lp.address, initialCollateralScaled);
-  await token.connect(f.lp).approve(f.router.address, initialCollateralScaled);
+  await token.mint(f.lp.address, initialCollateral);
+  await token.connect(f.lp).approve(f.router.address, initialCollateral);
 
-  return { ...f, initialCollateral, initialCollateralScaled };
+  return { ...f, initialCollateral };
 }
 
 //////////////////////////////////////////////////////
@@ -201,18 +205,16 @@ async function _deployAndMintForTraderAndLP(isCall: boolean) {
     initialCollateral = initialCollateral.mul(strike).div(ONE_ETHER);
   }
 
-  const initialCollateralScaled = f.scaleDecimals(initialCollateral);
+  initialCollateral = f.scaleDecimals(initialCollateral);
 
   const token = isCall ? f.base : f.quote;
 
   for (const user of [f.lp, f.trader]) {
-    await token.mint(user.address, initialCollateralScaled);
-    await token
-      .connect(user)
-      .approve(f.router.address, initialCollateralScaled);
+    await token.mint(user.address, initialCollateral);
+    await token.connect(user).approve(f.router.address, initialCollateral);
   }
 
-  return { ...f, initialCollateral, initialCollateralScaled };
+  return { ...f, initialCollateral };
 }
 
 //////////////////////////////////////////////////////
@@ -337,18 +339,17 @@ async function _deployAndBuy(isCall: boolean) {
   const avgPrice = average(price, nextPrice);
   const takerFee = await f.pool.takerFee(
     tradeSize,
-    tradeSize.mul(avgPrice).div(ONE_ETHER),
+    f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
   const totalPremium = await f.pool.getTradeQuote(tradeSize, true);
-  const totalPremiumScaled = f.scaleDecimals(totalPremium);
 
   const token = isCall ? f.base : f.quote;
 
-  await token.mint(f.trader.address, totalPremiumScaled);
-  await token.connect(f.trader).approve(f.router.address, totalPremiumScaled);
+  await token.mint(f.trader.address, totalPremium);
+  await token.connect(f.trader).approve(f.router.address, totalPremium);
 
-  const collateral = isCall ? ONE_ETHER : strike;
+  const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
   await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
 
@@ -386,7 +387,7 @@ async function _deployAndSell(isCall: boolean) {
   const avgPrice = average(price, nextPrice);
   const takerFee = await f.pool.takerFee(
     tradeSize,
-    tradeSize.mul(avgPrice).div(ONE_ETHER),
+    f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
 
@@ -394,15 +395,15 @@ async function _deployAndSell(isCall: boolean) {
 
   const token = isCall ? f.base : f.quote;
 
-  let mintAmountScaled = parseUnits('1', f.poolTokenDecimals);
+  let mintAmount = parseUnits('1', f.poolTokenDecimals);
   if (!isCall) {
-    mintAmountScaled = mintAmountScaled.mul(strike).div(ONE_ETHER);
+    mintAmount = mintAmount.mul(strike).div(ONE_ETHER);
   }
 
-  await token.mint(f.trader.address, mintAmountScaled);
-  await token.connect(f.trader).approve(f.router.address, mintAmountScaled);
+  await token.mint(f.trader.address, mintAmount);
+  await token.connect(f.trader).approve(f.router.address, mintAmount);
 
-  const collateral = isCall ? ONE_ETHER : strike;
+  const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
   await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
 
