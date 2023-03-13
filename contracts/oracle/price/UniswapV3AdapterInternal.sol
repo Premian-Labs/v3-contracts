@@ -290,7 +290,7 @@ contract UniswapV3AdapterInternal is
         return int256(uint256(IERC20Metadata(token).decimals()));
     }
 
-    /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/PoolAddress.sol#L33-L49
+    /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/OracleLibrary.sol#L16-L41
     ///      This function has been modified to query any range of times
     function _consult(
         address pool,
