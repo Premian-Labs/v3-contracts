@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IPoolFactory} from "./IPoolFactory.sol";
 
 library PoolFactoryStorage {
@@ -20,7 +22,7 @@ library PoolFactoryStorage {
         // Pool Key -> Count (Discount lattice for maturity)
         mapping(bytes32 => uint256) maturityCount;
         // Discount % per neighboring strike/maturity, 1e18 base
-        uint256 discountPerPool;
+        UD60x18 discountPerPool;
         // Initialization fee receiver
         address feeReceiver;
     }

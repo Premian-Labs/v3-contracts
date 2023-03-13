@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
@@ -30,7 +32,7 @@ interface IPoolFactory is IPoolFactoryEvents {
         // Address of oracle adapter
         address oracleAdapter;
         // The strike of the option
-        uint256 strike;
+        UD60x18 strike;
         // The maturity timestamp of the option
         uint64 maturity;
         // Whether the pool is for call or put options
@@ -52,11 +54,11 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return The fee required to initialize this pool
     function initializationFee(
         PoolKey memory k
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage denominated in 1e18
-    function setDiscountPerPool(uint256 discountPerPool) external;
+    function setDiscountPerPool(UD60x18 discountPerPool) external;
 
     /// @notice Set the feeReceiver for initialization fees - only callable by owner
     /// @param feeReceiver The new fee receiver address

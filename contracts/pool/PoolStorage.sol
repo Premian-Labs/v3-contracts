@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -16,8 +16,6 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
     using PoolStorage for PoolStorage.Layout;
-    using SafeCast for int256;
-    using UD60x18 for uint256;
 
     // Token id for SHORT
     uint256 internal constant SHORT = 0;
@@ -27,7 +25,8 @@ library PoolStorage {
     // The version of LP token, used to know how to decode it, if upgrades are made
     uint8 internal constant TOKEN_VERSION = 1;
 
-    uint256 internal constant MIN_TICK_DISTANCE = 1e15; // 0.001
+    UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
+    UD60x18 internal constant ZERO = UD60x18.wrap(0);
 
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");
@@ -47,22 +46,22 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         DoublyLinkedList.Uint256List tickIndex;
-        mapping(uint256 => IPoolInternal.Tick) ticks;
-        uint256 marketPrice;
-        uint256 globalFeeRate;
-        uint256 protocolFees;
-        uint256 strike;
-        uint256 liquidityRate;
-        uint256 longRate;
-        uint256 shortRate;
+        mapping(UD60x18 => IPoolInternal.Tick) ticks;
+        UD60x18 marketPrice;
+        UD60x18 globalFeeRate;
+        UD60x18 protocolFees;
+        UD60x18 strike;
+        UD60x18 liquidityRate;
+        UD60x18 longRate;
+        UD60x18 shortRate;
         // Current tick normalized price
-        uint256 currentTick;
+        UD60x18 currentTick;
         // Spot price after maturity // ToDo : Save the spot price
-        uint256 spot;
+        UD60x18 spot;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
         // Size of quotes already filled (provider -> quoteHash -> amountFilled)
-        mapping(address => mapping(bytes32 => uint256)) tradeQuoteAmountFilled;
+        mapping(address => mapping(bytes32 => UD60x18)) tradeQuoteAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }
@@ -85,7 +84,16 @@ library PoolStorage {
         Layout storage l,
         uint256 value
     ) internal view returns (uint256) {
-        uint256 decimals = l.getPoolTokenDecimals();
+        uint8 decimals = l.getPoolTokenDecimals();
+        return OptionMath.scaleDecimals(value, decimals);
+    }
+
+    /// @notice Adjust decimals of a value to match the pool token decimals
+    function scaleDecimals(
+        Layout storage l,
+        int256 value
+    ) internal view returns (int256) {
+        uint8 decimals = l.getPoolTokenDecimals();
         return OptionMath.scaleDecimals(value, decimals);
     }
 
@@ -95,12 +103,14 @@ library PoolStorage {
     }
 
     // TODO: Fetch price at maturity
-    function fetchQuote(Layout storage l) internal returns (uint256) {
-        if (l.spot == 0) {
+    function fetchQuote(Layout storage l) internal returns (UD60x18) {
+        if (l.spot == ZERO) {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();
 
-            l.spot = IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote);
+            l.spot = UD60x18.wrap(
+                IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote)
+            );
         }
 
         return l.spot;
@@ -113,16 +123,16 @@ library PoolStorage {
     /// @return tokenId token id
     function formatTokenId(
         address operator,
-        uint256 lower,
-        uint256 upper,
+        UD60x18 lower,
+        UD60x18 upper,
         Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
         tokenId =
             (uint256(TOKEN_VERSION) << 252) +
             (uint256(orderType) << 180) +
             (uint256(uint160(operator)) << 20) +
-            ((upper / MIN_TICK_DISTANCE) << 10) +
-            (lower / MIN_TICK_DISTANCE);
+            ((upper.unwrap() / MIN_TICK_DISTANCE.unwrap()) << 10) +
+            (lower.unwrap() / MIN_TICK_DISTANCE.unwrap());
     }
 
     /// @notice derive option maturity and strike price from ERC1155 token id
@@ -139,22 +149,24 @@ library PoolStorage {
         returns (
             uint8 version,
             address operator,
-            uint256 lower,
-            uint256 upper,
+            UD60x18 lower,
+            UD60x18 upper,
             Position.OrderType orderType
         )
     {
+        uint256 minTickDistance = MIN_TICK_DISTANCE.unwrap();
+
         assembly {
             version := shr(252, tokenId)
             orderType := and(shr(180, tokenId), 0xF) // 4 bits mask
             operator := shr(20, tokenId)
             upper := mul(
                 and(shr(10, tokenId), 0x3FF), // 10 bits mask
-                MIN_TICK_DISTANCE
+                minTickDistance
             )
             lower := mul(
                 and(tokenId, 0x3FF), // 10 bits mask
-                MIN_TICK_DISTANCE
+                minTickDistance
             )
         }
     }

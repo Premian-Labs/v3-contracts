@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
@@ -11,9 +13,9 @@ interface IPoolTrade is IPoolInternal {
     /// @param isBuy Whether the taker is buying or selling
     /// @return The premium which has to be paid to complete the trade
     function getTradeQuote(
-        uint256 size,
+        UD60x18 size,
         bool isBuy
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 
     /// @notice Functionality to support the RFQ / OTC system.
     ///         An LP can create a quote for which he will do an OTC trade through
@@ -24,7 +26,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
     function fillQuote(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory signature
     ) external;
 
@@ -36,10 +38,10 @@ interface IPoolTrade is IPoolInternal {
     /// @return totalPremium The premium paid or received by the taker for the trade
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
-    ) external returns (uint256 totalPremium, Delta memory delta);
+        UD60x18 premiumLimit
+    ) external returns (UD60x18 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -52,14 +54,14 @@ interface IPoolTrade is IPoolInternal {
     /// @return swapOutAmount The amount of pool tokens resulting from the swap
     function swapAndTrade(
         IPoolInternal.SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        UD60x18 premiumLimit
     )
         external
         payable
         returns (
-            uint256 totalPremium,
+            UD60x18 totalPremium,
             Delta memory delta,
             uint256 swapOutAmount
         );
@@ -76,13 +78,13 @@ interface IPoolTrade is IPoolInternal {
     /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap.
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        UD60x18 premiumLimit
     )
         external
         returns (
-            uint256 totalPremium,
+            UD60x18 totalPremium,
             Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
@@ -100,7 +102,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param sig secp256k1 Signature
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory sig
     ) external view returns (bool, InvalidQuoteError);
 
@@ -110,5 +112,5 @@ interface IPoolTrade is IPoolInternal {
     function getTradeQuoteFilledAmount(
         address provider,
         bytes32 tradeQuoteHash
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 }

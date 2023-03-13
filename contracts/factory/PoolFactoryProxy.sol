@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
@@ -13,7 +15,7 @@ contract PoolFactoryProxy is IPoolFactoryEvents, ProxyUpgradeableOwnable {
 
     constructor(
         address implementation,
-        uint256 discountPerPool,
+        UD60x18 discountPerPool,
         address feeReceiver
     ) ProxyUpgradeableOwnable(implementation) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();

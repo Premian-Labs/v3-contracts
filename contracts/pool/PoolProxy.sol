@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
@@ -27,7 +29,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         address base,
         address quote,
         address oracleAdapter,
-        uint256 strike,
+        UD60x18 strike,
         uint64 maturity,
         bool isCallPool
     ) {
@@ -54,8 +56,8 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
 
             l.isCallPool = isCallPool;
 
-            l.tickIndex.push(Pricing.MIN_TICK_PRICE);
-            l.tickIndex.push(Pricing.MAX_TICK_PRICE);
+            l.tickIndex.push(Pricing.MIN_TICK_PRICE.unwrap());
+            l.tickIndex.push(Pricing.MAX_TICK_PRICE.unwrap());
 
             l.currentTick = Pricing.MIN_TICK_PRICE;
             l.marketPrice = Pricing.MIN_TICK_PRICE;

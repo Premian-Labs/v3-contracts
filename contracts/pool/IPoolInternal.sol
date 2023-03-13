@@ -2,6 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+
 import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
@@ -48,10 +51,10 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__ZeroSize();
 
     struct Tick {
-        int256 delta;
-        uint256 externalFeeRate;
-        int256 longDelta;
-        int256 shortDelta;
+        SD59x18 delta;
+        UD60x18 externalFeeRate;
+        SD59x18 longDelta;
+        SD59x18 shortDelta;
         uint256 counter;
     }
 
@@ -62,7 +65,7 @@ interface IPoolInternal is IPosition, IPricing {
         address tokenOut;
         // amount of tokenIn to trade
         uint256 amountInMax;
-        //min amount out to be used to purchase
+        // min amount out to be used to purchase
         uint256 amountOutMin;
         // exchange address to call to execute the trade
         address callee;
@@ -80,9 +83,9 @@ interface IPoolInternal is IPosition, IPricing {
         // The taker of the quote (address(0) if quote should be usable by anyone)
         address taker;
         // The normalized option price
-        uint256 price;
+        UD60x18 price;
         // The max size
-        uint256 size;
+        UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
         // Timestamp until which the quote is valid
@@ -92,9 +95,9 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct Delta {
-        int256 collateral;
-        int256 longs;
-        int256 shorts;
+        SD59x18 collateral;
+        SD59x18 longs;
+        SD59x18 shorts;
     }
 
     ////////////////////
@@ -105,11 +108,11 @@ interface IPoolInternal is IPosition, IPricing {
         // The account doing the trade
         address user;
         // The number of contracts being traded
-        uint256 size;
+        UD60x18 size;
         // Whether the taker is buying or selling
         bool isBuy;
         // Tx will revert if total premium is above this value when buying, or below this value when selling.
-        uint256 premiumLimit;
+        UD60x18 premiumLimit;
         // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
@@ -117,23 +120,23 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
-        uint256 totalTakerFees;
-        uint256 totalProtocolFees;
-        uint256 longDelta;
-        uint256 shortDelta;
+        UD60x18 totalTakerFees;
+        UD60x18 totalProtocolFees;
+        UD60x18 longDelta;
+        UD60x18 shortDelta;
     }
 
     struct DepositArgsInternal {
         // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
-        uint256 belowLower;
+        UD60x18 belowLower;
         // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
-        uint256 belowUpper;
+        UD60x18 belowUpper;
         // The position size to deposit
-        uint256 size;
+        UD60x18 size;
         // minMarketPrice Min market price, as normalized value. (If below, tx will revert)
-        uint256 minMarketPrice;
+        UD60x18 minMarketPrice;
         // maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
-        uint256 maxMarketPrice;
+        UD60x18 maxMarketPrice;
         // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
         uint256 collateralCredit;
         // The address to which refund excess credit
@@ -142,8 +145,8 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct WithdrawVarsInternal {
         uint256 tokenId;
-        uint256 initialSize;
-        uint256 liquidityPerTick;
+        UD60x18 initialSize;
+        UD60x18 liquidityPerTick;
         bool isFullWithdrawal;
     }
 
@@ -157,16 +160,16 @@ interface IPoolInternal is IPosition, IPricing {
         // The user filling the quote
         address user;
         // The size to fill from the quote
-        uint256 size;
+        UD60x18 size;
         // secp256k1 concatenated 'r', 's', and 'v' value
         Signature signature;
     }
 
     struct PremiumAndFeeInternal {
-        uint256 premium;
-        uint256 protocolFee;
-        uint256 premiumTaker;
-        uint256 premiumMaker;
+        UD60x18 premium;
+        UD60x18 protocolFee;
+        UD60x18 premiumTaker;
+        UD60x18 premiumMaker;
     }
 
     enum InvalidQuoteError {

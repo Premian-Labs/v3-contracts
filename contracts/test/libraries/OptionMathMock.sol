@@ -2,33 +2,36 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
 contract OptionMathMock {
-    function helperNormal(int256 x) external pure returns (int256) {
+    function helperNormal(SD59x18 x) external pure returns (SD59x18) {
         return OptionMath.helperNormal(x);
     }
 
-    function normalCdf(int256 x) external pure returns (int256) {
+    function normalCdf(SD59x18 x) external pure returns (SD59x18) {
         return OptionMath.normalCdf(x);
     }
 
-    function normalPdf(int256 x) external pure returns (int256) {
+    function normalPdf(SD59x18 x) external pure returns (SD59x18) {
         return OptionMath.normalPdf(x);
     }
 
-    function relu(int256 x) external pure returns (uint256) {
+    function relu(SD59x18 x) external pure returns (UD60x18) {
         return OptionMath.relu(x);
     }
 
     function blackScholesPrice(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate,
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
         bool isCall
-    ) external pure returns (uint256) {
+    ) external pure returns (UD60x18) {
         return
             OptionMath.blackScholesPrice(
                 spot,
@@ -41,12 +44,12 @@ contract OptionMathMock {
     }
 
     function d1d2(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate
-    ) external pure returns (int256 d1, int256 d2) {
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate
+    ) external pure returns (SD59x18 d1, SD59x18 d2) {
         (d1, d2) = OptionMath.d1d2(
             spot,
             strike,
@@ -71,23 +74,23 @@ contract OptionMathMock {
     }
 
     function calculateStrikeInterval(
-        uint256 spot
-    ) external pure returns (uint256) {
+        UD60x18 spot
+    ) external pure returns (UD60x18) {
         return OptionMath.calculateStrikeInterval(spot);
     }
 
     function logMoneyness(
-        uint256 spot,
-        uint256 strike
-    ) external pure returns (uint256) {
+        UD60x18 spot,
+        UD60x18 strike
+    ) external pure returns (UD60x18) {
         return OptionMath.logMoneyness(spot, strike);
     }
 
     function initializationFee(
-        uint256 spot,
-        uint256 strike,
+        UD60x18 spot,
+        UD60x18 strike,
         uint64 maturity
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return OptionMath.initializationFee(spot, strike, maturity);
     }
 }

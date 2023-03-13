@@ -4,24 +4,21 @@ pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
-import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
-    using SafeCast for int256;
-    using SafeCast for uint256;
-    using SD59x18 for int256;
-    using UD60x18 for uint256;
 
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
@@ -54,26 +51,30 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(PoolKey memory k) public view returns (uint256) {
+    function initializationFee(PoolKey memory k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
 
-        uint256 discount = (OptionMath.ONE - l.discountPerPool)
-            .toInt256()
-            .pow(discountFactor.toInt256())
-            .toUint256();
+        UD60x18 discount = (OptionMath.ONE - l.discountPerPool)
+            .intoSD59x18()
+            .powu(discountFactor)
+            .intoUD60x18(); // ToDo : Check with Froggie
 
-        uint256 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
-        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
+        UD60x18 spot = UD60x18.wrap(
+            _fetchQuote(k.oracleAdapter, k.base, k.quote)
+        );
+        UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+        UD60x18 wrappedNativeUSDPrice = UD60x18.wrap(
+            _fetchWrappedNativeUSDQuote()
+        );
 
         return fee.mul(discount).div(wrappedNativeUSDPrice);
     }
 
     /// @inheritdoc IPoolFactory
-    function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
+    function setDiscountPerPool(UD60x18 discountPerPool) external onlyOwner {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.discountPerPool = discountPerPool;
         emit SetDiscountPerPool(discountPerPool);
@@ -102,7 +103,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         _ensureOptionMaturityIsValid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
-        uint256 fee = initializationFee(k);
+        uint256 fee = initializationFee(k).unwrap();
 
         if (_getPoolAddress(poolKey) != address(0))
             revert PoolFactory__PoolAlreadyDeployed();
@@ -177,17 +178,18 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
     function _ensureOptionStrikeIsValid(
-        uint256 strike,
+        UD60x18 strike,
         address oracleAdapter,
         address base,
         address quote
     ) internal view {
-        if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
+        if (strike == OptionMath.ZERO)
+            revert PoolFactory__OptionStrikeEqualsZero();
 
-        uint256 spot = _fetchQuote(oracleAdapter, base, quote);
-        uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
+        UD60x18 spot = UD60x18.wrap(_fetchQuote(oracleAdapter, base, quote));
+        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        if (strike % strikeInterval != 0)
+        if (strike % strikeInterval != OptionMath.ZERO)
             revert PoolFactory__OptionStrikeInvalid();
     }
 
