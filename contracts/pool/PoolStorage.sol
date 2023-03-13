@@ -118,18 +118,18 @@ library PoolStorage {
     function fromPoolTokenDecimals(
         Layout storage l,
         uint256 value
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return OptionMath.scaleDecimals(value, decimals, 18);
+        return UD60x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
     function fromPoolTokenDecimals(
         Layout storage l,
         int256 value
-    ) internal view returns (int256) {
+    ) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return OptionMath.scaleDecimals(value, decimals, 18);
+        return SD59x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)

@@ -50,7 +50,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                 _takerFee(
                     PoolStorage.layout(),
                     size,
-                    UD60x18.wrap(l.fromPoolTokenDecimals(premium)),
+                    l.fromPoolTokenDecimals(premium),
                     isPremiumNormalized
                 )
             );
