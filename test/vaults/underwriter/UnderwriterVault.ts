@@ -804,7 +804,7 @@ describe('UnderwriterVault', () => {
       await callVault.increaseTotalLockedSpread(parseEther('1.0'));
       assetAmount = parseEther(assetAmount.toString());
       const shareAmount = await callVault.convertToShares(assetAmount);
-      expect(shareAmount).to.eq(2 * assetAmount);
+      expect(shareAmount).to.eq(parseEther('4'));
     });
   });
 
@@ -814,7 +814,7 @@ describe('UnderwriterVault', () => {
       const shareAmount = parseEther('2');
       await expect(
         callVault.convertToAssets(shareAmount),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__ZEROShares');
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroShares');
     });
 
     it('if supply is non-zero and pricePerShare is one, withdrawn assets equals share amount', async () => {
@@ -990,7 +990,7 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addMockDeposit(callVault, 2, base, quote);
+      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
       await expect(
         callVault.maxRedeem(ethers.constants.AddressZero),
       ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
@@ -1001,12 +1001,11 @@ describe('UnderwriterVault', () => {
         vaultSetup,
       );
       await setMaturities(callVault);
-      await addMockDeposit(callVault, 3, base, quote);
+      await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
       await callVault.increaseTotalLockedSpread(parseEther('0.1'));
       await callVault.increaseTotalLockedAssets(parseEther('0.5'));
-      const assetAmount = await callVault.maxWithdraw(receiver.address);
-      console.log(await callVault.getPricePerShare());
-      expect(assetAmount).to.eq(parseEther('2.4'));
+      const assetAmount = await callVault.maxRedeem(receiver.address);
+      expect(assetAmount).to.eq('2482758620689655174');
     });
   });
 
@@ -1206,7 +1205,7 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#settle', () => {
-    const t0: number = 1678435200;
+    const t0: number = 1678435200 + ONE_WEEK + ONE_WEEK;
     const t1 = t0 + ONE_WEEK;
     const t2 = t0 + 2 * ONE_WEEK;
     let strikedict: { [key: number]: BigNumber[] } = {};
@@ -1275,6 +1274,16 @@ describe('UnderwriterVault', () => {
               sizes: [2, 3, 1].map((el) => parseEther(el.toString())),
             },
           ];
+
+          await oracleAdapter.mock.quoteFrom
+            .withArgs(base.address, quote.address, t0)
+            .returns(parseUnits('1500', 18));
+          await oracleAdapter.mock.quoteFrom
+            .withArgs(base.address, quote.address, t1)
+            .returns(parseUnits('1500', 18));
+          await oracleAdapter.mock.quoteFrom
+            .withArgs(base.address, quote.address, t2)
+            .returns(parseUnits('1500', 18));
 
           console.log('Depositing assets.');
           await addMockDeposit(vault, totalAssets, base, quote);

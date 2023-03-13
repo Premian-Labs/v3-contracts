@@ -104,8 +104,7 @@ export async function increaseTotalShares(
 ) {
   const sharesAmountParsed = parseEther(sharesAmount.toString());
   if (typeof receiverAddress == 'string') {
-    console.log();
-    vault.mintMock(receiverAddress, sharesAmountParsed);
+    await vault.mintMock(receiverAddress, sharesAmountParsed);
   } else {
     await vault.increaseTotalShares(sharesAmountParsed);
   }
