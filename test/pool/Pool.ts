@@ -3,7 +3,7 @@ import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
-import { average } from '../../utils/sdk/math';
+import { average, scaleDecimals } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
@@ -125,11 +125,12 @@ describe('Pool', () => {
   describe('#getTradeQuote', () => {
     runCallAndPutTests((isCallPool: boolean) => {
       it('should successfully return a buy trade quote', async () => {
-        const { pool, pKey, contractsToCollateral } = await loadFixture(
-          isCallPool
-            ? deployAndDeposit_1000_CS_CALL
-            : deployAndDeposit_1000_CS_PUT,
-        );
+        const { pool, pKey, contractsToCollateral, scaleDecimals } =
+          await loadFixture(
+            isCallPool
+              ? deployAndDeposit_1000_CS_CALL
+              : deployAndDeposit_1000_CS_PUT,
+          );
 
         const tradeSize = parseEther('500');
         const price = pKey.lower;
@@ -146,15 +147,18 @@ describe('Pool', () => {
           .div(ONE_ETHER)
           .add(takerFee);
 
-        expect(await pool.getTradeQuote(tradeSize, true)).to.eq(quote);
+        expect(await pool.getTradeQuote(tradeSize, true)).to.eq(
+          scaleDecimals(quote),
+        );
       });
 
       it('should successfully return a sell trade quote', async () => {
-        const { pool, pKey, contractsToCollateral } = await loadFixture(
-          isCallPool
-            ? deployAndDeposit_1000_LC_CALL
-            : deployAndDeposit_1000_LC_PUT,
-        );
+        const { pool, pKey, contractsToCollateral, scaleDecimals } =
+          await loadFixture(
+            isCallPool
+              ? deployAndDeposit_1000_LC_CALL
+              : deployAndDeposit_1000_LC_PUT,
+          );
 
         const tradeSize = parseEther('500');
         const price = pKey.upper;
@@ -171,7 +175,9 @@ describe('Pool', () => {
           .div(ONE_ETHER)
           .sub(takerFee);
 
-        expect(await pool.getTradeQuote(tradeSize, false)).to.eq(quote);
+        expect(await pool.getTradeQuote(tradeSize, false)).to.eq(
+          scaleDecimals(quote),
+        );
       });
 
       it('should revert if not enough liquidity to buy', async () => {

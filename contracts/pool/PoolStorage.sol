@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
 import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Position} from "../libraries/Position.sol";
@@ -79,22 +80,56 @@ library PoolStorage {
         return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
     }
 
-    /// @notice Adjust decimals of a value to match the pool token decimals
-    function scaleDecimals(
+    /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
+    function toPoolTokenDecimals(
         Layout storage l,
         uint256 value
     ) internal view returns (uint256) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return OptionMath.scaleDecimals(value, decimals);
+        return OptionMath.scaleDecimals(value, 18, decimals);
     }
 
-    /// @notice Adjust decimals of a value to match the pool token decimals
-    function scaleDecimals(
+    /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
+    function toPoolTokenDecimals(
         Layout storage l,
         int256 value
     ) internal view returns (int256) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return OptionMath.scaleDecimals(value, decimals);
+        return OptionMath.scaleDecimals(value, 18, decimals);
+    }
+
+    /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
+    function toPoolTokenDecimals(
+        Layout storage l,
+        UD60x18 value
+    ) internal view returns (uint256) {
+        return l.toPoolTokenDecimals(value.unwrap());
+    }
+
+    /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
+    function toPoolTokenDecimals(
+        Layout storage l,
+        SD59x18 value
+    ) internal view returns (int256) {
+        return l.toPoolTokenDecimals(value.unwrap());
+    }
+
+    /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
+    function fromPoolTokenDecimals(
+        Layout storage l,
+        uint256 value
+    ) internal view returns (uint256) {
+        uint8 decimals = l.getPoolTokenDecimals();
+        return OptionMath.scaleDecimals(value, decimals, 18);
+    }
+
+    /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
+    function fromPoolTokenDecimals(
+        Layout storage l,
+        int256 value
+    ) internal view returns (int256) {
+        uint8 decimals = l.getPoolTokenDecimals();
+        return OptionMath.scaleDecimals(value, decimals, 18);
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)

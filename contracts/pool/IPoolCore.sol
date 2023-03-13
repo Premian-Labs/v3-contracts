@@ -19,9 +19,9 @@ interface IPoolCore is IPoolInternal {
     /// @return The taker fee for an option trade denormalized
     function takerFee(
         UD60x18 size,
-        UD60x18 premium,
+        uint256 premium,
         bool isPremiumNormalized
-    ) external view returns (UD60x18);
+    ) external view returns (uint256);
 
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token

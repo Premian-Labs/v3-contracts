@@ -294,7 +294,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         IERC20(l.getPoolToken()).safeTransfer(
             p.operator,
-            l.scaleDecimals(claimedFees.unwrap())
+            l.toPoolTokenDecimals(claimedFees)
         );
 
         emit ClaimFees(
@@ -319,7 +319,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.protocolFees = ZERO;
         IERC20(l.getPoolToken()).safeTransfer(
             FEE_RECEIVER,
-            l.scaleDecimals(claimedFees.unwrap())
+            l.toPoolTokenDecimals(claimedFees)
         );
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
@@ -389,7 +389,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l,
             p.operator,
             address(this),
-            l.scaleDecimals(delta.collateral.intoUD60x18().unwrap()),
+            l.toPoolTokenDecimals(delta.collateral.intoUD60x18()),
             args.collateralCredit,
             args.refundAddress,
             delta.longs.intoUD60x18(),
@@ -570,7 +570,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 address(this),
                 p.operator,
-                l.scaleDecimals(collateralToTransfer.unwrap()),
+                l.toPoolTokenDecimals(collateralToTransfer),
                 0,
                 address(0),
                 delta.longs.abs().intoUD60x18(),
@@ -692,7 +692,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.getPoolToken(),
             underwriter,
             address(this),
-            l.scaleDecimals((collateral + protocolFee).unwrap())
+            l.toPoolTokenDecimals(collateral + protocolFee)
         );
 
         l.protocolFees = l.protocolFees + protocolFee;
@@ -814,7 +814,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         _ensureBelowTradeMaxSlippage(
-            totalPremium,
+            l.toPoolTokenDecimals(totalPremium),
             args.premiumLimit,
             args.isBuy
         );
@@ -974,7 +974,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
         // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
-        int256 _deltaCollateral = l.scaleDecimals(delta.collateral.unwrap());
+        int256 _deltaCollateral = l.toPoolTokenDecimals(delta.collateral);
         if (creditAmount > 0) {
             _deltaCollateral = _deltaCollateral + creditAmount.toInt256();
         }
@@ -1132,10 +1132,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(owner, PoolStorage.LONG, size.unwrap());
         IERC20(l.getPoolToken()).safeTransfer(
             owner,
-            l.scaleDecimals(
-                Position
-                    .contractsToCollateral(size, l.strike, l.isCallPool)
-                    .unwrap()
+            l.toPoolTokenDecimals(
+                Position.contractsToCollateral(size, l.strike, l.isCallPool)
             )
         );
 
@@ -1294,7 +1292,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (exerciseValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(
                 holder,
-                l.scaleDecimals(exerciseValue.unwrap())
+                l.toPoolTokenDecimals(exerciseValue)
             );
         }
 
@@ -1328,7 +1326,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (collateralValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(
                 holder,
-                l.scaleDecimals(collateralValue.unwrap())
+                l.toPoolTokenDecimals(collateralValue)
             );
         }
 
@@ -1420,7 +1418,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (collateral > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(
                 p.operator,
-                l.scaleDecimals(collateral.unwrap())
+                l.toPoolTokenDecimals(collateral)
             );
         }
 
@@ -2006,8 +2004,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     function _ensureBelowTradeMaxSlippage(
-        UD60x18 totalPremium,
-        UD60x18 premiumLimit,
+        uint256 totalPremium,
+        uint256 premiumLimit,
         bool isBuy
     ) internal pure {
         if (isBuy && totalPremium > premiumLimit)
@@ -2139,7 +2137,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IERC20 token = IERC20(l.getPoolToken());
             if (
                 token.allowance(args.user, ROUTER) <
-                l.scaleDecimals(delta.collateral.neg().intoUD60x18().unwrap())
+                l.toPoolTokenDecimals(delta.collateral.neg().intoUD60x18())
             ) {
                 return (
                     false,
@@ -2149,7 +2147,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             if (
                 token.balanceOf(args.user) <
-                l.scaleDecimals(delta.collateral.neg().intoUD60x18().unwrap())
+                l.toPoolTokenDecimals(delta.collateral.neg().intoUD60x18())
             ) {
                 return (false, InvalidQuoteError.InsufficientCollateralBalance);
             }

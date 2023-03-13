@@ -246,31 +246,37 @@ library OptionMath {
         return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
     }
 
-    /// @notice Converts an 18 decimals number, to a number with given amount of decimals
+    /// @notice Converts a number with `inputDecimals`, to a number with given amount of decimals
     /// @param value The value to convert
-    /// @param decimals The amount of decimals to convert to
+    /// @param inputDecimals The amount of decimals the input value has
+    /// @param targetDecimals The amount of decimals to convert to
     /// @return The converted value
     function scaleDecimals(
         uint256 value,
-        uint8 decimals
+        uint8 inputDecimals,
+        uint8 targetDecimals
     ) internal pure returns (uint256) {
-        if (decimals == 18) return value;
-        if (decimals > 18) return value * (10 ** (decimals - 18));
+        if (targetDecimals == inputDecimals) return value;
+        if (targetDecimals > inputDecimals)
+            return value * (10 ** (targetDecimals - inputDecimals));
 
-        return value / (10 ** (18 - decimals));
+        return value / (10 ** (inputDecimals - targetDecimals));
     }
 
-    /// @notice Converts an 18 decimals number, to a number with given amount of decimals
+    /// @notice Converts a number with `inputDecimals`, to a number with given amount of decimals
     /// @param value The value to convert
-    /// @param decimals The amount of decimals to convert to
+    /// @param inputDecimals The amount of decimals the input value has
+    /// @param targetDecimals The amount of decimals to convert to
     /// @return The converted value
     function scaleDecimals(
         int256 value,
-        uint8 decimals
+        uint8 inputDecimals,
+        uint8 targetDecimals
     ) internal pure returns (int256) {
-        if (decimals == 18) return value;
-        if (decimals > 18) return value * int256(10 ** (decimals - 18));
+        if (targetDecimals == inputDecimals) return value;
+        if (targetDecimals > inputDecimals)
+            return value * int256(10 ** (targetDecimals - inputDecimals));
 
-        return value / int256(10 ** (18 - decimals));
+        return value / int256(10 ** (inputDecimals - targetDecimals));
     }
 }
