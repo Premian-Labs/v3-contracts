@@ -902,6 +902,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, true);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
         await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
 
         await increaseTo(maturity);
@@ -1009,6 +1010,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, true);
+        await oracleAdapter.mock.quote.returns(settlementPrice);
         await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
 
         await increaseTo(maturity);
