@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
@@ -11,7 +10,7 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
-
+import "hardhat/console.sol";
 import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
@@ -26,7 +25,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
     address internal immutable CHAINLINK_ADAPTER;
-    // Wrapped native token address (eg WETH, FTM, AVAX, etc) pair
+    // Wrapped native token address (eg WETH, WFTM, etc)
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
     constructor(
@@ -37,6 +36,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+    }
+
+    /// @inheritdoc IPoolFactory
+    function isPool(address contractAddress) external view returns (bool) {
+        return PoolFactoryStorage.layout().isPool[contractAddress];
     }
 
     /// @inheritdoc IPoolFactory
@@ -93,6 +97,8 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             k.oracleAdapter == address(0)
         ) revert PoolFactory__ZeroAddress();
 
+        IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
+
         _ensureOptionStrikeIsValid(k.strike, k.oracleAdapter, k.base, k.quote);
         _ensureOptionMaturityIsValid(k.maturity);
 
@@ -122,9 +128,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             )
         );
 
-        PoolFactoryStorage.layout().pools[poolKey] = poolAddress;
-        PoolFactoryStorage.layout().strikeCount[k.strikeKey()] += 1;
-        PoolFactoryStorage.layout().maturityCount[k.maturityKey()] += 1;
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.pools[poolKey] = poolAddress;
+        l.isPool[poolAddress] = true;
+        l.strikeCount[k.strikeKey()] += 1;
+        l.maturityCount[k.maturityKey()] += 1;
 
         emit PoolDeployed(
             k.base,

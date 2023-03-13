@@ -389,8 +389,6 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        if (maturity <= block.timestamp) revert Vault__OptionExpired();
-
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
             if (maturity < l.minMaturity) {

@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -23,6 +23,13 @@ abstract contract ChainlinkAdapterInternal is
     using SafeCast for int256;
     using UD60x18 for uint256;
 
+    /// @dev If a fresh price is unavailable the adapter will wait the duration of
+    ///      MAX_DELAY before returning the stale price
+    uint32 internal constant MAX_DELAY = 12 hours;
+    /// @dev If the difference between target and last update is greater than the
+    ///      PRICE_STALE_THRESHOLD, the price is considered stale
+    uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
+
     int256 private constant FOREX_DECIMALS = 8;
     int256 private constant ETH_DECIMALS = 18;
 
@@ -38,20 +45,38 @@ abstract contract ChainlinkAdapterInternal is
         WRAPPED_BTC_TOKEN = _wrappedBTCToken;
     }
 
-    /// @dev Expects `mappedTokenIn` and `mappedTokenOut` to be unsorted
-    function _quote(
-        PricingPath path,
-        address mappedTokenIn,
-        address mappedTokenOut
+    function _quoteFrom(
+        address tokenIn,
+        address tokenOut,
+        uint256 target
     ) internal view returns (uint256) {
+        (
+            PricingPath path,
+            address mappedTokenIn,
+            address mappedTokenOut
+        ) = _pathForPair(tokenIn, tokenOut, false);
+
+        if (path == PricingPath.NONE) {
+            path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
+
+            if (path == PricingPath.NONE)
+                revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+        }
         if (path <= PricingPath.TOKEN_ETH) {
-            return _getDirectPrice(mappedTokenIn, mappedTokenOut, path);
+            return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
-            return _getPriceSameBase(mappedTokenIn, mappedTokenOut, path);
+            return
+                _getPriceSameBase(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.A_ETH_USD_B) {
-            return _getPriceDifferentBases(mappedTokenIn, mappedTokenOut, path);
+            return
+                _getPriceDifferentBases(
+                    path,
+                    mappedTokenIn,
+                    mappedTokenOut,
+                    target
+                );
         } else {
-            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut);
+            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
         }
     }
 
@@ -77,6 +102,8 @@ abstract contract ChainlinkAdapterInternal is
                 revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
             }
         }
+
+        if (l.pathForPair[keyForPair] == path) return;
 
         l.pathForPair[keyForPair] = path;
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
@@ -110,20 +137,27 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
     function _getDirectPrice(
+        PricingPath path,
         address tokenIn,
         address tokenOut,
-        PricingPath path
+        uint256 target
     ) internal view returns (uint256) {
         int256 factor = ETH_DECIMALS -
             (path == PricingPath.TOKEN_ETH ? ETH_DECIMALS : FOREX_DECIMALS);
 
         uint256 price;
         if (path == PricingPath.ETH_USD) {
-            price = _getETHUSD();
+            price = _getETHUSD(target);
         } else if (path == PricingPath.TOKEN_USD) {
-            price = _getPriceAgainstUSD(_isUSD(tokenOut) ? tokenIn : tokenOut);
+            price = _getPriceAgainstUSD(
+                _isUSD(tokenOut) ? tokenIn : tokenOut,
+                target
+            );
         } else if (path == PricingPath.TOKEN_ETH) {
-            price = _getPriceAgainstETH(_isETH(tokenOut) ? tokenIn : tokenOut);
+            price = _getPriceAgainstETH(
+                _isETH(tokenOut) ? tokenIn : tokenOut,
+                target
+            );
         }
 
         price = _scale(price, factor);
@@ -136,9 +170,10 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Handles prices when both tokens share the same base (either ETH or USD)
     function _getPriceSameBase(
+        PricingPath path,
         address tokenIn,
         address tokenOut,
-        PricingPath path
+        uint256 target
     ) internal view returns (uint256) {
         int256 diff = _decimals(tokenIn) - _decimals(tokenOut);
         int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
@@ -147,8 +182,8 @@ abstract contract ChainlinkAdapterInternal is
             ? Denominations.USD
             : Denominations.ETH;
 
-        uint256 tokenInToBase = _callPriceFeed(tokenIn, base);
-        uint256 tokenOutToBase = _callPriceFeed(tokenOut, base);
+        uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
+        uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
         uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
         uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
@@ -158,12 +193,13 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
     function _getPriceDifferentBases(
+        PricingPath path,
         address tokenIn,
         address tokenOut,
-        PricingPath path
+        uint256 target
     ) internal view returns (uint256) {
         int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
-        uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(), factor);
+        uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(target), factor);
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
             tokenIn < tokenOut) ||
@@ -171,21 +207,21 @@ abstract contract ChainlinkAdapterInternal is
 
         if (isTokenInUSD) {
             uint256 adjustedTokenInToUSD = _scale(
-                _getPriceAgainstUSD(tokenIn),
+                _getPriceAgainstUSD(tokenIn, target),
                 factor
             );
 
-            uint256 tokenOutToETH = _getPriceAgainstETH(tokenOut);
+            uint256 tokenOutToETH = _getPriceAgainstETH(tokenOut, target);
 
             return
                 adjustedTokenInToUSD.div(adjustedEthToUSDPrice).div(
                     tokenOutToETH
                 );
         } else {
-            uint256 tokenInToETH = _getPriceAgainstETH(tokenIn);
+            uint256 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
 
             uint256 adjustedTokenOutToUSD = _scale(
-                _getPriceAgainstUSD(tokenOut),
+                _getPriceAgainstUSD(tokenOut, target),
                 factor
             );
 
@@ -199,17 +235,17 @@ abstract contract ChainlinkAdapterInternal is
     /// @dev Handles prices when the pair is token/WBTC
     function _getPriceWBTCPrice(
         address tokenIn,
-        address tokenOut
+        address tokenOut,
+        uint256 target
     ) internal view returns (uint256) {
         bool isTokenInWBTC = _isWBTC(tokenIn);
         int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
 
-        uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(), factor).mul(
-            _scale(_getBTCUSD(), factor)
-        );
+        uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(target), factor)
+            .mul(_scale(_getBTCUSD(target), factor));
 
         uint256 adjustedTokenToUSD = _scale(
-            _getPriceAgainstUSD(!isTokenInWBTC ? tokenIn : tokenOut),
+            _getPriceAgainstUSD(!isTokenInWBTC ? tokenIn : tokenOut, target),
             factor
         );
 
@@ -218,17 +254,23 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     function _getPriceAgainstUSD(
-        address token
+        address token,
+        uint256 target
     ) internal view returns (uint256) {
         return
-            _isUSD(token) ? ONE_USD : _callPriceFeed(token, Denominations.USD);
+            _isUSD(token)
+                ? ONE_USD
+                : _fetchQuote(token, Denominations.USD, target);
     }
 
     function _getPriceAgainstETH(
-        address token
+        address token,
+        uint256 target
     ) internal view returns (uint256) {
         return
-            _isETH(token) ? ONE_ETH : _callPriceFeed(token, Denominations.ETH);
+            _isETH(token)
+                ? ONE_ETH
+                : _fetchQuote(token, Denominations.ETH, target);
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
@@ -360,13 +402,10 @@ abstract contract ChainlinkAdapterInternal is
         uint256 amount,
         int256 factor
     ) internal pure returns (uint256) {
-        uint256 ten = 10E18;
-        factor = factor * 1E18;
-
         if (factor < 0) {
-            return amount.div(ten.pow((-factor).toUint256()));
+            return amount / (10 ** (-factor).toUint256());
         } else {
-            return amount.mul(ten.pow(factor.toUint256()));
+            return amount * (10 ** factor.toUint256());
         }
     }
 
@@ -380,34 +419,129 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _callPriceFeed(
+    function _fetchQuote(
+        address base,
+        address quote,
+        uint256 target
+    ) internal view returns (uint256) {
+        return
+            target == 0
+                ? _fetchLatestQuote(base, quote)
+                : _fetchQuoteFrom(base, quote, target);
+    }
+
+    function _fetchLatestQuote(
         address base,
         address quote
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
-        int256 price = AggregatorInterface(feed).latestAnswer();
-        if (price <= 0) revert OracleAdapter__InvalidPrice(price);
+        (, int256 price, , , ) = _latestRoundData(feed);
+        _ensurePriceNonZero(price);
         return price.toUint256();
     }
 
-    function _batchRegisterFeedMappings(
-        FeedMappingArgs[] memory args
-    ) internal {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = args[i].token;
-            address denomination = args[i].denomination;
+    function _fetchQuoteFrom(
+        address base,
+        address quote,
+        uint256 target
+    ) internal view returns (uint256) {
+        address feed = _feed(base, quote);
 
-            if (token == denomination)
-                revert OracleAdapter__TokensAreSame(token, denomination);
+        (
+            uint80 roundId,
+            int256 price,
+            ,
+            uint256 updatedAt,
 
-            if (token == address(0) || denomination == address(0))
-                revert OracleAdapter__ZeroAddress();
+        ) = _latestRoundData(feed);
 
-            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
-            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
+        (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage
+            .parseRoundId(roundId);
+
+        int256 previousPrice = price;
+        uint256 previousUpdatedAt = updatedAt;
+
+        // if the last observation is after the target skip loop
+        if (target >= updatedAt) aggregatorRoundId = 0;
+
+        while (aggregatorRoundId > 0) {
+            roundId = ChainlinkAdapterStorage.formatRoundId(
+                phaseId,
+                --aggregatorRoundId
+            );
+
+            (, price, , updatedAt, ) = _getRoundData(feed, roundId);
+
+            if (target >= updatedAt) {
+                uint256 previousUpdateDistance = previousUpdatedAt - target;
+                uint256 currentUpdateDistance = target - updatedAt;
+
+                if (previousUpdateDistance < currentUpdateDistance) {
+                    price = previousPrice;
+                    updatedAt = previousUpdatedAt;
+                }
+
+                break;
+            }
+
+            previousPrice = price;
+            previousUpdatedAt = updatedAt;
         }
 
-        emit FeedMappingsRegistered(args);
+        _ensurePriceAfterTargetIsFresh(target, updatedAt);
+        _ensurePriceNonZero(price);
+        return price.toUint256();
+    }
+
+    function _latestRoundData(
+        address feed
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).latestRoundData() returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__LatestRoundDataCallReverted(data);
+        }
+    }
+
+    function _getRoundData(
+        address feed,
+        uint80 roundId
+    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+        try AggregatorV3Interface(feed).getRoundData(roundId) returns (
+            uint80 _roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        ) {
+            return (_roundId, answer, startedAt, updatedAt, answeredInRound);
+        } catch Error(string memory reason) {
+            revert(reason);
+        } catch (bytes memory data) {
+            revert ChainlinkAdapter__GetRoundDataCallReverted(data);
+        }
+    }
+
+    function _ensurePriceAfterTargetIsFresh(
+        uint256 target,
+        uint256 updatedAt
+    ) internal view {
+        if (
+            target >= updatedAt &&
+            block.timestamp - target < MAX_DELAY &&
+            target - updatedAt >= PRICE_STALE_THRESHOLD
+        ) {
+            // revert if 12 hours has not passed and price is stale
+            revert ChainlinkAdapter__PriceAfterTargetIsStale();
+        }
     }
 
     function _feed(
@@ -421,7 +555,9 @@ abstract contract ChainlinkAdapterInternal is
     }
 
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
-    function _denomination(address token) internal view returns (address) {
+    function _tokenToDenomination(
+        address token
+    ) internal view returns (address) {
         return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
 
@@ -441,8 +577,8 @@ abstract contract ChainlinkAdapterInternal is
         address tokenA,
         address tokenB
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
-        mappedTokenA = _denomination(tokenA);
-        mappedTokenB = _denomination(tokenB);
+        mappedTokenA = _tokenToDenomination(tokenA);
+        mappedTokenB = _tokenToDenomination(tokenB);
     }
 
     function _keyForUnsortedPair(
@@ -465,16 +601,16 @@ abstract contract ChainlinkAdapterInternal is
         return keccak256(abi.encode(tokenA, tokenB));
     }
 
-    function _getETHUSD() internal view returns (uint256) {
-        return _callPriceFeed(Denominations.ETH, Denominations.USD);
+    function _getETHUSD(uint256 target) internal view returns (uint256) {
+        return _fetchQuote(Denominations.ETH, Denominations.USD, target);
     }
 
-    function _getBTCUSD() internal view returns (uint256) {
-        return _callPriceFeed(Denominations.BTC, Denominations.USD);
+    function _getBTCUSD(uint256 target) internal view returns (uint256) {
+        return _fetchQuote(Denominations.BTC, Denominations.USD, target);
     }
 
-    function _getWBTCBTC() internal view returns (uint256) {
-        return _callPriceFeed(WRAPPED_BTC_TOKEN, Denominations.BTC);
+    function _getWBTCBTC(uint256 target) internal view returns (uint256) {
+        return _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
     }
 
     function _isUSD(address token) internal pure returns (bool) {

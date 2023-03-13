@@ -48,62 +48,21 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IOracleAdapter
-    function tryQuote(
-        address tokenIn,
-        address tokenOut
-    ) external returns (uint256) {
-        (
-            PricingPath path,
-            address mappedTokenIn,
-            address mappedTokenOut
-        ) = _pathForPair(tokenIn, tokenOut, false);
-
-        if (path == PricingPath.NONE) {
-            _upsertPair(tokenIn, tokenOut);
-
-            (path, mappedTokenIn, mappedTokenOut) = _pathForPair(
-                tokenIn,
-                tokenOut,
-                false
-            );
-        }
-
-        return _quote(path, mappedTokenIn, mappedTokenOut);
-    }
-
-    /// @inheritdoc IOracleAdapter
     function quote(
         address tokenIn,
         address tokenOut
     ) external view returns (uint256) {
-        (
-            PricingPath path,
-            address mappedTokenIn,
-            address mappedTokenOut
-        ) = _pathForPair(tokenIn, tokenOut, false);
-
-        if (path == PricingPath.NONE)
-            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
-
-        return _quote(path, mappedTokenIn, mappedTokenOut);
+        return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
     /// @inheritdoc IOracleAdapter
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint256 timestamp
+        uint256 target
     ) external view returns (uint256) {
-        (
-            PricingPath path,
-            address mappedTokenIn,
-            address mappedTokenOut
-        ) = _pathForPair(tokenIn, tokenOut, false);
-
-        if (path == PricingPath.NONE)
-            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
-
-        return _quote(path, mappedTokenIn, mappedTokenOut);
+        _ensureTargetNonZero(target);
+        return _quoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @inheritdoc IChainlinkAdapter
@@ -119,7 +78,21 @@ contract ChainlinkAdapter is
     function batchRegisterFeedMappings(
         FeedMappingArgs[] memory args
     ) external onlyOwner {
-        _batchRegisterFeedMappings(args);
+        for (uint256 i = 0; i < args.length; i++) {
+            address token = _tokenToDenomination(args[i].token);
+            address denomination = args[i].denomination;
+
+            if (token == denomination)
+                revert OracleAdapter__TokensAreSame(token, denomination);
+
+            if (token == address(0) || denomination == address(0))
+                revert OracleAdapter__ZeroAddress();
+
+            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
+            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
+        }
+
+        emit FeedMappingsRegistered(args);
     }
 
     /// @inheritdoc IChainlinkAdapter

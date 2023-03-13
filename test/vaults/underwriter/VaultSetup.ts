@@ -167,14 +167,19 @@ export async function vaultSetup() {
   // Mock Oracle Adapter setup
 
   oracleAdapter = await deployMockContract(deployer, [
+    'function isPairSupported(address, address) external view returns (bool, bool)',
+    'function upsertPair(address, address) external',
     'function quote(address, address) external view returns (uint256)',
     'function quoteFrom(address, address, uint256) external view returns (uint256)',
   ]);
 
+  // Upsert pair is called within deployPool from the PoolFactory contract
+  await oracleAdapter.mock.isPairSupported.returns(true, true);
+  await oracleAdapter.mock.upsertPair.returns();
   await oracleAdapter.mock.quote.returns(parseUnits('1500', 18));
 
   if (log)
-    console.log(`Mock oracelAdapter Implementation : ${oracleAdapter.address}`);
+    console.log(`Mock oracleAdapter Implementation : ${oracleAdapter.address}`);
 
   //=====================================================================================
   // Mock Volatility Oracle setup

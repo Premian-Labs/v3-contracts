@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -79,7 +78,7 @@ library PoolStorage {
     }
 
     // TODO: Fetch price at maturity
-    function fetchQuote(Layout storage l) internal returns (uint256) {
+    function fetchAndCacheQuote(Layout storage l) internal returns (uint256) {
         if (l.spot == 0) {
             if (block.timestamp < l.maturity)
                 revert IPoolInternal.Pool__OptionNotExpired();

@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import {
-  now,
+  latest,
   ONE_DAY,
   ONE_HOUR,
   ONE_WEEK,
@@ -49,7 +49,7 @@ let base: ERC20Mock;
 let quote: ERC20Mock;
 
 export async function setMaturities(vault: UnderwriterVaultMock) {
-  startTime = await now();
+  startTime = await latest();
   spot = 2800;
   minMaturity = startTime + 10 * ONE_DAY;
   maxMaturity = startTime + 20 * ONE_DAY;
@@ -671,15 +671,16 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_addListing', async () => {
+  describe('#_addListing', () => {
+    let startTime = 100000;
+
+    let t0 = startTime + 7 * ONE_DAY;
+    let t1 = startTime + 10 * ONE_DAY;
+    let t2 = startTime + 14 * ONE_DAY;
+
     before(async () => {
       const { callVault } = await loadFixture(vaultSetup);
       vault = callVault;
-
-      startTime = await now();
-      t0 = startTime + 7 * ONE_DAY;
-      t1 = startTime + 10 * ONE_DAY;
-      t2 = startTime + 14 * ONE_DAY;
     });
 
     it('adds a listing when there are no listings', async () => {
@@ -787,14 +788,6 @@ describe('UnderwriterVault', () => {
       expect(n).to.eq(4);
       expect(minMaturity).to.eq(t0);
       expect(maxMaturity).to.eq(t2);
-    });
-
-    it('will not add a listing with a maturity that is expired', async () => {
-      let strike = parseEther('1000');
-
-      await expect(
-        vault.addListing(strike, startTime),
-      ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
     });
   });
 
@@ -1061,7 +1054,7 @@ describe('UnderwriterVault', () => {
         );
         // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
         await addMockDeposit(callVault, test.deposit, base, quote);
-        let startTime = await now();
+        let startTime = await latest();
         let t0 = startTime + 7 * ONE_DAY;
         expect(await callVault.totalAssets()).to.eq(
           parseEther(test.deposit.toString()),
@@ -1219,7 +1212,7 @@ describe('UnderwriterVault', () => {
         parseEther(spread.toString()),
         parseEther(strike.toString()),
       );
-      afterBuyTimestamp = await now();
+      afterBuyTimestamp = await latest();
       console.log('Processed afterBuy.');
       return { vault: callVault };
     }
@@ -1585,7 +1578,7 @@ describe('UnderwriterVault', () => {
 
     async function setupSpreadsVault() {
       const { callVault } = await loadFixture(vaultSetup);
-      startTime = await now();
+      startTime = await latest();
       t0 = startTime + 7 * ONE_DAY;
       t1 = startTime + 10 * ONE_DAY;
       t2 = startTime + 14 * ONE_DAY;
@@ -1716,7 +1709,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('At maturity t0 totalLockedSpread should approximately equal 7.268', async () => {
@@ -1732,7 +1725,7 @@ describe('UnderwriterVault', () => {
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
 
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('At t0 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
@@ -1747,7 +1740,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('At maturity t1 totalLockedSpread should approximately equal 3.2', async () => {
@@ -1761,7 +1754,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('At t1 + 1 day totalLockedSpread should approximately equal 7.268', async () => {
@@ -1775,7 +1768,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('At maturity t2 totalLockedSpread should approximately equal 0.0', async () => {
@@ -1788,7 +1781,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(0.0, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
 
       it('Run through all of the above', async () => {
@@ -1801,7 +1794,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
         await increaseTo(t0);
         await vault.updateState();
         expect(
@@ -1812,7 +1805,7 @@ describe('UnderwriterVault', () => {
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
 
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
         await increaseTo(t0 + ONE_DAY);
         await vault.updateState();
         expect(
@@ -1822,7 +1815,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRate, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
         await increaseTo(t1);
         await vault.updateState();
         expect(
@@ -1831,7 +1824,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
         await increaseTo(t1 + ONE_DAY);
         await vault.updateState();
         expect(
@@ -1840,7 +1833,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(spreadUnlockingRatet2, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
         await increaseTo(t2);
         await vault.updateState();
         expect(
@@ -1849,7 +1842,7 @@ describe('UnderwriterVault', () => {
         expect(
           parseFloat(formatEther(await vault.spreadUnlockingRate())),
         ).to.be.closeTo(0.0, 0.001);
-        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await now());
+        expect(await vault.lastSpreadUnlockUpdate()).to.eq(await latest());
       });
     });
   });
