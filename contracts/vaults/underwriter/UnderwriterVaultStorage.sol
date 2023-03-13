@@ -20,7 +20,6 @@ library UnderwriterVaultStorage {
         // Whether the vault is underwriting calls or puts
         bool isCall;
         // The total assets that have been included in the pool.
-        uint256 totalAssets;
         uint256 totalLockedAssets;
         // Trading Parameters
         uint256 maxDTE; // 30

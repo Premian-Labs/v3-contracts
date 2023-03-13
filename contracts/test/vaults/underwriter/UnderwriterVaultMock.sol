@@ -10,6 +10,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {IPool} from "../../../pool/IPool.sol";
 import {UD60x18} from "../../../libraries/prbMath/UD60x18.sol";
@@ -285,14 +286,24 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function increaseTotalLockedAssets(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().totalLockedAssets += value;
+        console.log("hello");
+        console.log(address(this));
+        console.log(IERC20(_asset()).balanceOf(address(this)));
+        IERC20(_asset()).transfer(address(1), value);
+        console.log(IERC20(_asset()).balanceOf(address(this)));
     }
 
     function increaseTotalLockedSpread(uint256 value) external onlyOwner {
         UnderwriterVaultStorage.layout().totalLockedSpread += value;
     }
 
-    function increaseTotalAssets(uint256 value) external onlyOwner {
-        UnderwriterVaultStorage.layout().totalAssets += value;
+    function increaseTotalShares(uint256 value) external onlyOwner {
+        ERC20BaseStorage.Layout storage l = ERC20BaseStorage.layout();
+        l.totalSupply += value;
+    }
+
+    function mintMock(address receiver, uint256 value) external onlyOwner {
+        _mint(receiver, value);
     }
 
     function getAvailableAssets() external view returns (uint256) {

@@ -82,7 +82,9 @@ contract UnderwriterVault is
 
     function _totalAssets() internal view override returns (uint256) {
         // total assets = deposits + premiums + spreads
-        return UnderwriterVaultStorage.layout().totalAssets;
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return IERC20(_asset()).balanceOf(address(this)) + l.totalLockedAssets;
     }
 
     function _totalLockedSpread() internal view returns (uint256) {
@@ -293,17 +295,15 @@ contract UnderwriterVault is
     }
 
     function _availableAssets() internal view returns (uint256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        return l.totalAssets - _getTotalLockedSpread() - l.totalLockedAssets;
+        return
+            IERC20(_asset()).balanceOf(address(this)) - _getTotalLockedSpread();
     }
 
     function _getPricePerShare() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-
         return
-            (l.totalAssets - _getTotalLockedSpread() - _getTotalFairValue())
+            (_totalAssets() - _getTotalLockedSpread() - _getTotalFairValue())
                 .div(_totalSupply());
     }
 
@@ -498,7 +498,6 @@ contract UnderwriterVault is
         if (shareAmount == 0) {
             revert Vault__ZEROShares();
         }
-        UnderwriterVaultStorage.layout().totalAssets += assetAmount;
     }
 
     function _beforeWithdraw(
@@ -554,7 +553,6 @@ contract UnderwriterVault is
         l.spreadUnlockingRate += spreadRate;
         l.spreadUnlockingTicks[a.maturity] += spreadRate;
         l.totalLockedSpread += a.spread;
-        l.totalAssets += a.premium + a.spread;
         l.totalLockedAssets += newLockedAssets;
         l.positionSizes[a.maturity][a.strike] += a.size;
         l.lastTradeTimestamp = block.timestamp;
@@ -592,7 +590,7 @@ contract UnderwriterVault is
         if (l.alphaCLevel == 0) revert Vault__CLevelBounds();
 
         uint256 postUtilisation = (l.totalLockedAssets + collateralAmt).div(
-            l.totalAssets
+            _totalAssets()
         );
 
         if (postUtilisation > ONE.toUint256()) revert Vault__UtilEstError();
@@ -702,7 +700,8 @@ contract UnderwriterVault is
         uint256 collateralAmt = l.isCall
             ? args.size
             : args.size.mul(args.strike);
-        if ((collateralAmt + mintingFee) >= _availableAssets())
+        // todo: mintingFee is a transit item
+        if (collateralAmt >= IERC20(_asset()).balanceOf(address(this)))
             revert Vault__InsufficientFunds();
 
         uint256 cLevel = _getCLevel(collateralAmt);
@@ -810,7 +809,6 @@ contract UnderwriterVault is
             listingAddr = _getFactoryAddress(strike, maturity);
             settlementValue = IPool(listingAddr).settle(address(this));
             exerciseValue = unlockedCollateral - settlementValue;
-            l.totalAssets -= exerciseValue;
         }
     }
 
