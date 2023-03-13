@@ -251,7 +251,7 @@ library OptionMath {
     function scaleDecimals(
         uint256 value,
         uint256 decimals
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256) {
         if (decimals == 18) return value;
         if (decimals > 18) return value * (10 ** (decimals - 18));
 
