@@ -36,9 +36,13 @@ describe('Pool', () => {
 
     const oracleAdapter = await deployMockContract(deployer as any, [
       'function quote(address,address) external view returns (uint256)',
+      'function quoteFrom(address,address,uint256) external view returns (uint256)',
+      'function upsertPair(address,address) external',
     ]);
 
     await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
+    await oracleAdapter.mock.quoteFrom.returns(parseUnits('1000', 18));
+    await oracleAdapter.mock.upsertPair.returns();
 
     const p = await PoolUtil.deploy(
       deployer,
@@ -980,7 +984,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.exercise(trader.address);
@@ -1049,7 +1053,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndSell);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settle(trader.address);
@@ -1128,7 +1132,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('1250', 18));
+      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settlePosition(pKey);
