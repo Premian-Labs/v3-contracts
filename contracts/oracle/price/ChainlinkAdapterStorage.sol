@@ -19,4 +19,18 @@ library ChainlinkAdapterStorage {
             l.slot := slot
         }
     }
+
+    function formatRoundId(
+        uint16 phaseId,
+        uint64 aggregatorRoundId
+    ) internal pure returns (uint80) {
+        return uint80((uint256(phaseId) << 64) | aggregatorRoundId);
+    }
+
+    function parseRoundId(
+        uint256 roundId
+    ) internal pure returns (uint16 phaseId, uint64 aggregatorRoundId) {
+        phaseId = uint16(roundId >> 64);
+        aggregatorRoundId = uint64(roundId);
+    }
 }
