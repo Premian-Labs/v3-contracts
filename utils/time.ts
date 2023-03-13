@@ -1,7 +1,10 @@
+import { network } from 'hardhat';
+
 import {
   SnapshotRestorer,
   takeSnapshot,
   time,
+  reset,
 } from '@nomicfoundation/hardhat-network-helpers';
 
 import moment from 'moment-timezone';
@@ -101,8 +104,15 @@ export function revertToSnapshotAfterEach(
   });
 }
 
-export async function setBlockNumber(jsonRpcUrl: string, blockNumber: number) {
-  await ethers.provider.send('hardhat_reset', [
-    { forking: { jsonRpcUrl, blockNumber } },
-  ]);
+export async function setHardhat(jsonRpcUrl: string, blockNumber: number) {
+  await reset(jsonRpcUrl, blockNumber);
+}
+
+export async function resetHardhat() {
+  if ((network as any).config.forking) {
+    const { url: jsonRpcUrl, blockNumber } = (network as any).config.forking;
+    await setHardhat(jsonRpcUrl, blockNumber);
+  } else {
+    await reset();
+  }
 }

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { BigNumber, utils } from 'ethers';
 import { expect } from 'chai';
 
-import { now } from './time';
+import { latest } from './time';
 import { Token, tokens } from './addresses';
 
 export const getLastPrice = async (
@@ -107,7 +107,7 @@ export async function fetchPrice(
 ): Promise<number> {
   if (!cache[address]) cache[address] = {};
   if (!cache[address][target]) {
-    if (target == 0) target = await now();
+    if (target == 0) target = await latest();
     const price = await getPrice(network, address, target);
     cache[address][target] = price;
   }

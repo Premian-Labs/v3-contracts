@@ -70,7 +70,7 @@ export default {
     hardhat: {
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-        blockNumber: 16600000,
+        blockNumber: 16597500,
       },
       allowUnlimitedContractSize: true,
       blockGasLimit: 180000000000,

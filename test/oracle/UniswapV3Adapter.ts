@@ -1,7 +1,10 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+
+import { bnToAddress } from '@solidstate/library';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+
 import {
   IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
@@ -16,21 +19,11 @@ import {
   validateQuote,
 } from '../../utils/defillama';
 
-import { ONE_ETHER } from '../../utils/constants';
-import {
-  increase,
-  revertToSnapshotAfterEach,
-  setBlockNumber,
-} from '../../utils/time';
 import { UNISWAP_V3_FACTORY, Token, tokens } from '../../utils/addresses';
+import { ONE_ETHER } from '../../utils/constants';
+import { increase, resetHardhat, setHardhat } from '../../utils/time';
 
-import { bnToAddress } from '@solidstate/library';
-
-const { API_KEY_ALCHEMY } = process.env;
-const jsonRpcUrl = `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`;
-const blockNumber = 16597500; // Fri Feb 10 2023 09:35:59 GMT+0000
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
-
 const period = 600;
 const cardinalityPerMinute = 4;
 
@@ -62,16 +55,8 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
 }
 
 describe('UniswapV3Adapter', () => {
-  let deployer: SignerWithAddress;
-  let notOwner: SignerWithAddress;
-  let instance: UniswapV3Adapter;
-
-  before(async () => {
-    await setBlockNumber(jsonRpcUrl, blockNumber);
-  });
-
-  revertToSnapshotAfterEach(async () => {
-    [deployer, notOwner] = await ethers.getSigners();
+  async function deploy() {
+    const [deployer, notOwner] = await ethers.getSigners();
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
@@ -85,14 +70,41 @@ describe('UniswapV3Adapter', () => {
 
     await proxy.deployed();
 
-    instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
+    const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
 
     await instance.setPeriod(period);
     await instance.setCardinalityPerMinute(cardinalityPerMinute);
-  });
+
+    return { deployer, instance, notOwner };
+  }
+
+  async function deployAtBlock() {
+    const [deployer] = await ethers.getSigners();
+
+    const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
+      UNISWAP_V3_FACTORY,
+    );
+
+    await implementation.deployed();
+
+    const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+      implementation.address,
+    );
+
+    await proxy.deployed();
+
+    const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
+
+    await instance.setPeriod(period);
+    await instance.setCardinalityPerMinute(cardinalityPerMinute);
+
+    return { deployer, instance };
+  }
 
   describe('#isPairSupported', () => {
     it('should return false if pair is not supported by adapter', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [isCached, _] = await instance.isPairSupported(
         tokens.WETH.address,
         tokens.DAI.address,
@@ -102,6 +114,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should return false if path for pair does not exist', async () => {
+      const { instance } = await loadFixture(deploy);
+
       const [_, hasPath] = await instance.isPairSupported(
         tokens.WETH.address,
         bnToAddress(BigNumber.from(0)),
@@ -113,6 +127,8 @@ describe('UniswapV3Adapter', () => {
 
   describe('#upsertPair', () => {
     it('should revert if pair cannot be supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.upsertPair(
           bnToAddress(BigNumber.from(0)),
@@ -135,6 +151,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should not fail if called multiple times for same pair', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
 
       const [isCached, _] = await instance.isPairSupported(
@@ -150,6 +168,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should not insert pool if the cardinality is not at target', async () => {
+      const { deployer, instance } = await loadFixture(deploy);
+
       const pool500 = await IUniswapV3Factory__factory.connect(
         UNISWAP_V3_FACTORY,
         deployer,
@@ -192,6 +212,8 @@ describe('UniswapV3Adapter', () => {
 
   describe('#quote', async () => {
     it('should revert if pair is not supported', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.quote(tokens.WETH.address, bnToAddress(BigNumber.from(0))),
       ).to.be.revertedWithCustomError(
@@ -201,6 +223,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should revert if observation cardinality must be increased', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await instance.setCardinalityPerMinute(20);
 
       await expect(
@@ -212,6 +236,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should find path if pair has not been added', async () => {
+      const { deployer, instance } = await loadFixture(deploy);
+
       // must increase cardinality to 121 for pools
       await IUniswapV3Pool__factory.connect(
         '0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8',
@@ -232,6 +258,8 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should return quote using correct denomination', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let tokenIn = tokens.WETH; // 18 decimals
       let tokenOut = tokens.DAI; // 18 decimals
 
@@ -271,60 +299,10 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
-  describe('#quoteFrom', () => {
-    beforeEach(async () => {
-      await setBlockNumber(jsonRpcUrl, 16597040);
-
-      [deployer] = await ethers.getSigners();
-
-      const implementation = await new UniswapV3Adapter__factory(
-        deployer,
-      ).deploy(UNISWAP_V3_FACTORY);
-
-      await implementation.deployed();
-
-      const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
-        implementation.address,
-      );
-
-      await proxy.deployed();
-
-      instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
-
-      await instance.setPeriod(600);
-      await instance.setCardinalityPerMinute(4);
-    });
-
-    after(async () => {
-      await setBlockNumber(jsonRpcUrl, blockNumber);
-    });
-
-    it('should revert if the oldest observation is less the TWAP period', async () => {
-      await instance.upsertPair(tokens.UNI.address, tokens.AAVE.address);
-
-      await expect(
-        instance.quoteFrom(tokens.UNI.address, tokens.AAVE.address, target),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'UniswapV3Adapter__InsufficientObservationPeriod',
-      );
-
-      // oldest observation is ~490 seconds
-      // fast-forward so that the oldest observation is >= 600 seconds
-      await increase(120);
-
-      expect(
-        await instance.quoteFrom(
-          tokens.UNI.address,
-          tokens.AAVE.address,
-          target,
-        ),
-      );
-    });
-  });
-
   describe('#poolsForPair', () => {
     it('should return pools for pair', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let pools = await instance.poolsForPair(
         tokens.WETH.address,
         tokens.DAI.address,
@@ -349,17 +327,20 @@ describe('UniswapV3Adapter', () => {
 
   describe('#factory', () => {
     it('should return correct UniswapV3 factory address', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.factory()).to.be.eq(UNISWAP_V3_FACTORY);
     });
   });
 
   describe('#period', () =>
     it('should return correct period', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.period()).to.be.eq(period);
     }));
 
   describe('#cardinalityPerMinute', () => {
     it('should return correct cardinality per minute', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.cardinalityPerMinute()).to.be.eq(
         cardinalityPerMinute,
       );
@@ -368,18 +349,21 @@ describe('UniswapV3Adapter', () => {
 
   describe('#gasPerCardinality', () => {
     it('should return correct gas per cardinality', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.gasPerCardinality()).to.be.eq(22250);
     });
   });
 
   describe('#gasCostToSupportPool', () => {
     it('should return correct gas cost to add support for a new pool', async () => {
+      const { instance } = await loadFixture(deploy);
       expect(await instance.gasCostToSupportPool()).to.be.eq(30000);
     });
   });
 
   describe('#supportedFeeTiers', () => {
     it('should return supported fee tiers', async () => {
+      const { instance } = await loadFixture(deploy);
       const feeTiers = await instance.supportedFeeTiers();
       expect(feeTiers).to.be.deep.eq([500, 3000, 10000]);
     });
@@ -389,12 +373,14 @@ describe('UniswapV3Adapter', () => {
     const newPeriod = 800;
 
     it('should revert if not called by owner', async () => {
+      const { instance, notOwner } = await loadFixture(deploy);
       await expect(
         instance.connect(notOwner).setPeriod(newPeriod),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
     it('should set period to new value', async () => {
+      const { instance } = await loadFixture(deploy);
       await instance.setPeriod(newPeriod);
       expect(await instance.period()).to.be.eq(newPeriod);
     });
@@ -404,6 +390,8 @@ describe('UniswapV3Adapter', () => {
     const newCardinalityPerMinute = 8;
 
     it('should revert if not called by owner', async () => {
+      const { instance, notOwner } = await loadFixture(deploy);
+
       await expect(
         instance
           .connect(notOwner)
@@ -412,6 +400,7 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should set cardinality per minute to new value', async () => {
+      const { instance } = await loadFixture(deploy);
       await instance.setCardinalityPerMinute(newCardinalityPerMinute);
       expect(await instance.cardinalityPerMinute()).to.be.eq(
         newCardinalityPerMinute,
@@ -423,12 +412,15 @@ describe('UniswapV3Adapter', () => {
     const newGasPerCardinality = 10000;
 
     it('should revert if not called by owner', async () => {
+      const { instance, notOwner } = await loadFixture(deploy);
       await expect(
         instance.connect(notOwner).setGasPerCardinality(newGasPerCardinality),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
     it('should revert if gas per cardinality is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.setGasPerCardinality(0),
       ).to.be.revertedWithCustomError(
@@ -438,6 +430,7 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should set gas per cardinality to new value', async () => {
+      const { instance } = await loadFixture(deploy);
       await instance.setGasPerCardinality(newGasPerCardinality);
       expect(await instance.gasPerCardinality()).to.be.eq(newGasPerCardinality);
     });
@@ -447,12 +440,15 @@ describe('UniswapV3Adapter', () => {
     const newGasToSupportPool = 15000;
 
     it('should revert if not called by owner', async () => {
+      const { instance, notOwner } = await loadFixture(deploy);
       await expect(
         instance.connect(notOwner).setGasCostToSupportPool(newGasToSupportPool),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
     it('should revert if gas cost to support pool is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.setGasCostToSupportPool(0),
       ).to.be.revertedWithCustomError(
@@ -462,6 +458,7 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should set gas cost to support pool to new value', async () => {
+      const { instance } = await loadFixture(deploy);
       await instance.setGasCostToSupportPool(newGasToSupportPool);
       expect(await instance.gasCostToSupportPool()).to.be.eq(
         newGasToSupportPool,
@@ -473,12 +470,14 @@ describe('UniswapV3Adapter', () => {
     const newFeeTier = 100;
 
     it('should revert if not called by owner', async () => {
+      const { instance, notOwner } = await loadFixture(deploy);
       await expect(
         instance.connect(notOwner).insertFeeTier(newFeeTier),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
     it('should revert if fee tier is invalid', async () => {
+      const { instance } = await loadFixture(deploy);
       await expect(instance.insertFeeTier(15000)).to.be.revertedWithCustomError(
         instance,
         'UniswapV3Adapter__InvalidFeeTier',
@@ -486,6 +485,7 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should revert if fee tier exists', async () => {
+      const { instance } = await loadFixture(deploy);
       await expect(instance.insertFeeTier(10000)).to.be.revertedWithCustomError(
         instance,
         'UniswapV3Adapter__FeeTierExists',
@@ -493,6 +493,7 @@ describe('UniswapV3Adapter', () => {
     });
 
     it('should successfully add new fee tier', async () => {
+      const { instance } = await loadFixture(deploy);
       await instance.insertFeeTier(100);
       const feeTiers = await instance.supportedFeeTiers();
       expect(feeTiers).to.be.deep.eq([500, 3000, 10000, 100]);
@@ -501,9 +502,12 @@ describe('UniswapV3Adapter', () => {
 
   for (let i = 0; i < pools.length; i++) {
     const { tokenIn, tokenOut } = pools[i];
+    let instance: UniswapV3Adapter;
 
     describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
       beforeEach(async () => {
+        const f = await loadFixture(deploy);
+        instance = f.instance;
         await instance.upsertPair(tokenIn.address, tokenOut.address);
       });
 
@@ -576,4 +580,42 @@ describe('UniswapV3Adapter', () => {
       });
     });
   }
+
+  describe('#quoteFrom', () => {
+    before(async () => {
+      await setHardhat(
+        `https://eth-mainnet.alchemyapi.io/v2/${process.env.API_KEY_ALCHEMY}`,
+        16597040,
+      );
+    });
+
+    after(async () => {
+      await resetHardhat();
+    });
+
+    it('should revert if the oldest observation is less the TWAP period', async () => {
+      const { instance } = await loadFixture(deployAtBlock);
+
+      await instance.upsertPair(tokens.UNI.address, tokens.AAVE.address);
+
+      await expect(
+        instance.quoteFrom(tokens.UNI.address, tokens.AAVE.address, target),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InsufficientObservationPeriod',
+      );
+
+      // oldest observation is ~490 seconds
+      // fast-forward so that the oldest observation is >= 600 seconds
+      await increase(120);
+
+      expect(
+        await instance.quoteFrom(
+          tokens.UNI.address,
+          tokens.AAVE.address,
+          target,
+        ),
+      );
+    });
+  });
 });
