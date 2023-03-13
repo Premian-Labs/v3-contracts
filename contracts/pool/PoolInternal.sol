@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
@@ -19,6 +18,7 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
 
+import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
@@ -32,7 +32,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
-    using DoublyLinkedList for DoublyLinkedList.Uint256List;
+    using DoublyLinkedListUD60x18 for DoublyLinkedListUD60x18.UD60x18List;
     using PoolStorage for PoolStorage.Layout;
     using PoolStorage for TradeQuote;
     using Position for Position.Key;
@@ -127,7 +127,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.liquidityRate,
             l.marketPrice,
             l.currentTick,
-            UD60x18.wrap(l.tickIndex.next(l.currentTick.unwrap())),
+            l.tickIndex.next(l.currentTick),
             isBuy
         );
 
@@ -186,10 +186,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 // Set new lower and upper bounds
                 pricing.lower = isBuy
                     ? pricing.upper
-                    : UD60x18.wrap(l.tickIndex.prev(pricing.lower.unwrap()));
-                pricing.upper = UD60x18.wrap(
-                    l.tickIndex.next(pricing.lower.unwrap())
-                );
+                    : l.tickIndex.prev(pricing.lower);
+                pricing.upper = l.tickIndex.next(pricing.lower);
 
                 if (pricing.upper == ZERO) revert Pool__InsufficientLiquidity();
 
@@ -802,8 +800,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     // The trade will require crossing into the next tick range
                     if (
                         args.isBuy &&
-                        l.tickIndex.next(l.currentTick.unwrap()) >=
-                        Pricing.MAX_TICK_PRICE.unwrap()
+                        l.tickIndex.next(l.currentTick) >=
+                        Pricing.MAX_TICK_PRICE
                     ) revert Pool__InsufficientAskLiquidity();
 
                     if (!args.isBuy && l.currentTick <= Pricing.MIN_TICK_PRICE)
@@ -884,7 +882,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.liquidityRate,
                 l.marketPrice,
                 currentTick,
-                UD60x18.wrap(l.tickIndex.next(currentTick.unwrap())),
+                l.tickIndex.next(currentTick),
                 isBuy
             );
     }
@@ -1512,13 +1510,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 left = l.currentTick;
 
         while (left != ZERO && left > price) {
-            left = UD60x18.wrap(l.tickIndex.prev(left.unwrap()));
+            left = l.tickIndex.prev(left);
         }
 
-        UD60x18 next = UD60x18.wrap(l.tickIndex.next(left.unwrap()));
+        UD60x18 next = l.tickIndex.next(left);
         while (left != ZERO && next <= price) {
             left = next;
-            next = UD60x18.wrap(l.tickIndex.next(left.unwrap()));
+            next = l.tickIndex.next(left);
         }
 
         if (left == ZERO) revert Pool__TickNotFound();
@@ -1545,7 +1543,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (l.tickIndex.contains(price.unwrap())) return (l.ticks[price], true);
+        if (l.tickIndex.contains(price)) return (l.ticks[price], true);
 
         return (
             Tick({
@@ -1574,8 +1572,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tickFound) return tick;
 
         if (
-            !l.tickIndex.contains(priceBelow.unwrap()) ||
-            l.tickIndex.next(priceBelow.unwrap()) <= price.unwrap()
+            !l.tickIndex.contains(priceBelow) ||
+            l.tickIndex.next(priceBelow) <= price
         ) revert Pool__InvalidBelowPrice();
 
         tick = Tick({
@@ -1586,7 +1584,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             counter: 0
         });
 
-        l.tickIndex.insertAfter(priceBelow.unwrap(), price.unwrap());
+        l.tickIndex.insertAfter(priceBelow, price);
         l.ticks[price] = tick;
 
         return tick;
@@ -1596,7 +1594,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _removeTickIfNotActive(UD60x18 price) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        if (!l.tickIndex.contains(price.unwrap())) return;
+        if (!l.tickIndex.contains(price)) return;
 
         Tick storage tick = l.ticks[price];
 
@@ -1608,9 +1606,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (tick.delta != iZERO) revert Pool__TickDeltaNotZero();
 
             if (price == l.currentTick) {
-                UD60x18 newCurrentTick = UD60x18.wrap(
-                    l.tickIndex.prev(price.unwrap())
-                );
+                UD60x18 newCurrentTick = l.tickIndex.prev(price);
 
                 if (newCurrentTick < Pricing.MIN_TICK_PRICE)
                     revert Pool__TickOutOfRange();
@@ -1618,7 +1614,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.currentTick = newCurrentTick;
             }
 
-            l.tickIndex.remove(price.unwrap());
+            l.tickIndex.remove(price);
             delete l.ticks[price];
         }
     }
@@ -1773,9 +1769,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (delta > iZERO) {
             uint256 crossings;
 
-            while (
-                l.tickIndex.next(l.currentTick.unwrap()) < marketPrice.unwrap()
-            ) {
+            while (l.tickIndex.next(l.currentTick) < marketPrice) {
                 _cross(true);
                 crossings++;
             }
@@ -1804,9 +1798,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (isBuy) {
-            UD60x18 right = UD60x18.wrap(
-                l.tickIndex.next(l.currentTick.unwrap())
-            );
+            UD60x18 right = l.tickIndex.next(l.currentTick);
             if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange();
             l.currentTick = right;
         }
@@ -1829,9 +1821,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
                 revert Pool__TickOutOfRange();
-            l.currentTick = UD60x18.wrap(
-                l.tickIndex.prev(l.currentTick.unwrap())
-            );
+            l.currentTick = l.tickIndex.prev(l.currentTick);
         }
     }
 
@@ -1898,7 +1888,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         upper = ONE;
 
         UD60x18 current = l.currentTick;
-        UD60x18 right = UD60x18.wrap(l.tickIndex.next(current.unwrap()));
+        UD60x18 right = l.tickIndex.next(current);
 
         if (l.liquidityRate == ZERO) {
             // applies whenever the pool is empty or the last active order that
@@ -1910,7 +1900,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.ticks[right].delta.neg() > iZERO &&
             l.liquidityRate == l.ticks[right].delta.neg().intoUD60x18() &&
             right == l.marketPrice &&
-            l.tickIndex.next(right.unwrap()) != 0
+            l.tickIndex.next(right) != ZERO
         ) {
             // bid-bound market price check
             // liquidity_rate > 0
@@ -1920,12 +1910,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             //        ^
             //     current
             lower = right;
-            upper = UD60x18.wrap(l.tickIndex.next(right.unwrap()));
+            upper = l.tickIndex.next(right);
         } else if (
             l.ticks[current].delta.neg() > iZERO &&
             l.liquidityRate == l.ticks[current].delta.neg().intoUD60x18() &&
             current == l.marketPrice &&
-            l.tickIndex.prev(current.unwrap()) != 0
+            l.tickIndex.prev(current) != ZERO
         ) {
             //  ask-bound market price check
             //  liquidity_rate > 0
@@ -1934,7 +1924,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // |------[----]------|
             //        ^
             //     current
-            lower = UD60x18.wrap(l.tickIndex.prev(current.unwrap()));
+            lower = l.tickIndex.prev(current);
             upper = current;
         }
     }

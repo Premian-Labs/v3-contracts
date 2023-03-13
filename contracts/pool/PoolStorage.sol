@@ -3,10 +3,10 @@
 pragma solidity ^0.8.0;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
-import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
+import {DoublyLinkedListUD60x18} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -45,7 +45,7 @@ library PoolStorage {
         // Whether its a call or put pool
         bool isCallPool;
         // Index of all existing ticks sorted
-        DoublyLinkedList.Uint256List tickIndex;
+        DoublyLinkedListUD60x18.UD60x18List tickIndex;
         mapping(UD60x18 => IPoolInternal.Tick) ticks;
         UD60x18 marketPrice;
         UD60x18 globalFeeRate;
