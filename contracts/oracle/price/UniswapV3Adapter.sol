@@ -5,9 +5,11 @@ pragma solidity ^0.8.0;
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
+
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
-import {IUniswapV3Factory, UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
+import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles and

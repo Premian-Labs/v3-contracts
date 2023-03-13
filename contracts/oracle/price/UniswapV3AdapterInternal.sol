@@ -4,10 +4,11 @@ pragma solidity ^0.8.0;
 
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
-import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
-import {PoolAddress} from "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
+
+import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
+import {IUniswapV3Pool} from "../../vendor/uniswap/IUniswapV3Pool.sol";
+import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
+import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";

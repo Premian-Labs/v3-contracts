@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
