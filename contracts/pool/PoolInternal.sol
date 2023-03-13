@@ -1241,7 +1241,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (UD60x18) {
         if (size == ZERO) return ZERO;
 
-        UD60x18 spot = l.fetchQuote();
+        UD60x18 spot = l.fetchAndCacheQuote();
         UD60x18 strike = l.strike;
         bool isCall = l.isCallPool;
 

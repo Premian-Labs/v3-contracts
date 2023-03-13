@@ -1,10 +1,15 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
+
+import { bnToAddress } from '@solidstate/library';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
+  ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
 
 import {
@@ -12,12 +17,11 @@ import {
   getPrice,
 } from '../../utils/defillama';
 
-import { ONE_ETHER } from '../../utils/constants';
-import { latest } from '../../utils/time';
 import { feeds, Token, tokens } from '../../utils/addresses';
+import { ONE_ETHER } from '../../utils/constants';
+import { increaseTo, latest } from '../../utils/time';
 
-import { bnToAddress } from '@solidstate/library';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 enum PricingPath {
   NONE,
@@ -29,6 +33,14 @@ enum PricingPath {
   A_USD_ETH_B,
   A_ETH_USD_B,
   TOKEN_USD_BTC_WBTC,
+}
+
+enum FailureMode {
+  NONE,
+  GET_ROUND_DATA_REVERT_WITH_REASON,
+  GET_ROUND_DATA_REVERT,
+  LAST_ROUND_DATA_REVERT_WITH_REASON,
+  LAST_ROUND_DATA_REVERT,
 }
 
 let paths: { path: PricingPath; tokenIn: Token; tokenOut: Token }[][];
@@ -142,6 +154,26 @@ describe('ChainlinkAdapter', () => {
     return { deployer, instance };
   }
 
+  async function deployStub() {
+    const { deployer, instance } = await deploy();
+
+    const stub = await new ChainlinkOraclePriceStub__factory(deployer).deploy();
+
+    const stubCoin = bnToAddress(BigNumber.from(100));
+
+    await instance.batchRegisterFeedMappings([
+      {
+        token: stubCoin,
+        denomination: tokens.CHAINLINK_USD.address,
+        feed: stub.address,
+      },
+    ]);
+
+    await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+    return { deployer, instance, stub, stubCoin };
+  }
+
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
       const { instance } = await loadFixture(deploy);
@@ -204,6 +236,49 @@ describe('ChainlinkAdapter', () => {
       expect(isCached).to.be.true;
 
       await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
+    });
+
+    it('should only emit UpdatedPathForPair when path is updated', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      let [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.not.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
+
+      expect(isCached).to.be.true;
+
+      await instance.batchRegisterFeedMappings([
+        {
+          token: tokens.DAI.address,
+          denomination: tokens.CHAINLINK_ETH.address,
+          feed: bnToAddress(BigNumber.from(0)),
+        },
+      ]);
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      ).to.emit(instance, 'UpdatedPathForPair');
+
+      [isCached, _] = await instance.isPairSupported(
+        tokens.WETH.address,
+        tokens.DAI.address,
+      );
     });
   });
 
@@ -269,74 +344,48 @@ describe('ChainlinkAdapter', () => {
     });
   });
 
-  describe('#tryQuote', async () => {
-    it('should revert if pair not already supported and there is no feed', async () => {
-      const { instance } = await loadFixture(deploy);
+  describe('#quote', async () => {
+    it('should catch revert', async () => {
+      const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000],
+        [target - 90000],
+      );
 
       await expect(
-        instance.tryQuote(tokens.EUL.address, tokens.DAI.address),
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.LAST_ROUND_DATA_REVERT,
+        [100000000000],
+        [target - 90000],
+      );
+
+      await expect(
+        instance.quote(stubCoin, tokens.CHAINLINK_USD.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'OracleAdapter__PairCannotBeSupported',
+        'ChainlinkAdapter__LatestRoundDataCallReverted',
       );
     });
 
-    it('should add pair if they are not already supported', async () => {
-      const { instance } = await loadFixture(deploy);
-
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      let [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.false;
-
-      await instance.tryQuote(tokenIn.address, tokenOut.address);
-
-      [isCached, _] = await instance.isPairSupported(
-        tokens.WETH.address,
-        tokens.DAI.address,
-      );
-
-      expect(isCached).to.be.true;
-    });
-
-    it('should return quote for pair', async () => {
-      const { instance } = await loadFixture(deploy);
-
-      const tokenIn = tokens.WETH;
-      const tokenOut = tokens.DAI;
-
-      const quote = await instance.callStatic['tryQuote(address,address)'](
-        tokenIn.address,
-        tokenOut.address,
-      );
-
-      const coingeckoPrice = await getPriceBetweenTokens(
-        'ethereum',
-        tokenIn,
-        tokenOut,
-      );
-
-      const expected = convertPriceToBigNumberWithDecimals(coingeckoPrice, 18);
-
-      validateQuote(quote, expected);
-    });
-  });
-
-  describe('#quote', async () => {
-    it('should revert if pair is not supported yet', async () => {
+    it('should revert if pair is not supported', async () => {
       const { instance } = await loadFixture(deploy);
 
       await expect(
-        instance.quote(tokens.WETH.address, tokens.DAI.address),
+        instance.quote(tokens.WETH.address, bnToAddress(BigNumber.from(0))),
       ).to.be.revertedWithCustomError(
         instance,
         'OracleAdapter__PairNotSupported',
       );
+    });
+
+    it('should find path if pair has not been added', async () => {
+      const { instance } = await loadFixture(deploy);
+      expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
     });
 
     it('should return quote using correct denomination', async () => {
@@ -364,6 +413,254 @@ describe('ChainlinkAdapter', () => {
       invertedQuote = await instance.quote(tokenOut.address, tokenIn.address);
 
       expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
+    });
+  });
+
+  describe('#quoteFrom', async () => {
+    it('should catch revert', async () => {
+      const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+      await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWith('reverted with reason');
+
+      await stub.setup(
+        FailureMode.GET_ROUND_DATA_REVERT,
+        [100000000000, 100000000000, 100000000000],
+        [target + 3, target + 2, target + 1],
+      );
+
+      await expect(
+        instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'ChainlinkAdapter__GetRoundDataCallReverted',
+      );
+    });
+
+    it('should revert if target is 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await expect(
+        instance.quoteFrom(tokens.WETH.address, tokens.DAI.address, 0),
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
+    });
+
+    it('should revert if target > block.timestamp', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      const blockTimestamp = await latest();
+
+      await expect(
+        instance.quoteFrom(
+          tokens.WETH.address,
+          tokens.DAI.address,
+          blockTimestamp + 1,
+        ),
+      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
+    });
+
+    const stubCoin = bnToAddress(BigNumber.from(100));
+
+    describe('#when price is stale', async () => {
+      it('should revert when called within 12 hours of target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
+
+        await expect(
+          instance.quoteFrom(stubCoin, tokens.CHAINLINK_USD.address, target),
+        ).to.be.revertedWithCustomError(
+          instance,
+          'ChainlinkAdapter__PriceAfterTargetIsStale',
+        );
+      });
+
+      it('should return stale price when called 12 hours after target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await increaseTo(target + 43200);
+        await stub.setup(FailureMode.NONE, [100000000000], [target - 90000]);
+
+        const stalePrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(stalePrice.mul(1e10)); // convert to 1E18
+      });
+    });
+
+    describe('#when price is fresh', async () => {
+      it('should return price closest to target when called within 12 hours of target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
+        let freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [100000000000, 200000000000, 300000000000],
+          [target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 50, target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 100, target + 50, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000],
+          [target - 100, target - 50],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+      });
+
+      it('should return price closest to target when called 12 hours after target time', async () => {
+        const { instance, stub, stubCoin } = await loadFixture(deployStub);
+
+        await increaseTo(target + 43200);
+        await stub.setup(FailureMode.NONE, [1000000000000], [target + 100]);
+        let freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [100000000000, 200000000000, 300000000000],
+          [target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 50, target + 100, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(0);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000, 200000000000, 300000000000],
+          [target - 100, target + 50, target + 300, target + 500],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+
+        await stub.setup(
+          FailureMode.NONE,
+          [50000000000, 100000000000],
+          [target - 100, target - 50],
+        );
+
+        freshPrice = await stub.price(1);
+
+        expect(
+          await instance.quoteFrom(
+            stubCoin,
+            tokens.CHAINLINK_USD.address,
+            target,
+          ),
+        ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+      });
     });
   });
 
@@ -428,7 +725,7 @@ describe('ChainlinkAdapter', () => {
               let _tokenIn = Object.assign({}, tokenIn);
               let _tokenOut = Object.assign({}, tokenOut);
 
-              let network = 'ethereum';
+              let networks = { tokenIn: 'ethereum', tokenOut: 'ethereum' };
 
               const quote = await instance.quote(
                 _tokenIn.address,
@@ -436,27 +733,27 @@ describe('ChainlinkAdapter', () => {
               );
 
               if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
-                network = 'coingecko';
+                networks.tokenIn = 'coingecko';
                 _tokenIn.address = 'ethereum';
               }
 
               if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
-                network = 'coingecko';
-                _tokenIn.address = 'ethereum';
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'ethereum';
               }
 
               if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
-                network = 'coingecko';
+                networks.tokenIn = 'coingecko';
                 _tokenIn.address = 'bitcoin';
               }
 
               if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
-                network = 'coingecko';
+                networks.tokenOut = 'coingecko';
                 _tokenOut.address = 'bitcoin';
               }
 
               const coingeckoPrice = await getPriceBetweenTokens(
-                network,
+                networks,
                 _tokenIn,
                 _tokenOut,
               );
@@ -469,13 +766,66 @@ describe('ChainlinkAdapter', () => {
               validateQuote(quote, expected);
             });
           });
+
+          describe('#quoteFrom', async () => {
+            it('should return quote for pair from target', async () => {
+              // although the adapter will attepmt to return the price closest to the target
+              // the time of the update will likely be before or after the target.
+              TRESHOLD_PERCENTAGE = 4;
+
+              let _tokenIn = Object.assign({}, tokenIn);
+              let _tokenOut = Object.assign({}, tokenOut);
+
+              let networks = { tokenIn: 'ethereum', tokenOut: 'ethereum' };
+
+              const quoteFrom = await instance.quoteFrom(
+                _tokenIn.address,
+                _tokenOut.address,
+                target,
+              );
+
+              if (tokenIn.symbol === tokens.CHAINLINK_ETH.symbol) {
+                networks.tokenIn = 'coingecko';
+                _tokenIn.address = 'ethereum';
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_ETH.symbol) {
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'ethereum';
+              }
+
+              if (tokenIn.symbol === tokens.CHAINLINK_BTC.symbol) {
+                networks.tokenIn = 'coingecko';
+                _tokenIn.address = 'bitcoin';
+              }
+
+              if (tokenOut.symbol === tokens.CHAINLINK_BTC.symbol) {
+                networks.tokenOut = 'coingecko';
+                _tokenOut.address = 'bitcoin';
+              }
+
+              const coingeckoPrice = await getPriceBetweenTokens(
+                networks,
+                _tokenIn,
+                _tokenOut,
+                target,
+              );
+
+              const expected = convertPriceToBigNumberWithDecimals(
+                coingeckoPrice,
+                18,
+              );
+
+              validateQuote(quoteFrom, expected);
+            });
+          });
         });
       }
     });
   }
 });
 
-const TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
+let TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
 
 function validateQuote(quote: BigNumber, expected: BigNumber) {
   const threshold = expected.mul(TRESHOLD_PERCENTAGE * 10).div(100 * 10);
@@ -494,30 +844,44 @@ function validateQuote(quote: BigNumber, expected: BigNumber) {
 }
 
 async function getPriceBetweenTokens(
-  network: string,
-  tokenA: Token,
-  tokenB: Token,
+  networks: { tokenIn: string; tokenOut: string },
+  tokenIn: Token,
+  tokenOut: Token,
+  target: number = 0,
 ) {
-  if (tokenA.address === tokens.CHAINLINK_USD.address) {
-    return 1 / (await fetchPrice(network, tokenB.address));
+  if (tokenIn.address === tokens.CHAINLINK_USD.address) {
+    return 1 / (await fetchPrice(networks.tokenOut, tokenOut.address, target));
   }
-  if (tokenB.address === tokens.CHAINLINK_USD.address) {
-    return await fetchPrice(network, tokenA.address);
+  if (tokenOut.address === tokens.CHAINLINK_USD.address) {
+    return await fetchPrice(networks.tokenIn, tokenIn.address, target);
   }
 
-  let tokenAPrice = await fetchPrice(network, tokenA.address);
-  let tokenBPrice = await fetchPrice(network, tokenB.address);
+  let tokenInPrice = await fetchPrice(
+    networks.tokenIn,
+    tokenIn.address,
+    target,
+  );
+  let tokenOutPrice = await fetchPrice(
+    networks.tokenOut,
+    tokenOut.address,
+    target,
+  );
 
-  return tokenAPrice / tokenBPrice;
+  return tokenInPrice / tokenOutPrice;
 }
 
-let priceCache: Map<string, number> = new Map();
+let cache: { [address: string]: { [target: number]: number } } = {};
 
-async function fetchPrice(network: string, address: string): Promise<number> {
-  if (!priceCache.has(address)) {
-    const timestamp = await latest();
-    const price = await getPrice(network, address, timestamp);
-    priceCache.set(address, price);
+async function fetchPrice(
+  network: string,
+  address: string,
+  target: number = 0,
+): Promise<number> {
+  if (!cache[address]) cache[address] = {};
+  if (!cache[address][target]) {
+    if (target == 0) target = await latest();
+    const price = await getPrice(network, address, target);
+    cache[address][target] = price;
   }
-  return priceCache.get(address)!;
+  return cache[address][target];
 }

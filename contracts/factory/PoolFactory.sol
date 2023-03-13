@@ -99,6 +99,8 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             k.oracleAdapter == address(0)
         ) revert PoolFactory__ZeroAddress();
 
+        IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
+
         _ensureOptionStrikeIsValid(k.strike, k.oracleAdapter, k.base, k.quote);
         _ensureOptionMaturityIsValid(k.maturity);
 
