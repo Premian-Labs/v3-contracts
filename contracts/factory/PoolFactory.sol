@@ -10,7 +10,7 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
-import "hardhat/console.sol";
+
 import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
