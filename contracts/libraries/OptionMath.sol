@@ -51,9 +51,9 @@ library OptionMath {
     /// @param x 59x18 fixed point representation of the input to the normal CDF
     /// @return result 59x18 fixed point representation of the value of the evaluated helper function
     function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
-        SD59x18 a = ALPHA.div(LAMBDA).mul(S1);
-        SD59x18 b = (S1.mul(x) + iONE).pow(LAMBDA.div(S1)) - iONE;
-        result = (a.mul(b) + S2.mul(x)).exp().mul(iTWO.ln().neg()).exp();
+        SD59x18 a = (ALPHA / LAMBDA) * S1;
+        SD59x18 b = (S1 * x + iONE).pow(LAMBDA / S1) - iONE;
+        result = ((a * b + S2 * x).exp() * (iTWO.ln().neg())).exp();
     }
 
     /// @notice Approximation of the normal CDF
@@ -68,9 +68,7 @@ library OptionMath {
         } else if (x >= iEIGHT) {
             result = iONE;
         } else {
-            result = ((iONE + helperNormal(x.neg())) - helperNormal(x)).div(
-                iTWO
-            );
+            result = ((iONE + helperNormal(x.neg())) - helperNormal(x)) / iTWO;
         }
     }
 
@@ -112,18 +110,17 @@ library OptionMath {
         UD60x18 volAnnualized,
         UD60x18 riskFreeRate
     ) internal pure returns (SD59x18 d1, SD59x18 d2) {
-        UD60x18 timeScaledRiskFreeRate = riskFreeRate.mul(timeToMaturity);
-        UD60x18 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(
-            timeToMaturity
-        );
-        UD60x18 timeScaledStd = volAnnualized.mul(timeToMaturity.sqrt());
-        SD59x18 lnSpot = spot.div(strike).intoSD59x18().ln();
+        UD60x18 timeScaledRiskFreeRate = riskFreeRate * timeToMaturity;
+        UD60x18 timeScaledVariance = (volAnnualized.powu(2) / TWO) *
+            timeToMaturity;
+        UD60x18 timeScaledStd = volAnnualized * timeToMaturity.sqrt();
+        SD59x18 lnSpot = (spot / strike).intoSD59x18().ln();
 
-        d1 = (lnSpot +
-            timeScaledVariance.intoSD59x18() +
-            timeScaledRiskFreeRate.intoSD59x18()).div(
-                timeScaledStd.intoSD59x18()
-            );
+        d1 =
+            (lnSpot +
+                timeScaledVariance.intoSD59x18() +
+                timeScaledRiskFreeRate.intoSD59x18()) /
+            timeScaledStd.intoSD59x18();
 
         d2 = d1 - timeScaledStd.intoSD59x18();
     }
@@ -159,8 +156,7 @@ library OptionMath {
 
         SD59x18 discountFactor;
         if (riskFreeRate > ZERO) {
-            discountFactor = riskFreeRate
-                .mul(timeToMaturity)
+            discountFactor = (riskFreeRate * timeToMaturity)
                 .intoSD59x18()
                 .exp();
         } else {
@@ -175,10 +171,10 @@ library OptionMath {
             riskFreeRate
         );
         SD59x18 sign = isCall ? iONE : iONE.neg();
-        SD59x18 a = _spot.mul(normalCdf(d1.mul(sign)));
-        SD59x18 b = _strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
+        SD59x18 a = _spot * normalCdf(d1 * sign);
+        SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
 
-        return (a - b).mul(sign).intoUD60x18();
+        return ((a - b) * sign).intoUD60x18();
     }
 
     /// @notice Returns true if the maturity day is Friday
@@ -214,9 +210,9 @@ library OptionMath {
         UD60x18 spot
     ) internal pure returns (UD60x18) {
         SD59x18 o = spot.intoSD59x18().log10().floor();
-        SD59x18 x = spot.intoSD59x18().mul(iTEN.pow(o.mul(iONE.neg()) - iONE));
+        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * iONE.neg() - iONE));
         UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
-        UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE.mul(f) : FIVE.mul(f);
+        UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE * f : FIVE * f;
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 
@@ -228,7 +224,7 @@ library OptionMath {
         UD60x18 spot,
         UD60x18 strike
     ) internal pure returns (UD60x18) {
-        return spot.div(strike).intoSD59x18().ln().abs().intoUD60x18();
+        return (spot / strike).intoSD59x18().ln().abs().intoUD60x18();
     }
 
     function initializationFee(
@@ -244,15 +240,10 @@ library OptionMath {
         uint256 tBase = timeToMaturity < NEAR_TERM_TTM
             ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
             : timeToMaturity;
-        UD60x18 scaledT = UD60x18
-            .wrap(tBase * 1e18)
-            .div(UD60x18.wrap(ONE_YEAR_TTM * 1e18))
-            .sqrt(); // ToDo : Check with Froggie
+        UD60x18 scaledT = (UD60x18.wrap(tBase * 1e18) /
+            UD60x18.wrap(ONE_YEAR_TTM * 1e18)).sqrt(); // ToDo : Check with Froggie
 
-        return
-            INITIALIZATION_ALPHA.mul(kBase + scaledT).mul(scaledT).mul(
-                FEE_SCALAR
-            );
+        return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
     }
 
     /// @notice Converts an 18 decimals number, to a number with given amount of decimals

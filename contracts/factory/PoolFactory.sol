@@ -70,7 +70,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             _fetchWrappedNativeUSDQuote()
         );
 
-        return fee.mul(discount).div(wrappedNativeUSDPrice);
+        return (fee * discount) / wrappedNativeUSDPrice;
     }
 
     /// @inheritdoc IPoolFactory
