@@ -36,7 +36,7 @@ interface IOracleAdapter {
     /// @dev Will revert if pair isn't supported
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
-    /// @return Spot price of base denominated in quote token
+    /// @return Spot price of base denominated in quote token | 18 decimals
     function quote(
         address tokenIn,
         address tokenOut
@@ -47,7 +47,7 @@ interface IOracleAdapter {
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @param target Reference timestamp of the quote
-    /// @return Historical price of base denominated in quote token
+    /// @return Historical price of base denominated in quote token | 18 decimals
     function quoteFrom(
         address tokenIn,
         address tokenOut,

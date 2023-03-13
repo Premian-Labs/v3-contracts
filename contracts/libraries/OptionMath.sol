@@ -48,8 +48,8 @@ library OptionMath {
     error OptionMath__NonPositiveVol();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
-    /// @param x 59x18 fixed point representation of the input to the normal CDF
-    /// @return result 59x18 fixed point representation of the value of the evaluated helper function
+    /// @param x The input to the normal CDF | 18 decimals
+    /// @return result The value of the evaluated helper function | 18 decimals
     function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = (ALPHA / LAMBDA) * S1;
         SD59x18 b = (S1 * x + iONE).pow(LAMBDA / S1) - iONE;
@@ -60,8 +60,8 @@ library OptionMath {
     /// @dev The approximation implemented is based on the paper
     /// 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
     /// by Haim Shore
-    /// @param x input value to evaluate the normal CDF on, F(Z<=x)
-    /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
+    /// @param x input value to evaluate the normal CDF on, F(Z<=x) | 18 decimals
+    /// @return result The normal CDF evaluated at x | 18 decimals
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
         if (x <= iEIGHT.neg()) {
             result = iZERO;
@@ -77,8 +77,8 @@ library OptionMath {
     ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
-    /// @param x 60x18 fixed point number to get PDF for
-    /// @return z 60x18 fixed point z-number
+    /// @param x Number to get PDF for | 18 decimals
+    /// @return z z-number | 18 decimals
     function normalPdf(SD59x18 x) internal pure returns (SD59x18 z) {
         SD59x18 e;
         int256 one = iONE.unwrap();
@@ -94,8 +94,8 @@ library OptionMath {
     }
 
     /// @notice Implementation of the ReLu function f(x)=(x)^+ to compute call / put payoffs
-    /// @param x SD59x18 input value to evaluate the
-    /// @return result SD59x18 output of the relu function
+    /// @param x Input value | 18 decimals
+    /// @return result Output of the relu function | 18 decimals
     function relu(SD59x18 x) internal pure returns (UD60x18) {
         if (x >= iZERO) {
             return x.intoUD60x18();
@@ -127,13 +127,13 @@ library OptionMath {
 
     /// @notice Calculate the price of an option using the Black-Scholes model
     /// @dev this implementation assumes zero interest
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @param timeToMaturity 60x18 fixed point representation of duration of option contract (in years)
-    /// @param volAnnualized 60x18 fixed point representation of annualized volatility
-    /// @param riskFreeRate 60x18 fixed point representation the risk-free frate
+    /// @param spot Spot price | 18 decimals
+    /// @param strike Strike price | 18 decimals
+    /// @param timeToMaturity Duration of option contract (in years) | 18 decimals
+    /// @param volAnnualized Annualized volatility | 18 decimals
+    /// @param riskFreeRate The risk-free rate | 18 decimals
     /// @param isCall whether to price "call" or "put" option
-    /// @return price 60x18 fixed point representation of Black-Scholes option price
+    /// @return price The Black-Scholes option price | 18 decimals
     function blackScholesPrice(
         UD60x18 spot,
         UD60x18 strike,
@@ -204,8 +204,8 @@ library OptionMath {
     }
 
     /// @notice Calculates the strike interval for the given spot price
-    /// @param spot The spot price of the base asset
-    /// @return The strike interval
+    /// @param spot The spot price of the base asset | 18 decimals
+    /// @return The strike interval | 18 decimals
     function calculateStrikeInterval(
         UD60x18 spot
     ) internal pure returns (UD60x18) {
@@ -217,9 +217,9 @@ library OptionMath {
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @return The log moneyness of the strike price
+    /// @param spot The spot price | 18 decimals
+    /// @param strike The strike price | 18 decimals
+    /// @return The log moneyness of the strike price | 18 decimals
     function logMoneyness(
         UD60x18 spot,
         UD60x18 strike
@@ -227,6 +227,11 @@ library OptionMath {
         return (spot / strike).intoSD59x18().ln().abs().intoUD60x18();
     }
 
+    /// @notice Calculate the initialization fee for a pool
+    /// @param spot The spot price | 18 decimals
+    /// @param strike The strike price | 18 decimals
+    /// @param maturity The maturity timestamp of the option
+    /// @return The initialization fee | 18 decimals
     function initializationFee(
         UD60x18 spot,
         UD60x18 strike,

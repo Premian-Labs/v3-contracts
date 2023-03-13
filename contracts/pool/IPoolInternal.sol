@@ -63,13 +63,13 @@ interface IPoolInternal is IPosition, IPricing {
         address tokenIn;
         // Token result from the swap (Must be poolToken for `swapAndDeposit` / `swapAndTrade`)
         address tokenOut;
-        // amount of tokenIn to trade
+        // amount of tokenIn to trade | poolToken decimals
         uint256 amountInMax;
-        // min amount out to be used to purchase
+        // min amount out to be used to purchase | poolToken decimals
         uint256 amountOutMin;
         // exchange address to call to execute the trade
         address callee;
-        // address for which to set allowance for the trade
+        // address for which to set allowance for the trade | poolToken decimals
         address allowanceTarget;
         // data to execute the trade
         bytes data;
@@ -82,9 +82,9 @@ interface IPoolInternal is IPosition, IPricing {
         address provider;
         // The taker of the quote (address(0) if quote should be usable by anyone)
         address taker;
-        // The normalized option price
+        // The normalized option price | 18 decimals
         UD60x18 price;
-        // The max size
+        // The max size | 18 decimals
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
@@ -107,13 +107,13 @@ interface IPoolInternal is IPosition, IPricing {
     struct TradeArgsInternal {
         // The account doing the trade
         address user;
-        // The number of contracts being traded
+        // The number of contracts being traded | 18 decimals
         UD60x18 size;
         // Whether the taker is buying or selling
         bool isBuy;
-        // Tx will revert if total premium is above this value when buying, or below this value when selling.
+        // Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
         uint256 premiumLimit;
-        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap
+        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;
@@ -127,17 +127,17 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct DepositArgsInternal {
-        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
+        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
         UD60x18 belowLower;
-        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
+        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
         UD60x18 belowUpper;
-        // The position size to deposit
+        // The position size to deposit | 18 decimals
         UD60x18 size;
-        // minMarketPrice Min market price, as normalized value. (If below, tx will revert)
+        // minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
         UD60x18 minMarketPrice;
-        // maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+        // maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
         UD60x18 maxMarketPrice;
-        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap
+        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap | poolToken decimals
         uint256 collateralCredit;
         // The address to which refund excess credit
         address refundAddress;
@@ -159,7 +159,7 @@ interface IPoolInternal is IPosition, IPricing {
     struct FillQuoteArgsInternal {
         // The user filling the quote
         address user;
-        // The size to fill from the quote
+        // The size to fill from the quote | 18 decimals
         UD60x18 size;
         // secp256k1 concatenated 'r', 's', and 'v' value
         Signature signature;

@@ -21,7 +21,7 @@ library PoolFactoryStorage {
         mapping(bytes32 => uint256) strikeCount;
         // Pool Key -> Count (Discount lattice for maturity)
         mapping(bytes32 => uint256) maturityCount;
-        // Discount % per neighboring strike/maturity, 1e18 base
+        // Discount % per neighboring strike/maturity | 18 decimals
         UD60x18 discountPerPool;
         // Initialization fee receiver
         address feeReceiver;

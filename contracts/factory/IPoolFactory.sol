@@ -31,7 +31,7 @@ interface IPoolFactory is IPoolFactoryEvents {
         address quote;
         // Address of oracle adapter
         address oracleAdapter;
-        // The strike of the option
+        // The strike of the option | 18 decimals
         UD60x18 strike;
         // The maturity timestamp of the option
         uint64 maturity;
@@ -51,13 +51,13 @@ interface IPoolFactory is IPoolFactoryEvents {
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key
-    /// @return The fee required to initialize this pool
+    /// @return The fee required to initialize this pool | 18 decimals
     function initializationFee(
         PoolKey memory k
     ) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
-    /// @param discountPerPool The new discount percentage denominated in 1e18
+    /// @param discountPerPool The new discount percentage | 18 decimals
     function setDiscountPerPool(UD60x18 discountPerPool) external;
 
     /// @notice Set the feeReceiver for initialization fees - only callable by owner

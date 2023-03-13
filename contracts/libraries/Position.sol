@@ -31,21 +31,22 @@ library Position {
         address owner;
         // The Agent that can control modifications to the Position
         address operator;
-        // The lower tick normalized price of the range order
+        // The lower tick normalized price of the range order | 18 decimals
         UD60x18 lower;
-        // The upper tick normalized price of the range order
+        // The upper tick normalized price of the range order | 18 decimals
         UD60x18 upper;
         OrderType orderType;
         // ---- Values under are not used to compute the key hash but are included in this struct to reduce stack depth
         bool isCall;
+        // The option strike | 18 decimals
         UD60x18 strike;
     }
 
     // All the data required to be saved in storage
     struct Data {
-        // Used to track claimable fees over time
+        // Used to track claimable fees over time | 18 decimals
         UD60x18 lastFeeRate;
-        // The amount of fees a user can claim now. Resets after claim
+        // The amount of fees a user can claim now. Resets after claim | 18 decimals
         UD60x18 claimableFees;
     }
 
@@ -248,10 +249,10 @@ library Position {
     ///         decreases them. Returns the change in collateral, longs, shorts.
     ///         These are transferred to (withdrawal) or transferred from (deposit)
     ///         the Agent (Position.operator).
-    /// @param currentBalance The current balance of tokens
-    /// @param amount The number of tokens deposited or withdrawn
+    /// @param currentBalance The current balance of tokens | 18 decimals
+    /// @param amount The number of tokens deposited or withdrawn | 18 decimals
     /// @param price The current market price, used to compute the change in
-    ///              collateral, long and shorts due to the change in tokens
+    ///              collateral, long and shorts due to the change in tokens | 18 decimals
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         Key memory self,

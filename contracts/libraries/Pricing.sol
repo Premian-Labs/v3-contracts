@@ -28,10 +28,10 @@ library Pricing {
     UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
 
     struct Args {
-        UD60x18 liquidityRate; // Amount of liquidity
-        UD60x18 marketPrice; // The current market price
-        UD60x18 lower; // The normalized price of the lower bound of the range
-        UD60x18 upper; // The normalized price of the upper bound of the range
+        UD60x18 liquidityRate; // Amount of liquidity | 18 decimals
+        UD60x18 marketPrice; // The current market price | 18 decimals
+        UD60x18 lower; // The normalized price of the lower bound of the range | 18 decimals
+        UD60x18 upper; // The normalized price of the upper bound of the range | 18 decimals
         bool isBuy; // The direction of the trade
     }
 

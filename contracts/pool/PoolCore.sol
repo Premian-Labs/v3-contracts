@@ -81,8 +81,8 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function claim(Position.Key memory p) external returns (UD60x18) {
-        return _claim(p);
+    function claim(Position.Key memory p) external returns (uint256) {
+        return PoolStorage.layout().toPoolTokenDecimals(_claim(p));
     }
 
     /// @inheritdoc IPoolCore
@@ -204,18 +204,18 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(address holder) external returns (UD60x18) {
-        return _exercise(holder);
+    function exercise(address holder) external returns (uint256) {
+        return PoolStorage.layout().toPoolTokenDecimals(_exercise(holder));
     }
 
     /// @inheritdoc IPoolCore
-    function settle(address holder) external returns (UD60x18) {
-        return _settle(holder);
+    function settle(address holder) external returns (uint256) {
+        return PoolStorage.layout().toPoolTokenDecimals(_settle(holder));
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(Position.Key memory p) external returns (UD60x18) {
-        return _settlePosition(p);
+    function settlePosition(Position.Key memory p) external returns (uint256) {
+        return PoolStorage.layout().toPoolTokenDecimals(_settlePosition(p));
     }
 
     /// @inheritdoc IPoolCore
