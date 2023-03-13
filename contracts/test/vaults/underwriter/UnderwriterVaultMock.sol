@@ -47,17 +47,21 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getNumberOfUnexpiredListings(timestamp);
     }
 
-    function getTotalFairValueExpired(
+    function getTotalLiabilitiesExpired(
         uint256 timestamp
     ) external view returns (uint256) {
-        return _getTotalFairValueExpired(timestamp);
+        return _getTotalLiabilitiesExpired(timestamp);
     }
 
-    function getTotalFairValueUnexpired(
+    function getTotalLiabilitiesUnexpired(
         uint256 timestamp,
         uint256 spot
     ) external view returns (uint256) {
-        return _getTotalFairValueUnexpired(timestamp, spot);
+        return _getTotalLiabilitiesUnexpired(timestamp, spot);
+    }
+
+    function getTotalLiabilities() external view returns (uint256) {
+        return _getTotalLiabilities();
     }
 
     function getTotalFairValue() external view returns (uint256) {
@@ -132,6 +136,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 maturity
     ) external view returns (uint256) {
         return UnderwriterVaultStorage.layout().positionSizes[maturity][strike];
+    }
+
+    function setTotalLockedAssets(uint256 value) external onlyOwner {
+        UnderwriterVaultStorage.layout().totalLockedAssets = value;
     }
 
     function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {

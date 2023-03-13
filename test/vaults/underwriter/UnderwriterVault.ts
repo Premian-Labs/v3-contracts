@@ -70,6 +70,44 @@ export async function setMaturities(vault: UnderwriterVaultMock) {
 }
 
 describe('UnderwriterVault', () => {
+  describe('#_getSpotPrice', () => {
+    it('should get the current spot price', async () => {
+      const { callVault } = await loadFixture(vaultSetup);
+      vault = callVault;
+
+      let spot = parseFloat(formatEther(await callVault['getSpotPrice()']()));
+      expect(spot).to.eq(1500);
+    });
+
+    it('should get the spot price at a particular timestamp', async () => {
+      const currentTime = 1878113571;
+      const t0 = currentTime + 7 * ONE_DAY;
+      const t1 = currentTime + 10 * ONE_DAY;
+
+      const { callVault, oracleAdapter, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      vault = callVault;
+
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t0)
+        .returns(parseUnits('1000', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t1)
+        .returns(parseUnits('1400', 18));
+
+      let spot = parseFloat(
+        formatEther(await callVault['getSpotPrice(uint256)'](t0)),
+      );
+      expect(spot).to.eq(1000);
+
+      spot = parseFloat(
+        formatEther(await callVault['getSpotPrice(uint256)'](t1)),
+      );
+      expect(spot).to.eq(1400);
+    });
+  });
+
   describe('#_getMaturityAfterTimestamp', () => {
     before(async () => {
       const { callVault } = await loadFixture(vaultSetup);
@@ -201,133 +239,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_getSpotPrice', () => {
-    it('should get the current spot price', async () => {
-      const { callVault } = await loadFixture(vaultSetup);
-      vault = callVault;
-
-      let spot = parseFloat(formatEther(await callVault['getSpotPrice()']()));
-      expect(spot).to.eq(1500);
-    });
-
-    it('should get the spot price at a particular timestamp', async () => {
-      const currentTime = 1878113571;
-      const t0 = currentTime + 7 * ONE_DAY;
-      const t1 = currentTime + 10 * ONE_DAY;
-
-      const { callVault, oracleAdapter, base, quote } = await loadFixture(
-        vaultSetup,
-      );
-      vault = callVault;
-
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t0)
-        .returns(parseUnits('1000', 18));
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t1)
-        .returns(parseUnits('1400', 18));
-
-      let spot = parseFloat(
-        formatEther(await callVault['getSpotPrice(uint256)'](t0)),
-      );
-      expect(spot).to.eq(1000);
-
-      spot = parseFloat(
-        formatEther(await callVault['getSpotPrice(uint256)'](t1)),
-      );
-      expect(spot).to.eq(1400);
-    });
-  });
-
-  describe('#getTotalFairValue', () => {
-    const currentTime = 1878113571;
-    const t0 = currentTime + 7 * ONE_DAY;
-    const t1 = currentTime + 10 * ONE_DAY;
-    const t2 = currentTime + 14 * ONE_DAY;
-    const t3 = currentTime + 30 * ONE_DAY;
-
-    let vault: UnderwriterVaultMock;
-
-    const infos = [
-      {
-        maturity: t0,
-        strikes: [800, 900, 1500, 2000].map((el) => parseEther(el.toString())),
-        sizes: [1, 2, 2, 1].map((el) => parseEther(el.toString())),
-      },
-      {
-        maturity: t1,
-        strikes: [700, 900, 1500].map((el) => parseEther(el.toString())),
-        sizes: [1, 5, 1].map((el) => parseEther(el.toString())),
-      },
-      {
-        maturity: t2,
-        strikes: [800, 1500, 2000].map((el) => parseEther(el.toString())),
-        sizes: [1, 2, 1].map((el) => parseEther(el.toString())),
-      },
-      {
-        maturity: t3,
-        strikes: [900, 1500].map((el) => parseEther(el.toString())),
-        sizes: [2, 2].map((el) => parseEther(el.toString())),
-      },
-    ];
-
-    before(async () => {
-      const { callVault, oracleAdapter, base, quote } = await loadFixture(
-        vaultSetup,
-      );
-      vault = callVault;
-
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t0)
-        .returns(parseUnits('1000', 18));
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t1)
-        .returns(parseUnits('1400', 18));
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t2)
-        .returns(parseUnits('1600', 18));
-      await oracleAdapter.mock.quoteFrom
-        .withArgs(base.address, quote.address, t3)
-        .returns(parseUnits('1000', 18));
-
-      await vault.setListingsAndSizes(infos);
-    });
-
-    let tests = [
-      { isCall: true, timestamp: t0 - ONE_DAY, expected: 5.37163 },
-      { isCall: false, timestamp: t0 - ONE_DAY, expected: 1457.45 },
-      { isCall: true, timestamp: t0, expected: 4.45834 },
-      { isCall: false, timestamp: t0, expected: 2887.51 },
-      { isCall: true, timestamp: t0 + ONE_DAY, expected: 4.44419 },
-      { isCall: false, timestamp: t0 + ONE_DAY, expected: 2866.29 },
-      { isCall: true, timestamp: t1, expected: 4.15323 },
-      { isCall: false, timestamp: t1, expected: 2901.27 },
-      { isCall: true, timestamp: t1 + ONE_DAY, expected: 4.14161 },
-      { isCall: false, timestamp: t1 + ONE_DAY, expected: 2883.85 },
-      { isCall: true, timestamp: t2 + ONE_DAY, expected: 4.22983 },
-      { isCall: false, timestamp: t2 + ONE_DAY, expected: 2678.67948 },
-      { isCall: true, timestamp: t3, expected: 3.51071 },
-      { isCall: false, timestamp: t3, expected: 3500 },
-      { isCall: true, timestamp: t3 + ONE_DAY, expected: 3.51071 },
-      { isCall: false, timestamp: t3 + ONE_DAY, expected: 3500 },
-    ];
-
-    tests.forEach(async (test) => {
-      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
-        await vault.setIsCall(test.isCall);
-        if (test.isCall) await increaseTo(test.timestamp);
-        let result = await vault.getTotalFairValue();
-        let delta = test.isCall ? 0.00001 : 0.01;
-
-        expect(parseFloat(formatEther(result))).to.be.closeTo(
-          test.expected,
-          delta,
-        );
-      });
-    });
-  });
-
-  describe('#_getTotalFairValueExpired', () => {
+  describe('#_getTotalLiabilitiesExpired', () => {
     startTime = 100000;
 
     t0 = startTime + 7 * ONE_DAY;
@@ -411,7 +323,7 @@ describe('UnderwriterVault', () => {
     tests.forEach(async (test) => {
       it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
         await vault.setIsCall(test.isCall);
-        let result = await vault.getTotalFairValueExpired(test.timestamp);
+        let result = await vault.getTotalLiabilitiesExpired(test.timestamp);
         let delta = test.isCall ? 0.00001 : 0.0;
 
         expect(parseFloat(formatEther(result))).to.be.closeTo(
@@ -424,21 +336,21 @@ describe('UnderwriterVault', () => {
     it('returns 0 when there are no existing listings', async () => {
       await vault.clearListingsAndSizes();
 
-      let result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      let result = await vault.getTotalLiabilitiesExpired(t0 - ONE_DAY);
       let expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
 
       await vault.setIsCall(false);
 
-      result = await vault.getTotalFairValueExpired(t0 - ONE_DAY);
+      result = await vault.getTotalLiabilitiesExpired(t0 - ONE_DAY);
       expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
     });
   });
 
-  describe('#_getTotalFairValueUnexpired', () => {
+  describe('#_getTotalLiabilitiesUnexpired', () => {
     let startTime = 100000;
 
     let t0 = startTime + 7 * ONE_DAY;
@@ -493,20 +405,269 @@ describe('UnderwriterVault', () => {
       { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
     ];
 
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
+        await vault.setIsCall(test.isCall);
+        let result = await vault.getTotalLiabilitiesUnexpired(
+          test.timestamp,
+          spot,
+        );
+        let delta = test.isCall ? 0.00001 : 0.01;
+
+        expect(parseFloat(formatEther(result))).to.be.closeTo(
+          test.expected,
+          delta,
+        );
+      });
+    });
+
     it('returns 0 when there are no existing listings', async () => {
       await vault.clearListingsAndSizes();
 
-      let result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      let result = await vault.getTotalLiabilitiesUnexpired(t0 - ONE_DAY, spot);
       let expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
 
       await vault.setIsCall(false);
 
-      result = await vault.getTotalFairValueUnexpired(t0 - ONE_DAY, spot);
+      result = await vault.getTotalLiabilitiesUnexpired(t0 - ONE_DAY, spot);
       expected = 0;
 
       expect(result).to.eq(parseEther(expected.toString()));
+    });
+  });
+
+  describe('#_getTotalLiabilities', () => {
+    const currentTime = 1878113571;
+    const t0 = currentTime + 7 * ONE_DAY;
+    const t1 = currentTime + 10 * ONE_DAY;
+    const t2 = currentTime + 14 * ONE_DAY;
+    const t3 = currentTime + 30 * ONE_DAY;
+
+    let vault: UnderwriterVaultMock;
+
+    const infos = [
+      {
+        maturity: t0,
+        strikes: [800, 900, 1500, 2000].map((el) => parseEther(el.toString())),
+        sizes: [1, 2, 2, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t1,
+        strikes: [700, 900, 1500].map((el) => parseEther(el.toString())),
+        sizes: [1, 5, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t2,
+        strikes: [800, 1500, 2000].map((el) => parseEther(el.toString())),
+        sizes: [1, 2, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t3,
+        strikes: [900, 1500].map((el) => parseEther(el.toString())),
+        sizes: [2, 2].map((el) => parseEther(el.toString())),
+      },
+    ];
+
+    before(async () => {
+      const { callVault, oracleAdapter, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      vault = callVault;
+
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t0)
+        .returns(parseUnits('1000', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t1)
+        .returns(parseUnits('1400', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t2)
+        .returns(parseUnits('1600', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t3)
+        .returns(parseUnits('1000', 18));
+
+      await vault.setListingsAndSizes(infos);
+    });
+
+    let tests = [
+      { isCall: true, timestamp: t0 - ONE_DAY, expected: 5.37163 },
+      { isCall: false, timestamp: t0 - ONE_DAY, expected: 1457.45 },
+      { isCall: true, timestamp: t0, expected: 4.45834 },
+      { isCall: false, timestamp: t0, expected: 2887.51 },
+      { isCall: true, timestamp: t0 + ONE_DAY, expected: 4.44419 },
+      { isCall: false, timestamp: t0 + ONE_DAY, expected: 2866.29 },
+      { isCall: true, timestamp: t1, expected: 4.15323 },
+      { isCall: false, timestamp: t1, expected: 2901.27 },
+      { isCall: true, timestamp: t1 + ONE_DAY, expected: 4.14161 },
+      { isCall: false, timestamp: t1 + ONE_DAY, expected: 2883.85 },
+      { isCall: true, timestamp: t2 + ONE_DAY, expected: 4.22983 },
+      { isCall: false, timestamp: t2 + ONE_DAY, expected: 2678.67948 },
+      { isCall: true, timestamp: t3, expected: 3.51071 },
+      { isCall: false, timestamp: t3, expected: 3500 },
+      { isCall: true, timestamp: t3 + ONE_DAY, expected: 3.51071 },
+      { isCall: false, timestamp: t3 + ONE_DAY, expected: 3500 },
+    ];
+
+    tests.forEach(async (test) => {
+      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
+        await vault.setIsCall(test.isCall);
+        if (test.isCall) await increaseTo(test.timestamp);
+        let result = await vault.getTotalLiabilities();
+        let delta = test.isCall ? 0.00001 : 0.01;
+
+        expect(parseFloat(formatEther(result))).to.be.closeTo(
+          test.expected,
+          delta,
+        );
+      });
+    });
+  });
+
+  describe('#_getTotalFairValue', () => {
+    const currentTime = 1878113571;
+    const t0 = currentTime + 7 * ONE_DAY;
+    const t1 = currentTime + 10 * ONE_DAY;
+    const t2 = currentTime + 14 * ONE_DAY;
+    const t3 = currentTime + 30 * ONE_DAY;
+
+    let vault: UnderwriterVaultMock;
+
+    const infos = [
+      {
+        maturity: t0,
+        strikes: [800, 900, 1500, 2000].map((el) => parseEther(el.toString())),
+        sizes: [1, 2, 2, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t1,
+        strikes: [700, 900, 1500].map((el) => parseEther(el.toString())),
+        sizes: [1, 5, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t2,
+        strikes: [800, 1500, 2000].map((el) => parseEther(el.toString())),
+        sizes: [1, 2, 1].map((el) => parseEther(el.toString())),
+      },
+      {
+        maturity: t3,
+        strikes: [900, 1500].map((el) => parseEther(el.toString())),
+        sizes: [2, 2].map((el) => parseEther(el.toString())),
+      },
+    ];
+
+    let totalLockedCall = 0;
+    let totalLockedPut = 0;
+
+    for (let i = 0; i < infos.length; i++) {
+      for (let j = 0; j < infos[i].strikes.length; j++) {
+        let strike = parseFloat(formatEther(infos[i].strikes[j]));
+        let size = parseFloat(formatEther(infos[i].sizes[j]));
+
+        totalLockedCall += size;
+        totalLockedPut += strike * size;
+      }
+    }
+
+    before(async () => {
+      const { callVault, oracleAdapter, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      vault = callVault;
+
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t0)
+        .returns(parseUnits('1000', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t1)
+        .returns(parseUnits('1400', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t2)
+        .returns(parseUnits('1600', 18));
+      await oracleAdapter.mock.quoteFrom
+        .withArgs(base.address, quote.address, t3)
+        .returns(parseUnits('1000', 18));
+
+      await vault.setListingsAndSizes(infos);
+    });
+
+    let tests = [
+      {
+        isCall: true,
+        timestamp: t0 - ONE_DAY,
+        expected: totalLockedCall - 5.37163,
+      },
+      {
+        isCall: false,
+        timestamp: t0 - ONE_DAY,
+        expected: totalLockedPut - 1457.45,
+      },
+      { isCall: true, timestamp: t0, expected: totalLockedCall - 4.45834 },
+      { isCall: false, timestamp: t0, expected: totalLockedPut - 2887.51 },
+      {
+        isCall: true,
+        timestamp: t0 + ONE_DAY,
+        expected: totalLockedCall - 4.44419,
+      },
+      {
+        isCall: false,
+        timestamp: t0 + ONE_DAY,
+        expected: totalLockedPut - 2866.29,
+      },
+      { isCall: true, timestamp: t1, expected: totalLockedCall - 4.15323 },
+      { isCall: false, timestamp: t1, expected: totalLockedPut - 2901.27 },
+      {
+        isCall: true,
+        timestamp: t1 + ONE_DAY,
+        expected: totalLockedCall - 4.14161,
+      },
+      {
+        isCall: false,
+        timestamp: t1 + ONE_DAY,
+        expected: totalLockedPut - 2883.85,
+      },
+      {
+        isCall: true,
+        timestamp: t2 + ONE_DAY,
+        expected: totalLockedCall - 4.22983,
+      },
+      {
+        isCall: false,
+        timestamp: t2 + ONE_DAY,
+        expected: totalLockedPut - 2678.67948,
+      },
+      { isCall: true, timestamp: t3, expected: totalLockedCall - 3.51071 },
+      { isCall: false, timestamp: t3, expected: totalLockedPut - 3500 },
+      {
+        isCall: true,
+        timestamp: t3 + ONE_DAY,
+        expected: totalLockedCall - 3.51071,
+      },
+      {
+        isCall: false,
+        timestamp: t3 + ONE_DAY,
+        expected: totalLockedPut - 3500,
+      },
+    ];
+
+    tests.forEach(async (test) => {
+      let totalLocked = test.isCall ? totalLockedCall : totalLockedPut;
+
+      it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
+        await vault.setIsCall(test.isCall);
+        await vault.setTotalLockedAssets(parseEther(totalLocked.toString()));
+
+        if (test.isCall) await increaseTo(test.timestamp);
+        let result = await vault.getTotalFairValue();
+        let delta = test.isCall ? 0.00001 : 0.01;
+
+        expect(parseFloat(formatEther(result))).to.be.closeTo(
+          test.expected,
+          delta,
+        );
+      });
     });
   });
 
