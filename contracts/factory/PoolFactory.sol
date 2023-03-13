@@ -62,13 +62,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             .powu(discountFactor)
             .intoUD60x18(); // ToDo : Check with Froggie
 
-        UD60x18 spot = UD60x18.wrap(
-            _fetchQuote(k.oracleAdapter, k.base, k.quote)
-        );
+        UD60x18 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
         UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        UD60x18 wrappedNativeUSDPrice = UD60x18.wrap(
-            _fetchWrappedNativeUSDQuote()
-        );
+        UD60x18 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
 
         return (fee * discount) / wrappedNativeUSDPrice;
     }
@@ -164,13 +160,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         address oracleAdapter,
         address base,
         address quote
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
     // @notice We use the Premia Chainlink Adapter to fetch the price of the wrapped native token.
     //         This is used to convert the initializationFee from USD to native token
-    function _fetchWrappedNativeUSDQuote() internal view returns (uint256) {
+    function _fetchWrappedNativeUSDQuote() internal view returns (UD60x18) {
         return
             IOracleAdapter(CHAINLINK_ADAPTER).quote(
                 WRAPPED_NATIVE_TOKEN,
@@ -188,7 +184,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         if (strike == OptionMath.ZERO)
             revert PoolFactory__OptionStrikeEqualsZero();
 
-        UD60x18 spot = UD60x18.wrap(_fetchQuote(oracleAdapter, base, quote));
+        UD60x18 spot = _fetchQuote(oracleAdapter, base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != OptionMath.ZERO)

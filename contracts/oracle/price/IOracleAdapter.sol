@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 /// @title The interface for an oracle adapter that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
@@ -38,7 +40,7 @@ interface IOracleAdapter {
     function quote(
         address tokenIn,
         address tokenOut
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 
     /// @notice Returns a quote closest to the target timestamp, based on the given token pair
     /// @dev Will revert if pair isn't supported
@@ -50,5 +52,5 @@ interface IOracleAdapter {
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 }
