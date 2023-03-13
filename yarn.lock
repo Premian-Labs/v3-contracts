@@ -1018,6 +1018,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prb/math@https://github.com/PaulRBerg/prb-math.git#commit=29973d59eea4aafe58c4c7fd74a9c1441456db4d":
+  version: 3.3.0
+  resolution: "@prb/math@https://github.com/PaulRBerg/prb-math.git#commit=29973d59eea4aafe58c4c7fd74a9c1441456db4d"
+  checksum: de64e7d2b93e7fb7fffa33be84723e88712ec789f5f08911cb2ea670eba93e9706ed24f90591de6479220b2dfa987fc0ddf73202dffc6b49780ae569d83b70ec
+  languageName: node
+  linkType: hard
+
 "@scure/base@npm:~1.1.0":
   version: 1.1.1
   resolution: "@scure/base@npm:1.1.1"
@@ -6651,6 +6658,7 @@ __metadata:
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.2
     "@nomiclabs/hardhat-etherscan": ^3.1.6
+    "@prb/math": "https://github.com/PaulRBerg/prb-math.git#commit=29973d59eea4aafe58c4c7fd74a9c1441456db4d"
     "@solidstate/contracts": ^0.0.52
     "@solidstate/hardhat-4byte-uploader": ^1.0.2
     "@solidstate/hardhat-test-short-circuit": ^1.0.2
