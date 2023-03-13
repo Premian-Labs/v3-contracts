@@ -19,11 +19,7 @@ import {
 
 import { feeds, Token, tokens } from '../../utils/addresses';
 import { ONE_ETHER } from '../../utils/constants';
-import {
-  increaseTo,
-  latest,
-  revertToSnapshotAfterEach,
-} from '../../utils/time';
+import { increaseTo, latest } from '../../utils/time';
 
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
@@ -507,20 +503,6 @@ describe('ChainlinkAdapter', () => {
     });
 
     describe('#when price is fresh', async () => {
-      revertToSnapshotAfterEach(async () => {
-        const { instance, stub, stubCoin } = await loadFixture(deployStub);
-
-        await instance.batchRegisterFeedMappings([
-          {
-            token: stubCoin,
-            denomination: tokens.CHAINLINK_USD.address,
-            feed: stub.address,
-          },
-        ]);
-
-        await instance.upsertPair(stubCoin, tokens.CHAINLINK_USD.address);
-      });
-
       it('should return price closest to target when called within 12 hours of target time', async () => {
         const { instance, stub, stubCoin } = await loadFixture(deployStub);
 
