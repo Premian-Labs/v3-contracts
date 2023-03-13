@@ -1,38 +1,26 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { parseEther } from 'ethers/lib/utils';
 import {
-  ERC20Mock,
   ERC20Mock__factory,
-  ExchangeHelper,
   ExchangeHelper__factory,
   FeeConverter,
   FeeConverter__factory,
   ProxyUpgradeableOwnable__factory,
-  VxPremia,
   VxPremia__factory,
   VxPremiaProxy__factory,
 } from '../../typechain';
 import { bnToNumber } from '../../utils/sdk/math';
-
-let deployer: SignerWithAddress;
-let user1: SignerWithAddress;
-let treasury: SignerWithAddress;
-let exchangeHelper: ExchangeHelper;
-let feeConverter: FeeConverter;
-let vxPremia: VxPremia;
-let usdc: ERC20Mock;
-let premia: ERC20Mock;
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('FeeConverter', () => {
-  beforeEach(async () => {
-    [deployer, user1, treasury] = await ethers.getSigners();
+  async function deploy() {
+    const [deployer, user1, treasury] = await ethers.getSigners();
 
-    exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
+    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
 
-    usdc = await new ERC20Mock__factory(deployer).deploy('USDC', 8);
-    premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+    const usdc = await new ERC20Mock__factory(deployer).deploy('USDC', 8);
+    const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
 
     const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
       ethers.constants.AddressZero,
@@ -44,7 +32,7 @@ describe('FeeConverter', () => {
     const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
       vxPremiaImpl.address,
     );
-    vxPremia = VxPremia__factory.connect(vxPremiaProxy.address, deployer);
+    const vxPremia = VxPremia__factory.connect(vxPremiaProxy.address, deployer);
 
     const feeConverterImpl = await new FeeConverter__factory(deployer).deploy(
       exchangeHelper.address,
@@ -55,22 +43,26 @@ describe('FeeConverter', () => {
     const feeConverterProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(feeConverterImpl.address);
-    feeConverter = FeeConverter__factory.connect(
+    const feeConverter = FeeConverter__factory.connect(
       feeConverterProxy.address,
       deployer,
     );
 
-    // uniswap = await createUniswap(deployer, p.premia as PremiaErc20);
-
-    // rewardTokenWeth = await createUniswapPair(
-    //   deployer,
-    //   uniswap.factory,
-    //   p.rewardToken.address,
-    //   uniswap.weth.address,
-    // );
-  });
+    return {
+      deployer,
+      user1,
+      treasury,
+      exchangeHelper,
+      feeConverter,
+      vxPremia,
+      usdc,
+      premia,
+    };
+  }
 
   it('should fail to call convert if not authorized', async () => {
+    const { feeConverter, usdc } = await loadFixture(deploy);
+
     await expect(
       feeConverter.convert(
         usdc.address,
@@ -217,6 +209,9 @@ describe('FeeConverter', () => {
   });
 
   it('should send USDC successfully to vxPremia', async () => {
+    const { feeConverter, usdc, deployer, treasury, vxPremia } =
+      await loadFixture(deploy);
+
     await feeConverter.connect(deployer).setAuthorized(deployer.address, true);
 
     await usdc.mint(feeConverter.address, parseEther('10'));

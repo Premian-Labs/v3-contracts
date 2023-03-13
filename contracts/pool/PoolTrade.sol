@@ -10,10 +10,19 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     constructor(
         address factory,
+        address router,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
-    ) PoolInternal(factory, exchangeHelper, wrappedNativeToken, feeReceiver) {}
+    )
+        PoolInternal(
+            factory,
+            router,
+            exchangeHelper,
+            wrappedNativeToken,
+            feeReceiver
+        )
+    {}
 
     /// @inheritdoc IPoolTrade
     function getTradeQuote(
@@ -38,16 +47,28 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     /// @inheritdoc IPoolTrade
     function trade(
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     ) external returns (uint256 totalPremium, Delta memory delta) {
-        return _trade(TradeArgsInternal(msg.sender, size, isBuy, 0, true));
+        return
+            _trade(
+                TradeArgsInternal(
+                    msg.sender,
+                    size,
+                    isBuy,
+                    premiumLimit,
+                    0,
+                    true
+                )
+            );
     }
 
     /// @inheritdoc IPoolTrade
     function swapAndTrade(
         SwapArgs memory s,
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     )
         external
         payable
@@ -63,7 +84,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         (swapOutAmount, ) = _swap(s);
 
         (totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, swapOutAmount, true)
+            TradeArgsInternal(
+                msg.sender,
+                size,
+                isBuy,
+                premiumLimit,
+                swapOutAmount,
+                true
+            )
         );
 
         return (totalPremium, delta, swapOutAmount);
@@ -73,7 +101,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function tradeAndSwap(
         SwapArgs memory s,
         uint256 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     )
         external
         returns (
@@ -85,7 +114,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
         (totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, 0, false)
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false)
         );
 
         if (delta.collateral <= 0) return (totalPremium, delta, 0, 0);

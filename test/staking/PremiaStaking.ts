@@ -1,9 +1,7 @@
 import { expect } from 'chai';
 import {
-  ERC20Mock,
   ERC20Mock__factory,
   ExchangeHelper__factory,
-  IExchangeHelper,
   PremiaStakingMock,
   PremiaStakingMock__factory,
   PremiaStakingProxyMock__factory,
@@ -13,24 +11,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { signERC2612Permit } from 'eth-permit';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { BigNumber, BigNumberish } from 'ethers';
-import {
-  increase,
-  increaseTo,
-  ONE_YEAR,
-  revertToSnapshotAfterEach,
-} from '../../utils/time';
+import { increase, increaseTo, ONE_YEAR } from '../../utils/time';
 import { bnToNumber } from '../../utils/sdk/math';
-
-let admin: SignerWithAddress;
-let alice: SignerWithAddress;
-let bob: SignerWithAddress;
-let carol: SignerWithAddress;
-let premia: ERC20Mock;
-let usdc: ERC20Mock;
-let premiaStakingImplementation: PremiaStakingMock;
-let premiaStaking: PremiaStakingMock;
-let otherPremiaStaking: PremiaStakingMock;
-let exchangeHelper: IExchangeHelper;
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 const ONE_DAY = 3600 * 24;
 const USDC_DECIMALS = 6;
@@ -48,6 +31,7 @@ function decay(
 }
 
 async function bridge(
+  fromUser: SignerWithAddress,
   premiaStaking: PremiaStakingMock,
   otherPremiaStaking: PremiaStakingMock,
   user: SignerWithAddress,
@@ -57,7 +41,7 @@ async function bridge(
 ) {
   // Mocked bridge out
   await premiaStaking
-    .connect(alice)
+    .connect(fromUser)
     .sendFrom(
       user.address,
       0,
@@ -78,13 +62,16 @@ async function bridge(
 }
 
 describe('PremiaStaking', () => {
-  before(async () => {
-    [admin, alice, bob, carol] = await ethers.getSigners();
+  async function deploy() {
+    const [admin, alice, bob, carol] = await ethers.getSigners();
 
-    premia = await new ERC20Mock__factory(admin).deploy('PREMIA', 18);
-    usdc = await new ERC20Mock__factory(admin).deploy('USDC', USDC_DECIMALS);
-    exchangeHelper = await new ExchangeHelper__factory(admin).deploy();
-    premiaStakingImplementation = await new PremiaStakingMock__factory(
+    const premia = await new ERC20Mock__factory(admin).deploy('PREMIA', 18);
+    const usdc = await new ERC20Mock__factory(admin).deploy(
+      'USDC',
+      USDC_DECIMALS,
+    );
+    const exchangeHelper = await new ExchangeHelper__factory(admin).deploy();
+    const premiaStakingImplementation = await new PremiaStakingMock__factory(
       admin,
     ).deploy(
       ethers.constants.AddressZero,
@@ -101,12 +88,12 @@ describe('PremiaStaking', () => {
       admin,
     ).deploy(premiaStakingImplementation.address);
 
-    premiaStaking = PremiaStakingMock__factory.connect(
+    const premiaStaking = PremiaStakingMock__factory.connect(
       premiaStakingProxy.address,
       admin,
     );
 
-    otherPremiaStaking = PremiaStakingMock__factory.connect(
+    const otherPremiaStaking = PremiaStakingMock__factory.connect(
       otherPremiaStakingProxy.address,
       admin,
     );
@@ -119,12 +106,24 @@ describe('PremiaStaking', () => {
     await usdc
       .connect(admin)
       .approve(premiaStaking.address, ethers.constants.MaxUint256);
-  });
 
-  revertToSnapshotAfterEach(async () => {});
+    return {
+      admin,
+      alice,
+      bob,
+      carol,
+      premia,
+      usdc,
+      premiaStakingImplementation,
+      premiaStaking,
+      otherPremiaStaking,
+      exchangeHelper,
+    };
+  }
 
   describe('#getTotalVotingPower', () => {
     it('should successfully return total voting power', async () => {
+      const { premia, premiaStaking, alice, bob } = await loadFixture(deploy);
       expect(await premiaStaking.getTotalPower()).to.eq(0);
 
       await premia
@@ -147,6 +146,8 @@ describe('PremiaStaking', () => {
 
   describe('#getUserVotingPower', () => {
     it('should successfully return user voting power', async () => {
+      const { premia, premiaStaking, alice, bob } = await loadFixture(deploy);
+
       await premia
         .connect(alice)
         .approve(premiaStaking.address, parseEther('100'));
@@ -172,14 +173,24 @@ describe('PremiaStaking', () => {
     const stakeAmount = parseEther('120000');
     const oneMonth = 30 * ONE_DAY;
 
-    beforeEach(async () => {
-      await premia.mint(alice.address, stakeAmount);
-      await premia
-        .connect(alice)
-        .increaseAllowance(premiaStaking.address, ethers.constants.MaxUint256);
-    });
+    async function deployAndInitialize() {
+      const f = await deploy();
+      await f.premia.mint(f.alice.address, stakeAmount);
+      await f.premia
+        .connect(f.alice)
+        .increaseAllowance(
+          f.premiaStaking.address,
+          ethers.constants.MaxUint256,
+        );
+
+      return f;
+    }
 
     it('should stake and calculate discount successfully', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(
+        deployAndInitialize,
+      );
+
       await premiaStaking.connect(alice).stake(stakeAmount, ONE_YEAR);
       let amountWithBonus = await premiaStaking.getUserPower(alice.address);
       expect(amountWithBonus).to.eq(parseEther('150000'));
@@ -204,6 +215,10 @@ describe('PremiaStaking', () => {
     });
 
     it('should stake successfully with permit', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(
+        deployAndInitialize,
+      );
+
       const { timestamp } = await ethers.provider.getBlock('latest');
       const deadline = timestamp + 3600;
 
@@ -232,6 +247,8 @@ describe('PremiaStaking', () => {
     });
 
     it('should fail unstaking if stake is still locked', async () => {
+      const { premiaStaking, alice } = await loadFixture(deployAndInitialize);
+
       await premiaStaking.connect(alice).stake(stakeAmount, oneMonth);
       await expect(
         premiaStaking.connect(alice).startWithdraw(1),
@@ -242,6 +259,8 @@ describe('PremiaStaking', () => {
     });
 
     it('should correctly calculate stake period multiplier', async () => {
+      const { premiaStaking } = await loadFixture(deployAndInitialize);
+
       expect(await premiaStaking.getStakePeriodMultiplierBPS(0)).to.eq(2500);
       expect(
         await premiaStaking.getStakePeriodMultiplierBPS(ONE_YEAR / 2),
@@ -262,6 +281,8 @@ describe('PremiaStaking', () => {
   });
 
   it('should fail transferring tokens', async () => {
+    const { premia, premiaStaking, alice, bob } = await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -276,6 +297,8 @@ describe('PremiaStaking', () => {
   });
 
   it('should successfully stake with permit', async () => {
+    const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
     const { timestamp } = await ethers.provider.getBlock('latest');
     const deadline = timestamp + 3600;
 
@@ -303,6 +326,8 @@ describe('PremiaStaking', () => {
   });
 
   it('should not allow enter if not enough approve', async () => {
+    const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
     await expect(
       premiaStaking.connect(alice).stake(parseEther('100'), 0),
     ).to.be.revertedWithCustomError(
@@ -328,6 +353,9 @@ describe('PremiaStaking', () => {
   });
 
   it('should only allow to withdraw what is available', async () => {
+    const { premia, premiaStaking, alice, bob, otherPremiaStaking } =
+      await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -339,6 +367,7 @@ describe('PremiaStaking', () => {
     await otherPremiaStaking.connect(bob).stake(parseEther('20'), 0);
 
     await bridge(
+      alice,
       premiaStaking,
       otherPremiaStaking,
       alice,
@@ -360,6 +389,8 @@ describe('PremiaStaking', () => {
   });
 
   it('should correctly handle withdrawal with delay', async () => {
+    const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -403,6 +434,9 @@ describe('PremiaStaking', () => {
   });
 
   it('should distribute partial rewards properly', async () => {
+    const { premia, premiaStaking, alice, bob, carol, admin } =
+      await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -444,6 +478,9 @@ describe('PremiaStaking', () => {
   });
 
   it('should work with more than one participant', async () => {
+    const { premia, premiaStaking, alice, bob, carol, admin } =
+      await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -606,6 +643,8 @@ describe('PremiaStaking', () => {
   });
 
   it('should correctly calculate decay', async () => {
+    const { premiaStaking } = await loadFixture(deploy);
+
     const oneMonth = 30 * ONE_DAY;
     expect(
       bnToNumber(await premiaStaking.decay(parseEther('100'), 0, oneMonth)),
@@ -617,6 +656,9 @@ describe('PremiaStaking', () => {
   });
 
   it('should correctly bridge to other contract', async () => {
+    const { premia, premiaStaking, alice, otherPremiaStaking } =
+      await loadFixture(deploy);
+
     await premia
       .connect(alice)
       .approve(premiaStaking.address, parseEther('100'));
@@ -630,6 +672,7 @@ describe('PremiaStaking', () => {
     expect(await otherPremiaStaking.totalSupply()).to.eq(0);
 
     await bridge(
+      alice,
       premiaStaking,
       otherPremiaStaking,
       alice,
@@ -648,6 +691,8 @@ describe('PremiaStaking', () => {
 
   describe('#getStakeLevels', () => {
     it('should correctly return stake levels', async () => {
+      const { premiaStaking } = await loadFixture(deploy);
+
       expect(await premiaStaking.getStakeLevels()).to.deep.eq([
         [parseEther('5000'), parseEther('0.1')],
         [parseEther('50000'), parseEther('0.25')],
@@ -659,6 +704,9 @@ describe('PremiaStaking', () => {
 
   describe('#harvest', () => {
     it('should correctly harvest pending rewards of user', async () => {
+      const { premia, premiaStaking, alice, bob, carol, admin, usdc } =
+        await loadFixture(deploy);
+
       await premia
         .connect(alice)
         .approve(premiaStaking.address, parseEther('100'));
@@ -752,6 +800,10 @@ describe('PremiaStaking', () => {
 
   describe('#earlyUnstake', () => {
     it('should correctly apply early unstake fee and distribute it to stakers', async () => {
+      const { premia, premiaStaking, alice, bob, carol } = await loadFixture(
+        deploy,
+      );
+
       await premia
         .connect(bob)
         .approve(premiaStaking.address, parseEther('50'));
@@ -825,6 +877,8 @@ describe('PremiaStaking', () => {
 
   describe('#updateLock', () => {
     it('should correctly increase user lock', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       await premia.connect(alice).approve(premiaStaking.address, 1000);
       await premiaStaking.connect(alice).stake(1000, 0);
       let block = await ethers.provider.getBlock('latest');
@@ -848,6 +902,8 @@ describe('PremiaStaking', () => {
 
   describe('#getDiscount', () => {
     it('should successfully return discount', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       const amount = parseEther('10000');
       await premia.mint(alice.address, amount);
       await premia.connect(alice).approve(premiaStaking.address, amount);
@@ -873,6 +929,8 @@ describe('PremiaStaking', () => {
 
   describe('#getDiscountBPS', () => {
     it('should successfully return discount', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       const amount = parseEther('10000');
       await premia.mint(alice.address, amount);
       await premia.connect(alice).approve(premiaStaking.address, amount);
@@ -896,6 +954,8 @@ describe('PremiaStaking', () => {
 
   describe('#getStakePeriodMultiplier', () => {
     it('should successfully return stake period multiplier', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       expect(await premiaStaking.getStakePeriodMultiplier(0)).to.eq(
         parseEther('0.25'),
       );
@@ -916,6 +976,8 @@ describe('PremiaStaking', () => {
 
   describe('#getStakePeriodMultiplierBPS', () => {
     it('should successfully return stake period multiplier in BPS', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       expect(await premiaStaking.getStakePeriodMultiplierBPS(0)).to.eq(2500);
       expect(await premiaStaking.getStakePeriodMultiplierBPS(ONE_YEAR)).to.eq(
         12500,
@@ -934,6 +996,8 @@ describe('PremiaStaking', () => {
 
   describe('#getEarlyUnstakeFee', () => {
     it('should successfully return early unstake fee', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       await premia.connect(alice).approve(premiaStaking.address, 1000);
       await premiaStaking.connect(alice).stake(1000, 4 * ONE_YEAR);
       let block = await ethers.provider.getBlock('latest');
@@ -952,6 +1016,8 @@ describe('PremiaStaking', () => {
 
   describe('#getEarlyUnstakeFeeBPS', () => {
     it('should successfully return early unstake fee in BPS', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       await premia.connect(alice).approve(premiaStaking.address, 1000);
       await premiaStaking.connect(alice).stake(1000, 4 * ONE_YEAR);
       let block = await ethers.provider.getBlock('latest');
@@ -970,6 +1036,8 @@ describe('PremiaStaking', () => {
 
   describe('#sendFrom', () => {
     it('should not revert if no approval but owner', async () => {
+      const { premia, premiaStaking, alice } = await loadFixture(deploy);
+
       await premia.connect(alice).approve(premiaStaking.address, 1);
       await premiaStaking.connect(alice).stake(1, 0);
 
@@ -988,6 +1056,8 @@ describe('PremiaStaking', () => {
 
     describe('reverts if', () => {
       it('sender is not approved or owner', async () => {
+        const { premiaStaking, alice } = await loadFixture(deploy);
+
         await expect(
           premiaStaking
             .connect(alice)
