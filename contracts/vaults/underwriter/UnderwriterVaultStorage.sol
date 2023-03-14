@@ -2,9 +2,14 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
+import {DoublyLinkedListUD60x18} from "../../../libraries/DoublyLinkedListUD60x18.sol";
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -24,44 +29,44 @@ library UnderwriterVaultStorage {
         bool isCall;
         // The total assets that have been locked up as collateral for
         // underwritten options.
-        uint256 totalLockedAssets;
+        UD60x18 totalLockedAssets;
         // Trading Parameters
         // Minimum days until maturity which can be underwritten by the vault, default 3
-        uint256 minDTE;
+        UD60x18 minDTE;
         // Maximum days until maturity which can be underwritten by the vault, default 30
-        uint256 maxDTE;
+        UD60x18 maxDTE;
         // Minimum option delta which can be underwritten by the vault, default 0.1
-        int256 minDelta;
+        SD59x18 minDelta;
         // Maximum option delta which can be underwritten by the vault, default 0.7
-        int256 maxDelta;
+        SD59x18 maxDelta;
         // C-Level Parameters
-        uint256 minCLevel; // 1
-        uint256 maxCLevel; // 1.2
-        uint256 alphaCLevel; // 3
-        uint256 hourlyDecayDiscount; // 0.005
-        uint256 lastTradeTimestamp;
+        UD60x18 minCLevel; // 1
+        UD60x18 maxCLevel; // 1.2
+        UD60x18 alphaCLevel; // 3
+        UD60x18 hourlyDecayDiscount; // 0.005
+        UD60x18 lastTradeTimestamp;
         // Data structures for information on listings
         // (strike, maturity) => number of short contracts
-        mapping(uint256 => mapping(uint256 => uint256)) positionSizes;
+        mapping(UD60x18 => mapping(UD60x18 => UD60x18)) positionSizes;
         // The minimum maturity over all unsettled options
-        uint256 minMaturity;
+        UD60x18 minMaturity;
         // The maximum maturity over all unsettled options
-        uint256 maxMaturity;
+        UD60x18 maxMaturity;
         // A SortedDoublyLinkedList for maturities
-        DoublyLinkedList.Uint256List maturities;
+        DoublyLinkedListUD60x18 maturities;
         // maturity => set of strikes
-        mapping(uint256 => EnumerableSet.UintSet) maturityToStrikes;
+        mapping(UD60x18 => EnumerableSet.UintSet) maturityToStrikes;
         // Variables for dispersing profits across time
         // Tracks the total profits/spreads that are locked such that we can
         // deduct it from the total assets
-        uint256 totalLockedSpread;
+        UD60x18 totalLockedSpread;
         // Tracks the rate at which ask spreads are dispersed
-        uint256 spreadUnlockingRate;
+        UD60x18 spreadUnlockingRate;
         // Tracks the time spreadUnlockingRate was updated
-        uint256 lastSpreadUnlockUpdate;
+        UD60x18 lastSpreadUnlockUpdate;
         // we map maturities to the unlockingRate that needs to be deducted upon crossing
         // maturity => spreadUnlockingRate
-        mapping(uint256 => uint256) spreadUnlockingTicks;
+        mapping(UD60x18 => UD60x18) spreadUnlockingTicks;
     }
 
     function layout() internal pure returns (Layout storage l) {

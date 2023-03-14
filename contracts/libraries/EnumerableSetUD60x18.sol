@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+
+library EnumerableSetUD60x18 {
+    using EnumerableSet for EnumerableSet.Bytes32Set;
+
+    function at(
+        EnumerableSet.Bytes32Set storage self,
+        uint256 i
+    ) internal returns (UD60x18) {
+        return UD60x18.wrap(uint256(self.at(self, i)));
+    }
+
+    function contains(
+        EnumerableSet.Bytes32Set storage self,
+        UD60x18 value
+    ) internal returns (bool) {
+        return self.contains(bytes32(value.unwrap()));
+    }
+
+    function indexOf(
+        EnumerableSet.Bytes32Set storage self,
+        UD60x18 value
+    ) internal returns (uint256) {}
+
+    function length(
+        EnumerableSet.Bytes32Set storage self
+    ) internal returns (uint256) {}
+}

@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
-
-import {SD59x18} from "./prbMath/SD59x18.sol";
-import {UD60x18} from "./prbMath/UD60x18.sol";
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
+import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 library OptionMath {
-    using SafeCast for uint256;
-    using SafeCast for int256;
-    using UD60x18 for uint256;
-    using SD59x18 for int256;
+    using PRBMathExtra for SD59x18;
 
     // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
@@ -23,54 +19,56 @@ library OptionMath {
         int256 timeScaledRiskFreeRate;
     }
 
-    uint256 internal constant ONE_HALF = 0.5e18;
-    uint256 internal constant ONE = 1e18;
-    uint256 internal constant TWO = 2e18;
-    uint256 internal constant FIVE = 5e18;
-    uint256 internal constant TEN = 10e18;
-    uint256 internal constant ONE_THOUSAND = 1000e18;
-    uint256 internal constant INITIALIZATION_ALPHA = 5e18;
-    uint256 internal constant ATM_MONEYNESS = 0.5e18;
+    UD60x18 internal constant ZERO = UD60x18.wrap(0);
+    UD60x18 internal constant ONE_HALF = UD60x18.wrap(0.5e18);
+    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
+    UD60x18 internal constant TWO = UD60x18.wrap(2e18);
+    UD60x18 internal constant FIVE = UD60x18.wrap(5e18);
+    UD60x18 internal constant TEN = UD60x18.wrap(10e18);
+    UD60x18 internal constant ONE_THOUSAND = UD60x18.wrap(1000e18);
+    UD60x18 internal constant INITIALIZATION_ALPHA = UD60x18.wrap(5e18);
+    UD60x18 internal constant ATM_MONEYNESS = UD60x18.wrap(0.5e18);
     uint256 internal constant NEAR_TERM_TTM = 14 days;
     uint256 internal constant ONE_YEAR_TTM = 365 days;
-    uint256 internal constant FEE_SCALAR = 100e18;
+    UD60x18 internal constant FEE_SCALAR = UD60x18.wrap(100e18);
 
-    int256 internal constant ONE_HALF_I = 0.5e18;
-    int256 internal constant ONE_I = 1e18;
-    int256 internal constant TWO_I = 2e18;
-    int256 internal constant FOUR_I = 4e18;
-    int256 internal constant EIGHT_I = 8e18;
-    int256 internal constant TEN_I = 10e18;
-    int256 internal constant ALPHA = -6.37309208e18;
-    int256 internal constant LAMBDA = -0.61228883e18;
-    int256 internal constant S1 = -0.11105481e18;
-    int256 internal constant S2 = 0.44334159e18;
+    SD59x18 internal constant iZERO = SD59x18.wrap(0);
+    SD59x18 internal constant iONE_HALF = SD59x18.wrap(0.5e18);
+    SD59x18 internal constant iONE = SD59x18.wrap(1e18);
+    SD59x18 internal constant iTWO = SD59x18.wrap(2e18);
+    SD59x18 internal constant iFOUR = SD59x18.wrap(4e18);
+    SD59x18 internal constant iNINE = SD59x18.wrap(8e18);
+    SD59x18 internal constant iTEN = SD59x18.wrap(10e18);
+    SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
+    SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
+    SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);
+    SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
     error OptionMath__NonPositiveVol();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
-    /// @param x 59x18 fixed point representation of the input to the normal CDF
-    /// @return result 59x18 fixed point representation of the value of the evaluated helper function
-    function helperNormal(int256 x) internal pure returns (int256 result) {
-        int256 a = ALPHA.div(LAMBDA).mul(S1);
-        int256 b = (S1.mul(x) + ONE_I).pow(LAMBDA.div(S1)) - ONE_I;
-        result = (a.mul(b) + S2.mul(x)).exp().mul(-(TWO_I.ln())).exp();
+    /// @param x The input to the normal CDF | 18 decimals
+    /// @return result The value of the evaluated helper function | 18 decimals
+    function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
+        SD59x18 a = (ALPHA / LAMBDA) * S1;
+        SD59x18 b = (S1 * x + iONE).pow(LAMBDA / S1) - iONE;
+        result = ((a * b + S2 * x).exp() * (iTWO.ln().neg())).exp();
     }
 
     /// @notice Approximation of the normal CDF
     /// @dev The approximation implemented is based on the paper
     /// 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
     /// by Haim Shore
-    /// @param x input value to evaluate the normal CDF on, F(Z<=x)
-    /// @return result SD59x18 fixed point representation of the normal CDF evaluated at x
-    function normalCdf(int256 x) internal pure returns (int256 result) {
-        if (x <= ONE_I.div(S1)) {
-            result = int256(0);
-        } else if (x >= -ONE_I.div(S1)) {
-            result = ONE_I;
+    /// @param x input value to evaluate the normal CDF on, F(Z<=x) | 18 decimals
+    /// @return result The normal CDF evaluated at x | 18 decimals
+    function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
+        if (x <= iNINE.neg()) {
+            result = iZERO;
+        } else if (x >= iNINE) {
+            result = iONE;
         } else {
-            result = ((ONE_I + helperNormal(-x)) - helperNormal(x)).div(TWO_I);
+            result = ((iONE + helperNormal(x.neg())) - helperNormal(x)) / iTWO;
         }
     }
 
@@ -79,48 +77,52 @@ library OptionMath {
     ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
-    /// @param x 60x18 fixed point number to get PDF for
-    /// @return z 60x18 fixed point z-number
-    function normalPdf(int256 x) internal pure returns (int256 z) {
-        int256 e;
+    /// @param x Number to get PDF for | 18 decimals
+    /// @return z z-number | 18 decimals
+    function normalPdf(SD59x18 x) internal pure returns (SD59x18 z) {
+        SD59x18 e;
+        int256 one = iONE.unwrap();
+        uint256 two = TWO.unwrap();
+
         assembly {
-            e := sdiv(mul(add(not(x), 1), x), TWO) // (-x * x) / 2.
+            e := sdiv(mul(add(not(x), 1), x), two) // (-x * x) / 2.
         }
         e = e.exp();
         assembly {
-            z := sdiv(mul(e, ONE_I), SQRT_2PI)
+            z := sdiv(mul(e, one), SQRT_2PI)
         }
     }
 
     /// @notice Implementation of the ReLu function f(x)=(x)^+ to compute call / put payoffs
-    /// @param x SD59x18 input value to evaluate the
-    /// @return result SD59x18 output of the relu function
-    function relu(int256 x) internal pure returns (uint256) {
-        if (x >= 0) {
-            return x.toUint256();
+    /// @param x Input value | 18 decimals
+    /// @return result Output of the relu function | 18 decimals
+    function relu(SD59x18 x) internal pure returns (UD60x18) {
+        if (x >= iZERO) {
+            return x.intoUD60x18();
         }
-        return 0;
+        return ZERO;
     }
 
     function d1d2(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate
-    ) internal pure returns (int256 d1, int256 d2) {
-        uint256 timeScaledRiskFreeRate = riskFreeRate.mul(timeToMaturity);
-        uint256 timeScaledVariance = volAnnualized.powu(2).div(TWO).mul(
-            timeToMaturity
-        );
-        uint256 timeScaledStd = volAnnualized.mul(timeToMaturity.sqrt());
-        int256 lnSpot = spot.div(strike).toInt256().ln();
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate
+    ) internal pure returns (SD59x18 d1, SD59x18 d2) {
+        UD60x18 timeScaledRiskFreeRate = riskFreeRate * timeToMaturity;
+        UD60x18 timeScaledVariance = (volAnnualized.powu(2) / TWO) *
+            timeToMaturity;
+        UD60x18 timeScaledStd = volAnnualized * timeToMaturity.sqrt();
+        SD59x18 lnSpot = (spot / strike).intoSD59x18().ln();
 
-        d1 = (lnSpot +
-            timeScaledVariance.toInt256() +
-            timeScaledRiskFreeRate.toInt256()).div(timeScaledStd.toInt256());
+        d1 =
+            (lnSpot +
+                timeScaledVariance.intoSD59x18() +
+                timeScaledRiskFreeRate.intoSD59x18()) /
+            timeScaledStd.intoSD59x18();
 
-        d2 = d1 - timeScaledStd.toInt256();
+        d2 = d1 - timeScaledStd.intoSD59x18();
     }
 
     /// @notice Calculate option delta
@@ -155,52 +157,54 @@ library OptionMath {
 
     /// @notice Calculate the price of an option using the Black-Scholes model
     /// @dev this implementation assumes zero interest
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @param timeToMaturity 60x18 fixed point representation of duration of option contract (in years)
-    /// @param volAnnualized 60x18 fixed point representation of annualized volatility
-    /// @param riskFreeRate 60x18 fixed point representation the risk-free frate
+    /// @param spot Spot price | 18 decimals
+    /// @param strike Strike price | 18 decimals
+    /// @param timeToMaturity Duration of option contract (in years) | 18 decimals
+    /// @param volAnnualized Annualized volatility | 18 decimals
+    /// @param riskFreeRate The risk-free rate | 18 decimals
     /// @param isCall whether to price "call" or "put" option
-    /// @return price 60x18 fixed point representation of Black-Scholes option price
+    /// @return price The Black-Scholes option price | 18 decimals
     function blackScholesPrice(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate,
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
         bool isCall
-    ) internal pure returns (uint256) {
-        int256 _spot = spot.toInt256();
-        int256 _strike = strike.toInt256();
+    ) internal pure returns (UD60x18) {
+        SD59x18 _spot = spot.intoSD59x18();
+        SD59x18 _strike = strike.intoSD59x18();
 
-        if (volAnnualized == 0) revert OptionMath__NonPositiveVol();
+        if (volAnnualized == ZERO) revert OptionMath__NonPositiveVol();
 
-        if (timeToMaturity == 0) {
+        if (timeToMaturity == ZERO) {
             if (isCall) {
                 return relu(_spot - _strike);
             }
             return relu(_strike - _spot);
         }
 
-        int256 discountFactor;
-        if (riskFreeRate > 0) {
-            discountFactor = riskFreeRate.mul(timeToMaturity).toInt256().exp();
+        SD59x18 discountFactor;
+        if (riskFreeRate > ZERO) {
+            discountFactor = (riskFreeRate * timeToMaturity)
+                .intoSD59x18()
+                .exp();
         } else {
-            discountFactor = ONE_I;
+            discountFactor = iONE;
         }
 
-        (int256 d1, int256 d2) = d1d2(
+        (SD59x18 d1, SD59x18 d2) = d1d2(
             spot,
             strike,
             timeToMaturity,
             volAnnualized,
             riskFreeRate
         );
-        int256 sign = isCall ? ONE_I : -ONE_I;
-        int256 a = _spot.mul(normalCdf(d1.mul(sign)));
-        int256 b = _strike.div(discountFactor).mul(normalCdf(d2.mul(sign)));
+        SD59x18 sign = isCall ? iONE : iONE.neg();
+        SD59x18 a = _spot * normalCdf(d1 * sign);
+        SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
 
-        return (a - b).mul(sign).toUint256();
+        return ((a - b) * sign).intoUD60x18();
     }
 
     /// @notice Returns true if the maturity day is Friday
@@ -230,47 +234,84 @@ library OptionMath {
     }
 
     /// @notice Calculates the strike interval for the given spot price
-    /// @param spot The spot price of the base asset
-    /// @return The strike interval
+    /// @param spot The spot price of the base asset | 18 decimals
+    /// @return The strike interval | 18 decimals
     function calculateStrikeInterval(
-        uint256 spot
-    ) internal pure returns (uint256) {
-        int256 o = spot.toInt256().log10().floor();
-        int256 x = spot.toInt256().mul(TEN_I.pow(o.mul(-ONE_I) - ONE_I));
-        uint256 f = TEN_I.pow(o - ONE_I).toUint256();
-        uint256 y = x.toUint256() < ONE_HALF ? ONE.mul(f) : FIVE.mul(f);
+        UD60x18 spot
+    ) internal pure returns (UD60x18) {
+        SD59x18 o = spot.intoSD59x18().log10().floor();
+        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * iONE.neg() - iONE));
+        UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
+        UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE * f : FIVE * f;
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @return The log moneyness of the strike price
+    /// @param spot The spot price | 18 decimals
+    /// @param strike The strike price | 18 decimals
+    /// @return The log moneyness of the strike price | 18 decimals
     function logMoneyness(
-        uint256 spot,
-        uint256 strike
-    ) internal pure returns (uint256) {
-        return spot.div(strike).toInt256().ln().abs().toUint256();
+        UD60x18 spot,
+        UD60x18 strike
+    ) internal pure returns (UD60x18) {
+        return (spot / strike).intoSD59x18().ln().abs().intoUD60x18();
     }
 
+    /// @notice Calculate the initialization fee for a pool
+    /// @param spot The spot price | 18 decimals
+    /// @param strike The strike price | 18 decimals
+    /// @param maturity The maturity timestamp of the option
+    /// @return The initialization fee | 18 decimals
     function initializationFee(
-        uint256 spot,
-        uint256 strike,
+        UD60x18 spot,
+        UD60x18 strike,
         uint64 maturity
-    ) internal view returns (uint256) {
-        uint256 moneyness = logMoneyness(spot, strike);
+    ) internal view returns (UD60x18) {
+        UD60x18 moneyness = logMoneyness(spot, strike);
         uint256 timeToMaturity = calculateTimeToMaturity(maturity);
-        uint256 kBase = moneyness < ATM_MONEYNESS
-            ? (ATM_MONEYNESS - moneyness).toInt256().pow(FOUR_I).toUint256()
+        UD60x18 kBase = moneyness < ATM_MONEYNESS
+            ? (ATM_MONEYNESS - moneyness).intoSD59x18().pow(iFOUR).intoUD60x18()
             : moneyness - ATM_MONEYNESS;
         uint256 tBase = timeToMaturity < NEAR_TERM_TTM
             ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
             : timeToMaturity;
-        uint256 scaledT = tBase.div(ONE_YEAR_TTM).sqrt();
+        UD60x18 scaledT = (UD60x18.wrap(tBase * 1e18) /
+            UD60x18.wrap(ONE_YEAR_TTM * 1e18)).sqrt();
 
-        return
-            INITIALIZATION_ALPHA.mul(kBase + scaledT).mul(scaledT).mul(
-                FEE_SCALAR
-            );
+        return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
+    }
+
+    /// @notice Converts a number with `inputDecimals`, to a number with given amount of decimals
+    /// @param value The value to convert
+    /// @param inputDecimals The amount of decimals the input value has
+    /// @param targetDecimals The amount of decimals to convert to
+    /// @return The converted value
+    function scaleDecimals(
+        uint256 value,
+        uint8 inputDecimals,
+        uint8 targetDecimals
+    ) internal pure returns (uint256) {
+        if (targetDecimals == inputDecimals) return value;
+        if (targetDecimals > inputDecimals)
+            return value * (10 ** (targetDecimals - inputDecimals));
+
+        return value / (10 ** (inputDecimals - targetDecimals));
+    }
+
+    /// @notice Converts a number with `inputDecimals`, to a number with given amount of decimals
+    /// @param value The value to convert
+    /// @param inputDecimals The amount of decimals the input value has
+    /// @param targetDecimals The amount of decimals to convert to
+    /// @return The converted value
+    function scaleDecimals(
+        int256 value,
+        uint8 inputDecimals,
+        uint8 targetDecimals
+    ) internal pure returns (int256) {
+        if (targetDecimals == inputDecimals) return value;
+        if (targetDecimals > inputDecimals)
+            return value * int256(10 ** (targetDecimals - inputDecimals));
+
+        return value / int256(10 ** (inputDecimals - targetDecimals));
     }
 }

@@ -12,7 +12,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {IPool} from "../../../pool/IPool.sol";
-import {UD60x18} from "../../../libraries/prbMath/UD60x18.sol";
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
@@ -20,7 +20,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
     using EnumerableSet for *;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
-    using UD60x18 for uint256;
 
     struct MaturityInfo {
         uint256 maturity;

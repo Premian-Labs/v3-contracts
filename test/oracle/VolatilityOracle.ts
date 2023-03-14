@@ -210,7 +210,7 @@ describe('VolatilityOracle', () => {
     });
 
     it('should correctly perform a batch computation', async () => {
-      await prepareContractEnv();
+      const { oracle, token } = await loadFixture(deployAndUpdateParams);
 
       const spot = parseEther('2800');
       const strike = [

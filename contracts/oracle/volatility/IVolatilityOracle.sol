@@ -2,6 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
@@ -74,10 +77,10 @@ interface IVolatilityOracle {
     /// @return The annualized implied volatility, where 1 is defined as 100%
     function getVolatility(
         address token,
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity
-    ) external view returns (uint256);
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity
+    ) external view returns (UD60x18);
 
     /// @notice Calculate the annualized volatility for given set of parameters
     /// @param token The token address
@@ -87,10 +90,10 @@ interface IVolatilityOracle {
     /// @return The annualized implied volatility, where 1 is defined as 100%
     function getVolatility(
         address token,
-        uint256 spot,
-        uint256[] memory strike,
-        uint256[] memory timeToMaturity
-    ) external view returns (uint256[] memory);
+        UD60x18 spot,
+        UD60x18[] memory strike,
+        UD60x18[] memory timeToMaturity
+    ) external view returns (UD60x18[] memory);
 
-    function getRiskFreeRate() external pure returns (uint256);
+    function getRiskFreeRate() external pure returns (UD60x18);
 }
