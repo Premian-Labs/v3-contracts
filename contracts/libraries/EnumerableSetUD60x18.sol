@@ -10,27 +10,27 @@ library EnumerableSetUD60x18 {
     function at(
         EnumerableSet.Bytes32Set storage self,
         uint256 i
-    ) internal returns (UD60x18) {
-        return UD60x18.wrap(uint256(self.at(self, i)));
+    ) internal view returns (UD60x18) {
+        return UD60x18.wrap(uint256(self.at(i)));
     }
 
     function contains(
         EnumerableSet.Bytes32Set storage self,
         UD60x18 value
-    ) internal returns (bool) {
+    ) internal view returns (bool) {
         return self.contains(bytes32(value.unwrap()));
     }
 
     function indexOf(
         EnumerableSet.Bytes32Set storage self,
         UD60x18 value
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         return self.indexOf(bytes32(value.unwrap()));
     }
 
     function length(
         EnumerableSet.Bytes32Set storage self
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         return self.length();
     }
 
@@ -50,8 +50,8 @@ library EnumerableSetUD60x18 {
 
     function toArray(
         EnumerableSet.Bytes32Set storage self
-    ) internal returns (UD60x18[] memory) {
-        bytes32[] storage src = self.toArray();
+    ) internal view returns (UD60x18[] memory) {
+        bytes32[] memory src = self.toArray();
         UD60x18[] memory tgt = new UD60x18[](src.length);
         for (uint256 i = 0; i < src.length; i++) {
             tgt[i] = UD60x18.wrap(uint256(src[i]));

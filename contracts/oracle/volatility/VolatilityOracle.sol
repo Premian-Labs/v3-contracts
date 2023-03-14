@@ -18,7 +18,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
 
-    SD59x18 internal constant ZERO = SD59x18.wrap(0);
+    UD60x18 internal constant ZERO = UD60x18.wrap(0);
+
+    SD59x18 internal constant iZERO = SD59x18.wrap(0);
     SD59x18 internal constant ONE = SD59x18.wrap(1e18);
     SD59x18 internal constant TWO = SD59x18.wrap(2e18);
 
@@ -212,7 +214,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return (ONE - lam) * value1 + (lam * value2);
     }
 
-    /// @inheritdoc IVolatilityOracle
     function _getVolatility(
         address token,
         UD60x18 spot,
@@ -281,7 +282,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             info = SliceInfo({
                 theta: _weightedAvg(lam, params.theta[i], params.theta[i + 1]),
                 psi: _weightedAvg(lam, params.psi[i], params.psi[i + 1]),
-                rho: ZERO
+                rho: iZERO
             });
             info.rho =
                 _weightedAvg(

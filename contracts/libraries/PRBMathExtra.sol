@@ -47,6 +47,10 @@ library PRBMathExtra {
         return b < iZERO ? add(a, neg(b)) : a - b.intoUD60x18();
     }
 
+    function sub(SD59x18 a) internal pure returns (SD59x18) {
+        return SD59x18.wrap(-a.unwrap());
+    }
+
     function neg(SD59x18 a) internal pure returns (SD59x18) {
         return SD59x18.wrap(-a.unwrap());
     }

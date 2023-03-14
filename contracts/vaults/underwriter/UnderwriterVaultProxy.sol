@@ -7,30 +7,33 @@ import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC46
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+
 contract UnderwriterVaultProxy is
     ProxyUpgradeableOwnable,
     ERC20MetadataInternal
 {
     struct Clevel {
         // The minimum C-levelm allowed by the C-level mechanism
-        uint256 minClevel;
+        UD60x18 minClevel;
         // The maximum C-levelm allowed by the C-level mechanism
-        uint256 maxClevel;
+        UD60x18 maxClevel;
         // (fill in with better description)
-        uint256 alphaClevel;
+        UD60x18 alphaClevel;
         // The decay rate of the C-level back down to ordinary level
-        uint256 hourlyDecayDiscount;
+        UD60x18 hourlyDecayDiscount;
     }
 
     struct TradeBounds {
         // The maximum time until maturity the vault will underwrite
-        uint256 maxDTE;
+        UD60x18 maxDTE;
         // The minimum time until maturity the vault will underwrite
-        uint256 minDTE;
+        UD60x18 minDTE;
         // The maximum delta the vault will underwrite
-        int256 minDelta;
+        SD59x18 minDelta;
         // The minimum delta the vault will underwrite
-        int256 maxDelta;
+        SD59x18 maxDelta;
     }
 
     constructor(
@@ -43,7 +46,7 @@ contract UnderwriterVaultProxy is
         bool isCall,
         Clevel memory cLevel,
         TradeBounds memory tradeBounds,
-        uint256 lastTradeTimestamp
+        UD60x18 lastTradeTimestamp
     ) ProxyUpgradeableOwnable(implementation) {
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 

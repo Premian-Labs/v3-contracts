@@ -25,13 +25,13 @@ contract OptionMathMock {
     }
 
     function optionDelta(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate,
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
         bool isCall
-    ) external pure returns (int256) {
+    ) external pure returns (SD59x18) {
         return
             OptionMath.optionDelta(
                 spot,

@@ -4,11 +4,16 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {DateTime} from "./DateTime.sol";
 import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 library OptionMath {
+    using PRBMathExtra for SD59x18;
+    using SafeCast for int256;
+    using SafeCast for uint256;
+    using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;
 
     // To prevent stack too deep
@@ -133,14 +138,14 @@ library OptionMath {
     /// @param isCall whether to price "call" or "put" option
     /// @return price 60x18 fixed point representation of option delta
     function optionDelta(
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity,
-        uint256 volAnnualized,
-        uint256 riskFreeRate,
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
         bool isCall
-    ) internal pure returns (int256) {
-        (int256 d1, ) = d1d2(
+    ) internal pure returns (SD59x18) {
+        (SD59x18 d1, ) = d1d2(
             spot,
             strike,
             timeToMaturity,
@@ -151,7 +156,7 @@ library OptionMath {
         if (isCall) {
             return normalCdf(d1);
         } else {
-            return -normalCdf(-d1);
+            return normalCdf(d1.neg()).neg();
         }
     }
 
