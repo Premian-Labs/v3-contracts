@@ -24,8 +24,16 @@ contract UniswapV3Adapter is
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     constructor(
-        IUniswapV3Factory uniswapV3Factory
-    ) UniswapV3AdapterInternal(uniswapV3Factory) {}
+        IUniswapV3Factory uniswapV3Factory,
+        uint256 _gasPerCardinality,
+        uint256 _gasPerPool
+    )
+        UniswapV3AdapterInternal(
+            uniswapV3Factory,
+            _gasPerCardinality,
+            _gasPerPool
+        )
+    {}
 
     /// @inheritdoc IOracleAdapter
     function isPairSupported(
@@ -52,9 +60,6 @@ contract UniswapV3Adapter is
         uint256 cachedPoolsLength = cachedPools.length;
         uint256 preparedPoolCount;
 
-        uint104 _gasPerCardinality = l.gasPerCardinality;
-        uint112 _gasCostToSupportPool = l.gasCostToSupportPool;
-
         uint16 targetCardinality = uint16(
             (l.period * l.cardinalityPerMinute) / 60
         ) + 1;
@@ -65,12 +70,7 @@ contract UniswapV3Adapter is
             (
                 bool increaseCardinality,
                 bool gasCostExceedsGasLeft
-            ) = _tryIncreaseCardinality(
-                    pool,
-                    targetCardinality,
-                    _gasPerCardinality,
-                    _gasCostToSupportPool
-                );
+            ) = _tryIncreaseCardinality(pool, targetCardinality);
 
             if (increaseCardinality && gasCostExceedsGasLeft) {
                 // If the cardinality cannot be increased due to gas cost, then break
@@ -139,13 +139,13 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function gasPerCardinality() external view returns (uint104) {
-        return UniswapV3AdapterStorage.layout().gasPerCardinality;
+    function gasPerCardinality() external view returns (uint256) {
+        return GAS_PER_CARDINALITY;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function gasCostToSupportPool() external view returns (uint112) {
-        return UniswapV3AdapterStorage.layout().gasCostToSupportPool;
+    function gasToSupportPool() external view returns (uint256) {
+        return GAS_TO_SUPPORT_POOL;
     }
 
     /// @inheritdoc IUniswapV3Adapter
@@ -171,31 +171,6 @@ contract UniswapV3Adapter is
             .cardinalityPerMinute = _cardinalityPerMinute;
 
         emit CardinalityPerMinuteChanged(_cardinalityPerMinute);
-    }
-
-    /// @inheritdoc IUniswapV3Adapter
-    function setGasPerCardinality(
-        uint104 _gasPerCardinality
-    ) external onlyOwner {
-        if (_gasPerCardinality == 0)
-            revert UniswapV3Adapter__InvalidGasPerCardinality();
-
-        UniswapV3AdapterStorage.layout().gasPerCardinality = _gasPerCardinality;
-        emit GasPerCardinalityChanged(_gasPerCardinality);
-    }
-
-    /// @inheritdoc IUniswapV3Adapter
-    function setGasCostToSupportPool(
-        uint112 _gasCostToSupportPool
-    ) external onlyOwner {
-        if (_gasCostToSupportPool == 0)
-            revert UniswapV3Adapter__InvalidGasCostToSupportPool();
-
-        UniswapV3AdapterStorage
-            .layout()
-            .gasCostToSupportPool = _gasCostToSupportPool;
-
-        emit GasCostToSupportPoolChanged(_gasCostToSupportPool);
     }
 
     /// @inheritdoc IUniswapV3Adapter

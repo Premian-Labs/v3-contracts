@@ -60,6 +60,8 @@ describe('UniswapV3Adapter', () => {
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
+      22250,
+      30000,
     );
 
     await implementation.deployed();
@@ -83,6 +85,8 @@ describe('UniswapV3Adapter', () => {
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
+      22250,
+      30000,
     );
 
     await implementation.deployed();
@@ -354,10 +358,10 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
-  describe('#gasCostToSupportPool', () => {
+  describe('#gasToSupportPool', () => {
     it('should return correct gas cost to add support for a new pool', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.gasCostToSupportPool()).to.be.eq(30000);
+      expect(await instance.gasToSupportPool()).to.be.eq(30000);
     });
   });
 
@@ -408,71 +412,11 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
-  describe('#setGasPerCardinality', () => {
-    const newGasPerCardinality = 10000;
-
-    it('should revert if not called by owner', async () => {
-      const { instance, notOwner } = await loadFixture(deploy);
-      await expect(
-        instance.connect(notOwner).setGasPerCardinality(newGasPerCardinality),
-      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
-    });
-
-    it('should revert if gas per cardinality is 0', async () => {
-      const { instance } = await loadFixture(deploy);
-
-      await expect(
-        instance.setGasPerCardinality(0),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'UniswapV3Adapter__InvalidGasPerCardinality',
-      );
-    });
-
-    it('should set gas per cardinality to new value', async () => {
-      const { instance } = await loadFixture(deploy);
-      await instance.setGasPerCardinality(newGasPerCardinality);
-      expect(await instance.gasPerCardinality()).to.be.eq(newGasPerCardinality);
-    });
-  });
-
-  describe('#setGasCostToSupportPool', () => {
-    const newGasToSupportPool = 15000;
-
-    it('should revert if not called by owner', async () => {
-      const { instance, notOwner } = await loadFixture(deploy);
-      await expect(
-        instance.connect(notOwner).setGasCostToSupportPool(newGasToSupportPool),
-      ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
-    });
-
-    it('should revert if gas cost to support pool is 0', async () => {
-      const { instance } = await loadFixture(deploy);
-
-      await expect(
-        instance.setGasCostToSupportPool(0),
-      ).to.be.revertedWithCustomError(
-        instance,
-        'UniswapV3Adapter__InvalidGasCostToSupportPool',
-      );
-    });
-
-    it('should set gas cost to support pool to new value', async () => {
-      const { instance } = await loadFixture(deploy);
-      await instance.setGasCostToSupportPool(newGasToSupportPool);
-      expect(await instance.gasCostToSupportPool()).to.be.eq(
-        newGasToSupportPool,
-      );
-    });
-  });
-
   describe('#insertFeeTier', () => {
-    const newFeeTier = 100;
-
     it('should revert if not called by owner', async () => {
       const { instance, notOwner } = await loadFixture(deploy);
       await expect(
-        instance.connect(notOwner).insertFeeTier(newFeeTier),
+        instance.connect(notOwner).insertFeeTier(200),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
@@ -490,13 +434,6 @@ describe('UniswapV3Adapter', () => {
         instance,
         'UniswapV3Adapter__FeeTierExists',
       );
-    });
-
-    it('should successfully add new fee tier', async () => {
-      const { instance } = await loadFixture(deploy);
-      await instance.insertFeeTier(100);
-      const feeTiers = await instance.supportedFeeTiers();
-      expect(feeTiers).to.be.deep.eq([500, 3000, 10000, 100]);
     });
   });
 

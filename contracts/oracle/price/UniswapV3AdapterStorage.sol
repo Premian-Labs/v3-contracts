@@ -11,8 +11,6 @@ library UniswapV3AdapterStorage {
     struct Layout {
         uint8 cardinalityPerMinute;
         uint32 period;
-        uint104 gasPerCardinality;
-        uint112 gasCostToSupportPool;
         uint24[] feeTiers;
         mapping(bytes32 => address[]) poolsForPair;
     }

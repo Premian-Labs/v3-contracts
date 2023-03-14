@@ -24,11 +24,11 @@ interface IUniswapV3Adapter is IOracleAdapter {
 
     /// @notice Returns the approximate gas cost per each increased cardinality
     /// @return The gas cost per cardinality increase
-    function gasPerCardinality() external view returns (uint104);
+    function gasPerCardinality() external view returns (uint256);
 
     /// @notice Returns the approximate gas cost to add support for a new pool internally
     /// @return The gas cost to support a new pool
-    function gasCostToSupportPool() external view returns (uint112);
+    function gasToSupportPool() external view returns (uint256);
 
     /// @notice Returns all supported fee tiers
     /// @return The supported fee tiers
@@ -59,18 +59,6 @@ interface IUniswapV3Adapter is IOracleAdapter {
     ///      WARNING: increasing the cardinality per minute will make adding support to a pair significantly costly
     /// @param cardinalityPerMinute The new cardinality per minute
     function setCardinalityPerMinute(uint8 cardinalityPerMinute) external;
-
-    /// @notice Sets the gas cost per cardinality
-    /// @dev Will revert if the given gas cost is zero
-    ///      Can only be called by users with the admin role
-    /// @param gasPerCardinality The gas cost to set
-    function setGasPerCardinality(uint104 gasPerCardinality) external;
-
-    /// @notice Sets the gas cost to support a new pool
-    /// @dev Will revert if the given gas cost is zero
-    ///      Can only be called by users with the admin role
-    /// @param gasCostToSupportPool The gas cost to set
-    function setGasCostToSupportPool(uint112 gasCostToSupportPool) external;
 
     /// @notice Inserts a new fee tier
     /// @dev Will revert if the given tier is invalid, or already supported

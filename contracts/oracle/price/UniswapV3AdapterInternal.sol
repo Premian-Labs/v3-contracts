@@ -29,8 +29,17 @@ contract UniswapV3AdapterInternal is
     bytes32 internal constant POOL_INIT_CODE_HASH =
         0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
 
-    constructor(IUniswapV3Factory uniswapV3Factory) {
+    uint256 internal immutable GAS_PER_CARDINALITY;
+    uint256 internal immutable GAS_TO_SUPPORT_POOL;
+
+    constructor(
+        IUniswapV3Factory uniswapV3Factory,
+        uint256 gasPerCardinality,
+        uint256 gasToSupportPool
+    ) {
         UNISWAP_V3_FACTORY = uniswapV3Factory;
+        GAS_PER_CARDINALITY = gasPerCardinality;
+        GAS_TO_SUPPORT_POOL = gasToSupportPool;
     }
 
     function _quoteFrom(
@@ -239,9 +248,7 @@ contract UniswapV3AdapterInternal is
 
     function _tryIncreaseCardinality(
         address pool,
-        uint16 targetCardinality,
-        uint104 gasCostPerCardinality,
-        uint112 gasCostToSupportPool
+        uint16 targetCardinality
     ) internal returns (bool, bool) {
         (
             bool increaseCardinality,
@@ -251,11 +258,10 @@ contract UniswapV3AdapterInternal is
         bool gasCostExceedsGasLeft = true;
 
         if (increaseCardinality) {
-            uint112 gasCostToIncreaseAndAddSupport = uint112(
-                targetCardinality - currentCardinality
-            ) *
-                gasCostPerCardinality +
-                gasCostToSupportPool;
+            uint256 gasCostToIncreaseAndAddSupport = (targetCardinality -
+                currentCardinality) *
+                GAS_PER_CARDINALITY +
+                GAS_TO_SUPPORT_POOL;
 
             if (gasCostToIncreaseAndAddSupport <= gasleft()) {
                 gasCostExceedsGasLeft = false;
