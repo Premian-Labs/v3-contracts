@@ -43,6 +43,7 @@ contract UnderwriterVault is
 
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
+    address internal immutable ROUTER;
 
     int256 internal constant ONE = 1e18;
 
@@ -98,9 +99,10 @@ contract UnderwriterVault is
     /// @notice The constructor for this vault
     /// @param oracleAddress The address for the volatility oracle
     /// @param factoryAddress The pool factory address
-    constructor(address oracleAddress, address factoryAddress) {
+    constructor(address oracleAddress, address factoryAddress, address router) {
         IV_ORACLE = oracleAddress;
         FACTORY = factoryAddress;
+        ROUTER = router;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -361,9 +363,12 @@ contract UnderwriterVault is
     function _getPricePerShare() internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+        uint256 balanceOf = IERC20(_asset()).balanceOf(address(this));
+
         return
-            (_totalAssets() - _getTotalLockedSpread() - _getTotalFairValue())
-                .div(_totalSupply());
+            (balanceOf - _getTotalLockedSpread() + _getTotalFairValue()).div(
+                _totalSupply()
+            );
     }
 
     /// @notice Checks if a listing exists within internal data structures
@@ -810,7 +815,7 @@ contract UnderwriterVault is
 
         // Approve transfer of base / quote token
         IERC20(_asset()).approve(
-            poolAddr,
+            ROUTER,
             // todo: for puts multiply the size by the strike
             args.size + totalSpread + mintingFee
         );

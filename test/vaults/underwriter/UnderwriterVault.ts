@@ -1076,6 +1076,7 @@ describe('UnderwriterVault', () => {
             },
           ];
           await callVault.setListingsAndSizes(infos);
+          await callVault.increaseTotalLockedAssets(parseEther('1'));
         }
         let pps: number = parseFloat(
           formatEther(await callVault.getPricePerShare()),
@@ -1295,13 +1296,11 @@ describe('UnderwriterVault', () => {
           if (isCall) {
             deposit = 10;
             vault = callVault;
-            totalLockedAssets = parseEther('5');
             newLockedAfterSettlement = parseEther('1');
             newTotalAssets = 10.333333333333;
           } else {
             deposit = 10000;
             vault = putVault;
-            totalLockedAssets = parseEther('7120');
             newLockedAfterSettlement = parseEther('1120');
             newTotalAssets = 9000;
           }
@@ -1321,8 +1320,6 @@ describe('UnderwriterVault', () => {
             },
           ];
           await vault.setListingsAndSizes(infos);
-          await vault.increaseTotalLockedAssets(totalLockedAssets);
-
           for (const strike of [strike1, strike2]) {
             await createPool(
               strike,
@@ -1340,26 +1337,33 @@ describe('UnderwriterVault', () => {
             .returns(parseUnits('1500', 18));
           await vault.connect(caller).mintFromPool(strike1, maturity, size);
           await vault.connect(caller).mintFromPool(strike2, maturity, size);
+          expect(await vault.totalLockedAssets()).to.eq(parseEther('4'));
+          expect(await vault.totalAssets()).to.eq(parseEther('9.988'));
           await increaseTo(maturity);
           await vault.connect(caller).settleMaturity(maturity);
         }
-        it('totalAssets should be reduced by the exerciseValue and equal 9.986666666666', async () => {
+
+        const callTest = { newLocked: 0, newTotalAssets: 9.321333333333333 };
+
+        const putTest = { newLocked: 0, newTotalAssets: 0 };
+
+        const test = isCall ? callTest : putTest;
+
+        it(`totalAssets should be reduced by the exerciseValue and equal ${test.newTotalAssets}`, async () => {
           await loadFixture(setup);
           expect(
             parseFloat(formatEther(await vault.totalAssets())),
-          ).to.be.closeTo(newTotalAssets, 0.000000000001);
+          ).to.be.closeTo(test.newTotalAssets, 0.000000000001);
         });
-        it('the position size should be reduced by the amount of settled options', async () => {
-          expect(await vault.totalLockedAssets()).to.eq(
-            newLockedAfterSettlement,
-          );
+        it(`the position size should be reduced by the amount of settled options and equal ${test.newLocked}`, async () => {
+          expect(await vault.totalLockedAssets()).to.eq(test.newLocked);
         });
       });
     }
   });
 
   describe('#settle', () => {
-    const t0: number = 1678435200 + ONE_WEEK + ONE_WEEK;
+    const t0: number = 1678435200 + 2 * ONE_WEEK;
     const t1 = t0 + ONE_WEEK;
     const t2 = t0 + 2 * ONE_WEEK;
     let strikedict: { [key: number]: BigNumber[] } = {};
@@ -1384,12 +1388,12 @@ describe('UnderwriterVault', () => {
 
           if (isCall) {
             vault = callVault;
-            totalAssets = 100;
-            totalLockedAssets = parseEther('20');
+            totalAssets = 100.03;
+            totalLockedAssets = parseEther('10');
           } else {
             totalAssets = 100000;
             vault = putVault;
-            totalLockedAssets = parseEther('20000');
+            totalLockedAssets = parseEther('11300');
             await quote.mint(
               caller.address,
               parseEther(totalAssets.toString()),
@@ -1447,7 +1451,7 @@ describe('UnderwriterVault', () => {
           console.log('Deposited assets.');
 
           await vault.setListingsAndSizes(infos);
-          await vault.increaseTotalLockedAssets(totalLockedAssets);
+          //await vault.increaseTotalLockedAssets(totalLockedAssets);
           for (let info of infos) {
             for (const [i, strike] of info.strikes.entries()) {
               await createPool(
@@ -1482,23 +1486,23 @@ describe('UnderwriterVault', () => {
         ];
 
         const callTests = [
-          { newLocked: 20, newTotalAssets: 100 },
-          { newLocked: 17, newTotalAssets: 99.333333 },
-          { newLocked: 17, newTotalAssets: 99.333333 },
-          { newLocked: 16, newTotalAssets: 99.333333 },
-          { newLocked: 16, newTotalAssets: 99.333333 },
-          { newLocked: 10, newTotalAssets: 98.533333 },
-          { newLocked: 10, newTotalAssets: 98.533333 },
+          { newLocked: 10, newTotalAssets: 100 },
+          { newLocked: 7, newTotalAssets: 99.333333 },
+          { newLocked: 7, newTotalAssets: 99.333333 },
+          { newLocked: 6, newTotalAssets: 99.333333 },
+          { newLocked: 6, newTotalAssets: 99.333333 },
+          { newLocked: 0, newTotalAssets: 98.533333 },
+          { newLocked: 0, newTotalAssets: 98.533333 },
         ];
 
         const putTests = [
-          { newLocked: 20000, newTotalAssets: 100000 },
-          { newLocked: 16000, newTotalAssets: 99500 },
-          { newLocked: 16000, newTotalAssets: 99500 },
-          { newLocked: 14200, newTotalAssets: 99200 },
-          { newLocked: 14200, newTotalAssets: 99200 },
-          { newLocked: 5900, newTotalAssets: 98700 },
-          { newLocked: 5900, newTotalAssets: 98700 },
+          { newLocked: 11300, newTotalAssets: 100000 },
+          { newLocked: 7300, newTotalAssets: 99500 },
+          { newLocked: 7300, newTotalAssets: 99500 },
+          { newLocked: 5500, newTotalAssets: 99200 },
+          { newLocked: 5500, newTotalAssets: 99200 },
+          { newLocked: 0, newTotalAssets: 98700 },
+          { newLocked: 0, newTotalAssets: 98700 },
         ];
 
         const amountsList = isCall ? callTests : putTests;
@@ -1510,9 +1514,7 @@ describe('UnderwriterVault', () => {
               let { vault } = await loadFixture(setupVaultForSettlement);
               await increaseTo(test.timestamp);
               await vault.settle();
-
               let delta = isCall ? 0.00001 : 0;
-
               expect(
                 parseFloat(formatEther(await vault.totalAssets())),
               ).to.be.closeTo(amounts.newTotalAssets, delta);

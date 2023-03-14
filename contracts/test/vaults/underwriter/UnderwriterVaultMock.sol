@@ -32,8 +32,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     constructor(
         address oracleAddress,
-        address factoryAddress
-    ) UnderwriterVault(oracleAddress, factoryAddress) {}
+        address factoryAddress,
+        address routerAddress
+    ) UnderwriterVault(oracleAddress, factoryAddress, routerAddress) {}
 
     function getMaturityAfterTimestamp(
         uint256 timestamp
@@ -487,8 +488,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         if (!l.isCall) {
             allowance = allowance.mul(strike);
         }
-        IERC20(_asset()).approve(listingAddr, allowance);
+        IERC20(_asset()).approve(ROUTER, allowance);
+
         IPool(listingAddr).writeFrom(address(this), msg.sender, size);
+        UnderwriterVaultStorage.layout().totalLockedAssets += size;
     }
 
     function getActivePoolAddresses() public returns (address[] memory) {

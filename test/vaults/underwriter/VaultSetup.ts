@@ -280,6 +280,7 @@ export async function vaultSetup() {
   vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
     volOracle.address,
     p.poolFactory.address,
+    p.router.address,
   );
   await vaultImpl.deployed();
   if (log)
