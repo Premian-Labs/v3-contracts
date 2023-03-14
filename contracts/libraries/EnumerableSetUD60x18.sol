@@ -24,9 +24,38 @@ library EnumerableSetUD60x18 {
     function indexOf(
         EnumerableSet.Bytes32Set storage self,
         UD60x18 value
-    ) internal returns (uint256) {}
+    ) internal returns (uint256) {
+        return self.indexOf(bytes32(value.unwrap()));
+    }
 
     function length(
         EnumerableSet.Bytes32Set storage self
-    ) internal returns (uint256) {}
+    ) internal returns (uint256) {
+        return self.length();
+    }
+
+    function add(
+        EnumerableSet.Bytes32Set storage self,
+        UD60x18 value
+    ) internal returns (bool) {
+        return self.add(bytes32(value.unwrap()));
+    }
+
+    function remove(
+        EnumerableSet.Bytes32Set storage self,
+        UD60x18 value
+    ) internal returns (bool) {
+        return self.remove(bytes32(value.unwrap()));
+    }
+
+    function toArray(
+        EnumerableSet.Bytes32Set storage self
+    ) internal returns (UD60x18[] memory) {
+        bytes32[] storage src = self.toArray();
+        UD60x18[] memory tgt = new UD60x18[](src.length);
+        for (uint256 i = 0; i < src.length; i++) {
+            tgt[i] = UD60x18.wrap(uint256(src[i]));
+        }
+        return tgt;
+    }
 }

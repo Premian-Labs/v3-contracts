@@ -219,9 +219,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 strike,
         UD60x18 timeToMaturity
     ) internal view returns (UD60x18) {
-        if (spot == 0) revert VolatilityOracle__SpotIsZero();
-        if (strike == 0) revert VolatilityOracle__StrikeIsZero();
-        if (timeToMaturity == 0)
+        if (spot == ZERO) revert VolatilityOracle__SpotIsZero();
+        if (strike == ZERO) revert VolatilityOracle__StrikeIsZero();
+        if (timeToMaturity == ZERO)
             revert VolatilityOracle__TimeToMaturityIsZero();
 
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
@@ -337,6 +337,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     //TODO: get risk free rate
     function getRiskFreeRate() external pure returns (UD60x18) {
-        return 0;
+        return ZERO;
     }
 }
