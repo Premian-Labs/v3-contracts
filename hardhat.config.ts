@@ -50,7 +50,7 @@ export default {
   solidity: {
     compilers: [
       {
-        version: '0.8.18',
+        version: '0.8.19',
         settings: {
           viaIR: false,
           optimizer: {
@@ -69,7 +69,7 @@ export default {
       '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol':
         UNISWAP_SETTING,
       'contracts/staking/VxPremia.sol': {
-        version: '0.8.17',
+        version: '0.8.19',
         settings: {
           viaIR: true,
           optimizer: {
