@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
 interface IPoolEvents {
     event Deposit(
