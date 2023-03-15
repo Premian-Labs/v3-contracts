@@ -80,11 +80,8 @@ contract UniswapV3Adapter is
         }
 
         _resizeArray(poolsToSupport, poolsSupported);
-
         if (poolsToSupport.length == 0) revert UniswapV3Adapter__GasTooLow();
-
         l.poolsForPair[_keyForUnsortedPair(tokenA, tokenB)] = poolsToSupport;
-
         emit UpdatedPoolsForPair(tokenA, tokenB, poolsToSupport);
     }
 
