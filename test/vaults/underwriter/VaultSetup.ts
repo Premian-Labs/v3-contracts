@@ -44,10 +44,10 @@ export let maturity: number;
 export let strike: BigNumber;
 export let poolKey: PoolKey;
 
-interface Clevel {
-  minClevel: BigNumberish;
-  maxClevel: BigNumberish;
-  alphaClevel: BigNumberish;
+interface CLevel {
+  minCLevel: BigNumberish;
+  maxCLevel: BigNumberish;
+  alphaCLevel: BigNumberish;
   hourlyDecayDiscount: BigNumberish;
 }
 
@@ -286,10 +286,10 @@ export async function vaultSetup() {
   if (log)
     console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
-  const _cLevelParams: Clevel = {
-    minClevel: parseEther('1.0'),
-    maxClevel: parseEther('1.2'),
-    alphaClevel: parseEther('3.0'),
+  const _cLevelParams: CLevel = {
+    minCLevel: parseEther('1.0'),
+    maxCLevel: parseEther('1.2'),
+    alphaCLevel: parseEther('3.0'),
     hourlyDecayDiscount: parseEther('0.005'),
   };
 

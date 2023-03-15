@@ -2,27 +2,26 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {IUnderwriterVault} from "./IUnderwriterVault.sol";
+import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IVolatilityOracle} from "../../oracle/volatility/IVolatilityOracle.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../factory/IPoolFactory.sol";
 import {IPool} from "../../pool/IPool.sol";
 import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
-
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../libraries/EnumerableSetUD60x18.sol";
-import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
+import {ZERO, iZERO, ONE, iONE} from "../../libraries/Constants.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -37,11 +36,6 @@ contract UnderwriterVault is
     using SafeERC20 for IERC20;
     using SafeCast for int256;
     using SafeCast for uint256;
-
-    SD59x18 internal constant iZERO = SD59x18.wrap(0);
-    SD59x18 internal constant iONE = SD59x18.wrap(1e18);
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
 
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
@@ -1011,5 +1005,44 @@ contract UnderwriterVault is
         }
 
         return 0;
+    }
+
+    /// @inheritdoc IVault
+    function getTradeQuote(
+        uint256 strike,
+        uint64 maturity,
+        bool isCall,
+        uint256 size,
+        bool isBuy
+    ) external view returns (uint256 maxSize, uint256 price) {
+        TradeArgs memory args;
+        args.strike = UD60x18.wrap(strike);
+        args.maturity = maturity;
+        args.size = UD60x18.wrap(size);
+        (, UD60x18 premium, , , ) = _quote(args);
+
+        maxSize = _availableAssets().unwrap();
+        price = premium.unwrap();
+    }
+
+    /// @inheritdoc IVault
+    function trade(
+        uint256 strike,
+        uint64 maturity,
+        bool isCall,
+        uint256 size,
+        bool isBuy
+    ) external override {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!isBuy) revert Vault__TradeMustBeBuy();
+        if (isCall != l.isCall) revert Vault__OptionTypeMismatchWithVault();
+
+        TradeArgs memory args;
+        args.strike = UD60x18.wrap(strike);
+        args.maturity = maturity;
+        args.size = UD60x18.wrap(size);
+        return _buy(args);
     }
 }

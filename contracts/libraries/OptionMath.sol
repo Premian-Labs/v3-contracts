@@ -48,7 +48,6 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) | 18 decimals
     /// @return result The normal CDF evaluated at x | 18 decimals
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        // TODO: Magnus check this condition again and make sure it's correct
         if (x <= -iNINE) {
             result = iZERO;
         } else if (x >= iNINE) {

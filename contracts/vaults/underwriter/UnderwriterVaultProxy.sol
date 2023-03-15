@@ -2,25 +2,25 @@
 
 pragma solidity ^0.8.0;
 
-import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
-import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
-import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
-import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
+import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
+
+import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
+import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
 contract UnderwriterVaultProxy is
     ProxyUpgradeableOwnable,
     ERC20MetadataInternal
 {
-    struct Clevel {
-        // The minimum C-levelm allowed by the C-level mechanism
-        UD60x18 minClevel;
-        // The maximum C-levelm allowed by the C-level mechanism
-        UD60x18 maxClevel;
+    struct CLevel {
+        // The minimum C-level allowed by the C-level mechanism
+        UD60x18 minCLevel;
+        // The maximum C-level allowed by the C-level mechanism
+        UD60x18 maxCLevel;
         // (fill in with better description)
-        UD60x18 alphaClevel;
+        UD60x18 alphaCLevel;
         // The decay rate of the C-level back down to ordinary level
         UD60x18 hourlyDecayDiscount;
     }
@@ -44,7 +44,7 @@ contract UnderwriterVaultProxy is
         string memory name,
         string memory symbol,
         bool isCall,
-        Clevel memory cLevel,
+        CLevel memory cLevel,
         TradeBounds memory tradeBounds,
         uint256 lastTradeTimestamp
     ) ProxyUpgradeableOwnable(implementation) {
@@ -64,9 +64,9 @@ contract UnderwriterVaultProxy is
         l.minDTE = tradeBounds.minDTE;
         l.minDelta = tradeBounds.minDelta;
         l.maxDelta = tradeBounds.maxDelta;
-        l.minCLevel = cLevel.minClevel;
-        l.maxCLevel = cLevel.maxClevel;
-        l.alphaCLevel = cLevel.alphaClevel;
+        l.minCLevel = cLevel.minCLevel;
+        l.maxCLevel = cLevel.maxCLevel;
+        l.alphaCLevel = cLevel.alphaCLevel;
         l.hourlyDecayDiscount = cLevel.hourlyDecayDiscount;
         l.lastTradeTimestamp = lastTradeTimestamp;
         l.oracleAdapter = oracleAdapter;
