@@ -46,7 +46,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         return
-            PoolStorage.layout().toPoolTokenDecimals(
+            l.toPoolTokenDecimals(
                 _takerFee(
                     PoolStorage.layout(),
                     size,
