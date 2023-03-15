@@ -47,8 +47,9 @@ contract UniswapV3Adapter is
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
         address[] memory pools = _getPoolsSortedByLiquidity(tokenA, tokenB);
+        uint256 poolsLength = pools.length;
 
-        if (pools.length == 0)
+        if (poolsLength == 0)
             revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
 
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
@@ -56,15 +57,20 @@ contract UniswapV3Adapter is
 
         // Load to mem to avoid multiple storage reads
         address[] storage cachedPools = _poolsForPair(tokenA, tokenB);
-
         uint256 cachedPoolsLength = cachedPools.length;
-        uint256 preparedPoolCount;
 
         uint16 targetCardinality = uint16(
             (l.period * l.cardinalityPerMinute) / 60
         ) + 1;
 
-        for (uint256 i; i < pools.length; i++) {
+        // Remove all pools from cache
+        if (cachedPoolsLength > 0) {
+            for (uint256 i; i < cachedPoolsLength; i++) {
+                cachedPools.pop();
+            }
+        }
+
+        for (uint256 i; i < poolsLength; i++) {
             address pool = pools[i];
 
             (
@@ -73,27 +79,14 @@ contract UniswapV3Adapter is
             ) = _tryIncreaseCardinality(pool, targetCardinality);
 
             if (increaseCardinality && gasCostExceedsGasLeft) {
-                // If the cardinality cannot be increased due to gas cost, then break
-                break;
+                // If the cardinality cannot be increased due to gas cost, skip pool
+                continue;
             }
 
-            if (preparedPoolCount < cachedPoolsLength) {
-                // Rewrite storage
-                cachedPools[preparedPoolCount++] = pool;
-            } else {
-                // If I have more pools than before, then push
-                cachedPools.push(pool);
-                preparedPoolCount++;
-            }
+            cachedPools.push(pool);
         }
 
-        if (preparedPoolCount == 0) revert UniswapV3Adapter__GasTooLow();
-
-        // If I have less pools than before, then remove the extra pools
-        for (uint256 i = preparedPoolCount; i < cachedPoolsLength; i++) {
-            cachedPools.pop();
-        }
-
+        if (cachedPools.length == 0) revert UniswapV3Adapter__GasTooLow();
         emit UpdatedPoolsForPair(tokenA, tokenB, cachedPools);
     }
 
