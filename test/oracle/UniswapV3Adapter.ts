@@ -327,9 +327,10 @@ describe('UniswapV3Adapter', () => {
       );
 
       expect(pools).to.be.deep.eq([
-        '0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8',
-        '0x60594a405d53811d3bc4766596efd80fd545a270',
-        '0xa80964c5bbd1a0e95777094420555fead1a26c1e',
+        '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
+        '0x60594a405d53811d3BC4766596EFD80fd545A270',
+        '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
+        '0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19',
       ]);
     });
   });

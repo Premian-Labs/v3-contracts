@@ -55,20 +55,12 @@ contract UniswapV3Adapter is
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        // Load to mem to avoid multiple storage reads
-        address[] storage cachedPools = _poolsForPair(tokenA, tokenB);
-        uint256 cachedPoolsLength = cachedPools.length;
+        uint256 poolsSupported;
+        address[] memory poolsToSupport = new address[](poolsLength);
 
         uint16 targetCardinality = uint16(
             (l.period * l.cardinalityPerMinute) / 60
         ) + 1;
-
-        // Remove all pools from cache
-        if (cachedPoolsLength > 0) {
-            for (uint256 i; i < cachedPoolsLength; i++) {
-                cachedPools.pop();
-            }
-        }
 
         for (uint256 i; i < poolsLength; i++) {
             address pool = pools[i];
@@ -83,11 +75,17 @@ contract UniswapV3Adapter is
                 continue;
             }
 
-            cachedPools.push(pool);
+            poolsToSupport[i] = pool;
+            ++poolsSupported;
         }
 
-        if (cachedPools.length == 0) revert UniswapV3Adapter__GasTooLow();
-        emit UpdatedPoolsForPair(tokenA, tokenB, cachedPools);
+        _resizeArray(poolsToSupport, poolsSupported);
+
+        if (poolsToSupport.length == 0) revert UniswapV3Adapter__GasTooLow();
+
+        l.poolsForPair[_keyForUnsortedPair(tokenA, tokenB)] = poolsToSupport;
+
+        emit UpdatedPoolsForPair(tokenA, tokenB, poolsToSupport);
     }
 
     /// @inheritdoc IOracleAdapter
