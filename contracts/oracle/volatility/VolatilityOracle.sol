@@ -12,11 +12,16 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
+import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
+
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
+    using SafeCast for int256;
+    using PRBMathExtra for UD60x18;
+    using PRBMathExtra for SD59x18;
 
     UD60x18 internal constant ZERO = UD60x18.wrap(0);
 
@@ -242,7 +247,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 n = params.tau.length;
 
         // Log Moneyness
-        SD59x18 k = (strike.intoSD59x18() / spot.intoSD59x18()).ln();
+        SD59x18 k = (strike / spot).intoSD59x18().ln();
 
         // Compute total implied variance
         SliceInfo memory info;
@@ -294,8 +299,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
 
         SD59x18 phi = info.psi / info.theta;
-        SD59x18 term = (phi * k + info.rho).pow(TWO) +
-            (ONE - info.rho.pow(TWO));
+
+        // Use powu(2) instead of pow(TWO) here (o.w. LogInputTooSmall Error)
+        SD59x18 term = (phi * k + info.rho).powu(2) + (ONE - info.rho.powu(2));
+
         SD59x18 w = info.theta / TWO;
         w = w * (ONE + info.rho * phi * k + term.sqrt());
 

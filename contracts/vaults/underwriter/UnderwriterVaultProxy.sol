@@ -46,7 +46,7 @@ contract UnderwriterVaultProxy is
         bool isCall,
         Clevel memory cLevel,
         TradeBounds memory tradeBounds,
-        UD60x18 lastTradeTimestamp
+        uint256 lastTradeTimestamp
     ) ProxyUpgradeableOwnable(implementation) {
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 

@@ -31,7 +31,7 @@ contract UnderwriterVault is
     SolidStateERC4626,
     OwnableInternal
 {
-    using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
@@ -55,11 +55,11 @@ contract UnderwriterVault is
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
     struct AfterBuyArgs {
         // The maturity of a listing
-        UD60x18 maturity;
+        uint256 maturity;
         // The vanilla Black-Scholes premium paid by the option buyer
         UD60x18 premium;
         // The time until maturity (seconds) for the listing
-        UD60x18 secondsToExpiration;
+        uint256 secondsToExpiration;
         // The number of contracts for an option purchase
         UD60x18 size;
         // The spread captured from selling an option
@@ -87,9 +87,17 @@ contract UnderwriterVault is
         // The strike price of the listing
         UD60x18 strike;
         // The maturity of the listing
-        UD60x18 maturity;
+        uint256 maturity;
         // The number of contracts being traded
         UD60x18 size;
+    }
+
+    struct QuoteReturnVars {
+        address poolAddr;
+        UD60x18 premium;
+        UD60x18 mintingFee;
+        UD60x18 cLevel;
+        UD60x18 totalSpread;
     }
 
     struct UnexpiredListingVars {
@@ -98,7 +106,7 @@ contract UnderwriterVault is
         // A list of time until maturity (years) for a set of listings
         UD60x18[] timeToMaturities;
         // A list of maturities for a set of listings
-        UD60x18[] maturities;
+        uint256[] maturities;
     }
 
     /// @notice The constructor for this vault
@@ -151,28 +159,21 @@ contract UnderwriterVault is
                 .quoteFrom(l.base, l.quote, timestamp);
     }
 
-    /// @notice Gets the spot price at the given timestamp
-    /// @param timestamp The given timestamp
-    /// @return The spot price at the given timestamp
-    function _getSpotPrice(UD60x18 timestamp) internal view returns (UD60x18) {
-        return _getSpotPrice(timestamp.unwrap());
-    }
-
     /// @notice Gets the nearest maturity after the given timestamp, exclusive
     ///         of the timestamp being on a maturity
     /// @param timestamp The given timestamp
     /// @return The nearest maturity after the given timestamp
     function _getMaturityAfterTimestamp(
-        UD60x18 timestamp
-    ) internal view returns (UD60x18) {
+        uint256 timestamp
+    ) internal view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         if (timestamp >= l.maxMaturity) revert Vault__GreaterThanMaxMaturity();
 
-        UD60x18 current = l.minMaturity;
+        uint256 current = l.minMaturity;
 
-        while (current <= timestamp && current != ZERO) {
+        while (current <= timestamp && current != 0) {
             current = l.maturities.next(current);
         }
         return current;
@@ -183,7 +184,7 @@ contract UnderwriterVault is
     /// @param timestamp The given timestamp
     /// @return The number of unexpired listings
     function _getNumberOfUnexpiredListings(
-        UD60x18 timestamp
+        uint256 timestamp
     ) internal view returns (uint256) {
         uint256 n = 0;
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -191,9 +192,9 @@ contract UnderwriterVault is
 
         if (l.maxMaturity <= timestamp) return 0;
 
-        UD60x18 current = _getMaturityAfterTimestamp(timestamp);
+        uint256 current = _getMaturityAfterTimestamp(timestamp);
 
-        while (current <= l.maxMaturity && current != ZERO) {
+        while (current <= l.maxMaturity && current != 0) {
             n += l.maturityToStrikes[current].length();
             current = l.maturities.next(current);
         }
@@ -206,16 +207,16 @@ contract UnderwriterVault is
     /// @param timestamp The given timestamp
     /// @return The total liabilities of the basket of expired options underwritten
     function _getTotalLiabilitiesExpired(
-        UD60x18 timestamp
+        uint256 timestamp
     ) internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         // Compute fair value for expired unsettled options
-        UD60x18 current = l.minMaturity;
+        uint256 current = l.minMaturity;
         UD60x18 total = ZERO;
 
-        while (current <= timestamp && current != ZERO) {
+        while (current <= timestamp && current != 0) {
             UD60x18 spot = _getSpotPrice(current);
 
             for (
@@ -251,7 +252,7 @@ contract UnderwriterVault is
     /// @param spot The spot price
     /// @return The the total liabilities of the basket of unexpired options underwritten
     function _getTotalLiabilitiesUnexpired(
-        UD60x18 timestamp,
+        uint256 timestamp,
         UD60x18 spot
     ) internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -259,7 +260,7 @@ contract UnderwriterVault is
 
         if (l.maxMaturity <= timestamp) return ZERO;
 
-        UD60x18 current = _getMaturityAfterTimestamp(timestamp);
+        uint256 current = _getMaturityAfterTimestamp(timestamp);
         UD60x18 total = ZERO;
 
         // Compute fair value for options that have not expired
@@ -268,13 +269,14 @@ contract UnderwriterVault is
         UnexpiredListingVars memory listings = UnexpiredListingVars({
             strikes: new UD60x18[](n),
             timeToMaturities: new UD60x18[](n),
-            maturities: new UD60x18[](n)
+            maturities: new uint256[](n)
         });
 
         uint256 i = 0;
-        while (current <= l.maxMaturity && current != ZERO) {
-            UD60x18 timeToMaturity = (current - timestamp) /
-                UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
+        while (current <= l.maxMaturity && current != 0) {
+            UD60x18 timeToMaturity = UD60x18.wrap(
+                (current - timestamp) * 1e18
+            ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
 
             for (
                 uint256 j = 0;
@@ -292,24 +294,24 @@ contract UnderwriterVault is
         }
 
         UD60x18[] memory sigmas = IVolatilityOracle(IV_ORACLE).getVolatility(
-            _asset(),
+            l.base,
             spot,
             listings.strikes,
             listings.timeToMaturities
         );
 
-        for (uint256 x = 0; x < n; x++) {
+        for (uint256 k = 0; k < n; k++) {
             UD60x18 price = OptionMath.blackScholesPrice(
                 spot,
-                listings.strikes[x],
-                listings.timeToMaturities[x],
-                sigmas[x],
+                listings.strikes[k],
+                listings.timeToMaturities[k],
+                sigmas[k],
                 ZERO,
                 l.isCall
             );
 
-            UD60x18 size = l.positionSizes[listings.maturities[x]][
-                listings.strikes[x]
+            UD60x18 size = l.positionSizes[listings.maturities[k]][
+                listings.strikes[k]
             ];
             total = total + price * size;
         }
@@ -317,16 +319,12 @@ contract UnderwriterVault is
         return l.isCall ? total / spot : total;
     }
 
-    function blockTimestampUD60x18() internal view returns (UD60x18) {
-        return UD60x18.wrap(block.timestamp);
-    }
-
     /// @notice Gets the total liabilities of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total liabilities of the basket of options underwritten
     function _getTotalLiabilities() internal view returns (UD60x18) {
+        uint256 timestamp = block.timestamp;
         UD60x18 spot = _getSpotPrice();
-        UD60x18 timestamp = blockTimestampUD60x18();
         return
             _getTotalLiabilitiesUnexpired(timestamp, spot) +
             _getTotalLiabilitiesExpired(timestamp);
@@ -349,17 +347,18 @@ contract UnderwriterVault is
 
         if (l.maxMaturity <= l.lastSpreadUnlockUpdate) return ZERO;
 
-        UD60x18 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
+        uint256 current = _getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
 
-        UD60x18 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
+        uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
         UD60x18 spreadUnlockingRate = l.spreadUnlockingRate;
         // TODO: double check handling of negative total locked spread
         UD60x18 totalLockedSpread = l.totalLockedSpread;
+        uint256 timestamp = block.timestamp;
 
-        while (current <= blockTimestampUD60x18() && current != ZERO) {
+        while (current <= timestamp && current != 0) {
             totalLockedSpread =
                 totalLockedSpread -
-                (current - lastSpreadUnlockUpdate) *
+                UD60x18.wrap((current - lastSpreadUnlockUpdate) * 1e18) *
                 spreadUnlockingRate;
 
             spreadUnlockingRate =
@@ -370,17 +369,17 @@ contract UnderwriterVault is
         }
         totalLockedSpread =
             totalLockedSpread -
-            (blockTimestampUD60x18() - lastSpreadUnlockUpdate) *
+            UD60x18.wrap((timestamp - lastSpreadUnlockUpdate) * 1e18) *
             spreadUnlockingRate;
         return totalLockedSpread;
     }
 
-    function _balanceOf() internal view returns (uint256) {
-        return IERC20(_asset()).balanceOf(address(this));
-    }
-
     function _balanceOfUD60x18() internal view returns (UD60x18) {
         return UD60x18.wrap(_balanceOf());
+    }
+
+    function _balanceOf() internal view returns (uint256) {
+        return IERC20(_asset()).balanceOf(address(this));
     }
 
     function _totalSupplyUD60x18() internal view returns (UD60x18) {
@@ -389,6 +388,7 @@ contract UnderwriterVault is
 
     /// @notice Gets the current amount of available assets
     /// @return The amount of available assets
+    // TODO: shouldn't this include lockedAssets?
     function _availableAssets() internal view returns (UD60x18) {
         return _balanceOfUD60x18() - _getTotalLockedSpread();
     }
@@ -410,7 +410,7 @@ contract UnderwriterVault is
     /// @return If listing exists, return true, otherwise false
     function _contains(
         UD60x18 strike,
-        UD60x18 maturity
+        uint256 maturity
     ) internal view returns (bool) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -423,7 +423,7 @@ contract UnderwriterVault is
     /// @notice Adds a listing to the internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    function _addListing(UD60x18 strike, UD60x18 maturity) internal {
+    function _addListing(UD60x18 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -435,12 +435,12 @@ contract UnderwriterVault is
             } else if (
                 (l.minMaturity < maturity) && (maturity) < l.maxMaturity
             ) {
-                UD60x18 next = _getMaturityAfterTimestamp(maturity);
+                uint256 next = _getMaturityAfterTimestamp(maturity);
                 l.maturities.insertBefore(next, maturity);
             } else {
                 l.maturities.insertAfter(l.maxMaturity, maturity);
 
-                if (l.minMaturity == ZERO) l.minMaturity = maturity;
+                if (l.minMaturity == 0) l.minMaturity = maturity;
 
                 l.maxMaturity = maturity;
             }
@@ -454,7 +454,7 @@ contract UnderwriterVault is
     /// @notice Removes a listing from internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    function _removeListing(UD60x18 strike, UD60x18 maturity) internal {
+    function _removeListing(UD60x18 strike, uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -480,18 +480,20 @@ contract UnderwriterVault is
 
         // TODO: double check that l.maxMaturity is updated correctly during processing of a trade
         if (l.maxMaturity > l.lastSpreadUnlockUpdate) {
-            UD60x18 current = _getMaturityAfterTimestamp(
+            uint256 current = _getMaturityAfterTimestamp(
                 l.lastSpreadUnlockUpdate
             );
 
-            UD60x18 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
+            uint256 lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
             UD60x18 spreadUnlockingRate = l.spreadUnlockingRate;
             UD60x18 totalLockedSpread = l.totalLockedSpread;
 
-            while (current <= blockTimestampUD60x18() && current != ZERO) {
+            uint256 timestamp = block.timestamp;
+
+            while (current <= timestamp && current != 0) {
                 totalLockedSpread =
                     totalLockedSpread -
-                    (current - lastSpreadUnlockUpdate) *
+                    UD60x18.wrap((current - lastSpreadUnlockUpdate) * 1e18) *
                     spreadUnlockingRate;
 
                 spreadUnlockingRate =
@@ -502,12 +504,12 @@ contract UnderwriterVault is
             }
             totalLockedSpread =
                 totalLockedSpread -
-                (blockTimestampUD60x18() - lastSpreadUnlockUpdate) *
+                UD60x18.wrap((timestamp - lastSpreadUnlockUpdate) * 1e18) *
                 spreadUnlockingRate;
 
             l.totalLockedSpread = totalLockedSpread;
             l.spreadUnlockingRate = spreadUnlockingRate;
-            l.lastSpreadUnlockUpdate = blockTimestampUD60x18();
+            l.lastSpreadUnlockUpdate = timestamp;
         }
     }
 
@@ -681,8 +683,11 @@ contract UnderwriterVault is
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
+        uint256 timestamp = block.timestamp;
+
         _updateState();
-        UD60x18 spreadRate = args.spread / args.secondsToExpiration;
+        UD60x18 spreadRate = args.spread /
+            UD60x18.wrap(args.secondsToExpiration * 1e18);
         UD60x18 newLockedAssets = l.isCall
             ? args.size
             : args.size * args.strike;
@@ -696,7 +701,7 @@ contract UnderwriterVault is
         l.positionSizes[args.maturity][args.strike] =
             l.positionSizes[args.maturity][args.strike] +
             args.size;
-        l.lastTradeTimestamp = blockTimestampUD60x18();
+        l.lastTradeTimestamp = timestamp;
     }
 
     /// @notice Gets the pool factory address corresponding to the given strike
@@ -706,7 +711,7 @@ contract UnderwriterVault is
     /// @return The pool factory address
     function _getFactoryAddress(
         UD60x18 strike,
-        UD60x18 maturity
+        uint256 maturity
     ) internal view returns (address) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -717,7 +722,7 @@ contract UnderwriterVault is
         _poolKey.quote = l.quote;
         _poolKey.oracleAdapter = l.oracleAdapter;
         _poolKey.strike = strike;
-        _poolKey.maturity = uint64(maturity.unwrap());
+        _poolKey.maturity = uint64(maturity);
         _poolKey.isCallPool = l.isCall;
 
         address listingAddr = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
@@ -740,8 +745,9 @@ contract UnderwriterVault is
 
         if (postUtilisation > ONE) revert Vault__UtilEstError();
 
-        UD60x18 hoursSinceLastTx = (blockTimestampUD60x18() -
-            l.lastTradeTimestamp) / UD60x18.wrap(ONE_HOUR * 1e18);
+        UD60x18 hoursSinceLastTx = UD60x18.wrap(
+            (block.timestamp - l.lastTradeTimestamp) * 1e18
+        ) / UD60x18.wrap(ONE_HOUR * 1e18);
 
         UD60x18 cLevel = _calculateCLevel(
             postUtilisation,
@@ -792,16 +798,17 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
+        uint256 timestamp = block.timestamp;
+
         // Check non Zero Strike
         if (args.strike == ZERO) revert Vault__StrikeZero();
         // Check valid maturity
-        if (blockTimestampUD60x18() >= args.maturity)
-            revert Vault__OptionExpired();
+        if (timestamp >= args.maturity) revert Vault__OptionExpired();
 
         BlackScholesArgs memory bsArgs = BlackScholesArgs({
             spot: _getSpotPrice(),
             strike: args.strike,
-            timeToMaturity: (args.maturity - blockTimestampUD60x18()) /
+            timeToMaturity: UD60x18.wrap((args.maturity - timestamp) * 1e18) /
                 UD60x18.wrap(ONE_YEAR * 1e18),
             volAnnualized: ZERO,
             riskFreeRate: IVolatilityOracle(IV_ORACLE).getRiskFreeRate(),
@@ -823,8 +830,6 @@ contract UnderwriterVault is
             bsArgs.riskFreeRate
         );
 
-        address poolAddr = _getFactoryAddress(args.strike, args.maturity);
-
         // returns USD price for calls & puts
         UD60x18 price = OptionMath.blackScholesPrice(
             bsArgs.spot,
@@ -838,10 +843,14 @@ contract UnderwriterVault is
         if (l.isCall) price = price / bsArgs.spot;
 
         // call denominated in base, put denominated in quote
-        UD60x18 mintingFee = UD60x18.wrap(
-            IPool(poolAddr).takerFee(
+        QuoteReturnVars memory vars;
+        vars.poolAddr = _getFactoryAddress(args.strike, args.maturity);
+        vars.premium = price * args.size;
+
+        vars.mintingFee = UD60x18.wrap(
+            IPool(vars.poolAddr).takerFee(
                 args.size,
-                (price * args.size).unwrap(),
+                vars.premium.unwrap(),
                 false
             )
         );
@@ -852,10 +861,16 @@ contract UnderwriterVault is
         if (collateralAmt >= _availableAssets())
             revert Vault__InsufficientFunds();
 
-        UD60x18 cLevel = _getCLevel(collateralAmt);
-        UD60x18 spread = (cLevel - l.minCLevel) * price * args.size;
+        vars.cLevel = _getCLevel(collateralAmt);
+        vars.totalSpread = (vars.cLevel - l.minCLevel) * vars.premium;
 
-        return (poolAddr, (price * args.size), mintingFee, cLevel, spread);
+        return (
+            vars.poolAddr,
+            vars.premium,
+            vars.mintingFee,
+            vars.cLevel,
+            vars.totalSpread
+        );
     }
 
     /// @notice Fulfills an option purchase
@@ -890,7 +905,7 @@ contract UnderwriterVault is
         // Mint option and allocate long token
         IPool(poolAddr).writeFrom(address(this), msg.sender, args.size);
 
-        UD60x18 secondsToExpiration = args.maturity - blockTimestampUD60x18();
+        uint256 secondsToExpiration = args.maturity - block.timestamp;
 
         // Handle the premiums and spread capture generated
         AfterBuyArgs memory intel = AfterBuyArgs(
@@ -906,7 +921,7 @@ contract UnderwriterVault is
         emit Sell(
             msg.sender,
             args.strike.unwrap(),
-            args.maturity.unwrap() / 1e18,
+            args.maturity,
             args.size.unwrap(),
             premium.unwrap(),
             totalSpread.unwrap()
@@ -917,7 +932,7 @@ contract UnderwriterVault is
     function buy(uint256 strike, uint256 maturity, uint256 size) external {
         TradeArgs memory args;
         args.strike = UD60x18.wrap(strike);
-        args.maturity = UD60x18.wrap(maturity);
+        args.maturity = maturity;
         args.size = UD60x18.wrap(size);
         return _buy(args);
     }
@@ -930,7 +945,7 @@ contract UnderwriterVault is
     ) external view returns (address, uint256, uint256, uint256, uint256) {
         TradeArgs memory args;
         args.strike = UD60x18.wrap(strike);
-        args.maturity = UD60x18.wrap(maturity);
+        args.maturity = maturity;
         args.size = UD60x18.wrap(size);
         (
             address poolAddr,
@@ -950,7 +965,7 @@ contract UnderwriterVault is
 
     /// @notice Settles all options that are on a single maturity
     /// @param maturity The maturity that options will be settled for
-    function _settleMaturity(UD60x18 maturity) internal {
+    function _settleMaturity(uint256 maturity) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -971,26 +986,27 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Get last maturity that is greater than the current time
-        UD60x18 lastExpired;
+        uint256 lastExpired;
+        uint256 timestamp = block.timestamp;
 
-        if (blockTimestampUD60x18() >= l.maxMaturity) {
+        if (timestamp >= l.maxMaturity) {
             lastExpired = l.maxMaturity;
         } else {
-            lastExpired = _getMaturityAfterTimestamp(blockTimestampUD60x18());
+            lastExpired = _getMaturityAfterTimestamp(timestamp);
             lastExpired = l.maturities.prev(lastExpired);
         }
 
-        UD60x18 current = l.minMaturity;
+        uint256 current = l.minMaturity;
 
-        while (current <= lastExpired && current != ZERO) {
+        while (current <= lastExpired && current != 0) {
             _settleMaturity(current);
 
             // Remove maturity from data structure
-            UD60x18 next = l.maturities.next(current);
+            uint256 next = l.maturities.next(current);
             uint256 numStrikes = l.maturityToStrikes[current].length();
             for (uint256 i = 0; i < numStrikes; i++) {
                 UD60x18 strike = l.maturityToStrikes[current].at(0);
-                l.positionSizes[current][strike] = UD60x18.wrap(0);
+                l.positionSizes[current][strike] = ZERO;
                 _removeListing(strike, current);
             }
             current = next;
