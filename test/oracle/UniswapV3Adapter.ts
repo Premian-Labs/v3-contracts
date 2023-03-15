@@ -242,21 +242,11 @@ describe('UniswapV3Adapter', () => {
     it('should find path if pair has not been added', async () => {
       const { deployer, instance } = await loadFixture(deploy);
 
-      // must increase cardinality to 121 for pools
+      // must increase cardinality to 41 for pool
       await IUniswapV3Pool__factory.connect(
-        '0xc2e9f25be6257c210d7adf0d4cd6e3e881ba25f8',
+        '0xd8dec118e1215f02e10db846dcbbfe27d477ac19',
         deployer,
-      ).increaseObservationCardinalityNext(121);
-
-      await IUniswapV3Pool__factory.connect(
-        '0x60594a405d53811d3bc4766596efd80fd545a270',
-        deployer,
-      ).increaseObservationCardinalityNext(121);
-
-      await IUniswapV3Pool__factory.connect(
-        '0xa80964c5bbd1a0e95777094420555fead1a26c1e',
-        deployer,
-      ).increaseObservationCardinalityNext(121);
+      ).increaseObservationCardinalityNext(41);
 
       expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
     });
@@ -369,7 +359,7 @@ describe('UniswapV3Adapter', () => {
     it('should return supported fee tiers', async () => {
       const { instance } = await loadFixture(deploy);
       const feeTiers = await instance.supportedFeeTiers();
-      expect(feeTiers).to.be.deep.eq([500, 3000, 10000]);
+      expect(feeTiers).to.be.deep.eq([100, 500, 3000, 10000]);
     });
   });
 
