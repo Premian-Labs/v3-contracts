@@ -34,6 +34,8 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using PoolStorage for IERC20;
+    using PoolStorage for IERC20Router;
     using PoolStorage for PoolStorage.Layout;
     using PoolStorage for TradeQuote;
     using Position for Position.Key;
@@ -289,10 +291,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         claimedFees = pData.claimableFees;
 
         pData.claimableFees = ZERO;
-        IERC20(l.getPoolToken()).safeTransfer(
-            p.operator,
-            l.toPoolTokenDecimals(claimedFees)
-        );
+        IERC20(l.getPoolToken()).safeTransfer(p.operator, claimedFees);
 
         emit ClaimFees(
             p.owner,
@@ -314,10 +313,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (claimedFees == ZERO) return ZERO;
 
         l.protocolFees = ZERO;
-        IERC20(l.getPoolToken()).safeTransfer(
-            FEE_RECEIVER,
-            l.toPoolTokenDecimals(claimedFees)
-        );
+        IERC20(l.getPoolToken()).safeTransfer(FEE_RECEIVER, claimedFees);
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 
@@ -689,7 +685,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.getPoolToken(),
             underwriter,
             address(this),
-            l.toPoolTokenDecimals(collateral + protocolFee)
+            collateral + protocolFee
         );
 
         l.protocolFees = l.protocolFees + protocolFee;
@@ -1129,9 +1125,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(owner, PoolStorage.LONG, size.unwrap());
         IERC20(l.getPoolToken()).safeTransfer(
             owner,
-            l.toPoolTokenDecimals(
-                Position.contractsToCollateral(size, l.strike, l.isCallPool)
-            )
+            Position.contractsToCollateral(size, l.strike, l.isCallPool)
         );
 
         emit Annihilate(owner, size, 0);
@@ -1287,10 +1281,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(holder, PoolStorage.LONG, size.unwrap());
 
         if (exerciseValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(
-                holder,
-                l.toPoolTokenDecimals(exerciseValue)
-            );
+            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
         }
 
         emit Exercise(holder, size, exerciseValue, l.spot, ZERO);
@@ -1321,10 +1312,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // Burn short and transfer collateral to operator
         _burn(holder, PoolStorage.SHORT, size.unwrap());
         if (collateralValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(
-                holder,
-                l.toPoolTokenDecimals(collateralValue)
-            );
+            IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
         }
 
         emit Settle(holder, size, exerciseValue, l.spot, ZERO);
@@ -1413,10 +1401,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = ZERO;
 
         if (collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(
-                p.operator,
-                l.toPoolTokenDecimals(collateral)
-            );
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, collateral);
         }
 
         emit SettlePosition(

@@ -7,16 +7,22 @@ import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/Aggr
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
 
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
+import {IERC20Router} from "../router/IERC20Router.sol";
+
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
+    using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
     // Token id for SHORT
@@ -206,5 +212,24 @@ library PoolStorage {
                 minTickDistance
             )
         }
+    }
+
+    function safeTransfer(IERC20 token, address to, UD60x18 value) internal {
+        token.safeTransfer(to, PoolStorage.layout().toPoolTokenDecimals(value));
+    }
+
+    function safeTransferFrom(
+        IERC20Router router,
+        address token,
+        address from,
+        address to,
+        UD60x18 value
+    ) internal {
+        router.safeTransferFrom(
+            token,
+            from,
+            to,
+            PoolStorage.layout().toPoolTokenDecimals(value)
+        );
     }
 }
