@@ -36,8 +36,8 @@ let pools: { tokenIn: Token; tokenOut: Token }[];
     {tokenIn: tokens.WBTC, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.WBTC, tokenOut: tokens.USDC}, 
     {tokenIn: tokens.WBTC, tokenOut: tokens.USDT}, 
-    {tokenIn: tokens.WETH, tokenOut: tokens.USDC}, 
-    {tokenIn: tokens.USDC, tokenOut: tokens.WETH}, 
+    {tokenIn: tokens.WETH, tokenOut: tokens.USDT}, 
+    {tokenIn: tokens.USDT, tokenOut: tokens.WETH}, 
     {tokenIn: tokens.WETH, tokenOut: tokens.DAI}, 
     {tokenIn: tokens.MKR, tokenOut: tokens.USDC}, 
     {tokenIn: tokens.BOND, tokenOut: tokens.WETH}, 
@@ -154,6 +154,18 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
+    it('should revert if gas provided is too low', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await instance.setCardinalityPerMinute(200);
+
+      await expect(
+        instance.upsertPair(tokens.WETH.address, tokens.USDC.address, {
+          gasLimit: 200000,
+        }),
+      ).to.be.revertedWithCustomError(instance, 'UniswapV3Adapter__GasTooLow');
+    });
+
     it('should not fail if called multiple times for same pair', async () => {
       const { instance } = await loadFixture(deploy);
 
@@ -191,21 +203,24 @@ describe('UniswapV3Adapter', () => {
         deployer,
       ).getPool(tokens.WBTC.address, tokens.USDT.address, 10000);
 
-      await instance.setGasPerCardinality(50000);
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
+      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
+        gasLimit: 1000000,
+      });
 
       expect(
         await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
       ).to.be.deep.eq([pool3000]);
 
-      await instance.setGasPerCardinality(22500);
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
+      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
+        gasLimit: 1500000,
+      });
 
       expect(
         await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
       ).to.be.deep.eq([pool3000, pool500]);
 
-      await instance.setGasPerCardinality(1);
+      await instance.setCardinalityPerMinute(1);
+      await instance.setPeriod(1);
       await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
 
       expect(
@@ -269,7 +284,7 @@ describe('UniswapV3Adapter', () => {
       expect(quote.div(ONE_ETHER)).to.be.eq(ONE_ETHER.div(invertedQuote));
 
       tokenIn = tokens.WETH; // 18 decimals
-      tokenOut = tokens.USDC; // 6 decimals
+      tokenOut = tokens.USDT; // 6 decimals
 
       await instance.upsertPair(tokenIn.address, tokenOut.address);
 
@@ -391,6 +406,17 @@ describe('UniswapV3Adapter', () => {
           .connect(notOwner)
           .setCardinalityPerMinute(newCardinalityPerMinute),
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
+    });
+
+    it('should revert if cardinality per minute is invalid', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await expect(
+        instance.setCardinalityPerMinute(0),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__InvalidCardinalityPerMinute',
+      );
     });
 
     it('should set cardinality per minute to new value', async () => {
