@@ -69,7 +69,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 amountOutMin;
         // exchange address to call to execute the trade
         address callee;
-        // address for which to set allowance for the trade | poolToken decimals
+        // address for which to set allowance for the trade
         address allowanceTarget;
         // data to execute the trade
         bytes data;

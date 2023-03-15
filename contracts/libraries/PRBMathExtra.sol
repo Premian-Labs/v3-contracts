@@ -40,14 +40,10 @@ library PRBMathExtra {
     }
 
     function add(UD60x18 a, SD59x18 b) internal pure returns (UD60x18) {
-        return b < iZERO ? sub(a, neg(b)) : a + b.intoUD60x18();
+        return b < iZERO ? sub(a, -b) : a + b.intoUD60x18();
     }
 
     function sub(UD60x18 a, SD59x18 b) internal pure returns (UD60x18) {
-        return b < iZERO ? add(a, neg(b)) : a - b.intoUD60x18();
-    }
-
-    function neg(SD59x18 a) internal pure returns (SD59x18) {
-        return SD59x18.wrap(-a.unwrap());
+        return b < iZERO ? add(a, -b) : a - b.intoUD60x18();
     }
 }
