@@ -556,7 +556,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             delta = p.calculatePositionUpdate(
                 vars.initialSize,
-                size.intoSD59x18().neg(),
+                -size.intoSD59x18(),
                 l.marketPrice
             );
 
@@ -898,10 +898,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 shorts = UD60x18.wrap(_balanceOf(user, PoolStorage.SHORT));
 
         if (isBuy) {
-            delta.shorts = PRBMathExtra.min(shorts, size).intoSD59x18().neg();
+            delta.shorts = -PRBMathExtra.min(shorts, size).intoSD59x18();
             delta.longs = size.intoSD59x18() + delta.shorts;
         } else {
-            delta.longs = PRBMathExtra.min(longs, size).intoSD59x18().neg();
+            delta.longs = -PRBMathExtra.min(longs, size).intoSD59x18();
             delta.shorts = size.intoSD59x18() + delta.longs;
         }
     }
@@ -946,7 +946,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (_isBuy) {
             delta.collateral =
-                PRBMathExtra.min(shortCollateral, ZERO).intoSD59x18().neg() -
+                -PRBMathExtra.min(shortCollateral, ZERO).intoSD59x18() -
                 totalPremium.intoSD59x18();
         } else {
             delta.collateral =
@@ -999,7 +999,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _burn(
                 user,
                 PoolStorage.LONG,
-                delta.longs.neg().intoUD60x18().unwrap()
+                (-delta.longs).intoUD60x18().unwrap()
             );
         } else if (delta.longs > iZERO) {
             _mint(
@@ -1015,7 +1015,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _burn(
                 user,
                 PoolStorage.SHORT,
-                delta.shorts.neg().intoUD60x18().unwrap()
+                (-delta.shorts).intoUD60x18().unwrap()
             );
         } else if (delta.shorts > iZERO) {
             _mint(
@@ -1808,9 +1808,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.shortRate = l.shortRate.add(currentTick.shortDelta);
 
         // Flip the tick
-        currentTick.delta = currentTick.delta.neg();
-        currentTick.longDelta = currentTick.longDelta.neg();
-        currentTick.shortDelta = currentTick.shortDelta.neg();
+        currentTick.delta = -currentTick.delta;
+        currentTick.longDelta = -currentTick.longDelta;
+        currentTick.shortDelta = -currentTick.shortDelta;
 
         currentTick.externalFeeRate =
             l.globalFeeRate -
@@ -1895,8 +1895,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower = current;
             upper = right;
         } else if (
-            l.ticks[right].delta.neg() > iZERO &&
-            l.liquidityRate == l.ticks[right].delta.neg().intoUD60x18() &&
+            -l.ticks[right].delta > iZERO &&
+            l.liquidityRate == (-l.ticks[right].delta).intoUD60x18() &&
             right == l.marketPrice &&
             l.tickIndex.next(right) != ZERO
         ) {
@@ -1910,8 +1910,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower = right;
             upper = l.tickIndex.next(right);
         } else if (
-            l.ticks[current].delta.neg() > iZERO &&
-            l.liquidityRate == l.ticks[current].delta.neg().intoUD60x18() &&
+            -l.ticks[current].delta > iZERO &&
+            l.liquidityRate == (-l.ticks[current].delta).intoUD60x18() &&
             current == l.marketPrice &&
             l.tickIndex.prev(current) != ZERO
         ) {
@@ -2137,7 +2137,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IERC20 token = IERC20(l.getPoolToken());
             if (
                 token.allowance(args.user, ROUTER) <
-                l.toPoolTokenDecimals(delta.collateral.neg().intoUD60x18())
+                l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())
             ) {
                 return (
                     false,
@@ -2147,7 +2147,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             if (
                 token.balanceOf(args.user) <
-                l.toPoolTokenDecimals(delta.collateral.neg().intoUD60x18())
+                l.toPoolTokenDecimals((-delta.collateral).intoUD60x18())
             ) {
                 return (false, InvalidQuoteError.InsufficientCollateralBalance);
             }
@@ -2156,7 +2156,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             delta.longs < iZERO &&
             _balanceOf(args.user, PoolStorage.LONG) <
-            delta.longs.neg().intoUD60x18().unwrap()
+            (-delta.longs).intoUD60x18().unwrap()
         ) {
             return (false, InvalidQuoteError.InsufficientLongBalance);
         }
@@ -2164,7 +2164,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             delta.shorts < iZERO &&
             _balanceOf(args.user, PoolStorage.SHORT) <
-            delta.shorts.neg().intoUD60x18().unwrap()
+            (-delta.shorts).intoUD60x18().unwrap()
         ) {
             return (false, InvalidQuoteError.InsufficientShortBalance);
         }

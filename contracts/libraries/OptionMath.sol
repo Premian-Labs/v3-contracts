@@ -6,11 +6,8 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
-import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 library OptionMath {
-    using PRBMathExtra for SD59x18;
-
     // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
         int256 discountFactor;
@@ -53,7 +50,7 @@ library OptionMath {
     function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = (ALPHA / LAMBDA) * S1;
         SD59x18 b = (S1 * x + iONE).pow(LAMBDA / S1) - iONE;
-        result = ((a * b + S2 * x).exp() * (iTWO.ln().neg())).exp();
+        result = ((a * b + S2 * x).exp() * (-iTWO.ln())).exp();
     }
 
     /// @notice Approximation of the normal CDF
@@ -63,12 +60,12 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) | 18 decimals
     /// @return result The normal CDF evaluated at x | 18 decimals
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        if (x <= iEIGHT.neg()) {
+        if (x <= -iEIGHT) {
             result = iZERO;
         } else if (x >= iEIGHT) {
             result = iONE;
         } else {
-            result = ((iONE + helperNormal(x.neg())) - helperNormal(x)) / iTWO;
+            result = ((iONE + helperNormal(-x)) - helperNormal(x)) / iTWO;
         }
     }
 
@@ -170,7 +167,7 @@ library OptionMath {
             volAnnualized,
             riskFreeRate
         );
-        SD59x18 sign = isCall ? iONE : iONE.neg();
+        SD59x18 sign = isCall ? iONE : -iONE;
         SD59x18 a = _spot * normalCdf(d1 * sign);
         SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
 
@@ -210,7 +207,7 @@ library OptionMath {
         UD60x18 spot
     ) internal pure returns (UD60x18) {
         SD59x18 o = spot.intoSD59x18().log10().floor();
-        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * iONE.neg() - iONE));
+        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * (-iONE) - iONE));
         UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
         UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE * f : FIVE * f;
         return spot < ONE_THOUSAND ? y : y.ceil();
