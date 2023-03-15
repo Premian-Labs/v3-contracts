@@ -10,6 +10,8 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {IPricing} from "./IPricing.sol";
 
+import {ZERO, ONE} from "./Constants.sol";
+
 /// @notice This class implements the methods necessary for computing price movements within a tick range.
 ///         Warnings
 ///         --------
@@ -19,9 +21,6 @@ import {IPricing} from "./IPricing.sol";
 library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
-
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
 
     UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
     UD60x18 internal constant MIN_TICK_PRICE = UD60x18.wrap(0.001e18); // 0.001

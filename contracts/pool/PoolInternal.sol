@@ -24,6 +24,7 @@ import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
+import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IExchangeHelper} from "../IExchangeHelper.sol";
@@ -50,10 +51,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
-
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-    SD59x18 internal constant iZERO = SD59x18.wrap(0);
 
     // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%

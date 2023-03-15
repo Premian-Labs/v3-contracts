@@ -7,6 +7,8 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 
 import {DateTime} from "./DateTime.sol";
 
+import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iTEN} from "./Constants.sol";
+
 library OptionMath {
     // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
@@ -16,26 +18,12 @@ library OptionMath {
         int256 timeScaledRiskFreeRate;
     }
 
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-    UD60x18 internal constant ONE_HALF = UD60x18.wrap(0.5e18);
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
-    UD60x18 internal constant TWO = UD60x18.wrap(2e18);
-    UD60x18 internal constant FIVE = UD60x18.wrap(5e18);
-    UD60x18 internal constant TEN = UD60x18.wrap(10e18);
-    UD60x18 internal constant ONE_THOUSAND = UD60x18.wrap(1000e18);
     UD60x18 internal constant INITIALIZATION_ALPHA = UD60x18.wrap(5e18);
     UD60x18 internal constant ATM_MONEYNESS = UD60x18.wrap(0.5e18);
     uint256 internal constant NEAR_TERM_TTM = 14 days;
     uint256 internal constant ONE_YEAR_TTM = 365 days;
     UD60x18 internal constant FEE_SCALAR = UD60x18.wrap(100e18);
 
-    SD59x18 internal constant iZERO = SD59x18.wrap(0);
-    SD59x18 internal constant iONE_HALF = SD59x18.wrap(0.5e18);
-    SD59x18 internal constant iONE = SD59x18.wrap(1e18);
-    SD59x18 internal constant iTWO = SD59x18.wrap(2e18);
-    SD59x18 internal constant iFOUR = SD59x18.wrap(4e18);
-    SD59x18 internal constant iEIGHT = SD59x18.wrap(8e18);
-    SD59x18 internal constant iTEN = SD59x18.wrap(10e18);
     SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
     SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
     SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);

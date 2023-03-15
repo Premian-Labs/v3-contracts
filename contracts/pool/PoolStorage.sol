@@ -10,6 +10,7 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
+import {ZERO} from "../libraries/Constants.sol";
 
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
@@ -27,7 +28,6 @@ library PoolStorage {
     uint8 internal constant TOKEN_VERSION = 1;
 
     UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
 
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.Pool");

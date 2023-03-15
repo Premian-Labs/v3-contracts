@@ -18,6 +18,8 @@ import {OFTCore} from "../layerZero/token/oft/OFTCore.sol";
 import {IOFTCore} from "../layerZero/token/oft/IOFTCore.sol";
 import {BytesLib} from "../layerZero/util/BytesLib.sol";
 
+import {ONE} from "../libraries/Constants.sol";
+
 contract PremiaStaking is IPremiaStaking, OFT {
     using SafeERC20 for IERC20;
     using AddressUtils for address;
@@ -27,7 +29,6 @@ contract PremiaStaking is IPremiaStaking, OFT {
     address internal immutable REWARD_TOKEN;
     address internal immutable EXCHANGE_HELPER;
 
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
     uint256 internal constant WAD = 1e18;
     UD60x18 internal constant DECAY_RATE = UD60x18.wrap(270000000000); // 2.7e-7 -> Distribute around half of the current balance over a month
     uint64 internal constant MAX_PERIOD = 4 * 365 days;

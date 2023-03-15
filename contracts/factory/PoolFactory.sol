@@ -13,6 +13,7 @@ import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
+import {ZERO, ONE} from "../libraries/Constants.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
@@ -56,7 +57,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
 
-        UD60x18 discount = (OptionMath.ONE - l.discountPerPool)
+        UD60x18 discount = (ONE - l.discountPerPool)
             .intoSD59x18()
             .powu(discountFactor)
             .intoUD60x18();
@@ -180,13 +181,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         address base,
         address quote
     ) internal view {
-        if (strike == OptionMath.ZERO)
-            revert PoolFactory__OptionStrikeEqualsZero();
+        if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
 
         UD60x18 spot = _fetchQuote(oracleAdapter, base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        if (strike % strikeInterval != OptionMath.ZERO)
+        if (strike % strikeInterval != ZERO)
             revert PoolFactory__OptionStrikeInvalid();
     }
 

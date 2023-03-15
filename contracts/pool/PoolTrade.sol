@@ -7,6 +7,8 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
+import {iZERO} from "../libraries/Constants.sol";
+
 contract PoolTrade is IPoolTrade, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
 
