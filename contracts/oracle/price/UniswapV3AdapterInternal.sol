@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../vendor/uniswap/IUniswapV3Pool.sol";
@@ -12,7 +13,7 @@ import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
-import {SafeCast, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles and
 ///         https://github.com/Mean-Finance/uniswap-v3-oracle

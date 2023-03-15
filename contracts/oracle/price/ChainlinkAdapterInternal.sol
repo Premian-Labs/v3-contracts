@@ -4,11 +4,12 @@ pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-import {SafeCast, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
