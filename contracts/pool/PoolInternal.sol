@@ -37,7 +37,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using PoolStorage for IERC20Router;
     using PoolStorage for PoolStorage.Layout;
     using PoolStorage for TradeQuote;
-    using Position for Position.Key;
+    using Position for Position.KeyInternal;
     using Position for Position.OrderType;
     using Pricing for Pricing.Args;
     using SafeCast for uint256;
@@ -201,7 +201,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     // @notice Returns amount of claimable fees from pending update of claimable fees for the position. This does not include pData.claimableFees
     function _pendingClaimableFees(
         PoolStorage.Layout storage l,
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         Position.Data storage pData
     ) internal view returns (UD60x18 claimableFees, UD60x18 feeRate) {
         Tick memory lowerTick = _getTick(p.lower);
@@ -260,7 +260,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _updateClaimableFees(
         PoolStorage.Layout storage l,
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         Position.Data storage pData
     ) internal {
         (UD60x18 claimableFees, UD60x18 feeRate) = _pendingClaimableFees(
@@ -277,7 +277,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.
     function _claim(
-        Position.Key memory p
+        Position.KeyInternal memory p
     ) internal returns (UD60x18 claimedFees) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -318,7 +318,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param p The position key
     /// @param args The deposit parameters
     function _deposit(
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         DepositArgsInternal memory args
     ) internal {
         _deposit(
@@ -333,7 +333,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param args The deposit parameters
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function _deposit(
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         DepositArgsInternal memory args,
         bool isBidIfStrandedMarketPrice
     ) internal {
@@ -354,9 +354,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
         _ensureNonZeroSize(args.size);
         _ensureNotExpired(l);
-
-        p.strike = l.strike;
-        p.isCall = l.isCallPool;
 
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
@@ -414,7 +411,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _depositFeeAndTicksUpdate(
         PoolStorage.Layout storage l,
         Position.Data storage pData,
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
@@ -471,7 +468,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     function _withdraw(
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
@@ -488,9 +485,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _ensureValidRange(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
-
-        p.strike = l.strike;
-        p.isCall = l.isCallPool;
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -1100,7 +1094,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param newOwner The new owner of the transferred liquidity
     /// @param newOperator The new operator of the transferred liquidity
     function _transferPosition(
-        Position.Key memory srcP,
+        Position.KeyInternal memory srcP,
         address newOwner,
         address newOperator,
         UD60x18 size
@@ -1112,10 +1106,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (size == ZERO) revert Pool__ZeroSize();
 
         PoolStorage.Layout storage l = PoolStorage.layout();
-        srcP.strike = l.strike;
-        srcP.isCall = l.isCallPool;
 
-        Position.Key memory dstP = Position.Key({
+        Position.KeyInternal memory dstP = Position.KeyInternal({
             owner: newOwner,
             operator: newOperator,
             lower: srcP.lower,
@@ -1285,15 +1277,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    function _settlePosition(Position.Key memory p) internal returns (UD60x18) {
+    function _settlePosition(
+        Position.KeyInternal memory p
+    ) internal returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
         _removeFromFactory(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        p.strike = l.strike;
-        p.isCall = l.isCallPool;
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -1874,7 +1865,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         bool isBid
     ) internal view returns (bool) {
         (UD60x18 lower, UD60x18 upper) = _getStrandedArea(l);
@@ -1886,7 +1877,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
     ///         isMarketPriceStranded.
     function _getStrandedMarketPriceUpdate(
-        Position.Key memory p,
+        Position.KeyInternal memory p,
         bool isBid
     ) internal pure returns (UD60x18) {
         return isBid ? p.upper : p.lower;
