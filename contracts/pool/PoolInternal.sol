@@ -219,15 +219,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             feeRate,
             pData.lastFeeRate,
             p.liquidityPerTick(
-                UD60x18.wrap(
-                    _balanceOf(
-                        p.owner,
-                        PoolStorage.formatTokenId(
-                            p.operator,
-                            p.lower,
-                            p.upper,
-                            p.orderType
-                        )
+                _balanceOfUD60x18(
+                    p.owner,
+                    PoolStorage.formatTokenId(
+                        p.operator,
+                        p.lower,
+                        p.upper,
+                        p.orderType
                     )
                 )
             )
@@ -372,7 +370,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         Position.Delta memory delta = p.calculatePositionUpdate(
-            UD60x18.wrap(_balanceOf(p.owner, tokenId)),
+            _balanceOfUD60x18(p.owner, tokenId),
             args.size.intoSD59x18(),
             l.marketPrice
         );
@@ -437,7 +435,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        UD60x18 initialSize = UD60x18.wrap(_balanceOf(p.owner, tokenId));
+        UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
         UD60x18 liquidityPerTick;
 
         if (initialSize > ZERO) {
@@ -451,7 +449,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _mint(p.owner, tokenId, size.unwrap(), "");
 
         SD59x18 tickDelta = p
-            .liquidityPerTick(UD60x18.wrap(_balanceOf(p.owner, tokenId)))
+            .liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId))
             .intoSD59x18() - liquidityPerTick.intoSD59x18();
 
         // Adjust tick deltas
@@ -505,7 +503,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.orderType
         );
 
-        vars.initialSize = UD60x18.wrap(_balanceOf(p.owner, vars.tokenId));
+        vars.initialSize = _balanceOfUD60x18(p.owner, vars.tokenId);
 
         if (vars.initialSize == ZERO) revert Pool__PositionDoesNotExist();
 
@@ -572,9 +570,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             SD59x18 tickDelta = p
-                .liquidityPerTick(
-                    UD60x18.wrap(_balanceOf(p.owner, vars.tokenId))
-                )
+                .liquidityPerTick(_balanceOfUD60x18(p.owner, vars.tokenId))
                 .intoSD59x18() - vars.liquidityPerTick.intoSD59x18();
 
             _updateTicks(
@@ -886,8 +882,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 size,
         bool isBuy
     ) internal view returns (Delta memory delta) {
-        UD60x18 longs = UD60x18.wrap(_balanceOf(user, PoolStorage.LONG));
-        UD60x18 shorts = UD60x18.wrap(_balanceOf(user, PoolStorage.SHORT));
+        UD60x18 longs = _balanceOfUD60x18(user, PoolStorage.LONG);
+        UD60x18 shorts = _balanceOfUD60x18(user, PoolStorage.SHORT);
 
         if (isBuy) {
             delta.shorts = -PRBMathExtra.min(shorts, size).intoSD59x18();
@@ -1179,7 +1175,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 srcP.orderType
             );
 
-        UD60x18 srcSize = UD60x18.wrap(_balanceOf(srcP.owner, srcTokenId));
+        UD60x18 srcSize = _balanceOfUD60x18(srcP.owner, srcTokenId);
         if (size > srcSize) revert Pool__NotEnoughTokens();
 
         UD60x18 proportionTransferred = size.div(srcSize);
@@ -1270,7 +1266,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
-        UD60x18 size = UD60x18.wrap(_balanceOf(holder, PoolStorage.LONG));
+        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.LONG);
         if (size == ZERO) return ZERO;
 
         UD60x18 exerciseValue = _calculateExerciseValue(l, size);
@@ -1296,7 +1292,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
-        UD60x18 size = UD60x18.wrap(_balanceOf(holder, PoolStorage.SHORT));
+        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.SHORT);
         if (size == ZERO) return ZERO;
 
         UD60x18 exerciseValue = _calculateExerciseValue(l, size);
@@ -1343,7 +1339,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.orderType
         );
 
-        UD60x18 size = UD60x18.wrap(_balanceOf(p.owner, tokenId));
+        UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
         if (size == ZERO) return ZERO;
 
         {
@@ -1960,6 +1956,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     structHash
                 )
             );
+    }
+
+    function _balanceOfUD60x18(
+        address user,
+        uint256 tokenId
+    ) internal view returns (UD60x18) {
+        return UD60x18.wrap(_balanceOf(user, tokenId));
     }
 
     function _ensureValidRange(UD60x18 lower, UD60x18 upper) internal pure {
