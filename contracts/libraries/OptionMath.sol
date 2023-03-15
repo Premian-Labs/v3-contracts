@@ -4,18 +4,12 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {DateTime} from "./DateTime.sol";
-import {PRBMathExtra} from "./PRBMathExtra.sol";
+
+import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iNINE, iTEN} from "./Constants.sol";
 
 library OptionMath {
-    using PRBMathExtra for SD59x18;
-    using SafeCast for int256;
-    using SafeCast for uint256;
-    using PRBMathExtra for UD60x18;
-    using PRBMathExtra for SD59x18;
-
     // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
         int256 discountFactor;
@@ -24,26 +18,12 @@ library OptionMath {
         int256 timeScaledRiskFreeRate;
     }
 
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-    UD60x18 internal constant ONE_HALF = UD60x18.wrap(0.5e18);
-    UD60x18 internal constant ONE = UD60x18.wrap(1e18);
-    UD60x18 internal constant TWO = UD60x18.wrap(2e18);
-    UD60x18 internal constant FIVE = UD60x18.wrap(5e18);
-    UD60x18 internal constant TEN = UD60x18.wrap(10e18);
-    UD60x18 internal constant ONE_THOUSAND = UD60x18.wrap(1000e18);
     UD60x18 internal constant INITIALIZATION_ALPHA = UD60x18.wrap(5e18);
     UD60x18 internal constant ATM_MONEYNESS = UD60x18.wrap(0.5e18);
     uint256 internal constant NEAR_TERM_TTM = 14 days;
     uint256 internal constant ONE_YEAR_TTM = 365 days;
     UD60x18 internal constant FEE_SCALAR = UD60x18.wrap(100e18);
 
-    SD59x18 internal constant iZERO = SD59x18.wrap(0);
-    SD59x18 internal constant iONE_HALF = SD59x18.wrap(0.5e18);
-    SD59x18 internal constant iONE = SD59x18.wrap(1e18);
-    SD59x18 internal constant iTWO = SD59x18.wrap(2e18);
-    SD59x18 internal constant iFOUR = SD59x18.wrap(4e18);
-    SD59x18 internal constant iNINE = SD59x18.wrap(8e18);
-    SD59x18 internal constant iTEN = SD59x18.wrap(10e18);
     SD59x18 internal constant ALPHA = SD59x18.wrap(-6.37309208e18);
     SD59x18 internal constant LAMBDA = SD59x18.wrap(-0.61228883e18);
     SD59x18 internal constant S1 = SD59x18.wrap(-0.11105481e18);
@@ -58,7 +38,7 @@ library OptionMath {
     function helperNormal(SD59x18 x) internal pure returns (SD59x18 result) {
         SD59x18 a = (ALPHA / LAMBDA) * S1;
         SD59x18 b = (S1 * x + iONE).pow(LAMBDA / S1) - iONE;
-        result = ((a * b + S2 * x).exp() * (iTWO.ln().neg())).exp();
+        result = ((a * b + S2 * x).exp() * (-iTWO.ln())).exp();
     }
 
     /// @notice Approximation of the normal CDF
@@ -68,12 +48,13 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) | 18 decimals
     /// @return result The normal CDF evaluated at x | 18 decimals
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        if (x <= iNINE.neg()) {
+        // TODO: Magnus check this condition again and make sure it's correct
+        if (x <= -iNINE) {
             result = iZERO;
         } else if (x >= iNINE) {
             result = iONE;
         } else {
-            result = ((iONE + helperNormal(x.neg())) - helperNormal(x)) / iTWO;
+            result = ((iONE + helperNormal(-x)) - helperNormal(x)) / iTWO;
         }
     }
 
@@ -156,7 +137,7 @@ library OptionMath {
         if (isCall) {
             return normalCdf(d1);
         } else {
-            return normalCdf(d1.neg()).neg();
+            return -normalCdf(-d1);
         }
     }
 
@@ -205,7 +186,7 @@ library OptionMath {
             volAnnualized,
             riskFreeRate
         );
-        SD59x18 sign = isCall ? iONE : iONE.neg();
+        SD59x18 sign = isCall ? iONE : -iONE;
         SD59x18 a = _spot * normalCdf(d1 * sign);
         SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
 
@@ -245,7 +226,7 @@ library OptionMath {
         UD60x18 spot
     ) internal pure returns (UD60x18) {
         SD59x18 o = spot.intoSD59x18().log10().floor();
-        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * iONE.neg() - iONE));
+        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * (-iONE) - iONE));
         UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
         UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE * f : FIVE * f;
         return spot < ONE_THOUSAND ? y : y.ceil();

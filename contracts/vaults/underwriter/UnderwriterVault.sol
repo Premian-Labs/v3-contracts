@@ -37,8 +37,6 @@ contract UnderwriterVault is
     using SafeERC20 for IERC20;
     using SafeCast for int256;
     using SafeCast for uint256;
-    using PRBMathExtra for UD60x18;
-    using PRBMathExtra for SD59x18;
 
     SD59x18 internal constant iZERO = SD59x18.wrap(0);
     SD59x18 internal constant iONE = SD59x18.wrap(1e18);
