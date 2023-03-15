@@ -12,7 +12,7 @@ import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
-import {SafeCast, TokenSorting, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {SafeCast, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles and
 ///         https://github.com/Mean-Finance/uniswap-v3-oracle

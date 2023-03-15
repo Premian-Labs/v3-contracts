@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {TokenSorting} from "../../libraries/TokenSorting.sol";
-
 /// @title Base oracle adapter internal implementation
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract OracleAdapterInternal {
@@ -37,10 +35,7 @@ abstract contract OracleAdapterInternal {
         address tokenA,
         address tokenB
     ) internal pure returns (bytes32) {
-        (address sortedA, address sortedTokenB) = TokenSorting.sortTokens(
-            tokenA,
-            tokenB
-        );
+        (address sortedA, address sortedTokenB) = _sortTokens(tokenA, tokenB);
 
         return _keyForSortedPair(sortedA, sortedTokenB);
     }
@@ -62,6 +57,15 @@ abstract contract OracleAdapterInternal {
         } else {
             return amount * (10 ** factor.toUint256());
         }
+    }
+
+    function _sortTokens(
+        address tokenA,
+        address tokenB
+    ) internal pure returns (address _tokenA, address _tokenB) {
+        (_tokenA, _tokenB) = tokenA < tokenB
+            ? (tokenA, tokenB)
+            : (tokenB, tokenA);
     }
 
     function _ensureTargetNonZero(uint256 target) internal view {

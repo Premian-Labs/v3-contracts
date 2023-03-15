@@ -8,7 +8,7 @@ import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-import {SafeCast, TokenSorting, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {SafeCast, OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
@@ -86,7 +86,7 @@ abstract contract ChainlinkAdapterInternal is
     {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
-        (address sortedA, address sortedB) = TokenSorting.sortTokens(
+        (address sortedA, address sortedB) = _sortTokens(
             mappedTokenA,
             mappedTokenB
         );
@@ -529,7 +529,7 @@ abstract contract ChainlinkAdapterInternal is
             tokenB
         );
 
-        return TokenSorting.sortTokens(mappedTokenA, mappedTokenB);
+        return _sortTokens(mappedTokenA, mappedTokenB);
     }
 
     function _mapToDenomination(
