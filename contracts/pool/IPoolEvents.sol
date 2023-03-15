@@ -5,6 +5,15 @@ pragma solidity ^0.8.0;
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolEvents {
+    event PricePath(
+        address[][] basePath,
+        uint8[] basePathDecimals,
+        IPoolInternal.PriceFeedType baseFeedType,
+        address[][] quotePath,
+        uint8[] quotePathDecimals,
+        IPoolInternal.PriceFeedType quoteFeedType
+    );
+
     event Deposit(
         address indexed owner,
         uint256 indexed tokenId,

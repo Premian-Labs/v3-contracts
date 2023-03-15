@@ -110,7 +110,7 @@ export default {
   },
 
   abiExporter: {
-    runOnCompile: false,
+    runOnCompile: true,
     path: './abi',
     clear: true,
     flat: true,
