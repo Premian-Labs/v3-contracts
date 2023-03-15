@@ -183,7 +183,7 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
-    it('should not insert pool if the cardinality is not at target', async () => {
+    it('should skip pool(s) if the cardinality is not at target', async () => {
       const { deployer, instance } = await loadFixture(deploy);
 
       const pool500 = await IUniswapV3Factory__factory.connect(
