@@ -523,4 +523,32 @@ contract UnderwriterVaultMock is UnderwriterVault {
             addresses[i] = employedPools.at(i);
         return addresses;
     }
+
+    function ensureTradeableWithVault(bool isCall, bool isBuy) external view {
+        _ensureTradeableWithVault(isCall, isBuy);
+    }
+
+    function ensureValidOption(
+        uint256 timestamp,
+        UD60x18 strike,
+        uint256 maturity
+    ) external view {
+        _ensureValidOption(timestamp, strike, maturity);
+    }
+
+    function ensureSufficientFunds(
+        bool isCall,
+        UD60x18 strike,
+        UD60x18 size
+    ) external view {
+        _ensureSufficientFunds(isCall, strike, size);
+    }
+
+    function ensureWithinTradeBounds(
+        UD60x18 value,
+        UD60x18 minimum,
+        UD60x18 maximum
+    ) external view {
+        _ensureWithinTradeBounds(value, minimum, maximum);
+    }
 }

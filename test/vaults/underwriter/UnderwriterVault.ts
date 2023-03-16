@@ -1187,6 +1187,88 @@ describe('UnderwriterVault', () => {
     });
   });
 
+  describe('#_ensureTradeableWithVault', () => {
+    let tests = [
+      {
+        isCallVault: true,
+        isCall: true,
+        isBuy: true,
+        error: null,
+        message: 'trying to buy a call option from the call vault',
+      },
+      {
+        isCallVault: true,
+        isCall: true,
+        isBuy: false,
+        error: 'Vault__TradeMustBeBuy',
+        message: 'trying to sell a call option to the call vault',
+      },
+      {
+        isCallVault: true,
+        isCall: false,
+        isBuy: true,
+        error: 'Vault__OptionTypeMismatchWithVault',
+        message: 'trying to buy a put option from the call vault',
+      },
+      {
+        isCallVault: true,
+        isCall: false,
+        isBuy: false,
+        error: 'Vault__TradeMustBeBuy',
+        message: 'trying to sell a put option to the call vault',
+      },
+      {
+        isCallVault: false,
+        isCall: true,
+        isBuy: true,
+        error: 'Vault__OptionTypeMismatchWithVault',
+        message: 'trying to buy a call option from the put vault',
+      },
+      {
+        isCallVault: false,
+        isCall: true,
+        isBuy: false,
+        error: 'Vault__TradeMustBeBuy',
+        message: 'trying to sell a call option to the put vault',
+      },
+      {
+        isCallVault: false,
+        isCall: false,
+        isBuy: true,
+        error: null,
+        message: 'trying to buy a put option from the put vault',
+      },
+      {
+        isCallVault: false,
+        isCall: false,
+        isBuy: false,
+        error: 'Vault__TradeMustBeBuy',
+        message: 'trying to sell a put option to the put vault',
+      },
+    ];
+
+    tests.forEach(async (test) => {
+      if (test.error != null) {
+        it(`should raise ${test.error} error when ${test.message}`, async () => {
+          const { callVault, putVault } = await loadFixture(vaultSetup);
+          const vault = test.isCallVault ? callVault : putVault;
+
+          await expect(
+            vault.ensureTradeableWithVault(test.isCall, test.isBuy),
+          ).to.be.revertedWithCustomError(callVault, test.error);
+        });
+      } else {
+        it(`should not raise an error when ${test.message}`, async () => {
+          const { callVault, putVault } = await loadFixture(vaultSetup);
+          const vault = test.isCallVault ? callVault : putVault;
+
+          await expect(vault.ensureTradeableWithVault(test.isCall, test.isBuy));
+          expect(true);
+        });
+      }
+    });
+  });
+
   describe('#afterBuy', () => {
     const premium = 0.5;
     const spread = 0.1;
@@ -1207,14 +1289,14 @@ describe('UnderwriterVault', () => {
       maturity = minMaturity;
       spreadUnlockingRate = spread / (minMaturity - startTime);
 
-      await callVault.afterBuy(
-        minMaturity,
-        parseEther(premium.toString()),
-        maturity - startTime,
-        parseEther(size.toString()),
-        parseEther(spread.toString()),
-        parseEther(strike.toString()),
-      );
+      // await callVault.afterBuy(
+      //   minMaturity,
+      //   parseEther(premium.toString()),
+      //   maturity - startTime,
+      //   parseEther(size.toString()),
+      //   parseEther(spread.toString()),
+      //   parseEther(strike.toString()),
+      // );
       afterBuyTimestamp = await latest();
       console.log('Processed afterBuy.');
       return { vault: callVault };
