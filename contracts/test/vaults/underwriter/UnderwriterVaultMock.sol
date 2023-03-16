@@ -364,33 +364,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getFactoryAddress(strike, maturity);
     }
 
-    function ensureSupportedListing(
-        UD60x18 spot,
-        UD60x18 strike,
-        UD60x18 tau,
-        UD60x18 sigma,
-        UD60x18 rfRate
-    ) external {
-        _ensureSupportedListing(spot, strike, tau, sigma, rfRate);
-    }
-
-    function afterBuy(
-        uint256 maturity,
-        UD60x18 premium,
-        uint256 secondsToExpiration,
-        UD60x18 size,
-        UD60x18 spread,
-        UD60x18 strike
-    ) external {
-        AfterBuyArgs memory intel = AfterBuyArgs(
-            maturity,
-            premium,
-            secondsToExpiration,
-            size,
-            spread,
-            strike
-        );
-        _afterBuy(intel);
+    function afterBuy(QuoteVars memory vars) external {
+        _afterBuy(vars);
     }
 
     function getSpotPrice() public view returns (UD60x18) {

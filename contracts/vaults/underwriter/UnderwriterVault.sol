@@ -45,53 +45,6 @@ contract UnderwriterVault is
     address internal immutable ROUTER;
 
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
-    struct AfterBuyArgs {
-        // The maturity of a listing
-        uint256 maturity;
-        // The vanilla Black-Scholes premium paid by the option buyer
-        UD60x18 premium;
-        // The time until maturity (seconds) for the listing
-        uint256 secondsToExpiration;
-        // The number of contracts for an option purchase
-        UD60x18 size;
-        // The spread captured from selling an option
-        UD60x18 spread;
-        // The strike of a listing
-        UD60x18 strike;
-    }
-
-    struct BlackScholesArgs {
-        // The spot price
-        UD60x18 spot;
-        // The strike price of the listing
-        UD60x18 strike;
-        // The time until maturity (years)
-        UD60x18 timeToMaturity;
-        // The implied volatility for the listing
-        UD60x18 volAnnualized;
-        // The risk-free rate
-        UD60x18 riskFreeRate;
-        // Whether the option is a buy or a sell
-        bool isCall;
-    }
-
-    struct TradeArgs {
-        // The strike price of the listing
-        UD60x18 strike;
-        // The maturity of the listing
-        uint256 maturity;
-        // The number of contracts being traded
-        UD60x18 size;
-    }
-
-    struct QuoteReturnVars {
-        address poolAddr;
-        UD60x18 premium;
-        UD60x18 mintingFee;
-        UD60x18 cLevel;
-        UD60x18 totalSpread;
-    }
-
     struct UnexpiredListingVars {
         // A list of strikes for a set of listings
         UD60x18[] strikes;
@@ -99,6 +52,39 @@ contract UnderwriterVault is
         UD60x18[] timeToMaturities;
         // A list of maturities for a set of listings
         uint256[] maturities;
+    }
+
+    struct QuoteVars {
+        // timestamp of the quote/trade
+        uint256 timestamp;
+        // spot price
+        UD60x18 spot;
+        // strike price of the listing
+        UD60x18 strike;
+        // maturity of the listing
+        uint256 maturity;
+        // pool address of the listing
+        address poolAddr;
+        // time until maturity (years)
+        UD60x18 tau;
+        // implied volatility of the listing
+        UD60x18 sigma;
+        // risk-free rate
+        UD60x18 riskFreeRate;
+        // option delta
+        SD59x18 delta;
+        // option price
+        UD60x18 price;
+        // size of quote/trade
+        UD60x18 size;
+        // premium associated to the BSM price of the option
+        UD60x18 premium;
+        // C-level post-trade
+        UD60x18 cLevel;
+        // spread added on to premium due to C-level
+        UD60x18 spread;
+        // fee for minting the option through the pool
+        UD60x18 mintingFee;
     }
 
     /// @notice The constructor for this vault
@@ -635,64 +621,34 @@ contract UnderwriterVault is
         if (shareAmount == 0) revert Vault__ZeroShares();
     }
 
-    /// @notice Ensures that the listing is supported by this vault to sell
-    ///         options for
-    /// @param spot The spot price
-    /// @param strike The strike price of the listing
-    /// @param tau The time until maturity (yrs) for corresponding to the listing
-    /// @param sigma The implied volatility for the listing
-    /// @param rfRate The risk-free rate
-    function _ensureSupportedListing(
-        UD60x18 spot,
-        UD60x18 strike,
-        UD60x18 tau,
-        UD60x18 sigma,
-        UD60x18 rfRate
-    ) internal view {
-        UD60x18 dte = tau * UD60x18.wrap(365e18);
-
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        // DTE filter
-        if (dte > l.maxDTE || dte < l.minDTE) revert Vault__MaturityBounds();
-
-        // Delta filter
-        SD59x18 delta = OptionMath
-            .optionDelta(spot, strike, tau, sigma, rfRate, l.isCall)
-            .abs();
-
-        if (delta < l.minDelta || delta > l.maxDelta)
-            revert Vault__DeltaBounds();
-    }
-
     /// @notice An internal hook inside the buy function that is called after
     ///         logic inside the buy function is run to update state variables
-    /// @param args The arguments struct for this function.
-    function _afterBuy(AfterBuyArgs memory args) internal {
+    /// @param vars The arguments struct for this function.
+    function _afterBuy(QuoteVars memory vars) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
         uint256 timestamp = block.timestamp;
+        uint256 secondsToExpiration = vars.maturity - vars.timestamp;
 
         _updateState();
-        UD60x18 spreadRate = args.spread /
-            UD60x18.wrap(args.secondsToExpiration * 1e18);
+        UD60x18 spreadRate = vars.spread /
+            UD60x18.wrap(secondsToExpiration * 1e18);
         UD60x18 newLockedAssets = l.isCall
-            ? args.size
-            : args.size * args.strike;
+            ? vars.size
+            : vars.size * vars.strike;
 
         l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRate;
-        l.spreadUnlockingTicks[args.maturity] =
-            l.spreadUnlockingTicks[args.maturity] +
+        l.spreadUnlockingTicks[vars.maturity] =
+            l.spreadUnlockingTicks[vars.maturity] +
             spreadRate;
-        l.totalLockedSpread = l.totalLockedSpread + args.spread;
+        l.totalLockedSpread = l.totalLockedSpread + vars.spread;
         l.totalLockedAssets = l.totalLockedAssets + newLockedAssets;
-        l.positionSizes[args.maturity][args.strike] =
-            l.positionSizes[args.maturity][args.strike] +
-            args.size;
+        l.positionSizes[vars.maturity][vars.strike] =
+            l.positionSizes[vars.maturity][vars.strike] +
+            vars.size;
         l.lastTradeTimestamp = timestamp;
     }
 
@@ -782,177 +738,255 @@ contract UnderwriterVault is
             (alphaCLevel * positiveExp);
     }
 
-    /// @notice Gets a quote for a given trade request
-    /// @param args The trading arguments (documented in struct at top)
-    function _quote(
-        TradeArgs memory args
-    ) internal view returns (address, UD60x18, UD60x18, UD60x18, UD60x18) {
+    function _ensureTradeableWithVault(bool isCall, bool isBuy) internal view {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if (!isBuy) revert Vault__TradeMustBeBuy();
+        if (isCall != l.isCall) revert Vault__OptionTypeMismatchWithVault();
+    }
+
+    function _ensureValidOption(
+        uint256 timestamp,
+        UD60x18 strike,
+        uint256 maturity
+    ) internal view {
+        // Check non Zero Strike
+        if (strike == ZERO) revert Vault__StrikeZero();
+        // Check valid maturity
+        if (timestamp >= maturity) revert Vault__OptionExpired();
+    }
+
+    function _ensureSufficientFunds(
+        bool isCall,
+        UD60x18 strike,
+        UD60x18 size
+    ) internal view {
+        // Check if the vault has sufficient funds
+        UD60x18 collateral = isCall ? size : size * strike;
+        // todo: mintingFee is a transit item
+        if (collateral >= _availableAssets()) revert Vault__InsufficientFunds();
+    }
+
+    function _ensureWithinTradeBounds(
+        UD60x18 value,
+        UD60x18 minimum,
+        UD60x18 maximum
+    ) internal view {
+        if (value < minimum || value > maximum)
+            revert Vault__OutOfTradeBounds();
+    }
+
+    function _ensureWithinTradeBounds(
+        SD59x18 value,
+        SD59x18 minimum,
+        SD59x18 maximum
+    ) internal view {
+        if (value < minimum || value > maximum)
+            revert Vault__OutOfTradeBounds();
+    }
+
+    function _getQuoteVars(
+        uint256 timestamp,
+        UD60x18 spot,
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 size
+    ) internal view returns (QuoteVars memory) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        QuoteVars memory vars;
+
+        vars.timestamp = timestamp;
+        vars.spot = spot;
+        vars.strike = strike;
+        vars.maturity = maturity;
+        vars.poolAddr = _getFactoryAddress(vars.strike, vars.maturity);
+        vars.tau =
+            UD60x18.wrap((maturity - timestamp) * 1e18) /
+            UD60x18.wrap(ONE_YEAR * 1e18);
+        vars.sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
+            l.base,
+            vars.spot,
+            vars.strike,
+            vars.tau
+        );
+        vars.riskFreeRate = IVolatilityOracle(IV_ORACLE).getRiskFreeRate();
+        vars.delta = OptionMath
+            .optionDelta(
+                vars.spot,
+                vars.strike,
+                vars.tau,
+                vars.sigma,
+                vars.riskFreeRate,
+                l.isCall
+            )
+            .abs();
+        vars.price = OptionMath.blackScholesPrice(
+            vars.spot,
+            vars.strike,
+            vars.tau,
+            vars.sigma,
+            vars.riskFreeRate,
+            l.isCall
+        );
+        vars.price = l.isCall ? vars.price : vars.price / vars.spot;
+        vars.size = size;
+
+        vars.premium = vars.price * vars.size;
+
+        UD60x18 collateral = l.isCall ? vars.size : vars.size * vars.strike;
+        vars.cLevel = _getCLevel(collateral);
+        vars.spread = (vars.cLevel - l.minCLevel) * vars.premium;
+
+        vars.mintingFee = UD60x18.wrap(
+            IPool(vars.poolAddr).takerFee(
+                vars.size,
+                vars.premium.unwrap(),
+                false
+            )
+        );
+        return vars;
+    }
+
+    function _getTradeQuote(
+        UD60x18 spot,
+        UD60x18 strike,
+        uint64 maturity,
+        bool isCall,
+        UD60x18 size,
+        bool isBuy
+    ) internal view returns (uint256 maxSize, uint256 price) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         uint256 timestamp = block.timestamp;
 
-        // Check non Zero Strike
-        if (args.strike == ZERO) revert Vault__StrikeZero();
-        // Check valid maturity
-        if (timestamp >= args.maturity) revert Vault__OptionExpired();
+        _ensureTradeableWithVault(isCall, isBuy);
+        _ensureValidOption(timestamp, strike, maturity);
+        _ensureSufficientFunds(isCall, strike, size);
 
-        BlackScholesArgs memory bsArgs = BlackScholesArgs({
-            spot: _getSpotPrice(),
-            strike: args.strike,
-            timeToMaturity: UD60x18.wrap((args.maturity - timestamp) * 1e18) /
-                UD60x18.wrap(ONE_YEAR * 1e18),
-            volAnnualized: ZERO,
-            riskFreeRate: IVolatilityOracle(IV_ORACLE).getRiskFreeRate(),
-            isCall: l.isCall
-        });
-
-        bsArgs.volAnnualized = IVolatilityOracle(IV_ORACLE).getVolatility(
-            l.base,
-            bsArgs.spot,
-            bsArgs.strike,
-            bsArgs.timeToMaturity
+        QuoteVars memory vars = _getQuoteVars(
+            timestamp,
+            spot,
+            strike,
+            maturity,
+            size
         );
 
-        _ensureSupportedListing(
-            bsArgs.spot,
-            bsArgs.strike,
-            bsArgs.timeToMaturity,
-            bsArgs.volAnnualized,
-            bsArgs.riskFreeRate
+        _ensureWithinTradeBounds(vars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinTradeBounds(
+            vars.tau * UD60x18.wrap(365e18),
+            l.minDTE,
+            l.maxDTE
         );
 
-        // returns USD price for calls & puts
-        UD60x18 price = OptionMath.blackScholesPrice(
-            bsArgs.spot,
-            bsArgs.strike,
-            bsArgs.timeToMaturity,
-            bsArgs.volAnnualized,
-            bsArgs.riskFreeRate,
-            bsArgs.isCall
-        );
-
-        if (l.isCall) price = price / bsArgs.spot;
-
-        // call denominated in base, put denominated in quote
-        QuoteReturnVars memory vars;
-        vars.poolAddr = _getFactoryAddress(args.strike, args.maturity);
-        vars.premium = price * args.size;
-
-        vars.mintingFee = UD60x18.wrap(
-            IPool(vars.poolAddr).takerFee(
-                args.size,
-                vars.premium.unwrap(),
-                false
-            )
-        );
-
-        // Check if the vault has sufficient funds
-        UD60x18 collateralAmt = l.isCall ? args.size : args.size * args.strike;
-        // todo: mintingFee is a transit item
-        if (collateralAmt >= _availableAssets())
-            revert Vault__InsufficientFunds();
-
-        vars.cLevel = _getCLevel(collateralAmt);
-        vars.totalSpread = (vars.cLevel - l.minCLevel) * vars.premium;
-
-        return (
-            vars.poolAddr,
-            vars.premium,
-            vars.mintingFee,
-            vars.cLevel,
-            vars.totalSpread
-        );
+        maxSize = _availableAssets().unwrap();
+        price = vars.premium.unwrap();
     }
 
-    /// @notice Fulfills an option purchase
-    /// @param args The trading arguments (documented in struct at top)
-    function _buy(TradeArgs memory args) internal {
-        // Get pool address, price and c-level
-        (
-            address poolAddr,
-            UD60x18 premium,
-            UD60x18 mintingFee,
-            ,
-            UD60x18 totalSpread
-        ) = _quote(args);
+    /// @inheritdoc IVault
+    function getTradeQuote(
+        uint256 strike,
+        uint64 maturity,
+        bool isCall,
+        uint256 size,
+        bool isBuy
+    ) external view returns (uint256 maxSize, uint256 price) {
+        return
+            _getTradeQuote(
+                _getSpotPrice(),
+                UD60x18.wrap(strike),
+                maturity,
+                isCall,
+                UD60x18.wrap(size),
+                isBuy
+            );
+    }
+
+    function _trade(
+        UD60x18 spot,
+        UD60x18 strike,
+        uint64 maturity,
+        bool isCall,
+        UD60x18 size,
+        bool isBuy
+    ) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        uint256 timestamp = block.timestamp;
+
+        _ensureTradeableWithVault(isCall, isBuy);
+        _ensureValidOption(block.timestamp, strike, maturity);
+        _ensureSufficientFunds(isCall, strike, size);
+
+        QuoteVars memory vars = _getQuoteVars(
+            timestamp,
+            spot,
+            strike,
+            maturity,
+            size
+        );
+
+        _ensureWithinTradeBounds(vars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinTradeBounds(
+            vars.tau * UD60x18.wrap(365e18),
+            l.minDTE,
+            l.maxDTE
+        );
 
         // Add listing
-        _addListing(args.strike, args.maturity);
+        _addListing(vars.strike, vars.maturity);
 
         // Collect option premium from buyer
         IERC20(_asset()).safeTransferFrom(
             msg.sender,
             address(this),
-            (premium + totalSpread + mintingFee).unwrap()
+            (vars.premium + vars.spread + vars.mintingFee).unwrap()
         );
 
         // Approve transfer of base / quote token
         IERC20(_asset()).approve(
             ROUTER,
             // todo: for puts multiply the size by the strike
-            (args.size + totalSpread + mintingFee).unwrap()
+            (vars.premium + vars.spread + vars.mintingFee).unwrap()
         );
 
         // Mint option and allocate long token
-        IPool(poolAddr).writeFrom(address(this), msg.sender, args.size);
-
-        uint256 secondsToExpiration = args.maturity - block.timestamp;
+        IPool(vars.poolAddr).writeFrom(address(this), msg.sender, vars.size);
 
         // Handle the premiums and spread capture generated
-        AfterBuyArgs memory intel = AfterBuyArgs(
-            args.maturity,
-            premium,
-            secondsToExpiration,
-            args.size,
-            totalSpread,
-            args.strike
-        );
-        _afterBuy(intel);
+        _afterBuy(vars);
 
         emit Sell(
             msg.sender,
-            args.strike.unwrap(),
-            args.maturity,
-            args.size.unwrap(),
-            premium.unwrap(),
-            totalSpread.unwrap()
+            vars.strike.unwrap(),
+            vars.maturity,
+            vars.size.unwrap(),
+            vars.premium.unwrap(),
+            vars.spread.unwrap()
         );
     }
 
-    /// @inheritdoc IUnderwriterVault
-    function buy(uint256 strike, uint256 maturity, uint256 size) external {
-        TradeArgs memory args;
-        args.strike = UD60x18.wrap(strike);
-        args.maturity = maturity;
-        args.size = UD60x18.wrap(size);
-        return _buy(args);
-    }
-
-    /// @inheritdoc IUnderwriterVault
-    function quote(
+    /// @inheritdoc IVault
+    function trade(
         uint256 strike,
-        uint256 maturity,
-        uint256 size
-    ) external view returns (address, uint256, uint256, uint256, uint256) {
-        TradeArgs memory args;
-        args.strike = UD60x18.wrap(strike);
-        args.maturity = maturity;
-        args.size = UD60x18.wrap(size);
-        (
-            address poolAddr,
-            UD60x18 premium,
-            UD60x18 mintingFee,
-            UD60x18 cLevel,
-            UD60x18 spread
-        ) = _quote(args);
-        return (
-            poolAddr,
-            premium.unwrap(),
-            mintingFee.unwrap(),
-            cLevel.unwrap(),
-            spread.unwrap()
-        );
+        uint64 maturity,
+        bool isCall,
+        uint256 size,
+        bool isBuy
+    ) external override {
+        return
+            _trade(
+                _getSpotPrice(),
+                UD60x18.wrap(strike),
+                maturity,
+                isCall,
+                UD60x18.wrap(size),
+                isBuy
+            );
     }
 
     /// @notice Settles all options that are on a single maturity
@@ -1005,44 +1039,5 @@ contract UnderwriterVault is
         }
 
         return 0;
-    }
-
-    /// @inheritdoc IVault
-    function getTradeQuote(
-        uint256 strike,
-        uint64 maturity,
-        bool isCall,
-        uint256 size,
-        bool isBuy
-    ) external view returns (uint256 maxSize, uint256 price) {
-        TradeArgs memory args;
-        args.strike = UD60x18.wrap(strike);
-        args.maturity = maturity;
-        args.size = UD60x18.wrap(size);
-        (, UD60x18 premium, , , ) = _quote(args);
-
-        maxSize = _availableAssets().unwrap();
-        price = premium.unwrap();
-    }
-
-    /// @inheritdoc IVault
-    function trade(
-        uint256 strike,
-        uint64 maturity,
-        bool isCall,
-        uint256 size,
-        bool isBuy
-    ) external override {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        if (!isBuy) revert Vault__TradeMustBeBuy();
-        if (isCall != l.isCall) revert Vault__OptionTypeMismatchWithVault();
-
-        TradeArgs memory args;
-        args.strike = UD60x18.wrap(strike);
-        args.maturity = maturity;
-        args.size = UD60x18.wrap(size);
-        return _buy(args);
     }
 }

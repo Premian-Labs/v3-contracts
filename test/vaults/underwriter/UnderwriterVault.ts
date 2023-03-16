@@ -2122,7 +2122,9 @@ describe('UnderwriterVault', () => {
         const totalTransfer = premium.add(mintingFee).add(spread);
 
         await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        await callVault
+          .connect(trader)
+          .trade(strike, maturity, true, tradeSize, true);
         const vaultCollateralBalance = lpDepositSizeBN
           .sub(tradeSize)
           .add(premium)
@@ -2165,7 +2167,7 @@ describe('UnderwriterVault', () => {
         const strikeBN = parseEther(strike.toString());
         // FIXME: these tests will not run because writeFrom decimalization for puts is incorrect
 
-        // await putVault.connect(trader).buy(strikeBN, maturity, tradeSize);
+        // await putVault.connect(trader).trade(strikeBN, maturity, false, tradeSize, true);
         // const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
 
         // expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
@@ -2456,7 +2458,7 @@ describe('UnderwriterVault', () => {
       });
     });
 
-    describe('#buy', () => {
+    describe('#trade', () => {
       it('used post quote/trade utilization', async () => {
         const { callVault, lp, trader, base, quote } = await loadFixture(
           vaultSetup,
@@ -2479,7 +2481,9 @@ describe('UnderwriterVault', () => {
         );
         const totalTransfer = premium.add(mintingFee).add(spread);
         await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        await callVault
+          .connect(trader)
+          .trade(strike, maturity, true, tradeSize, true);
         const cLevel_postTrade_check = await callVault.getClevel(
           parseEther('0'),
         );
@@ -2514,10 +2518,14 @@ describe('UnderwriterVault', () => {
         );
         const totalTransfer = premium.add(mintingFee).add(spread);
         await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        await callVault
+          .connect(trader)
+          .trade(strike, maturity, true, tradeSize, true);
 
         await expect(
-          callVault.connect(trader).buy(strike, maturity, tradeSize),
+          callVault
+            .connect(trader)
+            .trade(strike, maturity, true, tradeSize, true),
         ).to.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
       });
 
@@ -2546,7 +2554,9 @@ describe('UnderwriterVault', () => {
         );
         const totalTransfer = premium.add(mintingFee).add(spread);
         await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        await callVault
+          .connect(trader)
+          .trade(strike, maturity, true, tradeSize, true);
 
         const lastTrade_t1 = await callVault.getLastTradeTimestamp();
 
@@ -2581,7 +2591,9 @@ describe('UnderwriterVault', () => {
         const totalTransfer = premium.add(mintingFee).add(spread);
         await base.connect(trader).approve(callVault.address, totalTransfer);
 
-        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        await callVault
+          .connect(trader)
+          .trade(strike, maturity, true, tradeSize, true);
         const cLevel_t2 = await callVault.getClevel(tradeSize);
         // Increase time by 2 hrs
         await time.increase(7200);

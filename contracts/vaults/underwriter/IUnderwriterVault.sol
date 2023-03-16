@@ -23,6 +23,7 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     error Vault__ZeroVol();
     error Vault__MaturityBounds();
     error Vault__DeltaBounds();
+    error Vault__OutOfTradeBounds();
     error Vault__CLevelBounds();
     error Vault__lowCLevel();
     error Vault__NonMonotonicMaturities();
@@ -40,18 +41,6 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         uint256 premium,
         uint256 vaultFee
     );
-
-    /// @notice Facilitates the purchase of an option for a LT
-    /// @param strike The strike price the option
-    /// @param maturity The maturity of the option
-    /// @param size The number of contracts
-    function buy(uint256 strike, uint256 maturity, uint256 size) external;
-
-    function quote(
-        uint256 strike,
-        uint256 maturity,
-        uint256 size
-    ) external view returns (address, uint256, uint256, uint256, uint256);
 
     /// @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);
