@@ -115,7 +115,7 @@ contract UnderwriterVault is
             .layout();
         uint256 balanceOf = IERC20(_asset()).balanceOf(address(this));
         // TODO: FIX THIS
-        return UD60x18.wrap(balanceOf) / l.totalLockedAssets;
+        return UD60x18.wrap(balanceOf) + l.totalLockedAssets;
     }
 
     /// @inheritdoc ERC4626BaseInternal
