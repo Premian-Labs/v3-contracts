@@ -1080,6 +1080,7 @@ describe('UnderwriterVault', () => {
           await callVault.setListingsAndSizes(infos);
           await callVault.increaseTotalLockedAssets(parseEther('1'));
         }
+        console.log('test');
         let pps: number = parseFloat(
           formatEther(await callVault.getPricePerShare()),
         );
@@ -2034,6 +2035,151 @@ describe('UnderwriterVault', () => {
       expect(parseFloat(formatEther(callDelta))).to.approximately(0.528, 0.001);
       expect(parseFloat(formatEther(putDelta))).to.approximately(-0.471, 0.001);
     });
+
+    describe('#minting options from pool', () => {
+      it('allows writeFrom to mint call options when directly called', async () => {
+        const { underwriter, trader, base, callPool, p } = await loadFixture(
+          vaultSetup,
+        );
+        const size = parseEther('5');
+        const callPoolUnderwriter = IPoolMock__factory.connect(
+          callPool.address,
+          underwriter,
+        );
+        const fee = await callPool.takerFee(size, 0, true);
+        const totalSize = size.add(fee);
+        await base.connect(underwriter).approve(p.router.address, totalSize);
+        await callPoolUnderwriter.writeFrom(
+          underwriter.address,
+          trader.address,
+          size,
+        );
+        expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
+        expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          size,
+        );
+        expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+          0,
+        );
+        expect(
+          await callPool.balanceOf(underwriter.address, TokenType.LONG),
+        ).to.eq(0);
+        expect(
+          await callPool.balanceOf(underwriter.address, TokenType.SHORT),
+        ).to.eq(size);
+      });
+
+      it('allows writeFrom to mint put options when directly called', async () => {
+        const { underwriter, trader, quote, putPool } = await loadFixture(
+          vaultSetup,
+        );
+        const size = parseEther('5');
+        const strike = 1500;
+        const putPoolUnderwriter = IPoolMock__factory.connect(
+          putPool.address,
+          underwriter,
+        );
+        const fee = await putPool.takerFee(size, 0, false);
+        const totalSize = size.mul(strike).add(fee);
+        console.log(totalSize);
+        await quote.connect(underwriter).approve(p.router.address, totalSize);
+        await putPoolUnderwriter.writeFrom(
+          underwriter.address,
+          trader.address,
+          size,
+        );
+        expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
+        expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          size,
+        );
+        expect(await putPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+          0,
+        );
+        expect(
+          await putPool.balanceOf(underwriter.address, TokenType.LONG),
+        ).to.eq(0);
+        expect(
+          await putPool.balanceOf(underwriter.address, TokenType.SHORT),
+        ).to.eq(size);
+      });
+
+      it('allows the vault to mint call options for the LP and Trader', async () => {
+        const { callVault, lp, trader, base, quote, callPool } =
+          await loadFixture(vaultSetup);
+        const lpDepositSize = 5; // units of base
+        const lpDepositSizeBN = parseEther(lpDepositSize.toString());
+        await addMockDeposit(callVault, lpDepositSize, base, quote);
+        const strike = parseEther('1500');
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+
+        const [, premium, mintingFee, , spread] = await callVault.quote(
+          strike,
+          maturity,
+          tradeSize,
+        );
+
+        const totalTransfer = premium.add(mintingFee).add(spread);
+
+        await base.connect(trader).approve(callVault.address, totalTransfer);
+        await callVault.connect(trader).buy(strike, maturity, tradeSize);
+        const vaultCollateralBalance = lpDepositSizeBN
+          .sub(tradeSize)
+          .add(premium)
+          .add(spread);
+
+        // todo: cover the put case
+        // collateral
+        expect(await base.balanceOf(callPool.address)).to.eq(
+          tradeSize.add(mintingFee),
+        );
+
+        expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          tradeSize,
+        );
+        expect(
+          await callPool.balanceOf(callVault.address, TokenType.SHORT),
+        ).to.eq(tradeSize);
+        // as time passes the B-Sch. price and C-level change
+        expect(
+          parseFloat(formatEther(await base.balanceOf(callVault.address))),
+        ).to.be.closeTo(
+          parseFloat(formatEther(vaultCollateralBalance)),
+          0.000001,
+        );
+      });
+
+      it('allows the vault to mint put options for the LP and Trader', async () => {
+        const { putVault, lp, trader, base, quote, putPool } =
+          await loadFixture(vaultSetup);
+
+        const strike = 1500;
+        const lpDepositSize = 5 * strike; // 5 units
+        const lpDepositSizeBN = parseUnits(lpDepositSize.toString(), 6);
+        await addMockDeposit(putVault, lpDepositSize, base, quote);
+
+        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+        const tradeSize = parseEther('2');
+        const fee = await putPool.takerFee(tradeSize, 0, false);
+        const totalSize = tradeSize.add(fee);
+        const strikeBN = parseEther(strike.toString());
+        // FIXME: these tests will not run because writeFrom decimalization for puts is incorrect
+
+        // await putVault.connect(trader).buy(strikeBN, maturity, tradeSize);
+        // const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
+
+        // expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
+        // expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+        //   tradeSize,
+        // );
+        // expect(await putPool.balanceOf(putVault.address, TokenType.SHORT)).to.eq(
+        //   tradeSize,
+        // );
+        // expect(await quote.balanceOf(putVault.address)).to.be.eq(
+        //   vaultCollateralBalance,
+        // );
+      });
+    });
   });
 
   describe('#_quote', () => {
@@ -2447,150 +2593,6 @@ describe('UnderwriterVault', () => {
         expect(cLevel_t2).to.be.gt(cLevel_t1);
         expect(cLevel_t2).to.be.gt(cLevel_t3);
       });
-    });
-  });
-
-  describe('#minting options from pool', () => {
-    it('allows writeFrom to mint call options when directly called', async () => {
-      const { underwriter, trader, base, callPool, p } = await loadFixture(
-        vaultSetup,
-      );
-      const size = parseEther('5');
-      const callPoolUnderwriter = IPoolMock__factory.connect(
-        callPool.address,
-        underwriter,
-      );
-      const fee = await callPool.takerFee(size, 0, true);
-      const totalSize = size.add(fee);
-      await base.connect(underwriter).approve(p.router.address, totalSize);
-      await callPoolUnderwriter.writeFrom(
-        underwriter.address,
-        trader.address,
-        size,
-      );
-      expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
-      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-        size,
-      );
-      expect(await callPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
-        0,
-      );
-      expect(
-        await callPool.balanceOf(underwriter.address, TokenType.LONG),
-      ).to.eq(0);
-      expect(
-        await callPool.balanceOf(underwriter.address, TokenType.SHORT),
-      ).to.eq(size);
-    });
-
-    it('allows writeFrom to mint put options when directly called', async () => {
-      const { underwriter, trader, quote, putPool } = await loadFixture(
-        vaultSetup,
-      );
-      const size = parseEther('5');
-      const strike = 1500;
-      const putPoolUnderwriter = IPoolMock__factory.connect(
-        putPool.address,
-        underwriter,
-      );
-      const fee = await putPool.takerFee(size, 0, false);
-      const totalSize = size.mul(strike).add(fee);
-      console.log(totalSize);
-      await quote.connect(underwriter).approve(p.router.address, totalSize);
-      await putPoolUnderwriter.writeFrom(
-        underwriter.address,
-        trader.address,
-        size,
-      );
-      expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
-      expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-        size,
-      );
-      expect(await putPool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
-      expect(
-        await putPool.balanceOf(underwriter.address, TokenType.LONG),
-      ).to.eq(0);
-      expect(
-        await putPool.balanceOf(underwriter.address, TokenType.SHORT),
-      ).to.eq(size);
-    });
-
-    it('allows the vault to mint call options for the LP and Trader', async () => {
-      const { callVault, lp, trader, base, quote, callPool } =
-        await loadFixture(vaultSetup);
-      const lpDepositSize = 5; // units of base
-      const lpDepositSizeBN = parseEther(lpDepositSize.toString());
-      await addMockDeposit(callVault, lpDepositSize, base, quote);
-      const strike = parseEther('1500');
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-      const tradeSize = parseEther('2');
-
-      const [, premium, mintingFee, , spread] = await callVault.quote(
-        strike,
-        maturity,
-        tradeSize,
-      );
-
-      const totalTransfer = premium.add(mintingFee).add(spread);
-
-      await base.connect(trader).approve(callVault.address, totalTransfer);
-      await callVault.connect(trader).buy(strike, maturity, tradeSize);
-      const vaultCollateralBalance = lpDepositSizeBN
-        .sub(tradeSize)
-        .add(premium)
-        .add(spread);
-
-      // todo: cover the put case
-      // collateral
-      expect(await base.balanceOf(callPool.address)).to.eq(
-        tradeSize.add(mintingFee),
-      );
-
-      expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-        tradeSize,
-      );
-      expect(
-        await callPool.balanceOf(callVault.address, TokenType.SHORT),
-      ).to.eq(tradeSize);
-      // as time passes the B-Sch. price and C-level change
-      expect(
-        parseFloat(formatEther(await base.balanceOf(callVault.address))),
-      ).to.be.closeTo(
-        parseFloat(formatEther(vaultCollateralBalance)),
-        0.000001,
-      );
-    });
-
-    it('allows the vault to mint put options for the LP and Trader', async () => {
-      const { putVault, lp, trader, base, quote, putPool } = await loadFixture(
-        vaultSetup,
-      );
-
-      const strike = 1500;
-      const lpDepositSize = 5 * strike; // 5 units
-      const lpDepositSizeBN = parseUnits(lpDepositSize.toString(), 6);
-      await addMockDeposit(putVault, lpDepositSize, base, quote);
-
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-      const tradeSize = parseEther('2');
-      const fee = await putPool.takerFee(tradeSize, 0, false);
-      const totalSize = tradeSize.add(fee);
-      const strikeBN = parseEther(strike.toString());
-      // FIXME: these tests will not run because writeFrom decimalization for puts is incorrect
-
-      // await putVault.connect(trader).buy(strikeBN, maturity, tradeSize);
-      // const vaultCollateralBalance = lpDepositSizeBN.sub(totalSize);
-
-      // expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
-      // expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-      //   tradeSize,
-      // );
-      // expect(await putPool.balanceOf(putVault.address, TokenType.SHORT)).to.eq(
-      //   tradeSize,
-      // );
-      // expect(await quote.balanceOf(putVault.address)).to.be.eq(
-      //   vaultCollateralBalance,
-      // );
     });
   });
 });
