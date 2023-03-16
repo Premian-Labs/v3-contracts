@@ -12,14 +12,16 @@ import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
 import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
-import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
+import {ETH_DECIMALS, Tokens} from "./Tokens.sol";
+import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
 contract UniswapV3AdapterInternal is
     IUniswapV3AdapterInternal,
     OracleAdapterInternal
 {
     using SafeCast for uint256;
+    using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     IUniswapV3Factory internal immutable UNISWAP_V3_FACTORY;
@@ -287,7 +289,7 @@ contract UniswapV3AdapterInternal is
     ) internal view returns (address[] storage) {
         return
             UniswapV3AdapterStorage.layout().poolsForPair[
-                _keyForUnsortedPair(tokenA, tokenB)
+                tokenA.keyForUnsortedPair(tokenB)
             ];
     }
 

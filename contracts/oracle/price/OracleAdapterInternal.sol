@@ -4,48 +4,11 @@ pragma solidity ^0.8.0;
 
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {IOracleAdapterInternal} from "./IOracleAdapterInternal.sol";
+
 /// @title Base oracle adapter internal implementation
-abstract contract OracleAdapterInternal {
+abstract contract OracleAdapterInternal is IOracleAdapterInternal {
     using SafeCast for int256;
-
-    int256 internal constant ETH_DECIMALS = 18;
-
-    uint256 internal constant ONE_ETH = 1 ether;
-
-    /// @notice Thrown when the target is zero or before the current block timestamp
-    error OracleAdapter__InvalidTarget();
-
-    /// @notice Thrown when the price is non-positive
-    error OracleAdapter__InvalidPrice(int256 price);
-
-    /// @notice Thrown when trying to add pair where addresses are the same
-    error OracleAdapter__TokensAreSame(address tokenA, address tokenB);
-
-    /// @notice Thrown when trying to add support for a pair that cannot be supported
-    error OracleAdapter__PairCannotBeSupported(address tokenA, address tokenB);
-
-    /// @notice Thrown when trying to execute a quote with a pair that isn't supported
-    error OracleAdapter__PairNotSupported(address tokenA, address tokenB);
-
-    /// @notice Thrown when one of the parameters is a zero address
-    error OracleAdapter__ZeroAddress();
-
-    function _keyForUnsortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        (address sortedA, address sortedTokenB) = _sortTokens(tokenA, tokenB);
-
-        return _keyForSortedPair(sortedA, sortedTokenB);
-    }
-
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _keyForSortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenA, tokenB));
-    }
 
     function _scale(
         uint256 amount,
@@ -56,15 +19,6 @@ abstract contract OracleAdapterInternal {
         } else {
             return amount * (10 ** factor.toUint256());
         }
-    }
-
-    function _sortTokens(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (address _tokenA, address _tokenB) {
-        (_tokenA, _tokenB) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
     }
 
     function _ensureTargetNonZero(uint256 target) internal view {

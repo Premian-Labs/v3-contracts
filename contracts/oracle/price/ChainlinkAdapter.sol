@@ -2,20 +2,21 @@
 
 pragma solidity ^0.8.0;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
-
-import {ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
+import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
+import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
-import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
+import {IOracleAdapter} from "./IOracleAdapter.sol";
+import {OracleAdapter} from "./OracleAdapter.sol";
+import {Tokens} from "./Tokens.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract ChainlinkAdapter is
     ChainlinkAdapterInternal,
     IChainlinkAdapter,
-    OracleAdapter,
-    SafeOwnable
+    OracleAdapter
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
+    using Tokens for address;
 
     constructor(
         address _wrappedNativeToken,
@@ -50,7 +51,7 @@ contract ChainlinkAdapter is
         ) = _mapToDenominationAndSort(tokenA, tokenB);
 
         PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
+        bytes32 keyForPair = mappedTokenA.keyForSortedPair(mappedTokenB);
 
         ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
             .layout();
@@ -97,39 +98,5 @@ contract ChainlinkAdapter is
     ) external view returns (PricingPath) {
         (PricingPath path, , ) = _pathForPair(tokenA, tokenB, false);
         return path;
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function batchRegisterFeedMappings(
-        FeedMappingArgs[] memory args
-    ) external onlyOwner {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = _tokenToDenomination(args[i].token);
-            address denomination = args[i].denomination;
-
-            if (token == denomination)
-                revert OracleAdapter__TokensAreSame(token, denomination);
-
-            if (token == address(0) || denomination == address(0))
-                revert OracleAdapter__ZeroAddress();
-
-            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
-            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
-        }
-
-        emit FeedMappingsRegistered(args);
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function feed(
-        address tokenA,
-        address tokenB
-    ) external view returns (address) {
-        (address mappedTokenA, address mappedTokenB) = _mapToDenomination(
-            tokenA,
-            tokenB
-        );
-
-        return _feed(mappedTokenA, mappedTokenB);
     }
 }

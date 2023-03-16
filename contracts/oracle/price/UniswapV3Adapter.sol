@@ -7,8 +7,10 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 
+import {IOracleAdapter} from "./IOracleAdapter.sol";
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
-import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
+import {OracleAdapter} from "./OracleAdapter.sol";
+import {Tokens} from "./Tokens.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
@@ -21,6 +23,7 @@ contract UniswapV3Adapter is
     UniswapV3AdapterInternal
 {
     using SafeCast for uint256;
+    using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     constructor(
@@ -81,7 +84,7 @@ contract UniswapV3Adapter is
 
         _resizeArray(poolsToSupport, poolsSupported);
         if (poolsToSupport.length == 0) revert UniswapV3Adapter__GasTooLow();
-        l.poolsForPair[_keyForUnsortedPair(tokenA, tokenB)] = poolsToSupport;
+        l.poolsForPair[tokenA.keyForUnsortedPair(tokenB)] = poolsToSupport;
         emit UpdatedPoolsForPair(tokenA, tokenB, poolsToSupport);
     }
 

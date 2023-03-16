@@ -2,6 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+
+import {FOREX_DECIMALS, ETH_DECIMALS} from "./Tokens.sol";
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 
 library ChainlinkAdapterStorage {
@@ -10,7 +13,6 @@ library ChainlinkAdapterStorage {
 
     struct Layout {
         mapping(bytes32 => IChainlinkAdapterInternal.PricingPath) pathForPair;
-        mapping(bytes32 => address) feeds;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -32,5 +34,37 @@ library ChainlinkAdapterStorage {
     ) internal pure returns (uint16 phaseId, uint64 aggregatorRoundId) {
         phaseId = uint16(roundId >> 64);
         aggregatorRoundId = uint64(roundId);
+    }
+
+    function factor(
+        IChainlinkAdapterInternal.PricingPath path
+    ) internal pure returns (int256) {
+        if (
+            path == IChainlinkAdapterInternal.PricingPath.ETH_USD ||
+            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD ||
+            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD_TOKEN ||
+            path == IChainlinkAdapterInternal.PricingPath.A_USD_ETH_B ||
+            path == IChainlinkAdapterInternal.PricingPath.A_ETH_USD_B ||
+            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD_BTC_WBTC
+        ) {
+            return ETH_DECIMALS - FOREX_DECIMALS;
+        }
+
+        return 0;
+    }
+
+    function isUSD(address token) internal pure returns (bool) {
+        return token == Denominations.USD;
+    }
+
+    function isETH(address token) internal pure returns (bool) {
+        return token == Denominations.ETH;
+    }
+
+    function isWBTC(
+        address wrappedBTCToken,
+        address token
+    ) internal pure returns (bool) {
+        return token == wrappedBTCToken;
     }
 }

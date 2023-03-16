@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {IOracleAdapter} from "./IOracleAdapter.sol";
+import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 
 /// @title An implementation of IOracleAdapter that uses Chainlink feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine
@@ -18,19 +18,4 @@ interface IChainlinkAdapter is IOracleAdapter {
         address tokenA,
         address tokenB
     ) external view returns (IChainlinkAdapterInternal.PricingPath);
-
-    /// @notice Registers mappings of ERC20 token, and denomination (ETH, or USD) to Chainlink feed
-    /// @param args The arguments for the new mappings
-    function batchRegisterFeedMappings(
-        IChainlinkAdapterInternal.FeedMappingArgs[] memory args
-    ) external;
-
-    /// @notice Returns the Chainlink feed for the given pair
-    /// @param tokenA One of the pair's tokens
-    /// @param tokenB The other of the pair's tokens
-    /// @return The Chainlink feed address
-    function feed(
-        address tokenA,
-        address tokenB
-    ) external view returns (address);
 }
