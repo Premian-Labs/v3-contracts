@@ -86,6 +86,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
+    function SetWithdrawalDelay(address withdrawalDelay) external onlyOwner {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+        l.withdrawalDelay = withdrawalDelay;
+        emit SetWithdrawalDelay(withdrawalDelay);
+    }
+
+    /// @inheritdoc IPoolFactory
     function deployPool(
         PoolKey memory k
     ) external payable returns (address poolAddress) {
@@ -124,7 +131,8 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
                 k.oracleAdapter,
                 k.strike,
                 k.maturity,
-                k.isCallPool
+                k.isCallPool,
+                PoolFactoryStorage.layout().withdrawalDelay
             )
         );
 

@@ -14,7 +14,8 @@ contract PoolFactoryProxy is IPoolFactoryEvents, ProxyUpgradeableOwnable {
     constructor(
         address implementation,
         uint256 discountPerPool,
-        address feeReceiver
+        address feeReceiver,
+        uint256 withdrawalDelay
     ) ProxyUpgradeableOwnable(implementation) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
@@ -23,5 +24,8 @@ contract PoolFactoryProxy is IPoolFactoryEvents, ProxyUpgradeableOwnable {
 
         l.feeReceiver = feeReceiver;
         emit SetFeeReceiver(feeReceiver);
+
+        l.withdrawalDelay = withdrawalDelay;
+        emit SetWithdrawalDelay(withdrawalDelay);
     }
 }

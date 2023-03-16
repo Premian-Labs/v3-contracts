@@ -390,6 +390,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tokenId
         );
 
+        pData.lastDeposit = block.timestamp;
+
         emit Deposit(
             p.owner,
             tokenId,
@@ -486,6 +488,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         p.isCall = l.isCallPool;
 
         Position.Data storage pData = l.positions[p.keyHash()];
+
+        _ensureWithdrawalDelayElapsed(l, pData);
 
         WithdrawVarsInternal memory vars;
 
@@ -1144,6 +1148,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
         dstData.claimableFees += feesTransferred;
         srcData.claimableFees -= feesTransferred;
+
+        dstData.lastDeposit = srcData.lastDeposit;
 
         if (srcTokenId == dstTokenId) {
             _safeTransfer(
@@ -1905,6 +1911,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+    }
+
+    function _ensureWithdrawalDelayElapsed(
+        PoolStorage.Layout storage l,
+        Position.Data storage position
+    ) internal view {
+        if (block.timestamp < position.lastDeposit + l.withdrawalDelay)
+            revert Pool__WithdrawalDelayNotElapsed();
     }
 
     function _ensureBelowTradeMaxSlippage(
