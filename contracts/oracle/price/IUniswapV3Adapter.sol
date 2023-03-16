@@ -6,8 +6,7 @@ import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
+///         prices between pairs
 interface IUniswapV3Adapter is IOracleAdapter {
     /// @notice Returns the address of the Uniswap V3 factory
     /// @dev This value is assigned during deployment and cannot be changed

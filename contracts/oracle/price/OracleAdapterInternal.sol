@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 /// @title Base oracle adapter internal implementation
-/// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract OracleAdapterInternal {
     using SafeCast for int256;
 

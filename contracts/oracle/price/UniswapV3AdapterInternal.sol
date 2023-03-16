@@ -15,8 +15,6 @@ import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3AdapterInternal is
     IUniswapV3AdapterInternal,
     OracleAdapterInternal

@@ -8,7 +8,6 @@ import {IOracleAdapter} from "./IOracleAdapter.sol";
 /// @title An implementation of IOracleAdapter that uses Chainlink feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine
 ///         prices between pairs
-/// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Returns the pricing path that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order

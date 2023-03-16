@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 /// @title The interface for an oracle adapter that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
-/// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
     /// @notice Returns whether the pair has already been added to the adapter and if it
     ///         supports the path required for the pair

@@ -11,7 +11,6 @@ import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
     OracleAdapterInternal

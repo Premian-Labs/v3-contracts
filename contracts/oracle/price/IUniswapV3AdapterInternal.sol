@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3AdapterInternal {
     /// @notice Thrown when trying to add an existing fee tier
     error UniswapV3Adapter__FeeTierExists(uint24 feeTier);

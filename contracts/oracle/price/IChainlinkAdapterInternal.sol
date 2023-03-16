@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapterInternal {
     struct FeedMappingArgs {
         address token;
