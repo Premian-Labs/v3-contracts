@@ -132,9 +132,8 @@ contract UnderwriterVault is
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    // todo
     function _totalAssets() internal view override returns (uint256) {
-        return _totalAssetsUD60x18().unwrap();
+        return _convertAssetFromUD60x18(_totalAssetsUD60x18());
     }
 
     /// @notice Gets the total locked spread currently stored in storage
