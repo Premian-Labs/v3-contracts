@@ -296,11 +296,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function getAvailableAssets() external view returns (UD60x18) {
-        return _availableAssets();
+        return _availableAssetsUD60x18();
     }
 
     function getPricePerShare() external view returns (UD60x18) {
-        return _getPricePerShare();
+        return _getPricePerShareUD60x18();
     }
 
     function positionSize(

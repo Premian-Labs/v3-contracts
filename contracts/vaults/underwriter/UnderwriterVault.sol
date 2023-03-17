@@ -97,56 +97,32 @@ contract UnderwriterVault is
         ROUTER = router;
     }
 
-    function _convertAssetTo18DecPlaces(
-        int256 value
-    ) internal view returns (int256) {
-        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
-        return OptionMath.scaleDecimals(value, decPlaces, 18);
+    function _decPlaces() internal view returns (uint8 decPlaces) {
+        decPlaces = IERC20Metadata(_asset()).decimals();
     }
 
-    function _convertAssetTo18DecPlaces(
-        uint256 value
-    ) internal view returns (uint256) {
-        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
-        return OptionMath.scaleDecimals(value, decPlaces, 18);
-    }
-
-    function _convertAssetTo18DecPlacesUD60x18(
+    function _convertAssetToUD60x18(
         uint256 value
     ) internal view returns (UD60x18) {
-        return UD60x18.wrap(_convertAssetTo18DecPlaces(value));
+        return UD60x18.wrap(OptionMath.scaleDecimals(value, _decPlaces(), 18));
     }
 
-    function _convertAssetTo18DecPlacesSD59x18(
+    function _convertAssetToSD59x18(
         int256 value
     ) internal view returns (SD59x18) {
-        return SD59x18.wrap(_convertAssetTo18DecPlaces(value));
+        return SD59x18.wrap(OptionMath.scaleDecimals(value, _decPlaces(), 18));
     }
 
-    function _convertAssetToOriginalDecPlaces(
-        int256 value
-    ) internal view returns (int256) {
-        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
-        return OptionMath.scaleDecimals(value, 18, decPlaces);
-    }
-
-    function _convertAssetToOriginalDecPlaces(
-        uint256 value
+    function _convertAssetFromUD60x18(
+        UD60x18 value
     ) internal view returns (uint256) {
-        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
-        return OptionMath.scaleDecimals(value, 18, decPlaces);
+        return OptionMath.scaleDecimals(value.unwrap(), 18, _decPlaces());
     }
 
-    function _convertAssetToOriginalDecPlacesUD60x18(
-        uint256 value
-    ) internal view returns (UD60x18) {
-        return UD60x18.wrap(_convertAssetToOriginalDecPlaces(value));
-    }
-
-    function _convertAssetToOriginalDecPlacesSD59x18(
-        int256 value
-    ) internal view returns (SD59x18) {
-        return SD59x18.wrap(_convertAssetToOriginalDecPlaces(value));
+    function _convertAssetFromSD59x18(
+        SD59x18 value
+    ) internal view returns (int256) {
+        return OptionMath.scaleDecimals(value.unwrap(), 18, _decPlaces());
     }
 
     function _totalAssetsUD60x18() internal view returns (UD60x18) {
@@ -156,6 +132,7 @@ contract UnderwriterVault is
     }
 
     /// @inheritdoc ERC4626BaseInternal
+    // todo
     function _totalAssets() internal view override returns (uint256) {
         return _totalAssetsUD60x18().unwrap();
     }
@@ -405,14 +382,13 @@ contract UnderwriterVault is
 
     function _balanceOfAssetUD60x18(
         address owner
-    ) internal view returns (UD60x18) {
-        uint256 balance = _balanceOfAsset(owner);
-        UD60x18 balanceScaled = _convertAssetTo18DecPlacesUD60x18(balance);
-        return balanceScaled;
+    ) internal view returns (UD60x18 balanceScaled) {
+        uint256 balance = IERC20(_asset()).balanceOf(owner);
+        balanceScaled = _convertAssetToUD60x18(balance);
     }
 
     function _balanceOfAsset(address owner) internal view returns (uint256) {
-        return IERC20(_asset()).balanceOf(owner);
+        return _convertAssetFromUD60x18(_balanceOfAssetUD60x18(owner));
     }
 
     function _totalSupplyUD60x18() internal view returns (UD60x18) {
@@ -422,13 +398,13 @@ contract UnderwriterVault is
     /// @notice Gets the current amount of available assets
     /// @return The amount of available assets
     // TODO: shouldn't this include lockedAssets?
-    function _availableAssets() internal view returns (UD60x18) {
+    function _availableAssetsUD60x18() internal view returns (UD60x18) {
         return _balanceOfAssetUD60x18(address(this)) - _getTotalLockedSpread();
     }
 
     /// @notice Gets the current price per share for the vault
     /// @return The current price per share
-    function _getPricePerShare() internal view returns (UD60x18) {
+    function _getPricePerShareUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return
@@ -511,7 +487,6 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        // TODO: double check that l.maxMaturity is updated correctly during processing of a trade
         if (l.maxMaturity > l.lastSpreadUnlockUpdate) {
             uint256 current = _getMaturityAfterTimestamp(
                 l.lastSpreadUnlockUpdate
@@ -558,7 +533,7 @@ contract UnderwriterVault is
             if (totalAssets == ZERO) {
                 shareAmount = assetAmount;
             } else {
-                shareAmount = assetAmount / _getPricePerShare();
+                shareAmount = assetAmount / _getPricePerShareUD60x18();
             }
         }
     }
@@ -578,7 +553,7 @@ contract UnderwriterVault is
         if (supply == ZERO) {
             revert Vault__ZeroShares();
         } else {
-            assetAmount = shareAmount * _getPricePerShare();
+            assetAmount = shareAmount * _getPricePerShareUD60x18();
         }
     }
 
@@ -586,7 +561,14 @@ contract UnderwriterVault is
     function _convertToAssets(
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
-        return _convertToAssetsUD60x18(UD60x18.wrap(shareAmount)).unwrap();
+        UD60x18 assets = _convertToAssetsUD60x18(UD60x18.wrap(shareAmount));
+        uint256 assetAmount = _convertAssetFromUD60x18(assets);
+    }
+
+    function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
+        // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
+        // therefore no further scaling has to be applied
+        return UD60x18.wrap(_balanceOf(owner));
     }
 
     function _maxWithdrawUD60x18(
@@ -595,9 +577,8 @@ contract UnderwriterVault is
         if (owner == address(0)) {
             revert Vault__AddressZero();
         }
-
-        UD60x18 assetsOwner = UD60x18.wrap(_convertToAssets(_balanceOf(owner)));
-        UD60x18 availableAssets = _availableAssets();
+        UD60x18 assetsOwner = _convertToAssetsUD60x18(_balanceOfUD60x18(owner));
+        UD60x18 availableAssets = _availableAssetsUD60x18();
 
         if (assetsOwner >= availableAssets) {
             withdrawableAssets = availableAssets;
@@ -610,7 +591,8 @@ contract UnderwriterVault is
     function _maxWithdraw(
         address owner
     ) internal view virtual override returns (uint256 withdrawableAssets) {
-        return _maxWithdrawUD60x18(owner).unwrap();
+        UD60x18 assets = _maxWithdrawUD60x18(owner);
+        withdrawableAssets = _convertAssetFromUD60x18(assets);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -628,7 +610,7 @@ contract UnderwriterVault is
         if (supply == ZERO) {
             assetAmount = shareAmount;
         } else {
-            assetAmount = shareAmount * _getPricePerShare();
+            assetAmount = shareAmount * _getPricePerShareUD60x18();
         }
     }
 
@@ -636,7 +618,8 @@ contract UnderwriterVault is
     function _previewMint(
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
-        return _previewMintUD60x18(UD60x18.wrap(shareAmount)).unwrap();
+        UD60x18 assets = _previewMintUD60x18(UD60x18.wrap(shareAmount));
+        uint256 assetAmount = _convertAssetFromUD60x18(assets);
     }
 
     function _previewWithdrawUD60x18(
@@ -644,14 +627,15 @@ contract UnderwriterVault is
     ) internal view returns (UD60x18 shareAmount) {
         if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
         if (_totalAssetsUD60x18() == ZERO) revert Vault__InsufficientFunds();
-        shareAmount = assetAmount / _getPricePerShare();
+        shareAmount = assetAmount / _getPricePerShareUD60x18();
     }
 
     /// @inheritdoc ERC4626BaseInternal
     function _previewWithdraw(
         uint256 assetAmount
     ) internal view virtual override returns (uint256 shareAmount) {
-        return _previewMintUD60x18(UD60x18.wrap(assetAmount)).unwrap();
+        UD60x18 assetAmountScaled = _convertAssetToUD60x18(assetAmount);
+        shareAmount = _previewMintUD60x18(assetAmountScaled).unwrap();
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -820,7 +804,8 @@ contract UnderwriterVault is
         // Check if the vault has sufficient funds
         UD60x18 collateral = isCall ? size : size * strike;
         // todo: mintingFee is a transit item
-        if (collateral >= _availableAssets()) revert Vault__InsufficientFunds();
+        if (collateral >= _availableAssetsUD60x18())
+            revert Vault__InsufficientFunds();
     }
 
     function _ensureWithinTradeBounds(
@@ -937,7 +922,7 @@ contract UnderwriterVault is
             l.maxDTE
         );
 
-        maxSize = _availableAssets().unwrap();
+        maxSize = _availableAssetsUD60x18().unwrap();
         price = vars.premium.unwrap();
     }
 
@@ -996,8 +981,8 @@ contract UnderwriterVault is
         _addListing(vars.strike, vars.maturity);
 
         // Collect option premium from buyer
-        uint256 transferAmountScaled = _convertAssetToOriginalDecPlaces(
-            (vars.premium + vars.spread + vars.mintingFee).unwrap()
+        uint256 transferAmountScaled = _convertAssetFromUD60x18(
+            vars.premium + vars.spread + vars.mintingFee
         );
 
         IERC20(_asset()).safeTransferFrom(
@@ -1008,8 +993,8 @@ contract UnderwriterVault is
 
         // Approve transfer of base / quote token
         // TODO: for puts multiply the size by the strike
-        uint256 approveAmountScaled = _convertAssetToOriginalDecPlaces(
-            (vars.size + vars.spread + vars.mintingFee).unwrap()
+        uint256 approveAmountScaled = _convertAssetFromUD60x18(
+            vars.size + vars.spread + vars.mintingFee
         );
 
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
