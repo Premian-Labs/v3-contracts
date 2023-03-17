@@ -74,7 +74,7 @@ contract UniswapV3AdapterInternal is
             factor
         );
 
-        _ensurePriceNonZero(price.toInt256());
+        _ensurePricePositive(price.toInt256());
         return price;
     }
 
@@ -158,12 +158,12 @@ contract UniswapV3AdapterInternal is
         for (uint256 i; i < poolLength; i++) {
             address pool = pools[i];
 
-            (bool increaseCardinality, ) = _increaseCardinality(
-                pool,
-                targetCardinality
-            );
+            (
+                bool currentCardinalityBelowTarget,
 
-            if (increaseCardinality)
+            ) = _isCurrentCardinalityBelowTarget(pool, targetCardinality);
+
+            if (currentCardinalityBelowTarget)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
         }
 
@@ -212,32 +212,30 @@ contract UniswapV3AdapterInternal is
     function _tryIncreaseCardinality(
         address pool,
         uint16 targetCardinality
-    ) internal returns (bool, bool) {
+    ) internal {
         (
-            bool increaseCardinality,
+            bool currentCardinalityBelowTarget,
             uint16 currentCardinality
-        ) = _increaseCardinality(pool, targetCardinality);
+        ) = _isCurrentCardinalityBelowTarget(pool, targetCardinality);
 
-        bool gasCostExceedsGasLeft = true;
+        if (!currentCardinalityBelowTarget) return;
 
-        if (increaseCardinality) {
-            uint256 gasCostToIncreaseAndAddSupport = (targetCardinality -
-                currentCardinality) *
-                GAS_PER_CARDINALITY +
-                GAS_TO_SUPPORT_POOL;
+        uint256 gasCostToIncreaseAndAddSupport = (targetCardinality -
+            currentCardinality) *
+            GAS_PER_CARDINALITY +
+            GAS_TO_SUPPORT_POOL;
 
-            if (gasCostToIncreaseAndAddSupport <= gasleft()) {
-                gasCostExceedsGasLeft = false;
-                IUniswapV3Pool(pool).increaseObservationCardinalityNext(
-                    targetCardinality
-                );
-            }
+        if (gasCostToIncreaseAndAddSupport <= gasleft()) {
+            IUniswapV3Pool(pool).increaseObservationCardinalityNext(
+                targetCardinality
+            );
+        } else {
+            // If the cardinality cannot be increased due to gas cost, revert
+            revert UniswapV3Adapter__ObservationCardinalityTooLow();
         }
-
-        return (increaseCardinality, gasCostExceedsGasLeft);
     }
 
-    function _increaseCardinality(
+    function _isCurrentCardinalityBelowTarget(
         address pool,
         uint16 targetCardinality
     ) internal view returns (bool, uint16) {

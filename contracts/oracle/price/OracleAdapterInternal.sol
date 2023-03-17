@@ -73,7 +73,7 @@ abstract contract OracleAdapterInternal {
             revert OracleAdapter__InvalidTarget();
     }
 
-    function _ensurePriceNonZero(int256 price) internal pure {
+    function _ensurePricePositive(int256 price) internal pure {
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
     }
 }
