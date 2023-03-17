@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import {UnderwriterVault, SolidStateERC4626} from "../../../vaults/underwriter/UnderwriterVault.sol";
-import {UnderwriterVaultStorage} from "../../../vaults/underwriter/UnderwriterVaultStorage.sol";
+import {UnderwriterVault, SolidStateERC4626} from "../../../../vault/strategies/underwriter/UnderwriterVault.sol";
+import {UnderwriterVaultStorage} from "../../../../vault/strategies/underwriter/UnderwriterVaultStorage.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
@@ -11,14 +11,14 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
-import {OptionMath} from "../../../libraries/OptionMath.sol";
-import {IPool} from "../../../pool/IPool.sol";
+import {OptionMath} from "../../../../libraries/OptionMath.sol";
+import {IPool} from "../../../../pool/IPool.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
+import {IPoolFactory} from "../../../../factory/IPoolFactory.sol";
 
-import {DoublyLinkedList} from "../../../libraries/DoublyLinkedListUD60x18.sol";
-import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
-import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
+import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.sol";
+import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
+import {ZERO, iZERO, ONE, iONE} from "../../../../libraries/Constants.sol";
 
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;

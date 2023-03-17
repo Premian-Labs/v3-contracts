@@ -6,7 +6,7 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {ISolidStateERC4626} from "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
-import {IVault} from "../../vault/IVault.sol";
+import {IVault} from "../../../vault/IVault.sol";
 
 interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Errors
