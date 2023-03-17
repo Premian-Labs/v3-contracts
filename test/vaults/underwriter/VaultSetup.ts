@@ -14,7 +14,7 @@ import {
   VolatilityOracleMock__factory,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
-import { getValidMaturity } from '../../../utils/time';
+import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
 import { PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
@@ -69,6 +69,31 @@ export let volOracleProxy: ProxyUpgradeableOwnable;
 
 export const log = true;
 
+export let startTime: number;
+export let spot: number;
+export let minMaturity: number;
+export let maxMaturity: number;
+
+export async function setMaturities(vault: UnderwriterVaultMock) {
+  startTime = await latest();
+  spot = 2800;
+  minMaturity = startTime + 10 * ONE_DAY;
+  maxMaturity = startTime + 20 * ONE_DAY;
+
+  const infos = [
+    {
+      maturity: minMaturity.toString(),
+      strikes: [],
+      sizes: [],
+    },
+    {
+      maturity: maxMaturity.toString(),
+      strikes: [],
+      sizes: [],
+    },
+  ];
+  await vault.setListingsAndSizes(infos);
+}
 export async function addDeposit(
   vault: UnderwriterVaultMock,
   caller: SignerWithAddress,
