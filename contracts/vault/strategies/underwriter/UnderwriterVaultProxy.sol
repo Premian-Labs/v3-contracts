@@ -7,7 +7,7 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
 import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 
-import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
+import {ProxyUpgradeableOwnable} from "../../../proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
 contract UnderwriterVaultProxy is
