@@ -46,13 +46,17 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function getMaturityAfterTimestamp(
         uint256 timestamp
     ) external view returns (uint256) {
-        return _getMaturityAfterTimestamp(timestamp);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.getMaturityAfterTimestamp(timestamp);
     }
 
     function getNumberOfUnexpiredListings(
         uint256 timestamp
     ) external view returns (uint256) {
-        return _getNumberOfUnexpiredListings(timestamp);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.getNumberOfUnexpiredListings(timestamp);
     }
 
     function getTotalLiabilitiesExpired(
@@ -104,19 +108,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.maturityToStrikes[maturity].length();
     }
 
-    function contains(
-        UD60x18 strike,
-        uint256 maturity
-    ) external view returns (bool) {
-        return _contains(strike, maturity);
-    }
-
     function updateState() external {
         return _updateState();
     }
 
-    function getTotalLockedSpread() external view returns (UD60x18) {
-        return _getTotalLockedSpread();
+    function getLockedSpreadVars()
+        external
+        view
+        returns (LockedSpreadVars memory)
+    {
+        return _getLockedSpreadVars();
     }
 
     function increasePositionSize(
@@ -349,12 +350,25 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getCLevel(collateralAmt);
     }
 
+    function contains(
+        UD60x18 strike,
+        uint256 maturity
+    ) external view returns (bool) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.contains(strike, maturity);
+    }
+
     function addListing(UD60x18 strike, uint256 maturity) external {
-        return _addListing(strike, maturity);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.addListing(strike, maturity);
     }
 
     function removeListing(UD60x18 strike, uint256 maturity) external {
-        return _removeListing(strike, maturity);
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.removeListing(strike, maturity);
     }
 
     function getFactoryAddress(

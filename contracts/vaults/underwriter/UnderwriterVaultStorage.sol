@@ -13,6 +13,8 @@ import {EnumerableSetUD60x18, EnumerableSet} from "../../libraries/EnumerableSet
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeCast for int256;
+    using DoublyLinkedList for DoublyLinkedList.Uint256List;
+    using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
 
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.UnderwriterVaultStorage");
@@ -72,6 +74,115 @@ library UnderwriterVaultStorage {
         bytes32 slot = STORAGE_SLOT;
         assembly {
             l.slot := slot
+        }
+    }
+
+    /// @notice Gets the nearest maturity after the given timestamp, exclusive
+    ///         of the timestamp being on a maturity
+    /// @param timestamp The given timestamp
+    /// @return The nearest maturity after the given timestamp
+    function getMaturityAfterTimestamp(
+        Layout storage l,
+        uint256 timestamp
+    ) internal view returns (uint256) {
+        //if (timestamp >= l.maxMaturity) revert Vault__GreaterThanMaxMaturity();
+
+        uint256 current = l.minMaturity;
+
+        while (current <= timestamp && current != 0) {
+            current = l.maturities.next(current);
+        }
+        return current;
+    }
+
+    /// @notice Gets the number of unexpired listings within the basket of
+    ///         options underwritten by this vault at the current time
+    /// @param timestamp The given timestamp
+    /// @return The number of unexpired listings
+    function getNumberOfUnexpiredListings(
+        Layout storage l,
+        uint256 timestamp
+    ) internal view returns (uint256) {
+        uint256 n = 0;
+
+        if (l.maxMaturity <= timestamp) return 0;
+
+        uint256 current = l.getMaturityAfterTimestamp(timestamp);
+
+        while (current <= l.maxMaturity && current != 0) {
+            n += l.maturityToStrikes[current].length();
+            current = l.maturities.next(current);
+        }
+
+        return n;
+    }
+
+    /// @notice Checks if a listing exists within internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
+    /// @return If listing exists, return true, otherwise false
+    function contains(
+        Layout storage l,
+        UD60x18 strike,
+        uint256 maturity
+    ) internal view returns (bool) {
+        if (!l.maturities.contains(maturity)) return false;
+
+        return l.maturityToStrikes[maturity].contains(strike);
+    }
+
+    /// @notice Adds a listing to the internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
+    function addListing(
+        Layout storage l,
+        UD60x18 strike,
+        uint256 maturity
+    ) internal {
+        // Insert maturity if it doesn't exist
+        if (!l.maturities.contains(maturity)) {
+            if (maturity < l.minMaturity) {
+                l.maturities.insertBefore(l.minMaturity, maturity);
+                l.minMaturity = maturity;
+            } else if (
+                (l.minMaturity < maturity) && (maturity) < l.maxMaturity
+            ) {
+                uint256 next = l.getMaturityAfterTimestamp(maturity);
+                l.maturities.insertBefore(next, maturity);
+            } else {
+                l.maturities.insertAfter(l.maxMaturity, maturity);
+
+                if (l.minMaturity == 0) l.minMaturity = maturity;
+
+                l.maxMaturity = maturity;
+            }
+        }
+
+        // Insert strike into the set of strikes for given maturity
+        if (!l.maturityToStrikes[maturity].contains(strike))
+            l.maturityToStrikes[maturity].add(strike);
+    }
+
+    /// @notice Removes a listing from internal data structures
+    /// @param strike The strike price of the listing
+    /// @param maturity The maturity of the listing
+    function removeListing(
+        Layout storage l,
+        UD60x18 strike,
+        uint256 maturity
+    ) internal {
+        if (l.contains(strike, maturity)) {
+            l.maturityToStrikes[maturity].remove(strike);
+
+            // Remove maturity if there are no strikes left
+            if (l.maturityToStrikes[maturity].length() == 0) {
+                if (maturity == l.minMaturity)
+                    l.minMaturity = l.maturities.next(maturity);
+                if (maturity == l.maxMaturity)
+                    l.maxMaturity = l.maturities.prev(maturity);
+
+                l.maturities.remove(maturity);
+            }
         }
     }
 }
