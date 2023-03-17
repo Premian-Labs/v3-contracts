@@ -8,6 +8,7 @@ import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol"
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
@@ -96,12 +97,62 @@ contract UnderwriterVault is
         ROUTER = router;
     }
 
+    function _convertAssetTo18DecPlaces(
+        int256 value
+    ) internal view returns (int256) {
+        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
+        return OptionMath.scaleDecimals(value, decPlaces, 18);
+    }
+
+    function _convertAssetTo18DecPlaces(
+        uint256 value
+    ) internal view returns (uint256) {
+        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
+        return OptionMath.scaleDecimals(value, decPlaces, 18);
+    }
+
+    function _convertAssetTo18DecPlacesUD60x18(
+        uint256 value
+    ) internal view returns (UD60x18) {
+        return UD60x18.wrap(_convertAssetTo18DecPlaces(value));
+    }
+
+    function _convertAssetTo18DecPlacesSD59x18(
+        int256 value
+    ) internal view returns (SD59x18) {
+        return SD59x18.wrap(_convertAssetTo18DecPlaces(value));
+    }
+
+    function _convertAssetToOriginalDecPlaces(
+        int256 value
+    ) internal view returns (int256) {
+        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
+        return OptionMath.scaleDecimals(value, 18, decPlaces);
+    }
+
+    function _convertAssetToOriginalDecPlaces(
+        uint256 value
+    ) internal view returns (uint256) {
+        uint8 decPlaces = IERC20Metadata(_asset()).decimals();
+        return OptionMath.scaleDecimals(value, 18, decPlaces);
+    }
+
+    function _convertAssetToOriginalDecPlacesUD60x18(
+        uint256 value
+    ) internal view returns (UD60x18) {
+        return UD60x18.wrap(_convertAssetToOriginalDecPlaces(value));
+    }
+
+    function _convertAssetToOriginalDecPlacesSD59x18(
+        int256 value
+    ) internal view returns (SD59x18) {
+        return SD59x18.wrap(_convertAssetToOriginalDecPlaces(value));
+    }
+
     function _totalAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        uint256 balanceOf = IERC20(_asset()).balanceOf(address(this));
-        // TODO: FIX THIS
-        return UD60x18.wrap(balanceOf) + l.totalLockedAssets;
+        return _balanceOfAssetUD60x18(address(this)) + l.totalLockedAssets;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -352,12 +403,16 @@ contract UnderwriterVault is
         return totalLockedSpread;
     }
 
-    function _balanceOfUD60x18() internal view returns (UD60x18) {
-        return UD60x18.wrap(_balanceOf());
+    function _balanceOfAssetUD60x18(
+        address owner
+    ) internal view returns (UD60x18) {
+        uint256 balance = _balanceOfAsset(owner);
+        UD60x18 balanceScaled = _convertAssetTo18DecPlacesUD60x18(balance);
+        return balanceScaled;
     }
 
-    function _balanceOf() internal view returns (uint256) {
-        return IERC20(_asset()).balanceOf(address(this));
+    function _balanceOfAsset(address owner) internal view returns (uint256) {
+        return IERC20(_asset()).balanceOf(owner);
     }
 
     function _totalSupplyUD60x18() internal view returns (UD60x18) {
@@ -368,7 +423,7 @@ contract UnderwriterVault is
     /// @return The amount of available assets
     // TODO: shouldn't this include lockedAssets?
     function _availableAssets() internal view returns (UD60x18) {
-        return _balanceOfUD60x18() - _getTotalLockedSpread();
+        return _balanceOfAssetUD60x18(address(this)) - _getTotalLockedSpread();
     }
 
     /// @notice Gets the current price per share for the vault
@@ -377,7 +432,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return
-            (_balanceOfUD60x18() -
+            (_balanceOfAssetUD60x18(address(this)) -
                 _getTotalLockedSpread() +
                 _getTotalFairValue()) / _totalSupplyUD60x18();
     }
@@ -941,18 +996,23 @@ contract UnderwriterVault is
         _addListing(vars.strike, vars.maturity);
 
         // Collect option premium from buyer
-        IERC20(_asset()).safeTransferFrom(
-            msg.sender,
-            address(this),
+        uint256 transferAmountScaled = _convertAssetToOriginalDecPlaces(
             (vars.premium + vars.spread + vars.mintingFee).unwrap()
         );
 
-        // Approve transfer of base / quote token
-        IERC20(_asset()).approve(
-            ROUTER,
-            // todo: for puts multiply the size by the strike
-            (vars.premium + vars.spread + vars.mintingFee).unwrap()
+        IERC20(_asset()).safeTransferFrom(
+            msg.sender,
+            address(this),
+            transferAmountScaled
         );
+
+        // Approve transfer of base / quote token
+        // TODO: for puts multiply the size by the strike
+        uint256 approveAmountScaled = _convertAssetToOriginalDecPlaces(
+            (vars.size + vars.spread + vars.mintingFee).unwrap()
+        );
+
+        IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
         // Mint option and allocate long token
         IPool(vars.poolAddr).writeFrom(address(this), msg.sender, vars.size);
