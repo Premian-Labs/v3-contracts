@@ -541,7 +541,9 @@ contract UnderwriterVault is
     function _convertToShares(
         uint256 assetAmount
     ) internal view override returns (uint256 shareAmount) {
-        return _convertToSharesUD60x18(UD60x18.wrap(assetAmount)).unwrap();
+        return
+            _convertToSharesUD60x18(_convertAssetToUD60x18(assetAmount))
+                .unwrap();
     }
 
     function _convertToAssetsUD60x18(
@@ -561,7 +563,7 @@ contract UnderwriterVault is
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _convertToAssetsUD60x18(UD60x18.wrap(shareAmount));
-        uint256 assetAmount = _convertAssetFromUD60x18(assets);
+        assetAmount = _convertAssetFromUD60x18(assets);
     }
 
     function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
@@ -618,7 +620,7 @@ contract UnderwriterVault is
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _previewMintUD60x18(UD60x18.wrap(shareAmount));
-        uint256 assetAmount = _convertAssetFromUD60x18(assets);
+        assetAmount = _convertAssetFromUD60x18(assets);
     }
 
     function _previewWithdrawUD60x18(

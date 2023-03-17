@@ -71,8 +71,9 @@ describe('#ERC4626 overridden functions', () => {
         });
 
         it('maxRedeem should return the amount of shares that are redeemable', async () => {
-          const { callVault, caller, receiver, base, quote } =
-            await loadFixture(vaultSetup);
+          const { callVault, receiver, base, quote } = await loadFixture(
+            vaultSetup,
+          );
           await setMaturities(callVault);
           await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
@@ -120,7 +121,8 @@ describe('#ERC4626 overridden functions', () => {
         it('if no shares have been minted, minted shares should equal deposited assets', async () => {
           const assetAmount = parseUnits('2', await token.decimals());
           const shareAmount = await vault.convertToShares(assetAmount);
-          expect(shareAmount).to.eq(assetAmount);
+          const shareAmountExpected = parseEther('2');
+          expect(shareAmount).to.eq(shareAmountExpected);
         });
 
         it('if supply is non-zero and pricePerShare is one, minted shares equals the deposited assets', async () => {
@@ -128,7 +130,9 @@ describe('#ERC4626 overridden functions', () => {
           await addMockDeposit(vault, 8, baseT, quoteT);
           const assetAmount = parseUnits('2', await token.decimals());
           const shareAmount = await vault.convertToShares(assetAmount);
-          expect(shareAmount).to.eq(assetAmount);
+          // share amount is always in 18 dp
+          const shareAmountExpected = parseEther('2');
+          expect(shareAmount).to.eq(shareAmountExpected);
         });
 
         it('if supply is non-zero, minted shares equals the deposited assets adjusted by the pricePerShare', async () => {
@@ -173,7 +177,7 @@ describe('#ERC4626 overridden functions', () => {
           await addMockDeposit(vault, 2, baseT, quoteT);
           const shareAmount = parseEther('2');
           const assetAmount = await vault.convertToAssets(shareAmount);
-          expect(parseUnits('2', await token.decimals())).to.eq(assetAmount);
+          expect(assetAmount).to.eq(parseUnits('2', await token.decimals()));
         });
 
         it('if supply is non-zero and pricePerShare is 0.5, withdrawn assets equals half the share amount', async () => {
@@ -204,7 +208,7 @@ describe('#ERC4626 overridden functions', () => {
           );
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
-          const assetAddress = await callVault.asset();
+          const assetAddress = await vault.asset();
           expect(assetAddress).to.eq(token.address);
         });
       });
