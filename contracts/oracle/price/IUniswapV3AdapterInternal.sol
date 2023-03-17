@@ -8,9 +8,6 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when trying to add an existing fee tier
     error UniswapV3Adapter__FeeTierExists(uint24 feeTier);
 
-    /// @notice Thrown when the gas limit is so low that no pools can be initialized
-    error UniswapV3Adapter__GasTooLow();
-
     /// @notice Thrown if the oldest observation is less than the TWAP period
     error UniswapV3Adapter__InsufficientObservationPeriod();
 
