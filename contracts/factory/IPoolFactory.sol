@@ -62,6 +62,10 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @param feeReceiver The new fee receiver address
     function setFeeReceiver(address feeReceiver) external;
 
+    /// @notice Set the withdrawalDelay for future pools - only callable by owner
+    /// @param withdrawalDelay The new withdrawal delay in seconds
+    function setWithdrawalDelay(uint256 withdrawalDelay) external;
+
     /// @notice Deploy a new option pool
     /// @param k The pool key
     /// @return poolAddress The address of the deployed pool

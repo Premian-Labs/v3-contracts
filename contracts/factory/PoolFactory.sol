@@ -86,7 +86,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function SetWithdrawalDelay(address withdrawalDelay) external onlyOwner {
+    function setWithdrawalDelay(uint256 withdrawalDelay) external onlyOwner {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.withdrawalDelay = withdrawalDelay;
         emit SetWithdrawalDelay(withdrawalDelay);
