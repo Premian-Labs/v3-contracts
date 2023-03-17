@@ -48,9 +48,6 @@ contract UniswapV3AdapterInternal is
         address tokenOut,
         uint32 target
     ) internal view returns (uint256) {
-        _ensurePeriodSet();
-        _ensureObservationCardinalitySet();
-
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
@@ -151,17 +148,13 @@ contract UniswapV3AdapterInternal is
         if (poolLength == 0)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
-        uint16 targetCardinality = uint16(
-            (l.period * l.cardinalityPerMinute) / 60
-        ) + 1;
-
         for (uint256 i; i < poolLength; i++) {
             address pool = pools[i];
 
             (
                 bool currentCardinalityBelowTarget,
 
-            ) = _isCurrentCardinalityBelowTarget(pool, targetCardinality);
+            ) = _isCurrentCardinalityBelowTarget(pool, l.targetCardinality);
 
             if (currentCardinalityBelowTarget)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
@@ -321,15 +314,5 @@ contract UniswapV3AdapterInternal is
                 )
             )
         );
-    }
-
-    function _ensurePeriodSet() internal view {
-        if (UniswapV3AdapterStorage.layout().period == 0)
-            revert UniswapV3Adapter__PeriodNotSet();
-    }
-
-    function _ensureObservationCardinalitySet() internal view {
-        if (UniswapV3AdapterStorage.layout().cardinalityPerMinute == 0)
-            revert UniswapV3Adapter__ObservationCardinalityNotSet();
     }
 }

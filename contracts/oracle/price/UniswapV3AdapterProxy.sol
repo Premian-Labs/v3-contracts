@@ -13,11 +13,29 @@ import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
+    /// @notice Thrown when cardinality per minute has not been set
+    error UniswapV3AdapterProxy__CardinalityPerMinuteNotSet();
+
+    /// @notice Thrown when period has not been set
+    error UniswapV3AdapterProxy__PeriodNotSet();
+
     constructor(
+        uint8 cardinalityPerMinute,
+        uint32 period,
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {
+        if (cardinalityPerMinute == 0)
+            revert UniswapV3AdapterProxy__CardinalityPerMinuteNotSet();
+
+        if (period == 0) revert UniswapV3AdapterProxy__PeriodNotSet();
+
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
+
+        l.targetCardinality = uint16((period * cardinalityPerMinute) / 60) + 1;
+
+        l.cardinalityPerMinute = cardinalityPerMinute;
+        l.period = period;
 
         l.feeTiers.push(100);
         l.feeTiers.push(500);

@@ -6,7 +6,6 @@ import { bnToAddress } from '@solidstate/library';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
-  IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
   UniswapV3Adapter,
   UniswapV3Adapter__factory,
@@ -67,6 +66,8 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+      cardinalityPerMinute,
+      period,
       implementation.address,
     );
 
@@ -92,6 +93,8 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+      cardinalityPerMinute,
+      period,
       implementation.address,
     );
 
@@ -99,11 +102,70 @@ describe('UniswapV3Adapter', () => {
 
     const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
 
-    await instance.setPeriod(period);
-    await instance.setCardinalityPerMinute(cardinalityPerMinute);
-
     return { deployer, instance };
   }
+
+  describe('#constructor', () => {
+    it('should revert if cardinality per minute is zero', async () => {
+      const [deployer] = await ethers.getSigners();
+
+      const implementation = await new UniswapV3Adapter__factory(
+        deployer,
+      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+
+      await implementation.deployed();
+
+      await expect(
+        new UniswapV3AdapterProxy__factory(deployer).deploy(
+          0,
+          period,
+          implementation.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        new UniswapV3AdapterProxy__factory(),
+        'UniswapV3AdapterProxy__CardinalityPerMinuteNotSet',
+      );
+    });
+
+    it('should revert if period is zero', async () => {
+      const [deployer] = await ethers.getSigners();
+
+      const implementation = await new UniswapV3Adapter__factory(
+        deployer,
+      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+
+      await implementation.deployed();
+
+      await expect(
+        new UniswapV3AdapterProxy__factory(deployer).deploy(
+          cardinalityPerMinute,
+          0,
+          implementation.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        new UniswapV3AdapterProxy__factory(),
+        'UniswapV3AdapterProxy__PeriodNotSet',
+      );
+    });
+
+    it('should set state variables', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      expect(await instance.targetCardinality()).to.equal(
+        (period * cardinalityPerMinute) / 60 + 1,
+      );
+
+      expect(await instance.period()).to.equal(period);
+
+      expect(await instance.cardinalityPerMinute()).to.equal(
+        cardinalityPerMinute,
+      );
+
+      expect(await instance.supportedFeeTiers()).to.be.deep.eq([
+        100, 500, 3000, 10000,
+      ]);
+    });
+  });
 
   describe('#isPairSupported', () => {
     it('should return false if pair is not supported by adapter', async () => {
@@ -347,6 +409,15 @@ describe('UniswapV3Adapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
+    it('should revert if period is not set', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await expect(instance.setPeriod(0)).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__PeriodNotSet',
+      );
+    });
+
     it('should set period to new value', async () => {
       const { instance } = await loadFixture(deploy);
       await instance.setPeriod(newPeriod);
@@ -367,14 +438,14 @@ describe('UniswapV3Adapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
-    it('should revert if cardinality per minute is invalid', async () => {
+    it('should revert if cardinality per minute is not set', async () => {
       const { instance } = await loadFixture(deploy);
 
       await expect(
         instance.setCardinalityPerMinute(0),
       ).to.be.revertedWithCustomError(
         instance,
-        'UniswapV3Adapter__InvalidCardinalityPerMinute',
+        'UniswapV3Adapter__CardinalityPerMinuteNotSet',
       );
     });
 

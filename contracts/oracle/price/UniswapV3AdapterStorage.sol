@@ -10,6 +10,7 @@ library UniswapV3AdapterStorage {
 
     struct Layout {
         uint8 cardinalityPerMinute;
+        uint16 targetCardinality;
         uint32 period;
         uint24[] feeTiers;
         mapping(bytes32 => address[]) poolsForPair;

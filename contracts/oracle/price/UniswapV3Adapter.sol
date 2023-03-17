@@ -57,13 +57,9 @@ contract UniswapV3Adapter is
 
         address[] memory poolsToSupport = new address[](poolsLength);
 
-        uint16 targetCardinality = uint16(
-            (l.period * l.cardinalityPerMinute) / 60
-        ) + 1;
-
         for (uint256 i; i < poolsLength; i++) {
             address pool = pools[i];
-            _tryIncreaseCardinality(pool, targetCardinality);
+            _tryIncreaseCardinality(pool, l.targetCardinality);
             poolsToSupport[i] = pool;
         }
 
@@ -113,6 +109,11 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
+    function targetCardinality() external view returns (uint16) {
+        return UniswapV3AdapterStorage.layout().targetCardinality;
+    }
+
+    /// @inheritdoc IUniswapV3Adapter
     function gasPerCardinality() external view returns (uint256) {
         return GAS_PER_CARDINALITY;
     }
@@ -129,22 +130,37 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function setPeriod(uint32 newPeriod) external onlyOwner {
-        UniswapV3AdapterStorage.layout().period = newPeriod;
-        emit PeriodChanged(newPeriod);
+        if (newPeriod == 0) revert UniswapV3Adapter__PeriodNotSet();
+
+        UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
+            .layout();
+
+        l.period = newPeriod;
+
+        l.targetCardinality =
+            uint16((newPeriod * l.cardinalityPerMinute) / 60) +
+            1;
+
+        emit UpdatedPeriod(newPeriod);
     }
 
     /// @inheritdoc IUniswapV3Adapter
     function setCardinalityPerMinute(
-        uint8 _cardinalityPerMinute
+        uint8 newCardinalityPerMinute
     ) external onlyOwner {
-        if (_cardinalityPerMinute == 0)
-            revert UniswapV3Adapter__InvalidCardinalityPerMinute();
+        if (newCardinalityPerMinute == 0)
+            revert UniswapV3Adapter__CardinalityPerMinuteNotSet();
 
-        UniswapV3AdapterStorage
-            .layout()
-            .cardinalityPerMinute = _cardinalityPerMinute;
+        UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
+            .layout();
 
-        emit CardinalityPerMinuteChanged(_cardinalityPerMinute);
+        l.cardinalityPerMinute = newCardinalityPerMinute;
+
+        l.targetCardinality =
+            uint16((l.period * newCardinalityPerMinute) / 60) +
+            1;
+
+        emit UpdatedCardinalityPerMinute(newCardinalityPerMinute);
     }
 
     /// @inheritdoc IUniswapV3Adapter
