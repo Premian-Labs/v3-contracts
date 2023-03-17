@@ -145,7 +145,7 @@ contract UniswapV3AdapterInternal is
         address tokenIn,
         address tokenOut
     ) internal view returns (address[] memory) {
-        address[] memory pools = _getPoolsSortedByLiquidity(tokenIn, tokenOut);
+        address[] memory pools = _getAllPoolsForPair(tokenIn, tokenOut);
         uint256 poolLength = pools.length;
 
         if (poolLength == 0)
@@ -165,44 +165,6 @@ contract UniswapV3AdapterInternal is
 
             if (increaseCardinality)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
-        }
-
-        return pools;
-    }
-
-    function _getPoolsSortedByLiquidity(
-        address tokenA,
-        address tokenB
-    ) internal view returns (address[] memory) {
-        address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
-        if (pools.length <= 1) return pools;
-
-        // Store liquidity by pool
-        uint128[] memory poolLiquidity = new uint128[](pools.length);
-        for (uint256 i; i < pools.length; i++) {
-            poolLiquidity[i] = IUniswapV3Pool(pools[i]).liquidity();
-        }
-
-        // Sort both arrays together
-        for (uint256 i; i < pools.length - 1; i++) {
-            uint256 biggestLiquidityIndex = i;
-
-            for (uint256 j = i + 1; j < pools.length; j++) {
-                if (poolLiquidity[j] > poolLiquidity[biggestLiquidityIndex]) {
-                    biggestLiquidityIndex = j;
-                }
-            }
-
-            if (biggestLiquidityIndex != i) {
-                // Swap pools
-                (pools[i], pools[biggestLiquidityIndex]) = (
-                    pools[biggestLiquidityIndex],
-                    pools[i]
-                );
-
-                // Don't need to swap both ways, can just move the liquidity in i to its new place
-                poolLiquidity[biggestLiquidityIndex] = poolLiquidity[i];
-            }
         }
 
         return pools;

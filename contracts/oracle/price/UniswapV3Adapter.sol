@@ -46,7 +46,7 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
-        address[] memory pools = _getPoolsSortedByLiquidity(tokenA, tokenB);
+        address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
         uint256 poolsLength = pools.length;
 
         if (poolsLength == 0)
@@ -55,7 +55,6 @@ contract UniswapV3Adapter is
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        uint256 poolsSupported;
         address[] memory poolsToSupport = new address[](poolsLength);
 
         uint16 targetCardinality = uint16(
@@ -71,16 +70,13 @@ contract UniswapV3Adapter is
             ) = _tryIncreaseCardinality(pool, targetCardinality);
 
             if (increaseCardinality && gasCostExceedsGasLeft) {
-                // If the cardinality cannot be increased due to gas cost, skip pool
-                continue;
+                // If the cardinality cannot be increased due to gas cost, revert
+                revert UniswapV3Adapter__ObservationCardinalityTooLow();
             }
 
             poolsToSupport[i] = pool;
-            ++poolsSupported;
         }
 
-        _resizeArray(poolsToSupport, poolsSupported);
-        if (poolsToSupport.length == 0) revert UniswapV3Adapter__GasTooLow();
         l.poolsForPair[_keyForUnsortedPair(tokenA, tokenB)] = poolsToSupport;
         emit UpdatedPoolsForPair(tokenA, tokenB, poolsToSupport);
     }

@@ -154,7 +154,7 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
-    it('should revert if gas provided is too low', async () => {
+    it('should revert if there is not enough gas to increase cardinality', async () => {
       const { instance } = await loadFixture(deploy);
 
       await instance.setCardinalityPerMinute(200);
@@ -163,7 +163,10 @@ describe('UniswapV3Adapter', () => {
         instance.upsertPair(tokens.WETH.address, tokens.USDC.address, {
           gasLimit: 200000,
         }),
-      ).to.be.revertedWithCustomError(instance, 'UniswapV3Adapter__GasTooLow');
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__ObservationCardinalityTooLow',
+      );
     });
 
     it('should not fail if called multiple times for same pair', async () => {
@@ -182,51 +185,6 @@ describe('UniswapV3Adapter', () => {
         await instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
       );
     });
-
-    it('should skip pool(s) if the cardinality is not at target', async () => {
-      const { deployer, instance } = await loadFixture(deploy);
-
-      const pool500 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 500);
-
-      // most liquid pool
-      const pool3000 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 3000);
-
-      // least liquid pool
-      const pool10000 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 10000);
-
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
-        gasLimit: 1000000,
-      });
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000]);
-
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
-        gasLimit: 1500000,
-      });
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000, pool500]);
-
-      await instance.setCardinalityPerMinute(1);
-      await instance.setPeriod(1);
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000, pool500, pool10000]);
-    });
   });
 
   describe('#quote', async () => {
@@ -241,7 +199,7 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
-    it('should revert if observation cardinality must be increased', async () => {
+    it('should revert if pair has not been added and observation cardinality must be increased', async () => {
       const { instance } = await loadFixture(deploy);
 
       await instance.setCardinalityPerMinute(20);
@@ -327,10 +285,10 @@ describe('UniswapV3Adapter', () => {
       );
 
       expect(pools).to.be.deep.eq([
-        '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
-        '0x60594a405d53811d3BC4766596EFD80fd545A270',
-        '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
         '0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19',
+        '0x60594a405d53811d3BC4766596EFD80fd545A270',
+        '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
+        '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
       ]);
     });
   });
