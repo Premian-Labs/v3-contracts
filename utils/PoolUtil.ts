@@ -17,7 +17,6 @@ import { diamondCut } from '../scripts/utils/diamond';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { Interface } from '@ethersproject/abi';
-
 interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;

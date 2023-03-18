@@ -8,6 +8,7 @@ import {
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
 import fs from 'fs';
+import { ContractAddresses } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,7 +16,7 @@ async function main() {
 
   //////////////////////////
 
-  let addresses: any;
+  let addresses: ContractAddresses;
   let addressesPath: string;
   let weth: string;
   let wbtc: string;
@@ -23,30 +24,25 @@ async function main() {
   let setImplementation: boolean;
 
   if (chainId === 42161) {
+    // Arbitrum
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
-    // Arbitrum addresses
-    weth = arbitrumAddresses.tokens.WETH;
-    wbtc = arbitrumAddresses.tokens.WBTC;
-    proxy = ChainlinkAdapterProxy__factory.connect(
-      arbitrumAddresses.ChainlinkAdapterProxy,
-      deployer,
-    );
     setImplementation = false;
   } else if (chainId === 5) {
+    // Goerli
     addresses = goerliAddresses;
     addressesPath = 'utils/deployment/goerli.json';
-    // Goerli addresses
-    weth = goerliAddresses.tokens.WETH;
-    wbtc = goerliAddresses.tokens.WBTC;
-    proxy = ChainlinkAdapterProxy__factory.connect(
-      goerliAddresses.ChainlinkAdapterProxy,
-      deployer,
-    );
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
+
+  weth = addresses.tokens.WETH;
+  wbtc = addresses.tokens.WBTC;
+  proxy = ChainlinkAdapterProxy__factory.connect(
+    addresses.ChainlinkAdapterProxy,
+    deployer,
+  );
 
   //////////////////////////
 
