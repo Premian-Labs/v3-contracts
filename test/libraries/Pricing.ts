@@ -1,21 +1,24 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { PricingMock, PricingMock__factory } from '../../typechain';
+import { PricingMock__factory } from '../../typechain';
 import { parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/sdk/math';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Pricing', () => {
-  let deployer: SignerWithAddress;
-  let instance: PricingMock;
+  async function deploy() {
+    const [deployer] = await ethers.getSigners();
+    const instance = await new PricingMock__factory(deployer).deploy();
 
-  before(async function () {
-    [deployer] = await ethers.getSigners();
-    instance = await new PricingMock__factory(deployer).deploy();
-  });
+    return { deployer, instance };
+  }
+
+  before(async function () {});
 
   describe('#proportion', () => {
     it('should return the proportional amount', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         [parseEther('0.25'), 0],
         [parseEther('0.75'), parseEther('1')],
@@ -32,6 +35,8 @@ describe('Pricing', () => {
     });
 
     it('should revert if lower >= upper', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.proportion(parseEther('0.75'), parseEther('0.25'), 0),
       ).to.be.revertedWithCustomError(
@@ -41,6 +46,8 @@ describe('Pricing', () => {
     });
 
     it('should revert if lower > market || market > upper', async () => {
+      const { instance } = await loadFixture(deploy);
+
       await expect(
         instance.proportion(
           parseEther('0.25'),
@@ -61,6 +68,8 @@ describe('Pricing', () => {
 
   describe('#amountOfTicksBetween', () => {
     it('should correctly calculate amount of ticks between two values', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         [parseEther('0.001'), parseEther('1'), 999],
         [parseEther('0.05'), parseEther('0.95'), 900],
@@ -75,6 +84,8 @@ describe('Pricing', () => {
         [parseEther('0.2'), parseEther('0.01')],
         [parseEther('0.1'), parseEther('0.1')],
       ]) {
+        const { instance } = await loadFixture(deploy);
+
         await expect(
           instance.amountOfTicksBetween(t[0], t[1]),
         ).to.be.revertedWithCustomError(
@@ -87,6 +98,8 @@ describe('Pricing', () => {
 
   describe('#liquidity', () => {
     it('should return the liquidity', async () => {
+      const { instance } = await loadFixture(deploy);
+
       for (const t of [
         [
           parseEther('1'),
@@ -122,6 +135,8 @@ describe('Pricing', () => {
 
   describe('#bidLiquidity', () => {
     it('should return the bid liquidity', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.25'), // price == lower
@@ -148,6 +163,8 @@ describe('Pricing', () => {
 
   describe('#askLiquidity', () => {
     it('should return the ask liquidity', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.25'), // price == lower
@@ -174,6 +191,8 @@ describe('Pricing', () => {
 
   describe('#maxTradeSize', () => {
     it('should return the max trade size for buy order', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'), // price == upper
@@ -188,6 +207,8 @@ describe('Pricing', () => {
     });
 
     it('should return the max trade size for sell order', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'), // price == upper
@@ -204,6 +225,8 @@ describe('Pricing', () => {
 
   describe('#price', () => {
     it('should return upper tick for buy order if liquidity == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: 0,
         marketPrice: parseEther('0.5'),
@@ -216,6 +239,8 @@ describe('Pricing', () => {
     });
 
     it('should return lower tick for sell order if liquidity == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: 0,
         marketPrice: parseEther('0.5'),
@@ -228,6 +253,8 @@ describe('Pricing', () => {
     });
 
     it('should return the price when trade size == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.5'),
@@ -244,6 +271,8 @@ describe('Pricing', () => {
     });
 
     it('should return the price for buy order when liquidity > 0 && trade size > 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'),
@@ -301,6 +330,8 @@ describe('Pricing', () => {
     });
 
     it('should return the price for sell order when liquidity > 0 && trade size > 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'),
@@ -358,6 +389,8 @@ describe('Pricing', () => {
     });
 
     it('should revert if price is out of range', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'), // price == upper
@@ -388,6 +421,8 @@ describe('Pricing', () => {
 
   describe('#nextPrice', () => {
     it('should return upper tick for buy order if liquidity == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: 0,
         marketPrice: parseEther('0.5'),
@@ -400,6 +435,8 @@ describe('Pricing', () => {
     });
 
     it('should return lower tick for sell order if liquidity == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: 0,
         marketPrice: parseEther('0.5'),
@@ -412,6 +449,8 @@ describe('Pricing', () => {
     });
 
     it('should return the price when trade size == 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.5'),
@@ -428,6 +467,8 @@ describe('Pricing', () => {
     });
 
     it('should return the next price for buy order when liquidity > 0 && trade size > 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.25'),
@@ -482,6 +523,8 @@ describe('Pricing', () => {
     });
 
     it('should return the next price for sell order when liquidity > 0 && trade size > 0', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'),
@@ -536,6 +579,8 @@ describe('Pricing', () => {
     });
 
     it('should revert if price is out of range', async () => {
+      const { instance } = await loadFixture(deploy);
+
       let args = {
         liquidityRate: parseEther('1'),
         marketPrice: parseEther('0.75'), // price == upper

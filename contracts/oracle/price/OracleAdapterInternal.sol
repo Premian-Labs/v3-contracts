@@ -5,6 +5,9 @@ pragma solidity ^0.8.0;
 /// @title Base oracle adapter internal implementation
 /// @notice derived from https://github.com/Mean-Finance/oracles
 abstract contract OracleAdapterInternal {
+    /// @notice Thrown when the target is zero or before the current block timestamp
+    error OracleAdapter__InvalidTarget();
+
     /// @notice Thrown when the price is non-positive
     error OracleAdapter__InvalidPrice(int256 price);
 
@@ -19,4 +22,13 @@ abstract contract OracleAdapterInternal {
 
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
+
+    function _ensureTargetNonZero(uint256 target) internal view {
+        if (target == 0 || target > block.timestamp)
+            revert OracleAdapter__InvalidTarget();
+    }
+
+    function _ensurePriceNonZero(int256 price) internal pure {
+        if (price <= 0) revert OracleAdapter__InvalidPrice(price);
+    }
 }
