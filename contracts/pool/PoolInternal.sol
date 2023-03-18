@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
-import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -42,7 +41,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using Pricing for Pricing.Args;
     using SafeCast for uint256;
     using Math for int256;
-    using UintUtils for uint256;
     using ECDSA for bytes32;
     using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;

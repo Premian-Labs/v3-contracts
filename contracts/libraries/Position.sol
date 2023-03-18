@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
-import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
@@ -17,7 +16,6 @@ library Position {
     using Math for int256;
     using Position for Position.Key;
     using Position for Position.OrderType;
-    using UintUtils for uint256;
 
     UD60x18 private constant ZERO = UD60x18.wrap(0);
     UD60x18 private constant ONE = UD60x18.wrap(1e18);
