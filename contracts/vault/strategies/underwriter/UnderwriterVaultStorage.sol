@@ -6,9 +6,11 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
+import {OptionMath} from "../../../libraries/OptionMath.sol";
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -75,6 +77,45 @@ library UnderwriterVaultStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function assetDecimals(Layout storage l) internal view returns (uint8) {
+        address asset = l.isCall ? l.base : l.quote;
+        return IERC20Metadata(asset).decimals();
+    }
+
+    function convertAssetToUD60x18(
+        Layout storage l,
+        uint256 value
+    ) internal view returns (UD60x18) {
+        return
+            UD60x18.wrap(
+                OptionMath.scaleDecimals(value, l.assetDecimals(), 18)
+            );
+    }
+
+    function convertAssetToSD59x18(
+        Layout storage l,
+        int256 value
+    ) internal view returns (SD59x18) {
+        return
+            SD59x18.wrap(
+                OptionMath.scaleDecimals(value, l.assetDecimals(), 18)
+            );
+    }
+
+    function convertAssetFromUD60x18(
+        Layout storage l,
+        UD60x18 value
+    ) internal view returns (uint256) {
+        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
+    }
+
+    function convertAssetFromSD59x18(
+        Layout storage l,
+        SD59x18 value
+    ) internal view returns (int256) {
+        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
     }
 
     /// @notice Gets the nearest maturity after the given timestamp, exclusive

@@ -538,31 +538,44 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return addresses;
     }
 
-    function ensureTradeableWithVault(bool isCall, bool isBuy) external view {
-        _ensureTradeableWithVault(isCall, isBuy);
+    function ensureTradeableWithVault(
+        bool isCallVault,
+        bool isCallOption,
+        bool isBuy
+    ) external pure {
+        _ensureTradeableWithVault(isCallVault, isCallOption, isBuy);
     }
 
     function ensureValidOption(
         uint256 timestamp,
         UD60x18 strike,
         uint256 maturity
-    ) external view {
+    ) external pure {
         _ensureValidOption(timestamp, strike, maturity);
     }
 
     function ensureSufficientFunds(
-        bool isCall,
+        bool isCallVault,
         UD60x18 strike,
-        UD60x18 size
-    ) external view {
-        _ensureSufficientFunds(isCall, strike, size);
+        UD60x18 size,
+        UD60x18 availableAssets
+    ) external pure {
+        _ensureSufficientFunds(isCallVault, strike, size, availableAssets);
     }
 
     function ensureWithinTradeBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
-    ) external view {
+    ) external pure {
+        _ensureWithinTradeBounds(value, minimum, maximum);
+    }
+
+    function ensureWithinTradeBounds(
+        SD59x18 value,
+        SD59x18 minimum,
+        SD59x18 maximum
+    ) external pure {
         _ensureWithinTradeBounds(value, minimum, maximum);
     }
 }
