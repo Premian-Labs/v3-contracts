@@ -7,8 +7,7 @@
     "USDC": "0x16fA8D635311fc4DA9A2f8793EE016670b0C6Ed2",
     "DAI": "0x53421DB1f41368E028A4239954feB5033C7B3729"
   },
-
-  "ChainlinkAdapterImplementation": "0x2D693d6855Ae77261D7255f1eda9bF94503c7FbA",
+  "ChainlinkAdapterImplementation": "0x6CF3e9768C1eeF80F491248156E0c83Cd138Fc07",
   "ChainlinkAdapterProxy": "0xaaC9F41695A7024e8B7Bd3b96bbc148a4455D450",
   "PremiaDiamond": "0x496a2B7deAD5C41CE9845D0C3f560a17a323e983",
   "PoolFactoryImplementation": "0x2C84bdf37fb8dbF8fBfE6687a4645914283CC4E8",
