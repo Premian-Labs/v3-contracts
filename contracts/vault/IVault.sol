@@ -5,21 +5,6 @@ pragma solidity ^0.8.0;
 interface IVault {
     event UpdateQuotes();
 
-    event Deposit(
-        address indexed sender,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
-
-    event Withdraw(
-        address indexed sender,
-        address indexed receiver,
-        address indexed owner,
-        uint256 assets,
-        uint256 shares
-    );
-
     event Trade(
         address indexed user,
         address indexed pool,
