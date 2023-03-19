@@ -67,12 +67,7 @@ export class PoolUtil {
 
     const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
-    ).deploy(
-      poolFactoryImpl.address,
-      discountPerPool,
-      feeReceiver,
-      isDevMode ? 0 : 3600,
-    );
+    ).deploy(poolFactoryImpl.address, discountPerPool, feeReceiver);
     await poolFactoryProxy.deployed();
 
     if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);

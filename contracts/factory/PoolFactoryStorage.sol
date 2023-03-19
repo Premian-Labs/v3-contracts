@@ -23,9 +23,6 @@ library PoolFactoryStorage {
         uint256 discountPerPool;
         // Initialization fee receiver
         address feeReceiver;
-        // Number of seconds required to pass before a deposit can be withdrawn
-        // (to prevent flash loans and JIT)
-        uint256 withdrawalDelay;
     }
 
     function layout() internal pure returns (Layout storage l) {

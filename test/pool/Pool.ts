@@ -7,6 +7,7 @@ import { PoolUtil } from '../../utils/PoolUtil';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import {
   getValidMaturity,
+  increase,
   increaseTo,
   latest,
   ONE_HOUR,
@@ -596,6 +597,8 @@ describe('Pool', () => {
           initialCollateral,
         } = await loadFixture(deployAndDeposit_1000_LC);
 
+        await increase(3600);
+
         const depositCollateralValue = parseEther('200');
 
         expect(await base.balanceOf(lp.address)).to.eq(
@@ -630,6 +633,21 @@ describe('Pool', () => {
             .add(withdrawCollateralValue),
         );
       });
+    });
+
+    it('should revert if trying to withdraw before end of withdrawal delay', async () => {
+      const { callPool, lp, pKey } = await loadFixture(
+        deployAndDeposit_1000_LC,
+      );
+
+      const withdrawSize = parseEther('750');
+
+      await expect(
+        callPool.connect(lp).withdraw(pKey, withdrawSize, 0, parseEther('1')),
+      ).to.be.revertedWithCustomError(
+        callPool,
+        'Pool__WithdrawalDelayNotElapsed',
+      );
     });
 
     it('should revert if msg.sender != p.operator', async () => {

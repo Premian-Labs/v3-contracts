@@ -29,8 +29,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         address oracleAdapter,
         uint256 strike,
         uint64 maturity,
-        bool isCallPool,
-        uint256 withdrawalDelay
+        bool isCallPool
     ) {
         DIAMOND = diamond;
         OwnableStorage.layout().owner = msg.sender;
@@ -54,8 +53,6 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.quoteDecimals = quoteDecimals;
 
             l.isCallPool = isCallPool;
-
-            l.withdrawalDelay = withdrawalDelay;
 
             l.tickIndex.push(Pricing.MIN_TICK_PRICE);
             l.tickIndex.push(Pricing.MAX_TICK_PRICE);
