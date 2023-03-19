@@ -818,12 +818,14 @@ contract UnderwriterVault is
         // Handle the premiums and spread capture generated
         _afterBuy(vars);
 
-        emit Sell(
+        emit Trade(
             msg.sender,
-            vars.strike.unwrap(),
-            vars.maturity,
+            vars.poolAddr,
             vars.size.unwrap(),
-            vars.premium.unwrap(),
+            false,
+            transferAmountScaled,
+            vars.mintingFee.unwrap(),
+            0,
             vars.spread.unwrap()
         );
     }

@@ -26,9 +26,9 @@ interface IVault {
         uint256 size,
         bool isBuy,
         uint256 premium,
-        uint256 takerFeePaid,
-        uint256 makerRebateReceived,
-        uint256 protocolFee
+        uint256 takerFee,
+        uint256 makerRebate,
+        uint256 vaultFee
     );
 
     event ManagementFeePaid(address indexed receiver, uint256 managementFee);

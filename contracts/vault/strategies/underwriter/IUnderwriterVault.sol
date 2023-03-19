@@ -84,16 +84,6 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 mintingFee;
     }
 
-    // Events
-    event Sell(
-        address indexed buyer,
-        uint256 strike,
-        uint256 maturity,
-        uint256 size,
-        uint256 premium,
-        uint256 vaultFee
-    );
-
     /// @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);
 }
