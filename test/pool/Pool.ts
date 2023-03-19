@@ -597,7 +597,7 @@ describe('Pool', () => {
           initialCollateral,
         } = await loadFixture(deployAndDeposit_1000_LC);
 
-        await increase(3600);
+        await increase(60);
 
         const depositCollateralValue = parseEther('200');
 
@@ -639,6 +639,8 @@ describe('Pool', () => {
       const { callPool, lp, pKey } = await loadFixture(
         deployAndDeposit_1000_LC,
       );
+
+      await increase(55);
 
       const withdrawSize = parseEther('750');
 
