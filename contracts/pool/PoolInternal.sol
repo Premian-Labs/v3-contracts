@@ -1152,7 +1152,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         dstData.claimableFees += feesTransferred;
         srcData.claimableFees -= feesTransferred;
 
-        dstData.lastDeposit = srcData.lastDeposit;
+        dstData.lastDeposit = block.timestamp;
 
         if (srcTokenId == dstTokenId) {
             _safeTransfer(
