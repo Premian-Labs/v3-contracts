@@ -821,12 +821,12 @@ contract UnderwriterVault is
         emit Trade(
             msg.sender,
             vars.poolAddr,
-            vars.size.unwrap(),
+            vars.size,
             false,
-            transferAmountScaled,
-            vars.mintingFee.unwrap(),
+            vars.premium + vars.spread + vars.mintingFee,
+            vars.mintingFee,
             0,
-            vars.spread.unwrap()
+            vars.spread
         );
     }
 
