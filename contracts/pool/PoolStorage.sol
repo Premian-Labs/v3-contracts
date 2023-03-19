@@ -43,7 +43,7 @@ library PoolStorage {
         uint64 maturity;
         // Whether its a call or put pool
         bool isCallPool;
-        // Number of blocks required to pass before a deposit can be withdrawn
+        // Number of seconds required to pass before a deposit can be withdrawn
         // (to prevent flash loans and JIT) - Set by factory
         uint256 withdrawalDelay;
         // Index of all existing ticks sorted
