@@ -71,9 +71,9 @@ describe('Pricing', () => {
       const { instance } = await loadFixture(deploy);
 
       for (const t of [
-        [parseEther('0.001'), parseEther('1'), 999],
-        [parseEther('0.05'), parseEther('0.95'), 900],
-        [parseEther('0.49'), parseEther('0.491'), 1],
+        [parseEther('0.001'), parseEther('1'), parseEther('999')],
+        [parseEther('0.05'), parseEther('0.95'), parseEther('900')],
+        [parseEther('0.49'), parseEther('0.491'), parseEther('1')],
       ]) {
         expect(await instance.amountOfTicksBetween(t[0], t[1])).to.eq(t[2]);
       }

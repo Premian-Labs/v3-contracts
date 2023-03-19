@@ -2,11 +2,16 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
     error VolatilityOracle__RelayerNotWhitelisted();
+    error VolatilityOracle__SpotIsZero();
+    error VolatilityOracle__StrikeIsZero();
+    error VolatilityOracle__TimeToMaturityIsZero();
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
@@ -71,8 +76,23 @@ interface IVolatilityOracle {
     /// @return The annualized implied volatility, where 1 is defined as 100%
     function getVolatility(
         address token,
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity
-    ) external view returns (int256);
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity
+    ) external view returns (UD60x18);
+
+    /// @notice Calculate the annualized volatility for given set of parameters
+    /// @param token The token address
+    /// @param spot The spot price of the token
+    /// @param strike The strike price of the option
+    /// @param timeToMaturity The time until maturity (denominated in years)
+    /// @return The annualized implied volatility, where 1 is defined as 100%
+    function getVolatility(
+        address token,
+        UD60x18 spot,
+        UD60x18[] memory strike,
+        UD60x18[] memory timeToMaturity
+    ) external view returns (UD60x18[] memory);
+
+    function getRiskFreeRate() external pure returns (UD60x18);
 }

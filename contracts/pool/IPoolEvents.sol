@@ -4,102 +4,104 @@ pragma solidity ^0.8.0;
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 interface IPoolEvents {
     event Deposit(
         address indexed owner,
         uint256 indexed tokenId,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts,
-        uint256 lastFeeRate,
-        uint256 claimableFees,
-        uint256 marketPrice,
-        uint256 liquidityRate,
-        uint256 currentTick
+        UD60x18 collateral,
+        UD60x18 longs,
+        UD60x18 shorts,
+        UD60x18 lastFeeRate,
+        UD60x18 claimableFees,
+        UD60x18 marketPrice,
+        UD60x18 liquidityRate,
+        UD60x18 currentTick
     );
 
     event Withdrawal(
         address indexed owner,
         uint256 indexed tokenId,
-        uint256 collateral,
-        uint256 longs,
-        uint256 shorts,
-        uint256 lastFeeRate,
-        uint256 claimableFees,
-        uint256 marketPrice,
-        uint256 liquidityRate,
-        uint256 currentTick
+        UD60x18 collateral,
+        UD60x18 longs,
+        UD60x18 shorts,
+        UD60x18 lastFeeRate,
+        UD60x18 claimableFees,
+        UD60x18 marketPrice,
+        UD60x18 liquidityRate,
+        UD60x18 currentTick
     );
 
     event ClaimFees(
         address indexed owner,
         uint256 indexed tokenId,
-        uint256 feesClaimed,
-        uint256 lastFeeRate
+        UD60x18 feesClaimed,
+        UD60x18 lastFeeRate
     );
 
-    event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
+    event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
     event FillQuote(
         bytes32 indexed tradeQuoteHash,
         address indexed user,
         address indexed provider,
-        uint256 contractSize,
+        UD60x18 contractSize,
         IPoolInternal.Delta deltaMaker,
         IPoolInternal.Delta deltaTaker,
-        uint256 premium,
-        uint256 protocolFee,
+        UD60x18 premium,
+        UD60x18 protocolFee,
         bool isBuy
     );
 
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
-        uint256 contractSize,
-        uint256 collateral,
-        uint256 protocolFee
+        UD60x18 contractSize,
+        UD60x18 collateral,
+        UD60x18 protocolFee
     );
 
     event Trade(
         address indexed user,
-        uint256 contractSize,
+        UD60x18 contractSize,
         IPoolInternal.Delta delta,
-        uint256 premium,
-        uint256 takerFee,
-        uint256 protocolFee,
-        uint256 marketPrice,
-        uint256 liquidityRate,
-        uint256 currentTick,
+        UD60x18 premium,
+        UD60x18 takerFee,
+        UD60x18 protocolFee,
+        UD60x18 marketPrice,
+        UD60x18 liquidityRate,
+        UD60x18 currentTick,
         bool isBuy
     );
 
     event Exercise(
         address indexed holder,
-        uint256 contractSize,
-        uint256 exerciseValue,
-        uint256 spot,
-        uint256 fee
+        UD60x18 contractSize,
+        UD60x18 exerciseValue,
+        UD60x18 spot,
+        UD60x18 fee
     );
 
     event Settle(
         address indexed user,
-        uint256 contractSize,
-        uint256 exerciseValue,
-        uint256 spot,
-        uint256 fee
+        UD60x18 contractSize,
+        UD60x18 exerciseValue,
+        UD60x18 spot,
+        UD60x18 fee
     );
 
-    event Annihilate(address indexed owner, uint256 contractSize, uint256 fee);
+    event Annihilate(address indexed owner, UD60x18 contractSize, uint256 fee);
 
     event SettlePosition(
         address indexed owner,
         uint256 indexed tokenId,
-        uint256 contractSize,
-        uint256 collateral,
-        uint256 exerciseValue,
-        uint256 feesClaimed,
-        uint256 spot,
-        uint256 fee
+        UD60x18 contractSize,
+        UD60x18 collateral,
+        UD60x18 exerciseValue,
+        UD60x18 feesClaimed,
+        UD60x18 spot,
+        UD60x18 fee
     );
 
     event TransferPosition(
