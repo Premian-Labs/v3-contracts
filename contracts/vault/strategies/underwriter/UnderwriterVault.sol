@@ -869,6 +869,8 @@ contract UnderwriterVault is
     function settle() external override returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+        // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
+        _updateState();
         // Get last maturity that is greater than the current time
         uint256 lastExpired;
         uint256 timestamp = block.timestamp;
