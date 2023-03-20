@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
+import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-interface IVault is IERC4626Internal {
+interface IVault is IERC4626Internal, IERC20Internal {
     event UpdateQuotes();
 
     event Trade(
