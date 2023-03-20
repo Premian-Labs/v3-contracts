@@ -376,7 +376,7 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
         (, int256 price, , , ) = _latestRoundData(feed);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 
@@ -429,7 +429,7 @@ abstract contract ChainlinkAdapterInternal is
         }
 
         _ensurePriceAfterTargetIsFresh(target, updatedAt);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 

@@ -6,7 +6,6 @@ import { bnToAddress } from '@solidstate/library';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
-  IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
   UniswapV3Adapter,
   UniswapV3Adapter__factory,
@@ -67,6 +66,8 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+      cardinalityPerMinute,
+      period,
       implementation.address,
     );
 
@@ -92,6 +93,8 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
+      cardinalityPerMinute,
+      period,
       implementation.address,
     );
 
@@ -99,11 +102,70 @@ describe('UniswapV3Adapter', () => {
 
     const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
 
-    await instance.setPeriod(period);
-    await instance.setCardinalityPerMinute(cardinalityPerMinute);
-
     return { deployer, instance };
   }
+
+  describe('#constructor', () => {
+    it('should revert if cardinality per minute is zero', async () => {
+      const [deployer] = await ethers.getSigners();
+
+      const implementation = await new UniswapV3Adapter__factory(
+        deployer,
+      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+
+      await implementation.deployed();
+
+      await expect(
+        new UniswapV3AdapterProxy__factory(deployer).deploy(
+          0,
+          period,
+          implementation.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        new UniswapV3AdapterProxy__factory(),
+        'UniswapV3AdapterProxy__CardinalityPerMinuteNotSet',
+      );
+    });
+
+    it('should revert if period is zero', async () => {
+      const [deployer] = await ethers.getSigners();
+
+      const implementation = await new UniswapV3Adapter__factory(
+        deployer,
+      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+
+      await implementation.deployed();
+
+      await expect(
+        new UniswapV3AdapterProxy__factory(deployer).deploy(
+          cardinalityPerMinute,
+          0,
+          implementation.address,
+        ),
+      ).to.be.revertedWithCustomError(
+        new UniswapV3AdapterProxy__factory(),
+        'UniswapV3AdapterProxy__PeriodNotSet',
+      );
+    });
+
+    it('should set state variables', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      expect(await instance.targetCardinality()).to.equal(
+        (period * cardinalityPerMinute) / 60 + 1,
+      );
+
+      expect(await instance.period()).to.equal(period);
+
+      expect(await instance.cardinalityPerMinute()).to.equal(
+        cardinalityPerMinute,
+      );
+
+      expect(await instance.supportedFeeTiers()).to.be.deep.eq([
+        100, 500, 3000, 10000,
+      ]);
+    });
+  });
 
   describe('#isPairSupported', () => {
     it('should return false if pair is not supported by adapter', async () => {
@@ -154,7 +216,7 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
-    it('should revert if gas provided is too low', async () => {
+    it('should revert if there is not enough gas to increase cardinality', async () => {
       const { instance } = await loadFixture(deploy);
 
       await instance.setCardinalityPerMinute(200);
@@ -163,7 +225,10 @@ describe('UniswapV3Adapter', () => {
         instance.upsertPair(tokens.WETH.address, tokens.USDC.address, {
           gasLimit: 200000,
         }),
-      ).to.be.revertedWithCustomError(instance, 'UniswapV3Adapter__GasTooLow');
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__ObservationCardinalityTooLow',
+      );
     });
 
     it('should not fail if called multiple times for same pair', async () => {
@@ -182,51 +247,6 @@ describe('UniswapV3Adapter', () => {
         await instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
       );
     });
-
-    it('should skip pool(s) if the cardinality is not at target', async () => {
-      const { deployer, instance } = await loadFixture(deploy);
-
-      const pool500 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 500);
-
-      // most liquid pool
-      const pool3000 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 3000);
-
-      // least liquid pool
-      const pool10000 = await IUniswapV3Factory__factory.connect(
-        UNISWAP_V3_FACTORY,
-        deployer,
-      ).getPool(tokens.WBTC.address, tokens.USDT.address, 10000);
-
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
-        gasLimit: 1000000,
-      });
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000]);
-
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address, {
-        gasLimit: 1500000,
-      });
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000, pool500]);
-
-      await instance.setCardinalityPerMinute(1);
-      await instance.setPeriod(1);
-      await instance.upsertPair(tokens.WBTC.address, tokens.USDT.address);
-
-      expect(
-        await instance.poolsForPair(tokens.WBTC.address, tokens.USDT.address),
-      ).to.be.deep.eq([pool3000, pool500, pool10000]);
-    });
   });
 
   describe('#quote', async () => {
@@ -241,7 +261,7 @@ describe('UniswapV3Adapter', () => {
       );
     });
 
-    it('should revert if observation cardinality must be increased', async () => {
+    it('should revert if pair has not been added and observation cardinality must be increased', async () => {
       const { instance } = await loadFixture(deploy);
 
       await instance.setCardinalityPerMinute(20);
@@ -327,10 +347,10 @@ describe('UniswapV3Adapter', () => {
       );
 
       expect(pools).to.be.deep.eq([
-        '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
-        '0x60594a405d53811d3BC4766596EFD80fd545A270',
-        '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
         '0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19',
+        '0x60594a405d53811d3BC4766596EFD80fd545A270',
+        '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
+        '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
       ]);
     });
   });
@@ -389,6 +409,15 @@ describe('UniswapV3Adapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
+    it('should revert if period is not set', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      await expect(instance.setPeriod(0)).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__PeriodNotSet',
+      );
+    });
+
     it('should set period to new value', async () => {
       const { instance } = await loadFixture(deploy);
       await instance.setPeriod(newPeriod);
@@ -409,14 +438,14 @@ describe('UniswapV3Adapter', () => {
       ).to.be.revertedWithCustomError(instance, 'Ownable__NotOwner');
     });
 
-    it('should revert if cardinality per minute is invalid', async () => {
+    it('should revert if cardinality per minute is not set', async () => {
       const { instance } = await loadFixture(deploy);
 
       await expect(
         instance.setCardinalityPerMinute(0),
       ).to.be.revertedWithCustomError(
         instance,
-        'UniswapV3Adapter__InvalidCardinalityPerMinute',
+        'UniswapV3Adapter__CardinalityPerMinuteNotSet',
       );
     });
 

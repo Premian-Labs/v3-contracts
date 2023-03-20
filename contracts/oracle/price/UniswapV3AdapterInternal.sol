@@ -48,9 +48,6 @@ contract UniswapV3AdapterInternal is
         address tokenOut,
         uint32 target
     ) internal view returns (uint256) {
-        _ensurePeriodSet();
-        _ensureObservationCardinalitySet();
-
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
@@ -74,7 +71,7 @@ contract UniswapV3AdapterInternal is
             factor
         );
 
-        _ensurePriceNonZero(price.toInt256());
+        _ensurePricePositive(price.toInt256());
         return price;
     }
 
@@ -145,64 +142,22 @@ contract UniswapV3AdapterInternal is
         address tokenIn,
         address tokenOut
     ) internal view returns (address[] memory) {
-        address[] memory pools = _getPoolsSortedByLiquidity(tokenIn, tokenOut);
+        address[] memory pools = _getAllPoolsForPair(tokenIn, tokenOut);
         uint256 poolLength = pools.length;
 
         if (poolLength == 0)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
-        uint16 targetCardinality = uint16(
-            (l.period * l.cardinalityPerMinute) / 60
-        ) + 1;
-
         for (uint256 i; i < poolLength; i++) {
             address pool = pools[i];
 
-            (bool increaseCardinality, ) = _increaseCardinality(
-                pool,
-                targetCardinality
-            );
+            (
+                bool currentCardinalityBelowTarget,
 
-            if (increaseCardinality)
+            ) = _isCurrentCardinalityBelowTarget(pool, l.targetCardinality);
+
+            if (currentCardinalityBelowTarget)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
-        }
-
-        return pools;
-    }
-
-    function _getPoolsSortedByLiquidity(
-        address tokenA,
-        address tokenB
-    ) internal view returns (address[] memory) {
-        address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
-        if (pools.length <= 1) return pools;
-
-        // Store liquidity by pool
-        uint128[] memory poolLiquidity = new uint128[](pools.length);
-        for (uint256 i; i < pools.length; i++) {
-            poolLiquidity[i] = IUniswapV3Pool(pools[i]).liquidity();
-        }
-
-        // Sort both arrays together
-        for (uint256 i; i < pools.length - 1; i++) {
-            uint256 biggestLiquidityIndex = i;
-
-            for (uint256 j = i + 1; j < pools.length; j++) {
-                if (poolLiquidity[j] > poolLiquidity[biggestLiquidityIndex]) {
-                    biggestLiquidityIndex = j;
-                }
-            }
-
-            if (biggestLiquidityIndex != i) {
-                // Swap pools
-                (pools[i], pools[biggestLiquidityIndex]) = (
-                    pools[biggestLiquidityIndex],
-                    pools[i]
-                );
-
-                // Don't need to swap both ways, can just move the liquidity in i to its new place
-                poolLiquidity[biggestLiquidityIndex] = poolLiquidity[i];
-            }
         }
 
         return pools;
@@ -250,32 +205,30 @@ contract UniswapV3AdapterInternal is
     function _tryIncreaseCardinality(
         address pool,
         uint16 targetCardinality
-    ) internal returns (bool, bool) {
+    ) internal {
         (
-            bool increaseCardinality,
+            bool currentCardinalityBelowTarget,
             uint16 currentCardinality
-        ) = _increaseCardinality(pool, targetCardinality);
+        ) = _isCurrentCardinalityBelowTarget(pool, targetCardinality);
 
-        bool gasCostExceedsGasLeft = true;
+        if (!currentCardinalityBelowTarget) return;
 
-        if (increaseCardinality) {
-            uint256 gasCostToIncreaseAndAddSupport = (targetCardinality -
-                currentCardinality) *
-                GAS_PER_CARDINALITY +
-                GAS_TO_SUPPORT_POOL;
+        uint256 gasCostToIncreaseAndAddSupport = (targetCardinality -
+            currentCardinality) *
+            GAS_PER_CARDINALITY +
+            GAS_TO_SUPPORT_POOL;
 
-            if (gasCostToIncreaseAndAddSupport <= gasleft()) {
-                gasCostExceedsGasLeft = false;
-                IUniswapV3Pool(pool).increaseObservationCardinalityNext(
-                    targetCardinality
-                );
-            }
+        if (gasCostToIncreaseAndAddSupport <= gasleft()) {
+            IUniswapV3Pool(pool).increaseObservationCardinalityNext(
+                targetCardinality
+            );
+        } else {
+            // If the cardinality cannot be increased due to gas cost, revert
+            revert UniswapV3Adapter__ObservationCardinalityTooLow();
         }
-
-        return (increaseCardinality, gasCostExceedsGasLeft);
     }
 
-    function _increaseCardinality(
+    function _isCurrentCardinalityBelowTarget(
         address pool,
         uint16 targetCardinality
     ) internal view returns (bool, uint16) {
@@ -361,15 +314,5 @@ contract UniswapV3AdapterInternal is
                 )
             )
         );
-    }
-
-    function _ensurePeriodSet() internal view {
-        if (UniswapV3AdapterStorage.layout().period == 0)
-            revert UniswapV3Adapter__PeriodNotSet();
-    }
-
-    function _ensureObservationCardinalitySet() internal view {
-        if (UniswapV3AdapterStorage.layout().cardinalityPerMinute == 0)
-            revert UniswapV3Adapter__ObservationCardinalityNotSet();
     }
 }
