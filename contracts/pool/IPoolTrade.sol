@@ -24,10 +24,12 @@ interface IPoolTrade is IPoolInternal {
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
     /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
-        Signature memory signature
+        Signature memory signature,
+        Permit2 memory permit
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -35,12 +37,14 @@ interface IPoolTrade is IPoolInternal {
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -49,6 +53,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap | poolToken decimals
@@ -56,7 +61,8 @@ interface IPoolTrade is IPoolInternal {
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     )
         external
         payable
@@ -72,6 +78,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium received by the taker of the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return collateralReceived The amount of un-swapped collateral received from the trade. | s.tokenOut decimals
@@ -80,7 +87,8 @@ interface IPoolTrade is IPoolInternal {
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     )
         external
         returns (

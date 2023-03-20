@@ -43,7 +43,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
-        Signature memory signature
+        Signature memory signature,
+        Permit2 memory permit
     ) external {
         _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature),
@@ -55,7 +56,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     ) external returns (uint256 totalPremium, Delta memory delta) {
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
@@ -70,7 +72,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     )
         external
         payable
@@ -105,7 +108,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2 memory permit
     )
         external
         returns (

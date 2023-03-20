@@ -9,6 +9,8 @@ import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
+import {ISignatureTransfer} from "../vendor/uniswap/ISignatureTransfer.sol";
+
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
@@ -100,6 +102,26 @@ interface IPoolInternal is IPosition, IPricing {
         SD59x18 shorts;
     }
 
+    struct Permit2 {
+        ISignatureTransfer.PermitTransferFrom permit;
+        bytes signature;
+    }
+
+    enum InvalidQuoteError {
+        None,
+        QuoteExpired,
+        QuoteCancelled,
+        QuoteOverfilled,
+        OutOfBoundsPrice,
+        InvalidQuoteTaker,
+        InvalidQuoteSignature,
+        InvalidAssetUpdate,
+        InsufficientCollateralAllowance,
+        InsufficientCollateralBalance,
+        InsufficientLongBalance,
+        InsufficientShortBalance
+    }
+
     ////////////////////
     ////////////////////
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
@@ -170,20 +192,5 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
-    }
-
-    enum InvalidQuoteError {
-        None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
-        OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
-        InvalidAssetUpdate,
-        InsufficientCollateralAllowance,
-        InsufficientCollateralBalance,
-        InsufficientLongBalance,
-        InsufficientShortBalance
     }
 }

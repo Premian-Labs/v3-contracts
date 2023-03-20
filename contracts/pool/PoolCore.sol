@@ -114,7 +114,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        Permit2 memory permit
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -141,6 +142,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
+        Permit2 memory permit,
         bool isBidIfStrandedMarketPrice
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -169,7 +171,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        Permit2 memory permit
     ) external payable {
         _ensureOperator(p.operator);
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -196,7 +199,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         Position.Key memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        Permit2 memory permit
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -213,7 +217,8 @@ contract PoolCore is IPoolCore, PoolInternal {
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        Permit2 memory permit
     ) external {
         return _writeFrom(underwriter, longReceiver, size);
     }
