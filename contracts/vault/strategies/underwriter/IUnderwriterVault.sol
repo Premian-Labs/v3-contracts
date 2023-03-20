@@ -27,7 +27,8 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     error Vault__DeltaBounds();
     error Vault__OutOfTradeBounds();
     error Vault__CLevelBounds();
-    error Vault__lowCLevel();
+    error Vault__LowCLevel();
+    error Vault__UtilisationOutOfBounds();
     error Vault__NonMonotonicMaturities();
     error Vault__ErroneousNextUnexpiredMaturity();
     error Vault__GreaterThanMaxMaturity();
@@ -83,16 +84,6 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         // fee for minting the option through the pool
         UD60x18 mintingFee;
     }
-
-    // Events
-    event Sell(
-        address indexed buyer,
-        uint256 strike,
-        uint256 maturity,
-        uint256 size,
-        uint256 premium,
-        uint256 vaultFee
-    );
 
     /// @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);

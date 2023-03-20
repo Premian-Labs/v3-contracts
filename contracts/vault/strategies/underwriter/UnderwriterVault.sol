@@ -23,6 +23,9 @@ import {IOracleAdapter} from "../../../oracle/price/IOracleAdapter.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
+import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
+
+import "hardhat/console.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -37,6 +40,7 @@ contract UnderwriterVault is
     using SafeERC20 for IERC20;
     using SafeCast for int256;
     using SafeCast for uint256;
+    using PRBMathExtra for UD60x18;
 
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
@@ -555,7 +559,7 @@ contract UnderwriterVault is
         );
 
         // NOTE: cLevel may have underflow of 1 unit
-        if (cLevel + ONE < l.minCLevel) revert Vault__lowCLevel();
+        if (cLevel + ONE < l.minCLevel) revert Vault__LowCLevel();
 
         UD60x18 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
 
@@ -586,6 +590,27 @@ contract UnderwriterVault is
         return
             (k * positiveExp + maxCLevel * alphaCLevel - k) /
             (alphaCLevel * positiveExp);
+    }
+
+    function _computeCLevel(
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) internal pure returns (UD60x18) {
+        if (utilisation > ONE) revert Vault__UtilisationOutOfBounds();
+
+        UD60x18 posExp = (alpha * (ONE - utilisation)).exp();
+        UD60x18 alphaExp = alpha.exp();
+        UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) /
+            (alphaExp - ONE);
+
+        UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) /
+            (alpha * posExp);
+
+        return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel);
     }
 
     function _ensureTradeableWithVault(
@@ -688,8 +713,23 @@ contract UnderwriterVault is
 
         vars.premium = vars.price * vars.size;
 
+        // Compute C-level
         UD60x18 collateral = l.isCall ? vars.size : vars.size * vars.strike;
-        vars.cLevel = _getCLevel(collateral);
+        UD60x18 utilisation = (l.totalLockedAssets + collateral) /
+            _totalAssetsUD60x18();
+        UD60x18 hoursSinceLastTx = UD60x18.wrap(
+            (vars.timestamp - l.lastTradeTimestamp) * 1e18
+        ) / UD60x18.wrap(ONE_HOUR * 1e18);
+
+        vars.cLevel = _computeCLevel(
+            utilisation,
+            l.alphaCLevel,
+            l.minCLevel,
+            l.maxCLevel,
+            l.hourlyDecayDiscount,
+            hoursSinceLastTx
+        );
+
         vars.spread = (vars.cLevel - l.minCLevel) * vars.premium;
 
         vars.mintingFee = UD60x18.wrap(
@@ -817,13 +857,15 @@ contract UnderwriterVault is
         // Handle the premiums and spread capture generated
         _afterBuy(vars);
 
-        emit Sell(
+        emit Trade(
             msg.sender,
-            vars.strike.unwrap(),
-            vars.maturity,
-            vars.size.unwrap(),
-            vars.premium.unwrap(),
-            vars.spread.unwrap()
+            vars.poolAddr,
+            vars.size,
+            false,
+            vars.premium + vars.spread + vars.mintingFee,
+            vars.mintingFee,
+            UD60x18.wrap(uint256(0)),
+            vars.spread
         );
     }
 

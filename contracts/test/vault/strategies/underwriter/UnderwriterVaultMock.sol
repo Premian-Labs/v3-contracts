@@ -582,4 +582,23 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) external pure {
         _ensureWithinTradeBounds(value, minimum, maximum);
     }
+
+    function computeCLevel(
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
+    ) external pure returns (UD60x18) {
+        return
+            _computeCLevel(
+                utilisation,
+                duration,
+                alpha,
+                minCLevel,
+                maxCLevel,
+                decayRate
+            );
+    }
 }

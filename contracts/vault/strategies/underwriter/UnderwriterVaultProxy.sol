@@ -10,10 +10,15 @@ import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC46
 import {ProxyUpgradeableOwnable} from "../../../proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
+import {ZERO} from "../../../libraries/Constants.sol";
+
 contract UnderwriterVaultProxy is
     ProxyUpgradeableOwnable,
     ERC20MetadataInternal
 {
+    // Errors
+    error VaultProxy__CLevelBounds();
+
     struct CLevel {
         // The minimum C-level allowed by the C-level mechanism
         UD60x18 minCLevel;
@@ -45,8 +50,7 @@ contract UnderwriterVaultProxy is
         string memory symbol,
         bool isCall,
         CLevel memory cLevel,
-        TradeBounds memory tradeBounds,
-        uint256 lastTradeTimestamp
+        TradeBounds memory tradeBounds
     ) ProxyUpgradeableOwnable(implementation) {
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 
@@ -56,6 +60,9 @@ contract UnderwriterVaultProxy is
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        if (cLevel.maxCLevel == ZERO) revert VaultProxy__CLevelBounds();
+        if (cLevel.alphaCLevel == ZERO) revert VaultProxy__CLevelBounds();
 
         l.isCall = isCall;
         l.base = base;
@@ -68,7 +75,7 @@ contract UnderwriterVaultProxy is
         l.maxCLevel = cLevel.maxCLevel;
         l.alphaCLevel = cLevel.alphaCLevel;
         l.hourlyDecayDiscount = cLevel.hourlyDecayDiscount;
-        l.lastTradeTimestamp = lastTradeTimestamp;
+        l.lastTradeTimestamp = block.timestamp;
         l.oracleAdapter = oracleAdapter;
     }
 }
