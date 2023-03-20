@@ -31,6 +31,7 @@ library OptionMath {
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
     error OptionMath__NonPositiveVol();
+    error OptionMath__Underflow();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x The input to the normal CDF | 18 decimals
@@ -159,7 +160,6 @@ library OptionMath {
     ) internal pure returns (UD60x18) {
         SD59x18 _spot = spot.intoSD59x18();
         SD59x18 _strike = strike.intoSD59x18();
-
         if (volAnnualized == ZERO) revert OptionMath__NonPositiveVol();
 
         if (timeToMaturity == ZERO) {
@@ -186,10 +186,15 @@ library OptionMath {
             riskFreeRate
         );
         SD59x18 sign = isCall ? iONE : -iONE;
-        SD59x18 a = _spot * normalCdf(d1 * sign);
-        SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
+        SD59x18 a = (_spot / _strike) * normalCdf(d1 * sign);
+        SD59x18 b = normalCdf(d2 * sign) / discountFactor;
+        SD59x18 scaledPrice = (a - b) * sign;
 
-        return ((a - b) * sign).intoUD60x18();
+        if (scaledPrice < SD59x18.wrap(-1e12)) revert OptionMath__Underflow();
+        if (scaledPrice >= SD59x18.wrap(-1e12) && scaledPrice <= iZERO)
+            scaledPrice = iZERO;
+
+        return (scaledPrice * _strike).intoUD60x18();
     }
 
     /// @notice Returns true if the maturity day is Friday
