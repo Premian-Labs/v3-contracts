@@ -72,12 +72,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getTotalLiabilitiesUnexpired(timestamp, spot);
     }
 
-    function getTotalLiabilities() external view returns (UD60x18) {
-        return _getTotalLiabilities();
+    function getTotalLiabilities(
+        uint256 timestamp
+    ) external view returns (UD60x18) {
+        return _getTotalLiabilities(timestamp);
     }
 
-    function getTotalFairValue() external view returns (UD60x18) {
-        return _getTotalFairValue();
+    function getTotalFairValue(
+        uint256 timestamp
+    ) external view returns (UD60x18) {
+        return _getTotalFairValue(timestamp);
     }
 
     function getNumberOfListings() external view returns (uint256) {

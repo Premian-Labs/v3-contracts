@@ -177,20 +177,17 @@ contract UnderwriterVault is
                 listings.strikes[i] = l.maturityToStrikes[current].at(j);
                 listings.timeToMaturities[i] = timeToMaturity;
                 listings.maturities[i] = current;
-
                 i++;
             }
 
             current = l.maturities.next(current);
         }
-
         UD60x18[] memory sigmas = IVolatilityOracle(IV_ORACLE).getVolatility(
             l.base,
             spot,
             listings.strikes,
             listings.timeToMaturities
         );
-
         for (uint256 k = 0; k < n; k++) {
             UD60x18 price = OptionMath.blackScholesPrice(
                 spot,
@@ -200,7 +197,6 @@ contract UnderwriterVault is
                 ZERO,
                 l.isCall
             );
-
             UD60x18 size = l.positionSizes[listings.maturities[k]][
                 listings.strikes[k]
             ];
@@ -213,8 +209,9 @@ contract UnderwriterVault is
     /// @notice Gets the total liabilities of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total liabilities of the basket of options underwritten
-    function _getTotalLiabilities() internal view returns (UD60x18) {
-        uint256 timestamp = block.timestamp;
+    function _getTotalLiabilities(
+        uint256 timestamp
+    ) internal view returns (UD60x18) {
         UD60x18 spot = _getSpotPrice();
         return
             _getTotalLiabilitiesUnexpired(timestamp, spot) +
@@ -224,10 +221,12 @@ contract UnderwriterVault is
     /// @notice Gets the total fair value of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total fair value of the basket of options underwritten
-    function _getTotalFairValue() internal view returns (UD60x18) {
+    function _getTotalFairValue(
+        uint256 timestamp
+    ) internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        return l.totalLockedAssets - _getTotalLiabilities();
+        return l.totalLockedAssets - _getTotalLiabilities(timestamp);
     }
 
     /// @notice Gets the total locked spread for the vault
@@ -304,7 +303,7 @@ contract UnderwriterVault is
         return
             (_balanceOfAssetUD60x18(address(this)) -
                 _getLockedSpreadVars().totalLockedSpread +
-                _getTotalFairValue()) / _totalSupplyUD60x18();
+                _getTotalFairValue(block.timestamp)) / _totalSupplyUD60x18();
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share

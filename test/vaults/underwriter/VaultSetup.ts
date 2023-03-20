@@ -209,47 +209,13 @@ export async function vaultSetup() {
   //=====================================================================================
   // Mock Volatility Oracle setup
 
-  const impl = await new VolatilityOracleMock__factory(deployer).deploy();
+  let volOracle = await deployMockContract(deployer, [
+    'function getVolatility(address token, uint256 spot, uint256 strike, uint256 timeToMaturity) external view returns (uint256)',
+    'function getVolatility(address token, uint256 spot, uint256[] memory strike, uint256[] memory timeToMaturity) external view returns (uint256[] memory)',
+    'function getRiskFreeRate() external pure returns (uint256)',
+  ]);
 
-  volOracleProxy = await new ProxyUpgradeableOwnable__factory(deployer).deploy(
-    impl.address,
-  );
-
-  volOracle = VolatilityOracleMock__factory.connect(
-    volOracleProxy.address,
-    deployer,
-  );
-
-  await volOracle.connect(deployer).addWhitelistedRelayers([deployer.address]);
-
-  const tau = [
-    0.0027397260273972603, 0.03561643835616438, 0.09315068493150686,
-    0.16986301369863013, 0.4191780821917808,
-  ].map((el) => Math.floor(el * 10 ** 12));
-
-  const theta = [
-    0.0017692409901229372, 0.01916765969267577, 0.050651452629040784,
-    0.10109715579595925, 0.2708994887970898,
-  ].map((el) => Math.floor(el * 10 ** 12));
-
-  const psi = [
-    0.037206384846952066, 0.0915623614722959, 0.16107355519602318,
-    0.2824760899898832, 0.35798035117937516,
-  ].map((el) => Math.floor(el * 10 ** 12));
-
-  const rho = [
-    1.3478910000157727e-8, 2.0145423645807155e-6, 2.910345029369492e-5,
-    0.0003768214425074357, 0.0002539234691761822,
-  ].map((el) => Math.floor(el * 10 ** 12));
-
-  const tauHex = await volOracle.formatParams(tau as any);
-  const thetaHex = await volOracle.formatParams(theta as any);
-  const psiHex = await volOracle.formatParams(psi as any);
-  const rhoHex = await volOracle.formatParams(rho as any);
-
-  await volOracle
-    .connect(deployer)
-    .updateParams([base.address], [tauHex], [thetaHex], [psiHex], [rhoHex]);
+  await volOracle.mock.getRiskFreeRate.returns(parseEther('0.01'));
 
   if (log) console.log(`volOracle Address : ${volOracle.address}`);
 
