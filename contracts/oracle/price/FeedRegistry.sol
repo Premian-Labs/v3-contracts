@@ -4,22 +4,22 @@ pragma solidity ^0.8.0;
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
-import {IRegistry} from "./IRegistry.sol";
-import {RegistryInternal} from "./RegistryInternal.sol";
-import {RegistryStorage} from "./RegistryStorage.sol";
+import {IFeedRegistry} from "./IFeedRegistry.sol";
+import {FeedRegistryInternal} from "./FeedRegistryInternal.sol";
+import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
-/// @title Adapter registry implementation
-contract Registry is IRegistry, RegistryInternal, SafeOwnable {
-    using RegistryStorage for RegistryStorage.Layout;
+/// @title Adapter feed registry implementation
+contract FeedRegistry is IFeedRegistry, FeedRegistryInternal, SafeOwnable {
+    using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
     constructor(
         address _wrappedNativeToken,
         address _wrappedBTCToken
-    ) RegistryInternal(_wrappedNativeToken, _wrappedBTCToken) {}
+    ) FeedRegistryInternal(_wrappedNativeToken, _wrappedBTCToken) {}
 
-    /// @inheritdoc IRegistry
+    /// @inheritdoc IFeedRegistry
     function batchRegisterFeedMappings(
         FeedMappingArgs[] memory args
     ) external onlyOwner {
@@ -28,19 +28,19 @@ contract Registry is IRegistry, RegistryInternal, SafeOwnable {
             address denomination = args[i].denomination;
 
             if (token == denomination)
-                revert Registry__TokensAreSame(token, denomination);
+                revert FeedRegistry__TokensAreSame(token, denomination);
 
             if (token == address(0) || denomination == address(0))
-                revert Registry__ZeroAddress();
+                revert FeedRegistry__ZeroAddress();
 
             bytes32 keyForPair = token.keyForUnsortedPair(denomination);
-            RegistryStorage.layout().feeds[keyForPair] = args[i].feed;
+            FeedRegistryStorage.layout().feeds[keyForPair] = args[i].feed;
         }
 
         emit FeedMappingsRegistered(args);
     }
 
-    /// @inheritdoc IRegistry
+    /// @inheritdoc IFeedRegistry
     function feed(
         address tokenA,
         address tokenB

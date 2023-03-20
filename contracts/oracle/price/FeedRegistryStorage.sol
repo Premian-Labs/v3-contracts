@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-library RegistryStorage {
+library FeedRegistryStorage {
     bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.Registry");
+        keccak256("premia.contracts.storage.FeedRegistry");
 
     struct Layout {
         mapping(bytes32 => address) feeds;

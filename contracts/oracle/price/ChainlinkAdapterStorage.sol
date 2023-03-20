@@ -36,7 +36,7 @@ library ChainlinkAdapterStorage {
         aggregatorRoundId = uint64(roundId);
     }
 
-    function factor(
+    function decimalsFactor(
         IChainlinkAdapterInternal.PricingPath path
     ) internal pure returns (int256) {
         if (

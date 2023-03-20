@@ -297,7 +297,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Registry__TokensAreSame');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__TokensAreSame');
     });
 
     it('should revert if token or denomination address is 0', async () => {
@@ -311,7 +311,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Registry__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
 
       await expect(
         instance.batchRegisterFeedMappings([
@@ -321,7 +321,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'Registry__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
     });
 
     it('shoud return feed of mapped token and denomination', async () => {

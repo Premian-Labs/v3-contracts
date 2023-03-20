@@ -10,13 +10,13 @@ import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
-import {Registry} from "./Registry.sol";
+import {FeedRegistry} from "./FeedRegistry.sol";
 import {FOREX_DECIMALS, Tokens} from "./Tokens.sol";
 
 abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
     OracleAdapterInternal,
-    Registry
+    FeedRegistry
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using ChainlinkAdapterStorage for IChainlinkAdapterInternal.PricingPath;
@@ -38,7 +38,7 @@ abstract contract ChainlinkAdapterInternal is
     constructor(
         address _wrappedNativeToken,
         address _wrappedBTCToken
-    ) Registry(_wrappedNativeToken, _wrappedBTCToken) {}
+    ) FeedRegistry(_wrappedNativeToken, _wrappedBTCToken) {}
 
     function _quoteFrom(
         address tokenIn,
@@ -108,7 +108,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = path.factor();
+        int256 factor = path.decimalsFactor();
 
         uint256 price;
         if (path == PricingPath.ETH_USD) {
@@ -140,7 +140,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = path.factor();
+        int256 factor = path.decimalsFactor();
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -162,7 +162,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = path.factor();
+        int256 factor = path.decimalsFactor();
         uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(target), factor);
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
@@ -203,7 +203,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        int256 factor = path.factor();
+        int256 factor = path.decimalsFactor();
         bool isTokenInWBTC = tokenIn == WRAPPED_BTC_TOKEN;
 
         uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(target), factor)
@@ -262,7 +262,7 @@ abstract contract ChainlinkAdapterInternal is
         PricingPath preferredPath;
         PricingPath fallbackPath;
 
-        bool wbtcUSDFeedExists = _exists(
+        bool wbtcUSDFeedExists = _feedExists(
             isTokenAWBTC ? tokenA : tokenB,
             Denominations.USD
         );
@@ -299,13 +299,13 @@ abstract contract ChainlinkAdapterInternal is
             conversionType = ConversionType.TO_ETH;
             preferredPath = PricingPath.TOKEN_ETH;
             fallbackPath = PricingPath.A_ETH_USD_B; // A -> ETH is skipped, if A == ETH
-        } else if (_exists(tokenA, Denominations.USD)) {
+        } else if (_feedExists(tokenA, Denominations.USD)) {
             // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively convert tokenB -> tokenA
             srcToken = tokenB;
             conversionType = ConversionType.TO_USD_TO_TOKEN;
             preferredPath = PricingPath.TOKEN_USD_TOKEN;
             fallbackPath = PricingPath.A_USD_ETH_B;
-        } else if (_exists(tokenA, Denominations.ETH)) {
+        } else if (_feedExists(tokenA, Denominations.ETH)) {
             // If tokenA has an ETH feed, we want to convert tokenB to ETH, and then use tokenA ETH feed to effectively convert tokenB -> tokenA
             srcToken = tokenB;
             conversionType = ConversionType.TO_ETH_TO_TOKEN;
@@ -350,9 +350,9 @@ abstract contract ChainlinkAdapterInternal is
             secondQuote = Denominations.USD;
         }
 
-        if (_exists(token, firstQuote)) {
+        if (_feedExists(token, firstQuote)) {
             return preferredPath;
-        } else if (_exists(token, secondQuote)) {
+        } else if (_feedExists(token, secondQuote)) {
             return fallbackPath;
         } else {
             return PricingPath.NONE;

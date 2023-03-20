@@ -4,12 +4,11 @@ pragma solidity ^0.8.0;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
-import {IRegistryInternal} from "./IRegistryInternal.sol";
-import {RegistryStorage} from "./RegistryStorage.sol";
+import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
-abstract contract RegistryInternal is IRegistryInternal {
-    using RegistryStorage for RegistryStorage.Layout;
+abstract contract FeedRegistryInternal {
+    using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
     address internal immutable WRAPPED_NATIVE_TOKEN;
@@ -20,7 +19,10 @@ abstract contract RegistryInternal is IRegistryInternal {
         WRAPPED_BTC_TOKEN = _wrappedBTCToken;
     }
 
-    function _exists(address base, address quote) internal view returns (bool) {
+    function _feedExists(
+        address base,
+        address quote
+    ) internal view returns (bool) {
         return _feed(base, quote) != address(0);
     }
 
@@ -29,7 +31,9 @@ abstract contract RegistryInternal is IRegistryInternal {
         address tokenB
     ) internal view returns (address) {
         return
-            RegistryStorage.layout().feeds[tokenA.keyForUnsortedPair(tokenB)];
+            FeedRegistryStorage.layout().feeds[
+                tokenA.keyForUnsortedPair(tokenB)
+            ];
     }
 
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
