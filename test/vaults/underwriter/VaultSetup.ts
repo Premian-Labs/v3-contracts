@@ -337,7 +337,6 @@ export async function vaultSetup() {
     true,
     _cLevelParams,
     _tradeBounds,
-    lastTimeStamp,
   );
   await callVaultProxy.deployed();
   callVault = UnderwriterVaultMock__factory.connect(
@@ -356,7 +355,6 @@ export async function vaultSetup() {
     false,
     _cLevelParams,
     _tradeBounds,
-    lastTimeStamp,
   );
   await putVaultProxy.deployed();
   putVault = UnderwriterVaultMock__factory.connect(

@@ -27,7 +27,8 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     error Vault__DeltaBounds();
     error Vault__OutOfTradeBounds();
     error Vault__CLevelBounds();
-    error Vault__lowCLevel();
+    error Vault__LowCLevel();
+    error Vault__UtilisationOutOfBounds();
     error Vault__NonMonotonicMaturities();
     error Vault__ErroneousNextUnexpiredMaturity();
     error Vault__GreaterThanMaxMaturity();
