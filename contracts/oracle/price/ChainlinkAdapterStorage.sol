@@ -60,11 +60,4 @@ library ChainlinkAdapterStorage {
     function isETH(address token) internal pure returns (bool) {
         return token == Denominations.ETH;
     }
-
-    function isWBTC(
-        address wrappedBTCToken,
-        address token
-    ) internal pure returns (bool) {
-        return token == wrappedBTCToken;
-    }
 }

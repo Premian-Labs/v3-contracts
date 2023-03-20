@@ -204,7 +204,7 @@ abstract contract ChainlinkAdapterInternal is
         uint256 target
     ) internal view returns (uint256) {
         int256 factor = path.factor();
-        bool isTokenInWBTC = WRAPPED_BTC_TOKEN.isWBTC(tokenIn);
+        bool isTokenInWBTC = tokenIn == WRAPPED_BTC_TOKEN;
 
         uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(target), factor)
             .mul(_scale(_getBTCUSD(target), factor));
@@ -250,8 +250,8 @@ abstract contract ChainlinkAdapterInternal is
         bool isTokenBUSD = tokenB.isUSD();
         bool isTokenAETH = tokenA.isETH();
         bool isTokenBETH = tokenB.isETH();
-        bool isTokenAWBTC = WRAPPED_BTC_TOKEN.isWBTC(tokenA);
-        bool isTokenBWBTC = WRAPPED_BTC_TOKEN.isWBTC(tokenB);
+        bool isTokenAWBTC = tokenA == WRAPPED_BTC_TOKEN;
+        bool isTokenBWBTC = tokenB == WRAPPED_BTC_TOKEN;
 
         if ((isTokenAETH && isTokenBUSD) || (isTokenAUSD && isTokenBETH)) {
             return PricingPath.ETH_USD;
