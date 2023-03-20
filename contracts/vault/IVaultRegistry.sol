@@ -30,8 +30,11 @@ interface IVaultRegistry {
     event VaultRemoved(address indexed vault);
 
     function vault(address vaultAddress) external view returns (Vault memory);
+
     function vaultAddress(uint256 index) external view returns (address);
+
     function vaults() external view returns (Vault[] memory);
+
     function vaultsLength() external view returns (uint256);
 
     function getVaults(
@@ -44,5 +47,6 @@ interface IVaultRegistry {
         TradeSide side,
         OptionType optionType
     ) external;
+
     function removeVault(address vault) external;
 }

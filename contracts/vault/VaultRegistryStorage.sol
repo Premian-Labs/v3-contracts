@@ -15,7 +15,6 @@ library VaultRegistryStorage {
 
     struct Layout {
         EnumerableSet.AddressSet vaultAddresses;
-
         mapping(address => IVaultRegistry.Vault) vaults;
         mapping(IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsPerTradeSide;
         mapping(IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsPerOptionType;
