@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 interface IVault is IERC4626Internal {
     event UpdateQuotes();
@@ -10,12 +11,12 @@ interface IVault is IERC4626Internal {
     event Trade(
         address indexed user,
         address indexed pool,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
-        uint256 premium,
-        uint256 takerFee,
-        uint256 makerRebate,
-        uint256 vaultFee
+        UD60x18 premium,
+        UD60x18 takerFee,
+        UD60x18 makerRebate,
+        UD60x18 vaultFee
     );
 
     event ManagementFeePaid(address indexed receiver, uint256 managementFee);

@@ -825,7 +825,7 @@ contract UnderwriterVault is
             false,
             vars.premium + vars.spread + vars.mintingFee,
             vars.mintingFee,
-            0,
+            UD60x18.wrap(uint256(0)),
             vars.spread
         );
     }
