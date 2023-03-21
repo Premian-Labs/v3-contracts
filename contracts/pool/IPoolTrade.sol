@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+
+import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal {
@@ -29,7 +31,7 @@ interface IPoolTrade is IPoolInternal {
         TradeQuote memory tradeQuote,
         UD60x18 size,
         Signature memory signature,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -44,7 +46,7 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external returns (uint256 totalPremium, Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -62,7 +64,7 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     )
         external
         payable
@@ -88,7 +90,7 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     )
         external
         returns (

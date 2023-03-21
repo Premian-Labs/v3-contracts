@@ -7,6 +7,7 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
+import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -19,7 +20,6 @@ contract PoolCore is IPoolCore, PoolInternal {
     constructor(
         address factory,
         address router,
-        address permit2,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
@@ -27,7 +27,6 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolInternal(
             factory,
             router,
-            permit2,
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver
@@ -117,7 +116,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -145,7 +144,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit,
+        Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -176,7 +175,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external payable {
         _ensureOperator(p.operator);
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -195,7 +194,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                 creditAmount,
                 s.refundAddress
             ),
-            _getEmptyPermit2()
+            Permit2.emptyPermit()
         );
     }
 
@@ -222,7 +221,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         address underwriter,
         address longReceiver,
         UD60x18 size,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external {
         return _writeFrom(underwriter, longReceiver, size, permit);
     }

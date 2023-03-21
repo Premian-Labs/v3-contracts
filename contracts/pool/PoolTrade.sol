@@ -11,6 +11,7 @@ import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
 import {iZERO} from "../libraries/Constants.sol";
+import {Permit2} from "../libraries/Permit2.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
     using SafeERC20 for IERC20;
@@ -19,7 +20,6 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     constructor(
         address factory,
         address router,
-        address permit2,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
@@ -27,7 +27,6 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolInternal(
             factory,
             router,
-            permit2,
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver
@@ -50,7 +49,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         TradeQuote memory tradeQuote,
         UD60x18 size,
         Signature memory signature,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external {
         _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature),
@@ -64,7 +63,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external returns (uint256 totalPremium, Delta memory delta) {
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
@@ -81,7 +80,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     )
         external
         payable
@@ -106,7 +105,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 swapOutAmount,
                 true
             ),
-            _getEmptyPermit2()
+            Permit2.emptyPermit()
         );
 
         return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
@@ -118,7 +117,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2 memory permit
+        Permit2.Data memory permit
     )
         external
         returns (
@@ -141,7 +140,10 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         address poolToken = l.getPoolToken();
         if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
-        (tokenOutReceived, collateralReceived) = _swap(s, _getEmptyPermit2());
+        (tokenOutReceived, collateralReceived) = _swap(
+            s,
+            Permit2.emptyPermit()
+        );
 
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);

@@ -105,14 +105,6 @@ interface IPoolInternal is IPosition, IPricing {
         SD59x18 shorts;
     }
 
-    struct Permit2 {
-        address permittedToken;
-        uint256 permittedAmount;
-        uint256 nonce;
-        uint256 deadline;
-        bytes signature;
-    }
-
     enum InvalidQuoteError {
         None,
         QuoteExpired,

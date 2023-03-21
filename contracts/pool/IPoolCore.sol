@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+
+import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolCore is IPoolInternal {
@@ -71,7 +73,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -91,7 +93,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit,
+        Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
     ) external;
 
@@ -113,7 +115,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
@@ -138,7 +140,7 @@ interface IPoolCore is IPoolInternal {
         address underwriter,
         address longReceiver,
         UD60x18 size,
-        Permit2 memory permit
+        Permit2.Data memory permit
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
