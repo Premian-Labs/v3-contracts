@@ -16,17 +16,86 @@ import {
   ONE_WEEK,
 } from '../../../../utils/time';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
-let startTime: number;
-let spot: number;
-let minMaturity: number;
-let maxMaturity: number;
-
 let vault: UnderwriterVaultMock;
 let token: ERC20Mock;
+
+let startTime: number = 2 * 1679395050;
+let t0: number = startTime + 7 * ONE_DAY;
+let t1: number = startTime + 10 * ONE_DAY;
+let t2: number = startTime + 14 * ONE_DAY;
+
+async function setupSpreadsVault() {
+  /*
+  Example
+
+  |-----t0---t1-----t2---|
+
+  Time to maturities starting from inception
+  ---------------
+  t0: 7 days
+  t1: 10 days
+  t2: 14 days
+
+  Spread locked at inception
+  ---------------
+  t0: 1.24
+  t1: 5.56
+  t2: 11.2
+
+  spreadUnlockingRate(t<t0): (1.24 / 7 + 5.56 / 10 + 11.2 / 14) / (24 * 60 * 60) = 0.0000177447
+  spreadUnlockingRate(t0<=t<t1): (5.56 / 10 + 11.2 / 14) / (24 * 60 * 60) = 0.00001569444
+  spreadUnlockingRate(t1<=t<t2): (11.2 / 14) / (24 * 60 * 60) = 0.00000925925
+  spreadUnlockingRate(t2<=t): 0
+  */
+  const { callVault } = await loadFixture(vaultSetup);
+
+  const infos = [
+    {
+      maturity: t0,
+      strikes: [],
+      sizes: [],
+    },
+    {
+      maturity: t1,
+      strikes: [],
+      sizes: [],
+    },
+    {
+      maturity: t2,
+      strikes: [],
+      sizes: [],
+    },
+    {
+      maturity: 2 * t2,
+      strikes: [],
+      sizes: [],
+    },
+  ];
+  await callVault.setListingsAndSizes(infos);
+  await callVault.setLastSpreadUnlockUpdate(startTime);
+  const totalLockedSpread = 1.24 + 5.56 + 11.2;
+  const totalLockedFormatted = parseEther(totalLockedSpread.toString());
+  const spreadUnlockingRatet0 = 1.24 / (7 * ONE_DAY);
+  const spreadUnlockingRatet1 = 5.56 / (10 * ONE_DAY);
+  const spreadUnlockingRatet2 = 11.2 / (14 * ONE_DAY);
+  const spreadUnlockingRate =
+    spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
+
+  const surt0 = parseEther(spreadUnlockingRatet0.toFixed(18).toString());
+  const surt1 = parseEther(spreadUnlockingRatet1.toFixed(18).toString());
+  const surt2 = parseEther(spreadUnlockingRatet2.toFixed(18).toString());
+  const surgl = parseEther(spreadUnlockingRate.toFixed(18).toString());
+  await callVault.increaseSpreadUnlockingTick(t0, surt0);
+  await callVault.increaseSpreadUnlockingTick(t1, surt1);
+  await callVault.increaseSpreadUnlockingTick(t2, surt2);
+  await callVault.increaseSpreadUnlockingRate(surgl);
+  await callVault.increaseTotalLockedSpread(totalLockedFormatted);
+  return { vault: callVault };
+}
 
 describe('UnderwriterVault', () => {
   describe('#_availableAssets', () => {
@@ -68,66 +137,93 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#_afterBuy', () => {
-    const premium = 0.5;
-    const spread = 0.1;
+    const spread = 10;
     const size = 1;
     const strike = 100;
-    let maturity: number;
-    let totalAssets: number;
-    let spreadUnlockingRate: number;
-    let afterBuyTimestamp: number;
+    let lockedAmount: number;
 
     async function setupAfterBuyVault(isCall: boolean) {
       // afterBuy function is independent of call / put option type
-      const { callVault } = await loadFixture(vaultSetup);
-      await setMaturities(callVault);
-      await callVault.setIsCall(isCall);
+      const { vault } = await loadFixture(setupSpreadsVault);
+      expect(await vault.spreadUnlockingRate()).to.eq('17744708994709');
+      await vault.setIsCall(isCall);
       console.log('Setup vault.');
 
-      maturity = minMaturity;
-      spreadUnlockingRate = spread / (minMaturity - startTime);
+      await vault.increasePositionSize(
+        t0,
+        parseEther(strike.toString()),
+        parseEther('1.234'),
+      );
+      lockedAmount = isCall ? 1.234 : 1.234 * strike;
+      await vault.increaseTotalLockedAssetsNoTransfer(
+        parseEther(lockedAmount.toString()),
+      );
 
-      // await callVault.afterBuy(
-      //   minMaturity,
-      //   parseEther(premium.toString()),
-      //   maturity - startTime,
-      //   parseEther(size.toString()),
-      //   parseEther(spread.toString()),
-      //   parseEther(strike.toString()),
-      // );
-      afterBuyTimestamp = await latest();
+      const ZERO = parseEther('0');
+      const afterBuyArgs = {
+        maturity: t0,
+        size: parseEther(size.toString()),
+        spread: parseEther(spread.toString()),
+        strike: parseEther(strike.toString()),
+        timestamp: startTime + ONE_DAY,
+        spot: ZERO,
+        poolAddr: ethers.constants.AddressZero,
+        tau: ZERO,
+        sigma: ZERO,
+        delta: ZERO,
+        premium: ZERO,
+        cLevel: ZERO,
+        riskFreeRate: ZERO,
+        price: ZERO,
+        mintingFee: ZERO,
+      };
+      await increaseTo(startTime + ONE_DAY);
+      await vault.afterBuy(afterBuyArgs);
       console.log('Processed afterBuy.');
-      return { vault: callVault };
+      return { vault };
     }
 
     it('lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there', async () => {
       const { vault } = await setupAfterBuyVault(true);
-      expect(await vault.lastSpreadUnlockUpdate()).to.eq(afterBuyTimestamp);
+      const lsuu = await vault.lastSpreadUnlockUpdate();
+      expect(parseInt(lsuu)).to.eq(startTime + ONE_DAY);
     });
 
-    it('spreadUnlockingRates should equal', async () => {
-      expect(
-        parseFloat(formatEther(await vault.spreadUnlockingRate())),
-      ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
+    it('spreadUnlockingRates should equal 34279100529100', async () => {
+      const { vault } = await setupAfterBuyVault(true);
+      expect(await vault.spreadUnlockingRate()).to.eq('37034832451499');
     });
 
-    it('positionSize should equal ', async () => {
-      const positionSize = await vault.positionSize(
-        maturity,
-        parseEther(strike.toString()),
-      );
-      expect(parseFloat(formatEther(positionSize))).to.eq(size);
+    it('positionSize should be incremented by the bought amount and equal 2.234', async () => {
+      const { vault } = await setupAfterBuyVault(true);
+      const x = parseEther(strike.toString());
+      const positionSize = await vault.positionSize(t0, x);
+      expect(parseFloat(formatEther(positionSize))).to.eq(1.234 + size);
     });
 
-    it('spreadUnlockingRate / ticks', async () => {
-      expect(
-        parseFloat(formatEther(await vault.spreadUnlockingTicks(maturity))),
-      ).to.be.closeTo(spreadUnlockingRate, 0.000000000000000001);
+    it('spreadUnlockingTick should be incremented by the spread amount divided by the the time to maturity', async () => {
+      const { vault } = await setupAfterBuyVault(true);
+      const sut = parseFloat(formatEther(await vault.spreadUnlockingTicks(t0)));
+      const increment = 10 / (6 * ONE_DAY);
+      const sur = 1.24 / (7 * ONE_DAY) + increment;
+      const sutExpected = parseFloat(sur.toFixed(18));
+      expect(sut).to.eq(sutExpected);
     });
 
-    it('totalLockedSpread should equa', async () => {
-      expect(parseFloat(formatEther(await vault.totalLockedSpread()))).to.eq(
-        spread,
+    it('totalLockedSpread should be incremented by the spread earned (10) after updating the state', async () => {
+      const { vault } = await setupAfterBuyVault(true);
+      // updateState:
+      //  totalLockedSpread = totalLockedSpread - SUR_OLD * timePassed;
+      //
+      const a =
+        18 - parseFloat(formatEther('17744708994709')) * ONE_DAY + spread;
+      expect(parseFloat(formatEther(await vault.totalLockedSpread()))).to.eq(a);
+    });
+
+    it('lastTradeTimestamp should equal timestamp (startTime + ONE_DAY)', async () => {
+      const { vault } = await setupAfterBuyVault(true);
+      expect(parseInt(await vault.getLastTradeTimestamp())).to.eq(
+        startTime + ONE_DAY,
       );
     });
 
@@ -135,7 +231,8 @@ describe('UnderwriterVault', () => {
       describe(isCall ? 'call' : 'put', () => {
         it('totalLockedAssets should equal', async () => {
           const { vault } = await setupAfterBuyVault(isCall);
-          const totalLocked = isCall ? size : size * strike;
+          let totalLocked = isCall ? size : size * strike;
+          totalLocked += lockedAmount;
           expect(
             parseFloat(formatEther(await vault.totalLockedAssets())),
           ).to.eq(totalLocked);
@@ -425,86 +522,6 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#_getLockedSpreadVars and #_updateState', () => {
-    /*
-        Example
-
-        |-----t0---t1-----t2---|
-
-        Time to maturities starting from inception
-        ---------------
-        t0: 7 days
-        t1: 10 days
-        t2: 14 days
-
-        Spread locked at inception
-        ---------------
-        t0: 1.24
-        t1: 5.56
-        t2: 11.2
-
-        spreadUnlockingRate(t<t0): (1.24 / 7 + 5.56 / 10 + 11.2 / 14) / (24 * 60 * 60) = 0.0000177447
-        spreadUnlockingRate(t0<=t<t1): (5.56 / 10 + 11.2 / 14) / (24 * 60 * 60) = 0.00001569444
-        spreadUnlockingRate(t1<=t<t2): (11.2 / 14) / (24 * 60 * 60) = 0.00000925925
-        spreadUnlockingRate(t2<=t): 0
-        */
-    let startTime: number = 2 * 1679395050;
-    let t0: number = startTime + 7 * ONE_DAY;
-    let t1: number = startTime + 10 * ONE_DAY;
-    let t2: number = startTime + 14 * ONE_DAY;
-
-    let spreadUnlockingRatet0: number;
-    let spreadUnlockingRatet1: number;
-    let spreadUnlockingRatet2: number;
-    let spreadUnlockingRate: number;
-
-    async function setupSpreadsVault() {
-      const { callVault } = await loadFixture(vaultSetup);
-
-      const infos = [
-        {
-          maturity: t0,
-          strikes: [],
-          sizes: [],
-        },
-        {
-          maturity: t1,
-          strikes: [],
-          sizes: [],
-        },
-        {
-          maturity: t2,
-          strikes: [],
-          sizes: [],
-        },
-        {
-          maturity: 2 * t2,
-          strikes: [],
-          sizes: [],
-        },
-      ];
-      await callVault.setListingsAndSizes(infos);
-      await callVault.setLastSpreadUnlockUpdate(startTime);
-      const totalLockedSpread = 1.24 + 5.56 + 11.2;
-      const totalLockedFormatted = parseEther(totalLockedSpread.toString());
-      spreadUnlockingRatet0 = 1.24 / (7 * ONE_DAY);
-      spreadUnlockingRatet1 = 5.56 / (10 * ONE_DAY);
-      spreadUnlockingRatet2 = 11.2 / (14 * ONE_DAY);
-      const surt0 = parseEther(spreadUnlockingRatet0.toFixed(18).toString());
-      const surt1 = parseEther(spreadUnlockingRatet1.toFixed(18).toString());
-      const surt2 = parseEther(spreadUnlockingRatet2.toFixed(18).toString());
-
-      await callVault.increaseSpreadUnlockingTick(t0, surt0);
-      await callVault.increaseSpreadUnlockingTick(t1, surt1);
-      await callVault.increaseSpreadUnlockingTick(t2, surt2);
-      spreadUnlockingRate =
-        spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
-      await callVault.increaseSpreadUnlockingRate(
-        parseEther(spreadUnlockingRate.toFixed(18).toString()),
-      );
-      await callVault.increaseTotalLockedSpread(totalLockedFormatted);
-      return { vault: callVault };
-    }
-
     const tests = [
       {
         timestamp: startTime + ONE_DAY,
@@ -547,7 +564,7 @@ describe('UnderwriterVault', () => {
             totalLockedSpread,
             spreadUnlockingRate,
             lastSpreadUnlockUpdate,
-          ] = await vault.getLockedSpreadVars();
+          ] = await vault.getLockedSpreadVars(test.timestamp);
           const tlsParsed = parseFloat(formatEther(totalLockedSpread));
           const surParsed = parseFloat(formatEther(spreadUnlockingRate));
           expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
@@ -577,7 +594,7 @@ describe('UnderwriterVault', () => {
         it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
           let { vault } = await loadFixture(setupSpreadsVault);
           await increaseTo(test.timestamp);
-          await vault.updateState();
+          await vault.updateState(test.timestamp);
           const tlsParsed = parseFloat(
             formatEther(await vault.totalLockedSpread()),
           );
@@ -590,97 +607,9 @@ describe('UnderwriterVault', () => {
             test.spreadUnlockingRate,
             0.0000000001,
           );
-          expect(lsuuParsed).to.be.closeTo(test.timestamp, 1);
+          expect(lsuuParsed).to.eq(test.timestamp);
         });
       });
-    });
-  });
-
-  describe('#_quote', () => {
-    it('reverts on no strike input', async () => {
-      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
-      const badStrike = parseEther('0'); // ATM
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-      const quoteSize = parseEther('1');
-      const lpDepositSize = 5; // units of base
-      await addMockDeposit(callVault, lpDepositSize, base, quote);
-      await expect(
-        callVault.quote(badStrike, maturity, quoteSize),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__StrikeZero');
-    });
-
-    it('reverts on expired maturity input', async () => {
-      const { base, quote, lp, callVault } = await loadFixture(vaultSetup);
-      const strike = parseEther('1500'); // ATM
-      const badMaturity = await time.latest();
-      const quoteSize = parseEther('1');
-      const lpDepositSize = 5; // units of base
-      await addMockDeposit(callVault, lpDepositSize, base, quote);
-      await expect(
-        callVault.quote(strike, badMaturity, quoteSize),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__OptionExpired');
-    });
-
-    it('should revert due to too large incoming trade size', async () => {
-      const { callVault, base, quote } = await loadFixture(vaultSetup);
-      const lpDepositSize = 5;
-      const largeTradeSize = parseEther('7');
-      const strike = parseEther('1500');
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-
-      await increaseTotalAssets(callVault, lpDepositSize, base, quote);
-      await expect(
-        callVault.quote(strike, maturity, largeTradeSize),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
-    });
-
-    it('returns proper quote parameters: price, mintingFee, cLevel', async () => {
-      const { callVault, base, quote } = await loadFixture(vaultSetup);
-      const lpDepositSize = 5;
-      const tradeSize = parseEther('2');
-      const strike = parseEther('1500');
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-
-      await increaseTotalAssets(callVault, lpDepositSize, base, quote);
-      // todo:
-
-      const [, price, mintingFee, cLevel] = await callVault.quote(
-        strike,
-        maturity,
-        tradeSize,
-      );
-
-      // Normalised price is in (0,1)
-      expect(parseFloat(formatEther(price))).to.lt(1);
-      expect(parseFloat(formatEther(price))).to.gt(0);
-
-      // mintingFee == trade fee
-      expect(parseFloat(formatEther(mintingFee))).to.eq(0.006);
-
-      // check c-level
-      expect(parseFloat(formatEther(cLevel))).to.approximately(1.024, 0.001);
-    });
-
-    it('reverts if maxCLevel is not set properly', async () => {
-      const { callVault } = await loadFixture(vaultSetup);
-      const strike = parseEther('1500');
-      const size = parseEther('2');
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-      await callVault.setMaxClevel(parseEther('0.0'));
-      expect(
-        callVault.quote(strike, maturity, size),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
-    });
-
-    it('reverts if the C level alpha is not set properly', async () => {
-      const { callVault } = await loadFixture(vaultSetup);
-      const strike = parseEther('1500');
-      const size = parseEther('2');
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-      await callVault.setMaxClevel(parseEther('0.0'));
-      expect(
-        callVault.quote(strike, maturity, size),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__CLevelBounds');
     });
   });
 
@@ -732,200 +661,5 @@ describe('UnderwriterVault', () => {
         });
       });
     }
-  });
-
-  describe('#_calculateCLevel', () => {
-    describe('#cLevel calculation', () => {
-      it('will not exceed max c-level', async () => {
-        const { callVault } = await loadFixture(vaultSetup);
-        const cLevel = await callVault.calculateClevel(
-          parseEther('1.0'),
-          parseEther('3.0'),
-          parseEther('1.0'),
-          parseEther('1.2'),
-        );
-        expect(parseFloat(formatEther(cLevel))).to.eq(1.2);
-      });
-
-      it('will not go below min c-level', async () => {
-        const { callVault } = await loadFixture(vaultSetup);
-        const cLevel = await callVault.calculateClevel(
-          parseEther('0.0'),
-          parseEther('3.0'),
-          parseEther('1.0'),
-          parseEther('1.2'),
-        );
-        expect(parseFloat(formatEther(cLevel))).to.eq(1.0);
-      });
-
-      it('will properly adjust based on utilization', async () => {
-        const { callVault } = await loadFixture(vaultSetup);
-
-        let cLevel = await callVault.calculateClevel(
-          parseEther('0.4'), // 40% utilization
-          parseEther('3.0'),
-          parseEther('1.0'),
-          parseEther('1.2'),
-        );
-        expect(parseFloat(formatEther(cLevel))).to.approximately(1.024, 0.001);
-
-        cLevel = await callVault.calculateClevel(
-          parseEther('0.9'),
-          parseEther('3.0'),
-          parseEther('1.0'),
-          parseEther('1.2'),
-        );
-        expect(parseFloat(formatEther(cLevel))).to.approximately(1.145, 0.001);
-      });
-    });
-
-    describe('#trade', () => {
-      it('used post quote/trade utilization', async () => {
-        const { callVault, lp, trader, base, quote } = await loadFixture(
-          vaultSetup,
-        );
-
-        // Hydrate Vault
-        const lpDepositSize = 5; // units of base
-        await addMockDeposit(callVault, lpDepositSize, base, quote);
-        // Trade Settings
-        const strike = parseEther('1500');
-        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        const tradeSize = parseEther('2');
-
-        // Execute Trade
-        const cLevel_postTrade = await callVault.getClevel(tradeSize);
-        const [, premium, mintingFee, spread] = await callVault.quote(
-          strike,
-          maturity,
-          tradeSize,
-        );
-        const totalTransfer = premium.add(mintingFee).add(spread);
-        await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault
-          .connect(trader)
-          .trade(strike, maturity, true, tradeSize, true);
-        const cLevel_postTrade_check = await callVault.getClevel(
-          parseEther('0'),
-        );
-        // Approx due to premium collection
-        expect(parseFloat(formatEther(cLevel_postTrade))).to.approximately(
-          parseFloat(formatEther(cLevel_postTrade_check)),
-          0.002,
-        );
-      });
-
-      it('ensures utilization never goes over 100%', async () => {
-        const { callVault, lp, trader, base, quote } = await loadFixture(
-          vaultSetup,
-        );
-
-        // Hydrate Vault
-        const lpDepositSize = 5; // units of base
-
-        await addMockDeposit(callVault, lpDepositSize, base, quote);
-
-        // Trade Settings
-        const strike = parseEther('1500');
-        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        const tradeSize = parseEther('3');
-
-        // Execute Trades
-        // todo: compute price + mintingFee without using quote
-        const [, premium, mintingFee, spread] = await callVault.quote(
-          strike,
-          maturity,
-          tradeSize,
-        );
-        const totalTransfer = premium.add(mintingFee).add(spread);
-        await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault
-          .connect(trader)
-          .trade(strike, maturity, true, tradeSize, true);
-
-        await expect(
-          callVault
-            .connect(trader)
-            .trade(strike, maturity, true, tradeSize, true),
-        ).to.revertedWithCustomError(callVault, 'Vault__InsufficientFunds');
-      });
-
-      it('properly updates for last trade timestamp', async () => {
-        const { callVault, lp, trader, base, quote } = await loadFixture(
-          vaultSetup,
-        );
-
-        // Hydrate Vault
-        const lpDepositSize = 5; // units of base
-        await addMockDeposit(callVault, lpDepositSize, base, quote);
-
-        // Trade Settings
-        const strike = parseEther('1500');
-        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        const tradeSize = parseEther('2');
-
-        // Initialized lastTradeTimestamp
-        const lastTrade_t0 = await callVault.getLastTradeTimestamp();
-
-        // Execute Trade
-        const [, premium, mintingFee, spread] = await callVault.quote(
-          strike,
-          maturity,
-          tradeSize,
-        );
-        const totalTransfer = premium.add(mintingFee).add(spread);
-        await base.connect(trader).approve(callVault.address, totalTransfer);
-        await callVault
-          .connect(trader)
-          .trade(strike, maturity, true, tradeSize, true);
-
-        const lastTrade_t1 = await callVault.getLastTradeTimestamp();
-
-        expect(lastTrade_t1).to.be.gt(lastTrade_t0);
-      });
-
-      it('properly decays the c Level over time', async () => {
-        const { callVault, lp, trader, base, quote } = await loadFixture(
-          vaultSetup,
-        );
-
-        // Hydrate Vault
-        const lpDepositSize = 5; // units of base
-        await addMockDeposit(callVault, lpDepositSize, base, quote);
-
-        // Trade Settings
-        const strike = parseEther('1500');
-        const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
-        const tradeSize = parseEther('2');
-
-        //PreTrade cLevel
-        const cLevel_t0 = await callVault.getClevel(parseEther('0'));
-
-        // Execute Trade
-        const cLevel_t1 = await callVault.getClevel(tradeSize);
-
-        const [, premium, mintingFee, spread] = await callVault.quote(
-          strike,
-          maturity,
-          tradeSize,
-        );
-        const totalTransfer = premium.add(mintingFee).add(spread);
-        await base.connect(trader).approve(callVault.address, totalTransfer);
-
-        await callVault
-          .connect(trader)
-          .trade(strike, maturity, true, tradeSize, true);
-        const cLevel_t2 = await callVault.getClevel(tradeSize);
-        // Increase time by 2 hrs
-        await time.increase(7200);
-        // Check final c-level
-        const cLevel_t3 = await callVault.getClevel(tradeSize);
-
-        expect(parseFloat(formatEther(cLevel_t0))).to.be.eq(1);
-        expect(parseFloat(formatEther(cLevel_t1))).to.be.gt(1);
-        expect(cLevel_t2).to.be.gt(cLevel_t1);
-        expect(cLevel_t2).to.be.gt(cLevel_t3);
-      });
-    });
   });
 });

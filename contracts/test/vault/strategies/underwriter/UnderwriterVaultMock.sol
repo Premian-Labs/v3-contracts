@@ -20,6 +20,8 @@ import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.so
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../../libraries/Constants.sol";
 
+import {console} from "hardhat/console.sol";
+
 contract UnderwriterVaultMock is UnderwriterVault {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -112,16 +114,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.maturityToStrikes[maturity].length();
     }
 
-    function updateState() external {
-        return _updateState();
+    function updateState(uint256 timestamp) external {
+        return _updateState(timestamp);
     }
 
-    function getLockedSpreadVars()
-        external
-        view
-        returns (LockedSpreadVars memory)
-    {
-        return _getLockedSpreadVars();
+    function getLockedSpreadVars(
+        uint256 timestamp
+    ) external view returns (LockedSpreadVars memory) {
+        return _getLockedSpreadVars(timestamp);
     }
 
     function increasePositionSize(
@@ -276,6 +276,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.spreadUnlockingTicks[maturity] =
             l.spreadUnlockingTicks[maturity] +
             value;
+    }
+
+    function increaseTotalLockedAssetsNoTransfer(
+        UD60x18 value
+    ) external onlyOwner {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.totalLockedAssets = l.totalLockedAssets + value;
     }
 
     function increaseTotalLockedAssets(UD60x18 value) external onlyOwner {
