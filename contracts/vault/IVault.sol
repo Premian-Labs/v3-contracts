@@ -33,9 +33,9 @@ interface IVault is IERC4626Internal, IERC20Internal {
         UD60x18 vaultFee
     );
 
-    event ManagementFeePaid(address indexed receiver, uint256 managementFee);
+    event ManagementFeePaid(address indexed recipient, uint256 managementFee);
 
-    event PerformanceFeePaid(address indexed receiver, uint256 performanceFee);
+    event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
     function getTradeQuote(
         uint256 strike,
