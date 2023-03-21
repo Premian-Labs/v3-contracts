@@ -21,6 +21,8 @@ import { feeds, Token, tokens } from '../../utils/addresses';
 import { ONE_ETHER } from '../../utils/constants';
 import { increaseTo, latest } from '../../utils/time';
 
+import { AdapterType } from '../../utils/sdk/types';
+
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
 enum PricingPath {
@@ -173,6 +175,51 @@ describe('ChainlinkAdapter', () => {
 
     return { deployer, instance, stub, stubCoin };
   }
+
+  describe('#describePricingPath', () => {
+    it('should describe pricing path', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      const USD = '0x0000000000000000000000000000000000000348';
+
+      let description = await instance.describePricingPath(
+        bnToAddress(BigNumber.from(1)),
+      );
+
+      expect(description[0]).to.eq(AdapterType.CHAINLINK);
+      expect(description[1]).to.eq(USD);
+      expect(description[2][0].length).to.eq(0);
+      expect(description[3].length).to.eq(0);
+
+      description = await instance.describePricingPath(tokens.WETH.address);
+
+      expect(description[0]).to.eq(AdapterType.CHAINLINK);
+      expect(description[1]).to.eq(USD);
+      expect(description[2][0]).to.deep.eq([
+        '0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6',
+      ]);
+      expect(description[3]).to.deep.eq(['8']);
+
+      description = await instance.describePricingPath(tokens.DAI.address);
+
+      expect(description[0]).to.eq(AdapterType.CHAINLINK);
+      expect(description[1]).to.eq(USD);
+      expect(description[2][0]).to.deep.eq([
+        '0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82',
+      ]);
+      expect(description[3]).to.deep.eq(['8']);
+
+      description = await instance.describePricingPath(tokens.BOND.address);
+
+      expect(description[0]).to.eq(AdapterType.CHAINLINK);
+      expect(description[1]).to.eq(USD);
+      expect(description[2][0]).to.deep.eq([
+        '0x5667eE03110045510897aDa33DC561cEfCBcC904',
+        '0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6',
+      ]);
+      expect(description[3]).to.deep.eq(['18', '8']);
+    });
+  });
 
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {

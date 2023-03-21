@@ -1,10 +1,13 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
+import {
+  ERC20Mock__factory,
+  IPoolMock__factory,
+  OracleAdapterMock__factory,
+} from '../../typechain';
 import { BigNumber } from 'ethers';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import {
   getValidMaturity,
   increaseTo,
@@ -34,15 +37,12 @@ describe('Pool', () => {
     const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    const oracleAdapter = await deployMockContract(deployer as any, [
-      'function quote(address,address) external view returns (uint256)',
-      'function quoteFrom(address,address,uint256) external view returns (uint256)',
-      'function upsertPair(address,address) external',
-    ]);
-
-    await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
-    await oracleAdapter.mock.quoteFrom.returns(parseUnits('1000', 18));
-    await oracleAdapter.mock.upsertPair.returns();
+    const oracleAdapter = await new OracleAdapterMock__factory(deployer).deploy(
+      base.address,
+      quote.address,
+      parseEther('1000'),
+      parseEther('1000'),
+    );
 
     const p = await PoolUtil.deploy(
       deployer,
@@ -72,7 +72,7 @@ describe('Pool', () => {
       );
 
       const r = await tx.wait(1);
-      const poolAddress = (r as any).events[0].args.poolAddress;
+      const poolAddress = (r as any).events[1].args.poolAddress;
 
       return IPoolMock__factory.connect(poolAddress, deployer);
     };
@@ -984,7 +984,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
+      await oracleAdapter.setQuoteFrom(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.exercise(trader.address);
@@ -1013,7 +1013,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+      await oracleAdapter.setQuote(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.exercise(trader.address);
@@ -1053,7 +1053,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndSell);
 
-      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
+      await oracleAdapter.setQuoteFrom(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settle(trader.address);
@@ -1087,7 +1087,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndSell);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+      await oracleAdapter.setQuote(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.settle(trader.address);
@@ -1132,7 +1132,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quoteFrom.returns(parseUnits('1250', 18));
+      await oracleAdapter.setQuoteFrom(parseUnits('1250', 18));
 
       await increaseTo(maturity);
       await callPool.settlePosition(pKey);
@@ -1171,7 +1171,7 @@ describe('Pool', () => {
         protocolFees,
       } = await loadFixture(deployAndBuy);
 
-      await oracleAdapter.mock.quote.returns(parseUnits('999', 18));
+      await oracleAdapter.setQuote(parseUnits('999', 18));
 
       await increaseTo(maturity);
       await callPool.settlePosition(pKey);

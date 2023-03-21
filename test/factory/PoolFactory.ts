@@ -1,9 +1,13 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { ERC20Mock__factory, IPool__factory } from '../../typechain';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { PoolUtil } from '../../utils/PoolUtil';
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
+import {
+  ERC20Mock__factory,
+  IPool__factory,
+  OracleAdapterMock__factory,
+} from '../../typechain';
+import { parseEther } from 'ethers/lib/utils';
+import { BigNumber } from 'ethers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   getLastFridayOfMonth,
   getValidMaturity,
@@ -13,8 +17,8 @@ import {
 } from '../../utils/time';
 
 import { tokens } from '../../utils/addresses';
-import { BigNumber } from 'ethers';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { PoolUtil } from '../../utils/PoolUtil';
+import { AdapterType } from '../../utils/sdk/types';
 
 describe('PoolFactory', () => {
   const isCall = true;
@@ -26,15 +30,12 @@ describe('PoolFactory', () => {
     const base = await new ERC20Mock__factory(deployer).deploy('WETH', 18);
     const quote = await new ERC20Mock__factory(deployer).deploy('USDC', 6);
 
-    const oracleAdapter = await deployMockContract(deployer as any, [
-      'function quote(address,address) external view returns (uint256)',
-      'function quoteFrom(address,address,uint256) external view returns (uint256)',
-      'function upsertPair(address,address) external',
-    ]);
-
-    await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
-    await oracleAdapter.mock.quoteFrom.returns(parseUnits('1000', 18));
-    await oracleAdapter.mock.upsertPair.returns();
+    const oracleAdapter = await new OracleAdapterMock__factory(deployer).deploy(
+      base.address,
+      quote.address,
+      parseEther('1000'),
+      parseEther('1000'),
+    );
 
     const p = await PoolUtil.deploy(
       deployer,
@@ -89,7 +90,7 @@ describe('PoolFactory', () => {
       });
 
       const r = await tx.wait(1);
-      const poolAddress = (r as any).events[0].args.poolAddress;
+      const poolAddress = (r as any).events[1].args.poolAddress;
 
       expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(poolAddress);
     });
@@ -105,10 +106,27 @@ describe('PoolFactory', () => {
       });
 
       const r = await tx.wait(1);
-      const poolAddress = (r as any).events[0].args.poolAddress;
+      const pricingPath = (r as any).events[0].args;
+      const poolAddress = (r as any).events[1].args.poolAddress;
 
       const pool = IPool__factory.connect(poolAddress, deployer);
       const poolSettings = await pool.getPoolSettings();
+
+      expect([
+        pricingPath.baseAdapterType,
+        pricingPath.basePath,
+        pricingPath.basePathDecimals,
+        pricingPath.quoteAdapterType,
+        pricingPath.quotePath,
+        pricingPath.quotePathDecimals,
+      ]).to.deep.eq([
+        AdapterType.CHAINLINK,
+        [['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6']],
+        [8],
+        AdapterType.CHAINLINK,
+        [['0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82']],
+        [8],
+      ]);
 
       expect([
         poolSettings.base,
