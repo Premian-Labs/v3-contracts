@@ -37,8 +37,8 @@ abstract contract ChainlinkAdapterInternal is
     uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
-    address private immutable WRAPPED_NATIVE_TOKEN;
-    address private immutable WRAPPED_BTC_TOKEN;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
+    address internal immutable WRAPPED_BTC_TOKEN;
 
     constructor(address _wrappedNativeToken, address _wrappedBTCToken) {
         WRAPPED_NATIVE_TOKEN = _wrappedNativeToken;
@@ -637,5 +637,23 @@ abstract contract ChainlinkAdapterInternal is
 
     function _isWBTC(address token) internal view returns (bool) {
         return token == WRAPPED_BTC_TOKEN;
+    }
+
+    // TODO: consolidate when merged with #103
+    function _resizeArray(address[] memory array, uint256 size) internal pure {
+        if (array.length == size) return;
+
+        assembly {
+            mstore(array, size)
+        }
+    }
+
+    // TODO: consolidate when merged with #103
+    function _resizeArray(uint8[] memory array, uint256 size) internal pure {
+        if (array.length == size) return;
+
+        assembly {
+            mstore(array, size)
+        }
     }
 }

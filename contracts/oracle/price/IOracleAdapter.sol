@@ -6,6 +6,12 @@ pragma solidity ^0.8.0;
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
+    enum AdapterType {
+        NONE,
+        CHAINLINK,
+        UNISWAP_V3
+    }
+
     /// @notice Returns whether the pair has already been added to the adapter and if it
     ///         supports the path required for the pair
     ///         (true, true): Pair is fully supported
@@ -51,4 +57,18 @@ interface IOracleAdapter {
         address tokenOut,
         uint256 target
     ) external view returns (uint256);
+
+    /// @notice Describes the pricing path used, given denomination (ETH, USD, etc).
+    /// @dev The denomination is hardcoded for each adapter and will therefore be subject to change between different adapters.
+    /// @param token The token from where the pricing path starts
+    /// @return The type of adapter
+    /// @return The denomination used by the adapter
+    /// @return The path required to convert the token to the denomination
+    /// @return The decimals of each token in the path
+    function describePricingPath(
+        address token
+    )
+        external
+        view
+        returns (AdapterType, address, address[][] memory, uint8[] memory);
 }
