@@ -45,6 +45,44 @@ contract UnderwriterVaultMock is UnderwriterVault {
         address routerAddress
     ) UnderwriterVault(oracleAddress, factoryAddress, routerAddress) {}
 
+    function assetDecimals() external view returns (uint8) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.assetDecimals();
+    }
+
+    function convertAssetToUD60x18(
+        uint256 value
+    ) external view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.convertAssetToUD60x18(value);
+    }
+
+    function convertAssetToSD59x18(
+        int256 value
+    ) external view returns (SD59x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.convertAssetToSD59x18(value);
+    }
+
+    function convertAssetFromUD60x18(
+        UD60x18 value
+    ) external view returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.convertAssetFromUD60x18(value);
+    }
+
+    function convertAssetFromSD59x18(
+        SD59x18 value
+    ) external view returns (int256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        return l.convertAssetFromSD59x18(value);
+    }
+
     function getMaturityAfterTimestamp(
         uint256 timestamp
     ) external view returns (uint256) {
@@ -153,6 +191,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 maturity
     ) external view returns (UD60x18) {
         return UnderwriterVaultStorage.layout().positionSizes[maturity][strike];
+    }
+
+    function setLastTradeTimestamp(uint256 timestamp) external {
+        UnderwriterVaultStorage.layout().lastTradeTimestamp = timestamp;
     }
 
     function setTotalLockedAssets(UD60x18 value) external onlyOwner {
@@ -607,6 +649,27 @@ contract UnderwriterVaultMock is UnderwriterVault {
                 minCLevel,
                 maxCLevel,
                 decayRate
+            );
+    }
+
+    function getTradeQuoteInternal(
+        uint256 timestamp,
+        UD60x18 spot,
+        UD60x18 strike,
+        uint64 maturity,
+        bool isCall,
+        UD60x18 size,
+        bool isBuy
+    ) external view returns (uint256 maxSize, uint256 price) {
+        return
+            _getTradeQuote(
+                timestamp,
+                spot,
+                strike,
+                maturity,
+                isCall,
+                size,
+                isBuy
             );
     }
 }

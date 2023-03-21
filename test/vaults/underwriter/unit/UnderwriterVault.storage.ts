@@ -1,30 +1,16 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { vaultSetup } from '../VaultSetup';
 import {
-  addMockDeposit,
-  createPool,
-  increaseTotalAssets,
-  vaultSetup,
-} from '../VaultSetup';
-import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
+  formatEther,
+  formatUnits,
+  parseEther,
+  parseUnits,
+} from 'ethers/lib/utils';
 import { expect } from 'chai';
-import {
-  getValidMaturity,
-  increaseTo,
-  latest,
-  ONE_DAY,
-  ONE_HOUR,
-  ONE_WEEK,
-} from '../../../../utils/time';
-import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
-import { BigNumber } from 'ethers';
-import { setMaturities } from '../VaultSetup';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { ONE_DAY } from '../../../../utils/time';
+import { UnderwriterVaultMock } from '../../../../typechain';
 
 let startTime: number;
-let spot: number;
-let minMaturity: number;
-let maxMaturity: number;
-
 let vault: UnderwriterVaultMock;
 
 let t0: number;
@@ -33,6 +19,121 @@ let t2: number;
 let t3: number;
 
 describe('UnderwriterVaultStorage', () => {
+  describe('#convertAssetToUD60x18', () => {
+    let tests = [true, false];
+
+    tests.forEach(async (isCallVault) => {
+      let name = isCallVault ? 'call' : 'put';
+      it(`should convert a uint256 to UD60x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = 11.2334;
+        const valueInUnits = parseUnits(
+          value.toString(),
+          await vault.assetDecimals(),
+        );
+        const valueIn18 = await vault.convertAssetToUD60x18(valueInUnits);
+        const convertedValue = parseFloat(formatEther(valueIn18));
+
+        expect(convertedValue).to.be.eq(value);
+      });
+    });
+  });
+
+  describe('#convertAssetToSD59x18', () => {
+    let tests = [true, false];
+
+    tests.forEach(async (isCallVault) => {
+      let name = isCallVault ? 'call' : 'put';
+      it(`should convert a positive int256 to SD59x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = 11.2334;
+        const valueInUnits = parseUnits(
+          value.toString(),
+          await vault.assetDecimals(),
+        );
+        const valueIn18 = await vault.convertAssetToSD59x18(valueInUnits);
+        const convertedValue = parseFloat(formatEther(valueIn18));
+
+        expect(convertedValue).to.be.eq(value);
+      });
+
+      it(`should convert a negative int256 to SD59x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = -11.2334;
+        const valueInUnits = parseUnits(
+          value.toString(),
+          await vault.assetDecimals(),
+        );
+        const valueIn18 = await vault.convertAssetToSD59x18(valueInUnits);
+        const convertedValue = parseFloat(formatEther(valueIn18));
+
+        expect(convertedValue).to.be.eq(value);
+      });
+    });
+  });
+
+  describe('#convertAssetFromUD60x18', () => {
+    let tests = [true, false];
+
+    tests.forEach(async (isCallVault) => {
+      let name = isCallVault ? 'call' : 'put';
+      it(`should convert a uint256 to UD60x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = 11.2334;
+        const valueIn18 = parseEther(value.toString());
+        const valueInUnits = await vault.convertAssetFromUD60x18(valueIn18);
+        const convertedValue = parseFloat(
+          formatUnits(valueInUnits, await vault.assetDecimals()),
+        );
+
+        expect(convertedValue).to.be.eq(value);
+      });
+    });
+  });
+
+  describe('#convertAssetFromSD59x18', () => {
+    let tests = [true, false];
+
+    tests.forEach(async (isCallVault) => {
+      let name = isCallVault ? 'call' : 'put';
+      it(`should convert a positive int256 to SD59x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = 11.2334;
+        const valueIn18 = parseEther(value.toString());
+        const valueInUnits = await vault.convertAssetFromSD59x18(valueIn18);
+        const convertedValue = parseFloat(
+          formatUnits(valueInUnits, await vault.assetDecimals()),
+        );
+
+        expect(convertedValue).to.be.eq(value);
+      });
+
+      it(`should convert a negative int256 to SD59x18 for ${name} vault`, async () => {
+        const { callVault, putVault } = await loadFixture(vaultSetup);
+        vault = isCallVault ? callVault : putVault;
+
+        const value = -11.2334;
+        const valueIn18 = parseEther(value.toString());
+        const valueInUnits = await vault.convertAssetFromSD59x18(valueIn18);
+        const convertedValue = parseFloat(
+          formatUnits(valueInUnits, await vault.assetDecimals()),
+        );
+
+        expect(convertedValue).to.be.eq(value);
+      });
+    });
+  });
+
   describe('#getMaturityAfterTimestamp', () => {
     before(async () => {
       const { callVault } = await loadFixture(vaultSetup);

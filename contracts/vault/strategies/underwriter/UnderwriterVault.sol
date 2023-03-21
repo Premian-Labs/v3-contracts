@@ -738,6 +738,7 @@ contract UnderwriterVault is
     }
 
     function _getTradeQuote(
+        uint256 timestamp,
         UD60x18 spot,
         UD60x18 strike,
         uint64 maturity,
@@ -747,8 +748,6 @@ contract UnderwriterVault is
     ) internal view returns (uint256 maxSize, uint256 price) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-
-        uint256 timestamp = block.timestamp;
 
         _ensureTradeableWithVault(l.isCall, isCall, isBuy);
         _ensureValidOption(timestamp, strike, maturity);
@@ -783,6 +782,7 @@ contract UnderwriterVault is
     ) external view returns (uint256 maxSize, uint256 price) {
         return
             _getTradeQuote(
+                block.timestamp,
                 _getSpotPrice(),
                 UD60x18.wrap(strike),
                 maturity,

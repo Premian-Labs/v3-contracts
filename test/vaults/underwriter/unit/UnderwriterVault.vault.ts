@@ -82,16 +82,25 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#getTradeQuote', () => {
+  describe('#_getTradeQuote', () => {
     it('reverts on no strike input', async () => {
       const { base, quote, callVault } = await loadFixture(vaultSetup);
+
+      const lastTradeTimestamp = 500000000;
+      await callVault.setLastTradeTimestamp(lastTradeTimestamp);
+
+      const timestamp = 1000000000;
+      const spot = parseEther('2000');
       const strike = parseEther('1500'); // ATM
       const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+
       const quoteSize = parseEther('4.9999');
       const depositSize = 5; // units of base
       await addMockDeposit(callVault, depositSize, base, quote);
 
-      const output = await callVault.getTradeQuote(
+      const output = await callVault.getTradeQuoteInternal(
+        timestamp,
+        spot,
         strike,
         maturity,
         true,
