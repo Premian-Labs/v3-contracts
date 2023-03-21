@@ -235,11 +235,9 @@ contract UnderwriterVault is
 
     /// @notice Gets the total locked spread for the vault
     /// @return The total locked spread
-    function _getLockedSpreadVars()
-        internal
-        view
-        returns (LockedSpreadVars memory)
-    {
+    function _getLockedSpreadVars(
+        uint256 timestamp
+    ) internal view returns (LockedSpreadVars memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -249,8 +247,6 @@ contract UnderwriterVault is
         vars.spreadUnlockingRate = l.spreadUnlockingRate;
         vars.totalLockedSpread = l.totalLockedSpread;
         vars.lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
-
-        uint256 timestamp = block.timestamp;
 
         while (current <= timestamp && current != 0) {
             vars.totalLockedSpread =
@@ -298,7 +294,7 @@ contract UnderwriterVault is
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
         return
             _balanceOfAssetUD60x18(address(this)) -
-            _getLockedSpreadVars().totalLockedSpread;
+            _getLockedSpreadVars(block.timestamp).totalLockedSpread;
     }
 
     /// @notice Gets the current price per share for the vault
@@ -306,17 +302,17 @@ contract UnderwriterVault is
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
         return
             (_balanceOfAssetUD60x18(address(this)) -
-                _getLockedSpreadVars().totalLockedSpread +
+                _getLockedSpreadVars(block.timestamp).totalLockedSpread +
                 _getTotalFairValue(block.timestamp)) / _totalSupplyUD60x18();
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
-    function _updateState() internal {
+    function _updateState(uint256 timestamp) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
         if (l.maxMaturity > l.lastSpreadUnlockUpdate) {
-            LockedSpreadVars memory vars = _getLockedSpreadVars();
+            LockedSpreadVars memory vars = _getLockedSpreadVars(timestamp);
 
             l.totalLockedSpread = vars.totalLockedSpread;
             l.spreadUnlockingRate = vars.spreadUnlockingRate;
@@ -484,10 +480,9 @@ contract UnderwriterVault is
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
-        uint256 timestamp = block.timestamp;
         uint256 secondsToExpiration = vars.maturity - vars.timestamp;
 
-        _updateState();
+        _updateState(vars.timestamp);
         UD60x18 spreadRate = vars.spread /
             UD60x18.wrap(secondsToExpiration * 1e18);
         UD60x18 newLockedAssets = l.isCall
@@ -503,7 +498,7 @@ contract UnderwriterVault is
         l.positionSizes[vars.maturity][vars.strike] =
             l.positionSizes[vars.maturity][vars.strike] +
             vars.size;
-        l.lastTradeTimestamp = timestamp;
+        l.lastTradeTimestamp = vars.timestamp;
     }
 
     /// @notice Gets the pool factory address corresponding to the given strike
@@ -911,7 +906,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
-        _updateState();
+        _updateState(block.timestamp);
         // Get last maturity that is greater than the current time
         uint256 lastExpired;
         uint256 timestamp = block.timestamp;
