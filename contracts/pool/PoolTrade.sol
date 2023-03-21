@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -10,6 +13,7 @@ import {IPoolTrade} from "./IPoolTrade.sol";
 import {iZERO} from "../libraries/Constants.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
+    using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
@@ -50,7 +54,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     ) external {
         _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature),
-            tradeQuote
+            tradeQuote,
+            permit
         );
     }
 
@@ -63,7 +68,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     ) external returns (uint256 totalPremium, Delta memory delta) {
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true)
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true),
+            permit
         );
 
         return (PoolStorage.layout().toPoolTokenDecimals(_totalPremium), delta);
@@ -88,7 +94,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (swapOutAmount, ) = _swap(s);
+        (swapOutAmount, ) = _swap(s, permit);
 
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
@@ -99,7 +105,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 premiumLimit,
                 swapOutAmount,
                 true
-            )
+            ),
+            _getEmptyPermit2()
         );
 
         return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
@@ -124,15 +131,25 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false)
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false),
+            permit
         );
 
         if (delta.collateral <= iZERO) return (totalPremium, delta, 0, 0);
 
-        s.amountInMax = delta.collateral.intoUD60x18().unwrap();
+        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
-        (tokenOutReceived, collateralReceived) = _swap(s);
+        address poolToken = l.getPoolToken();
+        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(s, _getEmptyPermit2());
+
+        if (tokenOutReceived > 0) {
+            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
+        }
+
+        if (collateralReceived > 0) {
+            IERC20(s.tokenIn).safeTransfer(s.refundAddress, collateralReceived);
+        }
 
         return (
             l.toPoolTokenDecimals(_totalPremium),

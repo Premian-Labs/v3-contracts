@@ -43,6 +43,8 @@ export class PoolUtil {
     log = true,
     isDevMode = false,
   ) {
+    const permit2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
+
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
     await premiaDiamond.deployed();
@@ -124,6 +126,7 @@ export class PoolUtil {
     const poolCoreImpl = await poolCoreFactory.deploy(
       poolFactory.address,
       router.address,
+      permit2,
       exchangeHelper.address,
       wrappedNativeToken,
       feeReceiver,
@@ -147,6 +150,7 @@ export class PoolUtil {
     const poolTradeImpl = await poolTradeFactory.deploy(
       poolFactory.address,
       router.address,
+      permit2,
       exchangeHelper.address,
       wrappedNativeToken,
       feeReceiver,
@@ -173,6 +177,7 @@ export class PoolUtil {
       const poolCoreMockImpl = await poolCoreMockFactory.deploy(
         poolFactory.address,
         router.address,
+        permit2,
         exchangeHelper.address,
         wrappedNativeToken,
         feeReceiver,

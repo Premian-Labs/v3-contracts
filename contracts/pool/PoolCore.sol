@@ -12,6 +12,8 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
 
+import "hardhat/console.sol";
+
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
@@ -119,6 +121,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2 memory permit
     ) external {
+        console.log("deposit");
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -132,7 +135,8 @@ contract PoolCore is IPoolCore, PoolInternal {
                 maxMarketPrice,
                 0,
                 address(0)
-            )
+            ),
+            permit
         );
     }
 
@@ -161,6 +165,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                 0,
                 address(0)
             ),
+            permit,
             isBidIfStrandedMarketPrice
         );
     }
@@ -180,7 +185,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (uint256 creditAmount, ) = _swap(s);
+        (uint256 creditAmount, ) = _swap(s, permit);
 
         _deposit(
             p.toKeyInternal(l.strike, l.isCallPool),
@@ -192,7 +197,8 @@ contract PoolCore is IPoolCore, PoolInternal {
                 maxMarketPrice,
                 creditAmount,
                 s.refundAddress
-            )
+            ),
+            _getEmptyPermit2()
         );
     }
 
@@ -201,8 +207,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         Position.Key memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        UD60x18 maxMarketPrice
     ) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -222,7 +227,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         Permit2 memory permit
     ) external {
-        return _writeFrom(underwriter, longReceiver, size);
+        return _writeFrom(underwriter, longReceiver, size, permit);
     }
 
     /// @inheritdoc IPoolCore

@@ -9,12 +9,22 @@ import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
+import { IPoolInternal } from '../../typechain/contracts/pool/IPool';
+import Permit2Struct = IPoolInternal.Permit2Struct;
 
 export const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)';
+  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))';
 
 export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
+
+export const emptyPermit2: Permit2Struct = {
+  permittedToken: '',
+  permittedAmount: '',
+  nonce: '',
+  deadline: '',
+  signature: '',
+} as const;
 
 export function getSettlementPrice(isCall: boolean, isItm: boolean) {
   if (isCall) {
@@ -72,7 +82,7 @@ async function _deploy(isCall: boolean) {
     oracleAdapter.address,
     feeReceiver.address,
     parseEther('0.1'), // 10%
-    true,
+    false,
     true,
   );
 
@@ -243,6 +253,7 @@ async function deposit(
       depositSize,
       0,
       parseEther('1'),
+      emptyPermit2,
     );
 
   return { ...f, tokenId, pKey, depositSize };
@@ -345,7 +356,9 @@ async function _deployAndBuy(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
+  await f.pool
+    .connect(f.trader)
+    .trade(tradeSize, true, totalPremium, emptyPermit2);
 
   const protocolFees = await f.pool.protocolFees();
 
@@ -399,7 +412,9 @@ async function _deployAndSell(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
+  await f.pool
+    .connect(f.trader)
+    .trade(tradeSize, false, totalPremium, emptyPermit2);
 
   const protocolFees = await f.pool.protocolFees();
 

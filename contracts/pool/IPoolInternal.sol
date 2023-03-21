@@ -21,9 +21,12 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientCollateralBalance();
     error Pool__InsufficientLiquidity();
     error Pool__InsufficientLongBalance();
+    error Pool__InsufficientPermit();
     error Pool__InsufficientShortBalance();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
+    error Pool__InvalidPermitRecipient();
+    error Pool__InvalidPermittedToken();
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
@@ -103,7 +106,10 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct Permit2 {
-        ISignatureTransfer.PermitTransferFrom permit;
+        address permittedToken;
+        uint256 permittedAmount;
+        uint256 nonce;
+        uint256 deadline;
         bytes signature;
     }
 

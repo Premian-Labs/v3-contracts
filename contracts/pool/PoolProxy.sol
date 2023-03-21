@@ -17,6 +17,8 @@ import {Pricing} from "../libraries/Pricing.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
+import "hardhat/console.sol";
+
 /// @title Upgradeable proxy with centrally controlled Pool implementation
 contract PoolProxy is Proxy, ERC165BaseInternal {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
@@ -68,6 +70,10 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
     }
 
     function _getImplementation() internal view override returns (address) {
+        console.log(
+            "_getImplementation",
+            IDiamondReadable(DIAMOND).facetAddress(msg.sig)
+        );
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
     }
 }

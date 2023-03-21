@@ -57,7 +57,6 @@ interface IPoolCore is IPoolInternal {
     ) external view returns (uint256);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
-
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
@@ -123,13 +122,11 @@ interface IPoolCore is IPoolInternal {
     /// @param size The position size to withdraw | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function withdraw(
         Position.Key memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice,
-        Permit2 memory permit
+        UD60x18 maxMarketPrice
     ) external;
 
     /// @notice Underwrite an option by depositing collateral
