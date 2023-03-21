@@ -22,8 +22,8 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @return The cardinality per minute used for increase cardinality calculations
     function cardinalityPerMinute() external view returns (uint8);
 
-    /// @notice Returns the target obersvation cardinality for pools
-    /// @return The target obersvation cardinality for pools
+    /// @notice Returns the target observation cardinality for pools
+    /// @return The target observation cardinality for pools
     function targetCardinality() external view returns (uint16);
 
     /// @notice Returns the approximate gas cost per each increased cardinality
