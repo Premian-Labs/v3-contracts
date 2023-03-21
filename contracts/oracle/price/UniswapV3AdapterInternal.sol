@@ -118,8 +118,8 @@ contract UniswapV3AdapterInternal is
         );
 
         if (range[0] > oldestObservation) {
-            // When the oldest obersvation is before the range start, restart range
-            // from oldest obeservation
+            // When the oldest observation is before the range start, restart range
+            // from oldest observation
             //
             //  end                 target   oldest         start
             //   |                    v        |              |
