@@ -26,6 +26,7 @@ let minMaturity: number;
 let maxMaturity: number;
 
 let vault: UnderwriterVaultMock;
+let token: ERC20Mock;
 
 describe('UnderwriterVault', () => {
   describe('#_availableAssets', () => {
@@ -35,6 +36,7 @@ describe('UnderwriterVault', () => {
           const { callVault, putVault, caller, receiver, base, quote } =
             await loadFixture(vaultSetup);
           vault = isCall ? callVault : putVault;
+          token = isCall ? base : quote;
           await setMaturities(vault);
           await addMockDeposit(vault, 2, base, quote);
         });
@@ -46,7 +48,9 @@ describe('UnderwriterVault', () => {
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.998'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.498', async () => {
-          await vault.increaseTotalLockedAssets(parseEther('0.5'));
+          await vault.increaseTotalLockedAssets(
+            parseUnits('0.5', await token.decimals()),
+          );
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.498'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.298', async () => {
@@ -54,7 +58,9 @@ describe('UnderwriterVault', () => {
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.298'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.2979', async () => {
-          await vault.increaseTotalLockedAssets(parseEther('0.0001'));
+          await vault.increaseTotalLockedAssets(
+            parseUnits('0.0001', await token.decimals()),
+          );
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.2979'));
         });
       });
