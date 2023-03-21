@@ -279,7 +279,7 @@ describe('test ensure functions', () => {
         value: parseEther('3'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(uint256,uint256,uint256)',
+        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: 'Vault__OutOfTradeBounds',
         message: 'below the lower bound',
       },
@@ -287,7 +287,7 @@ describe('test ensure functions', () => {
         value: parseEther('5'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(uint256,uint256,uint256)',
+        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'equal to the lower bound',
       },
@@ -295,7 +295,7 @@ describe('test ensure functions', () => {
         value: parseEther('7'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(uint256,uint256,uint256)',
+        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'within the bounds',
       },
@@ -303,7 +303,7 @@ describe('test ensure functions', () => {
         value: parseEther('10'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(uint256,uint256,uint256)',
+        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'equal to the upper bound',
       },
@@ -311,7 +311,7 @@ describe('test ensure functions', () => {
         value: parseEther('12'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(uint256,uint256,uint256)',
+        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: 'Vault__OutOfTradeBounds',
         message: 'above the upper bound',
       },
@@ -319,7 +319,7 @@ describe('test ensure functions', () => {
         value: parseEther('-7'),
         minimum: parseEther('-5'),
         maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(int256,int256,int256)',
+        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
         error: 'Vault__OutOfTradeBounds',
         message: 'below the lower bound',
       },
@@ -327,7 +327,7 @@ describe('test ensure functions', () => {
         value: parseEther('-5'),
         minimum: parseEther('-5'),
         maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(int256,int256,int256)',
+        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
         error: null,
         message: 'equal to the lower bound',
       },
@@ -335,7 +335,7 @@ describe('test ensure functions', () => {
         value: parseEther('0'),
         minimum: parseEther('-5'),
         maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(int256,int256,int256)',
+        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
         error: null,
         message: 'within the bounds',
       },
@@ -343,7 +343,7 @@ describe('test ensure functions', () => {
         value: parseEther('5'),
         minimum: parseEther('-5'),
         maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(int256,int256,int256)',
+        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
         error: null,
         message: 'equal to the upper bound',
       },
@@ -351,7 +351,7 @@ describe('test ensure functions', () => {
         value: parseEther('7'),
         minimum: parseEther('-5'),
         maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(int256,int256,int256)',
+        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
         error: 'Vault__OutOfTradeBounds',
         message: 'above the upper bound',
       },
@@ -364,7 +364,12 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault[test.signature](test.value, test.minimum, test.maximum),
+            vault[test.signature](
+              'value',
+              test.value,
+              test.minimum,
+              test.maximum,
+            ),
           ).to.be.revertedWithCustomError(vault, test.error);
         });
       } else {
@@ -373,7 +378,12 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault[test.signature](test.value, test.minimum, test.maximum),
+            vault[test.signature](
+              'value',
+              test.value,
+              test.minimum,
+              test.maximum,
+            ),
           ).to.not.be.rejected;
         });
       }

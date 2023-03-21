@@ -11,29 +11,17 @@ import {IVault} from "../../../vault/IVault.sol";
 interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Errors
     error Vault__TradeMustBeBuy();
+    error Vault__ZeroSize();
     error Vault__OptionTypeMismatchWithVault();
     error Vault__InsufficientFunds();
     error Vault__OptionExpired();
     error Vault__OptionPoolNotListed();
-    error Vault__OptionPoolNotSupported();
     error Vault__ZeroShares();
     error Vault__AddressZero();
     error Vault__ZeroAsset();
     error Vault__StrikeZero();
-    error Vault__MaturityZero();
-    error Vault__ZeroPrice();
-    error Vault__ZeroVol();
-    error Vault__MaturityBounds();
-    error Vault__DeltaBounds();
-    error Vault__OutOfTradeBounds();
-    error Vault__CLevelBounds();
-    error Vault__LowCLevel();
+    error Vault__OutOfTradeBounds(string valueName);
     error Vault__UtilisationOutOfBounds();
-    error Vault__NonMonotonicMaturities();
-    error Vault__ErroneousNextUnexpiredMaturity();
-    error Vault__GreaterThanMaxMaturity();
-    error Vault__UtilEstError();
-    error Vault__PositionHasNotBeenClosed();
 
     // Structs
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
@@ -75,7 +63,7 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 price;
         // size of quote/trade
         UD60x18 size;
-        // premium associated to the BSM price of the option
+        // premium associated to the BSM price of the option (price * size)
         UD60x18 premium;
         // C-level post-trade
         UD60x18 cLevel;

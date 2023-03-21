@@ -391,19 +391,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _settleMaturity(maturity);
     }
 
-    function calculateClevel(
-        UD60x18 utilisation,
-        UD60x18 alphaClevel,
-        UD60x18 minClevel,
-        UD60x18 maxClevel
-    ) external pure returns (UD60x18) {
-        return _calculateCLevel(utilisation, alphaClevel, minClevel, maxClevel);
-    }
-
-    function getClevel(UD60x18 collateralAmt) external view returns (UD60x18) {
-        return _getCLevel(collateralAmt);
-    }
-
     function contains(
         UD60x18 strike,
         uint256 maturity
@@ -618,19 +605,21 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function ensureWithinTradeBounds(
+        string memory valueName,
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
     ) external pure {
-        _ensureWithinTradeBounds(value, minimum, maximum);
+        _ensureWithinTradeBounds(valueName, value, minimum, maximum);
     }
 
     function ensureWithinTradeBounds(
+        string memory valueName,
         SD59x18 value,
         SD59x18 minimum,
         SD59x18 maximum
     ) external pure {
-        _ensureWithinTradeBounds(value, minimum, maximum);
+        _ensureWithinTradeBounds(valueName, value, minimum, maximum);
     }
 
     function computeCLevel(
@@ -671,5 +660,17 @@ contract UnderwriterVaultMock is UnderwriterVault {
                 size,
                 isBuy
             );
+    }
+
+    function tradeInternal(
+        uint256 timestamp,
+        UD60x18 spot,
+        UD60x18 strike,
+        uint64 maturity,
+        bool isCall,
+        UD60x18 size,
+        bool isBuy
+    ) external {
+        return _trade(timestamp, spot, strike, maturity, isCall, size, isBuy);
     }
 }

@@ -5,7 +5,7 @@ import {
   increaseTotalAssets,
   vaultSetup,
 } from '../VaultSetup';
-import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
+import { formatEther, parseEther, fts } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import {
   getValidMaturity,

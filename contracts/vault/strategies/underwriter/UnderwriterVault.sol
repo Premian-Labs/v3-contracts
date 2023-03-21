@@ -528,66 +528,15 @@ contract UnderwriterVault is
         return listingAddr;
     }
 
-    /// @notice Gets the C-level given an increase in collateral amount.
-    /// @param collateralAmt The collateral amount the will be utilised.
-    /// @return The C-level after utilising `collateralAmt`
-    function _getCLevel(UD60x18 collateralAmt) internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        if (l.maxCLevel == ZERO) revert Vault__CLevelBounds();
-        if (l.alphaCLevel == ZERO) revert Vault__CLevelBounds();
-
-        UD60x18 postUtilisation = (l.totalLockedAssets + collateralAmt) /
-            _totalAssetsUD60x18();
-
-        if (postUtilisation > ONE) revert Vault__UtilEstError();
-
-        UD60x18 hoursSinceLastTx = UD60x18.wrap(
-            (block.timestamp - l.lastTradeTimestamp) * 1e18
-        ) / UD60x18.wrap(ONE_HOUR * 1e18);
-
-        UD60x18 cLevel = _calculateCLevel(
-            postUtilisation,
-            l.alphaCLevel,
-            l.minCLevel,
-            l.maxCLevel
-        );
-
-        // NOTE: cLevel may have underflow of 1 unit
-        if (cLevel + ONE < l.minCLevel) revert Vault__LowCLevel();
-
-        UD60x18 discount = l.hourlyDecayDiscount * hoursSinceLastTx;
-
-        if (cLevel - discount < l.minCLevel) return l.minCLevel;
-
-        return cLevel - discount;
-    }
-
-    /// @notice Calculates the C-level given a post-utilisation value.
+    /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
     ///         (https://www.desmos.com/calculator/0uzv50t7jy)
-    /// @param postUtilisation The utilisation after some collateral is utilised
-    /// @param alphaCLevel (needs to be filled in)
+    /// @param utilisation The utilisation after some collateral is utilised
+    /// @param duration The time since last trade (hours)
+    /// @param alpha (needs to be filled in)
     /// @param minCLevel The minimum C-level
     /// @param maxCLevel The maximum C-level
+    /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
     /// @return The C-level corresponding to the post-utilisation value.
-    function _calculateCLevel(
-        UD60x18 postUtilisation,
-        UD60x18 alphaCLevel,
-        UD60x18 minCLevel,
-        UD60x18 maxCLevel
-    ) internal pure returns (UD60x18) {
-        UD60x18 freeCapitalRatio = ONE - postUtilisation;
-        UD60x18 positiveExp = (alphaCLevel * freeCapitalRatio).exp();
-        UD60x18 alphaCLevelExp = alphaCLevel.exp();
-        UD60x18 k = (alphaCLevel * (minCLevel * alphaCLevelExp - maxCLevel)) /
-            (alphaCLevelExp - ONE);
-
-        return
-            (k * positiveExp + maxCLevel * alphaCLevel - k) /
-            (alphaCLevel * positiveExp);
-    }
-
     function _computeCLevel(
         UD60x18 utilisation,
         UD60x18 duration,
@@ -607,6 +556,10 @@ contract UnderwriterVault is
             (alpha * posExp);
 
         return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel);
+    }
+
+    function _ensureNonZeroSize(UD60x18 size) internal pure {
+        if (size == ZERO) revert Vault__ZeroSize();
     }
 
     function _ensureTradeableWithVault(
@@ -642,21 +595,23 @@ contract UnderwriterVault is
     }
 
     function _ensureWithinTradeBounds(
+        string memory valueName,
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
     ) internal pure {
         if (value < minimum || value > maximum)
-            revert Vault__OutOfTradeBounds();
+            revert Vault__OutOfTradeBounds(valueName);
     }
 
     function _ensureWithinTradeBounds(
+        string memory valueName,
         SD59x18 value,
         SD59x18 minimum,
         SD59x18 maximum
     ) internal pure {
         if (value < minimum || value > maximum)
-            revert Vault__OutOfTradeBounds();
+            revert Vault__OutOfTradeBounds(valueName);
     }
 
     function _getQuoteVars(
@@ -748,6 +703,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
+        _ensureNonZeroSize(size);
         _ensureTradeableWithVault(l.isCall, isCall, isBuy);
         _ensureValidOption(timestamp, strike, maturity);
         _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
@@ -760,8 +716,9 @@ contract UnderwriterVault is
             size
         );
 
-        _ensureWithinTradeBounds(vars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinTradeBounds("delta", vars.delta, l.minDelta, l.maxDelta);
         _ensureWithinTradeBounds(
+            "tau",
             vars.tau * UD60x18.wrap(365e18),
             l.minDTE,
             l.maxDTE
@@ -794,6 +751,7 @@ contract UnderwriterVault is
     }
 
     function _trade(
+        uint256 timestamp,
         UD60x18 spot,
         UD60x18 strike,
         uint64 maturity,
@@ -804,8 +762,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        uint256 timestamp = block.timestamp;
-
+        _ensureNonZeroSize(size);
         _ensureTradeableWithVault(l.isCall, isCall, isBuy);
         _ensureValidOption(block.timestamp, strike, maturity);
         _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
@@ -817,9 +774,11 @@ contract UnderwriterVault is
             maturity,
             size
         );
+        UD60x18 totalPremium = vars.premium + vars.spread + vars.mintingFee;
 
-        _ensureWithinTradeBounds(vars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinTradeBounds("delta", vars.delta, l.minDelta, l.maxDelta);
         _ensureWithinTradeBounds(
+            "tau",
             vars.tau * UD60x18.wrap(365e18),
             l.minDTE,
             l.maxDTE
@@ -829,9 +788,7 @@ contract UnderwriterVault is
         l.addListing(vars.strike, vars.maturity);
 
         // Collect option premium from buyer
-        uint256 transferAmountScaled = l.convertAssetFromUD60x18(
-            vars.premium + vars.spread + vars.mintingFee
-        );
+        uint256 transferAmountScaled = l.convertAssetFromUD60x18(totalPremium);
 
         IERC20(_asset()).safeTransferFrom(
             msg.sender,
@@ -841,9 +798,7 @@ contract UnderwriterVault is
 
         // Approve transfer of base / quote token
         // TODO: for puts multiply the size by the strike
-        uint256 approveAmountScaled = l.convertAssetFromUD60x18(
-            vars.size + vars.spread + vars.mintingFee
-        );
+        uint256 approveAmountScaled = l.convertAssetFromUD60x18(totalPremium);
 
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
@@ -857,10 +812,10 @@ contract UnderwriterVault is
             msg.sender,
             vars.poolAddr,
             vars.size,
-            false,
-            vars.premium + vars.spread + vars.mintingFee,
+            true,
+            totalPremium,
             vars.mintingFee,
-            UD60x18.wrap(uint256(0)),
+            ZERO,
             vars.spread
         );
     }
@@ -875,6 +830,7 @@ contract UnderwriterVault is
     ) external override {
         return
             _trade(
+                block.timestamp,
                 _getSpotPrice(),
                 UD60x18.wrap(strike),
                 maturity,
