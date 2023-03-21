@@ -216,6 +216,9 @@ export async function vaultSetup() {
   ]);
 
   await volOracle.mock.getRiskFreeRate.returns(parseEther('0.01'));
+  await volOracle.mock.getVolatility
+    .withArgs(base.address, parseEther('1500'), [], [])
+    .returns([]);
 
   if (log) console.log(`volOracle Address : ${volOracle.address}`);
 
