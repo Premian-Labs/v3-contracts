@@ -49,6 +49,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     address internal immutable FACTORY;
     address internal immutable ROUTER;
+    address internal immutable PERMIT2;
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
@@ -67,12 +68,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     constructor(
         address factory,
         address router,
+        address permit2,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
     ) {
         FACTORY = factory;
         ROUTER = router;
+        PERMIT2 = permit2;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;

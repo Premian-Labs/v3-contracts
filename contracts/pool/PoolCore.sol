@@ -19,6 +19,7 @@ contract PoolCore is IPoolCore, PoolInternal {
     constructor(
         address factory,
         address router,
+        address permit2,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
@@ -26,6 +27,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolInternal(
             factory,
             router,
+            permit2,
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver

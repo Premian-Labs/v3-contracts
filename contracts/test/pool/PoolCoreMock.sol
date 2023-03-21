@@ -18,6 +18,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     constructor(
         address factory,
         address router,
+        address permit2,
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
@@ -25,6 +26,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         PoolInternal(
             factory,
             router,
+            permit2,
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver
