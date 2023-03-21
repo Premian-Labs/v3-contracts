@@ -84,12 +84,6 @@ contract ChainlinkAdapter is
         } else if (_exists(token, Denominations.ETH)) {
             path[0] = _aggregator(token, Denominations.ETH);
             path[1] = _aggregator(Denominations.ETH, Denominations.USD);
-        } else if (
-            _exists(token, WRAPPED_BTC_TOKEN) &&
-            _exists(WRAPPED_BTC_TOKEN, Denominations.USD)
-        ) {
-            path[0] = _aggregator(token, WRAPPED_BTC_TOKEN);
-            path[1] = _aggregator(WRAPPED_BTC_TOKEN, Denominations.USD);
         }
 
         tier[0] = path;
