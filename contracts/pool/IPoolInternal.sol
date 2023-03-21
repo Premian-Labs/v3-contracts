@@ -183,9 +183,4 @@ interface IPoolInternal is IPosition, IPricing {
         InsufficientLongBalance,
         InsufficientShortBalance
     }
-
-    enum PriceFeedType {
-        Chainlink,
-        UniswapV3
-    }
 }
