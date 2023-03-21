@@ -20,7 +20,7 @@ interface IUniswapV3AdapterInternal {
     /// @notice Thrown when the time ranges are not valid
     error UniswapV3Adapter__InvalidTimeRange();
 
-    /// @notice Thrown when current oberservation cardinality is below target cardinality
+    /// @notice Thrown when current observation cardinality is below target cardinality
     error UniswapV3Adapter__ObservationCardinalityTooLow();
 
     /// @notice Thrown when period has not been set
