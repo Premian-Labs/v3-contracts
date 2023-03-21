@@ -198,6 +198,7 @@ contract UnderwriterVault is
                 listings.strikes[k],
                 listings.timeToMaturities[k],
                 sigmas[k],
+                // TODO
                 ZERO,
                 l.isCall
             );
@@ -703,11 +704,10 @@ contract UnderwriterVault is
             vars.riskFreeRate,
             l.isCall
         );
-        vars.price = l.isCall ? vars.price : vars.price / vars.spot;
+        vars.price = l.isCall ? vars.price / vars.spot : vars.price;
         vars.size = size;
 
         vars.premium = vars.price * vars.size;
-
         // Compute C-level
         UD60x18 collateral = l.isCall ? vars.size : vars.size * vars.strike;
         UD60x18 utilisation = (l.totalLockedAssets + collateral) /
@@ -718,15 +718,14 @@ contract UnderwriterVault is
 
         vars.cLevel = _computeCLevel(
             utilisation,
+            hoursSinceLastTx,
             l.alphaCLevel,
             l.minCLevel,
             l.maxCLevel,
-            l.hourlyDecayDiscount,
-            hoursSinceLastTx
+            l.hourlyDecayDiscount
         );
 
         vars.spread = (vars.cLevel - l.minCLevel) * vars.premium;
-
         vars.mintingFee = UD60x18.wrap(
             IPool(vars.poolAddr).takerFee(
                 vars.size,
@@ -768,8 +767,10 @@ contract UnderwriterVault is
             l.maxDTE
         );
 
-        maxSize = _availableAssetsUD60x18().unwrap();
-        price = vars.premium.unwrap();
+        maxSize = isCall
+            ? _availableAssetsUD60x18().unwrap()
+            : (_availableAssetsUD60x18() / strike).unwrap();
+        price = (vars.premium + vars.spread + vars.mintingFee).unwrap();
     }
 
     /// @inheritdoc IVault

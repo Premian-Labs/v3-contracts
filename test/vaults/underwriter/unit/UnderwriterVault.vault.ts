@@ -3,6 +3,7 @@ import {
   addMockDeposit,
   createPool,
   increaseTotalAssets,
+  oracleAdapter,
   vaultSetup,
 } from '../VaultSetup';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -19,6 +20,8 @@ import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { BigNumber } from 'ethers';
 import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { MockContract } from '@ethereum-waffle/mock-contract';
+import { PoolUtil } from '../../../../utils/PoolUtil';
 
 let startTime: number;
 let spot: number;
@@ -83,42 +86,87 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#_getTradeQuote', () => {
-    it('reverts on no strike input', async () => {
-      const { base, quote, callVault } = await loadFixture(vaultSetup);
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        let vault: UnderwriterVaultMock;
+        async function setup() {
+          const {
+            base,
+            quote,
+            callVault,
+            putVault,
+            volOracle,
+            oracleAdapter,
+            deployer,
+            p,
+          } = await loadFixture(vaultSetup);
 
-      const lastTradeTimestamp = 500000000;
-      await callVault.setLastTradeTimestamp(lastTradeTimestamp);
+          vault = isCall ? callVault : putVault;
+          const spot = parseEther('1000');
+          const xstrike = 1100;
+          const strike = parseEther('1100'); // ATM
+          const timestamp = await getValidMaturity(2, 'weeks');
+          const maturity = await getValidMaturity(3, 'weeks');
 
-      const timestamp = 1000000000;
-      const spot = parseEther('2000');
-      const strike = parseEther('1500'); // ATM
-      const maturity = BigNumber.from(await getValidMaturity(2, 'weeks'));
+          await createPool(
+            strike,
+            maturity,
+            isCall,
+            deployer,
+            base,
+            quote,
+            oracleAdapter,
+            p,
+          );
 
-      const quoteSize = parseEther('4.9999');
-      const depositSize = 5; // units of base
-      await addMockDeposit(callVault, depositSize, base, quote);
+          const lastTradeTimestamp = timestamp - 3 * ONE_HOUR;
+          await vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-      const output = await callVault.getTradeQuoteInternal(
-        timestamp,
-        spot,
-        strike,
-        maturity,
-        true,
-        quoteSize,
-        true,
-      );
-      console.log(parseFloat(formatEther(output.price)));
-    });
+          await oracleAdapter.mock.quote.returns(spot);
+          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
+            .withArgs(base.address, spot, strike, '19178082191780821')
+            .returns(parseEther('1.54'));
 
-    it('reverts on expired maturity input', async () => {});
+          const depositSize = isCall ? 5 : 5 * xstrike;
+          await addMockDeposit(vault, depositSize, base, quote);
 
-    it('should revert due to too large incoming trade size', async () => {});
+          return { vault, maturity, spot, strike, timestamp };
+        }
 
-    it('returns proper quote parameters: price, mintingFee, cLevel', async () => {});
+        it('should process valid quote correctly', async () => {
+          const { vault, maturity, spot, strike, timestamp } =
+            await loadFixture(setup);
 
-    it('reverts if maxCLevel is not set properly', async () => {});
+          const quoteSize = parseEther('3');
 
-    it('reverts if the C level alpha is not set properly', async () => {});
+          const output = await vault.getTradeQuoteInternal(
+            timestamp,
+            spot,
+            strike,
+            maturity,
+            isCall,
+            quoteSize,
+            true,
+          );
+          const totalPremium = parseFloat(formatEther(output.price));
+          const expectedPremium = isCall
+            ? 0.15828885563446596
+            : 473.3029052286404;
+          const delta = isCall ? 1e-6 : 1e-2;
+          expect(totalPremium).to.be.closeTo(expectedPremium, delta);
+        });
+
+        it('reverts on expired maturity input', async () => {});
+
+        it('should revert due to too large incoming trade size', async () => {});
+
+        it('returns proper quote parameters: price, mintingFee, cLevel', async () => {});
+
+        it('reverts if maxCLevel is not set properly', async () => {});
+
+        it('reverts if the C level alpha is not set properly', async () => {});
+      });
+    }
   });
 
   describe('#trade', () => {});
