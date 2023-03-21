@@ -19,11 +19,11 @@ export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
 
 export const emptyPermit2: Permit2Struct = {
-  permittedToken: '',
-  permittedAmount: '',
-  nonce: '',
-  deadline: '',
-  signature: '',
+  permittedToken: ethers.constants.AddressZero,
+  permittedAmount: '0',
+  nonce: '0',
+  deadline: '0',
+  signature: '0x',
 } as const;
 
 export function getSettlementPrice(isCall: boolean, isItm: boolean) {

@@ -32,8 +32,6 @@ import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
-import "hardhat/console.sol";
-
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
@@ -349,7 +347,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Permit2 memory permit,
         bool isBidIfStrandedMarketPrice
     ) internal {
-        console.log("_deposit");
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded

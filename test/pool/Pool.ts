@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { BigNumber } from 'ethers';
-import { keccak256, parseEther, toUtf8Bytes } from 'ethers/lib/utils';
+import { parseEther } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average } from '../../utils/sdk/math';
@@ -24,11 +24,11 @@ import {
   deployAndSell_CALL,
   deployAndSell_PUT,
   depositFnSig,
+  emptyPermit2,
   getSettlementPrice,
   protocolFeePercentage,
   runCallAndPutTests,
   strike,
-  emptyPermit2,
 } from './Pool.fixture';
 
 describe('Pool', () => {
@@ -36,10 +36,9 @@ describe('Pool', () => {
     describe('#_getPricing', () => {
       runCallAndPutTests((isCallPool: boolean) => {
         it('should return pool state', async () => {
-          console.log(0);
-          const { premiaDiamond, pool, lp, poolToken, router } =
-            await loadFixture(isCallPool ? deploy_CALL : deploy_PUT);
-          console.log(1);
+          const { pool, lp, poolToken, router } = await loadFixture(
+            isCallPool ? deploy_CALL : deploy_PUT,
+          );
 
           let isBuy = true;
           let args = await pool._getPricing(isBuy);
@@ -73,26 +72,13 @@ describe('Pool', () => {
             strike: strike,
           };
 
-          console.log('a');
           await poolToken
             .connect(lp)
             .approve(router.address, parseEther('2000'));
           await poolToken.mint(lp.address, parseEther('2000'));
-          console.log('b');
 
           const nearestBelow = await pool.getNearestTicksBelow(lower, upper);
 
-          console.log('c', pool.address, lp.address);
-          console.log(
-            'd',
-            pool.interface.getSighash(depositFnSig),
-            keccak256(toUtf8Bytes(depositFnSig)),
-            await premiaDiamond.facetAddress(
-              pool.interface.getSighash(depositFnSig),
-            ),
-          );
-          console.log('e', await pool.connect(lp).marketPrice());
-          console.log('f', (await pool.connect(lp)).address);
           await pool
             .connect(lp)
             [depositFnSig](
@@ -105,7 +91,6 @@ describe('Pool', () => {
               emptyPermit2,
             );
 
-          console.log('g');
           args = await pool._getPricing(isBuy);
 
           expect(args.liquidityRate).to.eq(parseEther('4'));

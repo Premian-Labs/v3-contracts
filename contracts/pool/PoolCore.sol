@@ -12,8 +12,6 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
 
-import "hardhat/console.sol";
-
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
@@ -121,7 +119,6 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2 memory permit
     ) external {
-        console.log("deposit");
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
