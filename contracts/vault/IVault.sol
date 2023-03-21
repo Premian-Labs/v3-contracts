@@ -33,6 +33,33 @@ interface IVault is IERC4626Internal, IERC20Internal {
         UD60x18 vaultFee
     );
 
+    event Borrow(
+        bytes32 indexed borrowId,
+        address indexed from,
+        IERC20 indexed borrowToken,
+        IERC20 collateralToken,
+        UD60x18 sizeBorrowed,
+        UD60x18 collateralLocked,
+        UD60x18 borrowFee
+    );
+
+    event BorrowLiquidated(
+        bytes32 indexed borrowId,
+        address indexed from,
+        IERC20 indexed collateralToken,
+        UD60x18 collateralLiquidated
+    );
+
+    event RepayBorrow(
+        bytes32 indexed borrowId,
+        address indexed from,
+        IERC20 indexed borrowToken,
+        IERC20 collateralToken,
+        UD60x18 amountRepaid,
+        UD60x18 collateralUnlocked,
+        UD60x18 repayFee
+    );
+
     event ManagementFeePaid(address indexed recipient, uint256 managementFee);
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
