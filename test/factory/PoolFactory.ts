@@ -113,6 +113,7 @@ describe('PoolFactory', () => {
       const poolSettings = await pool.getPoolSettings();
 
       expect([
+        pricingPath.pool,
         pricingPath.baseAdapterType,
         pricingPath.basePath,
         pricingPath.basePathDecimals,
@@ -120,6 +121,7 @@ describe('PoolFactory', () => {
         pricingPath.quotePath,
         pricingPath.quotePathDecimals,
       ]).to.deep.eq([
+        poolAddress,
         AdapterType.CHAINLINK,
         [['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6']],
         [8],

@@ -99,31 +99,6 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
 
-        {
-            (
-                IOracleAdapter.AdapterType baseAdapterType,
-                ,
-                address[][] memory basePath,
-                uint8[] memory basePathDecimals
-            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.base);
-
-            (
-                IOracleAdapter.AdapterType quoteAdapterType,
-                ,
-                address[][] memory quotePath,
-                uint8[] memory quotePathDecimals
-            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.quote);
-
-            emit PricingPath(
-                basePath,
-                basePathDecimals,
-                baseAdapterType,
-                quotePath,
-                quotePathDecimals,
-                quoteAdapterType
-            );
-        }
-
         _ensureOptionStrikeIsValid(k.strike, k.oracleAdapter, k.base, k.quote);
         _ensureOptionMaturityIsValid(k.maturity);
 
@@ -158,6 +133,32 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         l.isPool[poolAddress] = true;
         l.strikeCount[k.strikeKey()] += 1;
         l.maturityCount[k.maturityKey()] += 1;
+
+        {
+            (
+                IOracleAdapter.AdapterType baseAdapterType,
+                ,
+                address[][] memory basePath,
+                uint8[] memory basePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.base);
+
+            (
+                IOracleAdapter.AdapterType quoteAdapterType,
+                ,
+                address[][] memory quotePath,
+                uint8[] memory quotePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.quote);
+
+            emit PricingPath(
+                poolAddress,
+                basePath,
+                basePathDecimals,
+                baseAdapterType,
+                quotePath,
+                quotePathDecimals,
+                quoteAdapterType
+            );
+        }
 
         emit PoolDeployed(
             k.base,

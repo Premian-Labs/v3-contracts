@@ -19,6 +19,7 @@ interface IPoolFactoryEvents {
     );
 
     event PricingPath(
+        address pool,
         address[][] basePath,
         uint8[] basePathDecimals,
         IOracleAdapter.AdapterType baseAdapterType,
