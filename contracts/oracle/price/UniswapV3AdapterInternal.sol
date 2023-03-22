@@ -52,13 +52,20 @@ contract UniswapV3AdapterInternal is
             .layout();
 
         address[] memory pools = _poolsForPair(tokenIn, tokenOut);
+        address[] memory allDeployedPools = _getAllPoolsForPair(
+            tokenIn,
+            tokenOut
+        );
 
-        if (pools.length == 0) {
-            pools = _tryFindPools(l, tokenIn, tokenOut);
+        if (allDeployedPools.length == 0)
+            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+
+        if (pools.length == 0 || pools.length < allDeployedPools.length) {
+            _validatePoolCardinality(l, allDeployedPools);
+            pools = allDeployedPools;
         }
 
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
-
         int256 factor = ETH_DECIMALS - _decimals(tokenOut);
 
         uint256 price = _scale(
@@ -137,18 +144,11 @@ contract UniswapV3AdapterInternal is
         return range;
     }
 
-    function _tryFindPools(
+    function _validatePoolCardinality(
         UniswapV3AdapterStorage.Layout storage l,
-        address tokenIn,
-        address tokenOut
-    ) internal view returns (address[] memory) {
-        address[] memory pools = _getAllPoolsForPair(tokenIn, tokenOut);
-        uint256 poolLength = pools.length;
-
-        if (poolLength == 0)
-            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
-
-        for (uint256 i; i < poolLength; i++) {
+        address[] memory pools
+    ) internal view {
+        for (uint256 i; i < pools.length; i++) {
             address pool = pools[i];
 
             (
@@ -159,8 +159,6 @@ contract UniswapV3AdapterInternal is
             if (currentCardinalityBelowTarget)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
         }
-
-        return pools;
     }
 
     function _getAllPoolsForPair(
@@ -181,7 +179,7 @@ contract UniswapV3AdapterInternal is
                 PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
             );
 
-            if (AddressUtils.isContract(pool)) {
+            if (AddressUtils.isContract(pool) && _isUnlocked(pool)) {
                 pools[validPools++] = pool;
             }
         }
@@ -248,6 +246,10 @@ contract UniswapV3AdapterInternal is
 
     function _decimals(address token) internal view returns (int256) {
         return int256(uint256(IERC20Metadata(token).decimals()));
+    }
+
+    function _isUnlocked(address pool) internal view returns (bool unlocked) {
+        (, , , , , , unlocked) = IUniswapV3Pool(pool).slot0();
     }
 
     /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/OracleLibrary.sol#L16-L41
