@@ -9,6 +9,7 @@ import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
+import { getEmptyPremiaPermit2 } from '../../utils/sdk/permit2';
 
 export const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))';
@@ -243,7 +244,7 @@ async function deposit(
       depositSize,
       0,
       parseEther('1'),
-      emptyPermit2,
+      getEmptyPremiaPermit2(),
     );
 
   return { ...f, tokenId, pKey, depositSize };
@@ -348,7 +349,7 @@ async function _deployAndBuy(isCall: boolean) {
 
   await f.pool
     .connect(f.trader)
-    .trade(tradeSize, true, totalPremium, emptyPermit2);
+    .trade(tradeSize, true, totalPremium, getEmptyPremiaPermit2());
 
   const protocolFees = await f.pool.protocolFees();
 
@@ -404,7 +405,7 @@ async function _deployAndSell(isCall: boolean) {
 
   await f.pool
     .connect(f.trader)
-    .trade(tradeSize, false, totalPremium, emptyPermit2);
+    .trade(tradeSize, false, totalPremium, getEmptyPremiaPermit2());
 
   const protocolFees = await f.pool.protocolFees();
 
