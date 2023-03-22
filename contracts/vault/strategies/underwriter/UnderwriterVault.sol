@@ -198,8 +198,7 @@ contract UnderwriterVault is
                 listings.strikes[k],
                 listings.timeToMaturities[k],
                 sigmas[k],
-                // TODO
-                ZERO,
+                IVolatilityOracle(IV_ORACLE).getRiskFreeRate(),
                 l.isCall
             );
             UD60x18 size = l.positionSizes[listings.maturities[k]][
