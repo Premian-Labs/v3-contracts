@@ -7,6 +7,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 import {Position} from "../libraries/Position.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
 
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
@@ -70,6 +71,21 @@ library PoolStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function getPoolTokenDecimals(
+        Layout storage l
+    ) internal view returns (uint8) {
+        return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
+    }
+
+    /// @notice Adjust decimals of a value to match the pool token decimals
+    function scaleDecimals(
+        Layout storage l,
+        uint256 value
+    ) internal view returns (uint256) {
+        uint256 decimals = l.getPoolTokenDecimals();
+        return OptionMath.scaleDecimals(value, decimals);
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
