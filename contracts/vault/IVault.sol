@@ -13,7 +13,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
     event Trade(
         address indexed user,
         address indexed pool,
-        UD60x18 size,
+        UD60x18 contractSize,
         bool isBuy,
         UD60x18 premium,
         UD60x18 takerFee,
