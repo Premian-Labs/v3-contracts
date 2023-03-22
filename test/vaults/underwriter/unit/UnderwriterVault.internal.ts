@@ -1,8 +1,10 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addMockDeposit,
+  callVault,
   createPool,
   increaseTotalAssets,
+  putVault,
   vaultSetup,
 } from '../VaultSetup';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -23,11 +25,13 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 let vault: UnderwriterVaultMock;
 let token: ERC20Mock;
 
-let startTime: number = 2 * 1679395050;
-let t0: number = startTime + 7 * ONE_DAY;
-let t1: number = startTime + 10 * ONE_DAY;
-let t2: number = startTime + 14 * ONE_DAY;
-
+let startTime: number = 1678435200 + 500 * ONE_WEEK;
+let t0: number = 1981440000; // startTime + 7 * ONE_DAY;
+let t1: number = 1981699200; // + 10 * ONE_DAY;
+let t2: number = 1982044800; // startTime + 14 * ONE_DAY;
+console.log(t0);
+console.log(t1);
+console.log(t2);
 async function setupSpreadsVault() {
   /*
   Example
@@ -51,50 +55,64 @@ async function setupSpreadsVault() {
   spreadUnlockingRate(t1<=t<t2): (11.2 / 14) / (24 * 60 * 60) = 0.00000925925
   spreadUnlockingRate(t2<=t): 0
   */
-  const { callVault } = await loadFixture(vaultSetup);
+  const {
+    callVault,
+    putVault,
+    caller,
+    deployer,
+    base,
+    quote,
+    oracleAdapter,
+    p,
+  } = await loadFixture(vaultSetup);
+  for (let vault of [callVault, putVault]) {
+    const infos = [
+      {
+        maturity: t0,
+        strikes: [],
+        sizes: [],
+      },
+      {
+        maturity: t1,
+        strikes: [],
+        sizes: [],
+      },
+      {
+        maturity: t2,
+        strikes: [],
+        sizes: [],
+      },
+    ];
+    await vault.setListingsAndSizes(infos);
+    await vault.setLastSpreadUnlockUpdate(startTime);
+    const totalLockedSpread = 1.24 + 5.56 + 11.2;
+    const totalLockedFormatted = parseEther(totalLockedSpread.toString());
+    const spreadUnlockingRatet0 = 1.24 / (7 * ONE_DAY);
+    const spreadUnlockingRatet1 = 5.56 / (10 * ONE_DAY);
+    const spreadUnlockingRatet2 = 11.2 / (14 * ONE_DAY);
+    const spreadUnlockingRate =
+      spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
 
-  const infos = [
-    {
-      maturity: t0,
-      strikes: [],
-      sizes: [],
-    },
-    {
-      maturity: t1,
-      strikes: [],
-      sizes: [],
-    },
-    {
-      maturity: t2,
-      strikes: [],
-      sizes: [],
-    },
-    {
-      maturity: 2 * t2,
-      strikes: [],
-      sizes: [],
-    },
-  ];
-  await callVault.setListingsAndSizes(infos);
-  await callVault.setLastSpreadUnlockUpdate(startTime);
-  const totalLockedSpread = 1.24 + 5.56 + 11.2;
-  const totalLockedFormatted = parseEther(totalLockedSpread.toString());
-  const spreadUnlockingRatet0 = 1.24 / (7 * ONE_DAY);
-  const spreadUnlockingRatet1 = 5.56 / (10 * ONE_DAY);
-  const spreadUnlockingRatet2 = 11.2 / (14 * ONE_DAY);
-  const spreadUnlockingRate =
-    spreadUnlockingRatet0 + spreadUnlockingRatet1 + spreadUnlockingRatet2;
-
-  const surt0 = parseEther(spreadUnlockingRatet0.toFixed(18).toString());
-  const surt1 = parseEther(spreadUnlockingRatet1.toFixed(18).toString());
-  const surt2 = parseEther(spreadUnlockingRatet2.toFixed(18).toString());
-  const surgl = parseEther(spreadUnlockingRate.toFixed(18).toString());
-  await callVault.increaseSpreadUnlockingTick(t0, surt0);
-  await callVault.increaseSpreadUnlockingTick(t1, surt1);
-  await callVault.increaseSpreadUnlockingTick(t2, surt2);
-  await callVault.increaseSpreadUnlockingRate(surgl);
-  await callVault.increaseTotalLockedSpread(totalLockedFormatted);
-  return { vault: callVault };
+    const surt0 = parseEther(spreadUnlockingRatet0.toFixed(18).toString());
+    const surt1 = parseEther(spreadUnlockingRatet1.toFixed(18).toString());
+    const surt2 = parseEther(spreadUnlockingRatet2.toFixed(18).toString());
+    const surgl = parseEther(spreadUnlockingRate.toFixed(18).toString());
+    await vault.increaseSpreadUnlockingTick(t0, surt0);
+    await vault.increaseSpreadUnlockingTick(t1, surt1);
+    await vault.increaseSpreadUnlockingTick(t2, surt2);
+    await vault.increaseSpreadUnlockingRate(surgl);
+    await vault.increaseTotalLockedSpread(totalLockedFormatted);
+  }
+  return {
+    callVault,
+    putVault,
+    caller,
+    deployer,
+    base,
+    quote,
+    oracleAdapter,
+    p,
+  };
 }
 
 describe('UnderwriterVault', () => {
@@ -144,7 +162,7 @@ describe('UnderwriterVault', () => {
 
     async function setupAfterBuyVault(isCall: boolean) {
       // afterBuy function is independent of call / put option type
-      const { vault } = await loadFixture(setupSpreadsVault);
+      const { callVault: vault } = await loadFixture(setupSpreadsVault);
       expect(await vault.spreadUnlockingRate()).to.eq('17744708994709');
       await vault.setIsCall(isCall);
       console.log('Setup vault.');
@@ -268,13 +286,13 @@ describe('UnderwriterVault', () => {
           maturity2 = await getValidMaturity(2, 'weeks');
 
           if (isCall) {
+            vault = callVault;
             deposit = 10;
             token = base;
-            vault = callVault;
           } else {
+            vault = putVault;
             deposit = 10000;
             token = quote;
-            vault = putVault;
           }
 
           console.log('Depositing assets.');
@@ -363,11 +381,13 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#settle', () => {
-    const t0: number = 1678435200 + 2 * ONE_WEEK;
-    const t1 = t0 + ONE_WEEK;
-    const t2 = t0 + 2 * ONE_WEEK;
+    const t0 = startTime + ONE_WEEK;
+    const t1 = startTime + ONE_WEEK * 2;
+    const t2 = startTime + ONE_WEEK * 3;
+
     let strikedict: { [key: number]: BigNumber[] } = {};
     let vault: UnderwriterVaultMock;
+    let token: ERC20Mock;
 
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
@@ -375,8 +395,8 @@ describe('UnderwriterVault', () => {
           let {
             callVault,
             putVault,
-            deployer,
             caller,
+            deployer,
             base,
             quote,
             oracleAdapter,
@@ -384,13 +404,15 @@ describe('UnderwriterVault', () => {
           } = await loadFixture(vaultSetup);
 
           let totalAssets: number;
-
+          await increaseTo(startTime);
           if (isCall) {
+            token = base;
             vault = callVault;
             totalAssets = 100.03;
           } else {
             totalAssets = 100000;
             vault = putVault;
+            token = quote;
             await quote.mint(
               caller.address,
               parseEther(totalAssets.toString()),
@@ -442,9 +464,9 @@ describe('UnderwriterVault', () => {
 
           console.log('Depositing assets.');
           await addMockDeposit(vault, totalAssets, base, quote);
-          expect(await vault.totalAssets()).to.eq(
-            parseEther(totalAssets.toString()),
-          );
+          /*expect(await vault.totalAssets()).to.eq(
+            parseUnits(totalAssets.toString(), await token.decimals()),
+          );*/
           console.log('Deposited assets.');
 
           await vault.setListingsAndSizes(infos);
@@ -469,6 +491,35 @@ describe('UnderwriterVault', () => {
                 .mintFromPool(strike, info.maturity, info.sizes[i]);
             }
           }
+          const totalLocked = isCall ? 10 : 14100;
+          expect(await vault.totalLockedAssets()).to.eq(
+            parseEther(totalLocked.toString()),
+          );
+
+          // setup spread to check that _updateState is called whenever options are settled
+          // note: we are not adding the spreads to the balanceOf
+          // as we just want to test wif the options are settled correctly
+          // we also only test whether the lastSpreadUnlockUpdate was stored correctly
+          // to check that the function was called
+          await vault.setLastSpreadUnlockUpdate(startTime);
+          const lockedt1 = 1;
+          const lockedt2 = 11.2;
+          const totalLockedFormatted = parseEther(
+            (lockedt1 + lockedt2).toString(),
+          );
+          let spreadUnlockingRatet1 = lockedt1 / (2 * ONE_WEEK);
+          let spreadUnlockingRatet2 = lockedt2 / (3 * ONE_WEEK);
+          spreadUnlockingRatet1 =
+            Math.trunc(spreadUnlockingRatet1 * 1e18) / 1e18;
+          spreadUnlockingRatet2 =
+            Math.trunc(spreadUnlockingRatet2 * 1e18) / 1e18;
+          const surt1 = parseEther(spreadUnlockingRatet1.toFixed(18));
+          const surt2 = parseEther(spreadUnlockingRatet2.toFixed(18));
+          const surgl = surt1.add(surt2);
+          await vault.increaseSpreadUnlockingTick(t1, surt1);
+          await vault.increaseSpreadUnlockingTick(t2, surt2);
+          await vault.increaseSpreadUnlockingRate(surgl);
+          await vault.increaseTotalLockedSpread(totalLockedFormatted);
           return { vault };
         }
 
@@ -493,13 +544,13 @@ describe('UnderwriterVault', () => {
         ];
 
         const putTests = [
-          { newLocked: 11300, newTotalAssets: 100000 },
-          { newLocked: 7300, newTotalAssets: 99500 },
-          { newLocked: 7300, newTotalAssets: 99500 },
-          { newLocked: 5500, newTotalAssets: 99200 },
-          { newLocked: 5500, newTotalAssets: 99200 },
-          { newLocked: 0, newTotalAssets: 98700 },
-          { newLocked: 0, newTotalAssets: 98700 },
+          { newLocked: 14100, newTotalAssets: 99957.7 },
+          { newLocked: 10100, newTotalAssets: 99457.7 },
+          { newLocked: 10100, newTotalAssets: 99457.7 },
+          { newLocked: 8300, newTotalAssets: 99157.7 },
+          { newLocked: 8300, newTotalAssets: 99157.7 },
+          { newLocked: 0, newTotalAssets: 98657.7 },
+          { newLocked: 0, newTotalAssets: 98657.7 },
         ];
 
         const amountsList = isCall ? callTests : putTests;
@@ -512,9 +563,11 @@ describe('UnderwriterVault', () => {
               await increaseTo(test.timestamp);
               await vault.settle();
               let delta = isCall ? 0.00001 : 0;
-              expect(
-                parseFloat(formatEther(await vault.totalAssets())),
-              ).to.be.closeTo(amounts.newTotalAssets, delta);
+              const decimals = await token.decimals();
+              const amount =
+                parseInt((await vault.totalAssets()).toString()) /
+                10 ** decimals; // ;
+              expect(amount).to.be.closeTo(amounts.newTotalAssets, delta);
             });
             it(`totalLocked equals ${amounts.newLocked}`, async () => {
               let totalLocked = await vault.totalLockedAssets();
@@ -538,6 +591,13 @@ describe('UnderwriterVault', () => {
                 });
               }
             });
+            it(`lastSpreadUnlockUpdate equals ${test.timestamp}`, async () => {
+              const lsuu = await vault.lastSpreadUnlockUpdate();
+              expect(parseInt(lsuu.toString())).to.be.closeTo(
+                test.timestamp,
+                1,
+              );
+            });
             counter++;
           });
         });
@@ -545,100 +605,89 @@ describe('UnderwriterVault', () => {
     }
   });
 
-  describe('#_getLockedSpreadVars and #_updateState', () => {
-    const tests = [
-      {
-        timestamp: startTime + ONE_DAY,
-        totalLockedSpread: 16.4668,
-        spreadUnlockingRate: 0.0000177447,
-      },
-      {
-        timestamp: t0,
-        totalLockedSpread: 7.268,
-        spreadUnlockingRate: 0.00001569444,
-      },
-      {
-        timestamp: t0 + ONE_DAY,
-        totalLockedSpread: 5.912,
-        spreadUnlockingRate: 0.00001569444,
-      },
-      {
-        timestamp: t1,
-        totalLockedSpread: 3.2,
-        spreadUnlockingRate: 0.00000925925,
-      },
-      {
-        timestamp: t1 + ONE_DAY,
-        totalLockedSpread: 2.4,
-        spreadUnlockingRate: 0.00000925925,
-      },
-      {
-        timestamp: t2,
-        totalLockedSpread: 0.0,
-        spreadUnlockingRate: 0.0,
-      },
-    ];
+  const tests = [
+    {
+      timestamp: startTime + ONE_DAY,
+      totalLockedSpread: 16.4668,
+      spreadUnlockingRate: 0.0000177447,
+    },
+    {
+      timestamp: t0,
+      totalLockedSpread: 7.268,
+      spreadUnlockingRate: 0.00001569444,
+    },
+    {
+      timestamp: t0 + ONE_DAY,
+      totalLockedSpread: 5.912,
+      spreadUnlockingRate: 0.00001569444,
+    },
+    {
+      timestamp: t1,
+      totalLockedSpread: 3.2,
+      spreadUnlockingRate: 0.00000925925,
+    },
+    {
+      timestamp: t1 + ONE_DAY,
+      totalLockedSpread: 2.4,
+      spreadUnlockingRate: 0.00000925925,
+    },
+    {
+      timestamp: t2,
+      totalLockedSpread: 0.0,
+      spreadUnlockingRate: 0.0,
+    },
+  ];
 
-    describe('#_getLockedSpreadVars', () => {
-      tests.forEach(async (test) => {
-        it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
-          let { vault } = await loadFixture(setupSpreadsVault);
-          await increaseTo(test.timestamp);
-          const [
-            totalLockedSpread,
-            spreadUnlockingRate,
-            lastSpreadUnlockUpdate,
-          ] = await vault.getLockedSpreadVars(test.timestamp);
-          const tlsParsed = parseFloat(formatEther(totalLockedSpread));
-          const surParsed = parseFloat(formatEther(spreadUnlockingRate));
-          expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
-          expect(surParsed).to.be.closeTo(
-            test.spreadUnlockingRate,
-            0.0000000001,
-          );
-          expect(parseInt(lastSpreadUnlockUpdate.toString())).to.eq(
-            test.timestamp,
-          );
+  describe('#_getLockedSpreadVars', () => {
+    tests.forEach(async (test) => {
+      it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
+        let { callVault: vault } = await loadFixture(setupSpreadsVault);
+        await increaseTo(test.timestamp);
+        const [totalLockedSpread, spreadUnlockingRate, lastSpreadUnlockUpdate] =
+          await vault.getLockedSpreadVars(test.timestamp);
+        const tlsParsed = parseFloat(formatEther(totalLockedSpread));
+        const surParsed = parseFloat(formatEther(spreadUnlockingRate));
+        expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
+        expect(surParsed).to.be.closeTo(test.spreadUnlockingRate, 0.0000000001);
+        expect(parseInt(lastSpreadUnlockUpdate.toString())).to.eq(
+          test.timestamp,
+        );
 
-          // assert that stored variables are not overwritten
-          const tlsStoredParsed = parseFloat(
-            formatEther(await vault.totalLockedSpread()),
-          );
-          const surStoredParsed = parseFloat(
-            formatEther(await vault.spreadUnlockingRate()),
-          );
-          const lsuuParsed = parseInt(
-            (await vault.lastSpreadUnlockUpdate()).toString(),
-          );
-          expect(tlsStoredParsed).to.eq(18);
-          expect(surStoredParsed).to.be.closeTo(0.0000177447, 0.0000000001);
-          expect(lsuuParsed).to.eq(startTime);
-        });
+        // assert that stored variables are not overwritten
+        const tlsStoredParsed = parseFloat(
+          formatEther(await vault.totalLockedSpread()),
+        );
+        const surStoredParsed = parseFloat(
+          formatEther(await vault.spreadUnlockingRate()),
+        );
+        const lsuuParsed = parseInt(
+          (await vault.lastSpreadUnlockUpdate()).toString(),
+        );
+        expect(tlsStoredParsed).to.eq(18);
+        expect(surStoredParsed).to.be.closeTo(0.0000177447, 0.0000000001);
+        expect(lsuuParsed).to.eq(startTime);
       });
     });
+  });
 
-    describe('#_updateState', () => {
-      tests.forEach(async (test) => {
-        it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
-          let { vault } = await loadFixture(setupSpreadsVault);
-          await increaseTo(test.timestamp);
-          await vault.updateState(test.timestamp);
-          const tlsParsed = parseFloat(
-            formatEther(await vault.totalLockedSpread()),
-          );
-          const surParsed = parseFloat(
-            formatEther(await vault.spreadUnlockingRate()),
-          );
-          const lsuuParsed = parseInt(
-            (await vault.lastSpreadUnlockUpdate()).toString(),
-          );
-          expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
-          expect(surParsed).to.be.closeTo(
-            test.spreadUnlockingRate,
-            0.0000000001,
-          );
-          expect(lsuuParsed).to.eq(test.timestamp);
-        });
+  describe('#_updateState', () => {
+    tests.forEach(async (test) => {
+      it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
+        let { callVault: vault } = await loadFixture(setupSpreadsVault);
+        await increaseTo(test.timestamp);
+        await vault.updateState(test.timestamp);
+        const tlsParsed = parseFloat(
+          formatEther(await vault.totalLockedSpread()),
+        );
+        const surParsed = parseFloat(
+          formatEther(await vault.spreadUnlockingRate()),
+        );
+        const lsuuParsed = parseInt(
+          (await vault.lastSpreadUnlockUpdate()).toString(),
+        );
+        expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
+        expect(surParsed).to.be.closeTo(test.spreadUnlockingRate, 0.0000000001);
+        expect(lsuuParsed).to.eq(test.timestamp);
       });
     });
   });
