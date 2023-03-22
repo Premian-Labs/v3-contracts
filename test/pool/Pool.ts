@@ -1,11 +1,11 @@
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
-import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
+import { ONE_ETHER, PERMIT2, THREE_ETHER } from '../../utils/constants';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
 import {
@@ -30,6 +30,11 @@ import {
   runCallAndPutTests,
   strike,
 } from './Pool.fixture';
+import { PermitTransferFrom } from '@uniswap/permit2-sdk';
+import {
+  getRandomPermit2Nonce,
+  signPremiaPermit2,
+} from '../../utils/sdk/permit2';
 
 describe('Pool', () => {
   describe('__internal', function () {
@@ -210,7 +215,7 @@ describe('Pool', () => {
     describe(`#${fnSig}`, () => {
       describe('OrderType LC', () => {
         runCallAndPutTests((isCallPool: boolean) => {
-          it('should mint 1000 LP tokens and deposit 200 collateral (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
+          it('should mint 1000 LP tokens and deposit 200 collateral using approval (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
             const {
               pool,
               lp,
@@ -233,6 +238,81 @@ describe('Pool', () => {
             const collateralValue = scaleDecimals(
               collateral.mul(averagePrice).div(ONE_ETHER),
             );
+
+            expect(await pool.balanceOf(lp.address, tokenId)).to.eq(
+              depositSize,
+            );
+            expect(await pool.totalSupply(tokenId)).to.eq(depositSize);
+            expect(await poolToken.balanceOf(pool.address)).to.eq(
+              collateralValue,
+            );
+            expect(await poolToken.balanceOf(lp.address)).to.eq(
+              initialCollateral.sub(collateralValue),
+            );
+            expect(await pool.marketPrice()).to.eq(pKey.upper);
+          });
+
+          it('should mint 1000 LP tokens and deposit 200 collateral using permit (lower: 0.1 | upper 0.3 | size: 1000)', async () => {
+            const {
+              pool,
+              lp,
+              pKey,
+              poolToken,
+              scaleDecimals,
+              initialCollateral,
+              contractsToCollateral,
+              router,
+            } = await loadFixture(
+              isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
+            );
+
+            const tokenId = await pool.formatTokenId(
+              pKey.operator,
+              pKey.lower,
+              pKey.upper,
+              OrderType.LC,
+            );
+
+            const nearestBelow = await pool.getNearestTicksBelow(
+              pKey.lower,
+              pKey.upper,
+            );
+
+            const depositSize = parseEther('1000');
+
+            const averagePrice = average(pKey.lower, pKey.upper);
+            const collateral = contractsToCollateral(depositSize);
+
+            const collateralValue = scaleDecimals(
+              collateral.mul(averagePrice).div(ONE_ETHER),
+            );
+
+            await poolToken.connect(lp).approve(router.address, 0);
+            await poolToken
+              .connect(lp)
+              .approve(PERMIT2, ethers.constants.MaxUint256);
+
+            const permit: PermitTransferFrom = {
+              deadline: (await latest()) + 1000,
+              nonce: getRandomPermit2Nonce(),
+              permitted: {
+                token: poolToken.address,
+                amount: collateralValue,
+              },
+              spender: pool.address,
+            };
+
+            await pool
+              .connect(lp)
+              [depositFnSig](
+                { ...pKey, orderType: OrderType.LC },
+                nearestBelow.nearestBelowLower,
+                nearestBelow.nearestBelowUpper,
+                depositSize,
+                0,
+                parseEther('1'),
+                await signPremiaPermit2(lp, permit),
+              );
 
             expect(await pool.balanceOf(lp.address, tokenId)).to.eq(
               depositSize,
@@ -666,7 +746,7 @@ describe('Pool', () => {
 
   describe('#writeFrom', () => {
     runCallAndPutTests((isCallPool) => {
-      it('should successfully write 500 options', async () => {
+      it('should successfully write 500 options using approval', async () => {
         const {
           pool,
           lp,
@@ -687,6 +767,60 @@ describe('Pool', () => {
           .writeFrom(lp.address, trader.address, size, emptyPermit2);
 
         const collateral = scaleDecimals(contractsToCollateral(size)).add(fee);
+
+        expect(await poolToken.balanceOf(pool.address)).to.eq(collateral);
+        expect(await poolToken.balanceOf(lp.address)).to.eq(
+          initialCollateral.sub(collateral),
+        );
+        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          size,
+        );
+        expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
+        expect(await pool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+        expect(await pool.balanceOf(lp.address, TokenType.SHORT)).to.eq(size);
+      });
+
+      it('should successfully write 500 options using permit', async () => {
+        const {
+          pool,
+          lp,
+          trader,
+          poolToken,
+          scaleDecimals,
+          initialCollateral,
+          contractsToCollateral,
+          router,
+        } = await loadFixture(
+          isCallPool ? deployAndMintForLP_CALL : deployAndMintForLP_PUT,
+        );
+
+        const size = parseEther('500');
+        const fee = await pool.takerFee(size, 0, true);
+        const collateral = scaleDecimals(contractsToCollateral(size)).add(fee);
+
+        await poolToken.connect(lp).approve(router.address, 0);
+        await poolToken
+          .connect(lp)
+          .approve(PERMIT2, ethers.constants.MaxUint256);
+
+        const permit: PermitTransferFrom = {
+          deadline: (await latest()) + 1000,
+          nonce: getRandomPermit2Nonce(),
+          permitted: {
+            token: poolToken.address,
+            amount: collateral,
+          },
+          spender: pool.address,
+        };
+
+        await pool
+          .connect(lp)
+          .writeFrom(
+            lp.address,
+            trader.address,
+            size,
+            await signPremiaPermit2(lp, permit),
+          );
 
         expect(await poolToken.balanceOf(pool.address)).to.eq(collateral);
         expect(await poolToken.balanceOf(lp.address)).to.eq(
@@ -787,7 +921,7 @@ describe('Pool', () => {
 
   describe('#trade', () => {
     runCallAndPutTests((isCallPool) => {
-      it('should successfully buy 500 options', async () => {
+      it('should successfully buy 500 options with approval', async () => {
         const { pool, trader, poolToken, router } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_CS_CALL
@@ -818,7 +952,51 @@ describe('Pool', () => {
         expect(await poolToken.balanceOf(trader.address)).to.eq(0);
       });
 
-      it('should successfully sell 500 options', async () => {
+      it('should successfully buy 500 options with permit', async () => {
+        const { pool, trader, poolToken } = await loadFixture(
+          isCallPool
+            ? deployAndDeposit_1000_CS_CALL
+            : deployAndDeposit_1000_CS_PUT,
+        );
+
+        const tradeSize = parseEther('500');
+        const totalPremium = await pool.getTradeQuote(tradeSize, true);
+
+        await poolToken.mint(trader.address, totalPremium);
+
+        await poolToken
+          .connect(trader)
+          .approve(PERMIT2, ethers.constants.MaxUint256);
+
+        const permit: PermitTransferFrom = {
+          deadline: (await latest()) + 1000,
+          nonce: getRandomPermit2Nonce(),
+          permitted: {
+            token: poolToken.address,
+            amount: totalPremium,
+          },
+          spender: pool.address,
+        };
+
+        await pool
+          .connect(trader)
+          .trade(
+            tradeSize,
+            true,
+            totalPremium.add(totalPremium.div(10)),
+            await signPremiaPermit2(trader, permit),
+          );
+
+        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          tradeSize,
+        );
+        expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
+          tradeSize,
+        );
+        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
+      });
+
+      it('should successfully sell 500 options with approval', async () => {
         const {
           pool,
           trader,
@@ -851,6 +1029,59 @@ describe('Pool', () => {
             false,
             totalPremium.sub(totalPremium.div(10)),
             emptyPermit2,
+          );
+
+        expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
+          tradeSize,
+        );
+        expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
+          tradeSize,
+        );
+        expect(await poolToken.balanceOf(trader.address)).to.eq(totalPremium);
+      });
+
+      it('should successfully sell 500 options with permit', async () => {
+        const {
+          pool,
+          trader,
+          poolToken,
+          scaleDecimals,
+          contractsToCollateral,
+        } = await loadFixture(
+          isCallPool
+            ? deployAndDeposit_1000_LC_CALL
+            : deployAndDeposit_1000_LC_PUT,
+        );
+
+        const tradeSize = parseEther('500');
+        const collateralScaled = scaleDecimals(
+          contractsToCollateral(tradeSize),
+        );
+
+        const totalPremium = await pool.getTradeQuote(tradeSize, false);
+
+        await poolToken.mint(trader.address, collateralScaled);
+        await poolToken
+          .connect(trader)
+          .approve(PERMIT2, ethers.constants.MaxUint256);
+
+        const permit: PermitTransferFrom = {
+          deadline: (await latest()) + 1000,
+          nonce: getRandomPermit2Nonce(),
+          permitted: {
+            token: poolToken.address,
+            amount: collateralScaled,
+          },
+          spender: pool.address,
+        };
+
+        await pool
+          .connect(trader)
+          .trade(
+            tradeSize,
+            false,
+            totalPremium.sub(totalPremium.div(10)),
+            await signPremiaPermit2(trader, permit),
           );
 
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
@@ -1273,7 +1504,7 @@ describe('Pool', () => {
 
   describe('#fillQuote', () => {
     runCallAndPutTests((isCallPool) => {
-      it('should successfully fill a valid quote', async () => {
+      it('should successfully fill a valid quote with approval', async () => {
         const {
           poolToken,
           scaleDecimals,
@@ -1300,6 +1531,77 @@ describe('Pool', () => {
         let premium = scaleDecimals(
           contractsToCollateral(quote.price.mul(quote.size).div(ONE_ETHER)),
         );
+
+        const collateral = scaleDecimals(contractsToCollateral(quote.size));
+
+        const protocolFee = await pool.takerFee(quote.size, premium, false);
+
+        expect(await poolToken.balanceOf(lp.address)).to.eq(
+          initialCollateral.sub(collateral).add(premium).sub(protocolFee),
+        );
+        expect(await poolToken.balanceOf(trader.address)).to.eq(
+          initialCollateral.sub(premium),
+        );
+
+        expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
+        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
+          quote.size,
+        );
+
+        expect(await pool.balanceOf(lp.address, TokenType.SHORT)).to.eq(
+          quote.size,
+        );
+        expect(await pool.balanceOf(lp.address, TokenType.LONG)).to.eq(0);
+      });
+
+      it('should successfully fill a valid quote with permit', async () => {
+        const {
+          poolToken,
+          scaleDecimals,
+          pool,
+          lp,
+          trader,
+          getTradeQuote,
+          initialCollateral,
+          contractsToCollateral,
+          router,
+        } = await loadFixture(
+          isCallPool
+            ? deployAndMintForTraderAndLP_CALL
+            : deployAndMintForTraderAndLP_PUT,
+        );
+
+        const quote = await getTradeQuote();
+
+        const sig = await signQuote(lp.provider!, pool.address, quote);
+
+        let premium = scaleDecimals(
+          contractsToCollateral(quote.price.mul(quote.size).div(ONE_ETHER)),
+        );
+
+        await poolToken.connect(trader).approve(router.address, 0);
+        await poolToken
+          .connect(trader)
+          .approve(PERMIT2, ethers.constants.MaxUint256);
+
+        const permit: PermitTransferFrom = {
+          deadline: (await latest()) + 1000,
+          nonce: getRandomPermit2Nonce(),
+          permitted: {
+            token: poolToken.address,
+            amount: premium,
+          },
+          spender: pool.address,
+        };
+
+        await pool
+          .connect(trader)
+          .fillQuote(
+            quote,
+            quote.size,
+            sig,
+            await signPremiaPermit2(trader, permit),
+          );
 
         const collateral = scaleDecimals(contractsToCollateral(quote.size));
 

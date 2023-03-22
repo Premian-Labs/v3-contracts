@@ -1080,7 +1080,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tradeQuote.isBuy,
             0,
             true,
-            permit
+            Permit2.emptyPermit()
         );
 
         emit FillQuote(
@@ -1986,7 +1986,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 amount
     ) internal {
         if (permit.signature.length > 0) {
-            if (permit.permittedToken == token)
+            if (permit.permittedToken != token)
                 revert Pool__InvalidPermittedToken();
 
             if (permit.permittedAmount < amount)
