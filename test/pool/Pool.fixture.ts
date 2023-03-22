@@ -9,22 +9,12 @@ import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
-import { IPoolInternal } from '../../typechain/contracts/pool/IPool';
-import Permit2Struct = IPoolInternal.Permit2Struct;
 
 export const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))';
 
 export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
-
-export const emptyPermit2: Permit2Struct = {
-  permittedToken: ethers.constants.AddressZero,
-  permittedAmount: '0',
-  nonce: '0',
-  deadline: '0',
-  signature: '0x',
-} as const;
 
 export function getSettlementPrice(isCall: boolean, isItm: boolean) {
   if (isCall) {

@@ -2,6 +2,7 @@ import { BigNumber, BigNumberish, BytesLike } from 'ethers';
 import { randomBytes } from 'ethers/lib/utils';
 import { PermitTransferFrom, SignatureTransfer } from '@uniswap/permit2-sdk';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { ethers } from 'hardhat';
 
 export const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3';
 
@@ -42,5 +43,15 @@ export async function signPremiaPermit2(
     permittedAmount: permit.permitted.amount,
     permittedToken: permit.permitted.token,
     signature: await signPermit2(signer, permit),
+  };
+}
+
+export function getEmptyPremiaPermit2(): PremiaPermit2 {
+  return {
+    permittedToken: ethers.constants.AddressZero,
+    permittedAmount: '0',
+    nonce: '0',
+    deadline: '0',
+    signature: '0x',
   };
 }
