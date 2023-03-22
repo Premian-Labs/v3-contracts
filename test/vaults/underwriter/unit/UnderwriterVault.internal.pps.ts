@@ -329,19 +329,19 @@ describe('UnderwriterVault', () => {
         });
 
         let callTests = [
-          { isCall: true, timestamp: t0 - ONE_DAY, expected: 0.679324 },
-          { isCall: true, timestamp: t0, expected: 0.540875 },
-          { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.534398 },
+          { isCall: true, timestamp: t0 - ONE_DAY, expected: 0.679618 },
+          { isCall: true, timestamp: t0, expected: 0.541099 },
+          { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.534583 },
           { isCall: true, timestamp: t2 + ONE_DAY, expected: 0 },
           { isCall: true, timestamp: t3, expected: 0 },
           { isCall: true, timestamp: t3 + ONE_DAY, expected: 0 },
         ];
 
         let putTests = [
-          { isCall: false, timestamp: t0 - ONE_DAY, expected: 6579.324 },
-          { isCall: false, timestamp: t0, expected: 4540.875 },
-          { isCall: false, timestamp: t0 + ONE_DAY, expected: 4534.398 },
-          { isCall: false, timestamp: t2 + ONE_DAY, expected: 1000 },
+          { isCall: false, timestamp: t0 - ONE_DAY, expected: 6576.0 },
+          { isCall: false, timestamp: t0, expected: 4537.998 },
+          { isCall: false, timestamp: t0 + ONE_DAY, expected: 4531.865 },
+          { isCall: false, timestamp: t2 + ONE_DAY, expected: 999.567 },
           { isCall: false, timestamp: t3, expected: 0 },
           { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
         ];
@@ -414,23 +414,23 @@ describe('UnderwriterVault', () => {
         });
 
         let callTests = [
-          { isCall: true, timestamp: t0 - ONE_DAY, expected: 0.679324 },
-          { isCall: true, timestamp: t0, expected: 0.640875 },
-          { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.634398 },
-          { isCall: true, timestamp: t1, expected: 0.806357 },
-          { isCall: true, timestamp: t1 + ONE_DAY, expected: 0.804556 },
+          { isCall: true, timestamp: t0 - ONE_DAY, expected: 0.679618 },
+          { isCall: true, timestamp: t0, expected: 0.641099 },
+          { isCall: true, timestamp: t0 + ONE_DAY, expected: 0.634583 },
+          { isCall: true, timestamp: t1, expected: 0.806477 },
+          { isCall: true, timestamp: t1 + ONE_DAY, expected: 0.804646 },
           { isCall: true, timestamp: t2 + ONE_DAY, expected: 1.1 },
           { isCall: true, timestamp: t3, expected: 1.1 },
           { isCall: true, timestamp: t3 + ONE_DAY, expected: 1.1 },
         ];
 
         let putTests = [
-          { isCall: false, timestamp: t0 - ONE_DAY, expected: 6579.324 },
-          { isCall: false, timestamp: t0, expected: 6540.875 },
-          { isCall: false, timestamp: t0 + ONE_DAY, expected: 6534.398 },
-          { isCall: false, timestamp: t1, expected: 4506.357 },
-          { isCall: false, timestamp: t1 + ONE_DAY, expected: 4504.556 },
-          { isCall: false, timestamp: t2 + ONE_DAY, expected: 3900 },
+          { isCall: false, timestamp: t0 - ONE_DAY, expected: 6576.0 },
+          { isCall: false, timestamp: t0, expected: 6537.998 },
+          { isCall: false, timestamp: t0 + ONE_DAY, expected: 6531.865 },
+          { isCall: false, timestamp: t1, expected: 4504.526 },
+          { isCall: false, timestamp: t1 + ONE_DAY, expected: 4502.855 },
+          { isCall: false, timestamp: t2 + ONE_DAY, expected: 3898.767 },
           { isCall: false, timestamp: t3, expected: 3900 },
           { isCall: false, timestamp: t3 + ONE_DAY, expected: 3900 },
         ];
@@ -497,19 +497,19 @@ describe('UnderwriterVault', () => {
           {
             isCall: true,
             timestamp: t0 - ONE_DAY,
-            expected: totalLockedCall - 0.679324,
+            expected: totalLockedCall - 0.679618,
           },
-          { isCall: true, timestamp: t0, expected: totalLockedCall - 0.640875 },
+          { isCall: true, timestamp: t0, expected: totalLockedCall - 0.641099 },
           {
             isCall: true,
             timestamp: t0 + ONE_DAY,
-            expected: totalLockedCall - 0.634398,
+            expected: totalLockedCall - 0.634583,
           },
-          { isCall: true, timestamp: t1, expected: totalLockedCall - 0.806357 },
+          { isCall: true, timestamp: t1, expected: totalLockedCall - 0.806477 },
           {
             isCall: true,
             timestamp: t1 + ONE_DAY,
-            expected: totalLockedCall - 0.804556,
+            expected: totalLockedCall - 0.804646,
           },
           {
             isCall: true,
@@ -528,24 +528,24 @@ describe('UnderwriterVault', () => {
           {
             isCall: false,
             timestamp: t0 - ONE_DAY,
-            expected: totalLockedPut - 6579.324,
+            expected: totalLockedPut - 6576.0,
           },
-          { isCall: false, timestamp: t0, expected: totalLockedPut - 6540.875 },
+          { isCall: false, timestamp: t0, expected: totalLockedPut - 6537.998 },
           {
             isCall: false,
             timestamp: t0 + ONE_DAY,
-            expected: totalLockedPut - 6534.398,
+            expected: totalLockedPut - 6531.865,
           },
-          { isCall: false, timestamp: t1, expected: totalLockedPut - 4506.357 },
+          { isCall: false, timestamp: t1, expected: totalLockedPut - 4504.526 },
           {
             isCall: false,
             timestamp: t1 + ONE_DAY,
-            expected: totalLockedPut - 4504.556,
+            expected: totalLockedPut - 4502.855,
           },
           {
             isCall: false,
             timestamp: t2 + ONE_DAY,
-            expected: totalLockedPut - 3900,
+            expected: totalLockedPut - 3898.767,
           },
           { isCall: false, timestamp: t3, expected: totalLockedPut - 3900 },
           {
