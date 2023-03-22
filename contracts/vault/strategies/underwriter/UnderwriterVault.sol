@@ -682,11 +682,7 @@ contract UnderwriterVault is
 
         vars.spread = (vars.cLevel - l.minCLevel) * vars.premium;
         vars.mintingFee = UD60x18.wrap(
-            IPool(vars.poolAddr).takerFee(
-                vars.size,
-                vars.premium.unwrap(),
-                false
-            )
+            IPool(vars.poolAddr).takerFee(vars.size, 0, true)
         );
         return vars;
     }
