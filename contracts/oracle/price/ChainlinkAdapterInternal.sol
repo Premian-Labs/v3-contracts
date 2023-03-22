@@ -547,9 +547,10 @@ abstract contract ChainlinkAdapterInternal is
     function _aggregator(
         address tokenA,
         address tokenB
-    ) internal view returns (address) {
+    ) internal view returns (address[] memory aggregator) {
         address feed = _feed(tokenA, tokenB);
-        return IAggregator(feed).aggregator();
+        aggregator = new address[](1);
+        aggregator[0] = IAggregator(feed).aggregator();
     }
 
     function _aggregatorDecimals(
@@ -637,15 +638,6 @@ abstract contract ChainlinkAdapterInternal is
 
     function _isWBTC(address token) internal view returns (bool) {
         return token == WRAPPED_BTC_TOKEN;
-    }
-
-    // TODO: consolidate when merged with #103
-    function _resizeArray(address[] memory array, uint256 size) internal pure {
-        if (array.length == size) return;
-
-        assembly {
-            mstore(array, size)
-        }
     }
 
     // TODO: consolidate when merged with #103

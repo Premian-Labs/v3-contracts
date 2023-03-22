@@ -79,9 +79,7 @@ contract ChainlinkAdapter is
             uint8[] memory decimals
         )
     {
-        // there are no tiers on chainlink so this is essentially a placeholder
-        address[][] memory tier = new address[][](1);
-        address[] memory path = new address[](2);
+        path = new address[][](2);
         token = _tokenToDenomination(token);
 
         if (_exists(token, Denominations.USD)) {
@@ -91,25 +89,23 @@ contract ChainlinkAdapter is
             path[1] = _aggregator(Denominations.ETH, Denominations.USD);
         }
 
-        tier[0] = path;
-        uint8[] memory decimals = new uint8[](2);
+        decimals = new uint8[](2);
 
-        if (tier[0][0] != address(0)) {
-            decimals[0] = _aggregatorDecimals(tier[0][0]);
+        if (path[0].length > 0) {
+            decimals[0] = _aggregatorDecimals(path[0][0]);
         }
 
-        if (tier[0][1] != address(0)) {
-            decimals[1] = _aggregatorDecimals(tier[0][1]);
+        if (path[1].length > 0) {
+            decimals[1] = _aggregatorDecimals(path[1][0]);
         }
 
-        if (tier[0][0] == address(0)) {
-            address[] memory temp = tier[0];
-            _resizeArray(temp, 0);
-            tier[0] = temp;
-        } else if (tier[0][1] == address(0)) {
-            address[] memory temp = tier[0];
-            _resizeArray(temp, 1);
-            tier[0] = temp;
+        if (path[0].length == 0) {
+            address[][] memory temp = new address[][](0);
+            path = temp;
+        } else if (path[1].length == 0) {
+            address[][] memory temp = new address[][](1);
+            temp[0] = path[0];
+            path = temp;
         }
 
         if (decimals[0] == 0) {
@@ -122,7 +118,8 @@ contract ChainlinkAdapter is
             decimals = temp;
         }
 
-        return (AdapterType.CHAINLINK, Denominations.USD, tier, decimals);
+        adapterType = AdapterType.CHAINLINK;
+        denomination = Denominations.USD;
     }
 
     /// @inheritdoc IChainlinkAdapter

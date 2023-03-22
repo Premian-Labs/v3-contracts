@@ -176,51 +176,6 @@ describe('ChainlinkAdapter', () => {
     return { deployer, instance, stub, stubCoin };
   }
 
-  describe('#describePricingPath', () => {
-    it('should describe pricing path', async () => {
-      const { instance } = await loadFixture(deploy);
-
-      const USD = '0x0000000000000000000000000000000000000348';
-
-      let description = await instance.describePricingPath(
-        bnToAddress(BigNumber.from(1)),
-      );
-
-      expect(description[0]).to.eq(AdapterType.CHAINLINK);
-      expect(description[1]).to.eq(USD);
-      expect(description[2][0].length).to.eq(0);
-      expect(description[3].length).to.eq(0);
-
-      description = await instance.describePricingPath(tokens.WETH.address);
-
-      expect(description[0]).to.eq(AdapterType.CHAINLINK);
-      expect(description[1]).to.eq(USD);
-      expect(description[2][0]).to.deep.eq([
-        '0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6',
-      ]);
-      expect(description[3]).to.deep.eq(['8']);
-
-      description = await instance.describePricingPath(tokens.DAI.address);
-
-      expect(description[0]).to.eq(AdapterType.CHAINLINK);
-      expect(description[1]).to.eq(USD);
-      expect(description[2][0]).to.deep.eq([
-        '0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82',
-      ]);
-      expect(description[3]).to.deep.eq(['8']);
-
-      description = await instance.describePricingPath(tokens.BOND.address);
-
-      expect(description[0]).to.eq(AdapterType.CHAINLINK);
-      expect(description[1]).to.eq(USD);
-      expect(description[2][0]).to.deep.eq([
-        '0x5667eE03110045510897aDa33DC561cEfCBcC904',
-        '0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6',
-      ]);
-      expect(description[3]).to.deep.eq(['18', '8']);
-    });
-  });
-
   describe('#isPairSupported', () => {
     it('returns false if pair is not supported by adapter', async () => {
       const { instance } = await loadFixture(deploy);
@@ -707,6 +662,51 @@ describe('ChainlinkAdapter', () => {
             target,
           ),
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
+      });
+    });
+
+    describe('#describePricingPath', () => {
+      it('should describe pricing path', async () => {
+        const { instance } = await loadFixture(deploy);
+
+        const USD = '0x0000000000000000000000000000000000000348';
+
+        let description = await instance.describePricingPath(
+          bnToAddress(BigNumber.from(1)),
+        );
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.denomination).to.eq(USD);
+        expect(description.path.length).to.eq(0);
+        expect(description.decimals.length).to.eq(0);
+
+        description = await instance.describePricingPath(tokens.WETH.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.denomination).to.eq(USD);
+        expect(description.path).to.deep.eq([
+          ['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6'],
+        ]);
+        expect(description.decimals).to.deep.eq(['8']);
+
+        description = await instance.describePricingPath(tokens.DAI.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.denomination).to.eq(USD);
+        expect(description.path).to.deep.eq([
+          ['0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82'],
+        ]);
+        expect(description.decimals).to.deep.eq(['8']);
+
+        description = await instance.describePricingPath(tokens.BOND.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.denomination).to.eq(USD);
+        expect(description.path).to.deep.eq([
+          ['0x5667eE03110045510897aDa33DC561cEfCBcC904'],
+          ['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6'],
+        ]);
+        expect(description.decimals).to.deep.eq(['18', '8']);
       });
     });
   });
