@@ -135,9 +135,7 @@ describe('UnderwriterVault', () => {
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.998'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.498', async () => {
-          await vault.increaseTotalLockedAssets(
-            parseUnits('0.5', await token.decimals()),
-          );
+          await vault.increaseTotalLockedAssets(parseEther('0.5'));
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.498'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.298', async () => {
@@ -145,9 +143,7 @@ describe('UnderwriterVault', () => {
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.298'));
         });
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.2979', async () => {
-          await vault.increaseTotalLockedAssets(
-            parseUnits('0.0001', await token.decimals()),
-          );
+          await vault.increaseTotalLockedAssets(parseEther('0.0001'));
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.2979'));
         });
       });

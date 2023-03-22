@@ -11,8 +11,7 @@ describe('#ERC4626 overridden functions', () => {
     describe(isCall ? 'call' : 'put', () => {
       describe('#maxWithdraw', () => {
         it('maxWithdraw should revert for a zero address', async () => {
-          const { callVault, caller, receiver, base, quote } =
-            await loadFixture(vaultSetup);
+          const { callVault, base, quote } = await loadFixture(vaultSetup);
           await setMaturities(callVault);
           await addMockDeposit(callVault, 2, base, quote);
           await expect(
@@ -21,8 +20,9 @@ describe('#ERC4626 overridden functions', () => {
         });
 
         it('maxWithdraw should return the available assets for a non-zero address', async () => {
-          const { callVault, caller, deployer, receiver, base, quote } =
-            await loadFixture(vaultSetup);
+          const { callVault, receiver, base, quote } = await loadFixture(
+            vaultSetup,
+          );
           await setMaturities(callVault);
           await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
@@ -61,8 +61,9 @@ describe('#ERC4626 overridden functions', () => {
 
       describe('#maxRedeem', () => {
         it('maxRedeem should revert for a zero address', async () => {
-          const { callVault, caller, receiver, base, quote } =
-            await loadFixture(vaultSetup);
+          const { callVault, receiver, base, quote } = await loadFixture(
+            vaultSetup,
+          );
           await setMaturities(callVault);
           await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
           await expect(
@@ -92,8 +93,7 @@ describe('#ERC4626 overridden functions', () => {
         });
 
         it('previewMint should return amount of assets required to mint', async () => {
-          const { callVault, caller, receiver, base, quote } =
-            await loadFixture(vaultSetup);
+          const { callVault, base, quote } = await loadFixture(vaultSetup);
           await setMaturities(callVault);
           await addMockDeposit(callVault, 2, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.2'));

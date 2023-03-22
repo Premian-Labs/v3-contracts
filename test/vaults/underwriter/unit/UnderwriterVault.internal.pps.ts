@@ -615,7 +615,7 @@ describe('UnderwriterVault.internal.pps', () => {
                 base.address,
                 parseEther('1500'),
                 [parseEther('1200')],
-                ['19177923642820903'],
+                ['153424657534246575'],
               )
               .returns([parseEther('0.51')]);
             expect(await vault.totalAssets()).to.eq(

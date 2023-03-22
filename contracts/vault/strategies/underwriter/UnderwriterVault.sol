@@ -25,8 +25,6 @@ import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/Enumerable
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 
-import "hardhat/console.sol";
-
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
 contract UnderwriterVault is
@@ -290,7 +288,7 @@ contract UnderwriterVault is
 
     /// @notice Gets the current amount of available assets
     /// @return The amount of available assets
-    // TODO: shouldn't this include lockedAssets?
+    // Note: we do not deduct the totalLockedAssets as these were already deducted during minting
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
         return
             _balanceOfAssetUD60x18(address(this)) -

@@ -310,6 +310,15 @@ describe('UnderwriterVault', () => {
           const timestamp = await getValidMaturity(1, 'weeks');
           const maturity = await getValidMaturity(2, 'months');
 
+          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
+            .withArgs(
+              base.address,
+              spot,
+              parseEther(xstrike.toString()),
+              '153424657534246575',
+            )
+            .returns(parseEther('0.51'));
+
           await createPool(
             strike,
             maturity,
@@ -722,7 +731,7 @@ describe('UnderwriterVault', () => {
 
           await oracleAdapter.mock.quote.returns(spot);
           await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
-            .withArgs(base.address, spot, strike, '191780821917808219')
+            .withArgs(base.address, spot, strike, '153424657534246575')
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
