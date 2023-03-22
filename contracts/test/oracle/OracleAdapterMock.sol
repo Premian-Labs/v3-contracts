@@ -59,30 +59,30 @@ contract OracleAdapterMock {
             uint8[] memory
         )
     {
-        address[][] memory tiers = new address[][](1);
-        address[] memory path = new address[](1);
+        address[][] memory path = new address[][](1);
+        address[] memory aggregator = new address[](1);
         uint8[] memory decimals = new uint8[](1);
 
         decimals[0] = 8;
 
         if (token == BASE) {
-            path[0] = 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6;
-            tiers[0] = path;
+            aggregator[0] = 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6;
+            path[0] = aggregator;
 
             return (
                 IOracleAdapter.AdapterType.CHAINLINK,
                 Denominations.USD,
-                tiers,
+                path,
                 decimals
             );
         } else {
-            path[0] = 0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82;
-            tiers[0] = path;
+            aggregator[0] = 0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82;
+            path[0] = aggregator;
 
             return (
                 IOracleAdapter.AdapterType.CHAINLINK,
                 Denominations.USD,
-                tiers,
+                path,
                 decimals
             );
         }
