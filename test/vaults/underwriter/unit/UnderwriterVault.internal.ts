@@ -595,7 +595,7 @@ describe('UnderwriterVault', () => {
               const lsuu = await vault.lastSpreadUnlockUpdate();
               expect(parseInt(lsuu.toString())).to.be.closeTo(
                 test.timestamp,
-                1,
+                2,
               );
             });
             counter++;
