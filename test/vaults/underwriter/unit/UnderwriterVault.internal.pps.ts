@@ -30,7 +30,7 @@ let t3: number;
 
 let vault: UnderwriterVaultMock;
 
-describe('UnderwriterVault', () => {
+describe('UnderwriterVault.internal.pps', () => {
   describe('#_getTotalLiabilitiesExpired', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
@@ -341,7 +341,7 @@ describe('UnderwriterVault', () => {
           { isCall: false, timestamp: t0 - ONE_DAY, expected: 6576.0 },
           { isCall: false, timestamp: t0, expected: 4537.998 },
           { isCall: false, timestamp: t0 + ONE_DAY, expected: 4531.865 },
-          { isCall: false, timestamp: t2 + ONE_DAY, expected: 999.567 },
+          { isCall: false, timestamp: t2 + ONE_DAY, expected: 998.767 },
           { isCall: false, timestamp: t3, expected: 0 },
           { isCall: false, timestamp: t3 + ONE_DAY, expected: 0 },
         ];
@@ -356,7 +356,6 @@ describe('UnderwriterVault', () => {
               spot,
             );
             let delta = test.isCall ? 0.000002 : 0.002;
-            console.log(result);
             expect(parseFloat(formatEther(result))).to.be.closeTo(
               test.expected,
               delta,
@@ -579,74 +578,81 @@ describe('UnderwriterVault', () => {
   });
 
   describe('#_getPricePerShare', () => {
-    let tests = [
-      { expected: 1, deposit: 2, totalLockedSpread: 0, tradeSize: 0 },
-      { expected: 0.9, deposit: 2, totalLockedSpread: 0.2, tradeSize: 0 },
-      { expected: 0.98, deposit: 5, totalLockedSpread: 0.1, tradeSize: 0 },
-      {
-        expected: 0.56666666,
-        deposit: 2,
-        totalLockedSpread: 0.2,
-        tradeSize: 1,
-      },
-      {
-        expected: 0.66666666,
-        deposit: 2,
-        totalLockedSpread: 0,
-        tradeSize: 1,
-      },
-    ];
-    tests.forEach(async (test) => {
-      it(`returns ${test.expected} when totalLockedSpread=${test.totalLockedSpread} and tradeSize=${test.tradeSize}`, async () => {
-        const { callVault, caller, volOracle, base, quote, receiver } =
-          await loadFixture(vaultSetup);
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        let callTests = [
+          { expected: 1, deposit: 2, tls: 0, tradeSize: 0 },
+          { expected: 0.9, deposit: 2, tls: 0.2, tradeSize: 0 },
+          { expected: 0.98, deposit: 5, tls: 0.1, tradeSize: 0 },
+          { expected: 0.749874, deposit: 2, tls: 0.2, tradeSize: 1.5 },
+          { expected: 0.899916, deposit: 2, tls: 0, tradeSize: 1 },
+        ];
+        let putTests = [
+          { expected: 1, deposit: 2, tls: 0, tradeSize: 0 },
+          { expected: 0.9, deposit: 2, tls: 0.2, tradeSize: 0 },
+          { expected: 0.98, deposit: 5, tls: 0.1, tradeSize: 0 },
+          { expected: 0.884747, deposit: 2, tls: 0.2, tradeSize: 1.5 },
+          { expected: 0.989831, deposit: 2, tls: 0, tradeSize: 1 },
+        ];
+        let tests = isCall ? callTests : putTests;
+        tests.forEach(async (test) => {
+          it(`returns ${test.expected} when totalLockedSpread=${test.tls} and tradeSize=${test.tradeSize}`, async () => {
+            const { callVault, putVault, volOracle, base, quote } =
+              await loadFixture(vaultSetup);
+            vault = isCall ? callVault : putVault;
+            const token = isCall ? base : quote;
 
-        await volOracle.mock.getVolatility
-          .withArgs(base.address, parseEther('1500'), [], [])
-          .returns([]);
+            await volOracle.mock.getVolatility
+              .withArgs(base.address, parseEther('1500'), [], [])
+              .returns([]);
 
-        // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
-        await addMockDeposit(callVault, test.deposit, base, quote);
-        let startTime = await latest();
-        let t0 = startTime + 7 * ONE_DAY;
-        await volOracle.mock.getVolatility
-          .withArgs(
-            base.address,
-            parseEther('1500'),
-            [parseEther('500')],
-            ['19177923642820903'],
-          )
-          .returns([parseEther('0.0001')]);
-        expect(await callVault.totalAssets()).to.eq(
-          parseEther(test.deposit.toString()),
-        );
-        expect(await callVault.totalSupply()).to.eq(
-          parseEther(test.deposit.toString()),
-        );
-        // mock vault
-        await callVault.increaseTotalLockedSpread(
-          parseEther(test.totalLockedSpread.toString()),
-        );
-        await callVault.setMaxMaturity(t0);
-        if (test.tradeSize > 0) {
-          // increase total locked assets
-          const infos = [
-            {
-              maturity: t0,
-              strikes: [500].map((el) => parseEther(el.toString())),
-              sizes: [1].map((el) => parseEther(el.toString())),
-            },
-          ];
-          await callVault.setListingsAndSizes(infos);
-          await callVault.increaseTotalLockedAssets(parseEther('1'));
-        }
-        console.log('test');
-        let pps: number = parseFloat(
-          formatEther(await callVault.getPricePerShare()),
-        );
-        expect(pps).to.be.closeTo(test.expected, 0.00000001);
+            // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
+            await addMockDeposit(vault, test.deposit, base, quote);
+            let startTime = await latest();
+            let t0 = startTime + 7 * ONE_DAY;
+            await volOracle.mock.getVolatility
+              .withArgs(
+                base.address,
+                parseEther('1500'),
+                [parseEther('1200')],
+                ['19177923642820903'],
+              )
+              .returns([parseEther('0.51')]);
+            expect(await vault.totalAssets()).to.eq(
+              parseUnits(test.deposit.toString(), await token.decimals()),
+            );
+            expect(await vault.totalSupply()).to.eq(
+              parseEther(test.deposit.toString()),
+            );
+            // mock vault
+            await vault.increaseTotalLockedSpread(
+              parseEther(test.tls.toString()),
+            );
+            await vault.setMaxMaturity(t0);
+            if (test.tradeSize > 0) {
+              // increase total locked assets
+              const infos = [
+                {
+                  maturity: t0,
+                  strikes: [1200].map((el) => parseEther(el.toString())),
+                  sizes: [test.tradeSize].map((el) =>
+                    parseEther(el.toString()),
+                  ),
+                },
+              ];
+              await vault.setListingsAndSizes(infos);
+              await vault.increaseTotalLockedAssets(
+                parseEther(test.tradeSize.toString()),
+              );
+            }
+            let pps: number = parseFloat(
+              formatEther(await vault.getPricePerShare()),
+            );
+            expect(pps).to.be.closeTo(test.expected, 0.000002);
+          });
+        });
       });
-    });
+    }
   });
 
   describe('#_getSpotPrice', () => {

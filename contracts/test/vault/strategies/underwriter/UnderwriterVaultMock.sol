@@ -332,7 +332,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalLockedAssets = l.totalLockedAssets + value;
-        IERC20(_asset()).transfer(address(1), value.unwrap());
+        uint256 transfer = l.convertAssetFromUD60x18(value);
+        IERC20(_asset()).transfer(address(1), transfer);
     }
 
     function increaseTotalLockedSpread(UD60x18 value) external onlyOwner {
