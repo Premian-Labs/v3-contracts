@@ -618,10 +618,17 @@ contract UnderwriterVault is
         UD60x18 spot,
         UD60x18 strike,
         uint256 maturity,
-        UD60x18 size
+        bool isCall,
+        UD60x18 size,
+        bool isBuy
     ) internal view returns (QuoteVars memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+
+        _ensureNonZeroSize(size);
+        _ensureTradeableWithVault(l.isCall, isCall, isBuy);
+        _ensureValidOption(timestamp, strike, maturity);
+        _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
 
         QuoteVars memory vars;
 
@@ -633,6 +640,7 @@ contract UnderwriterVault is
         vars.tau =
             UD60x18.wrap((maturity - timestamp) * 1e18) /
             UD60x18.wrap(ONE_YEAR * 1e18);
+
         vars.sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
             l.base,
             vars.spot,
@@ -680,9 +688,18 @@ contract UnderwriterVault is
         );
 
         vars.spread = (vars.cLevel - l.minCLevel) * vars.premium;
-        vars.mintingFee = UD60x18.wrap(
+        vars.mintingFee = l.convertAssetToUD60x18(
             IPool(vars.poolAddr).takerFee(vars.size, 0, true)
         );
+
+        _ensureWithinTradeBounds("delta", vars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinTradeBounds(
+            "tau",
+            vars.tau * UD60x18.wrap(365e18),
+            l.minDTE,
+            l.maxDTE
+        );
+
         return vars;
     }
 
@@ -698,31 +715,23 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        _ensureNonZeroSize(size);
-        _ensureTradeableWithVault(l.isCall, isCall, isBuy);
-        _ensureValidOption(timestamp, strike, maturity);
-        _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
-
         QuoteVars memory vars = _getQuoteVars(
             timestamp,
             spot,
             strike,
             maturity,
-            size
-        );
-
-        _ensureWithinTradeBounds("delta", vars.delta, l.minDelta, l.maxDelta);
-        _ensureWithinTradeBounds(
-            "tau",
-            vars.tau * UD60x18.wrap(365e18),
-            l.minDTE,
-            l.maxDTE
+            isCall,
+            size,
+            isBuy
         );
 
         maxSize = isCall
             ? _availableAssetsUD60x18().unwrap()
             : (_availableAssetsUD60x18() / strike).unwrap();
-        price = (vars.premium + vars.spread + vars.mintingFee).unwrap();
+
+        price = l.convertAssetFromUD60x18(
+            vars.premium + vars.spread + vars.mintingFee
+        );
     }
 
     /// @inheritdoc IVault
@@ -757,27 +766,16 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        _ensureNonZeroSize(size);
-        _ensureTradeableWithVault(l.isCall, isCall, isBuy);
-        _ensureValidOption(block.timestamp, strike, maturity);
-        _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
-
         QuoteVars memory vars = _getQuoteVars(
             timestamp,
             spot,
             strike,
             maturity,
-            size
+            isCall,
+            size,
+            isBuy
         );
         UD60x18 totalPremium = vars.premium + vars.spread + vars.mintingFee;
-
-        _ensureWithinTradeBounds("delta", vars.delta, l.minDelta, l.maxDelta);
-        _ensureWithinTradeBounds(
-            "tau",
-            vars.tau * UD60x18.wrap(365e18),
-            l.minDTE,
-            l.maxDTE
-        );
 
         // Add listing
         l.addListing(vars.strike, vars.maturity);
@@ -792,8 +790,10 @@ contract UnderwriterVault is
         );
 
         // Approve transfer of base / quote token
-        // TODO: for puts multiply the size by the strike
-        uint256 approveAmountScaled = l.convertAssetFromUD60x18(totalPremium);
+        UD60x18 collateral = l.isCall ? vars.size : vars.size * vars.strike;
+        uint256 approveAmountScaled = l.convertAssetFromUD60x18(
+            collateral + vars.mintingFee
+        );
 
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 

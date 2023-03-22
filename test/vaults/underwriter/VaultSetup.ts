@@ -4,6 +4,8 @@ import {
   ERC20Mock__factory,
   IPoolMock,
   IPoolMock__factory,
+  OptionMathMock,
+  OptionMathMock__factory,
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   UnderwriterVaultMock,
@@ -31,6 +33,8 @@ export let receiver: SignerWithAddress;
 export let underwriter: SignerWithAddress;
 export let lp: SignerWithAddress;
 export let trader: SignerWithAddress;
+
+export let optionMath: OptionMathMock;
 
 export let vaultImpl: UnderwriterVaultMock;
 export let callVaultProxy: UnderwriterVaultProxy;
@@ -153,6 +157,9 @@ export async function addMockDeposit(
 export async function vaultSetup() {
   [deployer, caller, receiver, underwriter, lp, trader] =
     await ethers.getSigners();
+
+  // Deploy option math
+  optionMath = await new OptionMathMock__factory(deployer).deploy();
 
   //=====================================================================================
   // Deploy ERC20's
@@ -341,6 +348,7 @@ export async function vaultSetup() {
     trader,
     base,
     quote,
+    optionMath,
     callVault,
     putVault,
     volOracle,
