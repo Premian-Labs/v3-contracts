@@ -54,6 +54,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     uint256 private constant PREMIUM_FEE_PERCENTAGE = 3e16; // 3%
     uint256 private constant COLLATERAL_FEE_PERCENTAGE = 3e15; // 0.3%
 
+    // Number of seconds required to pass before a deposit can be withdrawn (To prevent flash loans and JIT)
+    uint256 internal constant WITHDRAWAL_DELAY = 60;
+
     bytes32 private constant FILL_QUOTE_TYPE_HASH =
         keccak256(
             "FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)"
@@ -390,6 +393,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tokenId
         );
 
+        pData.lastDeposit = block.timestamp;
+
         emit Deposit(
             p.owner,
             tokenId,
@@ -486,6 +491,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         p.isCall = l.isCallPool;
 
         Position.Data storage pData = l.positions[p.keyHash()];
+
+        _ensureWithdrawalDelayElapsed(pData);
 
         WithdrawVarsInternal memory vars;
 
@@ -1144,6 +1151,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
         dstData.claimableFees += feesTransferred;
         srcData.claimableFees -= feesTransferred;
+
+        if (srcData.lastDeposit > dstData.lastDeposit) {
+            dstData.lastDeposit = srcData.lastDeposit;
+        }
 
         if (srcTokenId == dstTokenId) {
             _safeTransfer(
@@ -1905,6 +1916,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+    }
+
+    function _ensureWithdrawalDelayElapsed(
+        Position.Data storage position
+    ) internal view {
+        if (block.timestamp < position.lastDeposit + WITHDRAWAL_DELAY)
+            revert Pool__WithdrawalDelayNotElapsed();
     }
 
     function _ensureBelowTradeMaxSlippage(
