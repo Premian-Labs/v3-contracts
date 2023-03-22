@@ -530,13 +530,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
             .layout();
         address listingAddr = _getFactoryAddress(strike, maturity);
         UD60x18 allowance = UD60x18.wrap(2e18) * size;
+        UD60x18 locked;
         if (!l.isCall) {
             allowance = allowance * strike;
+            locked = size * strike;
+        } else {
+            locked = size;
         }
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
-
         IPool(listingAddr).writeFrom(address(this), msg.sender, size);
-        l.totalLockedAssets = l.totalLockedAssets + size;
+        l.totalLockedAssets = l.totalLockedAssets + locked;
     }
 
     function getActivePoolAddresses() public returns (address[] memory) {
