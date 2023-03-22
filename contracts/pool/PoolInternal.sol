@@ -26,8 +26,6 @@ import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
 
-import {ISignatureTransfer} from "../vendor/uniswap/ISignatureTransfer.sol";
-
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";

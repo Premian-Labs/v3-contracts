@@ -9,8 +9,6 @@ import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
-import {ISignatureTransfer} from "../vendor/uniswap/ISignatureTransfer.sol";
-
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize();
     error Pool__AboveMaxSlippage();
