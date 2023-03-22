@@ -72,7 +72,12 @@ contract ChainlinkAdapter is
     )
         external
         view
-        returns (AdapterType, address, address[][] memory, uint8[] memory)
+        returns (
+            AdapterType adapterType,
+            address denomination,
+            address[][] memory path,
+            uint8[] memory decimals
+        )
     {
         // there are no tiers on chainlink so this is essentially a placeholder
         address[][] memory tier = new address[][](1);
