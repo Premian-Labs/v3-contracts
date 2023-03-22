@@ -5,7 +5,7 @@ import {
   increaseTotalAssets,
   vaultSetup,
 } from '../VaultSetup';
-import { formatEther, parseEther, fts } from 'ethers/lib/utils';
+import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import {
   getValidMaturity,
@@ -186,7 +186,7 @@ describe('UnderwriterVault', () => {
     it('lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there', async () => {
       const { vault } = await setupAfterBuyVault(true);
       const lsuu = await vault.lastSpreadUnlockUpdate();
-      expect(parseInt(lsuu)).to.eq(startTime + ONE_DAY);
+      expect(parseInt(lsuu.toString())).to.eq(startTime + ONE_DAY);
     });
 
     it('spreadUnlockingRates should equal 34279100529100', async () => {
@@ -222,7 +222,7 @@ describe('UnderwriterVault', () => {
 
     it('lastTradeTimestamp should equal timestamp (startTime + ONE_DAY)', async () => {
       const { vault } = await setupAfterBuyVault(true);
-      expect(parseInt(await vault.getLastTradeTimestamp())).to.eq(
+      expect(parseInt((await vault.getLastTradeTimestamp()).toString())).to.eq(
         startTime + ONE_DAY,
       );
     });
@@ -244,14 +244,14 @@ describe('UnderwriterVault', () => {
   describe('#_settleMaturity', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        let maturity: number;
         const size = parseEther('2');
         const strike1 = parseEther('1000');
         const strike2 = parseEther('2000');
-        let totalLockedAssets: BigNumber;
-        let newLockedAfterSettlement: BigNumber;
-        let newTotalAssets: number;
+        let maturity1: number;
+        let maturity2: number;
         let vault: UnderwriterVaultMock;
+        let token: ERC20Mock;
+
         async function setup() {
           let {
             callVault,
@@ -264,21 +264,17 @@ describe('UnderwriterVault', () => {
             p,
           } = await loadFixture(vaultSetup);
           let deposit: number;
-          maturity = await getValidMaturity(1, 'weeks');
-          let token: ERC20Mock;
+          maturity1 = await getValidMaturity(1, 'weeks');
+          maturity2 = await getValidMaturity(2, 'weeks');
 
           if (isCall) {
             deposit = 10;
             token = base;
             vault = callVault;
-            newLockedAfterSettlement = parseEther('1');
-            newTotalAssets = 10.333333333333;
           } else {
             deposit = 10000;
             token = quote;
             vault = putVault;
-            newLockedAfterSettlement = parseEther('1120');
-            newTotalAssets = 9000;
           }
 
           console.log('Depositing assets.');
@@ -290,16 +286,21 @@ describe('UnderwriterVault', () => {
 
           const infos = [
             {
-              maturity: maturity,
+              maturity: maturity1,
               strikes: [strike1, strike2],
               sizes: [size, size],
+            },
+            {
+              maturity: maturity2,
+              strikes: [strike1],
+              sizes: [size],
             },
           ];
           await vault.setListingsAndSizes(infos);
           for (const strike of [strike1, strike2]) {
             await createPool(
               strike,
-              maturity,
+              maturity1,
               isCall,
               deployer,
               base,
@@ -308,31 +309,54 @@ describe('UnderwriterVault', () => {
               p,
             );
           }
+          await createPool(
+            strike1,
+            maturity2,
+            isCall,
+            deployer,
+            base,
+            quote,
+            oracleAdapter,
+            p,
+          );
+
           await oracleAdapter.mock.quoteFrom
-            .withArgs(base.address, quote.address, maturity)
+            .withArgs(base.address, quote.address, maturity1)
             .returns(parseUnits('1500', 18));
-          await vault.connect(caller).mintFromPool(strike1, maturity, size);
-          await vault.connect(caller).mintFromPool(strike2, maturity, size);
-          expect(await vault.totalLockedAssets()).to.eq(parseEther('4'));
-          expect(await vault.totalAssets()).to.eq(parseEther('9.988'));
-          await increaseTo(maturity);
-          await vault.connect(caller).settleMaturity(maturity);
+          await vault.connect(caller).mintFromPool(strike1, maturity1, size);
+          await vault.connect(caller).mintFromPool(strike2, maturity1, size);
+          await vault.connect(caller).mintFromPool(strike1, maturity2, size);
+
+          const lockedAssets = isCall ? '6' : '8000';
+          expect(await vault.totalLockedAssets()).to.eq(
+            parseEther(lockedAssets),
+          );
+          const assetsAfterMint = isCall ? '9.982' : '9976';
+          expect(await vault.totalAssets()).to.eq(
+            parseUnits(assetsAfterMint, await token.decimals()),
+          );
+
+          await increaseTo(maturity1);
+          await vault.connect(caller).settleMaturity(maturity1);
         }
 
-        const callTest = { newLocked: 0, newTotalAssets: 9.321333333333333 };
+        const callTest = { newLocked: 2, newTotalAssets: 9.3153333 };
 
-        const putTest = { newLocked: 0, newTotalAssets: 0 };
+        const putTest = { newLocked: 2000, newTotalAssets: 8976 };
 
         const test = isCall ? callTest : putTest;
 
         it(`totalAssets should be reduced by the exerciseValue and equal ${test.newTotalAssets}`, async () => {
           await loadFixture(setup);
-          expect(
-            parseFloat(formatEther(await vault.totalAssets())),
-          ).to.be.closeTo(test.newTotalAssets, 0.000000000001);
+          const decimals = await token.decimals();
+          const amount =
+            parseInt((await vault.totalAssets()).toString()) / 10 ** decimals;
+          expect(amount).to.be.closeTo(test.newTotalAssets, 0.0000001);
         });
-        it(`the position size should be reduced by the amount of settled options and equal ${test.newLocked}`, async () => {
-          expect(await vault.totalLockedAssets()).to.eq(test.newLocked);
+        it(`total locked assets should be reduced by the amount of settled options and equal ${test.newLocked}`, async () => {
+          expect(await vault.totalLockedAssets()).to.eq(
+            parseEther(test.newLocked.toString()),
+          );
         });
       });
     }
@@ -572,7 +596,9 @@ describe('UnderwriterVault', () => {
             test.spreadUnlockingRate,
             0.0000000001,
           );
-          expect(parseInt(lastSpreadUnlockUpdate)).to.eq(test.timestamp);
+          expect(parseInt(lastSpreadUnlockUpdate.toString())).to.eq(
+            test.timestamp,
+          );
 
           // assert that stored variables are not overwritten
           const tlsStoredParsed = parseFloat(
@@ -581,7 +607,9 @@ describe('UnderwriterVault', () => {
           const surStoredParsed = parseFloat(
             formatEther(await vault.spreadUnlockingRate()),
           );
-          const lsuuParsed = parseInt(await vault.lastSpreadUnlockUpdate());
+          const lsuuParsed = parseInt(
+            (await vault.lastSpreadUnlockUpdate()).toString(),
+          );
           expect(tlsStoredParsed).to.eq(18);
           expect(surStoredParsed).to.be.closeTo(0.0000177447, 0.0000000001);
           expect(lsuuParsed).to.eq(startTime);
@@ -601,7 +629,9 @@ describe('UnderwriterVault', () => {
           const surParsed = parseFloat(
             formatEther(await vault.spreadUnlockingRate()),
           );
-          const lsuuParsed = parseInt(await vault.lastSpreadUnlockUpdate());
+          const lsuuParsed = parseInt(
+            (await vault.lastSpreadUnlockUpdate()).toString(),
+          );
           expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
           expect(surParsed).to.be.closeTo(
             test.spreadUnlockingRate,
