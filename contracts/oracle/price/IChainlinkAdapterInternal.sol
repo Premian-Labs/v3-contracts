@@ -40,6 +40,9 @@ interface IChainlinkAdapterInternal {
         ToEthToToken // Token -> ETH -> Token
     }
 
+    /// @notice Thrown when attempting to increase array size
+    error ChainlinkAdapter__ArrayCannotExpand();
+
     /// @notice Thrown when the getRoundData call reverts without a reason
     error ChainlinkAdapter__GetRoundDataCallReverted(bytes data);
 

@@ -651,6 +651,7 @@ abstract contract ChainlinkAdapterInternal is
     // TODO: consolidate when merged with #103
     function _resizeArray(uint8[] memory array, uint256 size) internal pure {
         if (array.length == size) return;
+        if (array.length < size) revert ChainlinkAdapter__ArrayCannotExpand();
 
         assembly {
             mstore(array, size)
