@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
-import {IPoolFactory} from "./IPoolFactory.sol";
-
 interface IPoolFactoryEvents {
     event SetDiscountPerPool(uint256 indexed discountPerPool);
     event SetFeeReceiver(address indexed feeReceiver);
