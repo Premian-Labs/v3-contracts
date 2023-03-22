@@ -243,4 +243,18 @@ library OptionMath {
                 FEE_SCALAR
             );
     }
+
+    /// @notice Converts an 18 decimals number, to a number with given amount of decimals
+    /// @param value The value to convert
+    /// @param decimals The amount of decimals to convert to
+    /// @return The converted value
+    function scaleDecimals(
+        uint256 value,
+        uint256 decimals
+    ) internal pure returns (uint256) {
+        if (decimals == 18) return value;
+        if (decimals > 18) return value * (10 ** (decimals - 18));
+
+        return value / (10 ** (18 - decimals));
+    }
 }
