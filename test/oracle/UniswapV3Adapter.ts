@@ -6,6 +6,7 @@ import { bnToAddress } from '@solidstate/library';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 import {
+  IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
   UniswapV3Adapter,
   UniswapV3Adapter__factory,
@@ -284,6 +285,68 @@ describe('UniswapV3Adapter', () => {
       ).increaseObservationCardinalityNext(41);
 
       expect(await instance.quote(tokens.WETH.address, tokens.DAI.address));
+    });
+
+    it('should skip uninitialized pools and provide quote when no pools are cached', async () => {
+      const { deployer, instance } = await loadFixture(deploy);
+
+      let tokenIn = tokens.WETH; // 18 decimals
+      let tokenOut = tokens.MKR; // 18 decimals
+
+      await IUniswapV3Pool__factory.connect(
+        '0x886072A44BDd944495eFF38AcE8cE75C1EacDAF6',
+        deployer,
+      ).increaseObservationCardinalityNext(41);
+
+      await IUniswapV3Pool__factory.connect(
+        '0x3aFdC5e6DfC0B0a507A8e023c9Dce2CAfC310316',
+        deployer,
+      ).increaseObservationCardinalityNext(41);
+
+      await IUniswapV3Factory__factory.connect(
+        UNISWAP_V3_FACTORY,
+        deployer,
+      ).createPool(tokenIn.address, tokenOut.address, 100);
+
+      expect(await instance.quote(tokenIn.address, tokenOut.address));
+    });
+
+    it('should skip uninitialized pools and provide quote when pools are cached', async () => {
+      const { deployer, instance } = await loadFixture(deploy);
+
+      let tokenIn = tokens.WETH; // 18 decimals
+      let tokenOut = tokens.MKR; // 18 decimals
+
+      await instance.upsertPair(tokenIn.address, tokenOut.address);
+      expect(await instance.quote(tokenIn.address, tokenOut.address));
+
+      await IUniswapV3Factory__factory.connect(
+        UNISWAP_V3_FACTORY,
+        deployer,
+      ).createPool(tokenIn.address, tokenOut.address, 100);
+
+      expect(await instance.quote(tokenIn.address, tokenOut.address));
+
+      await IUniswapV3Pool__factory.connect(
+        '0xd9d92C02a8fd1DdB731381f1351DACA19928E0db',
+        deployer,
+      ).initialize(4295128740);
+
+      await expect(
+        instance.quote(tokenIn.address, tokenOut.address),
+      ).to.be.revertedWithCustomError(
+        instance,
+        'UniswapV3Adapter__ObservationCardinalityTooLow',
+      );
+
+      await IUniswapV3Pool__factory.connect(
+        '0xd9d92C02a8fd1DdB731381f1351DACA19928E0db',
+        deployer,
+      ).increaseObservationCardinalityNext(41);
+
+      await increase(600);
+
+      expect(await instance.quote(tokenIn.address, tokenOut.address));
     });
 
     it('should return quote using correct denomination', async () => {
