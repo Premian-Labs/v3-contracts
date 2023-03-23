@@ -30,7 +30,6 @@ abstract contract ChainlinkAdapterInternal is
     uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     int256 private constant FOREX_DECIMALS = 8;
-    int256 private constant ETH_DECIMALS = 18;
 
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
@@ -74,8 +73,7 @@ abstract contract ChainlinkAdapterInternal is
                     target
                 );
         } else {
-            return
-                _getPriceWBTCPrice(path, mappedTokenIn, mappedTokenOut, target);
+            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
         }
     }
 
