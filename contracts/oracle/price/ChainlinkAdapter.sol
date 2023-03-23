@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
@@ -76,7 +78,7 @@ contract ChainlinkAdapter is
     function quote(
         address tokenIn,
         address tokenOut
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
@@ -85,7 +87,7 @@ contract ChainlinkAdapter is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }

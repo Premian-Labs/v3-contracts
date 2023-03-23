@@ -6,6 +6,8 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../vendor/uniswap/IUniswapV3Pool.sol";
 import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
@@ -47,7 +49,7 @@ contract UniswapV3AdapterInternal is
         address tokenIn,
         address tokenOut,
         uint32 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
@@ -61,17 +63,19 @@ contract UniswapV3AdapterInternal is
 
         int256 factor = ETH_DECIMALS - _decimals(tokenOut);
 
-        uint256 price = _scale(
-            OracleLibrary.getQuoteAtTick(
-                weightedTick,
-                uint128(10 ** uint256(_decimals(tokenIn))),
-                tokenIn,
-                tokenOut
-            ),
-            factor
+        UD60x18 price = UD60x18.wrap(
+            _scale(
+                OracleLibrary.getQuoteAtTick(
+                    weightedTick,
+                    uint128(10 ** uint256(_decimals(tokenIn))),
+                    tokenIn,
+                    tokenOut
+                ),
+                factor
+            )
         );
 
-        _ensurePricePositive(price.toInt256());
+        _ensurePricePositive(price.intoSD59x18().unwrap());
         return price;
     }
 

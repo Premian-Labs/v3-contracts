@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
@@ -71,8 +73,8 @@ interface IVolatilityOracle {
     /// @return The annualized implied volatility, where 1 is defined as 100%
     function getVolatility(
         address token,
-        uint256 spot,
-        uint256 strike,
-        uint256 timeToMaturity
-    ) external view returns (int256);
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity
+    ) external view returns (UD60x18);
 }

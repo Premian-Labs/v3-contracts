@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 
 import {FeeConverterStorage} from "./FeeConverterStorage.sol";
 import {IFeeConverter} from "./IFeeConverter.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
-import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
 
 /// @author Premia
 /// @title A contract receiving all protocol fees, swapping them for premia
 contract FeeConverter is IFeeConverter, OwnableInternal {
     using SafeERC20 for IERC20;
-    using UD60x18 for uint256;
 
     address private immutable EXCHANGE_HELPER;
     address private immutable USDC;
@@ -25,7 +26,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     // The treasury address which will receive a portion of the protocol fees
     address private immutable TREASURY;
     // The percentage of protocol fees the treasury will get
-    uint256 private constant TREASURY_SHARE = 5e17; // 50%
+    UD60x18 private constant TREASURY_SHARE = UD60x18.wrap(0.5e18); // 50%
 
     //////////////////////////////////////////////////
     //////////////////////////////////////////////////
@@ -111,7 +112,8 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
             );
         }
 
-        uint256 treasuryAmount = outAmount.mul(TREASURY_SHARE);
+        uint256 treasuryAmount = (UD60x18.wrap(outAmount) * TREASURY_SHARE)
+            .unwrap();
 
         IERC20(USDC).safeTransfer(TREASURY, treasuryAmount);
         IERC20(USDC).approve(PREMIA_STAKING, outAmount - treasuryAmount);

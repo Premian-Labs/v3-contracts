@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
@@ -38,8 +40,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function formatTokenId(
         address operator,
-        uint256 lower,
-        uint256 upper,
+        UD60x18 lower,
+        UD60x18 upper,
         Position.OrderType orderType
     ) external pure returns (uint256 tokenId) {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
@@ -59,8 +61,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         returns (
             uint8 version,
             address operator,
-            uint256 lower,
-            uint256 upper,
+            UD60x18 lower,
+            UD60x18 upper,
             Position.OrderType orderType
         )
     {
@@ -68,6 +70,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     }
 
     function protocolFees() external view returns (uint256) {
-        return PoolStorage.layout().protocolFees;
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.toPoolTokenDecimals(l.protocolFees);
     }
 }
