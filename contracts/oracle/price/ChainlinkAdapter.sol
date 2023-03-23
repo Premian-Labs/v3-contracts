@@ -74,25 +74,31 @@ contract ChainlinkAdapter is
         view
         returns (
             AdapterType adapterType,
-            address denomination,
             address[][] memory path,
             uint8[] memory decimals
         )
     {
+        adapterType = AdapterType.CHAINLINK;
         path = new address[][](2);
+        decimals = new uint8[](2);
+
         token = _tokenToDenomination(token);
 
-        if (_exists(token, Denominations.USD)) {
-            path[0] = _aggregator(token, Denominations.USD);
+        if (token == Denominations.ETH) {
+            address[] memory aggregator = new address[](1);
+            aggregator[0] = Denominations.ETH;
+            path[0] = aggregator;
         } else if (_exists(token, Denominations.ETH)) {
             path[0] = _aggregator(token, Denominations.ETH);
+        } else if (_exists(token, Denominations.USD)) {
+            path[0] = _aggregator(token, Denominations.USD);
             path[1] = _aggregator(Denominations.ETH, Denominations.USD);
         }
 
-        decimals = new uint8[](2);
-
         if (path[0].length > 0) {
-            decimals[0] = _aggregatorDecimals(path[0][0]);
+            decimals[0] = path[0][0] == Denominations.ETH
+                ? 18
+                : _aggregatorDecimals(path[0][0]);
         }
 
         if (path[1].length > 0) {
@@ -117,9 +123,6 @@ contract ChainlinkAdapter is
             _resizeArray(temp, 1);
             decimals = temp;
         }
-
-        adapterType = AdapterType.CHAINLINK;
-        denomination = Denominations.USD;
     }
 
     /// @inheritdoc IChainlinkAdapter

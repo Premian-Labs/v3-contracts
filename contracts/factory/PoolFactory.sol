@@ -137,14 +137,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         {
             (
                 IOracleAdapter.AdapterType baseAdapterType,
-                ,
                 address[][] memory basePath,
                 uint8[] memory basePathDecimals
             ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.base);
 
             (
                 IOracleAdapter.AdapterType quoteAdapterType,
-                ,
                 address[][] memory quotePath,
                 uint8[] memory quotePathDecimals
             ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.quote);

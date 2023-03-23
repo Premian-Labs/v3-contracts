@@ -58,12 +58,10 @@ interface IOracleAdapter {
         uint256 target
     ) external view returns (uint256);
 
-    /// @notice Describes the pricing path used, given denomination (ETH, USD, etc).
-    /// @dev The denomination is hardcoded for each adapter and will therefore be subject to change between different adapters.
+    /// @notice Describes the pricing path used to convert the token to ETH
     /// @param token The token from where the pricing path starts
     /// @return adapterType The type of adapter
-    /// @return denomination The denomination used by the adapter
-    /// @return path The path required to convert the token to the denomination
+    /// @return path The path required to convert the token to ETH
     /// @return decimals The decimals of each token in the path
     function describePricingPath(
         address token
@@ -72,7 +70,6 @@ interface IOracleAdapter {
         view
         returns (
             AdapterType adapterType,
-            address denomination,
             address[][] memory path,
             uint8[] memory decimals
         );
