@@ -1,6 +1,5 @@
 import { ethers } from 'hardhat';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { parseEther } from 'ethers/lib/utils';
 import { Premia__factory } from '../../typechain';
 
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
@@ -51,7 +50,6 @@ async function main() {
 
   //////////////////////////
 
-  const discountPerPool = parseEther('0.1'); // 10%
   const log = true;
   const isDevMode = false;
 
