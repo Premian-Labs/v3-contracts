@@ -2,11 +2,7 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { OrderType } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 import { ONE_ETHER } from '../../utils/constants';
-import {
-  average,
-  scaleDecimals,
-  scaleDecimals as _scaleDecimals,
-} from '../../utils/sdk/math';
+import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
 import { ethers } from 'hardhat';
 import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
 import { deployMockContract } from '@ethereum-waffle/mock-contract';
@@ -15,7 +11,7 @@ import { tokens } from '../../utils/addresses';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
 
 export const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
+  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)';
 
 export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
@@ -132,8 +128,6 @@ async function _deploy(isCall: boolean) {
     lower: parseEther('0.1'),
     upper: parseEther('0.3'),
     orderType: OrderType.LC,
-    isCall: isCall,
-    strike: strike,
   } as const;
   Object.freeze(pKey);
 

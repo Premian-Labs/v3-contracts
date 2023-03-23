@@ -15,6 +15,7 @@ import {Pricing} from "./Pricing.sol";
 library Position {
     using Math for int256;
     using Position for Position.Key;
+    using Position for Position.KeyInternal;
     using Position for Position.OrderType;
 
     UD60x18 private constant ZERO = UD60x18.wrap(0);
@@ -23,8 +24,20 @@ library Position {
 
     SD59x18 private constant iZERO = SD59x18.wrap(0);
 
-    // All the data used to calculate the key of the position
     struct Key {
+        // The Agent that owns the exposure change of the Position
+        address owner;
+        // The Agent that can control modifications to the Position
+        address operator;
+        // The lower tick normalized price of the range order | 18 decimals
+        UD60x18 lower;
+        // The upper tick normalized price of the range order | 18 decimals
+        UD60x18 upper;
+        OrderType orderType;
+    }
+
+    // All the data used to calculate the key of the position
+    struct KeyInternal {
         // The Agent that owns the exposure change of the Position
         address owner;
         // The Agent that can control modifications to the Position
@@ -73,6 +86,36 @@ library Position {
             );
     }
 
+    function keyHash(KeyInternal memory self) internal pure returns (bytes32) {
+        return
+            keyHash(
+                Key({
+                    owner: self.owner,
+                    operator: self.operator,
+                    lower: self.lower,
+                    upper: self.upper,
+                    orderType: self.orderType
+                })
+            );
+    }
+
+    function toKeyInternal(
+        Key memory self,
+        UD60x18 strike,
+        bool isCall
+    ) internal pure returns (KeyInternal memory) {
+        return
+            KeyInternal({
+                owner: self.owner,
+                operator: self.operator,
+                lower: self.lower,
+                upper: self.upper,
+                orderType: self.orderType,
+                strike: strike,
+                isCall: isCall
+            });
+    }
+
     function isShort(OrderType orderType) internal pure returns (bool) {
         return orderType == OrderType.CS || orderType == OrderType.CSUP;
     }
@@ -82,7 +125,7 @@ library Position {
     }
 
     function pieceWiseLinear(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
         // ToDo : Move check somewhere else ?
@@ -95,7 +138,7 @@ library Position {
     }
 
     function pieceWiseQuadratic(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
         // ToDo : Move check somewhere else ?
@@ -137,7 +180,7 @@ library Position {
 
     /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
     function liquidityPerTick(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size
     ) internal pure returns (UD60x18) {
         UD60x18 amountOfTicks = Pricing.amountOfTicksBetween(
@@ -155,7 +198,7 @@ library Position {
     ///         bid(p; a, b) = [ (p - a) / (b - a) ] * [ (a + p)  / 2 ]
     ///                      = (p^2 - a^2) / [2 * (b - a)]
     function bid(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) internal pure returns (UD60x18) {
@@ -171,7 +214,7 @@ library Position {
     ///         distinguish between ask- and bid-side collateral. This increases the
     ///         capital efficiency of the range order.
     function collateral(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) internal pure returns (UD60x18 _collateral) {
@@ -199,7 +242,7 @@ library Position {
     }
 
     function contracts(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) internal pure returns (UD60x18) {
@@ -214,7 +257,7 @@ library Position {
 
     /// @notice Number of long contracts held in position at current price
     function long(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) internal pure returns (UD60x18) {
@@ -229,7 +272,7 @@ library Position {
 
     /// @notice Number of short contracts held in position at current price
     function short(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) internal pure returns (UD60x18) {
@@ -253,7 +296,7 @@ library Position {
     ///              collateral, long and shorts due to the change in tokens | 18 decimals
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
-        Key memory self,
+        KeyInternal memory self,
         UD60x18 currentBalance,
         SD59x18 amount,
         UD60x18 price
