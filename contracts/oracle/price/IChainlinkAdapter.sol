@@ -12,8 +12,8 @@ import {IOracleAdapter} from "./IOracleAdapter.sol";
 interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Returns the pricing path that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
     /// @return The pricing path that will be used
     function pathForPair(
         address tokenA,
@@ -27,8 +27,8 @@ interface IChainlinkAdapter is IOracleAdapter {
     ) external;
 
     /// @notice Returns the Chainlink feed for the given pair
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
     /// @return The Chainlink feed address
     function feed(
         address tokenA,
