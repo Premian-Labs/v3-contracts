@@ -6,11 +6,9 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ONE} from "../../libraries/Constants.sol";
-import {TokenSorting} from "../../libraries/TokenSorting.sol";
 
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
@@ -35,7 +33,6 @@ abstract contract ChainlinkAdapterInternal is
     int256 private constant ETH_DECIMALS = 18;
 
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
-    uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
     address private immutable WRAPPED_NATIVE_TOKEN;
@@ -77,37 +74,9 @@ abstract contract ChainlinkAdapterInternal is
                     target
                 );
         } else {
-            return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
+            return
+                _getPriceWBTCPrice(path, mappedTokenIn, mappedTokenOut, target);
         }
-    }
-
-    function _upsertPair(address tokenA, address tokenB) internal {
-        (
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
-
-        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
-
-        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
-            .layout();
-
-        if (path == PricingPath.NONE) {
-            // Check if there is a current path. If there is, it means that the pair was supported and it
-            // lost support. In that case, we will remove the current path and continue working as expected.
-            // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pathForPair[keyForPair];
-
-            if (_currentPath == PricingPath.NONE) {
-                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
-            }
-        }
-
-        if (l.pathForPair[keyForPair] == path) return;
-
-        l.pathForPair[keyForPair] = path;
-        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
     function _pathForPair(
@@ -121,7 +90,7 @@ abstract contract ChainlinkAdapterInternal is
     {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
-        (address sortedA, address sortedB) = TokenSorting.sortTokens(
+        (address sortedA, address sortedB) = _sortTokens(
             mappedTokenA,
             mappedTokenB
         );
@@ -171,8 +140,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 diff = _decimals(tokenIn) - _decimals(tokenOut);
-        int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
+        int256 factor = _factor(path);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -240,6 +208,21 @@ abstract contract ChainlinkAdapterInternal is
 
         UD60x18 price = adjustedWBTCToUSDPrice / adjustedTokenToUSD;
         return !isTokenInWBTC ? price.inv() : price;
+    }
+
+    function _factor(PricingPath path) internal pure returns (int256) {
+        if (
+            path == PricingPath.ETH_USD ||
+            path == PricingPath.TOKEN_USD ||
+            path == PricingPath.TOKEN_USD_TOKEN ||
+            path == PricingPath.A_USD_ETH_B ||
+            path == PricingPath.A_ETH_USD_B ||
+            path == PricingPath.TOKEN_USD_BTC_WBTC
+        ) {
+            return ETH_DECIMALS - FOREX_DECIMALS;
+        }
+
+        return 0;
     }
 
     function _getPriceAgainstUSD(
@@ -392,27 +375,6 @@ abstract contract ChainlinkAdapterInternal is
         return _feed(base, quote) != address(0);
     }
 
-    function _scale(
-        uint256 amount,
-        int256 factor
-    ) internal pure returns (uint256) {
-        if (factor < 0) {
-            return amount / (10 ** (-factor).toUint256());
-        } else {
-            return amount * (10 ** factor.toUint256());
-        }
-    }
-
-    function _decimals(address token) internal view returns (int256) {
-        if (_isETH(token)) {
-            return ETH_DECIMALS;
-        } else if (_isUSD(token) || _isWBTC(token)) {
-            return FOREX_DECIMALS;
-        } else {
-            return int256(uint256(IERC20Metadata(token).decimals()));
-        }
-    }
-
     function _fetchQuote(
         address base,
         address quote,
@@ -430,7 +392,7 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
         (, int256 price, , , ) = _latestRoundData(feed);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 
@@ -483,7 +445,7 @@ abstract contract ChainlinkAdapterInternal is
         }
 
         _ensurePriceAfterTargetIsFresh(target, updatedAt);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 
@@ -564,7 +526,7 @@ abstract contract ChainlinkAdapterInternal is
             tokenB
         );
 
-        return TokenSorting.sortTokens(mappedTokenA, mappedTokenB);
+        return _sortTokens(mappedTokenA, mappedTokenB);
     }
 
     function _mapToDenomination(
@@ -573,26 +535,6 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (address mappedTokenA, address mappedTokenB) {
         mappedTokenA = _tokenToDenomination(tokenA);
         mappedTokenB = _tokenToDenomination(tokenB);
-    }
-
-    function _keyForUnsortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        (address mappedTokenA, address mappedTokenB) = TokenSorting.sortTokens(
-            tokenA,
-            tokenB
-        );
-
-        return _keyForSortedPair(mappedTokenA, mappedTokenB);
-    }
-
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _keyForSortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenA, tokenB));
     }
 
     function _getETHUSD(uint256 target) internal view returns (UD60x18) {

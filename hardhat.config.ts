@@ -26,16 +26,6 @@ const {
   CACHE_PATH,
 } = process.env;
 
-const UNISWAP_SETTING = {
-  version: '0.7.6',
-  settings: {
-    optimizer: {
-      enabled: true,
-      runs: 200,
-    },
-  },
-};
-
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
 const pkeyMainnet =
   PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
@@ -59,15 +49,8 @@ export default {
           },
         },
       },
-      UNISWAP_SETTING,
     ],
     overrides: {
-      '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol':
-        UNISWAP_SETTING,
-      '@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol':
-        UNISWAP_SETTING,
-      '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol':
-        UNISWAP_SETTING,
       'contracts/staking/VxPremia.sol': {
         version: '0.8.19',
         settings: {
@@ -87,7 +70,7 @@ export default {
     hardhat: {
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
-        blockNumber: 16600000,
+        blockNumber: 16597500,
       },
       allowUnlimitedContractSize: true,
       blockGasLimit: 180000000000,
