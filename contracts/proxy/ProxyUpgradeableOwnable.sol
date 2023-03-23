@@ -2,14 +2,22 @@
 
 pragma solidity >=0.8.19;
 
+import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+
 import {ProxyUpgradeableOwnableStorage} from "./ProxyUpgradeableOwnableStorage.sol";
 
 contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
+    using AddressUtils for address;
+
+    event ImplementationSet(address implementation);
+
+    error InvalidImplementation(address implementation);
+
     constructor(address implementation) {
         _setOwner(msg.sender);
-        ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
+        _setImplementation(implementation);
     }
 
     receive() external payable {}
@@ -28,6 +36,14 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
     /// @notice set address of implementation contract
     /// @param implementation address of the new implementation
     function setImplementation(address implementation) external onlyOwner {
+        _setImplementation(implementation);
+    }
+
+    function _setImplementation(address implementation) internal {
+        if (!implementation.isContract())
+            revert InvalidImplementation(implementation);
+
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
+        emit ImplementationSet(implementation);
     }
 }

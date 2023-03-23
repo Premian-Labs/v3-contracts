@@ -46,7 +46,32 @@ contract ChainlinkAdapter is
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
-        _upsertPair(tokenA, tokenB);
+        (
+            address mappedTokenA,
+            address mappedTokenB
+        ) = _mapToDenominationAndSort(tokenA, tokenB);
+
+        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
+        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
+
+        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
+            .layout();
+
+        if (path == PricingPath.NONE) {
+            // Check if there is a current path. If there is, it means that the pair was supported and it
+            // lost support. In that case, we will remove the current path and continue working as expected.
+            // If there was no supported path, and there still isn't, then we will fail
+            PricingPath _currentPath = l.pathForPair[keyForPair];
+
+            if (_currentPath == PricingPath.NONE) {
+                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
+            }
+        }
+
+        if (l.pathForPair[keyForPair] == path) return;
+
+        l.pathForPair[keyForPair] = path;
+        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
     /// @inheritdoc IOracleAdapter

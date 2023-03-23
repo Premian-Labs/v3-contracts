@@ -14,8 +14,8 @@ interface IOracleAdapter {
     ///         (false, true): Pair is not supported, but can be added
     ///         (false, false): Pair cannot be supported
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
     /// @return isCached True if the pair has been cached, false otherwise
     /// @return hasPath True if the pair has a valid path, false otherwise
     function isPairSupported(
@@ -28,8 +28,8 @@ interface IOracleAdapter {
     ///         Can be called many times in order to let the adapter re-configure for a new context
     /// @dev Will revert if pair cannot be supported or has already been added. tokenA and tokenB may be
     ///      passed in either tokenA/tokenB or tokenB/tokenA order
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
     function upsertPair(address tokenA, address tokenB) external;
 
     /// @notice Returns a quote, based on the given token pair
