@@ -19,6 +19,7 @@ import {
 import { tokens } from '../../utils/addresses';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { AdapterType } from '../../utils/sdk/types';
+import { getEventArgs } from '../../utils/events';
 
 describe('PoolFactory', () => {
   const isCall = true;
@@ -89,8 +90,8 @@ describe('PoolFactory', () => {
         value: parseEther('1'),
       });
 
-      const r = await tx.wait(1);
-      const poolAddress = (r as any).events[1].args.poolAddress;
+      const poolAddress = (await getEventArgs(tx, 'PoolDeployed'))[0]
+        .poolAddress;
 
       expect(await p.poolFactory.getPoolAddress(poolKey)).to.eq(poolAddress);
     });
@@ -105,9 +106,11 @@ describe('PoolFactory', () => {
         value: parseEther('1'),
       });
 
-      const r = await tx.wait(1);
-      const pricingPath = (r as any).events[0].args;
-      const poolAddress = (r as any).events[1].args.poolAddress;
+      const pricingPath = (await getEventArgs(tx, 'PricingPath'))[0];
+      const poolAddress = (await getEventArgs(tx, 'PoolDeployed'))[0]
+        .poolAddress;
+
+      console.log(pricingPath, poolAddress);
 
       const pool = IPool__factory.connect(poolAddress, deployer);
       const poolSettings = await pool.getPoolSettings();
