@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
@@ -44,14 +46,39 @@ contract ChainlinkAdapter is
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
-        _upsertPair(tokenA, tokenB);
+        (
+            address mappedTokenA,
+            address mappedTokenB
+        ) = _mapToDenominationAndSort(tokenA, tokenB);
+
+        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
+        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
+
+        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
+            .layout();
+
+        if (path == PricingPath.NONE) {
+            // Check if there is a current path. If there is, it means that the pair was supported and it
+            // lost support. In that case, we will remove the current path and continue working as expected.
+            // If there was no supported path, and there still isn't, then we will fail
+            PricingPath _currentPath = l.pathForPair[keyForPair];
+
+            if (_currentPath == PricingPath.NONE) {
+                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
+            }
+        }
+
+        if (l.pathForPair[keyForPair] == path) return;
+
+        l.pathForPair[keyForPair] = path;
+        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
     /// @inheritdoc IOracleAdapter
     function quote(
         address tokenIn,
         address tokenOut
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
@@ -60,7 +87,7 @@ contract ChainlinkAdapter is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }

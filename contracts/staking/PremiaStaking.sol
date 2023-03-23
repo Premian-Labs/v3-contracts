@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC2612} from "@solidstate/contracts/token/ERC20/permit/IERC2612.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
@@ -15,20 +17,20 @@ import {OFT} from "../layerZero/token/oft/OFT.sol";
 import {OFTCore} from "../layerZero/token/oft/OFTCore.sol";
 import {IOFTCore} from "../layerZero/token/oft/IOFTCore.sol";
 import {BytesLib} from "../layerZero/util/BytesLib.sol";
-import {UD60x18} from "../libraries/prbMath/UD60x18.sol";
+
+import {ONE} from "../libraries/Constants.sol";
 
 contract PremiaStaking is IPremiaStaking, OFT {
     using SafeERC20 for IERC20;
     using AddressUtils for address;
     using BytesLib for bytes;
-    using UD60x18 for uint256;
 
     address internal immutable PREMIA;
     address internal immutable REWARD_TOKEN;
     address internal immutable EXCHANGE_HELPER;
 
-    uint256 internal constant ONE = 1e18;
-    uint256 internal constant DECAY_RATE = 270000000000; // 2.7e-7 -> Distribute around half of the current balance over a month
+    uint256 internal constant WAD = 1e18;
+    UD60x18 internal constant DECAY_RATE = UD60x18.wrap(270000000000); // 2.7e-7 -> Distribute around half of the current balance over a month
     uint64 internal constant MAX_PERIOD = 4 * 365 days;
     uint256 internal constant ACC_REWARD_PRECISION = 1e30;
     uint256 internal constant MAX_CONTRACT_DISCOUNT = 0.3e18; // -30%
@@ -501,7 +503,8 @@ contract PremiaStaking is IPremiaStaking, OFT {
             l,
             l.userInfo[msg.sender],
             amount,
-            amount.mul(getEarlyUnstakeFee(msg.sender))
+            (UD60x18.wrap(amount) *
+                UD60x18.wrap(getEarlyUnstakeFee(msg.sender))).unwrap()
         );
     }
 
@@ -679,10 +682,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
                     uint256 remappedAmount = level.amount - amountPrevLevel;
                     uint256 remappedPower = userPower - amountPrevLevel;
-                    uint256 levelProgress = remappedPower.div(remappedAmount);
+                    UD60x18 levelProgress = UD60x18.wrap(remappedPower * WAD) /
+                        UD60x18.wrap(remappedAmount * WAD);
 
                     return
-                        discountPrevLevel + remappedDiscount.mul(levelProgress);
+                        discountPrevLevel +
+                        (UD60x18.wrap(remappedDiscount) * levelProgress)
+                            .unwrap();
                 }
             }
 
@@ -731,9 +737,8 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 newTimestamp
     ) internal pure returns (uint256) {
         return
-            (ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp).mul(
-                pendingRewards
-            );
+            ((ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp) *
+                UD60x18.wrap(pendingRewards)).unwrap();
     }
 
     /// @inheritdoc IPremiaStaking
@@ -760,7 +765,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             if (period == 0) return 0.25e18; // x0.25
             if (period >= 4 * oneYear) return 4.25e18; // x4.25
 
-            return 0.25e18 + (period * ONE) / oneYear; // 0.25x + 1.0x per year lockup
+            return 0.25e18 + (period * WAD) / oneYear; // 0.25x + 1.0x per year lockup
         }
     }
 
@@ -775,7 +780,9 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 balance,
         uint64 stakePeriod
     ) internal pure returns (uint256) {
-        return balance.mul(getStakePeriodMultiplier(stakePeriod));
+        return
+            (UD60x18.wrap(balance) *
+                UD60x18.wrap(getStakePeriodMultiplier(stakePeriod))).unwrap();
     }
 
     function _calculateReward(

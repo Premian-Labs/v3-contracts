@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
@@ -29,8 +31,8 @@ interface IPoolFactory is IPoolFactoryEvents {
         address quote;
         // Address of oracle adapter
         address oracleAdapter;
-        // The strike of the option
-        uint256 strike;
+        // The strike of the option | 18 decimals
+        UD60x18 strike;
         // The maturity timestamp of the option
         uint64 maturity;
         // Whether the pool is for call or put options
@@ -49,14 +51,14 @@ interface IPoolFactory is IPoolFactoryEvents {
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key
-    /// @return The fee required to initialize this pool
+    /// @return The fee required to initialize this pool | 18 decimals
     function initializationFee(
         PoolKey memory k
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
-    /// @param discountPerPool The new discount percentage denominated in 1e18
-    function setDiscountPerPool(uint256 discountPerPool) external;
+    /// @param discountPerPool The new discount percentage | 18 decimals
+    function setDiscountPerPool(UD60x18 discountPerPool) external;
 
     /// @notice Set the feeReceiver for initialization fees - only callable by owner
     /// @param feeReceiver The new fee receiver address
