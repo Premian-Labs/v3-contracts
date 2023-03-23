@@ -124,11 +124,11 @@ describe('PoolFactory', () => {
       ]).to.deep.eq([
         poolAddress,
         AdapterType.CHAINLINK,
-        [['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6']],
-        [8],
+        [['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE']],
+        [18],
         AdapterType.CHAINLINK,
-        [['0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82']],
-        [8],
+        [['0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC']],
+        [18],
       ]);
 
       expect([

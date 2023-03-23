@@ -60,22 +60,18 @@ contract OracleAdapterMock {
             uint8[] memory decimals
         )
     {
+        adapterType = IOracleAdapter.AdapterType.CHAINLINK;
+
         path = new address[][](1);
         address[] memory aggregator = new address[](1);
+
+        aggregator[0] = token == BASE
+            ? 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+            : 0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC;
+
+        path[0] = aggregator;
+
         decimals = new uint8[](1);
-
-        decimals[0] = 8;
-
-        if (token == BASE) {
-            aggregator[0] = 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6;
-            path[0] = aggregator;
-
-            return (IOracleAdapter.AdapterType.CHAINLINK, path, decimals);
-        } else {
-            aggregator[0] = 0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82;
-            path[0] = aggregator;
-
-            return (IOracleAdapter.AdapterType.CHAINLINK, path, decimals);
-        }
+        decimals[0] = 18;
     }
 }
