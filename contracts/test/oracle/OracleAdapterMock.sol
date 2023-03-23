@@ -53,15 +53,14 @@ contract OracleAdapterMock {
         external
         view
         returns (
-            IOracleAdapter.AdapterType,
-            address,
-            address[][] memory,
-            uint8[] memory
+            IOracleAdapter.AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
         )
     {
-        address[][] memory path = new address[][](1);
+        path = new address[][](1);
         address[] memory aggregator = new address[](1);
-        uint8[] memory decimals = new uint8[](1);
+        decimals = new uint8[](1);
 
         decimals[0] = 8;
 
@@ -69,22 +68,12 @@ contract OracleAdapterMock {
             aggregator[0] = 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6;
             path[0] = aggregator;
 
-            return (
-                IOracleAdapter.AdapterType.CHAINLINK,
-                Denominations.USD,
-                path,
-                decimals
-            );
+            return (IOracleAdapter.AdapterType.CHAINLINK, path, decimals);
         } else {
             aggregator[0] = 0xDEc0a100eaD1fAa37407f0Edc76033426CF90b82;
             path[0] = aggregator;
 
-            return (
-                IOracleAdapter.AdapterType.CHAINLINK,
-                Denominations.USD,
-                path,
-                decimals
-            );
+            return (IOracleAdapter.AdapterType.CHAINLINK, path, decimals);
         }
     }
 }

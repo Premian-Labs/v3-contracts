@@ -110,8 +110,6 @@ describe('PoolFactory', () => {
       const poolAddress = (await getEventArgs(tx, 'PoolDeployed'))[0]
         .poolAddress;
 
-      console.log(pricingPath, poolAddress);
-
       const pool = IPool__factory.connect(poolAddress, deployer);
       const poolSettings = await pool.getPoolSettings();
 
