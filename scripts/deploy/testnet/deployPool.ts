@@ -5,6 +5,7 @@ import goerliAddresses from '../../../utils/deployment/goerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { PoolKey } from '../../../utils/sdk/types';
 import { BigNumber } from 'ethers';
+import { getValidMaturity } from '../../../utils/time';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -14,11 +15,11 @@ async function main() {
     deployer,
   );
   const poolKey: PoolKey = {
-    base: goerliAddresses.tokens.WETH,
+    base: goerliAddresses.tokens.testWETH,
     quote: goerliAddresses.tokens.USDC,
     oracleAdapter: goerliAddresses.ChainlinkAdapterProxy,
     strike: parseEther('2000'),
-    maturity: BigNumber.from(1678435200),
+    maturity: BigNumber.from(await getValidMaturity(1, 'months', false)),
     isCallPool: true,
   };
 
