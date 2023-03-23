@@ -1,5 +1,10 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addMockDeposit, callVault, vaultSetup } from '../VaultSetup';
+import {
+  addMockDeposit,
+  callVault,
+  increaseTotalShares,
+  vaultSetup,
+} from '../VaultSetup';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -56,6 +61,61 @@ describe('#ERC4626 overridden functions', () => {
               await token.decimals(),
             );
             expect(await vault.totalAssets()).to.eq(expectedAmount);
+          });
+        });
+      });
+
+      describe('#_previewWithdraw', () => {
+        let vault: UnderwriterVaultMock;
+        let token: ERC20Mock;
+
+        const tests = [
+          { totalSupply: 0, balanceOf: 0, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 1, balanceOf: 0, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 1, balanceOf: 1, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 4, balanceOf: 1, assetAmount: 1, shareAmount: 4 },
+          { totalSupply: 4, balanceOf: 5, assetAmount: 3, shareAmount: 2.4 },
+        ];
+
+        tests.forEach(async (test) => {
+          async function setup() {
+            let { callVault, putVault, base, quote } = await loadFixture(
+              vaultSetup,
+            );
+            vault = isCall ? callVault : putVault;
+            token = isCall ? base : quote;
+            const decimals = await token.decimals();
+            const balance = parseUnits(test.balanceOf.toString(), decimals);
+            await token.mint(vault.address, balance);
+            await vault.increaseTotalShares(
+              parseEther(test.totalSupply.toString()),
+            );
+            return { vault, token };
+          }
+
+          it(`previewWithdraw returns ${test.shareAmount}`, async () => {
+            let { vault, token } = await loadFixture(setup);
+            const assetAmount = parseUnits(
+              test.assetAmount.toString(),
+              await token.decimals(),
+            );
+
+            if (test.totalSupply == 0) {
+              await expect(
+                vault.previewWithdraw(assetAmount),
+              ).to.be.revertedWithCustomError(vault, 'Vault__ZeroShares');
+            } else if (test.balanceOf == 0) {
+              await expect(
+                vault.previewWithdraw(assetAmount),
+              ).to.be.revertedWithCustomError(
+                vault,
+                'Vault__InsufficientFunds',
+              );
+            } else {
+              expect(await vault.previewWithdraw(assetAmount)).to.eq(
+                parseEther(test.shareAmount.toString()),
+              );
+            }
           });
         });
       });
