@@ -59,6 +59,8 @@ library Position {
         UD60x18 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim | 18 decimals
         UD60x18 claimableFees;
+        // The timestamp of the last deposit. Used to enforce withdrawal delay
+        uint256 lastDeposit;
     }
 
     enum OrderType {

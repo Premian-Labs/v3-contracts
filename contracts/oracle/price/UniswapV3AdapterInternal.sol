@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
@@ -191,19 +191,6 @@ contract UniswapV3AdapterInternal is
         }
 
         _resizeArray(pools, validPools);
-    }
-
-    function _resizeArray(
-        address[] memory array,
-        uint256 amountOfValidElements
-    ) internal pure {
-        // If all elements are valid, then nothing to do here
-        if (array.length == amountOfValidElements) return;
-
-        // If not, then resize the array
-        assembly {
-            mstore(array, amountOfValidElements)
-        }
     }
 
     function _tryIncreaseCardinality(

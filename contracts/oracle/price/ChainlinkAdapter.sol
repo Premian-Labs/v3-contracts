@@ -4,6 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
@@ -90,6 +91,65 @@ contract ChainlinkAdapter is
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target);
+    }
+
+    /// @inheritdoc IOracleAdapter
+    function describePricingPath(
+        address token
+    )
+        external
+        view
+        returns (
+            AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
+        )
+    {
+        adapterType = AdapterType.CHAINLINK;
+        path = new address[][](2);
+        decimals = new uint8[](2);
+
+        token = _tokenToDenomination(token);
+
+        if (token == Denominations.ETH) {
+            address[] memory aggregator = new address[](1);
+            aggregator[0] = Denominations.ETH;
+            path[0] = aggregator;
+        } else if (_exists(token, Denominations.ETH)) {
+            path[0] = _aggregator(token, Denominations.ETH);
+        } else if (_exists(token, Denominations.USD)) {
+            path[0] = _aggregator(token, Denominations.USD);
+            path[1] = _aggregator(Denominations.ETH, Denominations.USD);
+        }
+
+        if (path[0].length > 0) {
+            decimals[0] = path[0][0] == Denominations.ETH
+                ? 18
+                : _aggregatorDecimals(path[0][0]);
+        }
+
+        if (path[1].length > 0) {
+            decimals[1] = _aggregatorDecimals(path[1][0]);
+        }
+
+        if (path[0].length == 0) {
+            address[][] memory temp = new address[][](0);
+            path = temp;
+        } else if (path[1].length == 0) {
+            address[][] memory temp = new address[][](1);
+            temp[0] = path[0];
+            path = temp;
+        }
+
+        if (decimals[0] == 0) {
+            uint8[] memory temp = decimals;
+            _resizeArray(temp, 0);
+            decimals = temp;
+        } else if (decimals[1] == 0) {
+            uint8[] memory temp = decimals;
+            _resizeArray(temp, 1);
+            decimals = temp;
+        }
     }
 
     /// @inheritdoc IChainlinkAdapter
