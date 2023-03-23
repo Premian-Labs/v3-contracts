@@ -59,7 +59,10 @@ contract UnderwriterVault is
     function _totalAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        return _balanceOfAssetUD60x18(address(this)) + l.totalLockedAssets;
+        return
+            _balanceOfAssetUD60x18(address(this)) +
+            l.totalLockedAssets -
+            l.feesCollected;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -290,18 +293,23 @@ contract UnderwriterVault is
     /// @return The amount of available assets
     // Note: we do not deduct the totalLockedAssets as these were already deducted during minting
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
         return
             _balanceOfAssetUD60x18(address(this)) -
-            _getLockedSpreadVars(block.timestamp).totalLockedSpread;
+            _getLockedSpreadVars(block.timestamp).totalLockedSpread -
+            l.feesCollected;
     }
 
     /// @notice Gets the current price per share for the vault
+    /// @notice
     /// @return The current price per share
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
         return
-            (_balanceOfAssetUD60x18(address(this)) -
-                _getLockedSpreadVars(block.timestamp).totalLockedSpread +
-                _getTotalFairValue(block.timestamp)) / _totalSupplyUD60x18();
+            (_availableAssetsUD60x18() + _getTotalFairValue(block.timestamp)) /
+            _totalSupplyUD60x18();
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
@@ -885,5 +893,53 @@ contract UnderwriterVault is
         }
 
         return 0;
+    }
+
+    function chargeFees() external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        UD60x18 totalAssets = _totalAssetsUD60x18();
+        // note: we need to pass totalAssets as an argument as they are changed when we charge the different fees
+        uint256 timestamp = block.timestamp;
+        _chargeManagementFees(timestamp, totalAssets);
+        _chargePerformanceFees(totalAssets);
+    }
+
+    function _chargeManagementFees(
+        uint256 timestamp,
+        UD60x18 totalAssets
+    ) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        // _availableAssets()
+        UD60x18 yearfrac = UD60x18.wrap(
+            (timestamp - l.lastFeeEventTimestamp) / (365 * 24 * 60 * 60)
+        );
+
+        UD60x18 managementFee = totalAssets * l.managementFeeRate * yearfrac;
+        // todo: these fees need to be deducted from the available assets.
+        // todo: note that available assets in that case can become negative, e.g. when all assets are locked away.
+        l.feesCollected = l.feesCollected + managementFee;
+    }
+
+    function _chargePerformanceFees(UD60x18 totalAssets) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        UD60x18 pricePerShare = _getPricePerShareUD60x18();
+        UD60x18 performance = pricePerShare / l.lastFeeEventPricePerShare;
+        if (performance > ONE) {
+            UD60x18 profit = totalAssets * (performance - ONE);
+            UD60x18 performanceFee = profit * l.performanceFeeRate;
+            l.feesCollected = l.feesCollected + performanceFee;
+        }
+    }
+
+    function claimFees() external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        // transfer the fees to the corresponding address
+        // todo: where does the address come from?
+        // set feesCollected to ZERO
+        l.feesCollected = ZERO;
     }
 }

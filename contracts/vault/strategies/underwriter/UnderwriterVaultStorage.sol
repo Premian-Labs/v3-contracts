@@ -70,6 +70,12 @@ library UnderwriterVaultStorage {
         // we map maturities to the unlockingRate that needs to be deducted upon crossing
         // maturity => spreadUnlockingRate
         mapping(uint256 => UD60x18) spreadUnlockingTicks;
+        //
+        UD60x18 managementFeeRate;
+        UD60x18 performanceFeeRate;
+        UD60x18 lastFeeEventPricePerShare;
+        uint256 lastFeeEventTimestamp;
+        UD60x18 feesCollected;
     }
 
     function layout() internal pure returns (Layout storage l) {
