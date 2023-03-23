@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addMockDeposit, vaultSetup } from '../VaultSetup';
+import { addMockDeposit, callVault, vaultSetup } from '../VaultSetup';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -9,6 +9,57 @@ import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 describe('#ERC4626 overridden functions', () => {
   for (const isCall of [true, false]) {
     describe(isCall ? 'call' : 'put', () => {
+      describe('#_totalAssets', () => {
+        let vault: UnderwriterVaultMock;
+        let token: ERC20Mock;
+        const tests = [
+          { balanceOf: 1, totalLocked: 0, feesCollected: 0, totalAssets: 1 },
+          {
+            balanceOf: 1,
+            totalLocked: 0.1,
+            feesCollected: 0,
+            totalAssets: 1.1,
+          },
+          {
+            balanceOf: 501,
+            totalLocked: 102,
+            feesCollected: 12.3,
+            totalAssets: 590.7,
+          },
+        ];
+
+        tests.forEach(async (test) => {
+          async function setup() {
+            let { callVault, putVault, base, quote } = await loadFixture(
+              vaultSetup,
+            );
+            vault = isCall ? callVault : putVault;
+            token = isCall ? base : quote;
+            await token.mint(
+              vault.address,
+              parseUnits(test.balanceOf.toString(), await token.decimals()),
+            );
+            await vault.setFeesCollected(
+              parseEther(test.feesCollected.toString()),
+            );
+            // note: we are not transferring it, otherwise this wont have an effect on totalAssets
+            await vault.increaseTotalLockedAssetsNoTransfer(
+              parseEther(test.totalLocked.toString()),
+            );
+            return { vault, token };
+          }
+
+          it(`totalAssets equals ${test.totalAssets}`, async () => {
+            let { vault, token } = await loadFixture(setup);
+            const expectedAmount = parseUnits(
+              test.totalAssets.toString(),
+              await token.decimals(),
+            );
+            expect(await vault.totalAssets()).to.eq(expectedAmount);
+          });
+        });
+      });
+
       describe('#maxWithdraw', () => {
         it('maxWithdraw should revert for a zero address', async () => {
           const { callVault, base, quote } = await loadFixture(vaultSetup);
