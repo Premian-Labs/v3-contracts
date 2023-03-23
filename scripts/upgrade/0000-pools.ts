@@ -57,14 +57,11 @@ async function main() {
 
   const deployedFacets = await PoolUtil.deployPoolImplementations(
     deployer,
-    premiaDiamond,
     poolFactory,
     router,
     exchangeHelper,
     weth,
-    chainlinkAdapter,
     feeReceiver,
-    discountPerPool,
     log,
     isDevMode,
   );

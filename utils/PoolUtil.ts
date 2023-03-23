@@ -42,14 +42,11 @@ export class PoolUtil {
 
   static async deployPoolImplementations(
     deployer: SignerWithAddress,
-    premiaDiamond: string,
     poolFactory: string,
     router: string,
     exchangeHelper: string,
     wrappedNativeToken: string,
-    chainlinkAdapter: string,
     feeReceiver: string,
-    discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     isDevMode = false,
   ) {
@@ -200,14 +197,11 @@ export class PoolUtil {
 
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
-      premiaDiamond.address,
       poolFactory.address,
       router.address,
       exchangeHelper.address,
       wrappedNativeToken,
-      chainlinkAdapter,
       feeReceiver,
-      discountPerPool,
       log,
       isDevMode,
     );
