@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
 import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
@@ -10,14 +12,14 @@ contract OracleAdapterMock {
     address immutable BASE;
     address immutable QUOTE;
 
-    uint256 quoteAmount;
-    uint256 quoteFromAmount;
+    UD60x18 quoteAmount;
+    UD60x18 quoteFromAmount;
 
     constructor(
         address _base,
         address _quote,
-        uint256 _quoteAmount,
-        uint256 _quoteFromAmount
+        UD60x18 _quoteAmount,
+        UD60x18 _quoteFromAmount
     ) {
         BASE = _base;
         QUOTE = _quote;
@@ -27,15 +29,15 @@ contract OracleAdapterMock {
 
     function upsertPair(address tokenA, address tokenB) external {}
 
-    function setQuote(uint256 _quoteAmount) external {
+    function setQuote(UD60x18 _quoteAmount) external {
         quoteAmount = _quoteAmount;
     }
 
-    function setQuoteFrom(uint256 _quoteFromAmount) external {
+    function setQuoteFrom(UD60x18 _quoteFromAmount) external {
         quoteFromAmount = _quoteFromAmount;
     }
 
-    function quote(address, address) external view returns (uint256) {
+    function quote(address, address) external view returns (UD60x18) {
         return quoteAmount;
     }
 
@@ -43,7 +45,7 @@ contract OracleAdapterMock {
         address,
         address,
         uint256
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return quoteFromAmount;
     }
 

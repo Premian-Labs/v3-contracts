@@ -58,7 +58,7 @@ interface IOracleAdapter {
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 
     /// @notice Describes the pricing path used to convert the token to ETH
     /// @param token The token from where the pricing path starts
