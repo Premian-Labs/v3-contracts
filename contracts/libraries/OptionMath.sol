@@ -7,7 +7,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SD59x18} from "./prbMath/SD59x18.sol";
 import {UD60x18} from "./prbMath/UD60x18.sol";
 
-import {DateTime} from "./DateTime.sol";
+import {DateTime} from "../vendor/DateTime.sol";
 
 library OptionMath {
     using SafeCast for uint256;
