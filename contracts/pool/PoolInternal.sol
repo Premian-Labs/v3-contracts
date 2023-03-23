@@ -284,7 +284,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         claimedFees = pData.claimableFees;
 
         pData.claimableFees = 0;
-        IERC20(l.getPoolToken()).safeTransfer(p.operator, claimedFees);
+        IERC20(l.getPoolToken()).safeTransfer(
+            p.operator,
+            l.scaleDecimals(claimedFees)
+        );
 
         emit ClaimFees(
             p.owner,
@@ -306,7 +309,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (claimedFees == 0) return 0;
 
         l.protocolFees = 0;
-        IERC20(l.getPoolToken()).safeTransfer(FEE_RECEIVER, claimedFees);
+        IERC20(l.getPoolToken()).safeTransfer(
+            FEE_RECEIVER,
+            l.scaleDecimals(claimedFees)
+        );
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 
@@ -375,7 +381,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l,
             p.operator,
             address(this),
-            delta.collateral.toUint256(),
+            l.scaleDecimals(delta.collateral.toUint256()),
             args.collateralCredit,
             args.refundAddress,
             delta.longs.toUint256(),
@@ -558,7 +564,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 address(this),
                 p.operator,
-                collateralToTransfer,
+                l.scaleDecimals(collateralToTransfer),
                 0,
                 address(0),
                 Math.abs(delta.longs),
@@ -599,6 +605,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
+    ///         WARNING : `collateral` and `collateralCredit` must be scaled to the collateral token decimals
     function _transferTokens(
         PoolStorage.Layout storage l,
         address from,
@@ -671,17 +678,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.strike,
             l.isCallPool
         );
-        uint256 protocolFee = Position.contractsToCollateral(
-            _takerFee(l, size, 0, true),
-            l.strike,
-            l.isCallPool
-        );
+        uint256 protocolFee = _takerFee(l, size, 0, true);
 
         IERC20Router(ROUTER).safeTransferFrom(
             l.getPoolToken(),
             underwriter,
             address(this),
-            collateral + protocolFee
+            l.scaleDecimals(collateral + protocolFee)
         );
 
         l.protocolFees += protocolFee;
@@ -806,13 +809,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.isBuy
         );
 
-        delta = _updateUserAssets(
+        delta = _calculateAndUpdateUserAssets(
             l,
             args.user,
             totalPremium,
-            args.creditAmount,
             args.size,
             args.isBuy,
+            args.creditAmount,
             args.transferCollateralToUser
         );
 
@@ -879,6 +882,27 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    // @notice Calculate the asset update for a user and update the user's assets
+    function _calculateAndUpdateUserAssets(
+        PoolStorage.Layout storage l,
+        address user,
+        uint256 totalPremium,
+        uint256 size,
+        bool isBuy,
+        uint256 creditAmount,
+        bool transferCollateralToUser
+    ) internal returns (Delta memory delta) {
+        delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
+
+        _updateUserAssets(
+            l,
+            user,
+            delta,
+            creditAmount,
+            transferCollateralToUser
+        );
+    }
+
     function _calculateAssetsUpdate(
         PoolStorage.Layout storage l,
         address user,
@@ -914,14 +938,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _updateUserAssets(
         PoolStorage.Layout storage l,
         address user,
-        uint256 totalPremium,
+        Delta memory delta,
         uint256 creditAmount,
-        uint256 size,
-        bool isBuy,
         bool transferCollateralToUser
-    ) internal returns (Delta memory delta) {
-        delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
-
+    ) internal {
         if (
             (delta.longs == 0 && delta.shorts == 0) ||
             (delta.longs > 0 && delta.shorts > 0) ||
@@ -941,12 +961,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.getPoolToken(),
                 user,
                 address(this),
-                uint256(-_deltaCollateral)
+                l.scaleDecimals(uint256(-_deltaCollateral))
             );
         } else if (_deltaCollateral > 0 && transferCollateralToUser) {
             IERC20(l.getPoolToken()).safeTransfer(
                 user,
-                uint256(_deltaCollateral)
+                l.scaleDecimals(uint256(_deltaCollateral))
             );
         }
 
@@ -972,11 +992,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price.mul(size);
-        r.protocolFee = Position.contractsToCollateral(
-            _takerFee(l, size, r.premium, true),
-            l.strike,
-            l.isCallPool
-        );
+        r.protocolFee = _takerFee(l, size, r.premium, true);
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(
@@ -1028,24 +1044,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.protocolFees += premiumAndFee.protocolFee;
 
         // Process trade taker
-        Delta memory deltaTaker = _updateUserAssets(
+        Delta memory deltaTaker = _calculateAndUpdateUserAssets(
             l,
             args.user,
             premiumAndFee.premiumTaker,
-            0,
             args.size,
             !tradeQuote.isBuy,
+            0,
             true
         );
 
         // Process trade maker
-        Delta memory deltaMaker = _updateUserAssets(
+        Delta memory deltaMaker = _calculateAndUpdateUserAssets(
             l,
             tradeQuote.provider,
             premiumAndFee.premiumMaker,
-            0,
             args.size,
             tradeQuote.isBuy,
+            0,
             true
         );
 
@@ -1073,7 +1089,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(owner, PoolStorage.LONG, size);
         IERC20(l.getPoolToken()).safeTransfer(
             owner,
-            Position.contractsToCollateral(size, l.strike, l.isCallPool)
+            l.scaleDecimals(
+                Position.contractsToCollateral(size, l.strike, l.isCallPool)
+            )
         );
 
         emit Annihilate(owner, size, 0);
@@ -1232,7 +1250,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(holder, PoolStorage.LONG, size);
 
         if (exerciseValue > 0) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
+            IERC20(l.getPoolToken()).safeTransfer(
+                holder,
+                l.scaleDecimals(exerciseValue)
+            );
         }
 
         emit Exercise(holder, size, exerciseValue, l.spot, 0);
@@ -1263,7 +1284,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // Burn short and transfer collateral to operator
         _burn(holder, PoolStorage.SHORT, size);
         if (collateralValue > 0) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
+            IERC20(l.getPoolToken()).safeTransfer(
+                holder,
+                l.scaleDecimals(collateralValue)
+            );
         }
 
         emit Settle(holder, size, exerciseValue, l.spot, 0);
@@ -1349,7 +1373,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = 0;
 
         if (collateral > 0) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, collateral);
+            IERC20(l.getPoolToken()).safeTransfer(
+                p.operator,
+                l.scaleDecimals(collateral)
+            );
         }
 
         emit SettlePosition(

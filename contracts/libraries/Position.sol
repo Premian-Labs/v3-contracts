@@ -126,6 +126,8 @@ library Position {
         return isCall ? _collateral : _collateral.div(strike);
     }
 
+    /// @notice Converts the amount of contracts to the amount of collateral normalized to 18 decimals.
+    ///         WARNING : Decimals needs to be scaled before using this amount for collateral transfers
     function contractsToCollateral(
         uint256 _contracts,
         uint256 strike,
