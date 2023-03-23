@@ -1,4 +1,10 @@
+import goerli from './deployment/goerli.json';
+
 export type Token = { address: string; decimals: number; symbol: string };
+
+export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
+export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
 
 export const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 
@@ -59,3 +65,26 @@ export const feeds = [
     { token: tokens.DAI.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
     { token: tokens.WBTC.address, denomination: tokens.CHAINLINK_BTC.address, feed: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23'},
 ]
+
+export const goerliFeeds = [
+  {
+    token: CHAINLINK_ETH,
+    denomination: CHAINLINK_USD,
+    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
+  },
+  {
+    token: goerli.tokens.WBTC,
+    denomination: CHAINLINK_USD,
+    feed: '0xA39434A63A52E749F02807ae27335515BA4b07F7',
+  },
+  {
+    token: goerli.tokens.LINK,
+    denomination: CHAINLINK_USD,
+    feed: '0x48731cF7e84dc94C5f84577882c14Be11a5B7456',
+  },
+  {
+    token: goerli.tokens.USDC,
+    denomination: CHAINLINK_USD,
+    feed: '0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7',
+  },
+];
