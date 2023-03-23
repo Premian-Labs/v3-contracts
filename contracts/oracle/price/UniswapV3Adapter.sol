@@ -85,6 +85,21 @@ contract UniswapV3Adapter is
         return _quoteFrom(tokenIn, tokenOut, target.toUint32());
     }
 
+    /// @inheritdoc IOracleAdapter
+    function describePricingPath(
+        address token
+    )
+        external
+        view
+        returns (
+            AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
+        )
+    {
+        // ToDo : Implement
+    }
+
     /// @inheritdoc IUniswapV3Adapter
     function poolsForPair(
         address tokenA,
