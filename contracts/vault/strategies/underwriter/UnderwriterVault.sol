@@ -441,7 +441,8 @@ contract UnderwriterVault is
         UD60x18 assetAmount
     ) internal view returns (UD60x18 shareAmount) {
         if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
-        if (_totalAssetsUD60x18() == ZERO) revert Vault__InsufficientFunds();
+        if (_availableAssetsUD60x18() == ZERO)
+            revert Vault__InsufficientFunds();
         shareAmount = assetAmount / _getPricePerShareUD60x18();
     }
 
