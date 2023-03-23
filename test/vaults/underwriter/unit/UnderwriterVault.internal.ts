@@ -146,6 +146,10 @@ describe('UnderwriterVault', () => {
           await vault.increaseTotalLockedAssets(parseEther('0.0001'));
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.2979'));
         });
+        it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets - feesCollected) = 1.1379', async () => {
+          await vault.setFeesCollected(parseEther('0.16'));
+          expect(await vault.getAvailableAssets()).to.eq(parseEther('1.1379'));
+        });
       });
     }
   });
