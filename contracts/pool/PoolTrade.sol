@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
+
+import {iZERO} from "../libraries/Constants.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
@@ -26,16 +30,19 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function getTradeQuote(
-        uint256 size,
+        UD60x18 size,
         bool isBuy
     ) external view returns (uint256) {
-        return _getTradeQuote(size, isBuy);
+        return
+            PoolStorage.layout().toPoolTokenDecimals(
+                _getTradeQuote(size, isBuy)
+            );
     }
 
     /// @inheritdoc IPoolTrade
     function fillQuote(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory signature
     ) external {
         _fillQuote(
@@ -46,27 +53,22 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function trade(
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     ) external returns (uint256 totalPremium, Delta memory delta) {
-        return
-            _trade(
-                TradeArgsInternal(
-                    msg.sender,
-                    size,
-                    isBuy,
-                    premiumLimit,
-                    0,
-                    true
-                )
-            );
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true)
+        );
+
+        return (PoolStorage.layout().toPoolTokenDecimals(_totalPremium), delta);
     }
 
     /// @inheritdoc IPoolTrade
     function swapAndTrade(
         SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     )
@@ -83,7 +85,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (swapOutAmount, ) = _swap(s);
 
-        (totalPremium, delta) = _trade(
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
             TradeArgsInternal(
                 msg.sender,
                 size,
@@ -94,13 +97,13 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             )
         );
 
-        return (totalPremium, delta, swapOutAmount);
+        return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
     }
 
     /// @inheritdoc IPoolTrade
     function tradeAndSwap(
         SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     )
@@ -113,25 +116,33 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         )
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        (totalPremium, delta) = _trade(
+        UD60x18 _totalPremium;
+        (_totalPremium, delta) = _trade(
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false)
         );
 
-        if (delta.collateral <= 0) return (totalPremium, delta, 0, 0);
+        if (delta.collateral <= iZERO) return (totalPremium, delta, 0, 0);
 
-        s.amountInMax = uint256(delta.collateral);
+        s.amountInMax = delta.collateral.intoUD60x18().unwrap();
 
         if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
         (tokenOutReceived, collateralReceived) = _swap(s);
 
-        return (totalPremium, delta, collateralReceived, tokenOutReceived);
+        return (
+            l.toPoolTokenDecimals(_totalPremium),
+            delta,
+            collateralReceived,
+            tokenOutReceived
+        );
     }
 
     /// @inheritdoc IPoolTrade
     function cancelTradeQuotes(bytes32[] calldata hashes) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
-            l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = type(uint256).max;
+            l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
+                type(uint256).max
+            );
             emit CancelTradeQuote(msg.sender, hashes[i]);
         }
     }
@@ -139,7 +150,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     /// @inheritdoc IPoolTrade
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory sig
     ) external view returns (bool, InvalidQuoteError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -157,7 +168,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function getTradeQuoteFilledAmount(
         address provider,
         bytes32 tradeQuoteHash
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return
             PoolStorage.layout().tradeQuoteAmountFilled[provider][
                 tradeQuoteHash

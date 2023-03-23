@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 
@@ -19,8 +21,8 @@ library PoolFactoryStorage {
         mapping(bytes32 => uint256) strikeCount;
         // Pool Key -> Count (Discount lattice for maturity)
         mapping(bytes32 => uint256) maturityCount;
-        // Discount % per neighboring strike/maturity, 1e18 base
-        uint256 discountPerPool;
+        // Discount % per neighboring strike/maturity | 18 decimals
+        UD60x18 discountPerPool;
         // Initialization fee receiver
         address feeReceiver;
     }

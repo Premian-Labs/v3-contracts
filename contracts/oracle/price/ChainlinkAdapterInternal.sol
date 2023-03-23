@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
-import {UD60x18} from "../../libraries/prbMath/UD60x18.sol";
 
 import {IAggregator} from "./IAggregator.sol";
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
@@ -18,7 +19,6 @@ abstract contract ChainlinkAdapterInternal is
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using SafeCast for int256;
-    using UD60x18 for uint256;
 
     /// @dev If a fresh price is unavailable the adapter will wait the duration of
     ///      MAX_DELAY before returning the stale price
@@ -44,7 +44,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         (
             PricingPath path,
             address mappedTokenIn,
@@ -108,7 +108,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         int256 factor = _factor(path);
 
         uint256 price;
@@ -123,15 +123,15 @@ abstract contract ChainlinkAdapterInternal is
             price = _getPriceAgainstETH(
                 _isETH(tokenOut) ? tokenIn : tokenOut,
                 target
-            );
+            ).unwrap();
         }
 
-        price = _scale(price, factor);
+        UD60x18 priceScaled = UD60x18.wrap(_scale(price, factor));
 
         bool invert = _isUSD(tokenIn) ||
             (path == PricingPath.TOKEN_ETH && _isETH(tokenIn));
 
-        return invert ? price.inv() : price;
+        return invert ? priceScaled.inv() : priceScaled;
     }
 
     /// @dev Handles prices when both tokens share the same base (either ETH or USD)
@@ -140,7 +140,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         int256 factor = _factor(path);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
@@ -150,10 +150,14 @@ abstract contract ChainlinkAdapterInternal is
         uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
         uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
-        uint256 adjustedTokenInToBase = _scale(tokenInToBase, factor);
-        uint256 adjustedTokenOutToBase = _scale(tokenOutToBase, factor);
+        UD60x18 adjustedTokenInToBase = UD60x18.wrap(
+            _scale(tokenInToBase, factor)
+        );
+        UD60x18 adjustedTokenOutToBase = UD60x18.wrap(
+            _scale(tokenOutToBase, factor)
+        );
 
-        return adjustedTokenInToBase.div(adjustedTokenOutToBase);
+        return adjustedTokenInToBase / adjustedTokenOutToBase;
     }
 
     /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
@@ -162,38 +166,33 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         int256 factor = _factor(path);
-        uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(target), factor);
+        UD60x18 adjustedEthToUSDPrice = UD60x18.wrap(
+            _scale(_getETHUSD(target), factor)
+        );
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
             tokenIn < tokenOut) ||
             (path == PricingPath.A_ETH_USD_B && tokenIn > tokenOut);
 
         if (isTokenInUSD) {
-            uint256 adjustedTokenInToUSD = _scale(
-                _getPriceAgainstUSD(tokenIn, target),
-                factor
+            UD60x18 adjustedTokenInToUSD = UD60x18.wrap(
+                _scale(_getPriceAgainstUSD(tokenIn, target), factor)
             );
 
-            uint256 tokenOutToETH = _getPriceAgainstETH(tokenOut, target);
+            UD60x18 tokenOutToETH = _getPriceAgainstETH(tokenOut, target);
 
-            return
-                adjustedTokenInToUSD.div(adjustedEthToUSDPrice).div(
-                    tokenOutToETH
-                );
+            return adjustedTokenInToUSD / adjustedEthToUSDPrice / tokenOutToETH;
         } else {
-            uint256 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
+            UD60x18 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
 
-            uint256 adjustedTokenOutToUSD = _scale(
-                _getPriceAgainstUSD(tokenOut, target),
-                factor
+            UD60x18 adjustedTokenOutToUSD = UD60x18.wrap(
+                _scale(_getPriceAgainstUSD(tokenOut, target), factor)
             );
 
             return
-                tokenInToETH.mul(adjustedEthToUSDPrice).div(
-                    adjustedTokenOutToUSD
-                );
+                (tokenInToETH * adjustedEthToUSDPrice) / adjustedTokenOutToUSD;
         }
     }
 
@@ -203,19 +202,25 @@ abstract contract ChainlinkAdapterInternal is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         int256 factor = _factor(path);
         bool isTokenInWBTC = _isWBTC(tokenIn);
 
-        uint256 adjustedWBTCToUSDPrice = _scale(_getWBTCBTC(target), factor)
-            .mul(_scale(_getBTCUSD(target), factor));
+        UD60x18 adjustedWBTCToUSDPrice = UD60x18.wrap(
+            _scale(_getWBTCBTC(target), factor)
+        ) * UD60x18.wrap(_scale(_getBTCUSD(target), factor));
 
-        uint256 adjustedTokenToUSD = _scale(
-            _getPriceAgainstUSD(!isTokenInWBTC ? tokenIn : tokenOut, target),
-            factor
+        UD60x18 adjustedTokenToUSD = UD60x18.wrap(
+            _scale(
+                _getPriceAgainstUSD(
+                    !isTokenInWBTC ? tokenIn : tokenOut,
+                    target
+                ),
+                factor
+            )
         );
 
-        uint256 price = adjustedWBTCToUSDPrice.div(adjustedTokenToUSD);
+        UD60x18 price = adjustedWBTCToUSDPrice / adjustedTokenToUSD;
         return !isTokenInWBTC ? price.inv() : price;
     }
 
@@ -247,11 +252,13 @@ abstract contract ChainlinkAdapterInternal is
     function _getPriceAgainstETH(
         address token,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         return
-            _isETH(token)
-                ? ONE_ETH
-                : _fetchQuote(token, Denominations.ETH, target);
+            UD60x18.wrap(
+                _isETH(token)
+                    ? ONE_ETH
+                    : _fetchQuote(token, Denominations.ETH, target)
+            );
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted

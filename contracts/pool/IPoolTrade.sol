@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal {
     /// @notice Gives a quote for a trade
-    /// @param size The number of contracts being traded
+    /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium which has to be paid to complete the trade
+    /// @return The premium which has to be paid to complete the trade | poolToken decimals
     function getTradeQuote(
-        uint256 size,
+        UD60x18 size,
         bool isBuy
     ) external view returns (uint256);
 
@@ -20,23 +22,23 @@ interface IPoolTrade is IPoolInternal {
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
     /// @param tradeQuote The quote given by the provider
-    /// @param size The size to fill from the quote
+    /// @param size The size to fill from the quote | 18 decimals
     /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
     function fillQuote(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory signature
     ) external;
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
-    /// @param size The number of contracts being traded
+    /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
-    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     ) external returns (uint256 totalPremium, Delta memory delta);
@@ -44,15 +46,15 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param s The swap arguments
-    /// @param size The number of contracts being traded
+    /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
-    /// @return totalPremium The premium paid or received by the taker for the trade
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return swapOutAmount The amount of pool tokens resulting from the swap
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap | poolToken decimals
     function swapAndTrade(
         IPoolInternal.SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     )
@@ -67,16 +69,16 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param s The swap arguments
-    /// @param size The number of contracts being traded
+    /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling.
-    /// @return totalPremium The premium received by the taker of the trade
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @return totalPremium The premium received by the taker of the trade | poolToken decimals
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return collateralReceived The amount of un-swapped collateral received from the trade.
-    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap.
+    /// @return collateralReceived The amount of un-swapped collateral received from the trade. | s.tokenOut decimals
+    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. | poolToken decimals
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
-        uint256 size,
+        UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
     )
@@ -96,19 +98,20 @@ interface IPoolTrade is IPoolInternal {
 
     /// @notice Returns whether or not a quote is valid, given a fill size
     /// @param tradeQuote The quote to check
-    /// @param size Size to fill from the quote
+    /// @param size Size to fill from the quote | 18 decimals
     /// @param sig secp256k1 Signature
     function isTradeQuoteValid(
         TradeQuote memory tradeQuote,
-        uint256 size,
+        UD60x18 size,
         Signature memory sig
     ) external view returns (bool, InvalidQuoteError);
 
     /// @notice Returns the size already filled for a given quote
     /// @param provider Provider of the quote
     /// @param tradeQuoteHash Hash of the quote
+    /// @return The size already filled | 18 decimals
     function getTradeQuoteFilledAmount(
         address provider,
         bytes32 tradeQuoteHash
-    ) external view returns (uint256);
+    ) external view returns (UD60x18);
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
@@ -8,15 +10,15 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolCore is IPoolInternal {
     /// @notice Get the current market price as normalized price
     /// @return The current market price as normalized price
-    function marketPrice() external view returns (uint256);
+    function marketPrice() external view returns (UD60x18);
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
-    /// @param size The size of a trade (number of contracts)
-    /// @param premium The total cost of option(s) for a purchase
+    /// @param size The size of a trade (number of contracts) | 18 decimals
+    /// @param premium The total cost of option(s) for a purchase | poolToken decimals
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
-    /// @return The taker fee for an option trade denormalized
+    /// @return The taker fee for an option trade denormalized | poolToken decimals
     function takerFee(
-        uint256 size,
+        UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized
     ) external view returns (uint256);
@@ -25,7 +27,7 @@ interface IPoolCore is IPoolInternal {
     /// @return base Address of base token
     /// @return quote Address of quote token
     /// @return oracleAdapter Address of oracle adapter
-    /// @return strike The strike of the option
+    /// @return strike The strike of the option | 18 decimals
     /// @return maturity The maturity timestamp of the option
     /// @return isCallPool Whether the pool is for call or put options
     function getPoolSettings()
@@ -35,7 +37,7 @@ interface IPoolCore is IPoolInternal {
             address base,
             address quote,
             address oracleAdapter,
-            uint256 strike,
+            UD60x18 strike,
             uint64 maturity,
             bool isCallPool
         );
@@ -44,12 +46,12 @@ interface IPoolCore is IPoolInternal {
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.
     /// @param p The position key
-    /// @return The amount of claimed fees
+    /// @return The amount of claimed fees | poolToken decimals
     function claim(Position.Key memory p) external returns (uint256);
 
     /// @notice Returns total claimable fees for the position
     /// @param p The position key
-    /// @return The total claimable fees for the position
+    /// @return The total claimable fees for the position | poolToken decimals
     function getClaimableFees(
         Position.Key memory p
     ) external view returns (uint256);
@@ -57,36 +59,36 @@ interface IPoolCore is IPoolInternal {
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
 
     /// @param p The position key
-    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param size The position size to deposit
-    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
-    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param size The position size to deposit | 18 decimals
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     function deposit(
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
-    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param size The position size to deposit
-    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
-    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param size The position size to deposit | 18 decimals
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function deposit(
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice,
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice,
         bool isBidIfStrandedMarketPrice
     ) external;
 
@@ -94,84 +96,87 @@ interface IPoolCore is IPoolInternal {
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param s The swap arguments
     /// @param p The position key
-    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas
-    /// @param size The position size to deposit
-    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
-    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+    /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+    /// @param size The position size to deposit | 18 decimals
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
-    /// @param size The position size to withdraw
-    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert)
-    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert)
+    /// @param size The position size to withdraw | 18 decimals
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     function withdraw(
         Position.Key memory p,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external;
 
     /// @notice Underwrite an option by depositing collateral
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
     /// @param longReceiver The address which will receive the long token
-    /// @param size The number of contracts being underwritten
+    /// @param size The number of contracts being underwritten | 18 decimals
     function writeFrom(
         address underwriter,
         address longReceiver,
-        uint256 size
+        UD60x18 size
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.
-    /// @param size The size to annihilate
-    function annihilate(uint256 size) external;
+    /// @param size The size to annihilate | 18 decimals
+    function annihilate(UD60x18 size) external;
 
     /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
+    /// @return The exercise value as amount of collateral paid out | poolToken decimals
     function exercise(address holder) external returns (uint256);
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
+    /// @return The amount of collateral left after settlement | poolToken decimals
     function settle(address holder) external returns (uint256);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
+    /// @return The amount of collateral left after settlement | poolToken decimals
     function settlePosition(Position.Key memory p) external returns (uint256);
 
     /// @notice Get nearest ticks below `lower` and `upper`.
     ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
-    /// @param lower The lower bound of the range
-    /// @param upper The upper bound of the range
-    /// @return nearestBelowLower The nearest tick below `lower`
-    /// @return nearestBelowUpper The nearest tick below `upper`
+    /// @param lower The lower bound of the range | 18 decimals
+    /// @param upper The upper bound of the range | 18 decimals
+    /// @return nearestBelowLower The nearest tick below `lower` | 18 decimals
+    /// @return nearestBelowUpper The nearest tick below `upper` | 18 decimals
     function getNearestTicksBelow(
-        uint256 lower,
-        uint256 upper
+        UD60x18 lower,
+        UD60x18 upper
     )
         external
         view
-        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper);
+        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper);
 
     /// @notice Transfer a LP position to a new owner/operator
     /// @param srcP The position key
     /// @param newOwner The new owner
     /// @param newOperator The new operator
-    /// @param size The size to transfer
+    /// @param size The size to transfer | 18 decimals
     function transferPosition(
         Position.Key memory srcP,
         address newOwner,
         address newOperator,
-        uint256 size
+        UD60x18 size
     ) external;
 }

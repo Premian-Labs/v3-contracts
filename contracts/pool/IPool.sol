@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IPoolTrade} from "./IPoolTrade.sol";
 import {IPoolCore} from "./IPoolCore.sol";

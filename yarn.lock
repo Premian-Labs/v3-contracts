@@ -1018,6 +1018,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@prb/math@https://github.com/Lumyo/prb-math.git#head=yarn":
+  version: 3.3.0
+  resolution: "@prb/math@https://github.com/Lumyo/prb-math.git#commit=12ed8a4309fbf1d9a12b9ef494ec61f507b36b08"
+  checksum: 45070e7b4649b15eeb199beda7f093f75c3e07c9b29cd0166b8effcb7fd4131820b560aaa1873c6e78fe6c85abe200e7bde000facd21b19887cda9ea72f0d43e
+  languageName: node
+  linkType: hard
+
 "@scure/base@npm:~1.1.0":
   version: 1.1.1
   resolution: "@scure/base@npm:1.1.1"
@@ -6651,6 +6658,7 @@ __metadata:
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.2
     "@nomiclabs/hardhat-etherscan": ^3.1.7
+    "@prb/math": "https://github.com/Lumyo/prb-math.git#head=yarn"
     "@solidstate/contracts": ^0.0.54
     "@solidstate/hardhat-4byte-uploader": ^1.0.2
     "@solidstate/hardhat-test-short-circuit": ^1.0.2
