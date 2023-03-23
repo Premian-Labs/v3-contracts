@@ -70,7 +70,8 @@ library UnderwriterVaultStorage {
         // we map maturities to the unlockingRate that needs to be deducted upon crossing
         // maturity => spreadUnlockingRate
         mapping(uint256 => UD60x18) spreadUnlockingTicks;
-        //
+        // Performance fee variables
+        mapping(address => UD60x18) balanceOfAssets;
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
         UD60x18 lastFeeEventPricePerShare;

@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -313,6 +314,17 @@ contract UnderwriterVault is
             _totalSupplyUD60x18();
     }
 
+    function _getAveragePricePerShareUD60x18(
+        address owner
+    ) internal view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 assets = l.balanceOfAssets[owner];
+        UD60x18 shares = _balanceOfUD60x18(owner);
+        return assets / shares;
+    }
+
     /// @notice updates total spread in storage to be able to compute the price per share
     function _updateState(uint256 timestamp) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -466,6 +478,14 @@ contract UnderwriterVault is
         if (receiver == address(0)) revert Vault__AddressZero();
         if (assetAmount == 0) revert Vault__ZeroAsset();
         if (shareAmount == 0) revert Vault__ZeroShares();
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        // Add assetAmount deposited to user's balance
+        // This is needed to compute average price per share
+        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+        l.balanceOfAssets[receiver] = l.balanceOfAssets[receiver] + assets;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -477,6 +497,14 @@ contract UnderwriterVault is
         if (owner == address(0)) revert Vault__AddressZero();
         if (assetAmount == 0) revert Vault__ZeroAsset();
         if (shareAmount == 0) revert Vault__ZeroShares();
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        // Subtract assetAmount deposited from user's balance
+        // This is needed to compute average price per share
+        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+        l.balanceOfAssets[owner] = l.balanceOfAssets[owner] - assets;
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -895,6 +923,38 @@ contract UnderwriterVault is
         }
 
         return 0;
+    }
+
+    /// @inheritdoc ERC20BaseInternal
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 shares = UD60x18.wrap(amount);
+
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 avgPPS = _getAveragePricePerShareUD60x18(from);
+
+        // Compute return
+        UD60x18 performance = pps / avgPPS;
+
+        if (performance > ONE) {
+            UD60x18 assets = l.balanceOfAssets[from];
+            UD60x18 profit = (performance - ONE) * assets;
+            UD60x18 performanceFee = l.performanceFeeRate * profit;
+
+            UD60x18 remainingProfit = profit - performanceFee;
+
+            // TODO: transfer performance fee to collection address
+
+            // TODO: transfer remaining profit to `from`
+        }
     }
 
     function chargeFees() external {
