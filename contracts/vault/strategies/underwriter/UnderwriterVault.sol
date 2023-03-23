@@ -454,7 +454,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         UD60x18 assetAmountScaled = l.convertAssetToUD60x18(assetAmount);
-        shareAmount = _previewMintUD60x18(assetAmountScaled).unwrap();
+        shareAmount = _previewWithdrawUD60x18(assetAmountScaled).unwrap();
     }
 
     /// @inheritdoc ERC4626BaseInternal
