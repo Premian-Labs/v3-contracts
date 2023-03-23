@@ -677,4 +677,49 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) external {
         return _trade(timestamp, spot, strike, maturity, isCall, size, isBuy);
     }
+
+    function chargeManagementFees(
+        uint256 timestamp,
+        UD60x18 totalAssets
+    ) external {
+        _chargeManagementFees(timestamp, totalAssets);
+    }
+
+    function setFeesCollected(UD60x18 value) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.feesCollected = value;
+    }
+
+    function setLastFeeEventPricePerShare(UD60x18 value) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.lastFeeEventPricePerShare = value;
+    }
+
+    function setLastFeeEventTimestamp(uint256 value) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.lastFeeEventTimestamp = value;
+    }
+
+    function setManagementFeeRate(UD60x18 value) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.managementFeeRate = value;
+    }
+
+    function setPerformanceFeeRate(UD60x18 value) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.performanceFeeRate = value;
+    }
+
+    function getFeesCollected() external view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().feesCollected;
+    }
+
+    function getLastFeeEventTimestamp() external view returns (uint256) {
+        return UnderwriterVaultStorage.layout().lastFeeEventTimestamp;
+    }
 }

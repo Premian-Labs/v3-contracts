@@ -24,6 +24,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/Doub
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
+import {console} from "hardhat/console.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -901,9 +902,10 @@ contract UnderwriterVault is
             .layout();
         UD60x18 totalAssets = _totalAssetsUD60x18();
         // note: we need to pass totalAssets as an argument as they are changed when we charge the different fees
+        // note: keep order: 1) charge performance 2) charge management fees
         uint256 timestamp = block.timestamp;
-        _chargeManagementFees(timestamp, totalAssets);
         _chargePerformanceFees(totalAssets);
+        _chargeManagementFees(timestamp, totalAssets);
     }
 
     function _chargeManagementFees(
@@ -912,15 +914,14 @@ contract UnderwriterVault is
     ) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        // _availableAssets()
-        UD60x18 yearfrac = UD60x18.wrap(
-            (timestamp - l.lastFeeEventTimestamp) / (365 * 24 * 60 * 60)
-        );
 
+        UD60x18 yearfrac = UD60x18.wrap(
+            (timestamp - l.lastFeeEventTimestamp) * 1e18
+        ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
         UD60x18 managementFee = totalAssets * l.managementFeeRate * yearfrac;
-        // todo: these fees need to be deducted from the available assets.
-        // todo: note that available assets in that case can become negative, e.g. when all assets are locked away.
+
         l.feesCollected = l.feesCollected + managementFee;
+        l.lastFeeEventTimestamp = timestamp;
     }
 
     function _chargePerformanceFees(UD60x18 totalAssets) internal {
@@ -932,6 +933,7 @@ contract UnderwriterVault is
             UD60x18 profit = totalAssets * (performance - ONE);
             UD60x18 performanceFee = profit * l.performanceFeeRate;
             l.feesCollected = l.feesCollected + performanceFee;
+            l.lastFeeEventPricePerShare = pricePerShare;
         }
     }
 
