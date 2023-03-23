@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
@@ -71,7 +73,7 @@ contract UniswapV3Adapter is
     function quote(
         address tokenIn,
         address tokenOut
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
@@ -80,7 +82,7 @@ contract UniswapV3Adapter is
         address tokenIn,
         address tokenOut,
         uint256 target
-    ) external view returns (uint256) {
+    ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target.toUint32());
     }

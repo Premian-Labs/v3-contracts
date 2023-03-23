@@ -168,7 +168,9 @@ abstract contract ChainlinkAdapterInternal is
         uint256 target
     ) internal view returns (UD60x18) {
         int256 factor = _factor(path);
-        uint256 adjustedEthToUSDPrice = _scale(_getETHUSD(target), factor);
+        UD60x18 adjustedEthToUSDPrice = UD60x18.wrap(
+            _scale(_getETHUSD(target), factor)
+        );
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
             tokenIn < tokenOut) ||
