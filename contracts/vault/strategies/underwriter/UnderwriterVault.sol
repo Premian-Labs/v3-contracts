@@ -47,6 +47,7 @@ contract UnderwriterVault is
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
+    address internal immutable FEE_RECEIVER;
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
     address internal immutable ROUTER;
@@ -54,7 +55,13 @@ contract UnderwriterVault is
     /// @notice The constructor for this vault
     /// @param oracleAddress The address for the volatility oracle
     /// @param factoryAddress The pool factory address
-    constructor(address oracleAddress, address factoryAddress, address router) {
+    constructor(
+        address feeReceiver,
+        address oracleAddress,
+        address factoryAddress,
+        address router
+    ) {
+        FEE_RECEIVER = feeReceiver;
         IV_ORACLE = oracleAddress;
         FACTORY = factoryAddress;
         ROUTER = router;
@@ -66,7 +73,7 @@ contract UnderwriterVault is
         return
             _balanceOfAssetUD60x18(address(this)) +
             l.totalLockedAssets -
-            l.feesCollected;
+            l.protocolFees;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -302,7 +309,7 @@ contract UnderwriterVault is
         return
             _balanceOfAssetUD60x18(address(this)) -
             _getLockedSpreadVars(block.timestamp).totalLockedSpread -
-            l.feesCollected;
+            l.protocolFees;
     }
 
     /// @notice Gets the current price per share for the vault
@@ -503,6 +510,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
+        _beforeTokenTransfer(owner, address(this), shareAmount);
         // Subtract assetAmount deposited from user's balance
         // This is needed to compute average price per share
         UD60x18 fractionKept = ONE -
@@ -894,7 +902,7 @@ contract UnderwriterVault is
     }
 
     /// @inheritdoc IUnderwriterVault
-    function settle() external override returns (uint256) {
+    function settle() external override {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
@@ -926,7 +934,8 @@ contract UnderwriterVault is
             current = next;
         }
 
-        return 0;
+        // Claim protocol fees
+        _claimFees();
     }
 
     function _getPerformanceFeeVars(
@@ -973,6 +982,10 @@ contract UnderwriterVault is
     }
 
     /// @inheritdoc ERC20BaseInternal
+    // _beforeTokenTransfer -> _burn -> _beforeTokenTransfer -> burn (conflict)
+    // solution was to ignore the content of the hook when the to address is the zero address
+    // however, the problem is that withdraw uses burn to burn the users shares
+    // in this case we need the beforeTransferToken hook to "tax" the user
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -998,13 +1011,21 @@ contract UnderwriterVault is
                 // fees collected denominated in the reference token
                 // fees are tracked in order to keep the pps uneffected during the burn
                 // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
-                l.feesCollected = l.feesCollected + vars.feeInAssets;
+                l.protocolFees = l.protocolFees + vars.feeInAssets;
+
+                emit PerformanceFeePaid(
+                    FEE_RECEIVER,
+                    vars.feeInAssets.unwrap()
+                );
+
                 // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
                 totalShares = totalShares + vars.feeInShares;
             }
             UD60x18 fractionKept = ONE - (totalShares / vars.balance);
             l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
-            l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
+
+            if (to != address(this))
+                l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
         }
     }
 
@@ -1024,16 +1045,26 @@ contract UnderwriterVault is
         ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
         UD60x18 managementFee = totalAssets * l.managementFeeRate * yearfrac;
 
-        l.feesCollected = l.feesCollected + managementFee;
+        l.protocolFees = l.protocolFees + managementFee;
         l.lastFeeEventTimestamp = timestamp;
+
+        emit ManagementFeePaid(FEE_RECEIVER, managementFee.unwrap());
+
+        // Claim protocol fees
+        _claimFees();
     }
 
-    function claimFees() external {
+    function _claimFees() internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        // transfer the fees to the corresponding address
-        // todo: where does the address come from?
-        // set feesCollected to ZERO
-        l.feesCollected = ZERO;
+
+        uint256 claimedFees = l.convertAssetFromUD60x18(l.protocolFees);
+
+        l.protocolFees = ZERO;
+        IERC20(_asset()).safeTransfer(FEE_RECEIVER, claimedFees);
+        emit ClaimProtocolFees(
+            FEE_RECEIVER,
+            l.convertAssetToUD60x18(claimedFees)
+        );
     }
 }

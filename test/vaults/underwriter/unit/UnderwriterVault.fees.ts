@@ -154,6 +154,14 @@ describe('UnderwriterVault.fees', () => {
     });
   });
 
+  async function setupMaxTransferable(isCall: boolean, test: any) {
+    let { vault, caller } = await setup(isCall, test);
+    await vault.setPerformanceFeeRate(
+      parseEther(test.performanceFeeRate.toString()),
+    );
+    return { vault, caller };
+  }
+
   describe('#_maxTransferableShares', () => {
     const tests = [
       {
@@ -182,14 +190,6 @@ describe('UnderwriterVault.fees', () => {
       },
     ];
     let isCall = true;
-
-    async function setupMaxTransferable(isCall: boolean, test: any) {
-      let { vault, caller } = await setup(isCall, test);
-      await vault.setPerformanceFeeRate(
-        parseEther(test.performanceFeeRate.toString()),
-      );
-      return { vault, caller };
-    }
 
     tests.forEach(async (test) => {
       it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferable}`, async () => {
@@ -391,6 +391,7 @@ describe('UnderwriterVault.fees', () => {
       );
       expect(netUserDepositCaller).to.eq(2.76);
     });
+
     it('revert if transfer amount is too high', async () => {
       let test = tests[1];
       let { vault, caller, receiver } = await setupBeforeTokenTransfer(
@@ -413,6 +414,117 @@ describe('UnderwriterVault.fees', () => {
         receiver.address,
         parseEther((2.27125).toString()),
       );
+    });
+
+    it('if receiver address is the vault address the netUserDeposit should not be updated', async () => {
+      let test = tests[1];
+      let { vault, caller } = await setupBeforeTokenTransfer(isCall, test);
+
+      await vault.beforeTokenTransfer(
+        caller.address,
+        vault.address,
+        parseEther(test.transferAmount.toString()),
+      );
+
+      const netUserDepositReceiver = parseFloat(
+        formatEther(await vault.getNetUserDeposit(vault.address)),
+      );
+      expect(netUserDepositReceiver).to.eq(0);
+
+      const netUserDepositCaller = parseFloat(
+        formatEther(await vault.getNetUserDeposit(caller.address)),
+      );
+      expect(netUserDepositCaller).to.eq(test.netUserDepositCallerAfter);
+    });
+  });
+
+  let isCall: boolean = true;
+
+  describe('#maxWithdraw', () => {
+    it('maxWithdraw should revert for a zero address', async () => {
+      const { callVault, base, quote } = await loadFixture(vaultSetup);
+      await setMaturities(callVault);
+      await addMockDeposit(callVault, 2, base, quote);
+      await expect(
+        callVault.maxWithdraw(ethers.constants.AddressZero),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
+    });
+
+    let test = {
+      shares: 2.3,
+      pps: 1.5,
+      ppsUser: 1.2,
+      totalSupply: 2.5,
+      maxTransferable: 2.27125,
+      performanceFeeRate: 0.05,
+    };
+
+    it('should return maxTransferableShares * pricePerShare as sufficient funds are available', async () => {
+      const { vault, caller } = await setupMaxTransferable(isCall, test);
+      //await setMaturities(vault);
+      //await vault.increaseTotalLockedSpread(parseEther('0.1'));
+      //await vault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await vault.maxWithdraw(caller.address);
+
+      // assets: 2.3 * 1.5
+      // tax: 2.3 * 1.5 * 0.05 * 0.25
+      // maxWithdrawable = assets - tax = 3.406875
+      expect(assetAmount).to.eq(parseEther('3.406875'));
+    });
+
+    it('should return available assets', async () => {
+      const { vault, caller } = await setupMaxTransferable(isCall, test);
+      await setMaturities(vault);
+      await vault.increaseTotalLockedSpread(parseEther('0.2'));
+      await vault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await vault.maxWithdraw(caller.address);
+      // assets: 2.3 * 1.5 = 3.45
+      // tax: 2.3 * 1.5 * 0.05 * 0.25
+      // maxWithdrawable = assets - tax = 3.406875
+      //
+      expect(assetAmount).to.eq(parseEther('3.15'));
+    });
+
+    it('maxWithdraw should return the available assets for a non-zero address', async () => {
+      const { callVault, receiver, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+
+      await setMaturities(callVault);
+      await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
+      await callVault.increaseTotalLockedSpread(parseEther('0.1'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await callVault.maxWithdraw(receiver.address);
+
+      expect(assetAmount).to.eq(parseEther('2.4'));
+    });
+
+    it('maxWithdraw should return the assets the receiver owns', async () => {
+      const { callVault, caller, receiver, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      await setMaturities(callVault);
+      await addMockDeposit(callVault, 8, base, quote, 8, caller.address);
+      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
+      await callVault.increaseTotalLockedSpread(parseEther('0.0'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = await callVault.maxWithdraw(receiver.address);
+      expect(assetAmount).to.eq(parseEther('2'));
+    });
+
+    it('maxWithdraw should return the assets the receiver owns since there are sufficient funds', async () => {
+      const { callVault, caller, receiver, base, quote } = await loadFixture(
+        vaultSetup,
+      );
+      await setMaturities(callVault);
+      await addMockDeposit(callVault, 7, base, quote, 7, caller.address);
+      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
+      await callVault.increaseTotalLockedSpread(parseEther('0.1'));
+      await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+      const assetAmount = parseFloat(
+        formatEther(await callVault.maxWithdraw(receiver.address)),
+      );
+      expect(assetAmount).to.be.closeTo(1.977777777777777, 0.00000001);
     });
   });
 });

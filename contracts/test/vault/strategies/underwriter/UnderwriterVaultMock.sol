@@ -40,10 +40,18 @@ contract UnderwriterVaultMock is UnderwriterVault {
     EnumerableSet.AddressSet internal employedPools;
 
     constructor(
+        address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address routerAddress
-    ) UnderwriterVault(oracleAddress, factoryAddress, routerAddress) {}
+    )
+        UnderwriterVault(
+            feeReceiver,
+            oracleAddress,
+            factoryAddress,
+            routerAddress
+        )
+    {}
 
     function assetDecimals() external view returns (uint8) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
@@ -685,16 +693,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _chargeManagementFees(timestamp, totalAssets);
     }
 
-    function setFeesCollected(UD60x18 value) external {
+    function setProtocolFees(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        l.feesCollected = value;
-    }
-
-    function setLastFeeEventPricePerShare(UD60x18 value) external {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        l.lastFeeEventPricePerShare = value;
+        l.protocolFees = value;
     }
 
     function setLastFeeEventTimestamp(uint256 value) external {
@@ -719,8 +721,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.performanceFeeRate = value;
     }
 
-    function getFeesCollected() external view returns (UD60x18) {
-        return UnderwriterVaultStorage.layout().feesCollected;
+    function getProtocolFees() external view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().protocolFees;
     }
 
     function getLastFeeEventTimestamp() external view returns (uint256) {

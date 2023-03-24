@@ -84,6 +84,9 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 feeInAssets;
     }
 
+    // Events
+    event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
+
     /// @notice Settle all positions that are past their maturity.
-    function settle() external returns (uint256);
+    function settle() external;
 }

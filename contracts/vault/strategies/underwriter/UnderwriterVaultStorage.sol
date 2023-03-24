@@ -74,9 +74,8 @@ library UnderwriterVaultStorage {
         mapping(address => UD60x18) netUserDeposits;
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
-        UD60x18 lastFeeEventPricePerShare;
         uint256 lastFeeEventTimestamp;
-        UD60x18 feesCollected;
+        UD60x18 protocolFees;
     }
 
     function layout() internal pure returns (Layout storage l) {
