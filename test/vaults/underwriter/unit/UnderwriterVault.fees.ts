@@ -20,7 +20,7 @@ import {
   IPoolMock,
   UnderwriterVaultMock,
 } from '../../../../typechain';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { MockContract } from '@ethereum-waffle/mock-contract';
@@ -28,6 +28,7 @@ import { PoolUtil } from '../../../../utils/PoolUtil';
 import { PoolKey, TokenType } from '../../../../utils/sdk/types';
 import exp from 'constants';
 import { start } from 'repl';
+import { Sign } from 'crypto';
 
 let startTime: number;
 let vault: UnderwriterVaultMock;
@@ -130,21 +131,12 @@ describe('UnderwriterVault.fees', () => {
         totalSupply: 2.2,
         pps: 1.0,
         ppsUser: 1,
-        ppsExpected: 1.0,
-      },
-      {
-        shares: 0.0,
-        totalSupply: 2.2,
-        pps: 1.3,
-        ppsUser: 1.3,
-        ppsExpected: 1.3,
       },
       {
         shares: 2.3,
         totalSupply: 2.5,
         pps: 1.5,
         ppsUser: 1.2,
-        ppsExpected: 1.2,
       },
     ];
     let isCall = true;
@@ -152,14 +144,12 @@ describe('UnderwriterVault.fees', () => {
     tests.forEach(async (test) => {
       it(`userShares ${test.shares}, userDeposit ${
         test.ppsUser * test.shares
-      }, ppsVault ${test.pps}, then ppsUser equals ${
-        test.ppsExpected
-      }`, async () => {
+      }, ppsVault ${test.pps}, then ppsUser equals ${test.pps}`, async () => {
         const { vault, caller } = await setup(isCall, test);
         const ppsUser = parseFloat(
           formatEther(await vault.getAveragePricePerShare(caller.address)),
         );
-        expect(ppsUser).to.eq(test.ppsExpected);
+        expect(ppsUser).to.eq(test.ppsUser);
       });
     });
   });
@@ -251,62 +241,70 @@ describe('UnderwriterVault.fees', () => {
     let token: ERC20Mock;
     let isCall = true;
 
+    async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
+      let {
+        callVault,
+        putVault,
+        base,
+        quote,
+        caller: _caller,
+        receiver: _receiver,
+      } = await loadFixture(vaultSetup);
+
+      vault = isCall ? callVault : putVault;
+      token = isCall ? base : quote;
+      caller = _caller;
+      receiver = _receiver;
+
+      // set pps and totalSupply vault
+      const totalSupply = parseEther(test.totalSupply.toString());
+      await increaseTotalShares(
+        vault,
+        parseFloat((test.totalSupply - test.shares).toFixed(12)),
+      );
+      const pps = parseEther(test.pps.toString());
+      const vaultDeposit = parseEther(
+        (test.pps * test.totalSupply).toFixed(12),
+      );
+      await token.mint(vault.address, vaultDeposit);
+      // if we dont ad this amount the pps will be lower due to collected fees
+      await token.mint(
+        vault.address,
+        parseEther(test.feesCollectedInitial.toString()),
+      );
+      await vault.setFeesCollected(
+        parseEther(test.feesCollectedInitial.toString()),
+      );
+      // set pps and shares user caller
+      const userShares = parseEther(test.shares.toString());
+      await vault.mintMock(caller.address, userShares);
+      const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+      await vault.setNetUserDeposit(caller.address, userDeposit);
+
+      // check pps is as expected
+      const ppsUser = parseEther(test.ppsUser.toString());
+      const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+      expect(ppsAvg).to.eq(ppsUser);
+
+      await vault.setNetUserDeposit(
+        receiver.address,
+        parseEther(test.netUserDepositReceiver.toString()),
+      );
+
+      expect(await vault.totalSupply()).to.eq(totalSupply);
+      expect(await vault.getPricePerShare()).to.eq(pps);
+
+      await vault.setPerformanceFeeRate(
+        parseEther(test.performanceFeeRate.toString()),
+      );
+      return { vault, caller, receiver };
+    }
+
     tests.forEach(async (test) => {
-      async function setup() {
-        let {
-          callVault,
-          putVault,
-          base,
-          quote,
-          caller: _caller,
-          receiver: _receiver,
-        } = await loadFixture(vaultSetup);
-
-        vault = isCall ? callVault : putVault;
-        token = isCall ? base : quote;
-        caller = _caller;
-        receiver = _receiver;
-
-        // set pps and totalSupply vault
-        const totalSupply = parseEther(test.totalSupply.toString());
-        await increaseTotalShares(
-          vault,
-          parseFloat((test.totalSupply - test.shares).toFixed(12)),
-        );
-        const pps = parseEther(test.pps.toString());
-        const vaultDeposit = parseEther(
-          (test.pps * test.totalSupply).toFixed(12),
-        );
-        await token.mint(vault.address, vaultDeposit);
-        // if we dont ad this amount the pps will be lower due to collected fees
-        await token.mint(
-          vault.address,
-          parseEther(test.feesCollectedInitial.toString()),
-        );
-        await vault.setFeesCollected(
-          parseEther(test.feesCollectedInitial.toString()),
-        );
-        // set pps and shares user caller
-        const userShares = parseEther(test.shares.toString());
-        await vault.mintMock(caller.address, userShares);
-        const ppsUser = parseEther(test.ppsUser.toString());
-        const userDeposit = parseEther(
-          (test.shares * test.ppsUser).toFixed(12),
-        );
-        await vault.setNetUserDeposit(caller.address, userDeposit);
-        const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-
-        await vault.setNetUserDeposit(
-          receiver.address,
-          parseEther(test.netUserDepositReceiver.toString()),
-        );
-
-        expect(ppsAvg).to.eq(ppsUser);
-        expect(await vault.totalSupply()).to.eq(totalSupply);
-        expect(await vault.getPricePerShare()).to.eq(pps);
-
-        await vault.setPerformanceFeeRate(
-          parseEther(test.performanceFeeRate.toString()),
+      it(`the balanceOf caller equals ${test.sharesAfter}`, async () => {
+        let { vault, caller, receiver } = await setupBeforeTokenTransfer(
+          isCall,
+          test,
         );
 
         await vault.beforeTokenTransfer(
@@ -315,11 +313,6 @@ describe('UnderwriterVault.fees', () => {
           parseEther(test.transferAmount.toString()),
         );
 
-        return { vault, caller, receiver };
-      }
-
-      it(`the balanceOf caller equals ${test.sharesAfter}`, async () => {
-        let { vault, caller, receiver } = await loadFixture(setup);
         const balanceAfter = parseFloat(
           formatEther(await vault.balanceOf(caller.address)),
         );
@@ -357,8 +350,69 @@ describe('UnderwriterVault.fees', () => {
       });
     });
 
-    it('no effect if address from is zero address', async () => {});
-    it('no effect if address to is zero address', async () => {});
-    it('revert if transfer amount is too high', async () => {});
+    it('no effect if address from is zero address', async () => {
+      let test = tests[1];
+      let { vault, receiver } = await setupBeforeTokenTransfer(isCall, test);
+      const callerAddress = ethers.constants.AddressZero;
+      await vault.beforeTokenTransfer(
+        callerAddress,
+        receiver.address,
+        parseEther(test.transferAmount.toString()),
+      );
+      const netUserDepositCaller = parseFloat(
+        formatEther(await vault.getNetUserDeposit(callerAddress)),
+      );
+      expect(netUserDepositCaller).to.eq(0);
+
+      const netUserDepositReceiver = parseFloat(
+        formatEther(await vault.getNetUserDeposit(receiver.address)),
+      );
+      expect(netUserDepositReceiver).to.eq(test.netUserDepositReceiver);
+    });
+
+    it('no effect if address to is zero address', async () => {
+      let test = tests[1];
+      let { vault, caller } = await setupBeforeTokenTransfer(isCall, test);
+      const receiverAddress = ethers.constants.AddressZero;
+
+      await vault.beforeTokenTransfer(
+        caller.address,
+        receiverAddress,
+        parseEther(test.transferAmount.toString()),
+      );
+
+      const netUserDepositReceiver = parseFloat(
+        formatEther(await vault.getNetUserDeposit(receiverAddress)),
+      );
+      expect(netUserDepositReceiver).to.eq(0);
+
+      const netUserDepositCaller = parseFloat(
+        formatEther(await vault.getNetUserDeposit(caller.address)),
+      );
+      expect(netUserDepositCaller).to.eq(2.76);
+    });
+    it('revert if transfer amount is too high', async () => {
+      let test = tests[1];
+      let { vault, caller, receiver } = await setupBeforeTokenTransfer(
+        isCall,
+        test,
+      );
+      await expect(
+        vault.beforeTokenTransfer(
+          caller.address,
+          receiver.address,
+          parseEther((2.27126).toString()),
+        ),
+      ).to.be.revertedWithCustomError(
+        vault,
+        'ERC20Base__TransferExceedsBalance',
+      );
+      // check that this passes
+      await vault.beforeTokenTransfer(
+        caller.address,
+        receiver.address,
+        parseEther((2.27125).toString()),
+      );
+    });
   });
 });

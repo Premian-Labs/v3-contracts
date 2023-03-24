@@ -963,8 +963,7 @@ contract UnderwriterVault is
                 .layout();
 
             UD60x18 shares = UD60x18.wrap(amount);
-
-            if (shares >= _maxTransferableShares(from))
+            if (shares > _maxTransferableShares(from))
                 revert ERC20Base__TransferExceedsBalance();
 
             UD60x18 pps = _getPricePerShareUD60x18();
