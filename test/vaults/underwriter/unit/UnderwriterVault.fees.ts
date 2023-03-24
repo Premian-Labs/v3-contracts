@@ -31,6 +31,7 @@ import { start } from 'repl';
 
 let startTime: number;
 let vault: UnderwriterVaultMock;
+let token: ERC20Mock;
 
 describe('UnderwriterVault.fees', () => {
   describe('#_chargeManagementFees', () => {
@@ -90,7 +91,78 @@ describe('UnderwriterVault.fees', () => {
     });
   });
 
-  describe('#_getAveragePricePerShare', () => {});
+  async function setup(isCall: boolean, test: any) {
+    let { callVault, putVault, base, quote, caller } = await loadFixture(
+      vaultSetup,
+    );
+
+    vault = isCall ? callVault : putVault;
+    token = isCall ? base : quote;
+
+    // set pps and totalSupply vault
+    const totalSupply = parseEther(test.totalSupply.toString());
+    await increaseTotalShares(
+      vault,
+      parseFloat((test.totalSupply - test.shares).toFixed(12)),
+    );
+    const pps = parseEther(test.pps.toString());
+    const vaultDeposit = parseEther((test.pps * test.totalSupply).toFixed(12));
+    await token.mint(vault.address, vaultDeposit);
+
+    // set pps and shares user
+    const userShares = parseEther(test.shares.toString());
+    await vault.mintMock(caller.address, userShares);
+    const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+    await vault.setNetUserDeposit(caller.address, userDeposit);
+    //const ppsUser = parseEther(test.ppsUser.toString());
+    //const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+    //expect(ppsAvg).to.eq(ppsUser);
+    expect(await vault.totalSupply()).to.eq(totalSupply);
+    expect(await vault.getPricePerShare()).to.eq(pps);
+
+    return { vault, caller };
+  }
+
+  describe('#_getAveragePricePerShare', () => {
+    const tests = [
+      {
+        shares: 1.1,
+        totalSupply: 2.2,
+        pps: 1.0,
+        ppsUser: 1,
+        ppsExpected: 1.0,
+      },
+      {
+        shares: 0.0,
+        totalSupply: 2.2,
+        pps: 1.3,
+        ppsUser: 1.3,
+        ppsExpected: 1.3,
+      },
+      {
+        shares: 2.3,
+        totalSupply: 2.5,
+        pps: 1.5,
+        ppsUser: 1.2,
+        ppsExpected: 1.2,
+      },
+    ];
+    let isCall = true;
+
+    tests.forEach(async (test) => {
+      it(`userShares ${test.shares}, userDeposit ${
+        test.ppsUser * test.shares
+      }, ppsVault ${test.pps}, then ppsUser equals ${
+        test.ppsExpected
+      }`, async () => {
+        const { vault, caller } = await setup(isCall, test);
+        const ppsUser = parseFloat(
+          formatEther(await vault.getAveragePricePerShare(caller.address)),
+        );
+        expect(ppsUser).to.eq(test.ppsExpected);
+      });
+    });
+  });
 
   describe('#_maxTransferableShares', () => {
     const tests = [
@@ -119,53 +191,19 @@ describe('UnderwriterVault.fees', () => {
         performanceFeeRate: 0.05,
       },
     ];
-    let vault: UnderwriterVaultMock;
-    let token: ERC20Mock;
     let isCall = true;
 
+    async function setupMaxTransferable(isCall: boolean, test: any) {
+      let { vault, caller } = await setup(isCall, test);
+      await vault.setPerformanceFeeRate(
+        parseEther(test.performanceFeeRate.toString()),
+      );
+      return { vault, caller };
+    }
+
     tests.forEach(async (test) => {
-      async function setup() {
-        let { callVault, putVault, base, quote, caller } = await loadFixture(
-          vaultSetup,
-        );
-
-        vault = isCall ? callVault : putVault;
-        token = isCall ? base : quote;
-
-        // set pps and totalSupply vault
-        const totalSupply = parseEther(test.totalSupply.toString());
-        await increaseTotalShares(
-          vault,
-          parseFloat((test.totalSupply - test.shares).toFixed(12)),
-        );
-        const pps = parseEther(test.pps.toString());
-        const vaultDeposit = parseEther(
-          (test.pps * test.totalSupply).toFixed(12),
-        );
-        await token.mint(vault.address, vaultDeposit);
-
-        // set pps and shares user
-        const userShares = parseEther(test.shares.toString());
-        await vault.mintMock(caller.address, userShares);
-        const ppsUser = parseEther(test.ppsUser.toString());
-        const userDeposit = parseEther(
-          (test.shares * test.ppsUser).toFixed(12),
-        );
-        await vault.setNetUserDeposit(caller.address, userDeposit);
-        const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-
-        expect(ppsAvg).to.eq(ppsUser);
-        expect(await vault.totalSupply()).to.eq(totalSupply);
-        expect(await vault.getPricePerShare()).to.eq(pps);
-
-        await vault.setPerformanceFeeRate(
-          parseEther(test.performanceFeeRate.toString()),
-        );
-        return { vault, caller };
-      }
-
       it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferable}`, async () => {
-        const { vault, caller } = await loadFixture(setup);
+        const { vault, caller } = await setupMaxTransferable(isCall, test);
         const maxTransferable = await vault.maxTransferableShares(
           caller.address,
         );
