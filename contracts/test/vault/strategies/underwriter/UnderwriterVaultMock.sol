@@ -726,4 +726,34 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function getLastFeeEventTimestamp() external view returns (uint256) {
         return UnderwriterVaultStorage.layout().lastFeeEventTimestamp;
     }
+
+    function setNetUserDeposit(address owner, uint256 value) external {
+        UnderwriterVaultStorage.layout().netUserDeposits[owner] = UD60x18.wrap(
+            value
+        );
+    }
+
+    function getNetUserDeposit(address owner) external view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().netUserDeposits[owner];
+    }
+
+    function maxTransferableShares(
+        address owner
+    ) external view returns (uint256) {
+        return _maxTransferableShares(owner).unwrap();
+    }
+
+    function getAveragePricePerShare(
+        address owner
+    ) external view returns (uint256) {
+        return _getAveragePricePerShareUD60x18(owner).unwrap();
+    }
+
+    function beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) external {
+        _beforeTokenTransfer(from, to, amount);
+    }
 }

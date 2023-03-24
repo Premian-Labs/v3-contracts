@@ -6,6 +6,8 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
+import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
+
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -320,9 +322,10 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        UD60x18 assets = l.balanceOfAssets[owner];
+        UD60x18 assets = l.netUserDeposits[owner];
         UD60x18 shares = _balanceOfUD60x18(owner);
-        return assets / shares;
+        if (shares > ZERO) return assets / shares;
+        else return _getPricePerShareUD60x18();
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
@@ -485,7 +488,7 @@ contract UnderwriterVault is
         // Add assetAmount deposited to user's balance
         // This is needed to compute average price per share
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
-        l.balanceOfAssets[receiver] = l.balanceOfAssets[receiver] + assets;
+        l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -503,8 +506,10 @@ contract UnderwriterVault is
 
         // Subtract assetAmount deposited from user's balance
         // This is needed to compute average price per share
-        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
-        l.balanceOfAssets[owner] = l.balanceOfAssets[owner] - assets;
+        UD60x18 fractionKept = ONE -
+            UD60x18.wrap(shareAmount) /
+            UD60x18.wrap(_balanceOf(owner));
+        l.netUserDeposits[owner] = l.netUserDeposits[owner] * fractionKept;
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -925,6 +930,26 @@ contract UnderwriterVault is
         return 0;
     }
 
+    function _maxTransferableShares(
+        address owner
+    ) internal view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 balance = UD60x18.wrap(_balanceOf(owner));
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 ppsAvg = _getAveragePricePerShareUD60x18(owner);
+        UD60x18 performance = pps / ppsAvg;
+        UD60x18 maxTransferableShares = balance;
+        if (performance > ONE) {
+            UD60x18 feeInShares = balance *
+                (performance - ONE) *
+                l.performanceFeeRate;
+            maxTransferableShares = balance - feeInShares;
+        }
+        return maxTransferableShares;
+    }
+
     /// @inheritdoc ERC20BaseInternal
     function _beforeTokenTransfer(
         address from,
@@ -932,28 +957,33 @@ contract UnderwriterVault is
         uint256 amount
     ) internal override {
         super._beforeTokenTransfer(from, to, amount);
+        if (from != address(0) && to != address(0)) {
+            UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+                .layout();
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        UD60x18 shares = UD60x18.wrap(amount);
-
-        UD60x18 pps = _getPricePerShareUD60x18();
-        UD60x18 avgPPS = _getAveragePricePerShareUD60x18(from);
-
-        // Compute return
-        UD60x18 performance = pps / avgPPS;
-
-        if (performance > ONE) {
-            UD60x18 assets = l.balanceOfAssets[from];
-            UD60x18 profit = (performance - ONE) * assets;
-            UD60x18 performanceFee = l.performanceFeeRate * profit;
-
-            UD60x18 remainingProfit = profit - performanceFee;
-
-            // TODO: transfer performance fee to collection address
-
-            // TODO: transfer remaining profit to `from`
+            UD60x18 shares = UD60x18.wrap(amount);
+            if (shares >= _maxTransferableShares(from))
+                revert ERC20Base__TransferExceedsBalance();
+            UD60x18 pps = _getPricePerShareUD60x18();
+            UD60x18 avgPPS = _getAveragePricePerShareUD60x18(from);
+            UD60x18 performance = pps / avgPPS;
+            UD60x18 totalShares = shares;
+            UD60x18 fromBalance = UD60x18.wrap(_balanceOf(from));
+            if (performance > ONE) {
+                UD60x18 feeInShares = (performance - ONE) *
+                    shares *
+                    l.performanceFeeRate;
+                _burn(from, feeInShares.unwrap());
+                // fees collected denominated in the reference token
+                // fees are tracked in order to keep the pps uneffected during the burn
+                // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
+                l.feesCollected = l.feesCollected + feeInShares * pps;
+                // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
+                totalShares = totalShares + feeInShares;
+            }
+            UD60x18 fractionKept = ONE - (totalShares / fromBalance);
+            l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
+            l.netUserDeposits[to] = l.netUserDeposits[to] + shares * pps;
         }
     }
 
@@ -961,10 +991,7 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         UD60x18 totalAssets = _totalAssetsUD60x18();
-        // note: we need to pass totalAssets as an argument as they are changed when we charge the different fees
-        // note: keep order: 1) charge performance 2) charge management fees
         uint256 timestamp = block.timestamp;
-        _chargePerformanceFees(totalAssets);
         _chargeManagementFees(timestamp, totalAssets);
     }
 
@@ -982,19 +1009,6 @@ contract UnderwriterVault is
 
         l.feesCollected = l.feesCollected + managementFee;
         l.lastFeeEventTimestamp = timestamp;
-    }
-
-    function _chargePerformanceFees(UD60x18 totalAssets) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        UD60x18 pricePerShare = _getPricePerShareUD60x18();
-        UD60x18 performance = pricePerShare / l.lastFeeEventPricePerShare;
-        if (performance > ONE) {
-            UD60x18 profit = totalAssets * (performance - ONE);
-            UD60x18 performanceFee = profit * l.performanceFeeRate;
-            l.feesCollected = l.feesCollected + performanceFee;
-            l.lastFeeEventPricePerShare = pricePerShare;
-        }
     }
 
     function claimFees() external {
