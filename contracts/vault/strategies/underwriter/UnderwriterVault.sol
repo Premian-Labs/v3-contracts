@@ -324,8 +324,7 @@ contract UnderwriterVault is
 
         UD60x18 assets = l.netUserDeposits[owner];
         UD60x18 shares = _balanceOfUD60x18(owner);
-        if (shares > ZERO) return assets / shares;
-        else return _getPricePerShareUD60x18();
+        return assets / shares;
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
@@ -937,6 +936,8 @@ contract UnderwriterVault is
             .layout();
 
         UD60x18 balance = UD60x18.wrap(_balanceOf(owner));
+        if (balance == ZERO) return ZERO;
+
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 ppsAvg = _getAveragePricePerShareUD60x18(owner);
         UD60x18 performance = pps / ppsAvg;
@@ -962,13 +963,16 @@ contract UnderwriterVault is
                 .layout();
 
             UD60x18 shares = UD60x18.wrap(amount);
+
             if (shares >= _maxTransferableShares(from))
                 revert ERC20Base__TransferExceedsBalance();
+
             UD60x18 pps = _getPricePerShareUD60x18();
             UD60x18 avgPPS = _getAveragePricePerShareUD60x18(from);
             UD60x18 performance = pps / avgPPS;
             UD60x18 totalShares = shares;
             UD60x18 fromBalance = UD60x18.wrap(_balanceOf(from));
+
             if (performance > ONE) {
                 UD60x18 feeInShares = (performance - ONE) *
                     shares *
