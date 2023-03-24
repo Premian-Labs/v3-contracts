@@ -132,6 +132,16 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         l.strikeCount[k.strikeKey()] += 1;
         l.maturityCount[k.maturityKey()] += 1;
 
+        emit PoolDeployed(
+            k.base,
+            k.quote,
+            k.oracleAdapter,
+            k.strike,
+            k.maturity,
+            k.isCallPool,
+            poolAddress
+        );
+
         {
             (
                 IOracleAdapter.AdapterType baseAdapterType,
@@ -155,16 +165,6 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
                 quoteAdapterType
             );
         }
-
-        emit PoolDeployed(
-            k.base,
-            k.quote,
-            k.oracleAdapter,
-            k.strike,
-            k.maturity,
-            k.isCallPool,
-            poolAddress
-        );
     }
 
     /// @inheritdoc IPoolFactory
