@@ -1,27 +1,17 @@
-import {
-  ERC20Mock,
-  IPoolMock__factory,
-  UnderwriterVaultMock,
-} from '../../../typechain';
-import { BigNumber, Signer } from 'ethers';
+import { ERC20Mock, UnderwriterVaultMock } from '../../../typechain';
+import { BigNumber } from 'ethers';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addDeposit,
-  vaultSetup,
   caller,
-  receiver,
   createPool,
-  poolKey,
+  receiver,
+  setMaturities,
+  vaultSetup,
 } from './VaultSetup';
-import { setMaturities } from './UnderwriterVault';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
-import {
-  getValidMaturity,
-  increaseTo,
-  now,
-  ONE_DAY,
-} from '../../../utils/time';
+import { increaseTo, now, ONE_DAY } from '../../../utils/time';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { ethers } from 'hardhat';
 import { MockContract } from '@ethereum-waffle/mock-contract';
