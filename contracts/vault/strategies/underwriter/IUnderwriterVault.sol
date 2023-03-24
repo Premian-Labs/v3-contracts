@@ -73,6 +73,17 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 mintingFee;
     }
 
+    struct PerformanceFeeVars {
+        UD60x18 pps;
+        UD60x18 ppsAvg;
+        UD60x18 shares;
+        UD60x18 assets;
+        UD60x18 balance;
+        UD60x18 performance;
+        UD60x18 feeInShares;
+        UD60x18 feeInAssets;
+    }
+
     /// @notice Settle all positions that are past their maturity.
     function settle() external returns (uint256);
 }
