@@ -11,8 +11,6 @@ abstract contract OracleAdapterInternal {
 
     int256 internal constant ETH_DECIMALS = 18;
 
-    uint256 internal constant ONE_ETH = 1 ether;
-
     /// @notice Thrown when attempting to increase array size
     error OracleAdapter__ArrayCannotExpand();
 

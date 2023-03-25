@@ -31,9 +31,6 @@ abstract contract ChainlinkAdapterInternal is
 
     int256 private constant FOREX_DECIMALS = 8;
 
-    uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
-    uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
-
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable WRAPPED_BTC_TOKEN;
 
@@ -138,7 +135,9 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 factor = _factor(path);
+        int256 factor = PricingPath.TOKEN_USD_TOKEN == path
+            ? ETH_DECIMALS - FOREX_DECIMALS
+            : int256(0);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -206,21 +205,6 @@ abstract contract ChainlinkAdapterInternal is
 
         UD60x18 price = adjustedWBTCToUSDPrice / adjustedTokenToUSD;
         return !isTokenInWBTC ? price.inv() : price;
-    }
-
-    function _factor(PricingPath path) internal pure returns (int256) {
-        if (
-            path == PricingPath.ETH_USD ||
-            path == PricingPath.TOKEN_USD ||
-            path == PricingPath.TOKEN_USD_TOKEN ||
-            path == PricingPath.A_USD_ETH_B ||
-            path == PricingPath.A_ETH_USD_B ||
-            path == PricingPath.TOKEN_USD_BTC_WBTC
-        ) {
-            return ETH_DECIMALS - FOREX_DECIMALS;
-        }
-
-        return 0;
     }
 
     function _getPriceAgainstUSD(
