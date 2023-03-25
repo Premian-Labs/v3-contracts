@@ -53,6 +53,8 @@ abstract contract OracleAdapterInternal {
         uint256 amount,
         int256 factor
     ) internal pure returns (uint256) {
+        if (factor == 0) return amount;
+
         if (factor < 0) {
             return amount / (10 ** (-factor).toUint256());
         } else {
