@@ -68,6 +68,11 @@ export const feeds = [
 
 export const goerliFeeds = [
   {
+    token: '0xC2ECb8563800B523426c3328EeC1F7771D433C9c', // testWETH
+    denomination: CHAINLINK_USD,
+    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
+  },
+  {
     token: CHAINLINK_ETH,
     denomination: CHAINLINK_USD,
     feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
