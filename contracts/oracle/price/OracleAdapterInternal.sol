@@ -13,6 +13,9 @@ abstract contract OracleAdapterInternal {
 
     uint256 internal constant ONE_ETH = 1 ether;
 
+    /// @notice Thrown when attempting to increase array size
+    error OracleAdapter__ArrayCannotExpand();
+
     /// @notice Thrown when the target is zero or before the current block timestamp
     error OracleAdapter__InvalidTarget();
 
@@ -66,6 +69,24 @@ abstract contract OracleAdapterInternal {
         (_tokenA, _tokenB) = tokenA < tokenB
             ? (tokenA, tokenB)
             : (tokenB, tokenA);
+    }
+
+    function _resizeArray(address[] memory array, uint256 size) internal pure {
+        if (array.length == size) return;
+        if (array.length < size) revert OracleAdapter__ArrayCannotExpand();
+
+        assembly {
+            mstore(array, size)
+        }
+    }
+
+    function _resizeArray(uint8[] memory array, uint256 size) internal pure {
+        if (array.length == size) return;
+        if (array.length < size) revert OracleAdapter__ArrayCannotExpand();
+
+        assembly {
+            mstore(array, size)
+        }
     }
 
     function _ensureTargetNonZero(uint256 target) internal view {

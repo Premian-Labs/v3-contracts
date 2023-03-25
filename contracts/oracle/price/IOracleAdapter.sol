@@ -8,6 +8,12 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 /// @notice These methods allow users to add support for pairs, and then ask for quotes
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IOracleAdapter {
+    enum AdapterType {
+        NONE,
+        CHAINLINK,
+        UNISWAP_V3
+    }
+
     /// @notice Returns whether the pair has already been added to the adapter and if it
     ///         supports the path required for the pair
     ///         (true, true): Pair is fully supported
@@ -53,4 +59,20 @@ interface IOracleAdapter {
         address tokenOut,
         uint256 target
     ) external view returns (UD60x18);
+
+    /// @notice Describes the pricing path used to convert the token to ETH
+    /// @param token The token from where the pricing path starts
+    /// @return adapterType The type of adapter
+    /// @return path The path required to convert the token to ETH
+    /// @return decimals The decimals of each token in the path
+    function describePricingPath(
+        address token
+    )
+        external
+        view
+        returns (
+            AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
+        );
 }

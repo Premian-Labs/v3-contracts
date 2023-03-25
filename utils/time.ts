@@ -9,6 +9,7 @@ import {
 
 import moment from 'moment-timezone';
 import { NumberLike } from '@nomicfoundation/hardhat-network-helpers/dist/src/types';
+import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 
 moment.tz.setDefault('UTC');
 
@@ -66,8 +67,12 @@ export async function getLastFridayOfMonth(timestamp: number, interval: any) {
   return friday.hour(8).unix();
 }
 
-export async function getValidMaturity(interval: any, period: string) {
-  const timestamp = await time.latest();
+export async function getValidMaturity(
+  interval: any,
+  period: string,
+  isDevMode = true,
+) {
+  const timestamp = isDevMode ? await time.latest() : getCurrentTimestamp();
   const currentTime = moment.unix(timestamp);
 
   if (period === 'days' && interval < 3) {

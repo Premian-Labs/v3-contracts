@@ -5,11 +5,11 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ONE} from "../../libraries/Constants.sol";
 
+import {IAggregator} from "./IAggregator.sol";
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
@@ -34,8 +34,8 @@ abstract contract ChainlinkAdapterInternal is
     uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
     uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
 
-    address private immutable WRAPPED_NATIVE_TOKEN;
-    address private immutable WRAPPED_BTC_TOKEN;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
+    address internal immutable WRAPPED_BTC_TOKEN;
 
     constructor(address _wrappedNativeToken, address _wrappedBTCToken) {
         WRAPPED_NATIVE_TOKEN = _wrappedNativeToken;
@@ -450,7 +450,7 @@ abstract contract ChainlinkAdapterInternal is
     function _latestRoundData(
         address feed
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try AggregatorV3Interface(feed).latestRoundData() returns (
+        try IAggregator(feed).latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 startedAt,
@@ -469,7 +469,7 @@ abstract contract ChainlinkAdapterInternal is
         address feed,
         uint80 roundId
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try AggregatorV3Interface(feed).getRoundData(roundId) returns (
+        try IAggregator(feed).getRoundData(roundId) returns (
             uint80 _roundId,
             int256 answer,
             uint256 startedAt,
@@ -496,6 +496,21 @@ abstract contract ChainlinkAdapterInternal is
             // revert if 12 hours has not passed and price is stale
             revert ChainlinkAdapter__PriceAfterTargetIsStale();
         }
+    }
+
+    function _aggregator(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address[] memory aggregator) {
+        address feed = _feed(tokenA, tokenB);
+        aggregator = new address[](1);
+        aggregator[0] = IAggregator(feed).aggregator();
+    }
+
+    function _aggregatorDecimals(
+        address aggregator
+    ) internal view returns (uint8) {
+        return IAggregator(aggregator).decimals();
     }
 
     function _feed(
