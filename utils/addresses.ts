@@ -1,4 +1,12 @@
+import goerli from './deployment/goerli.json';
+
 export type Token = { address: string; decimals: number; symbol: string };
+
+export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
+export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
+
+export const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
@@ -11,9 +19,12 @@ export const tokens: { [symbol: string]: Token } =  {
     'CRV': { address: '0xD533a949740bb3306d119CC777fa900bA034cd52', decimals: 18, symbol: 'CRV' },
     'AMP': { address: '0xfF20817765cB7f73d4bde2e66e067E58D11095C2', decimals: 18, symbol: 'AMP' },
     'IMX': { address: '0xf57e7e7c23978c3caec3c3548e3d615c346e79ff', decimals: 18, symbol: 'IMX' },
+    'ENS': { address: '0xc18360217d8f7ab5e7c516566761ea12ce7f9d72', decimals: 18, symbol: 'ENS' },
     'FXS': { address: '0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0', decimals: 18, symbol: 'FXS' },
     'AXS': { address: '0xBB0E17EF65F82Ab018d8EDd776e8DD940327B28b', decimals: 18, symbol: 'AXS' },
     'DAI': { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18, symbol: 'DAI' },
+    'MKR': { address: '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2', decimals: 18, symbol: 'MKR' },
+    'UNI': { address: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984', decimals: 18, symbol: 'UNI' },
     'USDC': { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDC' },
     'USDT': { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6, symbol: 'USDT' },
     'WBTC': { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8, symbol: 'WBTC' },
@@ -21,6 +32,8 @@ export const tokens: { [symbol: string]: Token } =  {
     'AAVE': { address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9', decimals: 18, symbol: 'AAVE' },
     'COMP': { address: '0xc00e94Cb662C3520282E6f5717214004A7f26888', decimals: 18, symbol: 'COMP' },
     'BOND': { address: '0x0391D2021f89DC339F60Fff84546EA23E337750f', decimals: 18, symbol: 'BOND' },
+    'FRAX': { address: '0x853d955aCEf822Db058eb8505911ED77F175b99e', decimals: 18, symbol: 'FRAX' },
+    'LINK': { address: '0x514910771AF9Ca656af840dff83E8264EcF986CA', decimals: 18, symbol: 'LINK' },
     'MATIC': { address: '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0', decimals: 18, symbol: 'MATIC' },
     'ALPHA': { address: '0xa1faa113cbE53436Df28FF0aEe54275c13B40975', decimals: 18, symbol: 'ALPHA' },
 }
@@ -29,6 +42,7 @@ export const tokens: { [symbol: string]: Token } =  {
 // prettier-ignore
 export const feeds = [
     { token: tokens.CHAINLINK_BTC.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c'},
+    { token: tokens.ENS.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16'},
     { token: tokens.USDC.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6'},
     { token: tokens.WETH.address, denomination: tokens.CHAINLINK_USD.address, feed: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419'},
     { token: tokens.DAI.address, denomination: tokens.CHAINLINK_USD.address, feed: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9'},
@@ -51,3 +65,31 @@ export const feeds = [
     { token: tokens.DAI.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
     { token: tokens.WBTC.address, denomination: tokens.CHAINLINK_BTC.address, feed: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23'},
 ]
+
+export const goerliFeeds = [
+  {
+    token: '0xC2ECb8563800B523426c3328EeC1F7771D433C9c', // testWETH
+    denomination: CHAINLINK_USD,
+    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
+  },
+  {
+    token: CHAINLINK_ETH,
+    denomination: CHAINLINK_USD,
+    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
+  },
+  {
+    token: goerli.tokens.WBTC,
+    denomination: CHAINLINK_USD,
+    feed: '0xA39434A63A52E749F02807ae27335515BA4b07F7',
+  },
+  {
+    token: goerli.tokens.LINK,
+    denomination: CHAINLINK_USD,
+    feed: '0x48731cF7e84dc94C5f84577882c14Be11a5B7456',
+  },
+  {
+    token: goerli.tokens.USDC,
+    denomination: CHAINLINK_USD,
+    feed: '0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7',
+  },
+];

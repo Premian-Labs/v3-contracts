@@ -1,11 +1,15 @@
+import { network } from 'hardhat';
+
 import {
   SnapshotRestorer,
   takeSnapshot,
   time,
+  reset,
 } from '@nomicfoundation/hardhat-network-helpers';
 
 import moment from 'moment-timezone';
 import { NumberLike } from '@nomicfoundation/hardhat-network-helpers/dist/src/types';
+import { getCurrentTimestamp } from 'hardhat/internal/hardhat-network/provider/utils/getCurrentTimestamp';
 
 moment.tz.setDefault('UTC');
 
@@ -63,8 +67,12 @@ export async function getLastFridayOfMonth(timestamp: number, interval: any) {
   return friday.hour(8).unix();
 }
 
-export async function getValidMaturity(interval: any, period: string) {
-  const timestamp = await time.latest();
+export async function getValidMaturity(
+  interval: any,
+  period: string,
+  isDevMode = true,
+) {
+  const timestamp = isDevMode ? await time.latest() : getCurrentTimestamp();
   const currentTime = moment.unix(timestamp);
 
   if (period === 'days' && interval < 3) {
@@ -99,4 +107,17 @@ export function revertToSnapshotAfterEach(
     await afterEachCallback.bind(this)();
     await snapshot.restore();
   });
+}
+
+export async function setHardhat(jsonRpcUrl: string, blockNumber: number) {
+  await reset(jsonRpcUrl, blockNumber);
+}
+
+export async function resetHardhat() {
+  if ((network as any).config.forking) {
+    const { url: jsonRpcUrl, blockNumber } = (network as any).config.forking;
+    await setHardhat(jsonRpcUrl, blockNumber);
+  } else {
+    await reset();
+  }
 }

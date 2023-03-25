@@ -14,12 +14,15 @@ import {
 
 import {
   convertPriceToBigNumberWithDecimals,
-  getPrice,
+  getPriceBetweenTokens,
+  validateQuote,
 } from '../../utils/defillama';
 
 import { feeds, Token, tokens } from '../../utils/addresses';
 import { ONE_ETHER } from '../../utils/constants';
 import { increaseTo, latest } from '../../utils/time';
+
+import { AdapterType } from '../../utils/sdk/types';
 
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
@@ -175,7 +178,7 @@ describe('ChainlinkAdapter', () => {
   }
 
   describe('#isPairSupported', () => {
-    it('returns false if pair is not supported by adapter', async () => {
+    it('should return false if pair is not supported by adapter', async () => {
       const { instance } = await loadFixture(deploy);
 
       const [isCached, _] = await instance.isPairSupported(
@@ -186,7 +189,7 @@ describe('ChainlinkAdapter', () => {
       expect(isCached).to.be.false;
     });
 
-    it('returns false if path for pair does not exist', async () => {
+    it('should return false if path for pair does not exist', async () => {
       const { instance } = await loadFixture(deploy);
 
       const [_, hasPath] = await instance.isPairSupported(
@@ -235,7 +238,9 @@ describe('ChainlinkAdapter', () => {
 
       expect(isCached).to.be.true;
 
-      await instance.upsertPair(tokens.WETH.address, tokens.DAI.address);
+      expect(
+        await instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
+      );
     });
 
     it('should only emit UpdatedPathForPair when path is updated', async () => {
@@ -468,8 +473,6 @@ describe('ChainlinkAdapter', () => {
       ).to.be.revertedWithCustomError(instance, 'OracleAdapter__InvalidTarget');
     });
 
-    const stubCoin = bnToAddress(BigNumber.from(100));
-
     describe('#when price is stale', async () => {
       it('should revert when called within 12 hours of target time', async () => {
         const { instance, stub, stubCoin } = await loadFixture(deployStub);
@@ -662,6 +665,45 @@ describe('ChainlinkAdapter', () => {
         ).to.be.eq(freshPrice.mul(1e10)); // convert to 1E18
       });
     });
+
+    describe('#describePricingPath', () => {
+      it('should describe pricing path', async () => {
+        const { instance } = await loadFixture(deploy);
+
+        let description = await instance.describePricingPath(
+          bnToAddress(BigNumber.from(1)),
+        );
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.path.length).to.eq(0);
+        expect(description.decimals.length).to.eq(0);
+
+        description = await instance.describePricingPath(tokens.WETH.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.path).to.deep.eq([
+          ['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'],
+        ]);
+        expect(description.decimals).to.deep.eq(['18']);
+
+        description = await instance.describePricingPath(tokens.DAI.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.path).to.deep.eq([
+          ['0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC'],
+        ]);
+        expect(description.decimals).to.deep.eq(['18']);
+
+        description = await instance.describePricingPath(tokens.ENS.address);
+
+        expect(description.adapterType).to.eq(AdapterType.CHAINLINK);
+        expect(description.path).to.deep.eq([
+          ['0x780f1bD91a5a22Ede36d4B2b2c0EcCB9b1726a28'],
+          ['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6'],
+        ]);
+        expect(description.decimals).to.deep.eq(['8', '8']);
+      });
+    });
   });
 
   for (let i = 0; i < paths.length; i++) {
@@ -763,16 +805,12 @@ describe('ChainlinkAdapter', () => {
                 18,
               );
 
-              validateQuote(quote, expected);
+              validateQuote(3, quote, expected);
             });
           });
 
           describe('#quoteFrom', async () => {
             it('should return quote for pair from target', async () => {
-              // although the adapter will attepmt to return the price closest to the target
-              // the time of the update will likely be before or after the target.
-              TRESHOLD_PERCENTAGE = 4;
-
               let _tokenIn = Object.assign({}, tokenIn);
               let _tokenOut = Object.assign({}, tokenOut);
 
@@ -816,7 +854,7 @@ describe('ChainlinkAdapter', () => {
                 18,
               );
 
-              validateQuote(quoteFrom, expected);
+              validateQuote(3, quoteFrom, expected);
             });
           });
         });
@@ -824,64 +862,3 @@ describe('ChainlinkAdapter', () => {
     });
   }
 });
-
-let TRESHOLD_PERCENTAGE = 3; // In mainnet, max threshold is usually 2%, but since we are combining pairs, it can sometimes be a little higher
-
-function validateQuote(quote: BigNumber, expected: BigNumber) {
-  const threshold = expected.mul(TRESHOLD_PERCENTAGE * 10).div(100 * 10);
-  const [upperThreshold, lowerThreshold] = [
-    expected.add(threshold),
-    expected.sub(threshold),
-  ];
-  const diff = quote.sub(expected);
-  const sign = diff.isNegative() ? '-' : '+';
-  const diffPercentage = diff.abs().mul(10000).div(expected).toNumber() / 100;
-
-  expect(
-    quote.lte(upperThreshold) && quote.gte(lowerThreshold),
-    `Expected ${quote.toString()} to be within [${lowerThreshold.toString()},${upperThreshold.toString()}]. Diff was ${sign}${diffPercentage}%`,
-  ).to.be.true;
-}
-
-async function getPriceBetweenTokens(
-  networks: { tokenIn: string; tokenOut: string },
-  tokenIn: Token,
-  tokenOut: Token,
-  target: number = 0,
-) {
-  if (tokenIn.address === tokens.CHAINLINK_USD.address) {
-    return 1 / (await fetchPrice(networks.tokenOut, tokenOut.address, target));
-  }
-  if (tokenOut.address === tokens.CHAINLINK_USD.address) {
-    return await fetchPrice(networks.tokenIn, tokenIn.address, target);
-  }
-
-  let tokenInPrice = await fetchPrice(
-    networks.tokenIn,
-    tokenIn.address,
-    target,
-  );
-  let tokenOutPrice = await fetchPrice(
-    networks.tokenOut,
-    tokenOut.address,
-    target,
-  );
-
-  return tokenInPrice / tokenOutPrice;
-}
-
-let cache: { [address: string]: { [target: number]: number } } = {};
-
-async function fetchPrice(
-  network: string,
-  address: string,
-  target: number = 0,
-): Promise<number> {
-  if (!cache[address]) cache[address] = {};
-  if (!cache[address][target]) {
-    if (target == 0) target = await latest();
-    const price = await getPrice(network, address, target);
-    cache[address][target] = price;
-  }
-  return cache[address][target];
-}

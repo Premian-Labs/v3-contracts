@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 interface IVault {
     event UpdateQuotes();
 
-    function getQuote(
-        address pool,
+    function getTradeQuote(
+        uint256 strike,
+        uint64 maturity,
+        bool isCall,
         uint256 size,
         bool isBuy
     ) external view returns (uint256 maxSize, uint256 price);
 
-    function fillQuote(
-        address pool,
+    function trade(
+        uint256 strike,
+        uint64 maturity,
+        bool isCall,
         uint256 size,
-        bool isBuy,
-        uint256 price,
-        uint256 maxSlippage,
-        uint256 deadline
+        bool isBuy
     ) external;
 }

@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
-import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
@@ -18,7 +17,6 @@ library Position {
     using Position for Position.Key;
     using Position for Position.KeyInternal;
     using Position for Position.OrderType;
-    using UintUtils for uint256;
 
     UD60x18 private constant ZERO = UD60x18.wrap(0);
     UD60x18 private constant ONE = UD60x18.wrap(1e18);
@@ -61,6 +59,8 @@ library Position {
         UD60x18 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim | 18 decimals
         UD60x18 claimableFees;
+        // The timestamp of the last deposit. Used to enforce withdrawal delay
+        uint256 lastDeposit;
     }
 
     enum OrderType {

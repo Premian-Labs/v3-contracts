@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SD59x18} from "@prb/math/src/SD59x18.sol";
@@ -51,6 +51,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
     error Pool__TickWidthInvalid();
+    error Pool__WithdrawalDelayNotElapsed();
     error Pool__ZeroSize();
 
     struct Tick {

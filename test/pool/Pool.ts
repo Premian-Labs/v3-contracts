@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { BigNumber, ethers } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { increaseTo, latest } from '../../utils/time';
+import { increase, increaseTo, latest } from '../../utils/time';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { average } from '../../utils/sdk/math';
 import { OrderType, TokenType } from '../../utils/sdk/types';
@@ -564,6 +564,8 @@ describe('Pool', () => {
               : deployAndDeposit_1000_LC_PUT,
           );
 
+          await increase(60);
+
           const depositCollateralValue = scaleDecimals(
             contractsToCollateral(parseEther('200')),
           );
@@ -606,6 +608,25 @@ describe('Pool', () => {
     });
 
     runCallAndPutTests((isCallPool: boolean) => {
+      it('should revert if trying to withdraw before end of withdrawal delay', async () => {
+        const { pool, lp, pKey } = await loadFixture(
+          isCallPool
+            ? deployAndDeposit_1000_LC_CALL
+            : deployAndDeposit_1000_LC_PUT,
+        );
+
+        await increase(55);
+
+        const withdrawSize = parseEther('750');
+
+        await expect(
+          pool.connect(lp).withdraw(pKey, withdrawSize, 0, parseEther('1')),
+        ).to.be.revertedWithCustomError(
+          pool,
+          'Pool__WithdrawalDelayNotElapsed',
+        );
+      });
+
       it('should revert if msg.sender != p.operator', async () => {
         const { pool, deployer, pKey } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
@@ -1221,8 +1242,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.mock.quote.returns(settlementPrice);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.exercise(trader.address);
@@ -1270,8 +1290,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.mock.quote.returns(settlementPrice);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.exercise(trader.address);
@@ -1323,8 +1342,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.mock.quote.returns(settlementPrice);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settle(trader.address);
@@ -1374,8 +1392,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.mock.quote.returns(settlementPrice);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settle(trader.address);
@@ -1429,7 +1446,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settlePosition(pKey);
@@ -1483,8 +1500,7 @@ describe('Pool', () => {
         );
 
         const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.mock.quote.returns(settlementPrice);
-        await oracleAdapter.mock.quoteFrom.returns(settlementPrice);
+        await oracleAdapter.setQuoteFrom(settlementPrice);
 
         await increaseTo(maturity);
         await pool.settlePosition(pKey);

@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
-import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -43,7 +42,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using Pricing for Pricing.Args;
     using SafeCast for uint256;
     using Math for int256;
-    using UintUtils for uint256;
     using ECDSA for bytes32;
     using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;
@@ -59,6 +57,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE =
         UD60x18.wrap(0.003e18); // 0.3%
+
+    // Number of seconds required to pass before a deposit can be withdrawn (To prevent flash loans and JIT)
+    uint256 internal constant WITHDRAWAL_DELAY = 60;
 
     bytes32 internal constant FILL_QUOTE_TYPE_HASH =
         keccak256(
@@ -401,6 +402,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             tokenId
         );
 
+        pData.lastDeposit = block.timestamp;
+
         emit Deposit(
             p.owner,
             tokenId,
@@ -494,6 +497,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _verifyTickWidth(p.upper);
 
         Position.Data storage pData = l.positions[p.keyHash()];
+
+        _ensureWithdrawalDelayElapsed(pData);
 
         WithdrawVarsInternal memory vars;
 
@@ -1183,6 +1188,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
             srcData.claimableFees = srcData.claimableFees + feesTransferred;
+        }
+
+        if (srcData.lastDeposit > dstData.lastDeposit) {
+            dstData.lastDeposit = srcData.lastDeposit;
         }
 
         if (srcTokenId == dstTokenId) {
@@ -2018,6 +2027,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
+    }
+
+    function _ensureWithdrawalDelayElapsed(
+        Position.Data storage position
+    ) internal view {
+        if (block.timestamp < position.lastDeposit + WITHDRAWAL_DELAY)
+            revert Pool__WithdrawalDelayNotElapsed();
     }
 
     function _ensureBelowTradeMaxSlippage(

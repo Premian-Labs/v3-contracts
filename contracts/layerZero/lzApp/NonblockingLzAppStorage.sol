@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 library NonblockingLzAppStorage {
     bytes32 internal constant STORAGE_SLOT =

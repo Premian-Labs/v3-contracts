@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";

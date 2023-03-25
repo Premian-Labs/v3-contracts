@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
