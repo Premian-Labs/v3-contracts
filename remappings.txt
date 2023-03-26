@@ -1,3 +1,4 @@
 @chainlink=node_modules/@chainlink
-@prb=node_modules/@prb
+@prb/math=node_modules/@prb/math
+@prb/test=lib/prb-test/src
 @solidstate=node_modules/@solidstate

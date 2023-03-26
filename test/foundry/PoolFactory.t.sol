@@ -12,8 +12,8 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 contract PoolFactoryTest is DeployTest {
-    function setUp() public {
-        _setUp();
+    function setUp() public override {
+        super.setUp();
     }
 
     function test_getPoolAddress_ReturnAddress0IfNotDeployed() public {
@@ -41,7 +41,7 @@ contract PoolFactoryTest is DeployTest {
         assertEq(base, poolKey.base);
         assertEq(quote, poolKey.quote);
         assertEq(oracleAdapter, poolKey.oracleAdapter);
-        assertEq(strike == poolKey.strike, true);
+        assertEq(strike, poolKey.strike);
         assertEq(maturity, poolKey.maturity);
         assertEq(isCallPool, poolKey.isCallPool);
     }
