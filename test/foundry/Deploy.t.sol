@@ -2,11 +2,11 @@
 
 pragma solidity >=0.8.19;
 
+import {Test} from "forge-std/Test.sol";
 import {StdCheats} from "forge-std/StdCheats.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {PRBMathAssertions} from "@prb/math/src/test/Assertions.sol";
-import {PRBTest} from "@prb/test/PRBTest.sol";
+import {Assertions} from "./Assertions.sol";
 
 import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
 
@@ -27,7 +27,7 @@ import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
-contract DeployTest is PRBTest, StdCheats, PRBMathAssertions {
+contract DeployTest is StdCheats, Assertions {
     ERC20Mock base;
     ERC20Mock quote;
     OracleAdapterMock oracleAdapter;
