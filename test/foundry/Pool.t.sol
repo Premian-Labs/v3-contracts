@@ -12,27 +12,19 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-contract PoolTest is DeployTest {
-    IPool callPool;
-    IPool putPool;
-
-    function setUp() public override {
-        super.setUp();
-
-        callPool = IPool(factory.deployPool{value: 1 ether}(poolKey));
-        poolKey.isCallPool = false;
-        putPool = IPool(factory.deployPool{value: 1 ether}(poolKey));
-        poolKey.isCallPool = true;
-    }
+abstract contract PoolTest is DeployTest {
+    IPool pool;
 
     function _test_deposit(bool isCall) internal {
         poolKey.isCallPool = isCall;
-        IPool pool = isCall ? callPool : putPool;
 
         vm.startPrank(lp);
 
         ERC20Mock token = ERC20Mock(getPoolToken(isCall));
-        uint256 _initialCollateral = initialCollateral(isCall).unwrap();
+        uint256 _initialCollateral = scaleDecimals(
+            initialCollateral(isCall),
+            isCall
+        );
 
         token.mint(lp, _initialCollateral);
         token.approve(address(router), _initialCollateral);
@@ -62,11 +54,7 @@ contract PoolTest is DeployTest {
         assertEq(pool.marketPrice(), posKey.upper);
     }
 
-    function test_deposit_1000_LC_CALL() public {
-        _test_deposit(true);
-    }
-
-    function test_deposit_1000_LC_PUT() public {
-        _test_deposit(false);
+    function test_deposit_1000_LC() public {
+        _test_deposit(poolKey.isCallPool);
     }
 }
