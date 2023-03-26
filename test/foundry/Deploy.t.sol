@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {StdCheats} from "forge-std/StdCheats.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {Assertions} from "./Assertions.sol";
@@ -27,7 +26,7 @@ import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
-contract DeployTest is StdCheats, Assertions {
+contract DeployTest is Test, Assertions {
     ERC20Mock base;
     ERC20Mock quote;
     OracleAdapterMock oracleAdapter;

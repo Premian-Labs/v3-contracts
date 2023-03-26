@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
-import {Test} from "forge-std/Test.sol";
+import {StdAssertions} from "forge-std/StdAssertions.sol";
 
 import {SD1x18} from "@prb/math/src/sd1x18/ValueType.sol";
 import {SD59x18} from "@prb/math/src/sd59x18/ValueType.sol";
 import {UD2x18} from "@prb/math/src/ud2x18/ValueType.sol";
 import {UD60x18} from "@prb/math/src/ud60x18/ValueType.sol";
 
-contract Assertions is Test {
+contract Assertions is StdAssertions {
     /*//////////////////////////////////////////////////////////////////////////
                                        SD1X18
     //////////////////////////////////////////////////////////////////////////*/
