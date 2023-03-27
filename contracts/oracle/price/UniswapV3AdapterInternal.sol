@@ -179,7 +179,7 @@ contract UniswapV3AdapterInternal is
                 PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
             );
 
-            if (AddressUtils.isContract(pool) && _isUnlocked(pool)) {
+            if (AddressUtils.isContract(pool) && _isInitialized(pool)) {
                 pools[validPools++] = pool;
             }
         }
@@ -248,8 +248,9 @@ contract UniswapV3AdapterInternal is
         return int256(uint256(IERC20Metadata(token).decimals()));
     }
 
-    function _isUnlocked(address pool) internal view returns (bool unlocked) {
-        (, , , , , , unlocked) = IUniswapV3Pool(pool).slot0();
+    function _isInitialized(address pool) internal view returns (bool) {
+        (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        return sqrtPriceX96 != 0;
     }
 
     /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/OracleLibrary.sol#L16-L41
