@@ -38,7 +38,12 @@ contract DeployTest is Test, Assertions {
 
     Position.Key posKey;
 
-    address constant lp = address(0x1);
+    Users users;
+
+    struct Users {
+        address lp;
+        address trader;
+    }
 
     bytes4[] internal poolBaseSelectors;
     bytes4[] internal poolCoreSelectors;
@@ -51,6 +56,8 @@ contract DeployTest is Test, Assertions {
 
     function setUp() public virtual {
         vm.warp(1679758940);
+
+        users = Users({lp: address(0x111), trader: address(0x222)});
 
         base = new ERC20Mock("WETH", 18);
         quote = new ERC20Mock("USDC", 6);
@@ -191,8 +198,8 @@ contract DeployTest is Test, Assertions {
         ///////////////////////
 
         posKey = Position.Key({
-            owner: lp,
-            operator: lp,
+            owner: users.lp,
+            operator: users.lp,
             lower: UD60x18.wrap(0.1 ether),
             upper: UD60x18.wrap(0.3 ether),
             orderType: Position.OrderType.LC
