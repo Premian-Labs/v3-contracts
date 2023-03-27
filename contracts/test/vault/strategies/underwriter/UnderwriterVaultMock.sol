@@ -769,4 +769,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) external view returns (PerformanceFeeVars memory) {
         return _getPerformanceFeeVars(from, shares);
     }
+
+    function afterDeposit(
+        address receiver,
+        uint256 assetAmount,
+        uint256 shareAmount
+    ) external {
+        return _afterDeposit(receiver, assetAmount, shareAmount);
+    }
 }

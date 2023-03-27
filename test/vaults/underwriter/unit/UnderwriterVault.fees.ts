@@ -679,5 +679,56 @@ describe('UnderwriterVault.fees', () => {
     }
   });
 
-  describe('#_afterDeposit', () => {});
+  describe('#_afterDeposit', () => {
+    it('_afterDeposit should revert for a zero address', async () => {
+      const { callVault } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.afterDeposit(
+          ethers.constants.AddressZero,
+          parseEther('1'),
+          parseEther('1'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
+    });
+    it('_afterDeposit should revert for zero asset amount', async () => {
+      const { callVault, receiver } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.afterDeposit(
+          receiver.address,
+          parseEther('0'),
+          parseEther('1'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroAsset');
+    });
+    it('_afterDeposit should revert for zero share amount', async () => {
+      const { callVault, receiver } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.afterDeposit(
+          receiver.address,
+          parseEther('1'),
+          parseEther('0'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroShares');
+    });
+
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        it('_afterDeposit should increment netUserDeposits by the scaled asset amount', async () => {
+          const { callVault, putVault, receiver, base, quote } =
+            await loadFixture(vaultSetup);
+          vault = isCall ? callVault : putVault;
+          token = isCall ? base : quote;
+          await vault.setNetUserDeposit(receiver.address, parseEther('1.5'));
+          await vault.afterDeposit(
+            receiver.address,
+            parseUnits('3', await token.decimals()),
+            parseEther('2'),
+          );
+          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+            parseEther('4.5'),
+          );
+        });
+      });
+    }
+  });
 });
