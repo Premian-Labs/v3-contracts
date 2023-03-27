@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 interface IOracleAdapterInternal {
+    /// @notice Thrown when attempting to increase array size
+    error OracleAdapter__ArrayCannotExpand();
+
     /// @notice Thrown when the target is zero or before the current block timestamp
     error OracleAdapter__InvalidTarget();
 
@@ -17,4 +20,7 @@ interface IOracleAdapterInternal {
 
     /// @notice Thrown when trying to add pair where addresses are the same
     error OracleAdapter__TokensAreSame(address tokenA, address tokenB);
+
+    /// @notice Thrown when one of the parameters is a zero address
+    error OracleAdapter__ZeroAddress();
 }
