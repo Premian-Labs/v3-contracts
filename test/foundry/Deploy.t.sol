@@ -5,6 +5,8 @@ pragma solidity >=0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
+
 import {Assertions} from "./Assertions.sol";
 
 import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
@@ -12,7 +14,6 @@ import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writ
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
@@ -27,8 +28,8 @@ import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 contract DeployTest is Test, Assertions {
-    ERC20Mock base;
-    ERC20Mock quote;
+    address base;
+    address quote;
     OracleAdapterMock oracleAdapter;
     IPoolFactory.PoolKey poolKey;
     PoolFactory factory;
@@ -58,9 +59,9 @@ contract DeployTest is Test, Assertions {
         vm.warp(1679758940);
 
         users = Users({lp: address(0x111), trader: address(0x222)});
+        base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
+        quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // WETH
 
-        base = new ERC20Mock("WETH", 18);
-        quote = new ERC20Mock("USDC", 6);
         oracleAdapter = new OracleAdapterMock(
             address(base),
             address(quote),
@@ -68,8 +69,8 @@ contract DeployTest is Test, Assertions {
             UD60x18.wrap(1000 ether)
         );
         poolKey = IPoolFactory.PoolKey({
-            base: address(base),
-            quote: address(quote),
+            base: base,
+            quote: quote,
             oracleAdapter: address(oracleAdapter),
             strike: UD60x18.wrap(1000 ether),
             maturity: 1682668800,
@@ -216,7 +217,7 @@ contract DeployTest is Test, Assertions {
     }
 
     function getPoolToken(bool isCall) internal view returns (address) {
-        return isCall ? poolKey.base : poolKey.quote;
+        return isCall ? base : quote;
     }
 
     function contractsToCollateral(
@@ -230,7 +231,7 @@ contract DeployTest is Test, Assertions {
         UD60x18 amount,
         bool isCall
     ) internal view returns (uint256) {
-        uint8 decimals = ERC20Mock(getPoolToken(isCall)).decimals();
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
 

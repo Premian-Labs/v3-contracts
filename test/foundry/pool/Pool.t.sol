@@ -3,6 +3,9 @@
 pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
+
+import "forge-std/Console.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -15,8 +18,6 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
 import {Position} from "contracts/libraries/Position.sol";
 
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
-
 abstract contract PoolTest is DeployTest {
     IPool pool;
 
@@ -25,7 +26,7 @@ abstract contract PoolTest is DeployTest {
 
         address lp = users.lp;
 
-        ERC20Mock token = ERC20Mock(getPoolToken(isCall));
+        ISolidStateERC20 token = ISolidStateERC20(getPoolToken(isCall));
         uint256 _initialCollateral = scaleDecimals(
             initialCollateral(isCall),
             isCall
@@ -33,7 +34,7 @@ abstract contract PoolTest is DeployTest {
 
         vm.startPrank(lp);
 
-        token.mint(lp, _initialCollateral);
+        deal(address(token), lp, _initialCollateral);
         token.approve(address(router), _initialCollateral);
 
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
