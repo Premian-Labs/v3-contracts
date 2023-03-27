@@ -1,3 +1,4 @@
 module.exports = {
-  skipFiles: ['layerZero'],
+  skipFiles: ['layerZero', 'vendor'],
+  configureYulOptimizer: true,
 };

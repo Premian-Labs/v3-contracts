@@ -1,26 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
 
-import {OptionMath, SD59x18, UD60x18} from "../libraries/OptionMath.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
+import {ZERO, ONE} from "../libraries/Constants.sol";
 
 contract PoolFactory is IPoolFactory, SafeOwnable {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
-    using SafeCast for int256;
-    using SafeCast for uint256;
-    using SD59x18 for int256;
-    using UD60x18 for uint256;
 
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
@@ -53,26 +51,26 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(PoolKey memory k) public view returns (uint256) {
+    function initializationFee(PoolKey memory k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] +
             l.strikeCount[k.strikeKey()];
 
-        uint256 discount = (OptionMath.ONE - l.discountPerPool)
-            .toInt256()
-            .pow(discountFactor.toInt256())
-            .toUint256();
+        UD60x18 discount = (ONE - l.discountPerPool)
+            .intoSD59x18()
+            .powu(discountFactor)
+            .intoUD60x18();
 
-        uint256 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
-        uint256 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        uint256 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
+        UD60x18 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
+        UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+        UD60x18 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
 
-        return fee.mul(discount).div(wrappedNativeUSDPrice);
+        return (fee * discount) / wrappedNativeUSDPrice;
     }
 
     /// @inheritdoc IPoolFactory
-    function setDiscountPerPool(uint256 discountPerPool) external onlyOwner {
+    function setDiscountPerPool(UD60x18 discountPerPool) external onlyOwner {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.discountPerPool = discountPerPool;
         emit SetDiscountPerPool(discountPerPool);
@@ -103,7 +101,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         _ensureOptionMaturityIsValid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
-        uint256 fee = initializationFee(k);
+        uint256 fee = initializationFee(k).unwrap();
 
         if (_getPoolAddress(poolKey) != address(0))
             revert PoolFactory__PoolAlreadyDeployed();
@@ -143,6 +141,30 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             k.isCallPool,
             poolAddress
         );
+
+        {
+            (
+                IOracleAdapter.AdapterType baseAdapterType,
+                address[][] memory basePath,
+                uint8[] memory basePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.base);
+
+            (
+                IOracleAdapter.AdapterType quoteAdapterType,
+                address[][] memory quotePath,
+                uint8[] memory quotePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.quote);
+
+            emit PricingPath(
+                poolAddress,
+                basePath,
+                basePathDecimals,
+                baseAdapterType,
+                quotePath,
+                quotePathDecimals,
+                quoteAdapterType
+            );
+        }
     }
 
     /// @inheritdoc IPoolFactory
@@ -162,13 +184,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         address oracleAdapter,
         address base,
         address quote
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
     // @notice We use the Premia Chainlink Adapter to fetch the price of the wrapped native token.
     //         This is used to convert the initializationFee from USD to native token
-    function _fetchWrappedNativeUSDQuote() internal view returns (uint256) {
+    function _fetchWrappedNativeUSDQuote() internal view returns (UD60x18) {
         return
             IOracleAdapter(CHAINLINK_ADAPTER).quote(
                 WRAPPED_NATIVE_TOKEN,
@@ -178,17 +200,17 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
     function _ensureOptionStrikeIsValid(
-        uint256 strike,
+        UD60x18 strike,
         address oracleAdapter,
         address base,
         address quote
     ) internal view {
-        if (strike == 0) revert PoolFactory__OptionStrikeEqualsZero();
+        if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
 
-        uint256 spot = _fetchQuote(oracleAdapter, base, quote);
-        uint256 strikeInterval = OptionMath.calculateStrikeInterval(spot);
+        UD60x18 spot = _fetchQuote(oracleAdapter, base, quote);
+        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        if (strike % strikeInterval != 0)
+        if (strike % strikeInterval != ZERO)
             revert PoolFactory__OptionStrikeInvalid();
     }
 

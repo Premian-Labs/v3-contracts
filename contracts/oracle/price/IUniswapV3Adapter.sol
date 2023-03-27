@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 
@@ -23,8 +23,8 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @return The cardinality per minute used for increase cardinality calculations
     function cardinalityPerMinute() external view returns (uint8);
 
-    /// @notice Returns the target obersvation cardinality for pools
-    /// @return The target obersvation cardinality for pools
+    /// @notice Returns the target observation cardinality for pools
+    /// @return The target observation cardinality for pools
     function targetCardinality() external view returns (uint16);
 
     /// @notice Returns the approximate gas cost per each increased cardinality

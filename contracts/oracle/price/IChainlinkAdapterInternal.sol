@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 interface IChainlinkAdapterInternal {
     /// @notice The path that will be used to calculate quotes for a given pair

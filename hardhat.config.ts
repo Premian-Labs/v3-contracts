@@ -40,7 +40,7 @@ export default {
   solidity: {
     compilers: [
       {
-        version: '0.8.18',
+        version: '0.8.19',
         settings: {
           viaIR: false,
           optimizer: {
@@ -52,7 +52,7 @@ export default {
     ],
     overrides: {
       'contracts/staking/VxPremia.sol': {
-        version: '0.8.17',
+        version: '0.8.19',
         settings: {
           viaIR: true,
           optimizer: {
@@ -93,7 +93,7 @@ export default {
   },
 
   abiExporter: {
-    runOnCompile: false,
+    runOnCompile: true,
     path: './abi',
     clear: true,
     flat: true,

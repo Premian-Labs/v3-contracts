@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "../../vendor/uniswap/IUniswapV3Pool.sol";
@@ -47,7 +49,7 @@ contract UniswapV3AdapterInternal is
         address tokenIn,
         address tokenOut,
         uint32 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
@@ -61,17 +63,19 @@ contract UniswapV3AdapterInternal is
 
         int256 factor = ETH_DECIMALS - _decimals(tokenOut);
 
-        uint256 price = _scale(
-            OracleLibrary.getQuoteAtTick(
-                weightedTick,
-                uint128(10 ** uint256(_decimals(tokenIn))),
-                tokenIn,
-                tokenOut
-            ),
-            factor
+        UD60x18 price = UD60x18.wrap(
+            _scale(
+                OracleLibrary.getQuoteAtTick(
+                    weightedTick,
+                    uint128(10 ** uint256(_decimals(tokenIn))),
+                    tokenIn,
+                    tokenOut
+                ),
+                factor
+            )
         );
 
-        _ensurePricePositive(price.toInt256());
+        _ensurePricePositive(price.intoSD59x18().unwrap());
         return price;
     }
 
@@ -118,8 +122,8 @@ contract UniswapV3AdapterInternal is
         );
 
         if (range[0] > oldestObservation) {
-            // When the oldest obersvation is before the range start, restart range
-            // from oldest obeservation
+            // When the oldest observation is before the range start, restart range
+            // from oldest observation
             //
             //  end                 target   oldest         start
             //   |                    v        |              |
@@ -187,19 +191,6 @@ contract UniswapV3AdapterInternal is
         }
 
         _resizeArray(pools, validPools);
-    }
-
-    function _resizeArray(
-        address[] memory array,
-        uint256 amountOfValidElements
-    ) internal pure {
-        // If all elements are valid, then nothing to do here
-        if (array.length == amountOfValidElements) return;
-
-        // If not, then resize the array
-        assembly {
-            mstore(array, amountOfValidElements)
-        }
     }
 
     function _tryIncreaseCardinality(

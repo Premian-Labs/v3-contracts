@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
+
 import {Position} from "../libraries/Position.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
+
 import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
@@ -28,18 +33,27 @@ contract PoolCore is IPoolCore, PoolInternal {
     {}
 
     /// @inheritdoc IPoolCore
-    function marketPrice() external view returns (uint256) {
+    function marketPrice() external view returns (UD60x18) {
         return PoolStorage.layout().marketPrice;
     }
 
     /// @inheritdoc IPoolCore
     function takerFee(
-        uint256 size,
+        UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized
     ) external view returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         return
-            _takerFee(PoolStorage.layout(), size, premium, isPremiumNormalized);
+            l.toPoolTokenDecimals(
+                _takerFee(
+                    l,
+                    size,
+                    l.fromPoolTokenDecimals(premium),
+                    isPremiumNormalized
+                )
+            );
     }
 
     /// @inheritdoc IPoolCore
@@ -50,7 +64,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             address base,
             address quote,
             address oracleAdapter,
-            uint256 strike,
+            UD60x18 strike,
             uint64 maturity,
             bool isCallPool
         )
@@ -68,7 +82,12 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function claim(Position.Key memory p) external returns (uint256) {
-        return _claim(p);
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        return
+            l.toPoolTokenDecimals(
+                _claim(p.toKeyInternal(l.strike, l.isCallPool))
+            );
     }
 
     /// @inheritdoc IPoolCore
@@ -78,23 +97,30 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        (uint256 pendingClaimableFees, ) = _pendingClaimableFees(l, p, pData);
+        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(
+            l,
+            p.toKeyInternal(l.strike, l.isCallPool),
+            pData
+        );
 
-        return pData.claimableFees + pendingClaimableFees;
+        return
+            l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
     /// @inheritdoc IPoolCore
     function deposit(
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         _ensureOperator(p.operator);
         _deposit(
-            p,
+            p.toKeyInternal(l.strike, l.isCallPool),
             DepositArgsInternal(
                 belowLower,
                 belowUpper,
@@ -110,16 +136,18 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function deposit(
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice,
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice,
         bool isBidIfStrandedMarketPrice
     ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         _ensureOperator(p.operator);
         _deposit(
-            p,
+            p.toKeyInternal(l.strike, l.isCallPool),
             DepositArgsInternal(
                 belowLower,
                 belowUpper,
@@ -137,11 +165,11 @@ contract PoolCore is IPoolCore, PoolInternal {
     function swapAndDeposit(
         SwapArgs memory s,
         Position.Key memory p,
-        uint256 belowLower,
-        uint256 belowUpper,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 belowLower,
+        UD60x18 belowUpper,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external payable {
         _ensureOperator(p.operator);
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -150,7 +178,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         (uint256 creditAmount, ) = _swap(s);
 
         _deposit(
-            p,
+            p.toKeyInternal(l.strike, l.isCallPool),
             DepositArgsInternal(
                 belowLower,
                 belowUpper,
@@ -166,51 +194,63 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function withdraw(
         Position.Key memory p,
-        uint256 size,
-        uint256 minMarketPrice,
-        uint256 maxMarketPrice
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
     ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         _ensureOperator(p.operator);
-        _withdraw(p, size, minMarketPrice, maxMarketPrice);
+        _withdraw(
+            p.toKeyInternal(l.strike, l.isCallPool),
+            size,
+            minMarketPrice,
+            maxMarketPrice
+        );
     }
 
     /// @inheritdoc IPoolCore
     function writeFrom(
         address underwriter,
         address longReceiver,
-        uint256 size
+        UD60x18 size
     ) external {
         return _writeFrom(underwriter, longReceiver, size);
     }
 
     /// @inheritdoc IPoolCore
-    function annihilate(uint256 size) external {
+    function annihilate(UD60x18 size) external {
         _annihilate(msg.sender, size);
     }
 
     /// @inheritdoc IPoolCore
     function exercise(address holder) external returns (uint256) {
-        return _exercise(holder);
+        return PoolStorage.layout().toPoolTokenDecimals(_exercise(holder));
     }
 
     /// @inheritdoc IPoolCore
     function settle(address holder) external returns (uint256) {
-        return _settle(holder);
+        return PoolStorage.layout().toPoolTokenDecimals(_settle(holder));
     }
 
     /// @inheritdoc IPoolCore
     function settlePosition(Position.Key memory p) external returns (uint256) {
-        return _settlePosition(p);
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        return
+            PoolStorage.layout().toPoolTokenDecimals(
+                _settlePosition(p.toKeyInternal(l.strike, l.isCallPool))
+            );
     }
 
     /// @inheritdoc IPoolCore
     function getNearestTicksBelow(
-        uint256 lower,
-        uint256 upper
+        UD60x18 lower,
+        UD60x18 upper
     )
         external
         view
-        returns (uint256 nearestBelowLower, uint256 nearestBelowUpper)
+        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
         return _getNearestTicksBelow(lower, upper);
     }
@@ -219,9 +259,16 @@ contract PoolCore is IPoolCore, PoolInternal {
         Position.Key memory srcP,
         address newOwner,
         address newOperator,
-        uint256 size
+        UD60x18 size
     ) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
         _ensureOperator(srcP.operator);
-        _transferPosition(srcP, newOwner, newOperator, size);
+        _transferPosition(
+            srcP.toKeyInternal(l.strike, l.isCallPool),
+            newOwner,
+            newOperator,
+            size
+        );
     }
 }
