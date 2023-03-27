@@ -223,28 +223,6 @@ abstract contract ChainlinkAdapterInternal is
         return !isTokenInWBTC ? price.inv() : price;
     }
 
-    function _getPriceAgainstUSD(
-        address token,
-        uint256 target
-    ) internal view returns (uint256) {
-        return
-            token.isUSD()
-                ? ONE_USD
-                : _fetchQuote(token, Denominations.USD, target);
-    }
-
-    function _getPriceAgainstETH(
-        address token,
-        uint256 target
-    ) internal view returns (UD60x18) {
-        return
-            UD60x18.wrap(
-                token.isETH()
-                    ? ONE_ETH
-                    : _fetchQuote(token, Denominations.ETH, target)
-            );
-    }
-
     /// @dev Expects `tokenA` and `tokenB` to be sorted
     function _determinePricingPath(
         address tokenA,
@@ -477,20 +455,6 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _ensurePriceAfterTargetIsFresh(
-        uint256 target,
-        uint256 updatedAt
-    ) internal view {
-        if (
-            target >= updatedAt &&
-            block.timestamp - target < MAX_DELAY &&
-            target - updatedAt >= PRICE_STALE_THRESHOLD
-        ) {
-            // revert if 12 hours has not passed and price is stale
-            revert ChainlinkAdapter__PriceAfterTargetIsStale();
-        }
-    }
-
     function _aggregator(
         address tokenA,
         address tokenB
@@ -506,6 +470,28 @@ abstract contract ChainlinkAdapterInternal is
         return AggregatorProxyInterface(aggregator).decimals();
     }
 
+    function _getPriceAgainstUSD(
+        address token,
+        uint256 target
+    ) internal view returns (uint256) {
+        return
+            token.isUSD()
+                ? ONE_USD
+                : _fetchQuote(token, Denominations.USD, target);
+    }
+
+    function _getPriceAgainstETH(
+        address token,
+        uint256 target
+    ) internal view returns (UD60x18) {
+        return
+            UD60x18.wrap(
+                token.isETH()
+                    ? ONE_ETH
+                    : _fetchQuote(token, Denominations.ETH, target)
+            );
+    }
+
     function _getETHUSD(uint256 target) internal view returns (uint256) {
         return _fetchQuote(Denominations.ETH, Denominations.USD, target);
     }
@@ -516,5 +502,19 @@ abstract contract ChainlinkAdapterInternal is
 
     function _getWBTCBTC(uint256 target) internal view returns (uint256) {
         return _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
+    }
+
+    function _ensurePriceAfterTargetIsFresh(
+        uint256 target,
+        uint256 updatedAt
+    ) internal view {
+        if (
+            target >= updatedAt &&
+            block.timestamp - target < MAX_DELAY &&
+            target - updatedAt >= PRICE_STALE_THRESHOLD
+        ) {
+            // revert if 12 hours has not passed and price is stale
+            revert ChainlinkAdapter__PriceAfterTargetIsStale();
+        }
     }
 }
