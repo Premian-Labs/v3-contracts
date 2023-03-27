@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-import {DeployTest} from "./Deploy.t.sol";
+import {DeployTest} from "../Deploy.t.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 

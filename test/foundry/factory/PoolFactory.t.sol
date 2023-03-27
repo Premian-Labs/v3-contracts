@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {DeployTest} from "./Deploy.t.sol";
+import {DeployTest} from "../Deploy.t.sol";
 
 import {IPool} from "contracts/pool/IPool.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
