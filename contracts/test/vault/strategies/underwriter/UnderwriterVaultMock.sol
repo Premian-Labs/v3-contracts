@@ -777,4 +777,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) external {
         return _afterDeposit(receiver, assetAmount, shareAmount);
     }
+
+    function beforeWithdraw(
+        address receiver,
+        uint256 assetAmount,
+        uint256 shareAmount
+    ) external {
+        return _beforeWithdraw(receiver, assetAmount, shareAmount);
+    }
 }

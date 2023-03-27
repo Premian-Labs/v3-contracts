@@ -691,20 +691,20 @@ describe('UnderwriterVault.fees', () => {
       ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
     });
     it('_afterDeposit should revert for zero asset amount', async () => {
-      const { callVault, receiver } = await loadFixture(vaultSetup);
+      const { callVault, caller } = await loadFixture(vaultSetup);
       await expect(
         callVault.afterDeposit(
-          receiver.address,
+          caller.address,
           parseEther('0'),
           parseEther('1'),
         ),
       ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroAsset');
     });
     it('_afterDeposit should revert for zero share amount', async () => {
-      const { callVault, receiver } = await loadFixture(vaultSetup);
+      const { callVault, caller } = await loadFixture(vaultSetup);
       await expect(
         callVault.afterDeposit(
-          receiver.address,
+          caller.address,
           parseEther('1'),
           parseEther('0'),
         ),
@@ -714,18 +714,76 @@ describe('UnderwriterVault.fees', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         it('_afterDeposit should increment netUserDeposits by the scaled asset amount', async () => {
-          const { callVault, putVault, receiver, base, quote } =
+          const { callVault, putVault, caller, base, quote } =
             await loadFixture(vaultSetup);
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
-          await vault.setNetUserDeposit(receiver.address, parseEther('1.5'));
+          await vault.setNetUserDeposit(caller.address, parseEther('1.5'));
           await vault.afterDeposit(
-            receiver.address,
+            caller.address,
             parseUnits('3', await token.decimals()),
             parseEther('2'),
           );
-          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
             parseEther('4.5'),
+          );
+        });
+      });
+    }
+  });
+
+  describe('#_beforeWithdraw', () => {
+    it('_beforeWithdraw should revert for a zero address', async () => {
+      const { callVault } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.beforeWithdraw(
+          ethers.constants.AddressZero,
+          parseEther('1'),
+          parseEther('1'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
+    });
+    it('_beforeWithdraw should revert for zero asset amount', async () => {
+      const { callVault, caller } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.beforeWithdraw(
+          caller.address,
+          parseEther('0'),
+          parseEther('1'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroAsset');
+    });
+    it('_beforeWithdraw should revert for zero share amount', async () => {
+      const { callVault, caller } = await loadFixture(vaultSetup);
+      await expect(
+        callVault.beforeWithdraw(
+          caller.address,
+          parseEther('1'),
+          parseEther('0'),
+        ),
+      ).to.be.revertedWithCustomError(callVault, 'Vault__ZeroShares');
+    });
+
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        it('test that _beforeWithdraw calls _beforeTokenTransfer to transfer performance related fees', async () => {
+          const { callVault, putVault, caller, base, quote } =
+            await loadFixture(vaultSetup);
+
+          vault = isCall ? callVault : putVault;
+          token = isCall ? base : quote;
+          await vault.setNetUserDeposit(caller.address, parseEther('1.5'));
+          await vault.mintMock(caller.address, parseEther('1.5'));
+          await token.mint(vault.address, parseEther('1.5'));
+
+          await vault.beforeWithdraw(
+            caller.address,
+            parseUnits('1.5', await token.decimals()),
+            parseEther('1.0'), // share amount
+          );
+
+          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
+            parseEther('0.499999999999999999'),
           );
         });
       });

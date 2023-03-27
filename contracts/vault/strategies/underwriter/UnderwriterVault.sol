@@ -512,12 +512,6 @@ contract UnderwriterVault is
             .layout();
 
         _beforeTokenTransfer(owner, address(this), shareAmount);
-        // Subtract assetAmount deposited from user's balance
-        // This is needed to compute average price per share
-        UD60x18 fractionKept = ONE -
-            UD60x18.wrap(shareAmount) /
-            _balanceOfUD60x18(owner);
-        l.netUserDeposits[owner] = l.netUserDeposits[owner] * fractionKept;
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -1023,7 +1017,8 @@ contract UnderwriterVault is
                 // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
                 totalShares = totalShares + vars.feeInShares;
             }
-            UD60x18 fractionKept = ONE - (totalShares / vars.balanceShares);
+            UD60x18 fractionKept = (vars.balanceShares - totalShares) /
+                vars.balanceShares;
             l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
 
             if (to != address(this))
