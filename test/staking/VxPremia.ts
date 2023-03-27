@@ -380,7 +380,7 @@ describe('VxPremia', () => {
     await increase(ONE_DAY * 366);
 
     let tx = await vxPremia.connect(alice).startWithdraw(parseEther('4'));
-    let event = (await getEventArgs(tx, 'RemoveVote'))[0];
+    let event = await getEventArgs(tx, 'RemoveVote');
 
     expect(event[0].voter).to.eq(alice.address);
     expect(event[0].version).to.eq(0);
@@ -388,7 +388,7 @@ describe('VxPremia', () => {
     expect(event[0].amount).to.eq(parseEther('2.5'));
 
     tx = await vxPremia.connect(alice).startWithdraw(parseEther('4'));
-    event = (await getEventArgs(tx, 'RemoveVote'))[0];
+    event = await getEventArgs(tx, 'RemoveVote');
 
     expect(event[0].voter).to.eq(alice.address);
     expect(event[0].version).to.eq(0);

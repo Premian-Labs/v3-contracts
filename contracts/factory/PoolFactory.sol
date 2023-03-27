@@ -141,6 +141,30 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             k.isCallPool,
             poolAddress
         );
+
+        {
+            (
+                IOracleAdapter.AdapterType baseAdapterType,
+                address[][] memory basePath,
+                uint8[] memory basePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.base);
+
+            (
+                IOracleAdapter.AdapterType quoteAdapterType,
+                address[][] memory quotePath,
+                uint8[] memory quotePathDecimals
+            ) = IOracleAdapter(k.oracleAdapter).describePricingPath(k.quote);
+
+            emit PricingPath(
+                poolAddress,
+                basePath,
+                basePathDecimals,
+                baseAdapterType,
+                quotePath,
+                quotePathDecimals,
+                quoteAdapterType
+            );
+        }
     }
 
     /// @inheritdoc IPoolFactory

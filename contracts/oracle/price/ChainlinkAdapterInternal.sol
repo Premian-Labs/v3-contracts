@@ -5,12 +5,11 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {TokenSorting} from "../../libraries/TokenSorting.sol";
+import {ONE} from "../../libraries/Constants.sol";
 
+import {IAggregator} from "./IAggregator.sol";
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
@@ -31,14 +30,9 @@ abstract contract ChainlinkAdapterInternal is
     uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     int256 private constant FOREX_DECIMALS = 8;
-    int256 private constant ETH_DECIMALS = 18;
 
-    uint256 private constant ONE_USD = 10 ** uint256(FOREX_DECIMALS);
-    uint256 private constant ONE_ETH = 10 ** uint256(ETH_DECIMALS);
-    uint256 private constant ONE_BTC = 10 ** uint256(FOREX_DECIMALS);
-
-    address private immutable WRAPPED_NATIVE_TOKEN;
-    address private immutable WRAPPED_BTC_TOKEN;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
+    address internal immutable WRAPPED_BTC_TOKEN;
 
     constructor(address _wrappedNativeToken, address _wrappedBTCToken) {
         WRAPPED_NATIVE_TOKEN = _wrappedNativeToken;
@@ -80,35 +74,6 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _upsertPair(address tokenA, address tokenB) internal {
-        (
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
-
-        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
-
-        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
-            .layout();
-
-        if (path == PricingPath.NONE) {
-            // Check if there is a current path. If there is, it means that the pair was supported and it
-            // lost support. In that case, we will remove the current path and continue working as expected.
-            // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pathForPair[keyForPair];
-
-            if (_currentPath == PricingPath.NONE) {
-                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
-            }
-        }
-
-        if (l.pathForPair[keyForPair] == path) return;
-
-        l.pathForPair[keyForPair] = path;
-        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
-    }
-
     function _pathForPair(
         address tokenA,
         address tokenB,
@@ -120,7 +85,7 @@ abstract contract ChainlinkAdapterInternal is
     {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
-        (address sortedA, address sortedB) = TokenSorting.sortTokens(
+        (address sortedA, address sortedB) = _sortTokens(
             mappedTokenA,
             mappedTokenB
         );
@@ -142,10 +107,7 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 factor = ETH_DECIMALS -
-            (path == PricingPath.TOKEN_ETH ? ETH_DECIMALS : FOREX_DECIMALS);
-
-        uint256 price;
+        UD60x18 price;
         if (path == PricingPath.ETH_USD) {
             price = _getETHUSD(target);
         } else if (path == PricingPath.TOKEN_USD) {
@@ -157,15 +119,13 @@ abstract contract ChainlinkAdapterInternal is
             price = _getPriceAgainstETH(
                 _isETH(tokenOut) ? tokenIn : tokenOut,
                 target
-            ).unwrap();
+            );
         }
-
-        UD60x18 priceScaled = UD60x18.wrap(_scale(price, factor));
 
         bool invert = _isUSD(tokenIn) ||
             (path == PricingPath.TOKEN_ETH && _isETH(tokenIn));
 
-        return invert ? priceScaled.inv() : priceScaled;
+        return invert ? price.inv() : price;
     }
 
     /// @dev Handles prices when both tokens share the same base (either ETH or USD)
@@ -175,8 +135,9 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 diff = _decimals(tokenIn) - _decimals(tokenOut);
-        int256 factor = ETH_DECIMALS - (diff > 0 ? diff : -diff);
+        int256 factor = PricingPath.TOKEN_USD_TOKEN == path
+            ? ETH_DECIMALS - FOREX_DECIMALS
+            : int256(0);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -202,19 +163,14 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
-        UD60x18 adjustedEthToUSDPrice = UD60x18.wrap(
-            _scale(_getETHUSD(target), factor)
-        );
+        UD60x18 adjustedEthToUSDPrice = _getETHUSD(target);
 
         bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
             tokenIn < tokenOut) ||
             (path == PricingPath.A_ETH_USD_B && tokenIn > tokenOut);
 
         if (isTokenInUSD) {
-            UD60x18 adjustedTokenInToUSD = UD60x18.wrap(
-                _scale(_getPriceAgainstUSD(tokenIn, target), factor)
-            );
+            UD60x18 adjustedTokenInToUSD = _getPriceAgainstUSD(tokenIn, target);
 
             UD60x18 tokenOutToETH = _getPriceAgainstETH(tokenOut, target);
 
@@ -222,8 +178,9 @@ abstract contract ChainlinkAdapterInternal is
         } else {
             UD60x18 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
 
-            UD60x18 adjustedTokenOutToUSD = UD60x18.wrap(
-                _scale(_getPriceAgainstUSD(tokenOut, target), factor)
+            UD60x18 adjustedTokenOutToUSD = _getPriceAgainstUSD(
+                tokenOut,
+                target
             );
 
             return
@@ -238,20 +195,12 @@ abstract contract ChainlinkAdapterInternal is
         uint256 target
     ) internal view returns (UD60x18) {
         bool isTokenInWBTC = _isWBTC(tokenIn);
-        int256 factor = ETH_DECIMALS - FOREX_DECIMALS;
+        UD60x18 adjustedWBTCToUSDPrice = _getWBTCBTC(target) *
+            _getBTCUSD(target);
 
-        UD60x18 adjustedWBTCToUSDPrice = UD60x18.wrap(
-            _scale(_getWBTCBTC(target), factor)
-        ) * UD60x18.wrap(_scale(_getBTCUSD(target), factor));
-
-        UD60x18 adjustedTokenToUSD = UD60x18.wrap(
-            _scale(
-                _getPriceAgainstUSD(
-                    !isTokenInWBTC ? tokenIn : tokenOut,
-                    target
-                ),
-                factor
-            )
+        UD60x18 adjustedTokenToUSD = _getPriceAgainstUSD(
+            !isTokenInWBTC ? tokenIn : tokenOut,
+            target
         );
 
         UD60x18 price = adjustedWBTCToUSDPrice / adjustedTokenToUSD;
@@ -261,11 +210,16 @@ abstract contract ChainlinkAdapterInternal is
     function _getPriceAgainstUSD(
         address token,
         uint256 target
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         return
             _isUSD(token)
-                ? ONE_USD
-                : _fetchQuote(token, Denominations.USD, target);
+                ? ONE
+                : UD60x18.wrap(
+                    _scale(
+                        _fetchQuote(token, Denominations.USD, target),
+                        ETH_DECIMALS - FOREX_DECIMALS
+                    )
+                );
     }
 
     function _getPriceAgainstETH(
@@ -273,11 +227,9 @@ abstract contract ChainlinkAdapterInternal is
         uint256 target
     ) internal view returns (UD60x18) {
         return
-            UD60x18.wrap(
-                _isETH(token)
-                    ? ONE_ETH
-                    : _fetchQuote(token, Denominations.ETH, target)
-            );
+            _isETH(token)
+                ? ONE
+                : UD60x18.wrap(_fetchQuote(token, Denominations.ETH, target));
     }
 
     /// @dev Expects `tokenA` and `tokenB` to be sorted
@@ -405,27 +357,6 @@ abstract contract ChainlinkAdapterInternal is
         return _feed(base, quote) != address(0);
     }
 
-    function _scale(
-        uint256 amount,
-        int256 factor
-    ) internal pure returns (uint256) {
-        if (factor < 0) {
-            return amount / (10 ** (-factor).toUint256());
-        } else {
-            return amount * (10 ** factor.toUint256());
-        }
-    }
-
-    function _decimals(address token) internal view returns (int256) {
-        if (_isETH(token)) {
-            return ETH_DECIMALS;
-        } else if (_isUSD(token) || _isWBTC(token)) {
-            return FOREX_DECIMALS;
-        } else {
-            return int256(uint256(IERC20Metadata(token).decimals()));
-        }
-    }
-
     function _fetchQuote(
         address base,
         address quote,
@@ -443,7 +374,7 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (uint256) {
         address feed = _feed(base, quote);
         (, int256 price, , , ) = _latestRoundData(feed);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 
@@ -496,14 +427,14 @@ abstract contract ChainlinkAdapterInternal is
         }
 
         _ensurePriceAfterTargetIsFresh(target, updatedAt);
-        _ensurePriceNonZero(price);
+        _ensurePricePositive(price);
         return price.toUint256();
     }
 
     function _latestRoundData(
         address feed
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try AggregatorV3Interface(feed).latestRoundData() returns (
+        try IAggregator(feed).latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 startedAt,
@@ -522,7 +453,7 @@ abstract contract ChainlinkAdapterInternal is
         address feed,
         uint80 roundId
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try AggregatorV3Interface(feed).getRoundData(roundId) returns (
+        try IAggregator(feed).getRoundData(roundId) returns (
             uint80 _roundId,
             int256 answer,
             uint256 startedAt,
@@ -551,6 +482,21 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
+    function _aggregator(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address[] memory aggregator) {
+        address feed = _feed(tokenA, tokenB);
+        aggregator = new address[](1);
+        aggregator[0] = IAggregator(feed).aggregator();
+    }
+
+    function _aggregatorDecimals(
+        address aggregator
+    ) internal view returns (uint8) {
+        return IAggregator(aggregator).decimals();
+    }
+
     function _feed(
         address tokenA,
         address tokenB
@@ -577,7 +523,7 @@ abstract contract ChainlinkAdapterInternal is
             tokenB
         );
 
-        return TokenSorting.sortTokens(mappedTokenA, mappedTokenB);
+        return _sortTokens(mappedTokenA, mappedTokenB);
     }
 
     function _mapToDenomination(
@@ -588,36 +534,34 @@ abstract contract ChainlinkAdapterInternal is
         mappedTokenB = _tokenToDenomination(tokenB);
     }
 
-    function _keyForUnsortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        (address mappedTokenA, address mappedTokenB) = TokenSorting.sortTokens(
-            tokenA,
-            tokenB
-        );
-
-        return _keyForSortedPair(mappedTokenA, mappedTokenB);
+    function _getETHUSD(uint256 target) internal view returns (UD60x18) {
+        return
+            UD60x18.wrap(
+                _scale(
+                    _fetchQuote(Denominations.ETH, Denominations.USD, target),
+                    ETH_DECIMALS - FOREX_DECIMALS
+                )
+            );
     }
 
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _keyForSortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenA, tokenB));
+    function _getBTCUSD(uint256 target) internal view returns (UD60x18) {
+        return
+            UD60x18.wrap(
+                _scale(
+                    _fetchQuote(Denominations.BTC, Denominations.USD, target),
+                    ETH_DECIMALS - FOREX_DECIMALS
+                )
+            );
     }
 
-    function _getETHUSD(uint256 target) internal view returns (uint256) {
-        return _fetchQuote(Denominations.ETH, Denominations.USD, target);
-    }
-
-    function _getBTCUSD(uint256 target) internal view returns (uint256) {
-        return _fetchQuote(Denominations.BTC, Denominations.USD, target);
-    }
-
-    function _getWBTCBTC(uint256 target) internal view returns (uint256) {
-        return _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target);
+    function _getWBTCBTC(uint256 target) internal view returns (UD60x18) {
+        return
+            UD60x18.wrap(
+                _scale(
+                    _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target),
+                    ETH_DECIMALS - FOREX_DECIMALS
+                )
+            );
     }
 
     function _isUSD(address token) internal pure returns (bool) {

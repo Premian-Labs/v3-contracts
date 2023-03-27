@@ -2,20 +2,20 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { OrderType } from '../../utils/sdk/types';
 import { BigNumber } from 'ethers';
 import { ONE_ETHER } from '../../utils/constants';
-import {
-  average,
-  scaleDecimals,
-  scaleDecimals as _scaleDecimals,
-} from '../../utils/sdk/math';
+import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
 import { ethers } from 'hardhat';
-import { ERC20Mock__factory, IPoolMock__factory } from '../../typechain';
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
+import {
+  ERC20Mock__factory,
+  IPoolMock__factory,
+  OracleAdapterMock__factory,
+} from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
+import { getEventArgs } from '../../utils/events';
 
 export const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8,bool,uint256),uint256,uint256,uint256,uint256,uint256)';
+  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)';
 
 export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
@@ -60,15 +60,12 @@ async function _deploy(isCall: boolean) {
   const poolToken = isCall ? base : quote;
   const poolTokenDecimals = isCall ? 18 : 6;
 
-  const oracleAdapter = await deployMockContract(deployer as any, [
-    'function quote(address,address) external view returns (uint256)',
-    'function quoteFrom(address,address,uint256) external view returns (uint256)',
-    'function upsertPair(address,address) external',
-  ]);
-
-  await oracleAdapter.mock.quote.returns(parseUnits('1000', 18));
-  await oracleAdapter.mock.quoteFrom.returns(parseUnits('1000', 18));
-  await oracleAdapter.mock.upsertPair.returns();
+  const oracleAdapter = await new OracleAdapterMock__factory(deployer).deploy(
+    base.address,
+    quote.address,
+    parseEther('1000'),
+    parseEther('1000'),
+  );
 
   const p = await PoolUtil.deploy(
     deployer,
@@ -97,8 +94,7 @@ async function _deploy(isCall: boolean) {
       },
     );
 
-    const r = await tx.wait(1);
-    const poolAddress = (r as any).events[0].args.poolAddress;
+    const poolAddress = (await getEventArgs(tx, 'PoolDeployed'))[0].poolAddress;
 
     return IPoolMock__factory.connect(poolAddress, deployer);
   };
@@ -132,8 +128,6 @@ async function _deploy(isCall: boolean) {
     lower: parseEther('0.1'),
     upper: parseEther('0.3'),
     orderType: OrderType.LC,
-    isCall: isCall,
-    strike: strike,
   } as const;
   Object.freeze(pKey);
 

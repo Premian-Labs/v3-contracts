@@ -1,5 +1,11 @@
 import { BigNumber, BigNumberish } from 'ethers';
 
+export enum AdapterType {
+  NONE,
+  CHAINLINK,
+  UNISWAP_V3,
+}
+
 export enum TokenType {
   SHORT = 0,
   LONG = 1,

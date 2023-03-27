@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapterInternal {
@@ -50,8 +50,8 @@ interface IChainlinkAdapterInternal {
     error ChainlinkAdapter__PriceAfterTargetIsStale();
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
-    /// @param tokenA The exchange token (base token)
-    /// @param tokenB The token to quote against (quote token)
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
     /// @param path The new path
     event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
 
