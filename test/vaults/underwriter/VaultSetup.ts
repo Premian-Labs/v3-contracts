@@ -33,6 +33,7 @@ export let receiver: SignerWithAddress;
 export let underwriter: SignerWithAddress;
 export let lp: SignerWithAddress;
 export let trader: SignerWithAddress;
+export let feeReceiver: SignerWithAddress;
 
 export let optionMath: OptionMathMock;
 
@@ -155,7 +156,7 @@ export async function addMockDeposit(
 }
 
 export async function vaultSetup() {
-  [deployer, caller, receiver, underwriter, lp, trader] =
+  [deployer, caller, receiver, underwriter, lp, trader, feeReceiver] =
     await ethers.getSigners();
 
   // Deploy option math
@@ -279,6 +280,7 @@ export async function vaultSetup() {
   // Mock Vault setup
 
   vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
+    feeReceiver.address,
     volOracle.address,
     p.poolFactory.address,
     p.router.address,

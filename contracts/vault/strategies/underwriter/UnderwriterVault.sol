@@ -410,10 +410,11 @@ contract UnderwriterVault is
         }
 
         UD60x18 sharesOwner = _maxTransferableShares(owner);
-        UD60x18 assetsOwner = _convertToAssetsUD60x18(sharesOwner);
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 assetsOwner = sharesOwner * pps;
         UD60x18 availableAssets = _availableAssetsUD60x18();
 
-        if (assetsOwner >= availableAssets) {
+        if (assetsOwner > availableAssets) {
             withdrawableAssets = availableAssets;
         } else {
             withdrawableAssets = assetsOwner;
