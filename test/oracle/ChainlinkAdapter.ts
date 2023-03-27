@@ -745,14 +745,14 @@ describe('ChainlinkAdapter', () => {
             });
           });
 
-          describe('#pathForPair', () => {
+          describe('#pricingPath', () => {
             it('should return pricing path for pair', async () => {
-              const path1 = await instance.pathForPair(
+              const path1 = await instance.pricingPath(
                 tokenIn.address,
                 tokenOut.address,
               );
 
-              const path2 = await instance.pathForPair(
+              const path2 = await instance.pricingPath(
                 tokenOut.address,
                 tokenIn.address,
               );

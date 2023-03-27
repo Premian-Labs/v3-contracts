@@ -47,7 +47,7 @@ abstract contract ChainlinkAdapterInternal is
             PricingPath path,
             address mappedTokenIn,
             address mappedTokenOut
-        ) = _pathForPair(tokenIn, tokenOut, false);
+        ) = _pricingPath(tokenIn, tokenOut, false);
 
         if (path == PricingPath.NONE) {
             path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
@@ -74,7 +74,7 @@ abstract contract ChainlinkAdapterInternal is
         }
     }
 
-    function _pathForPair(
+    function _pricingPath(
         address tokenA,
         address tokenB,
         bool sortTokens
@@ -89,7 +89,7 @@ abstract contract ChainlinkAdapterInternal is
             mappedTokenB
         );
 
-        path = ChainlinkAdapterStorage.layout().pathForPair[
+        path = ChainlinkAdapterStorage.layout().pricingPath[
             sortedA.keyForSortedPair(sortedB)
         ];
 

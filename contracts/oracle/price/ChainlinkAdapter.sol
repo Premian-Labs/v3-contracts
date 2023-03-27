@@ -36,7 +36,7 @@ contract ChainlinkAdapter is
             PricingPath path,
             address mappedTokenA,
             address mappedTokenB
-        ) = _pathForPair(tokenA, tokenB, true);
+        ) = _pricingPath(tokenA, tokenB, true);
 
         isCached = path != PricingPath.NONE;
 
@@ -64,16 +64,14 @@ contract ChainlinkAdapter is
             // Check if there is a current path. If there is, it means that the pair was supported and it
             // lost support. In that case, we will remove the current path and continue working as expected.
             // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pathForPair[keyForPair];
+            PricingPath _currentPath = l.pricingPath[keyForPair];
 
-            if (_currentPath == PricingPath.NONE) {
+            if (_currentPath == PricingPath.NONE)
                 revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
-            }
         }
 
-        if (l.pathForPair[keyForPair] == path) return;
-
-        l.pathForPair[keyForPair] = path;
+        if (l.pricingPath[keyForPair] == path) return;
+        l.pricingPath[keyForPair] = path;
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
@@ -155,11 +153,11 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function pathForPair(
+    function pricingPath(
         address tokenA,
         address tokenB
     ) external view returns (PricingPath) {
-        (PricingPath path, , ) = _pathForPair(tokenA, tokenB, false);
+        (PricingPath path, , ) = _pricingPath(tokenA, tokenB, false);
         return path;
     }
 }

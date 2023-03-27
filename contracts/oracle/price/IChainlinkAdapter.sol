@@ -14,7 +14,7 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The pricing path that will be used
-    function pathForPair(
+    function pricingPath(
         address tokenA,
         address tokenB
     ) external view returns (IChainlinkAdapterInternal.PricingPath);
