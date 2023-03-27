@@ -1,5 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import {
+  IOracleAdapter,
   ERC20Mock,
   ERC20Mock__factory,
   IPoolMock,
@@ -14,10 +15,11 @@ import {
   UnderwriterVaultProxy__factory,
   VolatilityOracleMock,
   VolatilityOracleMock__factory,
+  IOracleAdapter__factory,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
-import { PoolKey } from '../../../utils/sdk/types';
+import { AdapterType, PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
 import {
@@ -26,6 +28,7 @@ import {
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { expect } from 'chai';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
@@ -155,6 +158,37 @@ export async function addMockDeposit(
   await increaseTotalShares(vault, sharesAmount, receiverAddress);
 }
 
+export async function createPool(
+  strike: BigNumber,
+  maturity: number,
+  isCall: boolean,
+  deployer: SignerWithAddress,
+  base: ERC20Mock,
+  quote: ERC20Mock,
+  oracleAdapter: MockContract,
+  p: PoolUtil,
+): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
+  let pool: IPoolMock;
+
+  poolKey = {
+    base: base.address,
+    quote: quote.address,
+    oracleAdapter: oracleAdapter.address,
+    strike: strike,
+    maturity: BigNumber.from(maturity),
+    isCallPool: isCall,
+  };
+
+  const tx = await p.poolFactory.deployPool(poolKey, {
+    value: parseEther('1'),
+  });
+
+  const r = await tx.wait(1);
+  const poolAddress = (r as any).events[0].args.poolAddress;
+  pool = IPoolMock__factory.connect(poolAddress, deployer);
+  return [pool, poolAddress, poolKey];
+}
+
 export async function vaultSetup() {
   [deployer, caller, receiver, underwriter, lp, trader, feeReceiver] =
     await ethers.getSigners();
@@ -204,12 +238,29 @@ export async function vaultSetup() {
     'function upsertPair(address, address) external',
     'function quote(address, address) external view returns (uint256)',
     'function quoteFrom(address, address, uint256) external view returns (uint256)',
+    'function describePricingPath(address) external view returns (uint8,address[][],uint8[])',
   ]);
 
   // Upsert pair is called within deployPool from the PoolFactory contract
   await oracleAdapter.mock.isPairSupported.returns(true, true);
   await oracleAdapter.mock.upsertPair.returns();
   await oracleAdapter.mock.quote.returns(parseUnits('1500', 18));
+
+  await oracleAdapter.mock.describePricingPath
+    .withArgs(base.address)
+    .returns(
+      AdapterType.NONE,
+      [['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE']],
+      ['18'],
+    );
+
+  await oracleAdapter.mock.describePricingPath
+    .withArgs(quote.address)
+    .returns(
+      AdapterType.NONE,
+      [['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE']],
+      ['6'],
+    );
 
   if (log)
     console.log(`Mock oracleAdapter Implementation : ${oracleAdapter.address}`);
@@ -368,35 +419,4 @@ export async function vaultSetup() {
     putPoolAddress,
     feeReceiver,
   };
-}
-
-export async function createPool(
-  strike: BigNumber,
-  maturity: number,
-  isCall: boolean,
-  deployer: SignerWithAddress,
-  base: ERC20Mock,
-  quote: ERC20Mock,
-  oracleAdapter: MockContract,
-  p: PoolUtil,
-): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
-  let pool: IPoolMock;
-
-  poolKey = {
-    base: base.address,
-    quote: quote.address,
-    oracleAdapter: oracleAdapter.address,
-    strike: strike,
-    maturity: BigNumber.from(maturity),
-    isCallPool: isCall,
-  };
-
-  const tx = await p.poolFactory.deployPool(poolKey, {
-    value: parseEther('1'),
-  });
-
-  const r = await tx.wait(1);
-  const poolAddress = (r as any).events[0].args.poolAddress;
-  pool = IPoolMock__factory.connect(poolAddress, deployer);
-  return [pool, poolAddress, poolKey];
 }
