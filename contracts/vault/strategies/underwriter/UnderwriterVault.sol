@@ -953,7 +953,7 @@ contract UnderwriterVault is
         vars.performance = vars.pps / vars.ppsAvg;
         vars.shares = shares;
         vars.assets = vars.shares * vars.pps;
-        vars.balance = _balanceOfUD60x18(owner);
+        vars.balanceShares = _balanceOfUD60x18(owner);
 
         if (vars.performance > ONE) {
             vars.feeInShares =
@@ -977,9 +977,9 @@ contract UnderwriterVault is
         PerformanceFeeVars memory vars = _getPerformanceFeeVars(owner, balance);
 
         if (vars.performance > ONE) {
-            return vars.balance - vars.feeInShares;
+            return vars.balanceShares - vars.feeInShares;
         }
-        return vars.balance;
+        return vars.balanceShares;
     }
 
     /// @inheritdoc ERC20BaseInternal
@@ -998,7 +998,8 @@ contract UnderwriterVault is
                 .layout();
 
             UD60x18 shares = UD60x18.wrap(amount);
-            if (shares > _maxWithdrawUD60x18(from))
+
+            if (shares > _maxTransferableShares(from))
                 revert ERC20Base__TransferExceedsBalance();
 
             PerformanceFeeVars memory vars = _getPerformanceFeeVars(
@@ -1022,7 +1023,7 @@ contract UnderwriterVault is
                 // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
                 totalShares = totalShares + vars.feeInShares;
             }
-            UD60x18 fractionKept = ONE - (totalShares / vars.balance);
+            UD60x18 fractionKept = ONE - (totalShares / vars.balanceShares);
             l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
 
             if (to != address(this))
@@ -1032,6 +1033,7 @@ contract UnderwriterVault is
 
     function chargeFees() external {
         _chargeManagementFees(block.timestamp, _totalAssetsUD60x18());
+        _claimFees();
     }
 
     function _chargeManagementFees(
@@ -1050,9 +1052,6 @@ contract UnderwriterVault is
         l.lastFeeEventTimestamp = timestamp;
 
         emit ManagementFeePaid(FEE_RECEIVER, managementFee.unwrap());
-
-        // Claim protocol fees
-        _claimFees();
     }
 
     function _claimFees() internal {

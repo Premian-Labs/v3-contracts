@@ -758,4 +758,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) external {
         _beforeTokenTransfer(from, to, amount);
     }
+
+    function claimFees() external {
+        _claimFees();
+    }
+
+    function getPerformanceFeeVars(
+        address from,
+        UD60x18 shares
+    ) external view returns (PerformanceFeeVars memory) {
+        return _getPerformanceFeeVars(from, shares);
+    }
 }

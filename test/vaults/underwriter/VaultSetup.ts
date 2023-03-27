@@ -366,6 +366,7 @@ export async function vaultSetup() {
     strike,
     callPoolAddress,
     putPoolAddress,
+    feeReceiver,
   };
 }
 
