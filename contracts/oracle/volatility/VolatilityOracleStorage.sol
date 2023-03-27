@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 library VolatilityOracleStorage {
@@ -36,6 +37,8 @@ library VolatilityOracleStorage {
         mapping(address => Update) parameters;
         // Relayer addresses which can be trusted to provide accurate option trades
         EnumerableSet.AddressSet whitelistedRelayers;
+        // risk-free rate
+        UD60x18 riskFreeRate;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -32,6 +32,7 @@ library UnderwriterVaultStorage {
         bool isCall;
         // The total assets that have been locked up as collateral for
         // underwritten options.
+        UD60x18 totalAssets;
         UD60x18 totalLockedAssets;
         // Trading Parameters
         // Minimum days until maturity which can be underwritten by the vault, default 3

@@ -111,7 +111,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] memory tau,
         bytes32[] memory theta,
         bytes32[] memory psi,
-        bytes32[] memory rho
+        bytes32[] memory rho,
+        UD60x18 riskFreeRate
     ) external {
         uint256 length = tokens.length;
 
@@ -139,6 +140,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
             emit UpdateParameters(tokens[i], tau[i], theta[i], psi[i], rho[i]);
         }
+
+        l.riskFreeRate = riskFreeRate;
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -343,8 +346,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return sigma;
     }
 
-    //TODO: get risk free rate
-    function getRiskFreeRate() external pure returns (UD60x18) {
-        return ZERO;
+    function getRiskFreeRate() external view returns (UD60x18) {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
+        return l.riskFreeRate;
     }
 }

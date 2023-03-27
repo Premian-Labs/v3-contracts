@@ -46,12 +46,14 @@ interface IVolatilityOracle {
     /// @param theta List of ATM total implied variance curves
     /// @param psi List of ATM skew curves
     /// @param rho List of rho curves
+    /// @param riskFreeRate The risk-free rate
     function updateParams(
         address[] memory tokens,
         bytes32[] memory tau,
         bytes32[] memory theta,
         bytes32[] memory psi,
-        bytes32[] memory rho
+        bytes32[] memory rho,
+        UD60x18 riskFreeRate
     ) external;
 
     /// @notice Get the IV model parameters of a token pair
@@ -94,5 +96,5 @@ interface IVolatilityOracle {
         UD60x18[] memory timeToMaturity
     ) external view returns (UD60x18[] memory);
 
-    function getRiskFreeRate() external pure returns (UD60x18);
+    function getRiskFreeRate() external view returns (UD60x18);
 }
