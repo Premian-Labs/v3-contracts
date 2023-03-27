@@ -6,7 +6,8 @@ import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {IAggregator} from "./IAggregator.sol";
+import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
+
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
@@ -442,7 +443,7 @@ abstract contract ChainlinkAdapterInternal is
     function _latestRoundData(
         address feed
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try IAggregator(feed).latestRoundData() returns (
+        try AggregatorProxyInterface(feed).latestRoundData() returns (
             uint80 roundId,
             int256 answer,
             uint256 startedAt,
@@ -461,7 +462,7 @@ abstract contract ChainlinkAdapterInternal is
         address feed,
         uint80 roundId
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
-        try IAggregator(feed).getRoundData(roundId) returns (
+        try AggregatorProxyInterface(feed).getRoundData(roundId) returns (
             uint80 _roundId,
             int256 answer,
             uint256 startedAt,
@@ -496,13 +497,13 @@ abstract contract ChainlinkAdapterInternal is
     ) internal view returns (address[] memory aggregator) {
         address feed = _feed(tokenA, tokenB);
         aggregator = new address[](1);
-        aggregator[0] = IAggregator(feed).aggregator();
+        aggregator[0] = AggregatorProxyInterface(feed).aggregator();
     }
 
     function _aggregatorDecimals(
         address aggregator
     ) internal view returns (uint8) {
-        return IAggregator(aggregator).decimals();
+        return AggregatorProxyInterface(aggregator).decimals();
     }
 
     function _getETHUSD(uint256 target) internal view returns (uint256) {
