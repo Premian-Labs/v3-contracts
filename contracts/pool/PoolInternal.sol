@@ -1413,7 +1413,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 s.data,
                 s.refundAddress
             );
-        if (amountCredited < s.amountOutMin) revert Pool__NotEnoughSwapOutput();
+        if (amountCredited < s.amountOutMin)
+            revert Pool__NotEnoughSwapOutput(amountCredited, s.amountOutMin);
     }
 
     ////////////////////////////////////////////////////////////////

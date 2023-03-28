@@ -1,3 +1,4 @@
 @chainlink=node_modules/@chainlink
 @prb/math=node_modules/@prb/math
 @solidstate=node_modules/@solidstate
+@uniswap=node_modules/@uniswap

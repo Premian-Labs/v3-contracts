@@ -5,6 +5,10 @@ pragma solidity >=0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
+import {IV3SwapRouter} from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
+import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
+
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
 
 import {Assertions} from "./Assertions.sol";
@@ -36,6 +40,12 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    UD60x18 depositSize;
+
+    IV3SwapRouter constant uniswapRouter =
+        IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+    IQuoterV2 constant uniswapQuoter =
+        IQuoterV2(0x61fFE014bA17989E743c5F6cB21bF9697530B21e);
 
     Position.Key posKey;
 
@@ -56,11 +66,9 @@ contract DeployTest is Test, Assertions {
     receive() external payable {}
 
     function setUp() public virtual {
-        vm.warp(1679758940);
-
         users = Users({lp: address(0x111), trader: address(0x222)});
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
-        quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // WETH
+        quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
 
         oracleAdapter = new OracleAdapterMock(
             address(base),
@@ -207,17 +215,12 @@ contract DeployTest is Test, Assertions {
         });
     }
 
-    function initialCollateral(
-        bool isCall
-    ) internal view returns (UD60x18 result) {
-        result = UD60x18.wrap(1000 ether);
-        if (!isCall) {
-            result = result * poolKey.strike;
-        }
-    }
-
     function getPoolToken(bool isCall) internal view returns (address) {
         return isCall ? base : quote;
+    }
+
+    function getSwapToken(bool isCall) internal view returns (address) {
+        return isCall ? quote : base;
     }
 
     function contractsToCollateral(

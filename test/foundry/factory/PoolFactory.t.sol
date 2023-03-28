@@ -12,6 +12,7 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 contract PoolFactoryTest is DeployTest {
     function setUp() public override {
         super.setUp();
+        vm.warp(1679758940);
     }
 
     function test_getPoolAddress_ReturnAddress0IfNotDeployed() public {
