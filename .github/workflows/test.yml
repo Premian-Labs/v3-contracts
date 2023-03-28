@@ -1,6 +1,9 @@
 name: test
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
 
 env:
   FOUNDRY_PROFILE: ci
@@ -30,5 +33,5 @@ jobs:
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test -vvv --fork-url ${{ secrets.ETH_RPC_URL }
         id: test
