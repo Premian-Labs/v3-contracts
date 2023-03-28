@@ -5,8 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
-
-import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
