@@ -50,17 +50,16 @@ contract UniswapV3Adapter is
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
         address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
-        uint256 poolsLength = pools.length;
 
-        if (poolsLength == 0)
+        if (pools.length == 0)
             revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
 
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        address[] memory poolsToSupport = new address[](poolsLength);
+        address[] memory poolsToSupport = new address[](pools.length);
 
-        for (uint256 i; i < poolsLength; i++) {
+        for (uint256 i; i < pools.length; i++) {
             address pool = pools[i];
             _tryIncreaseCardinality(pool, l.targetCardinality);
             poolsToSupport[i] = pool;
