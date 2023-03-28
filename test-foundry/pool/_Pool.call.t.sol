@@ -12,13 +12,13 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-import {PoolTest} from "./Pool.t.sol";
+import {PoolTest} from "./_Pool.t.sol";
 
-contract PoolPutTest is PoolTest {
+contract PoolCallTest is PoolTest {
     function setUp() public override {
         super.setUp();
 
-        poolKey.isCallPool = false;
+        poolKey.isCallPool = true;
         pool = IPool(factory.deployPool{value: 1 ether}(poolKey));
     }
 }

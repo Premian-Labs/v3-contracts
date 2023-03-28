@@ -26,6 +26,7 @@ import {Premia} from "contracts/proxy/Premia.sol";
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
 
+import {IPool} from "contracts/pool/IPool.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
@@ -41,6 +42,8 @@ contract DeployTest is Test, Assertions {
     ERC20Router router;
     ExchangeHelper exchangeHelper;
     UD60x18 depositSize;
+
+    IPool pool;
 
     IV3SwapRouter constant uniswapRouter =
         IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
