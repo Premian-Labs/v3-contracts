@@ -10,8 +10,6 @@ import {IOracleAdapterInternal} from "./IOracleAdapterInternal.sol";
 abstract contract OracleAdapterInternal is IOracleAdapterInternal {
     using SafeCast for int256;
 
-    int256 internal constant ETH_DECIMALS = 18;
-
     function _keyForUnsortedPair(
         address tokenA,
         address tokenB

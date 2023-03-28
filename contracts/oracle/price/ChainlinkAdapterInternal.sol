@@ -13,7 +13,7 @@ import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 import {FeedRegistry} from "./FeedRegistry.sol";
-import {FOREX_DECIMALS, Tokens} from "./Tokens.sol";
+import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "./Tokens.sol";
 
 abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,
