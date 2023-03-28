@@ -536,10 +536,7 @@ contract UnderwriterVault is
         _beforeTokenTransfer(owner, address(this), shareAmount);
         // Remove the assets from totalAssets
         // TODO: check totalAssets
-        l.totalAssets =
-            l.totalAssets -
-            l.netUserDeposits[owner] *
-            (ONE - fractionKept);
+        l.totalAssets = l.totalAssets - assetAmount;
     }
 
     /// @notice An internal hook inside the buy function that is called after
