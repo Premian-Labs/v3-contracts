@@ -73,15 +73,19 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 mintingFee;
     }
 
-    struct PerformanceFeeVars {
+    struct FeeVars {
         UD60x18 pps;
         UD60x18 ppsAvg;
         UD60x18 shares;
         UD60x18 assets;
         UD60x18 balanceShares;
         UD60x18 performance;
-        UD60x18 feeInShares;
-        UD60x18 feeInAssets;
+        UD60x18 performanceFeeInShares;
+        UD60x18 performanceFeeInAssets;
+        UD60x18 managementFeeInShares;
+        UD60x18 managementFeeInAssets;
+        UD60x18 totalFeeInShares;
+        UD60x18 totalFeeInAssets;
     }
 
     // Events

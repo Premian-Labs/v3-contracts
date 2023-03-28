@@ -686,23 +686,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _trade(timestamp, spot, strike, maturity, isCall, size, isBuy);
     }
 
-    function chargeManagementFees(
-        uint256 timestamp,
-        UD60x18 totalAssets
-    ) external {
-        _chargeManagementFees(timestamp, totalAssets);
-    }
-
     function setProtocolFees(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.protocolFees = value;
-    }
-
-    function setLastFeeEventTimestamp(uint256 value) external {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        l.lastFeeEventTimestamp = value;
     }
 
     function balanceOfAsset(address owner) external view returns (uint256) {
@@ -725,10 +712,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().protocolFees;
     }
 
-    function getLastFeeEventTimestamp() external view returns (uint256) {
-        return UnderwriterVaultStorage.layout().lastFeeEventTimestamp;
-    }
-
     function setNetUserDeposit(address owner, uint256 value) external {
         UnderwriterVaultStorage.layout().netUserDeposits[owner] = UD60x18.wrap(
             value
@@ -739,10 +722,21 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().netUserDeposits[owner];
     }
 
+    function setTimeOfDeposit(address owner, uint256 value) external {
+        UnderwriterVaultStorage.layout().timeOfDeposit[owner] = UD60x18.wrap(
+            value
+        );
+    }
+
+    function getTimeOfDeposit(address owner) external view returns (UD60x18) {
+        return UnderwriterVaultStorage.layout().timeOfDeposit[owner];
+    }
+
     function maxTransferableShares(
-        address owner
+        address owner,
+        uint256 timestamp
     ) external view returns (uint256) {
-        return _maxTransferableShares(owner).unwrap();
+        return _maxTransferableShares(owner, timestamp).unwrap();
     }
 
     function getAveragePricePerShare(
@@ -763,11 +757,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _claimFees();
     }
 
-    function getPerformanceFeeVars(
+    function getFeeVars(
         address from,
-        UD60x18 shares
-    ) external view returns (PerformanceFeeVars memory) {
-        return _getPerformanceFeeVars(from, shares);
+        UD60x18 shares,
+        uint256 timestamp
+    ) external view returns (FeeVars memory) {
+        return _getFeeVars(from, shares, timestamp);
     }
 
     function afterDeposit(
@@ -784,5 +779,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 shareAmount
     ) external {
         return _beforeWithdraw(receiver, assetAmount, shareAmount);
+    }
+
+    function updateTimeOfDeposit(
+        address owner,
+        uint256 shareAmount,
+        uint256 timestamp
+    ) external {
+        _updateTimeOfDeposit(owner, shareAmount, timestamp);
     }
 }

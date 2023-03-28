@@ -409,7 +409,7 @@ contract UnderwriterVault is
             revert Vault__AddressZero();
         }
 
-        UD60x18 sharesOwner = _maxTransferableShares(owner);
+        UD60x18 sharesOwner = _maxTransferableShares(owner, block.timestamp);
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 assetsOwner = sharesOwner * pps;
         UD60x18 availableAssets = _availableAssetsUD60x18();
@@ -479,6 +479,23 @@ contract UnderwriterVault is
         shareAmount = _previewWithdrawUD60x18(assetAmountScaled).unwrap();
     }
 
+    function _updateTimeOfDeposit(
+        address owner,
+        uint256 shareAmount,
+        uint256 timestamp
+    ) internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 balance = UD60x18.wrap(_balanceOf(owner));
+        UD60x18 shares = UD60x18.wrap(shareAmount);
+        UD60x18 timestamp = UD60x18.wrap(timestamp * 1e18);
+
+        l.timeOfDeposit[owner] =
+            (l.timeOfDeposit[owner] * balance + timestamp * shares) /
+            (balance + shares);
+    }
+
     /// @inheritdoc ERC4626BaseInternal
     function _afterDeposit(
         address receiver,
@@ -496,6 +513,8 @@ contract UnderwriterVault is
         // This is needed to compute average price per share
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
+
+        _updateTimeOfDeposit(receiver, shareAmount, block.timestamp);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -933,14 +952,15 @@ contract UnderwriterVault is
         _claimFees();
     }
 
-    function _getPerformanceFeeVars(
+    function _getFeeVars(
         address owner,
-        UD60x18 shares
-    ) internal view returns (PerformanceFeeVars memory) {
+        UD60x18 shares,
+        uint256 timestamp
+    ) internal view returns (FeeVars memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        PerformanceFeeVars memory vars;
+        FeeVars memory vars;
 
         vars.pps = _getPricePerShareUD60x18();
         vars.ppsAvg = _getAveragePricePerShareUD60x18(owner);
@@ -950,30 +970,45 @@ contract UnderwriterVault is
         vars.balanceShares = _balanceOfUD60x18(owner);
 
         if (vars.performance > ONE) {
-            vars.feeInShares =
+            vars.performanceFeeInShares =
                 vars.shares *
                 (vars.performance - ONE) *
                 l.performanceFeeRate;
 
-            vars.feeInAssets = vars.feeInShares * vars.pps;
+            vars.performanceFeeInAssets =
+                vars.performanceFeeInShares *
+                vars.pps;
         }
-
+        UD60x18 yearfrac = UD60x18.wrap(
+            (timestamp - l.timeOfDeposit[owner].unwrap()) * 1e18
+        ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
+        vars.managementFeeInShares =
+            vars.balanceShares *
+            l.managementFeeRate *
+            yearfrac;
+        vars.managementFeeInAssets =
+            _convertToAssetsUD60x18(vars.balanceShares) *
+            l.managementFeeRate *
+            yearfrac;
+        vars.totalFeeInShares =
+            vars.managementFeeInShares +
+            vars.performanceFeeInShares;
+        vars.totalFeeInAssets =
+            vars.managementFeeInAssets +
+            vars.performanceFeeInAssets;
         return vars;
     }
 
     function _maxTransferableShares(
-        address owner
+        address owner,
+        uint256 timestamp
     ) internal view returns (UD60x18) {
         UD60x18 balance = _balanceOfUD60x18(owner);
 
         if (balance == ZERO) return ZERO;
 
-        PerformanceFeeVars memory vars = _getPerformanceFeeVars(owner, balance);
-
-        if (vars.performance > ONE) {
-            return vars.balanceShares - vars.feeInShares;
-        }
-        return vars.balanceShares;
+        FeeVars memory vars = _getFeeVars(owner, balance, timestamp);
+        return vars.balanceShares - vars.totalFeeInShares;
     }
 
     /// @inheritdoc ERC20BaseInternal
@@ -991,62 +1026,41 @@ contract UnderwriterVault is
             UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
                 .layout();
 
+            uint256 timestamp = block.timestamp;
             UD60x18 shares = UD60x18.wrap(amount);
 
-            if (shares > _maxTransferableShares(from))
+            if (shares > _maxTransferableShares(from, timestamp))
                 revert ERC20Base__TransferExceedsBalance();
+            FeeVars memory vars = _getFeeVars(from, shares, timestamp);
 
-            PerformanceFeeVars memory vars = _getPerformanceFeeVars(
-                from,
-                shares
-            );
-
-            UD60x18 totalShares = shares;
+            _burn(from, vars.totalFeeInShares.unwrap());
+            // fees collected denominated in the reference token
+            // fees are tracked in order to keep the pps uneffected during the burn
+            // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
+            l.protocolFees = l.protocolFees + vars.totalFeeInAssets;
             if (vars.performance > ONE) {
-                _burn(from, vars.feeInShares.unwrap());
-                // fees collected denominated in the reference token
-                // fees are tracked in order to keep the pps uneffected during the burn
-                // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
-                l.protocolFees = l.protocolFees + vars.feeInAssets;
-
                 emit PerformanceFeePaid(
                     FEE_RECEIVER,
-                    vars.feeInAssets.unwrap()
+                    vars.performanceFeeInAssets.unwrap()
                 );
-
-                // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
-                totalShares = totalShares + vars.feeInShares;
             }
-            UD60x18 fractionKept = (vars.balanceShares - totalShares) /
-                vars.balanceShares;
+            emit ManagementFeePaid(
+                FEE_RECEIVER,
+                vars.managementFeeInAssets.unwrap()
+            );
+
+            // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
+            UD60x18 fractionKept = (vars.balanceShares -
+                shares -
+                vars.totalFeeInShares) / vars.balanceShares;
+
             l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
 
-            if (to != address(this))
+            if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
+                _updateTimeOfDeposit(to, amount, timestamp);
+            }
         }
-    }
-
-    function chargeFees() external {
-        _chargeManagementFees(block.timestamp, _totalAssetsUD60x18());
-        _claimFees();
-    }
-
-    function _chargeManagementFees(
-        uint256 timestamp,
-        UD60x18 totalAssets
-    ) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        UD60x18 yearfrac = UD60x18.wrap(
-            (timestamp - l.lastFeeEventTimestamp) * 1e18
-        ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
-        UD60x18 managementFee = totalAssets * l.managementFeeRate * yearfrac;
-
-        l.protocolFees = l.protocolFees + managementFee;
-        l.lastFeeEventTimestamp = timestamp;
-
-        emit ManagementFeePaid(FEE_RECEIVER, managementFee.unwrap());
     }
 
     function _claimFees() internal {

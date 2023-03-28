@@ -20,6 +20,7 @@ import {
   ONE_DAY,
   ONE_HOUR,
   ONE_WEEK,
+  ONE_YEAR,
 } from '../../../../utils/time';
 import {
   ERC20Mock,
@@ -42,76 +43,6 @@ let vault: UnderwriterVaultMock;
 let token: ERC20Mock;
 
 describe('UnderwriterVault.fees', () => {
-  describe('#_chargeManagementFees', () => {
-    startTime = 10000000;
-    const tests = [
-      {
-        totalAssets: 11.2,
-        lastFeeEventTimestamp: startTime - ONE_DAY,
-        timestamp: startTime + ONE_DAY,
-        protocolFees: 1,
-        managementFeeRate: 0.01,
-        protocolFeesAfter: 1 + (11.2 * 0.01 * 2) / 365,
-      },
-      {
-        totalAssets: 1.2,
-        lastFeeEventTimestamp: startTime - ONE_DAY,
-        timestamp: startTime + ONE_DAY,
-        protocolFees: 0.0123,
-        managementFeeRate: 0.0,
-        protocolFeesAfter: 0.0123,
-      },
-      {
-        totalAssets: 501.3,
-        lastFeeEventTimestamp: startTime - ONE_DAY,
-        timestamp: startTime + 6 * ONE_HOUR,
-        protocolFees: 0.0123,
-        managementFeeRate: 0.05,
-        protocolFeesAfter: 0.0123 + (501.3 * 0.05 * (1 + 1 / 4)) / 365,
-      },
-    ];
-
-    async function setupManagementFees(isCall: boolean, test: any) {
-      let { callVault, putVault, base, quote } = await loadFixture(vaultSetup);
-      vault = isCall ? callVault : putVault;
-      token = isCall ? base : quote;
-      await vault.setProtocolFees(parseEther(test.protocolFees.toString()));
-      await vault.setLastFeeEventTimestamp(test.lastFeeEventTimestamp);
-      await vault.setManagementFeeRate(
-        parseEther(test.managementFeeRate.toString()),
-      );
-      await vault.chargeManagementFees(
-        test.timestamp,
-        parseEther(test.totalAssets.toString()),
-      );
-      return vault;
-    }
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        tests.forEach(async (test) => {
-          describe('', () => {
-            it(`protocol fees after charging equals ${test.protocolFeesAfter}`, async () => {
-              vault = await setupManagementFees(isCall, test);
-              const protocolFees = parseFloat(
-                formatEther(await vault.getProtocolFees()),
-              );
-              const delta = 1e-16;
-              expect(protocolFees).to.be.closeTo(test.protocolFeesAfter, delta);
-            });
-            it(`lastFeeEventTimestamp equals ${test.timestamp}`, async () => {
-              vault = await setupManagementFees(isCall, test);
-              expect(await vault.getLastFeeEventTimestamp()).to.eq(
-                test.timestamp,
-              );
-            });
-          });
-        });
-      });
-    }
-  });
-
-  describe('#chargeFees', () => {});
-
   describe('#_claimFees', () => {
     async function setup(isCall: boolean, test: any) {
       let { callVault, putVault, feeReceiver, base, quote } = await loadFixture(
@@ -224,55 +155,11 @@ describe('UnderwriterVault.fees', () => {
     return { vault, caller, token };
   }
 
-  describe('#_maxTransferableShares', () => {
-    const tests = [
-      {
-        shares: 1.1,
-        pps: 1.0,
-        ppsUser: 1,
-        totalSupply: 2.2,
-        maxTransferable: 1.1,
-        performanceFeeRate: 0.01,
-      },
-      {
-        shares: 0.0,
-        pps: 1.3,
-        ppsUser: 1.3,
-        totalSupply: 2.2,
-        maxTransferable: 0.0,
-        performanceFeeRate: 0.01,
-      },
-      {
-        shares: 2.3,
-        pps: 1.5,
-        ppsUser: 1.2,
-        totalSupply: 2.5,
-        maxTransferable: 2.27125,
-        performanceFeeRate: 0.05,
-      },
-    ];
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        tests.forEach(async (test) => {
-          it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferable}`, async () => {
-            const { vault, caller } = await setupMaxTransferable(isCall, test);
-            const maxTransferable = await vault.maxTransferableShares(
-              caller.address,
-            );
-            expect(parseFloat(formatEther(maxTransferable))).to.eq(
-              test.maxTransferable,
-            );
-          });
-        });
-      });
-    }
-  });
-
   let caller: SignerWithAddress;
   let receiver: SignerWithAddress;
   let token: ERC20Mock;
 
-  async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
+  async function setupGetFeeVars(isCall: boolean, test: any) {
     let {
       callVault,
       putVault,
@@ -299,30 +186,19 @@ describe('UnderwriterVault.fees', () => {
       await token.decimals(),
     );
     await token.mint(vault.address, vaultDeposit);
-    // if we dont ad this amount the pps will be lower due to collected fees
-    if (false) {
-      await token.mint(
-        vault.address,
-        parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
-      );
-      await vault.setProtocolFees(
-        parseEther(test.protocolFeesInitial.toString()),
-      );
-      await vault.setNetUserDeposit(
-        receiver.address,
-        parseEther(test.netUserDepositReceiver.toString()),
-      );
-    }
     // set pps and shares user caller
     const userShares = parseEther(test.shares.toString());
     await vault.mintMock(caller.address, userShares);
     const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
     await vault.setNetUserDeposit(caller.address, userDeposit);
+    await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
 
     // check pps is as expected
     const ppsUser = parseEther(test.ppsUser.toString());
-    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-    expect(ppsAvg).to.eq(ppsUser);
+    if (test.shares > 0) {
+      const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+      expect(ppsAvg).to.eq(ppsUser);
+    }
 
     expect(await vault.totalSupply()).to.eq(totalSupply);
     expect(await vault.getPricePerShare()).to.eq(pps);
@@ -330,51 +206,255 @@ describe('UnderwriterVault.fees', () => {
     await vault.setPerformanceFeeRate(
       parseEther(test.performanceFeeRate.toString()),
     );
+    await vault.setManagementFeeRate(
+      parseEther(test.managementFeeRate.toString()),
+    );
     return { vault, caller, receiver };
   }
 
-  describe('#_beforeTokenTransfer', () => {
+  async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
+    let { vault, caller, receiver } = await setupGetFeeVars(isCall, test);
+
+    await token.mint(
+      vault.address,
+      parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
+    );
+    await vault.setProtocolFees(
+      parseEther(test.protocolFeesInitial.toString()),
+    );
+    await vault.setNetUserDeposit(
+      receiver.address,
+      parseEther(test.netUserDepositReceiver.toString()),
+    );
+
+    return { vault, caller, receiver };
+  }
+
+  const testsFeeVars = [
+    {
+      shares: 1.1,
+      pps: 1.0,
+      ppsUser: 1.0,
+      assets: 0.1,
+      balanceShares: 1.1,
+      totalSupply: 2.2,
+      performanceFeeRate: 0.01,
+      managementFeeRate: 0.02,
+      transferAmount: 0.1,
+      performance: 1.0,
+      performanceFeeInShares: 0,
+      performanceFeeInAssets: 0,
+      managementFeeInShares: 0.000060273972602739,
+      managementFeeInAssets: 0.000060273972602739,
+      totalFeeInShares: 0.000060273972602739,
+      totalFeeInAssets: 0.000060273972602739,
+      timeOfDeposit: 3000000000,
+      timestamp: 3000000000 + ONE_DAY,
+      maxTransferableShares: 1.0999397260273973,
+      // beforeTokenTransfer
+      protocolFeesInitial: 0.1,
+      protocolFees: 0.1,
+      sharesAfter: 1.1,
+      netUserDepositReceiver: 1.2,
+      netUserDepositReceiverAfter: 1.3,
+      netUserDepositCallerAfter: 1.0,
+    },
+    {
+      shares: 2.3,
+      pps: 1.5,
+      ppsUser: 1.2,
+      assets: 1.845,
+      balanceShares: 2.3,
+      totalSupply: 2.5,
+      performanceFeeRate: 0.05,
+      managementFeeRate: 0.02,
+      transferAmount: 1.23,
+      performance: 1.25,
+      performanceFeeInShares: 0.015375,
+      performanceFeeInAssets: 0.0230625,
+      managementFeeInShares: 0.046,
+      managementFeeInAssets: 0.069,
+      totalFeeInShares: 0.061375,
+      totalFeeInAssets: 0.0920625,
+      timeOfDeposit: 3000000000,
+      timestamp: 3000000000 + ONE_YEAR,
+      maxTransferableShares: 2.22525,
+      // beforeTokenTransfer
+      protocolFeesInitial: 0.1,
+      protocolFees: 0.1230625,
+      sharesAfter: 2.284625,
+      netUserDepositReceiver: 1.2,
+      netUserDepositReceiverAfter: 3.045,
+      netUserDepositCallerAfter: 1.21035, // 2,3 * 1,2 * ((2,3 - 1,23 - 0,061375) / 2,3)
+    },
+  ];
+
+  describe('#_updateTimeOfDeposit', () => {
+    async function setup(test: any) {
+      let { callVault: vault, caller } = await loadFixture(vaultSetup);
+      await vault.mintMock(
+        caller.address,
+        parseEther(test.sharesInitial.toString()),
+      );
+      if (test.timeOfDeposit > 0)
+        await vault.setTimeOfDeposit(
+          caller.address,
+          parseEther(test.timeOfDeposit.toString()),
+        );
+
+      return { vault, caller };
+    }
     const tests = [
       {
-        shares: 1.1,
-        pps: 1.0,
-        ppsUser: 1.0,
-        totalSupply: 2.2,
-        performanceFeeRate: 0.01,
-        protocolFeesInitial: 0.1,
-        protocolFees: 0.1,
-        transferAmount: 0.1,
-        sharesAfter: 1.1,
-        netUserDepositReceiver: 1.2,
-        netUserDepositReceiverAfter: 1.3,
-        netUserDepositCallerAfter: 1.0,
+        sharesInitial: 0,
+        shareAmount: 1,
+        timeOfDeposit: 0,
+        timestamp: 300000,
+        timeOfDepositNew: 300000,
       },
       {
-        shares: 2.3,
-        pps: 1.5,
-        ppsUser: 1.2,
-        totalSupply: 2.5,
-        performanceFeeRate: 0.05,
-        protocolFeesInitial: 0.1,
-        protocolFees: 0.1230625,
-        transferAmount: 1.23,
-        sharesAfter: 2.284625,
-        netUserDepositReceiver: 1.2,
-        netUserDepositReceiverAfter: 3.045,
-        netUserDepositCallerAfter: 1.26555,
+        sharesInitial: 2,
+        shareAmount: 3,
+        timeOfDeposit: 300000,
+        timestamp: 300000 + ONE_DAY,
+        timeOfDepositNew: 351840,
       },
     ];
 
+    tests.forEach(async (test) => {
+      it('', async () => {
+        let { vault, caller } = await setup(test);
+        await vault.updateTimeOfDeposit(
+          caller.address,
+          parseEther(test.shareAmount.toString()),
+          test.timestamp,
+        );
+        const timeOfDeposit = parseFloat(
+          formatEther(await vault.getTimeOfDeposit(caller.address)),
+        );
+        expect(timeOfDeposit).to.eq(test.timeOfDepositNew);
+      });
+    });
+  });
+
+  describe('#_getFeeVars', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        tests.forEach(async (test) => {
+        testsFeeVars.forEach(async (test) => {
+          describe('', () => {
+            it('', async () => {
+              let { vault, caller } = await setupGetFeeVars(isCall, test);
+              const {
+                pps,
+                ppsAvg,
+                shares,
+                assets,
+                balanceShares,
+                performance,
+                performanceFeeInShares,
+                performanceFeeInAssets,
+                managementFeeInShares,
+                managementFeeInAssets,
+                totalFeeInShares,
+                totalFeeInAssets,
+              } = await vault.getFeeVars(
+                caller.address,
+                parseEther(test.transferAmount.toString()),
+                test.timestamp,
+              );
+              await expect(pps).to.eq(parseEther(test.pps.toString()));
+              await expect(ppsAvg).to.eq(parseEther(test.ppsUser.toString()));
+              await expect(shares).to.eq(
+                parseEther(test.transferAmount.toString()),
+              );
+              await expect(assets).to.eq(parseEther(test.assets.toString()));
+              await expect(balanceShares).to.eq(
+                parseEther(test.balanceShares.toString()),
+              );
+              await expect(performance).to.eq(
+                parseEther(test.performance.toString()),
+              );
+              await expect(performanceFeeInShares).to.eq(
+                parseEther(test.performanceFeeInShares.toString()),
+              );
+              await expect(performanceFeeInAssets).to.eq(
+                parseEther(test.performanceFeeInAssets.toString()),
+              );
+              await expect(managementFeeInShares).to.eq(
+                parseEther(test.managementFeeInShares.toString()),
+              );
+              await expect(managementFeeInAssets).to.eq(
+                parseEther(test.managementFeeInAssets.toString()),
+              );
+              await expect(totalFeeInShares).to.eq(
+                parseEther(test.totalFeeInShares.toString()),
+              );
+              await expect(totalFeeInAssets).to.eq(
+                parseEther(test.totalFeeInAssets.toString()),
+              );
+            });
+          });
+        });
+      });
+    }
+  });
+
+  describe('#_maxTransferableShares', () => {
+    let test: any = {
+      shares: 0.0,
+      pps: 1.0,
+      ppsUser: 1.0,
+      assets: 0.1,
+      balanceShares: 1.1,
+      totalSupply: 2.2,
+      performanceFeeRate: 0.01,
+      managementFeeRate: 0.02,
+      transferAmount: 0.1,
+      performance: 1.0,
+      performanceFeeInShares: 0.0,
+      performanceFeeInAssets: 0.0,
+      managementFeeInShares: 0.0,
+      managementFeeInAssets: 0.0,
+      totalFeeInShares: 0.0,
+      totalFeeInAssets: 0.0,
+      timeOfDeposit: 3000000000,
+      timestamp: 3000000000 + ONE_DAY,
+      maxTransferableShares: 0.0,
+    };
+    //testsFeeVars.push(test);
+    const myClonedArray = [];
+    testsFeeVars.forEach((val) => myClonedArray.push(Object.assign({}, val)));
+    myClonedArray.push(test);
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        testsFeeVars.forEach(async (test) => {
+          it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferableShares}`, async () => {
+            const { vault, caller } = await setupGetFeeVars(isCall, test);
+            console.log(await vault.balanceOf(caller.address));
+            const maxTransferableShares = await vault.maxTransferableShares(
+              caller.address,
+              test.timestamp,
+            );
+            expect(parseFloat(formatEther(maxTransferableShares))).to.eq(
+              test.maxTransferableShares,
+            );
+          });
+        });
+      });
+    }
+  });
+
+  describe('#_beforeTokenTransfer', () => {
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        testsFeeVars.forEach(async (test) => {
           describe('', () => {
             it(`the balanceOf caller equals ${test.sharesAfter}`, async () => {
               let { vault, caller, receiver } = await setupBeforeTokenTransfer(
                 isCall,
                 test,
               );
-
+              await increaseTo(test.timeOfDeposit);
               await vault.beforeTokenTransfer(
                 caller.address,
                 receiver.address,
@@ -384,13 +464,15 @@ describe('UnderwriterVault.fees', () => {
               const balanceAfter = parseFloat(
                 formatEther(await vault.balanceOf(caller.address)),
               );
-              expect(balanceAfter).to.eq(test.sharesAfter);
+              const delta = 1e-7;
+              expect(balanceAfter).to.be.closeTo(test.sharesAfter, delta);
             });
             it(`protocolFees should equal ${test.protocolFees}`, async () => {
               const feesAfter = parseFloat(
                 formatEther(await vault.getProtocolFees()),
               );
-              expect(feesAfter).to.eq(test.protocolFees);
+              const delta = 1e-7;
+              expect(feesAfter).to.be.closeTo(test.protocolFees, delta);
             });
             it('vault pps should stay constant', async () => {
               const pps = parseFloat(
@@ -421,7 +503,7 @@ describe('UnderwriterVault.fees', () => {
           });
         });
         it('no effect if address from is zero address', async () => {
-          let test = tests[1];
+          let test = testsFeeVars[1];
           let { vault, receiver } = await setupBeforeTokenTransfer(
             isCall,
             test,
@@ -444,7 +526,7 @@ describe('UnderwriterVault.fees', () => {
         });
 
         it('no effect if address to is zero address', async () => {
-          let test = tests[1];
+          let test = testsFeeVars[1];
           let { vault, caller } = await setupBeforeTokenTransfer(isCall, test);
           const receiverAddress = ethers.constants.AddressZero;
 
@@ -466,16 +548,17 @@ describe('UnderwriterVault.fees', () => {
         });
 
         it('revert if transfer amount is too high', async () => {
-          let test = tests[1];
+          let test = testsFeeVars[1];
           let { vault, caller, receiver } = await setupBeforeTokenTransfer(
             isCall,
             test,
           );
+          await increaseTo(test.timestamp);
           await expect(
             vault.beforeTokenTransfer(
               caller.address,
               receiver.address,
-              parseEther((2.27126).toString()),
+              parseEther((test.maxTransferableShares + 0.01).toString()),
             ),
           ).to.be.revertedWithCustomError(
             vault,
@@ -485,14 +568,15 @@ describe('UnderwriterVault.fees', () => {
           await vault.beforeTokenTransfer(
             caller.address,
             receiver.address,
-            parseEther((2.27125).toString()),
+            parseEther((test.maxTransferableShares - 0.01).toString()),
           );
         });
 
         it('if receiver address is the vault address the netUserDeposit should not be updated', async () => {
-          let test = tests[1];
+          let test = testsFeeVars[1];
           let { vault, caller } = await setupBeforeTokenTransfer(isCall, test);
 
+          await increaseTo(test.timestamp);
           await vault.beforeTokenTransfer(
             caller.address,
             vault.address,
@@ -504,87 +588,14 @@ describe('UnderwriterVault.fees', () => {
           );
           expect(netUserDepositReceiver).to.eq(0);
 
-          const netUserDepositCaller = parseFloat(
+          const netUserDepositCallerAfter = parseFloat(
             formatEther(await vault.getNetUserDeposit(caller.address)),
           );
-          expect(netUserDepositCaller).to.eq(test.netUserDepositCallerAfter);
-        });
-      });
-    }
-  });
-
-  describe('#_performanceFeeVars', () => {
-    const tests = [
-      {
-        shares: 1.1,
-        pps: 1.0,
-        ppsUser: 1.0,
-        assets: 0.1,
-        balanceShares: 1.1,
-        totalSupply: 2.2,
-        performanceFeeRate: 0.01,
-        transferAmount: 0.1,
-        performance: 1.0,
-        feeInShares: 0,
-        feeInAssets: 0,
-      },
-      {
-        shares: 2.3,
-        pps: 1.5,
-        ppsUser: 1.2,
-        assets: 1.845,
-        balanceShares: 2.3,
-        totalSupply: 2.5,
-        performanceFeeRate: 0.05,
-        transferAmount: 1.23,
-        performance: 1.25,
-        feeInShares: 0.015375,
-        feeInAssets: 0.0230625,
-      },
-    ];
-
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        tests.forEach(async (test) => {
-          describe('', () => {
-            it('', async () => {
-              let { vault, caller, receiver } = await setupBeforeTokenTransfer(
-                isCall,
-                test,
-              );
-              const {
-                pps,
-                ppsAvg,
-                shares,
-                assets,
-                balanceShares,
-                performance,
-                feeInShares,
-                feeInAssets,
-              } = await vault.getPerformanceFeeVars(
-                caller.address,
-                parseEther(test.transferAmount.toString()),
-              );
-              await expect(pps).to.eq(parseEther(test.pps.toString()));
-              await expect(ppsAvg).to.eq(parseEther(test.ppsUser.toString()));
-              await expect(shares).to.eq(
-                parseEther(test.transferAmount.toString()),
-              );
-              await expect(assets).to.eq(parseEther(test.assets.toString()));
-              await expect(balanceShares).to.eq(
-                parseEther(test.balanceShares.toString()),
-              );
-              await expect(performance).to.eq(
-                parseEther(test.performance.toString()),
-              );
-              await expect(feeInShares).to.eq(
-                parseEther(test.feeInShares.toString()),
-              );
-              await expect(feeInAssets).to.eq(
-                parseEther(test.feeInAssets.toString()),
-              );
-            });
-          });
+          const delta = 1e-7;
+          expect(netUserDepositCallerAfter).to.be.closeTo(
+            test.netUserDepositCallerAfter,
+            delta,
+          );
         });
       });
     }
@@ -788,5 +799,9 @@ describe('UnderwriterVault.fees', () => {
         });
       });
     }
+  });
+
+  describe('#chargeFees', () => {
+    it('test that charge fees, charges the ');
   });
 });
