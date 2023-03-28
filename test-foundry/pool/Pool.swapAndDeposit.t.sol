@@ -10,11 +10,9 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
-
-import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-
 import {IPool} from "contracts/pool/IPool.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 

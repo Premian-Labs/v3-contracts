@@ -2,12 +2,12 @@
 
 pragma solidity >=0.8.19;
 
-import {DeployTest} from "../Deploy.t.sol";
-
-import {IPool} from "contracts/pool/IPool.sol";
-import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
+
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+import {IPool} from "contracts/pool/IPool.sol";
+
+import {DeployTest} from "../Deploy.t.sol";
 
 contract PoolFactoryTest is DeployTest {
     function setUp() public override {

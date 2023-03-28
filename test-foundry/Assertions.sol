@@ -8,6 +8,7 @@ import {SD59x18} from "@prb/math/src/sd59x18/ValueType.sol";
 import {UD2x18} from "@prb/math/src/ud2x18/ValueType.sol";
 import {UD60x18} from "@prb/math/src/ud60x18/ValueType.sol";
 
+/// @notice Derived from https://github.com/PaulRBerg/prb-math/blob/main/src/test/Assertions.sol
 contract Assertions is StdAssertions {
     /*//////////////////////////////////////////////////////////////////////////
                                        SD1X18
