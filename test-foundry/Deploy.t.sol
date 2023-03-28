@@ -33,6 +33,8 @@ import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 contract DeployTest is Test, Assertions {
+    uint256 mainnetFork;
+
     address base;
     address quote;
     OracleAdapterMock oracleAdapter;
@@ -69,6 +71,10 @@ contract DeployTest is Test, Assertions {
     receive() external payable {}
 
     function setUp() public virtual {
+        string memory ETH_RPC_URL = vm.envString("ETH_RPC_URL");
+        mainnetFork = vm.createFork(ETH_RPC_URL);
+        vm.selectFork(mainnetFork);
+
         users = Users({lp: address(0x111), trader: address(0x222)});
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC

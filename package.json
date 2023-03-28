@@ -25,7 +25,6 @@
     "deploy:orderbook": "hardhat run \"./scripts/deploy/0001-deployOrderbook.ts\" --network arbitrumNova",
     "postinstall": "yarn compile && husky install",
     "test": "hardhat test",
-    "test:forge": "forge test -vvv --fork-url $ETH_RPC_URL",
     "contract-size": "yarn run hardhat size-contracts",
     "prettier": "prettier --write --ignore-path .gitignore ."
   },

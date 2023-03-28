@@ -3,7 +3,9 @@ src = 'contracts'
 out = 'out'
 libs = ['lib']
 test = 'test-foundry'
-
 fork_block_number = 16597500
+
+[rpc_endpoints]
+mainnet = "${TEST_RPC}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
