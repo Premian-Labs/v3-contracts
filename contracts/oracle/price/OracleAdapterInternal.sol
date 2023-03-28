@@ -11,7 +11,6 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
     using SafeCast for int256;
 
     int256 internal constant ETH_DECIMALS = 18;
-    uint256 internal constant ONE_ETH = 1 ether;
 
     function _keyForUnsortedPair(
         address tokenA,
@@ -34,6 +33,8 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
         uint256 amount,
         int256 factor
     ) internal pure returns (uint256) {
+        if (factor == 0) return amount;
+
         if (factor < 0) {
             return amount / (10 ** (-factor).toUint256());
         } else {
