@@ -1,3 +1,4 @@
+import { diamondCut } from '../scripts/utils/diamond';
 import {
   PoolBase__factory,
   PoolCore__factory,
@@ -12,11 +13,11 @@ import {
   ERC20Router__factory,
   ERC20Router,
 } from '../typechain';
+import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { diamondCut } from '../scripts/utils/diamond';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { Interface } from '@ethersproject/abi';
+
 interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;

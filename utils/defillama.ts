@@ -1,9 +1,8 @@
-import axios from 'axios';
-import { BigNumber, utils } from 'ethers';
-import { expect } from 'chai';
-
-import { latest } from './time';
 import { Token, tokens } from './addresses';
+import { latest } from './time';
+import axios from 'axios';
+import { expect } from 'chai';
+import { BigNumber, utils } from 'ethers';
 
 export const getLastPrice = async (
   network: string,

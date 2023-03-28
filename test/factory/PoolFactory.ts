@@ -1,13 +1,12 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
 import {
   ERC20Mock__factory,
   IPool__factory,
   OracleAdapterMock__factory,
 } from '../../typechain';
-import { parseEther } from 'ethers/lib/utils';
-import { BigNumber } from 'ethers';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { PoolUtil } from '../../utils/PoolUtil';
+import { tokens } from '../../utils/addresses';
+import { getEventArgs } from '../../utils/events';
+import { AdapterType } from '../../utils/sdk/types';
 import {
   getLastFridayOfMonth,
   getValidMaturity,
@@ -15,11 +14,11 @@ import {
   ONE_DAY,
   ONE_WEEK,
 } from '../../utils/time';
-
-import { tokens } from '../../utils/addresses';
-import { PoolUtil } from '../../utils/PoolUtil';
-import { AdapterType } from '../../utils/sdk/types';
-import { getEventArgs } from '../../utils/events';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 describe('PoolFactory', () => {
   const isCall = true;

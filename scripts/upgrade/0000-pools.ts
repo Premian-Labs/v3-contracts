@@ -1,12 +1,11 @@
-import { ethers } from 'hardhat';
-import { PoolUtil } from '../../utils/PoolUtil';
 import { Premia__factory } from '../../typechain';
-
+import { PoolUtil } from '../../utils/PoolUtil';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
-import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import { ContractAddresses } from '../../utils/deployment/types';
+import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import fs from 'fs';
+import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

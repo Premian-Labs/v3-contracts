@@ -1,28 +1,23 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
-
-import { bnToAddress } from '@solidstate/library';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
   ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
-
+import { feeds, Token, tokens } from '../../utils/addresses';
+import { ONE_ETHER } from '../../utils/constants';
 import {
   convertPriceToBigNumberWithDecimals,
   getPriceBetweenTokens,
   validateQuote,
 } from '../../utils/defillama';
-
-import { feeds, Token, tokens } from '../../utils/addresses';
-import { ONE_ETHER } from '../../utils/constants';
-import { increaseTo, latest } from '../../utils/time';
-
 import { AdapterType } from '../../utils/sdk/types';
+import { increaseTo, latest } from '../../utils/time';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { bnToAddress } from '@solidstate/library';
+import { expect } from 'chai';
+import { BigNumber } from 'ethers';
+import { ethers } from 'hardhat';
 
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 

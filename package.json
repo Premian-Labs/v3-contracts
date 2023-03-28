@@ -26,7 +26,7 @@
     "postinstall": "yarn compile && husky install",
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
-    "prettier": "prettier --write --ignore-path .gitignore ."
+    "prettier": "prettier --write ."
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",

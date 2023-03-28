@@ -1,6 +1,6 @@
-import { parseEther } from 'ethers/lib/utils';
-import { BigNumber } from 'ethers';
 import { OrderType } from './types';
+import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 
 const MIN_TICK_DISTANCE = parseEther('0.001');
 
