@@ -64,7 +64,14 @@ describe('VolatilityOracle', () => {
 
     await f.oracle
       .connect(f.relayer)
-      .updateParams([token], [tauHex], [thetaHex], [psiHex], [rhoHex]);
+      .updateParams(
+        [token],
+        [tauHex],
+        [thetaHex],
+        [psiHex],
+        [rhoHex],
+        parseEther('0.01'),
+      );
 
     return { ...f, tau, theta, psi, rho, token };
   }

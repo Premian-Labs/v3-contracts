@@ -70,10 +70,9 @@ contract UnderwriterVault is
     function _totalAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        return
-            _balanceOfAssetUD60x18(address(this)) +
-            l.totalLockedAssets -
-            l.protocolFees;
+
+        // TODO: check totalAssets
+        return l.totalAssets - l.protocolFees;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -306,8 +305,9 @@ contract UnderwriterVault is
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+        // TODO: check totalAssets
         return
-            _balanceOfAssetUD60x18(address(this)) -
+            l.totalAssets -
             _getLockedSpreadVars(block.timestamp).totalLockedSpread -
             l.protocolFees;
     }
@@ -514,6 +514,9 @@ contract UnderwriterVault is
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
 
+        // TODO: check totalAssets
+        l.totalAssets = l.totalAssets + assets;
+
         _updateTimeOfDeposit(receiver, shareAmount, block.timestamp);
     }
 
@@ -531,6 +534,12 @@ contract UnderwriterVault is
             .layout();
 
         _beforeTokenTransfer(owner, address(this), shareAmount);
+        // Remove the assets from totalAssets
+        // TODO: check totalAssets
+        l.totalAssets =
+            l.totalAssets -
+            l.netUserDeposits[owner] *
+            (ONE - fractionKept);
     }
 
     /// @notice An internal hook inside the buy function that is called after

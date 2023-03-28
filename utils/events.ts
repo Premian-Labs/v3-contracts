@@ -6,5 +6,5 @@ export async function getEvent(tx: any, event: string) {
 }
 
 export async function getEventArgs(tx: any, event: string) {
-  return [(await getEvent(tx, event)).map((x: any) => x?.args)];
+  return (await getEvent(tx, event)).map((x: any) => x?.args);
 }

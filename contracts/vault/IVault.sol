@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";

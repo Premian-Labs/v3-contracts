@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
@@ -12,11 +12,7 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    function vault(address _vaultAddress)
-        external
-        view
-        returns (Vault memory)
-    {
+    function vault(address _vaultAddress) external view returns (Vault memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaults[_vaultAddress];
     }
@@ -60,7 +56,9 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
             i < l.vaultsPerOptionType[optionType].length();
             i++
         ) {
-            vaultsToReturn[i] = l.vaults[l.vaultsPerOptionType[optionType].at(i)];
+            vaultsToReturn[i] = l.vaults[
+                l.vaultsPerOptionType[optionType].at(i)
+            ];
         }
         return vaultsToReturn;
     }
@@ -124,11 +122,7 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        l.vaults[_vault] = Vault(
-            _vault,
-            side,
-            optionType
-        );
+        l.vaults[_vault] = Vault(_vault, side, optionType);
 
         l.vaultAddresses.add(_vault);
         l.vaultsPerTradeSide[side].add(_vault);

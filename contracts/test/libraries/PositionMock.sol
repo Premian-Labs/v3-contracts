@@ -8,7 +8,9 @@ import {SD59x18} from "@prb/math/src/SD59x18.sol";
 import {Position} from "../../libraries/Position.sol";
 
 contract PositionMock {
-    function keyHash(Position.Key memory self) external pure returns (bytes32) {
+    function keyHash(
+        Position.KeyInternal memory self
+    ) external pure returns (bytes32) {
         return Position.keyHash(self);
     }
 
@@ -23,14 +25,14 @@ contract PositionMock {
     }
 
     function pieceWiseLinear(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 price
     ) external pure returns (UD60x18) {
         return Position.pieceWiseLinear(self, price);
     }
 
     function pieceWiseQuadratic(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 price
     ) external pure returns (UD60x18) {
         return Position.pieceWiseQuadratic(self, price);
@@ -53,14 +55,14 @@ contract PositionMock {
     }
 
     function liquidityPerTick(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size
     ) external pure returns (UD60x18) {
         return Position.liquidityPerTick(self, size);
     }
 
     function bid(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) external pure returns (UD60x18) {
@@ -68,7 +70,7 @@ contract PositionMock {
     }
 
     function collateral(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) external pure returns (UD60x18) {
@@ -76,7 +78,7 @@ contract PositionMock {
     }
 
     function contracts(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) external pure returns (UD60x18) {
@@ -84,7 +86,7 @@ contract PositionMock {
     }
 
     function long(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) external pure returns (UD60x18) {
@@ -92,7 +94,7 @@ contract PositionMock {
     }
 
     function short(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 size,
         UD60x18 price
     ) external pure returns (UD60x18) {
@@ -100,7 +102,7 @@ contract PositionMock {
     }
 
     function calculatePositionUpdate(
-        Position.Key memory self,
+        Position.KeyInternal memory self,
         UD60x18 currentBalance,
         SD59x18 amount,
         UD60x18 price

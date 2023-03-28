@@ -19,6 +19,7 @@ describe('#vaultSetup', () => {
     const { base, quote, maturity, oracleAdapter, p } = await loadFixture(
       vaultSetup,
     );
+
     for (const isCall of [true, false]) {
       const nonExistingPoolKey = {
         base: base.address,
@@ -31,6 +32,7 @@ describe('#vaultSetup', () => {
       const listingAddr = await p.poolFactory.getPoolAddress(
         nonExistingPoolKey,
       );
+
       expect(listingAddr).to.be.eq(ethers.constants.AddressZero);
     }
   });

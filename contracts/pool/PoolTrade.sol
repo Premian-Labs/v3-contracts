@@ -62,7 +62,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true)
         );
 
-        return (PoolStorage.layout().toPoolTokenDecimals(totalPremium), delta);
+        return (PoolStorage.layout().toPoolTokenDecimals(_totalPremium), delta);
     }
 
     /// @inheritdoc IPoolTrade
@@ -97,7 +97,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             )
         );
 
-        return (l.toPoolTokenDecimals(totalPremium), delta, swapOutAmount);
+        return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
     }
 
     /// @inheritdoc IPoolTrade
@@ -129,7 +129,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         (tokenOutReceived, collateralReceived) = _swap(s);
 
         return (
-            l.toPoolTokenDecimals(totalPremium),
+            l.toPoolTokenDecimals(_totalPremium),
             delta,
             collateralReceived,
             tokenOutReceived
