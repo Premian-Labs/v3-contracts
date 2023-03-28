@@ -1,5 +1,6 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
+  addDeposit,
   addMockDeposit,
   feeReceiver,
   increaseTotalAssets,
@@ -96,18 +97,24 @@ describe('UnderwriterVault.fees', () => {
       decimals,
     );
     await token.mint(vault.address, vaultDeposit);
+    await vault.increaseTotalAssets(
+      parseEther((test.pps * test.totalSupply).toFixed(12)),
+    );
 
     // set pps and shares user
     const userShares = parseEther(test.shares.toString());
     await vault.mintMock(caller.address, userShares);
     const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
     await vault.setNetUserDeposit(caller.address, userDeposit);
-    //const ppsUser = parseEther(test.ppsUser.toString());
-    //const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-    //expect(ppsAvg).to.eq(ppsUser);
+    const ppsUser = parseEther(test.ppsUser.toString());
+    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+
+    expect(ppsAvg).to.eq(ppsUser);
+
     expect(await vault.totalSupply()).to.eq(totalSupply);
     expect(await vault.getPricePerShare()).to.eq(pps);
-    //expect(await vault.getAveragePricePerShare(caller.address)).to.eq(pps);
+
+    expect(await vault.getAveragePricePerShare(caller.address)).to.eq(pps);
 
     return { vault, caller, token };
   }
@@ -186,6 +193,11 @@ describe('UnderwriterVault.fees', () => {
       await token.decimals(),
     );
     await token.mint(vault.address, vaultDeposit);
+
+    await vault.increaseTotalAssets(
+      parseEther((test.pps * test.totalSupply).toFixed(12)),
+    );
+
     // set pps and shares user caller
     const userShares = parseEther(test.shares.toString());
     await vault.mintMock(caller.address, userShares);
@@ -605,7 +617,7 @@ describe('UnderwriterVault.fees', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         it('maxWithdraw should revert for a zero address', async () => {
-          const { callVault, base, quote } = await loadFixture(vaultSetup);
+          const { callVault, base, quote, lp } = await loadFixture(vaultSetup);
           await setMaturities(callVault);
           await addMockDeposit(callVault, 2, base, quote);
           await expect(

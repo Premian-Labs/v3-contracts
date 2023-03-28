@@ -29,6 +29,7 @@ import {
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
+import { now } from 'moment-timezone';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
@@ -128,6 +129,7 @@ export async function increaseTotalAssets(
   const token = isCall ? base : quote;
   const assetAmount = parseUnits(amount.toString(), await token.decimals());
   await token.mint(vault.address, assetAmount);
+  await vault.increaseTotalAssets(parseEther(amount.toString()));
 }
 
 export async function increaseTotalShares(
@@ -154,8 +156,16 @@ export async function addMockDeposit(
   sharesAmount: number = amount,
   receiverAddress: any = null,
 ) {
-  await increaseTotalAssets(vault, amount, base, quote);
-  await increaseTotalShares(vault, sharesAmount, receiverAddress);
+  // await increaseTotalAssets(vault, amount, base, quote);
+  // await increaseTotalShares(vault, sharesAmount, receiverAddress);
+  const isCall = await vault.isCall();
+  const token = isCall ? base : quote;
+  const assetAmount = parseUnits(amount.toString(), await token.decimals());
+
+  if (receiverAddress != null) {
+    await token.connect(caller).approve(vault.address, assetAmount);
+    await vault.connect(caller).deposit(assetAmount, receiverAddress);
+  }
 }
 
 export async function createPool(

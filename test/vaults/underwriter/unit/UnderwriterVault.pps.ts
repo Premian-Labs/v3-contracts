@@ -1,5 +1,6 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
+  addDeposit,
   addMockDeposit,
   createPool,
   increaseTotalAssets,
@@ -597,7 +598,7 @@ describe('UnderwriterVault.internal.pps', () => {
         let tests = isCall ? callTests : putTests;
         tests.forEach(async (test) => {
           it(`returns ${test.expected} when totalLockedSpread=${test.tls} and tradeSize=${test.tradeSize}`, async () => {
-            const { callVault, putVault, volOracle, base, quote } =
+            const { callVault, putVault, volOracle, base, quote, lp } =
               await loadFixture(vaultSetup);
             vault = isCall ? callVault : putVault;
             const token = isCall ? base : quote;
@@ -607,7 +608,7 @@ describe('UnderwriterVault.internal.pps', () => {
               .returns([]);
 
             // create a deposit and check that totalAssets and totalSupply amounts are computed correctly
-            await addMockDeposit(vault, test.deposit, base, quote);
+            await addDeposit(vault, lp, test.deposit, base, quote);
             let startTime = await latest();
             let t0 = startTime + 7 * ONE_DAY;
             await volOracle.mock.getVolatility

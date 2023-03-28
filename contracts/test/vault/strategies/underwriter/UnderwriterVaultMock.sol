@@ -355,6 +355,18 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalSupply += value;
     }
 
+    function setTotalAssets(UD60x18 value) external onlyOwner {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.totalAssets = value;
+    }
+
+    function increaseTotalAssets(UD60x18 value) external onlyOwner {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        l.totalAssets = l.totalAssets + value;
+    }
+
     function mintMock(address receiver, uint256 value) external onlyOwner {
         _mint(receiver, value);
     }
@@ -547,8 +559,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
             locked = size;
         }
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
+
+        UD60x18 mintingFee = l.convertAssetToUD60x18(
+            IPool(listingAddr).takerFee(size, 0, true)
+        );
+
         IPool(listingAddr).writeFrom(address(this), msg.sender, size);
+
         l.totalLockedAssets = l.totalLockedAssets + locked;
+        l.totalAssets = l.totalAssets - mintingFee;
     }
 
     function getActivePoolAddresses() public returns (address[] memory) {
@@ -723,12 +742,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function setTimeOfDeposit(address owner, uint256 value) external {
-        UnderwriterVaultStorage.layout().timeOfDeposit[owner] = UD60x18.wrap(
-            value
-        );
+        UnderwriterVaultStorage.layout().timeOfDeposit[owner] = value;
     }
 
-    function getTimeOfDeposit(address owner) external view returns (UD60x18) {
+    function getTimeOfDeposit(address owner) external view returns (uint256) {
         return UnderwriterVaultStorage.layout().timeOfDeposit[owner];
     }
 

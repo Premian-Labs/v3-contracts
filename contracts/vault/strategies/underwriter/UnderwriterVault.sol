@@ -67,19 +67,11 @@ contract UnderwriterVault is
         ROUTER = router;
     }
 
-    function _totalAssetsUD60x18() internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        // TODO: check totalAssets
-        return l.totalAssets - l.protocolFees;
-    }
-
     /// @inheritdoc ERC4626BaseInternal
     function _totalAssets() internal view override returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        return l.convertAssetFromUD60x18(_totalAssetsUD60x18());
+        return l.convertAssetFromUD60x18(l.totalAssets);
     }
 
     /// @notice Gets the total locked spread currently stored in storage
@@ -305,11 +297,10 @@ contract UnderwriterVault is
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        // TODO: check totalAssets
         return
             l.totalAssets -
-            _getLockedSpreadVars(block.timestamp).totalLockedSpread -
-            l.protocolFees;
+            l.totalLockedAssets -
+            _getLockedSpreadVars(block.timestamp).totalLockedSpread;
     }
 
     /// @notice Gets the current price per share for the vault
@@ -349,13 +340,15 @@ contract UnderwriterVault is
     function _convertToSharesUD60x18(
         UD60x18 assetAmount
     ) internal view returns (UD60x18 shareAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
         UD60x18 supply = _totalSupplyUD60x18();
 
         if (supply == ZERO) {
             shareAmount = assetAmount;
         } else {
-            UD60x18 totalAssets = _totalAssetsUD60x18();
-            if (totalAssets == ZERO) {
+            if (l.totalAssets == ZERO) {
                 shareAmount = assetAmount;
             } else {
                 shareAmount = assetAmount / _getPricePerShareUD60x18();
@@ -487,13 +480,15 @@ contract UnderwriterVault is
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        UD60x18 balance = UD60x18.wrap(_balanceOf(owner));
+        UD60x18 balance = _balanceOfUD60x18(owner);
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 timestamp = UD60x18.wrap(timestamp * 1e18);
+        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner]);
 
-        l.timeOfDeposit[owner] =
-            (l.timeOfDeposit[owner] * balance + timestamp * shares) /
+        UD60x18 updated = (depositTimestamp * balance + timestamp * shares) /
             (balance + shares);
+
+        l.timeOfDeposit[owner] = updated.unwrap() / 1e18;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -512,9 +507,8 @@ contract UnderwriterVault is
         // Add assetAmount deposited to user's balance
         // This is needed to compute average price per share
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
-        l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
 
-        // TODO: check totalAssets
+        l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
         _updateTimeOfDeposit(receiver, shareAmount, block.timestamp);
@@ -536,7 +530,8 @@ contract UnderwriterVault is
         _beforeTokenTransfer(owner, address(this), shareAmount);
         // Remove the assets from totalAssets
         // TODO: check totalAssets
-        l.totalAssets = l.totalAssets - assetAmount;
+        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+        l.totalAssets = l.totalAssets - assets;
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -741,7 +736,7 @@ contract UnderwriterVault is
         // Compute C-level
         UD60x18 collateral = l.isCall ? vars.size : vars.size * vars.strike;
         UD60x18 utilisation = (l.totalLockedAssets + collateral) /
-            _totalAssetsUD60x18();
+            l.totalAssets;
         UD60x18 hoursSinceLastTx = UD60x18.wrap(
             (vars.timestamp - l.lastTradeTimestamp) * 1e18
         ) / UD60x18.wrap(ONE_HOUR * 1e18);
@@ -849,6 +844,10 @@ contract UnderwriterVault is
         l.addListing(vars.strike, vars.maturity);
 
         // Collect option premium from buyer
+
+        // Add everything except mintingFee
+        l.totalAssets = l.totalAssets + vars.premium + vars.spread;
+
         uint256 transferAmountScaled = l.convertAssetFromUD60x18(totalPremium);
 
         IERC20(_asset()).safeTransferFrom(
@@ -986,7 +985,7 @@ contract UnderwriterVault is
                 vars.pps;
         }
         UD60x18 yearfrac = UD60x18.wrap(
-            (timestamp - l.timeOfDeposit[owner].unwrap()) * 1e18
+            (timestamp - l.timeOfDeposit[owner]) * 1e18
         ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
         vars.managementFeeInShares =
             vars.balanceShares *
@@ -1044,6 +1043,8 @@ contract UnderwriterVault is
             // fees are tracked in order to keep the pps uneffected during the burn
             // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
             l.protocolFees = l.protocolFees + vars.totalFeeInAssets;
+            l.totalAssets = l.totalAssets - vars.totalFeeInAssets;
+
             if (vars.performance > ONE) {
                 emit PerformanceFeePaid(
                     FEE_RECEIVER,

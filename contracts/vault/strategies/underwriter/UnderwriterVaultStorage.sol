@@ -73,7 +73,7 @@ library UnderwriterVaultStorage {
         mapping(uint256 => UD60x18) spreadUnlockingTicks;
         // Performance fee variables
         mapping(address => UD60x18) netUserDeposits;
-        mapping(address => UD60x18) timeOfDeposit;
+        mapping(address => uint256) timeOfDeposit;
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
         UD60x18 protocolFees;

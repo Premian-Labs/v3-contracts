@@ -1,6 +1,6 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
-  addMockDeposit,
+  addDeposit,
   base,
   createPool,
   increaseTotalAssets,
@@ -113,6 +113,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
             optionMath,
           } = await loadFixture(vaultSetup);
@@ -144,7 +145,7 @@ describe('UnderwriterVault', () => {
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           return { base, quote, vault, maturity, spot, strike, timestamp };
         }
@@ -300,6 +301,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
           } = await loadFixture(vaultSetup);
 
@@ -339,7 +341,7 @@ describe('UnderwriterVault', () => {
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           const quoteSize = parseEther('3');
 
@@ -365,6 +367,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
           } = await loadFixture(vaultSetup);
 
@@ -395,7 +398,7 @@ describe('UnderwriterVault', () => {
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           const quoteSize = parseEther('3');
 
@@ -429,6 +432,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
             optionMath,
           } = await loadFixture(vaultSetup);
@@ -461,7 +465,7 @@ describe('UnderwriterVault', () => {
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           return {
             pool,
@@ -705,6 +709,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
           } = await loadFixture(vaultSetup);
 
@@ -731,11 +736,11 @@ describe('UnderwriterVault', () => {
 
           await oracleAdapter.mock.quote.returns(spot);
           await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
-            .withArgs(base.address, spot, strike, '153424657534246575')
+            .withArgs(base.address, spot, strike, '191780821917808219')
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           const tradeSize = parseEther('3');
 
@@ -764,6 +769,7 @@ describe('UnderwriterVault', () => {
             volOracle,
             oracleAdapter,
             deployer,
+            lp,
             p,
           } = await loadFixture(vaultSetup);
 
@@ -794,7 +800,7 @@ describe('UnderwriterVault', () => {
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
-          await addMockDeposit(vault, depositSize, base, quote);
+          await addDeposit(vault, lp, depositSize, base, quote);
 
           const tradeSize = parseEther('3');
 

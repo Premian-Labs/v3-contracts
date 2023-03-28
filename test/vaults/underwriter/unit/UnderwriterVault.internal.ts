@@ -1,5 +1,6 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
+  addDeposit,
   addMockDeposit,
   callVault,
   createPool,
@@ -126,7 +127,7 @@ describe('UnderwriterVault', () => {
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
           await setMaturities(vault);
-          await addMockDeposit(vault, 2, base, quote);
+          await addDeposit(vault, caller, 2, base, quote);
         });
         it('expected to equal totalAssets = 2', async () => {
           expect(await vault.getAvailableAssets()).to.eq(parseEther('2'));
@@ -146,10 +147,6 @@ describe('UnderwriterVault', () => {
         it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets) = 1.2979', async () => {
           await vault.increaseTotalLockedAssets(parseEther('0.0001'));
           expect(await vault.getAvailableAssets()).to.eq(parseEther('1.2979'));
-        });
-        it('expected to equal (totalAssets - totalLockedSpread - totalLockedAssets - feesCollected) = 1.1379', async () => {
-          await vault.setFeesCollected(parseEther('0.16'));
-          expect(await vault.getAvailableAssets()).to.eq(parseEther('1.1379'));
         });
       });
     }
@@ -297,7 +294,7 @@ describe('UnderwriterVault', () => {
           }
 
           console.log('Depositing assets.');
-          await addMockDeposit(vault, deposit, base, quote);
+          await addDeposit(vault, caller, deposit, base, quote);
           expect(await vault.totalAssets()).to.eq(
             parseUnits(deposit.toString(), await token.decimals()),
           );
@@ -350,6 +347,7 @@ describe('UnderwriterVault', () => {
           expect(await vault.totalLockedAssets()).to.eq(
             parseEther(lockedAssets),
           );
+
           const assetsAfterMint = isCall ? '9.982' : '9976';
           expect(await vault.totalAssets()).to.eq(
             parseUnits(assetsAfterMint, await token.decimals()),

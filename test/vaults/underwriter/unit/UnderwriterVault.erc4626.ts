@@ -1,5 +1,6 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
+  addDeposit,
   addMockDeposit,
   callVault,
   increaseTotalShares,
@@ -10,6 +11,7 @@ import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { setMaturities } from '../VaultSetup';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 describe('#ERC4626 overridden functions', () => {
   for (const isCall of [true, false]) {
@@ -18,44 +20,25 @@ describe('#ERC4626 overridden functions', () => {
         let vault: UnderwriterVaultMock;
         let token: ERC20Mock;
         const tests = [
-          { balanceOf: 1, totalLocked: 0, feesCollected: 0, totalAssets: 1 },
+          { totalAssets: 1 },
           {
-            balanceOf: 1,
-            totalLocked: 0.1,
-            feesCollected: 0,
             totalAssets: 1.1,
           },
           {
-            balanceOf: 501,
-            totalLocked: 102,
-            feesCollected: 12.3,
             totalAssets: 590.7,
           },
         ];
 
         tests.forEach(async (test) => {
-          async function setup() {
+          it(`totalAssets equals ${test.totalAssets}`, async () => {
             let { callVault, putVault, base, quote } = await loadFixture(
               vaultSetup,
             );
             vault = isCall ? callVault : putVault;
             token = isCall ? base : quote;
-            await token.mint(
-              vault.address,
-              parseUnits(test.balanceOf.toString(), await token.decimals()),
-            );
-            await vault.setFeesCollected(
-              parseEther(test.feesCollected.toString()),
-            );
-            // note: we are not transferring it, otherwise this wont have an effect on totalAssets
-            await vault.increaseTotalLockedAssetsNoTransfer(
-              parseEther(test.totalLocked.toString()),
-            );
-            return { vault, token };
-          }
 
-          it(`totalAssets equals ${test.totalAssets}`, async () => {
-            let { vault, token } = await loadFixture(setup);
+            await vault.setTotalAssets(parseEther(test.totalAssets.toString()));
+
             const expectedAmount = parseUnits(
               test.totalAssets.toString(),
               await token.decimals(),
@@ -70,11 +53,11 @@ describe('#ERC4626 overridden functions', () => {
         let token: ERC20Mock;
 
         const tests = [
-          { totalSupply: 0, balanceOf: 0, assetAmount: 1, shareAmount: 1 },
-          { totalSupply: 1, balanceOf: 0, assetAmount: 1, shareAmount: 1 },
-          { totalSupply: 1, balanceOf: 1, assetAmount: 1, shareAmount: 1 },
-          { totalSupply: 4, balanceOf: 1, assetAmount: 1, shareAmount: 4 },
-          { totalSupply: 4, balanceOf: 5, assetAmount: 3, shareAmount: 2.4 },
+          { totalSupply: 0, totalAssets: 0, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 1, totalAssets: 0, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 1, totalAssets: 1, assetAmount: 1, shareAmount: 1 },
+          { totalSupply: 4, totalAssets: 1, assetAmount: 1, shareAmount: 4 },
+          { totalSupply: 4, totalAssets: 5, assetAmount: 3, shareAmount: 2.4 },
         ];
 
         tests.forEach(async (test) => {
@@ -85,8 +68,11 @@ describe('#ERC4626 overridden functions', () => {
             vault = isCall ? callVault : putVault;
             token = isCall ? base : quote;
             const decimals = await token.decimals();
-            const balance = parseUnits(test.balanceOf.toString(), decimals);
+            const balance = parseUnits(test.totalAssets.toString(), decimals);
             await token.mint(vault.address, balance);
+            await vault.increaseTotalAssets(
+              parseEther(test.totalAssets.toString()),
+            );
             await vault.increaseTotalShares(
               parseEther(test.totalSupply.toString()),
             );
@@ -104,7 +90,7 @@ describe('#ERC4626 overridden functions', () => {
               await expect(
                 vault.previewWithdraw(assetAmount),
               ).to.be.revertedWithCustomError(vault, 'Vault__ZeroShares');
-            } else if (test.balanceOf == 0) {
+            } else if (test.totalAssets == 0) {
               await expect(
                 vault.previewWithdraw(assetAmount),
               ).to.be.revertedWithCustomError(
@@ -122,9 +108,9 @@ describe('#ERC4626 overridden functions', () => {
 
       describe('#maxWithdraw', () => {
         it('maxWithdraw should revert for a zero address', async () => {
-          const { callVault, base, quote } = await loadFixture(vaultSetup);
+          const { callVault, base, quote, lp } = await loadFixture(vaultSetup);
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 2, base, quote);
+          await addDeposit(callVault, lp, 2, base, quote);
           await expect(
             callVault.maxWithdraw(ethers.constants.AddressZero),
           ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
@@ -135,9 +121,11 @@ describe('#ERC4626 overridden functions', () => {
             vaultSetup,
           );
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
+          await addDeposit(callVault, receiver, 3, base, quote);
+
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+
           const assetAmount = await callVault.maxWithdraw(receiver.address);
 
           expect(assetAmount).to.eq(parseEther('2.4'));
@@ -147,8 +135,8 @@ describe('#ERC4626 overridden functions', () => {
           const { callVault, caller, receiver, base, quote } =
             await loadFixture(vaultSetup);
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 8, base, quote, 8, caller.address);
-          await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
+          await addDeposit(callVault, caller, 8, base, quote);
+          await addDeposit(callVault, receiver, 2, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.0'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
           const assetAmount = await callVault.maxWithdraw(receiver.address);
@@ -159,8 +147,8 @@ describe('#ERC4626 overridden functions', () => {
           const { callVault, caller, receiver, base, quote } =
             await loadFixture(vaultSetup);
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 7, base, quote, 7, caller.address);
-          await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
+          await addDeposit(callVault, caller, 7, base, quote);
+          await addDeposit(callVault, receiver, 2, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
           const assetAmount = parseFloat(
@@ -176,7 +164,7 @@ describe('#ERC4626 overridden functions', () => {
             vaultSetup,
           );
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
+          await addDeposit(callVault, receiver, 2, base, quote);
           await expect(
             callVault.maxRedeem(ethers.constants.AddressZero),
           ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
@@ -187,7 +175,7 @@ describe('#ERC4626 overridden functions', () => {
             vaultSetup,
           );
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 3, base, quote, 3, receiver.address);
+          await addDeposit(callVault, receiver, 3, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
           const assetAmount = await callVault.maxRedeem(receiver.address);
@@ -204,9 +192,13 @@ describe('#ERC4626 overridden functions', () => {
         });
 
         it('previewMint should return amount of assets required to mint', async () => {
-          const { callVault, base, quote } = await loadFixture(vaultSetup);
+          const { callVault, receiver, base, quote } = await loadFixture(
+            vaultSetup,
+          );
           await setMaturities(callVault);
-          await addMockDeposit(callVault, 2, base, quote);
+          await addDeposit(callVault, receiver, 2, base, quote);
+          let pps = await callVault.getPricePerShare();
+          console.log(pps);
           await callVault.increaseTotalLockedSpread(parseEther('0.2'));
           const assetAmount = await callVault.previewMint(parseEther('4'));
           expect(assetAmount).to.eq(parseEther('3.6'));
@@ -218,15 +210,17 @@ describe('#ERC4626 overridden functions', () => {
         let token: ERC20Mock;
         let baseT: ERC20Mock;
         let quoteT: ERC20Mock;
+        let receiver: SignerWithAddress;
 
         beforeEach(async () => {
-          const { callVault, putVault, base, quote } = await loadFixture(
+          const { callVault, putVault, base, quote, lp } = await loadFixture(
             vaultSetup,
           );
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
           baseT = base;
           quoteT = quote;
+          receiver = lp;
         });
 
         it('if no shares have been minted, minted shares should equal deposited assets', async () => {
@@ -238,7 +232,7 @@ describe('#ERC4626 overridden functions', () => {
 
         it('if supply is non-zero and pricePerShare is one, minted shares equals the deposited assets', async () => {
           await setMaturities(vault);
-          await addMockDeposit(vault, 8, baseT, quoteT);
+          await addDeposit(vault, receiver, 8, baseT, quoteT);
           const assetAmount = parseUnits('2', await token.decimals());
           const shareAmount = await vault.convertToShares(assetAmount);
           // share amount is always in 18 dp
@@ -249,8 +243,10 @@ describe('#ERC4626 overridden functions', () => {
         it('if supply is non-zero, minted shares equals the deposited assets adjusted by the pricePerShare', async () => {
           const assetAmount = 2;
           await setMaturities(vault);
-          await addMockDeposit(vault, 2, baseT, quoteT);
+          await addDeposit(vault, receiver, 2, baseT, quoteT);
+
           await vault.increaseTotalLockedSpread(parseEther('1.0'));
+
           const assetAmountParsed = parseUnits(
             assetAmount.toString(),
             await token.decimals(),
@@ -265,15 +261,17 @@ describe('#ERC4626 overridden functions', () => {
         let token: ERC20Mock;
         let baseT: ERC20Mock;
         let quoteT: ERC20Mock;
+        let receiver: SignerWithAddress;
 
         beforeEach(async () => {
-          const { callVault, putVault, base, quote } = await loadFixture(
+          const { callVault, putVault, base, quote, lp } = await loadFixture(
             vaultSetup,
           );
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
           baseT = base;
           quoteT = quote;
+          receiver = lp;
         });
 
         it('if total supply is zero, revert due to zero shares', async () => {
@@ -285,7 +283,7 @@ describe('#ERC4626 overridden functions', () => {
 
         it('if supply is non-zero and pricePerShare is one, withdrawn assets equals share amount', async () => {
           await setMaturities(vault);
-          await addMockDeposit(vault, 2, baseT, quoteT);
+          await addDeposit(vault, receiver, 2, baseT, quoteT);
           const shareAmount = parseEther('2');
           const assetAmount = await vault.convertToAssets(shareAmount);
           expect(assetAmount).to.eq(parseUnits('2', await token.decimals()));
@@ -293,7 +291,7 @@ describe('#ERC4626 overridden functions', () => {
 
         it('if supply is non-zero and pricePerShare is 0.5, withdrawn assets equals half the share amount', async () => {
           await setMaturities(vault);
-          await addMockDeposit(vault, 2, baseT, quoteT);
+          await addDeposit(vault, receiver, 2, baseT, quoteT);
           await vault.increaseTotalLockedSpread(parseEther('1.0'));
           const assetAmount = await vault.convertToAssets(parseEther('2'));
           const assetAmountExpected = parseUnits('1.0', await token.decimals());
