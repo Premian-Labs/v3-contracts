@@ -215,6 +215,7 @@ contract UnderwriterVault is
 
     /// @notice Gets the total liabilities of the basket of options underwritten
     ///         by this vault at the current time
+    /// @param timestamp The given timestamp
     /// @return The total liabilities of the basket of options underwritten
     function _getTotalLiabilities(
         uint256 timestamp
@@ -227,6 +228,7 @@ contract UnderwriterVault is
 
     /// @notice Gets the total fair value of the basket of options underwritten
     ///         by this vault at the current time
+    /// @param timestamp The given timestamp
     /// @return The total fair value of the basket of options underwritten
     function _getTotalFairValue(
         uint256 timestamp
@@ -237,6 +239,7 @@ contract UnderwriterVault is
     }
 
     /// @notice Gets the total locked spread for the vault
+    /// @param timestamp A timestamp.
     /// @return The total locked spread
     function _getLockedSpreadVars(
         uint256 timestamp
@@ -293,7 +296,6 @@ contract UnderwriterVault is
 
     /// @notice Gets the current amount of available assets
     /// @return The amount of available assets
-    // Note: we do not deduct the totalLockedAssets as these were already deducted during minting
     function _availableAssetsUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -304,7 +306,6 @@ contract UnderwriterVault is
     }
 
     /// @notice Gets the current price per share for the vault
-    /// @notice
     /// @return The current price per share
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
         return
@@ -870,6 +871,7 @@ contract UnderwriterVault is
         // Handle the premiums and spread capture generated
         _afterBuy(vars);
 
+        // Emit trade event
         emit Trade(
             msg.sender,
             vars.poolAddr,
@@ -880,6 +882,9 @@ contract UnderwriterVault is
             ZERO,
             vars.spread
         );
+
+        // Emit event for updated quotes
+        emit UpdateQuotes();
     }
 
     /// @inheritdoc IVault
@@ -990,17 +995,17 @@ contract UnderwriterVault is
                 vars.performanceFeeInShares *
                 vars.pps;
         }
-        UD60x18 yearfrac = UD60x18.wrap(
+        UD60x18 timeSinceLastDeposit = UD60x18.wrap(
             (timestamp - l.timeOfDeposit[owner]) * 1e18
         ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
         vars.managementFeeInShares =
             vars.balanceShares *
             l.managementFeeRate *
-            yearfrac;
+            timeSinceLastDeposit;
         vars.managementFeeInAssets =
             _convertToAssetsUD60x18(vars.balanceShares) *
             l.managementFeeRate *
-            yearfrac;
+            timeSinceLastDeposit;
         vars.totalFeeInShares =
             vars.managementFeeInShares +
             vars.performanceFeeInShares;
@@ -1084,6 +1089,7 @@ contract UnderwriterVault is
 
         l.protocolFees = ZERO;
         IERC20(_asset()).safeTransfer(FEE_RECEIVER, claimedFees);
+
         emit ClaimProtocolFees(
             FEE_RECEIVER,
             l.convertAssetToUD60x18(claimedFees)

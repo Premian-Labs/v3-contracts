@@ -570,46 +570,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalAssets = l.totalAssets - mintingFee;
     }
 
-    function getActivePoolAddresses() public returns (address[] memory) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        uint256 maturity = l.minMaturity;
-        uint256 n = _getNumberOfListings();
-        address[] memory addresses = new address[](n);
-
-        while (maturity != 0) {
-            for (
-                uint256 i = 0;
-                i < l.maturityToStrikes[maturity].length();
-                i++
-            ) {
-                IPoolFactory.PoolKey memory _poolKey;
-                _poolKey.base = l.base;
-                _poolKey.quote = l.quote;
-                _poolKey.oracleAdapter = l.oracleAdapter;
-                _poolKey.strike = l.maturityToStrikes[maturity].at(i);
-                _poolKey.maturity = uint64(maturity);
-                _poolKey.isCallPool = l.isCall;
-                address listingAddr = IPoolFactory(FACTORY).getPoolAddress(
-                    _poolKey
-                );
-                addresses[i] = listingAddr;
-                if (!employedPools.contains(listingAddr))
-                    employedPools.add(listingAddr);
-            }
-            maturity = l.maturities.next(maturity);
-        }
-        return addresses;
-    }
-
-    function getEmployedPools() external view returns (address[] memory) {
-        uint256 n = employedPools.length();
-        address[] memory addresses = new address[](n);
-        for (uint256 i = 0; i < employedPools.length(); i++)
-            addresses[i] = employedPools.at(i);
-        return addresses;
-    }
-
     function ensureTradeableWithVault(
         bool isCallVault,
         bool isCallOption,

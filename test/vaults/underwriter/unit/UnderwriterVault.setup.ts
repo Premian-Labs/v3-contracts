@@ -14,7 +14,6 @@ import { TokenType } from '../../../../utils/sdk/types';
 import { getValidMaturity } from '../../../../utils/time';
 
 describe('#vaultSetup', () => {
-  // TODO: what does this test?
   it('returns addressZero from factory non existing pool', async () => {
     const { base, quote, maturity, oracleAdapter, p } = await loadFixture(
       vaultSetup,

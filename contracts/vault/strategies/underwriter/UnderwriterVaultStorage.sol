@@ -22,6 +22,9 @@ library UnderwriterVaultStorage {
         keccak256("premia.contracts.storage.UnderwriterVaultStorage");
 
     struct Layout {
+        // ====================================================================
+        // Vault Specification
+        // ====================================================================
         // ERC20 token address for the base asset
         address base;
         // ERC20 token address for the quote asset
@@ -30,11 +33,16 @@ library UnderwriterVaultStorage {
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;
-        // The total assets that have been locked up as collateral for
-        // underwritten options.
+        // ====================================================================
+        // Vault Accounting
+        // ====================================================================
+        // The total assets held in the vault from deposits
         UD60x18 totalAssets;
+        // The total assets that have been locked up as collateral for underwritten options.
         UD60x18 totalLockedAssets;
+        // ====================================================================
         // Trading Parameters
+        // ====================================================================
         // Minimum days until maturity which can be underwritten by the vault, default 3
         UD60x18 minDTE;
         // Maximum days until maturity which can be underwritten by the vault, default 30
@@ -43,15 +51,17 @@ library UnderwriterVaultStorage {
         SD59x18 minDelta;
         // Maximum option delta which can be underwritten by the vault, default 0.7
         SD59x18 maxDelta;
+        // ====================================================================
         // C-Level Parameters
+        // ====================================================================
         UD60x18 minCLevel; // 1
         UD60x18 maxCLevel; // 1.2
         UD60x18 alphaCLevel; // 3
         UD60x18 hourlyDecayDiscount; // 0.005
         uint256 lastTradeTimestamp;
+        // ====================================================================
         // Data structures for information on listings
-        // (maturity, strike) => number of short contracts
-        mapping(uint256 => mapping(UD60x18 => UD60x18)) positionSizes;
+        // ====================================================================
         // The minimum maturity over all unsettled options
         uint256 minMaturity;
         // The maximum maturity over all unsettled options
@@ -60,22 +70,27 @@ library UnderwriterVaultStorage {
         DoublyLinkedList.Uint256List maturities;
         // maturity => set of strikes
         mapping(uint256 => EnumerableSet.Bytes32Set) maturityToStrikes;
-        // Variables for dispersing profits across time
-        // Tracks the total profits/spreads that are locked such that we can
-        // deduct it from the total assets
+        // (maturity, strike) => number of short contracts
+        mapping(uint256 => mapping(UD60x18 => UD60x18)) positionSizes;
+        // ====================================================================
+        // Dispersing Profit Variables
+        // ====================================================================
+        // Tracks the total profits/spreads that are locked such that we can deduct it from the total assets
         UD60x18 totalLockedSpread;
         // Tracks the rate at which ask spreads are dispersed
         UD60x18 spreadUnlockingRate;
         // Tracks the time spreadUnlockingRate was updated
         uint256 lastSpreadUnlockUpdate;
-        // we map maturities to the unlockingRate that needs to be deducted upon crossing
+        // Tracks the unlockingRate for maturities that need to be deducted upon crossing
         // maturity => spreadUnlockingRate
         mapping(uint256 => UD60x18) spreadUnlockingTicks;
-        // Performance fee variables
-        mapping(address => UD60x18) netUserDeposits;
-        mapping(address => uint256) timeOfDeposit;
+        // ====================================================================
+        // Management/Performance Fee Variables
+        // ====================================================================
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
+        mapping(address => UD60x18) netUserDeposits;
+        mapping(address => uint256) timeOfDeposit;
         UD60x18 protocolFees;
     }
 

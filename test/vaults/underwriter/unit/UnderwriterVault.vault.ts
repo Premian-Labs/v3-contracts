@@ -520,17 +520,21 @@ describe('UnderwriterVault', () => {
             .connect(trader)
             .approve(vault.address, parseEther('1000'));
 
-          await vault
-            .connect(trader)
-            .tradeInternal(
-              timestamp,
-              spot,
-              strike,
-              maturity,
-              isCall,
-              tradeSize,
-              true,
-            );
+          expect(
+            await vault
+              .connect(trader)
+              .tradeInternal(
+                timestamp,
+                spot,
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+              ),
+          )
+            .to.emit(vault, 'UpdateQuotes')
+            .to.emit(vault, 'Trade');
 
           // Get deposit size and collateral in right format
           const _strike = 1100;

@@ -1,24 +1,29 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import {
+  ChainlinkAdapter__factory,
+  ChainlinkAdapterProxy__factory,
   ERC20Mock,
   ERC20Mock__factory,
   IPoolMock,
   IPoolMock__factory,
   OptionMathMock,
   OptionMathMock__factory,
+  OracleAdapter,
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   UnderwriterVaultMock,
   UnderwriterVaultMock__factory,
   UnderwriterVaultProxy,
   UnderwriterVaultProxy__factory,
+  VolatilityOracle,
+  VolatilityOracle__factory,
   VolatilityOracleMock,
   VolatilityOracleMock__factory,
 } from '../../../../typechain';
 import { PoolUtil } from '../../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../../utils/time';
 import { PoolKey } from '../../../../utils/sdk/types';
-import { tokens } from '../../../../utils/addresses';
+import { feeds, tokens } from '../../../../utils/addresses';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
 import {
   deployMockContract,
@@ -68,8 +73,8 @@ export let quote: ERC20Mock;
 export let longCall: ERC20Mock;
 export let shortCall: ERC20Mock;
 
-export let oracleAdapter: MockContract;
-export let volOracle: VolatilityOracleMock;
+export let oracleAdapter: OracleAdapter;
+export let volOracle: VolatilityOracle;
 export let volOracleProxy: ProxyUpgradeableOwnable;
 
 export const log = true;
@@ -190,6 +195,37 @@ export async function trade(
     .trade(strikeBN, maturity, isCall, tradeSize, true);
 }
 
+export async function createPool(
+  strike: BigNumber,
+  maturity: number,
+  isCall: boolean,
+  deployer: SignerWithAddress,
+  base: ERC20Mock,
+  quote: ERC20Mock,
+  oracleAdapter: OracleAdapter,
+  p: PoolUtil,
+): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
+  let pool: IPoolMock;
+
+  poolKey = {
+    base: base.address,
+    quote: quote.address,
+    oracleAdapter: oracleAdapter.address,
+    strike: strike,
+    maturity: BigNumber.from(maturity),
+    isCallPool: isCall,
+  };
+
+  const tx = await p.poolFactory.deployPool(poolKey, {
+    value: parseEther('1'),
+  });
+
+  const r = await tx.wait(1);
+  const poolAddress = (r as any).events[0].args.poolAddress;
+  pool = IPoolMock__factory.connect(poolAddress, deployer);
+  return [pool, poolAddress, poolKey];
+}
+
 export async function vaultSetup() {
   [deployer, caller, receiver, underwriter, lp, trader, feeReceiver] =
     await ethers.getSigners();
@@ -234,31 +270,39 @@ export async function vaultSetup() {
   //=====================================================================================
   // Mock Oracle Adapter setup
 
-  oracleAdapter = await deployMockContract(deployer, [
-    'function isPairSupported(address, address) external view returns (bool, bool)',
-    'function upsertPair(address, address) external',
-    'function quote(address, address) external view returns (uint256)',
-    'function quoteFrom(address, address, uint256) external view returns (uint256)',
-  ]);
+  const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
+    tokens.WETH.address,
+    tokens.WBTC.address,
+  );
 
-  // Upsert pair is called within deployPool from the PoolFactory contract
-  await oracleAdapter.mock.isPairSupported.returns(true, true);
-  await oracleAdapter.mock.upsertPair.returns();
-  await oracleAdapter.mock.quote.returns(parseUnits('1500', 18));
+  await implementation.deployed();
+
+  const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
+    implementation.address,
+  );
+
+  await proxy.deployed();
+
+  const oracleAdapter = ChainlinkAdapter__factory.connect(
+    proxy.address,
+    deployer,
+  );
+
+  await oracleAdapter.batchRegisterFeedMappings(feeds);
 
   if (log)
     console.log(`Mock oracleAdapter Implementation : ${oracleAdapter.address}`);
 
   //=====================================================================================
-  // Mock Volatility Oracle setup
+  // Volatility Oracle setup
 
-  const impl = await new VolatilityOracleMock__factory(deployer).deploy();
+  const impl = await new VolatilityOracle__factory(deployer).deploy();
 
   volOracleProxy = await new ProxyUpgradeableOwnable__factory(deployer).deploy(
     impl.address,
   );
 
-  volOracle = VolatilityOracleMock__factory.connect(
+  volOracle = VolatilityOracle__factory.connect(
     volOracleProxy.address,
     deployer,
   );
@@ -441,35 +485,4 @@ export async function vaultSetup() {
     putPoolAddress,
     feeReceiver,
   };
-}
-
-export async function createPool(
-  strike: BigNumber,
-  maturity: number,
-  isCall: boolean,
-  deployer: SignerWithAddress,
-  base: ERC20Mock,
-  quote: ERC20Mock,
-  oracleAdapter: MockContract,
-  p: PoolUtil,
-): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
-  let pool: IPoolMock;
-
-  poolKey = {
-    base: base.address,
-    quote: quote.address,
-    oracleAdapter: oracleAdapter.address,
-    strike: strike,
-    maturity: BigNumber.from(maturity),
-    isCallPool: isCall,
-  };
-
-  const tx = await p.poolFactory.deployPool(poolKey, {
-    value: parseEther('1'),
-  });
-
-  const r = await tx.wait(1);
-  const poolAddress = (r as any).events[0].args.poolAddress;
-  pool = IPoolMock__factory.connect(poolAddress, deployer);
-  return [pool, poolAddress, poolKey];
 }
