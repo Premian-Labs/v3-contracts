@@ -2,20 +2,20 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-
 import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
 import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
+import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
+import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
+
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
-import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
-import {ETH_DECIMALS, Tokens} from "./Tokens.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
 contract UniswapV3AdapterInternal is

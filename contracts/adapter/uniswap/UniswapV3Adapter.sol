@@ -7,10 +7,11 @@ import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol"
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import {IOracleAdapter} from "./IOracleAdapter.sol";
+import {IOracleAdapter} from "../IOracleAdapter.sol";
+import {Tokens} from "../Tokens.sol";
+import {OracleAdapter} from "../OracleAdapter.sol";
+
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
-import {OracleAdapter} from "./OracleAdapter.sol";
-import {Tokens} from "./Tokens.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
