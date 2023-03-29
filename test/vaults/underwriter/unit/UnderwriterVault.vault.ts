@@ -339,6 +339,9 @@ describe('UnderwriterVault', () => {
           await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
             .withArgs(base.address, spot, strike, '191780821917808219')
             .returns(parseEther('1.54'));
+          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
+            .withArgs(base.address, spot, strike, '134246575342465753')
+            .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
           await addDeposit(vault, lp, depositSize, base, quote);
@@ -462,6 +465,9 @@ describe('UnderwriterVault', () => {
           await oracleAdapter.mock.quote.returns(spot);
           await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
             .withArgs(base.address, spot, strike, '19178082191780821')
+            .returns(parseEther('1.54'));
+          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
+            .withArgs(base.address, spot, strike, '134246575342465753')
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
@@ -737,6 +743,9 @@ describe('UnderwriterVault', () => {
           await oracleAdapter.mock.quote.returns(spot);
           await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
             .withArgs(base.address, spot, strike, '191780821917808219')
+            .returns(parseEther('1.54'));
+          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
+            .withArgs(base.address, spot, strike, '134246575342465753')
             .returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
