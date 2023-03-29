@@ -117,7 +117,7 @@ async function setupSpreadsVault() {
   };
 }
 
-describe('UnderwriterVault', () => {
+describe('UnderwriterVault.internal', () => {
   describe('#_availableAssets', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
@@ -462,7 +462,7 @@ describe('UnderwriterVault', () => {
             .returns(parseUnits('1500', 18));
 
           console.log('Depositing assets.');
-          await addMockDeposit(vault, totalAssets, base, quote);
+          await addDeposit(vault, caller, totalAssets, base, quote);
           /*expect(await vault.totalAssets()).to.eq(
             parseUnits(totalAssets.toString(), await token.decimals()),
           );*/

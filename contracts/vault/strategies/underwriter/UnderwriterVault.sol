@@ -916,7 +916,13 @@ contract UnderwriterVault is
                 : positionSize * strike;
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
             address listingAddr = _getFactoryAddress(strike, maturity);
-            IPool(listingAddr).settle(address(this));
+            UD60x18 collateralValue = l.convertAssetToUD60x18(
+                IPool(listingAddr).settle(address(this))
+            );
+            l.totalAssets =
+                l.totalAssets -
+                unlockedCollateral -
+                collateralValue;
         }
     }
 
