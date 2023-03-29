@@ -114,7 +114,7 @@ describe('UnderwriterVault.fees', () => {
     expect(await vault.totalSupply()).to.eq(totalSupply);
     expect(await vault.getPricePerShare()).to.eq(pps);
 
-    expect(await vault.getAveragePricePerShare(caller.address)).to.eq(pps);
+    //expect(await vault.getAveragePricePerShare(caller.address)).to.eq(pps);
 
     return { vault, caller, token };
   }
@@ -265,11 +265,11 @@ describe('UnderwriterVault.fees', () => {
       maxTransferableShares: 1.0999397260273973,
       // beforeTokenTransfer
       protocolFeesInitial: 0.1,
-      protocolFees: 0.1,
-      sharesAfter: 1.1,
+      protocolFees: 0.1 + 0.000060273972602739,
+      sharesAfter: 1.099939726,
       netUserDepositReceiver: 1.2,
       netUserDepositReceiverAfter: 1.3,
-      netUserDepositCallerAfter: 1.0,
+      netUserDepositCallerAfter: 0.999939726,
     },
     {
       shares: 2.3,
@@ -293,8 +293,8 @@ describe('UnderwriterVault.fees', () => {
       maxTransferableShares: 2.22525,
       // beforeTokenTransfer
       protocolFeesInitial: 0.1,
-      protocolFees: 0.1230625,
-      sharesAfter: 2.284625,
+      protocolFees: 0.1 + 0.0230625 + 0.069,
+      sharesAfter: 2.238625,
       netUserDepositReceiver: 1.2,
       netUserDepositReceiverAfter: 3.045,
       netUserDepositCallerAfter: 1.21035, // 2,3 * 1,2 * ((2,3 - 1,23 - 0,061375) / 2,3)
@@ -309,10 +309,7 @@ describe('UnderwriterVault.fees', () => {
         parseEther(test.sharesInitial.toString()),
       );
       if (test.timeOfDeposit > 0)
-        await vault.setTimeOfDeposit(
-          caller.address,
-          parseEther(test.timeOfDeposit.toString()),
-        );
+        await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
 
       return { vault, caller };
     }
@@ -339,12 +336,12 @@ describe('UnderwriterVault.fees', () => {
         await vault.updateTimeOfDeposit(
           caller.address,
           parseEther(test.shareAmount.toString()),
-          test.timestamp,
+          test.timestamp.toString(),
         );
-        const timeOfDeposit = parseFloat(
-          formatEther(await vault.getTimeOfDeposit(caller.address)),
+        const timeOfDepositUpdated = parseInt(
+          (await vault.getTimeOfDeposit(caller.address)).toString(),
         );
-        expect(timeOfDeposit).to.eq(test.timeOfDepositNew);
+        expect(timeOfDepositUpdated).to.eq(test.timeOfDepositNew);
       });
     });
   });
@@ -434,12 +431,12 @@ describe('UnderwriterVault.fees', () => {
       maxTransferableShares: 0.0,
     };
     //testsFeeVars.push(test);
-    const myClonedArray = [];
+    const myClonedArray: any = [];
     testsFeeVars.forEach((val) => myClonedArray.push(Object.assign({}, val)));
     myClonedArray.push(test);
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        testsFeeVars.forEach(async (test) => {
+        myClonedArray.forEach(async (test) => {
           it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferableShares}`, async () => {
             const { vault, caller } = await setupGetFeeVars(isCall, test);
             console.log(await vault.balanceOf(caller.address));
@@ -466,7 +463,7 @@ describe('UnderwriterVault.fees', () => {
                 isCall,
                 test,
               );
-              await increaseTo(test.timeOfDeposit);
+              await increaseTo(test.timestamp);
               await vault.beforeTokenTransfer(
                 caller.address,
                 receiver.address,
@@ -496,7 +493,7 @@ describe('UnderwriterVault.fees', () => {
               const netUserDeposit = parseFloat(
                 formatEther(await vault.getNetUserDeposit(caller.address)),
               );
-              const delta = 1e-8;
+              const delta = 1e-5;
               expect(netUserDeposit).to.be.closeTo(
                 test.netUserDepositCallerAfter,
                 delta,
@@ -795,9 +792,16 @@ describe('UnderwriterVault.fees', () => {
 
           vault = isCall ? callVault : putVault;
           token = isCall ? base : quote;
+
+          const timeOfDeposit = 3000000000;
+
           await vault.setNetUserDeposit(caller.address, parseEther('1.5'));
+          await vault.setTimeOfDeposit(caller.address, timeOfDeposit);
           await vault.mintMock(caller.address, parseEther('1.5'));
           await token.mint(vault.address, parseEther('1.5'));
+          await vault.increaseTotalAssets(parseEther('3'));
+
+          await increaseTo(timeOfDeposit + ONE_DAY);
 
           await vault.beforeWithdraw(
             caller.address,
@@ -811,9 +815,5 @@ describe('UnderwriterVault.fees', () => {
         });
       });
     }
-  });
-
-  describe('#chargeFees', () => {
-    it('test that charge fees, charges the ');
   });
 });

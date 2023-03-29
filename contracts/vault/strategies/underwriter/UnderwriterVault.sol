@@ -483,7 +483,7 @@ contract UnderwriterVault is
         UD60x18 balance = _balanceOfUD60x18(owner);
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 timestamp = UD60x18.wrap(timestamp * 1e18);
-        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner]);
+        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * 1e18);
 
         UD60x18 updated = (depositTimestamp * balance + timestamp * shares) /
             (balance + shares);
