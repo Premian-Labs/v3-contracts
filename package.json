@@ -27,7 +27,7 @@
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
     "prettier": "prettier --write .",
-    "build-docs": "forge doc && npx replace-in-files --string '%5C' --replacement '/' './docs/book/**/*'"
+    "build-docs": "forge doc --build && npx replace-in-files --string '%5C' --replacement '/' './docs/book/**/*'"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
