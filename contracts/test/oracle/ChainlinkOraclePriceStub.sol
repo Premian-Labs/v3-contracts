@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {ChainlinkAdapterStorage} from "../../oracle/price/ChainlinkAdapterStorage.sol";
+import {ChainlinkAdapterStorage} from "../../adapter/chainlink/ChainlinkAdapterStorage.sol";
 
 contract ChainlinkOraclePriceStub {
     uint16 PHASE_ID = 1;
