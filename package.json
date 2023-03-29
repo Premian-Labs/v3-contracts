@@ -23,7 +23,7 @@
     "compile": "hardhat compile",
     "compile:force": "hardhat compile --force",
     "deploy:orderbook": "hardhat run \"./scripts/deploy/0001-deployOrderbook.ts\" --network arbitrumNova",
-    "postinstall": "yarn compile && husky install",
+    "postinstall": "husky install",
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
     "prettier": "prettier --write --ignore-path .gitignore ."
@@ -47,6 +47,7 @@
     "@types/chai": "^4.3.4",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.2",
+    "@uniswap/swap-router-contracts": "^1.3.0",
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.3",
     "axios": "^1.3.4",
