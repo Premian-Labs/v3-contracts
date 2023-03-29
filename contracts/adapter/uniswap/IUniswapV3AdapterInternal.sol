@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
 interface IUniswapV3AdapterInternal {
     /// @notice Thrown when cardinality per minute has not been set
     error UniswapV3Adapter__CardinalityPerMinuteNotSet();

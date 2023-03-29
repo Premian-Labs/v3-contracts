@@ -6,7 +6,7 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
-import {IOracleAdapter} from "../../oracle/price/IOracleAdapter.sol";
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
 contract OracleAdapterMock {
     address immutable BASE;

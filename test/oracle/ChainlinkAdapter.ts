@@ -299,7 +299,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__TokensAreSame');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__TokensAreSame');
     });
 
     it('should revert if token or denomination address is 0', async () => {
@@ -313,7 +313,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
 
       await expect(
         instance.batchRegisterFeedMappings([
@@ -323,7 +323,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
     });
 
     it('shoud return feed of mapped token and denomination', async () => {
@@ -745,14 +745,14 @@ describe('ChainlinkAdapter', () => {
             });
           });
 
-          describe('#pathForPair', () => {
+          describe('#pricingPath', () => {
             it('should return pricing path for pair', async () => {
-              const path1 = await instance.pathForPair(
+              const path1 = await instance.pricingPath(
                 tokenIn.address,
                 tokenOut.address,
               );
 
-              const path2 = await instance.pathForPair(
+              const path2 = await instance.pricingPath(
                 tokenOut.address,
                 tokenIn.address,
               );

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0 <0.9.0;
 
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
 import {FullMath} from "./FullMath.sol";
 import {TickMath} from "./TickMath.sol";
-import {IUniswapV3Pool} from "./IUniswapV3Pool.sol";
 
 /// @title Oracle library
 /// @notice Provides functions to integrate with V3 pool oracle

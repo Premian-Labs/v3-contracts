@@ -2,12 +2,13 @@
 
 pragma solidity >=0.8.19;
 
-import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import {IOracleAdapter} from "./IOracleAdapter.sol";
+import {IOracleAdapter} from "../IOracleAdapter.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
+/// @title An implementation of IOracleAdapter that uses Uniswap feeds
+/// @notice This oracle adapter will attempt to use all available feeds to determine
+///         prices between pairs
 interface IUniswapV3Adapter is IOracleAdapter {
     /// @notice Returns the address of the Uniswap V3 factory
     /// @dev This value is assigned during deployment and cannot be changed

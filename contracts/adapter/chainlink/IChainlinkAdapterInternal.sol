@@ -2,14 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
 interface IChainlinkAdapterInternal {
-    struct FeedMappingArgs {
-        address token;
-        address denomination;
-        address feed;
-    }
-
     /// @notice The path that will be used to calculate quotes for a given pair
     enum PricingPath {
         // There is no path calculated
@@ -33,11 +26,11 @@ interface IChainlinkAdapterInternal {
     }
 
     enum ConversionType {
-        ToBtc, // Token -> BTC
-        ToUsd, // Token -> USD
-        ToEth, // Token -> ETH
-        ToUsdToToken, // Token -> USD -> Token
-        ToEthToToken // Token -> ETH -> Token
+        TO_BTC, // Token -> BTC
+        TO_USD, // Token -> USD
+        TO_ETH, // Token -> ETH
+        TO_USD_TO_TOKEN, // Token -> USD -> Token
+        TO_ETH_TO_TOKEN // Token -> ETH -> Token
     }
 
     /// @notice Thrown when the getRoundData call reverts without a reason
@@ -54,8 +47,4 @@ interface IChainlinkAdapterInternal {
     /// @param tokenB The other of the pair's tokens
     /// @param path The new path
     event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
-
-    /// @notice Emitted when new Chainlink price feed mappings are registered
-    /// @param args The arguments for the new mappings
-    event FeedMappingsRegistered(FeedMappingArgs[] args);
 }
