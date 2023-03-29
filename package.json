@@ -23,7 +23,7 @@
     "compile": "hardhat compile",
     "compile:force": "hardhat compile --force",
     "deploy:orderbook": "hardhat run \"./scripts/deploy/0001-deployOrderbook.ts\" --network arbitrumNova",
-    "postinstall": "yarn compile && husky install",
+    "postinstall": "husky install",
     "test": "hardhat test",
     "contract-size": "yarn run hardhat size-contracts",
     "prettier": "prettier --write --ignore-path .gitignore ."
