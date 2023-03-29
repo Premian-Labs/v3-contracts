@@ -1,5 +1,5 @@
-import { ethers } from 'hardhat';
 import { OrderbookStream__factory } from '../../typechain';
+import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

@@ -4,13 +4,13 @@ import {
   VxPremia__factory,
   VxPremiaProxy__factory,
 } from '../../typechain';
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { parseEther, solidityPack } from 'ethers/lib/utils';
-import { deployMockContract } from '@ethereum-waffle/mock-contract';
-import { increase, ONE_DAY } from '../../utils/time';
 import { getEventArgs } from '../../utils/events';
+import { increase, ONE_DAY } from '../../utils/time';
+import { deployMockContract } from '@ethereum-waffle/mock-contract';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { parseEther, solidityPack } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 /* Example to decode packed target data
 

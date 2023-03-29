@@ -1,4 +1,3 @@
-import { expect } from 'chai';
 import {
   ERC20Mock__factory,
   ExchangeHelper__factory,
@@ -6,14 +5,15 @@ import {
   PremiaStakingMock__factory,
   PremiaStakingProxyMock__factory,
 } from '../../typechain';
-import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { signERC2612Permit } from 'eth-permit';
-import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { BigNumber, BigNumberish } from 'ethers';
-import { increase, increaseTo, ONE_YEAR } from '../../utils/time';
 import { bnToNumber } from '../../utils/sdk/math';
+import { increase, increaseTo, ONE_YEAR } from '../../utils/time';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { expect } from 'chai';
+import { signERC2612Permit } from 'eth-permit';
+import { BigNumber, BigNumberish } from 'ethers';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 const ONE_DAY = 3600 * 24;
 const USDC_DECIMALS = 6;

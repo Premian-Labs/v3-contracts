@@ -1,10 +1,3 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
-
-import { bnToAddress } from '@solidstate/library';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-
 import {
   IUniswapV3Factory__factory,
   IUniswapV3Pool__factory,
@@ -12,16 +5,19 @@ import {
   UniswapV3Adapter__factory,
   UniswapV3AdapterProxy__factory,
 } from '../../typechain';
-
+import { UNISWAP_V3_FACTORY, Token, tokens } from '../../utils/addresses';
+import { ONE_ETHER } from '../../utils/constants';
 import {
   convertPriceToBigNumberWithDecimals,
   getPriceBetweenTokens,
   validateQuote,
 } from '../../utils/defillama';
-
-import { UNISWAP_V3_FACTORY, Token, tokens } from '../../utils/addresses';
-import { ONE_ETHER } from '../../utils/constants';
 import { increase, resetHardhat, setHardhat } from '../../utils/time';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { bnToAddress } from '@solidstate/library';
+import { expect } from 'chai';
+import { BigNumber } from 'ethers';
+import { ethers } from 'hardhat';
 
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 const period = 600;
