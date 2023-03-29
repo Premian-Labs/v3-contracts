@@ -1,6 +1,3 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { parseEther } from 'ethers/lib/utils';
 import {
   ERC20Mock__factory,
   ExchangeHelper__factory,
@@ -12,6 +9,9 @@ import {
 } from '../../typechain';
 import { bnToNumber } from '../../utils/sdk/math';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 describe('FeeConverter', () => {
   async function deploy() {

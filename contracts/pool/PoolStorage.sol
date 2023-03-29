@@ -15,7 +15,7 @@ import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
 
-import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
+import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {IERC20Router} from "../router/IERC20Router.sol";
 

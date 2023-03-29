@@ -33,7 +33,10 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__LongOrShortMustBeZero();
     error Pool__NegativeSpotPrice();
     error Pool__NotAuthorized();
-    error Pool__NotEnoughSwapOutput();
+    error Pool__NotEnoughSwapOutput(
+        uint256 amountCredited,
+        uint256 amountOutMin
+    );
     error Pool__NotEnoughTokens();
     error Pool__OppositeSides();
     error Pool__OptionExpired();

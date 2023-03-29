@@ -1,0 +1,11 @@
+[profile.default]
+src = 'contracts'
+out = 'out'
+libs = ['lib']
+test = 'test-foundry'
+fork_block_number = 16597500
+
+[rpc_endpoints]
+mainnet = "${ETH_RPC_URL}"
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

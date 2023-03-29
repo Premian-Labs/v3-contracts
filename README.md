@@ -32,6 +32,7 @@ Create a `.env` file with the following values defined:
 
 | Key                 | Description                                                              |
 | ------------------- | ------------------------------------------------------------------------ |
+| `ETH_RPC_URL`       | RPC URL used for Foundry tests using fork mode                           |
 | `API_KEY_ALCHEMY`   | [Alchemy](https://www.alchemy.com/) API key for node connectivity        |
 | `API_KEY_ETHERSCAN` | [Etherscan](https://etherscan.io//) API key for source code verification |
 | `PKEY_ETH_TEST`     | private key for test/development use on testnets                         |

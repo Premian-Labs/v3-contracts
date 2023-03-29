@@ -1,14 +1,13 @@
-import { ethers } from 'hardhat';
 import {
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy,
   ChainlinkAdapterProxy__factory,
 } from '../../typechain';
-
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
-import fs from 'fs';
 import { ContractAddresses } from '../../utils/deployment/types';
+import fs from 'fs';
+import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

@@ -18,11 +18,11 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-import {IVolatilityOracle} from "../../../oracle/volatility/IVolatilityOracle.sol";
+import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 import {IPool} from "../../../pool/IPool.sol";
-import {IOracleAdapter} from "../../../oracle/price/IOracleAdapter.sol";
+import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";

@@ -1,11 +1,10 @@
-import { ethers } from 'hardhat';
 import { PoolFactory__factory } from '../../../typechain';
-
 import goerliAddresses from '../../../utils/deployment/goerli.json';
-import { parseEther } from 'ethers/lib/utils';
 import { PoolKey } from '../../../utils/sdk/types';
-import { BigNumber } from 'ethers';
 import { getValidMaturity } from '../../../utils/time';
+import { BigNumber } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();

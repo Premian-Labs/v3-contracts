@@ -1,6 +1,6 @@
 import { Premia } from '../../typechain';
-import { ethers } from 'ethers';
 import { Interface } from '@ethersproject/abi';
+import { ethers } from 'ethers';
 
 export enum FacetCutAction {
   ADD,

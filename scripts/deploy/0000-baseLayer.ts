@@ -1,14 +1,13 @@
-import { ethers } from 'hardhat';
-import { PoolUtil } from '../../utils/PoolUtil';
-import { parseEther } from 'ethers/lib/utils';
 import {
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
 } from '../../typechain';
-
+import { PoolUtil } from '../../utils/PoolUtil';
+import { goerliFeeds } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
-import { goerliFeeds } from '../../utils/addresses';
+import { parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
