@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/Console.sol";
-
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
