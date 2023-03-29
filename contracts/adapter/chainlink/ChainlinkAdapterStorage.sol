@@ -4,7 +4,8 @@ pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
-import {FOREX_DECIMALS, ETH_DECIMALS} from "./Tokens.sol";
+import {FOREX_DECIMALS, ETH_DECIMALS} from "../Tokens.sol";
+
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 
 library ChainlinkAdapterStorage {

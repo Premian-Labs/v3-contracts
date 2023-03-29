@@ -9,11 +9,12 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ONE} from "../../libraries/Constants.sol";
 import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
 
+import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
+import {FeedRegistry} from "../FeedRegistry.sol";
+import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "../Tokens.sol";
+
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
-import {FeedRegistry} from "./FeedRegistry.sol";
-import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "./Tokens.sol";
 
 abstract contract ChainlinkAdapterInternal is
     IChainlinkAdapterInternal,

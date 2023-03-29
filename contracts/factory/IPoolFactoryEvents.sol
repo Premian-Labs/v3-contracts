@@ -3,7 +3,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
-import {IOracleAdapter} from "../oracle/price/IOracleAdapter.sol";
+import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 interface IPoolFactoryEvents {
     event SetDiscountPerPool(UD60x18 indexed discountPerPool);

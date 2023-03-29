@@ -2,7 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {IOracleAdapter} from "./IOracleAdapter.sol";
+import {IOracleAdapter} from "../IOracleAdapter.sol";
+
 import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
 
 /// @title An implementation of IOracleAdapter that uses Chainlink feeds

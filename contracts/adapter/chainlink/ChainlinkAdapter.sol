@@ -6,12 +6,13 @@ import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
+import {IOracleAdapter} from "../IOracleAdapter.sol";
+import {OracleAdapter} from "../OracleAdapter.sol";
+import {Tokens} from "../Tokens.sol";
+
 import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
-import {IOracleAdapter} from "./IOracleAdapter.sol";
-import {OracleAdapter} from "./OracleAdapter.sol";
-import {Tokens} from "./Tokens.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract ChainlinkAdapter is
