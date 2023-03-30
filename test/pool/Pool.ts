@@ -1,4 +1,4 @@
-import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
+import { ONE_ETHER, PERMIT2, THREE_ETHER } from '../../utils/constants';
 import { average } from '../../utils/sdk/math';
 import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
@@ -27,7 +27,7 @@ import {
 } from './Pool.fixture';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { PermitTransferFrom } from '@uniswap/permit2-sdk';
 import {
