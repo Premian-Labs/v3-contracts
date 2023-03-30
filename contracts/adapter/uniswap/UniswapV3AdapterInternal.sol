@@ -68,7 +68,7 @@ contract UniswapV3AdapterInternal is
         }
 
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
-        int256 factor = ETH_DECIMALS - _decimals(tokenOut);
+        int256 factor = ETH_DECIMALS - int256(uint256(_decimals(tokenOut)));
 
         UD60x18 price = UD60x18.wrap(
             _scale(
@@ -235,8 +235,8 @@ contract UniswapV3AdapterInternal is
             ];
     }
 
-    function _decimals(address token) internal view returns (int256) {
-        return int256(uint256(IERC20Metadata(token).decimals()));
+    function _decimals(address token) internal view returns (uint8) {
+        return IERC20Metadata(token).decimals();
     }
 
     function _isInitialized(address pool) internal view returns (bool) {
