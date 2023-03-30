@@ -13,6 +13,7 @@ import {
   validateQuote,
 } from '../../utils/defillama';
 import { increase, resetHardhat, setHardhat } from '../../utils/time';
+import { AdapterType } from '../../utils/sdk/types';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { bnToAddress } from '@solidstate/library';
 import { expect } from 'chai';
@@ -56,6 +57,7 @@ describe('UniswapV3Adapter', () => {
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
+      tokens.WETH.address,
       22250,
       30000,
     );
@@ -83,6 +85,7 @@ describe('UniswapV3Adapter', () => {
 
     const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
       UNISWAP_V3_FACTORY,
+      tokens.WETH.address,
       22250,
       30000,
     );
@@ -108,7 +111,7 @@ describe('UniswapV3Adapter', () => {
 
       const implementation = await new UniswapV3Adapter__factory(
         deployer,
-      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+      ).deploy(UNISWAP_V3_FACTORY, tokens.WETH.address, 22250, 30000);
 
       await implementation.deployed();
 
@@ -129,7 +132,7 @@ describe('UniswapV3Adapter', () => {
 
       const implementation = await new UniswapV3Adapter__factory(
         deployer,
-      ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+      ).deploy(UNISWAP_V3_FACTORY, tokens.WETH.address, 22250, 30000);
 
       await implementation.deployed();
 
@@ -539,6 +542,54 @@ describe('UniswapV3Adapter', () => {
         instance,
         'UniswapV3Adapter__FeeTierExists',
       );
+    });
+  });
+
+  describe('#describePricingPath', () => {
+    it('should describe pricing path', async () => {
+      const { instance } = await loadFixture(deploy);
+
+      let description = await instance.describePricingPath(
+        bnToAddress(BigNumber.from(1)),
+      );
+
+      expect(description.adapterType).to.eq(AdapterType.UNISWAP_V3);
+      expect(description.path.length).to.eq(0);
+      expect(description.decimals.length).to.eq(0);
+
+      description = await instance.describePricingPath(tokens.WETH.address);
+
+      expect(description.adapterType).to.eq(AdapterType.UNISWAP_V3);
+      expect(description.path).to.deep.eq([
+        ['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'],
+      ]);
+      expect(description.decimals).to.deep.eq([18]);
+
+      description = await instance.describePricingPath(tokens.DAI.address);
+
+      expect(description.adapterType).to.eq(AdapterType.UNISWAP_V3);
+      expect(description.path).to.deep.eq([
+        [
+          '0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19',
+          '0x60594a405d53811d3BC4766596EFD80fd545A270',
+          '0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8',
+          '0xa80964C5bBd1A0E95777094420555fead1A26c1e',
+        ],
+      ]);
+      expect(description.decimals).to.deep.eq([18, 18]);
+
+      description = await instance.describePricingPath(tokens.USDC.address);
+
+      expect(description.adapterType).to.eq(AdapterType.UNISWAP_V3);
+      expect(description.path).to.deep.eq([
+        [
+          '0xE0554a476A092703abdB3Ef35c80e0D76d32939F',
+          '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
+          '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
+          '0x7BeA39867e4169DBe237d55C8242a8f2fcDcc387',
+        ],
+      ]);
+      expect(description.decimals).to.deep.eq([6, 18]);
     });
   });
 

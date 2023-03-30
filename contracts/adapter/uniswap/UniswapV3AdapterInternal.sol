@@ -27,6 +27,7 @@ contract UniswapV3AdapterInternal is
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     IUniswapV3Factory internal immutable UNISWAP_V3_FACTORY;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
 
     /// @dev init bytecode from the deployed version of Uniswap V3 Pool contract
     bytes32 internal constant POOL_INIT_CODE_HASH =
@@ -37,10 +38,12 @@ contract UniswapV3AdapterInternal is
 
     constructor(
         IUniswapV3Factory uniswapV3Factory,
+        address wrappedNativeToken,
         uint256 gasPerCardinality,
         uint256 gasToSupportPool
     ) {
         UNISWAP_V3_FACTORY = uniswapV3Factory;
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         GAS_PER_CARDINALITY = gasPerCardinality;
         GAS_TO_SUPPORT_POOL = gasToSupportPool;
     }
