@@ -333,10 +333,12 @@ describe('UnderwriterVault.fees', () => {
     tests.forEach(async (test) => {
       it('', async () => {
         let { vault, caller } = await setup(test);
+
+        await vault.setTimestamp(test.timestamp);
+
         await vault.updateTimeOfDeposit(
           caller.address,
           parseEther(test.shareAmount.toString()),
-          test.timestamp.toString(),
         );
         const timeOfDepositUpdated = parseInt(
           (await vault.getTimeOfDeposit(caller.address)).toString(),
@@ -353,6 +355,9 @@ describe('UnderwriterVault.fees', () => {
           describe('', () => {
             it('', async () => {
               let { vault, caller } = await setupGetFeeVars(isCall, test);
+
+              await vault.setTimestamp(test.timestamp);
+
               const {
                 pps,
                 ppsAvg,
@@ -369,7 +374,6 @@ describe('UnderwriterVault.fees', () => {
               } = await vault.getFeeVars(
                 caller.address,
                 parseEther(test.transferAmount.toString()),
-                test.timestamp,
               );
               await expect(pps).to.eq(parseEther(test.pps.toString()));
               await expect(ppsAvg).to.eq(parseEther(test.ppsUser.toString()));
@@ -439,10 +443,11 @@ describe('UnderwriterVault.fees', () => {
         myClonedArray.forEach(async (test) => {
           it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferableShares}`, async () => {
             const { vault, caller } = await setupGetFeeVars(isCall, test);
+            await vault.setTimestamp(test.timestamp);
+
             console.log(await vault.balanceOf(caller.address));
             const maxTransferableShares = await vault.maxTransferableShares(
               caller.address,
-              test.timestamp,
             );
             expect(parseFloat(formatEther(maxTransferableShares))).to.eq(
               test.maxTransferableShares,

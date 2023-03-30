@@ -65,18 +65,18 @@ interface IVault is IERC4626Internal, IERC20Internal {
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
     function getTradeQuote(
-        uint256 strike,
+        UD60x18 strike,
         uint64 maturity,
         bool isCall,
-        uint256 size,
+        UD60x18 size,
         bool isBuy
     ) external view returns (uint256 maxSize, uint256 price);
 
     function trade(
-        uint256 strike,
+        UD60x18 strike,
         uint64 maturity,
         bool isCall,
-        uint256 size,
+        UD60x18 size,
         bool isBuy
     ) external;
 }

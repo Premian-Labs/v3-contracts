@@ -134,7 +134,9 @@ describe('UnderwriterVault.internal.pps', () => {
         tests.forEach(async (test) => {
           it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
             await vault.setIsCall(test.isCall);
-            let result = await vault.getTotalLiabilitiesExpired(test.timestamp);
+            await vault.setTimestamp(test.timestamp);
+
+            let result = await vault.getTotalLiabilitiesExpired();
             let delta = test.isCall ? 0.00001 : 0.0;
 
             expect(parseFloat(formatEther(result))).to.be.closeTo(
@@ -146,15 +148,16 @@ describe('UnderwriterVault.internal.pps', () => {
 
         it('returns 0 when there are no existing listings', async () => {
           await vault.clearListingsAndSizes();
+          await vault.setTimestamp(t0 - ONE_DAY);
 
-          let result = await vault.getTotalLiabilitiesExpired(t0 - ONE_DAY);
+          let result = await vault.getTotalLiabilitiesExpired();
           let expected = 0;
 
           expect(result).to.eq(parseEther(expected.toString()));
 
           await vault.setIsCall(false);
 
-          result = await vault.getTotalLiabilitiesExpired(t0 - ONE_DAY);
+          result = await vault.getTotalLiabilitiesExpired();
           expected = 0;
 
           expect(result).to.eq(parseEther(expected.toString()));
@@ -327,6 +330,7 @@ describe('UnderwriterVault.internal.pps', () => {
           vault = callVault;
           await setupVolOracleMock(volOracle, base);
           await vault.setListingsAndSizes(infos);
+          await vault.setSpotPrice(spot);
         });
 
         let callTests = [
@@ -352,10 +356,9 @@ describe('UnderwriterVault.internal.pps', () => {
         tests.forEach(async (test) => {
           it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
             await vault.setIsCall(test.isCall);
-            let result = await vault.getTotalLiabilitiesUnexpired(
-              test.timestamp,
-              spot,
-            );
+            await vault.setTimestamp(test.timestamp);
+
+            let result = await vault.getTotalLiabilitiesUnexpired();
             let delta = test.isCall ? 0.000002 : 0.002;
             expect(parseFloat(formatEther(result))).to.be.closeTo(
               test.expected,
@@ -366,18 +369,16 @@ describe('UnderwriterVault.internal.pps', () => {
 
         it('returns 0 when there are no existing listings', async () => {
           await vault.clearListingsAndSizes();
+          await vault.setTimestamp(t0 - ONE_DAY);
 
-          let result = await vault.getTotalLiabilitiesUnexpired(
-            t0 - ONE_DAY,
-            spot,
-          );
+          let result = await vault.getTotalLiabilitiesUnexpired();
           let expected = 0;
 
           expect(result).to.eq(parseEther(expected.toString()));
 
           await vault.setIsCall(false);
 
-          result = await vault.getTotalLiabilitiesUnexpired(t0 - ONE_DAY, spot);
+          result = await vault.getTotalLiabilitiesUnexpired();
           expected = 0;
 
           expect(result).to.eq(parseEther(expected.toString()));
@@ -440,7 +441,8 @@ describe('UnderwriterVault.internal.pps', () => {
         tests.forEach(async (test) => {
           it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
             await vault.setIsCall(test.isCall);
-            let result = await vault.getTotalLiabilities(test.timestamp);
+            await vault.setTimestamp(test.timestamp);
+            let result = await vault.getTotalLiabilities();
             let delta = test.isCall ? 0.00001 : 0.01;
             expect(parseFloat(formatEther(result))).to.be.closeTo(
               test.expected,
@@ -562,10 +564,11 @@ describe('UnderwriterVault.internal.pps', () => {
 
           it(`returns ${test.expected} when isCall=${test.isCall} and timestamp=${test.timestamp}`, async () => {
             await vault.setIsCall(test.isCall);
+            await vault.setTimestamp(test.timestamp);
             await vault.setTotalLockedAssets(
               parseEther(totalLocked.toString()),
             );
-            let result = await vault.getTotalFairValue(test.timestamp);
+            let result = await vault.getTotalFairValue();
             let delta = test.isCall ? 0.00001 : 0.01;
 
             expect(parseFloat(formatEther(result))).to.be.closeTo(

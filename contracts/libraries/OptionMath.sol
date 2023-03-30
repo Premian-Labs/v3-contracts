@@ -112,12 +112,12 @@ library OptionMath {
     }
 
     /// @notice Calculate option delta
-    /// @param spot 60x18 fixed point representation of spot price
-    /// @param strike 60x18 fixed point representation of strike price
-    /// @param timeToMaturity 60x18 fixed point representation of duration of option contract (in years)
-    /// @param volAnnualized 60x18 fixed point representation of annualized volatility
+    /// @param spot Spot price
+    /// @param strike Strike price
+    /// @param timeToMaturity Duration of option contract (in years)
+    /// @param volAnnualized Annualized volatility
     /// @param isCall whether to price "call" or "put" option
-    /// @return price 60x18 fixed point representation of option delta
+    /// @return price Option delta
     function optionDelta(
         UD60x18 spot,
         UD60x18 strike,

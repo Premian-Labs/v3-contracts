@@ -193,7 +193,8 @@ describe('UnderwriterVault.internal', () => {
         price: ZERO,
         mintingFee: ZERO,
       };
-      await increaseTo(startTime + ONE_DAY);
+
+      await vault.setTimestamp(startTime + ONE_DAY);
       await vault.afterBuy(afterBuyArgs);
       console.log('Processed afterBuy.');
       return { vault };
@@ -641,9 +642,10 @@ describe('UnderwriterVault.internal', () => {
     tests.forEach(async (test) => {
       it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
         let { callVault: vault } = await loadFixture(setupSpreadsVault);
-        await increaseTo(test.timestamp);
+        await vault.setTimestamp(test.timestamp);
+
         const [totalLockedSpread, spreadUnlockingRate, lastSpreadUnlockUpdate] =
-          await vault.getLockedSpreadVars(test.timestamp);
+          await vault.getLockedSpreadVars();
         const tlsParsed = parseFloat(formatEther(totalLockedSpread));
         const surParsed = parseFloat(formatEther(spreadUnlockingRate));
         expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
@@ -673,7 +675,9 @@ describe('UnderwriterVault.internal', () => {
     tests.forEach(async (test) => {
       it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
         let { callVault: vault } = await loadFixture(setupSpreadsVault);
-        await increaseTo(test.timestamp);
+
+        await vault.setTimestamp(test.timestamp);
+
         await vault.updateState(test.timestamp);
         const tlsParsed = parseFloat(
           formatEther(await vault.totalLockedSpread()),
