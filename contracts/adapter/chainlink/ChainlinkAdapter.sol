@@ -2,23 +2,26 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
-import {ChainlinkAdapterInternal, ChainlinkAdapterStorage} from "./ChainlinkAdapterInternal.sol";
+import {IOracleAdapter} from "../IOracleAdapter.sol";
+import {OracleAdapter} from "../OracleAdapter.sol";
+import {Tokens} from "../Tokens.sol";
+
+import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
+import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
-import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 
 /// @notice derived from https://github.com/Mean-Finance/oracles
 contract ChainlinkAdapter is
     ChainlinkAdapterInternal,
     IChainlinkAdapter,
-    OracleAdapter,
-    SafeOwnable
+    OracleAdapter
 {
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
+    using Tokens for address;
 
     constructor(
         address _wrappedNativeToken,
@@ -34,7 +37,7 @@ contract ChainlinkAdapter is
             PricingPath path,
             address mappedTokenA,
             address mappedTokenB
-        ) = _pathForPair(tokenA, tokenB, true);
+        ) = _pricingPath(tokenA, tokenB, true);
 
         isCached = path != PricingPath.NONE;
 
@@ -53,7 +56,7 @@ contract ChainlinkAdapter is
         ) = _mapToDenominationAndSort(tokenA, tokenB);
 
         PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = _keyForSortedPair(mappedTokenA, mappedTokenB);
+        bytes32 keyForPair = mappedTokenA.keyForSortedPair(mappedTokenB);
 
         ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
             .layout();
@@ -62,16 +65,14 @@ contract ChainlinkAdapter is
             // Check if there is a current path. If there is, it means that the pair was supported and it
             // lost support. In that case, we will remove the current path and continue working as expected.
             // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pathForPair[keyForPair];
+            PricingPath _currentPath = l.pricingPath[keyForPair];
 
-            if (_currentPath == PricingPath.NONE) {
+            if (_currentPath == PricingPath.NONE)
                 revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
-            }
         }
 
-        if (l.pathForPair[keyForPair] == path) return;
-
-        l.pathForPair[keyForPair] = path;
+        if (l.pricingPath[keyForPair] == path) return;
+        l.pricingPath[keyForPair] = path;
         emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
     }
 
@@ -115,9 +116,9 @@ contract ChainlinkAdapter is
             address[] memory aggregator = new address[](1);
             aggregator[0] = Denominations.ETH;
             path[0] = aggregator;
-        } else if (_exists(token, Denominations.ETH)) {
+        } else if (_feedExists(token, Denominations.ETH)) {
             path[0] = _aggregator(token, Denominations.ETH);
-        } else if (_exists(token, Denominations.USD)) {
+        } else if (_feedExists(token, Denominations.USD)) {
             path[0] = _aggregator(token, Denominations.USD);
             path[1] = _aggregator(Denominations.ETH, Denominations.USD);
         }
@@ -153,45 +154,11 @@ contract ChainlinkAdapter is
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function pathForPair(
+    function pricingPath(
         address tokenA,
         address tokenB
     ) external view returns (PricingPath) {
-        (PricingPath path, , ) = _pathForPair(tokenA, tokenB, false);
+        (PricingPath path, , ) = _pricingPath(tokenA, tokenB, false);
         return path;
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function batchRegisterFeedMappings(
-        FeedMappingArgs[] memory args
-    ) external onlyOwner {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = _tokenToDenomination(args[i].token);
-            address denomination = args[i].denomination;
-
-            if (token == denomination)
-                revert OracleAdapter__TokensAreSame(token, denomination);
-
-            if (token == address(0) || denomination == address(0))
-                revert OracleAdapter__ZeroAddress();
-
-            bytes32 keyForPair = _keyForUnsortedPair(token, denomination);
-            ChainlinkAdapterStorage.layout().feeds[keyForPair] = args[i].feed;
-        }
-
-        emit FeedMappingsRegistered(args);
-    }
-
-    /// @inheritdoc IChainlinkAdapter
-    function feed(
-        address tokenA,
-        address tokenB
-    ) external view returns (address) {
-        (address mappedTokenA, address mappedTokenB) = _mapToDenomination(
-            tokenA,
-            tokenB
-        );
-
-        return _feed(mappedTokenA, mappedTokenB);
     }
 }

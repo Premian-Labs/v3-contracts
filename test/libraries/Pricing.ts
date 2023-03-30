@@ -1,9 +1,9 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
 import { PricingMock__factory } from '../../typechain';
-import { parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/sdk/math';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 describe('Pricing', () => {
   async function deploy() {

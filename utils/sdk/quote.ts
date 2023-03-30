@@ -1,6 +1,6 @@
 import { signData } from './rpc';
-import { Provider } from '@ethersproject/providers';
 import { TradeQuote } from './types';
+import { Provider } from '@ethersproject/providers';
 import {
   defaultAbiCoder,
   keccak256,

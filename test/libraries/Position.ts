@@ -1,10 +1,10 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
 import { PositionMock__factory } from '../../typechain';
-import { formatEther, parseEther } from 'ethers/lib/utils';
 import { average } from '../../utils/sdk/math';
 import { OrderType } from '../../utils/sdk/types';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
+import { formatEther, parseEther } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 describe('Position', () => {
   const strike = parseEther('1000');

@@ -1,9 +1,3 @@
-import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { OrderType } from '../../utils/sdk/types';
-import { BigNumber } from 'ethers';
-import { ONE_ETHER } from '../../utils/constants';
-import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
-import { ethers } from 'hardhat';
 import {
   ERC20Mock__factory,
   IPoolMock__factory,
@@ -11,9 +5,15 @@ import {
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
-import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
+import { ONE_ETHER } from '../../utils/constants';
 import { getEventArgs } from '../../utils/events';
 import { getEmptyPremiaPermit2 } from '../../utils/sdk/permit2';
+import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
+import { OrderType } from '../../utils/sdk/types';
+import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
+import { BigNumber } from 'ethers';
+import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 export const depositFnSig =
   'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))';

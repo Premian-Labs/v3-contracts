@@ -1,28 +1,23 @@
-import { expect } from 'chai';
-import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
-
-import { bnToAddress } from '@solidstate/library';
-import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
   ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
-
+import { feeds, Token, tokens } from '../../utils/addresses';
+import { ONE_ETHER } from '../../utils/constants';
 import {
   convertPriceToBigNumberWithDecimals,
   getPriceBetweenTokens,
   validateQuote,
 } from '../../utils/defillama';
-
-import { feeds, Token, tokens } from '../../utils/addresses';
-import { ONE_ETHER } from '../../utils/constants';
-import { increaseTo, latest } from '../../utils/time';
-
 import { AdapterType } from '../../utils/sdk/types';
+import { increaseTo, latest } from '../../utils/time';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { bnToAddress } from '@solidstate/library';
+import { expect } from 'chai';
+import { BigNumber } from 'ethers';
+import { ethers } from 'hardhat';
 
 const target = 1676016000; // Fri Feb 10 2023 08:00:00 GMT+0000
 
@@ -299,7 +294,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__TokensAreSame');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__TokensAreSame');
     });
 
     it('should revert if token or denomination address is 0', async () => {
@@ -313,7 +308,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
 
       await expect(
         instance.batchRegisterFeedMappings([
@@ -323,7 +318,7 @@ describe('ChainlinkAdapter', () => {
             feed: bnToAddress(BigNumber.from(1)),
           },
         ]),
-      ).to.be.revertedWithCustomError(instance, 'OracleAdapter__ZeroAddress');
+      ).to.be.revertedWithCustomError(instance, 'FeedRegistry__ZeroAddress');
     });
 
     it('shoud return feed of mapped token and denomination', async () => {
@@ -745,14 +740,14 @@ describe('ChainlinkAdapter', () => {
             });
           });
 
-          describe('#pathForPair', () => {
+          describe('#pricingPath', () => {
             it('should return pricing path for pair', async () => {
-              const path1 = await instance.pathForPair(
+              const path1 = await instance.pricingPath(
                 tokenIn.address,
                 tokenOut.address,
               );
 
-              const path2 = await instance.pathForPair(
+              const path2 = await instance.pricingPath(
                 tokenOut.address,
                 tokenIn.address,
               );

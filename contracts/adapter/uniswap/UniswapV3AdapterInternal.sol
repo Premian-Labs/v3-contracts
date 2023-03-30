@@ -2,28 +2,28 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-
-import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
-import {IUniswapV3Pool} from "../../vendor/uniswap/IUniswapV3Pool.sol";
 import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
 import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
 
+import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
+import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
+
 import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
-import {OracleAdapterInternal} from "./OracleAdapterInternal.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3AdapterInternal is
     IUniswapV3AdapterInternal,
     OracleAdapterInternal
 {
     using SafeCast for uint256;
+    using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     IUniswapV3Factory internal immutable UNISWAP_V3_FACTORY;
@@ -54,13 +54,20 @@ contract UniswapV3AdapterInternal is
             .layout();
 
         address[] memory pools = _poolsForPair(tokenIn, tokenOut);
+        address[] memory allDeployedPools = _getAllPoolsForPair(
+            tokenIn,
+            tokenOut
+        );
 
-        if (pools.length == 0) {
-            pools = _tryFindPools(l, tokenIn, tokenOut);
+        if (allDeployedPools.length == 0)
+            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+
+        if (pools.length == 0 || pools.length < allDeployedPools.length) {
+            _validatePoolCardinality(l, allDeployedPools);
+            pools = allDeployedPools;
         }
 
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
-
         int256 factor = ETH_DECIMALS - _decimals(tokenOut);
 
         UD60x18 price = UD60x18.wrap(
@@ -141,18 +148,11 @@ contract UniswapV3AdapterInternal is
         return range;
     }
 
-    function _tryFindPools(
+    function _validatePoolCardinality(
         UniswapV3AdapterStorage.Layout storage l,
-        address tokenIn,
-        address tokenOut
-    ) internal view returns (address[] memory) {
-        address[] memory pools = _getAllPoolsForPair(tokenIn, tokenOut);
-        uint256 poolLength = pools.length;
-
-        if (poolLength == 0)
-            revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
-
-        for (uint256 i; i < poolLength; i++) {
+        address[] memory pools
+    ) internal view {
+        for (uint256 i; i < pools.length; i++) {
             address pool = pools[i];
 
             (
@@ -163,8 +163,6 @@ contract UniswapV3AdapterInternal is
             if (currentCardinalityBelowTarget)
                 revert UniswapV3Adapter__ObservationCardinalityTooLow();
         }
-
-        return pools;
     }
 
     function _getAllPoolsForPair(
@@ -185,7 +183,7 @@ contract UniswapV3AdapterInternal is
                 PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
             );
 
-            if (AddressUtils.isContract(pool)) {
+            if (AddressUtils.isContract(pool) && _isInitialized(pool)) {
                 pools[validPools++] = pool;
             }
         }
@@ -233,12 +231,17 @@ contract UniswapV3AdapterInternal is
     ) internal view returns (address[] storage) {
         return
             UniswapV3AdapterStorage.layout().poolsForPair[
-                _keyForUnsortedPair(tokenA, tokenB)
+                tokenA.keyForUnsortedPair(tokenB)
             ];
     }
 
     function _decimals(address token) internal view returns (int256) {
         return int256(uint256(IERC20Metadata(token).decimals()));
+    }
+
+    function _isInitialized(address pool) internal view returns (bool) {
+        (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        return sqrtPriceX96 != 0;
     }
 
     /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/OracleLibrary.sol#L16-L41

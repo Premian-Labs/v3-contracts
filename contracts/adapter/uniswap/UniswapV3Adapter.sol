@@ -2,15 +2,16 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-
-import {IUniswapV3Factory} from "../../vendor/uniswap/IUniswapV3Factory.sol";
+import {IOracleAdapter} from "../IOracleAdapter.sol";
+import {Tokens} from "../Tokens.sol";
+import {OracleAdapter} from "../OracleAdapter.sol";
 
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
-import {IOracleAdapter, OracleAdapter} from "./OracleAdapter.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
@@ -23,6 +24,7 @@ contract UniswapV3Adapter is
     UniswapV3AdapterInternal
 {
     using SafeCast for uint256;
+    using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     constructor(
@@ -49,23 +51,22 @@ contract UniswapV3Adapter is
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
         address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
-        uint256 poolsLength = pools.length;
 
-        if (poolsLength == 0)
+        if (pools.length == 0)
             revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
 
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        address[] memory poolsToSupport = new address[](poolsLength);
+        address[] memory poolsToSupport = new address[](pools.length);
 
-        for (uint256 i; i < poolsLength; i++) {
+        for (uint256 i; i < pools.length; i++) {
             address pool = pools[i];
             _tryIncreaseCardinality(pool, l.targetCardinality);
             poolsToSupport[i] = pool;
         }
 
-        l.poolsForPair[_keyForUnsortedPair(tokenA, tokenB)] = poolsToSupport;
+        l.poolsForPair[tokenA.keyForUnsortedPair(tokenB)] = poolsToSupport;
         emit UpdatedPoolsForPair(tokenA, tokenB, poolsToSupport);
     }
 
