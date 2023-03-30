@@ -4,8 +4,8 @@ pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";

@@ -24,6 +24,7 @@ function getRemappings() {
     .readFileSync('remappings.txt', 'utf8')
     .split('\n')
     .filter(Boolean)
+    .filter((el) => !el.includes('node_modules'))
     .map((line: string) => line.trim().split('='));
 }
 

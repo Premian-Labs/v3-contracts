@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
