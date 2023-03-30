@@ -88,7 +88,7 @@ contract ChainlinkAdapter is
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint256 target
+        uint32 target
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target);

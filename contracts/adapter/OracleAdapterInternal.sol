@@ -67,7 +67,7 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
         }
     }
 
-    function _ensureTargetNonZero(uint256 target) internal view {
+    function _ensureTargetNonZero(uint32 target) internal view {
         if (target == 0 || target > block.timestamp)
             revert OracleAdapter__InvalidTarget();
     }

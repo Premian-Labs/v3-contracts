@@ -56,7 +56,7 @@ interface IOracleAdapter {
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint256 target
+        uint32 target
     ) external view returns (UD60x18);
 
     /// @notice Describes the pricing path used to convert the token to ETH

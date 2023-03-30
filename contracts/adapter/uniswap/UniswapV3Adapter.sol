@@ -4,7 +4,6 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
@@ -23,7 +22,6 @@ contract UniswapV3Adapter is
     SafeOwnable,
     UniswapV3AdapterInternal
 {
-    using SafeCast for uint256;
     using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
@@ -82,10 +80,10 @@ contract UniswapV3Adapter is
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint256 target
+        uint32 target
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
-        return _quoteFrom(tokenIn, tokenOut, target.toUint32());
+        return _quoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @inheritdoc IOracleAdapter

@@ -42,7 +42,7 @@ abstract contract ChainlinkAdapterInternal is
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint256 target
+        uint32 target
     ) internal view returns (UD60x18) {
         (
             PricingPath path,
