@@ -8,11 +8,7 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
-import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
-
 contract ChainlinkAdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
-    using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
-
     constructor(
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {
