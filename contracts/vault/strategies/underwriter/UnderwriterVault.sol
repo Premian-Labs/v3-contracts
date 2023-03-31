@@ -614,10 +614,16 @@ contract UnderwriterVault is
         return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel);
     }
 
+    /// @notice Ensures that an option is tradeable with the vault.
+    /// @param size The amount of contracts.
     function _ensureNonZeroSize(UD60x18 size) internal pure {
         if (size == ZERO) revert Vault__ZeroSize();
     }
 
+    /// @notice Ensures that an option is tradeable with the vault.
+    /// @param isCallVault Whether the vault is a call or put vault.
+    /// @param isCallOption Whether the option is a call or put.
+    /// @param isBuy Whether the trade is a buy or a sell.
     function _ensureTradeableWithVault(
         bool isCallVault,
         bool isCallOption,
@@ -628,6 +634,9 @@ contract UnderwriterVault is
             revert Vault__OptionTypeMismatchWithVault();
     }
 
+    /// @notice Ensures that an option is valid for trading.
+    /// @param strike The strike price of the option.
+    /// @param maturity The maturity of the option.
     function _ensureValidOption(
         UD60x18 strike,
         uint256 maturity
@@ -638,6 +647,11 @@ contract UnderwriterVault is
         if (_getBlockTimestamp() >= maturity) revert Vault__OptionExpired();
     }
 
+    /// @notice Ensures there is sufficient funds for processing a trade.
+    /// @param isCallVault Whether the vault is a call or put vault.
+    /// @param strike The strike price.
+    /// @param size The amount of contracts.
+    /// @param availableAssets The amount of available assets currently in the vault.
     function _ensureSufficientFunds(
         bool isCallVault,
         UD60x18 strike,
@@ -649,6 +663,11 @@ contract UnderwriterVault is
         if (collateral >= availableAssets) revert Vault__InsufficientFunds();
     }
 
+    /// @notice Ensures that a value is within the specified boundary for trading for the UD60x18 data type.
+    /// @param valueName The name of the value to be checked.
+    /// @param value The observed value of the variable.
+    /// @param minimum The minimum value the variable can be.
+    /// @param maximum The maximum value the variable can be.
     function _ensureWithinTradeBounds(
         string memory valueName,
         UD60x18 value,
@@ -659,6 +678,11 @@ contract UnderwriterVault is
             revert Vault__OutOfTradeBounds(valueName);
     }
 
+    /// @notice Ensures that a value is within the specified boundary for trading for the SD59x18 data type.
+    /// @param valueName The name of the value to be checked.
+    /// @param value The observed value of the variable.
+    /// @param minimum The minimum value the variable can be.
+    /// @param maximum The maximum value the variable can be.
     function _ensureWithinTradeBounds(
         string memory valueName,
         SD59x18 value,
@@ -669,6 +693,13 @@ contract UnderwriterVault is
             revert Vault__OutOfTradeBounds(valueName);
     }
 
+    /// @notice Get the variables needed in order to compute the quote for a trade.
+    /// @param strike The strike price of the option.
+    /// @param maturity The maturity of the option.
+    /// @param isCall Whether the option is a call or a put.
+    /// @param size The amount of contracts.
+    /// @param isBuy Whether the trade is a buy or a sell.
+    /// @return The variables needed in order to compute the quote for a trade.
     function _getQuoteVars(
         UD60x18 strike,
         uint256 maturity,
@@ -916,6 +947,10 @@ contract UnderwriterVault is
         emit UpdateQuotes();
     }
 
+    /// @notice Computes the fee variables needed for computed performance and management fees.
+    /// @param owner The owner of the shares.
+    /// @param shares The amount of shares to be transferred.
+    /// @return The fee variables needed for computed performance and management fees.
     function _getFeeVars(
         address owner,
         UD60x18 shares
@@ -944,6 +979,7 @@ contract UnderwriterVault is
                 vars.performanceFeeInShares *
                 vars.pps;
         }
+
         UD60x18 timeSinceLastDeposit = UD60x18.wrap(
             (timestamp - l.timeOfDeposit[owner]) * 1e18
         ) / UD60x18.wrap(365 * 24 * 60 * 60 * 1e18);
@@ -956,15 +992,20 @@ contract UnderwriterVault is
             _convertToAssetsUD60x18(vars.balanceShares) *
             l.managementFeeRate *
             timeSinceLastDeposit;
+
         vars.totalFeeInShares =
             vars.managementFeeInShares +
             vars.performanceFeeInShares;
         vars.totalFeeInAssets =
             vars.managementFeeInAssets +
             vars.performanceFeeInAssets;
+
         return vars;
     }
 
+    /// @notice Gets the maximum amount of shares a user can transfer.
+    /// @param owner The owner of the shares.
+    /// @return The maximum amount of shares a user can transfer.
     function _maxTransferableShares(
         address owner
     ) internal view returns (UD60x18) {
@@ -977,10 +1018,6 @@ contract UnderwriterVault is
     }
 
     /// @inheritdoc ERC20BaseInternal
-    // _beforeTokenTransfer -> _burn -> _beforeTokenTransfer -> burn (conflict)
-    // solution was to ignore the content of the hook when the to address is the zero address
-    // however, the problem is that withdraw uses burn to burn the users shares
-    // in this case we need the beforeTransferToken hook to "tax" the user
     function _beforeTokenTransfer(
         address from,
         address to,

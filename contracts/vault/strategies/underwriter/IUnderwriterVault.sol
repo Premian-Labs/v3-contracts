@@ -66,23 +66,35 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     }
 
     struct FeeVars {
+        // current price per share
         UD60x18 pps;
+        // average price per share of the user
         UD60x18 ppsAvg;
+        // amount of shares the user wants to transfer
         UD60x18 shares;
+        // amount of assets that the user's shares are worth currently
         UD60x18 assets;
+        // total amount of shares the user owns
         UD60x18 balanceShares;
+        // performance of the user's deposited capital (1.2 meaning 20% in returns, 0.9 meaning -10% in returns)
         UD60x18 performance;
+        // performance fee given to the vault based on the amount transferred denoted in shares
         UD60x18 performanceFeeInShares;
+        // performance fee given to the vault based on the amount transferred denoted in assets
         UD60x18 performanceFeeInAssets;
+        // management fee given to the vault based on the amount transferred denoted in shares
         UD60x18 managementFeeInShares;
+        // management fee given to the vault based on the amount transferred denoted in assets
         UD60x18 managementFeeInAssets;
+        // total fee given to the vault based on the amount transferred denoted in shares
         UD60x18 totalFeeInShares;
+        // total fee given to the vault based on the amount transferred denoted in the assets
         UD60x18 totalFeeInAssets;
     }
 
     // Events
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
-    /// @notice Settle all positions that are past their maturity.
+    /// @notice Settles all expired option positions.
     function settle() external;
 }
