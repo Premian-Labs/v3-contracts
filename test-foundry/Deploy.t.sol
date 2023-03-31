@@ -322,6 +322,25 @@ contract DeployTest is Test, Assertions {
             });
     }
 
+    function getSwapQuote(
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) internal returns (uint256) {
+        (uint256 swapQuote, , , ) = IQuoterV2(uniswapQuoter)
+            .quoteExactOutputSingle(
+                IQuoterV2.QuoteExactOutputSingleParams({
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    amount: amount,
+                    fee: 3000,
+                    sqrtPriceLimitX96: 0
+                })
+            );
+
+        return swapQuote;
+    }
+
     function getPoolToken(bool isCall) internal view returns (address) {
         return isCall ? base : quote;
     }

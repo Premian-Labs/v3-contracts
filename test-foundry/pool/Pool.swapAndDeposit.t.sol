@@ -6,8 +6,6 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
-
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
@@ -30,16 +28,7 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
         UD60x18 collateral = contractsToCollateral(depositSize, isCall);
         uint256 collateralValue = scaleDecimals(collateral * avgPrice, isCall);
 
-        (uint256 swapQuote, , , ) = IQuoterV2(uniswapQuoter)
-            .quoteExactOutputSingle(
-                IQuoterV2.QuoteExactOutputSingleParams({
-                    tokenIn: swapToken,
-                    tokenOut: poolToken,
-                    amount: collateralValue,
-                    fee: 3000,
-                    sqrtPriceLimitX96: 0
-                })
-            );
+        uint256 swapQuote = getSwapQuote(swapToken, poolToken, collateralValue);
 
         deal(swapToken, users.lp, swapQuote);
 
