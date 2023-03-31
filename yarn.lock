@@ -1174,6 +1174,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solidstate/library@npm:^0.0.54":
+  version: 0.0.54
+  resolution: "@solidstate/library@npm:0.0.54"
+  dependencies:
+    eth-permit: ^0.1.10
+  checksum: 0c4e0fd7acbdc4ee1b892462329e915c5bb3f3e0133d995bba2773a148992d76d7f5490767751b6147e5b9abb5ecf3071f8c59390605bf58b69adb34de3451d3
+  languageName: node
+  linkType: hard
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -3650,6 +3659,15 @@ __metadata:
     "@codechecks/client":
       optional: true
   checksum: 3bfa81e554b069bb817f2a073a601a0429e6b582c56ad99db0727dc2a102ab00fc27888820b8a042a194a8fb7d40954d10cd7b011ede6b8170285d2d5a88666c
+  languageName: node
+  linkType: hard
+
+"eth-permit@npm:^0.1.10":
+  version: 0.1.10
+  resolution: "eth-permit@npm:0.1.10"
+  dependencies:
+    utf8: ^3.0.0
+  checksum: 9b6ce4ba002f57fa7c5e032cd52c805e1e095f82f54d5e7d3672b6475c3e781060b6202fc2c514117673bbaed73a3b8d910538d78d67c69c7b36d4fb75c55d92
   languageName: node
   linkType: hard
 
@@ -6932,6 +6950,7 @@ __metadata:
     "@nomiclabs/hardhat-etherscan": ^3.1.7
     "@solidstate/contracts": ^0.0.54
     "@solidstate/hardhat-4byte-uploader": ^1.0.2
+    "@solidstate/library": ^0.0.54
     "@typechain/ethers-v5": ^10.2.0
     "@typechain/hardhat": ^6.1.5
     "@types/chai": ^4.3.4
@@ -8689,7 +8708,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"utf8@npm:3.0.0":
+"utf8@npm:3.0.0, utf8@npm:^3.0.0":
   version: 3.0.0
   resolution: "utf8@npm:3.0.0"
   checksum: cb89a69ad9ab393e3eae9b25305b3ff08bebca9adc839191a34f90777eb2942f86a96369d2839925fea58f8f722f7e27031d697f10f5f39690f8c5047303e62d
