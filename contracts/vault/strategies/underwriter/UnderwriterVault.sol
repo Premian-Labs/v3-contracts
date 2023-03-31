@@ -27,6 +27,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/Doub
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
+import {console} from "hardhat/console.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -869,8 +870,7 @@ contract UnderwriterVault is
             );
             l.totalAssets =
                 l.totalAssets -
-                unlockedCollateral -
-                collateralValue;
+                (unlockedCollateral - collateralValue);
         }
     }
 

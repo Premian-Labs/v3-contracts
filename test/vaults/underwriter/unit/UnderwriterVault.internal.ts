@@ -678,7 +678,7 @@ describe('UnderwriterVault.internal', () => {
 
         await vault.setTimestamp(test.timestamp);
 
-        await vault.updateState(test.timestamp);
+        await vault.updateState();
         const tlsParsed = parseFloat(
           formatEther(await vault.totalLockedSpread()),
         );
