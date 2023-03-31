@@ -10,9 +10,12 @@ import {IV3SwapRouter} from "@uniswap/swap-router-contracts/contracts/interfaces
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
 
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
 
+import {ZERO, ONE} from "contracts/libraries/Constants.sol";
+import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
@@ -226,6 +229,44 @@ contract DeployTest is Test, Assertions {
             upper: UD60x18.wrap(0.3 ether),
             orderType: Position.OrderType.LC
         });
+    }
+
+    function deposit(
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(UD60x18.wrap(depositSize));
+    }
+
+    function deposit(
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        bool isCall = poolKey.isCallPool;
+
+        IERC20 token = IERC20(getPoolToken(isCall));
+        initialCollateral = scaleDecimals(
+            isCall ? depositSize : depositSize * poolKey.strike,
+            isCall
+        );
+
+        vm.startPrank(users.lp);
+
+        deal(address(token), users.lp, initialCollateral);
+        token.approve(address(router), initialCollateral);
+
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
+            .getNearestTicksBelow(posKey.lower, posKey.upper);
+
+        pool.deposit(
+            posKey,
+            nearestBelowLower,
+            nearestBelowUpper,
+            depositSize,
+            ZERO,
+            ONE,
+            Permit2.emptyPermit()
+        );
+
+        vm.stopPrank();
     }
 
     function getPoolToken(bool isCall) internal view returns (address) {

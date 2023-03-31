@@ -20,52 +20,29 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolDepositTest is DeployTest {
-    function _test_deposit(bool isCall) internal {
+    function _test_deposit_1000LC(bool isCall) internal {
         poolKey.isCallPool = isCall;
 
-        address lp = users.lp;
-
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
-
         IERC20 token = IERC20(getPoolToken(isCall));
-        uint256 _initialCollateral = scaleDecimals(
-            isCall ? depositSize : depositSize * poolKey.strike,
-            isCall
-        );
-
-        vm.startPrank(lp);
-
-        deal(address(token), lp, _initialCollateral);
-        token.approve(address(router), _initialCollateral);
-
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
-            .getNearestTicksBelow(posKey.lower, posKey.upper);
-
-        pool.deposit(
-            posKey,
-            nearestBelowLower,
-            nearestBelowUpper,
-            depositSize,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
-
-        vm.stopPrank();
+        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        uint256 initialCollateral = deposit(depositSize);
 
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         UD60x18 collateral = contractsToCollateral(depositSize, isCall);
         uint256 collateralValue = scaleDecimals(collateral * avgPrice, isCall);
 
-        assertEq(pool.balanceOf(lp, tokenId()), depositSize);
+        assertEq(pool.balanceOf(users.lp, tokenId()), depositSize);
         assertEq(pool.totalSupply(tokenId()), depositSize);
         assertEq(token.balanceOf(address(pool)), collateralValue);
-        assertEq(token.balanceOf(lp), _initialCollateral - collateralValue);
+        assertEq(
+            token.balanceOf(users.lp),
+            initialCollateral - collateralValue
+        );
         assertEq(pool.marketPrice(), posKey.upper);
     }
 
     function test_deposit_1000_LC() public {
-        _test_deposit(poolKey.isCallPool);
+        _test_deposit_1000LC(poolKey.isCallPool);
     }
 
     function test_deposit_revertIf_SenderNotOperator() public {
@@ -88,7 +65,8 @@ abstract contract PoolDepositTest is DeployTest {
     function _test_deposit_revertIf_MarketPriceOutOfMinMax(
         bool isCall
     ) internal {
-        _test_deposit(isCall);
+        poolKey.isCallPool = isCall;
+        deposit(1000 ether);
         assertEq(pool.marketPrice(), posKey.upper);
 
         vm.startPrank(users.lp);
