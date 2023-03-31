@@ -66,6 +66,7 @@ contract UnderwriterVault is
         ROUTER = router;
     }
 
+    /// @notice Gets the timestamp of the current block.
     function _getBlockTimestamp() internal view virtual returns (uint256) {
         return block.timestamp;
     }
@@ -501,6 +502,8 @@ contract UnderwriterVault is
         l.totalAssets = l.totalAssets + assets;
 
         _updateTimeOfDeposit(receiver, shareAmount);
+
+        emit UpdateQuotes();
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -517,10 +520,12 @@ contract UnderwriterVault is
             .layout();
 
         _beforeTokenTransfer(owner, address(this), shareAmount);
+
         // Remove the assets from totalAssets
-        // TODO: check totalAssets
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
         l.totalAssets = l.totalAssets - assets;
+
+        emit UpdateQuotes();
     }
 
     /// @notice An internal hook inside the buy function that is called after
@@ -907,6 +912,8 @@ contract UnderwriterVault is
 
         // Claim protocol fees
         _claimFees();
+
+        emit UpdateQuotes();
     }
 
     function _getFeeVars(
@@ -992,7 +999,7 @@ contract UnderwriterVault is
 
             _burn(from, vars.totalFeeInShares.unwrap());
             // fees collected denominated in the reference token
-            // fees are tracked in order to keep the pps uneffected during the burn
+            // fees are tracked in order to keep the pps unaffected during the burn
             // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
             l.protocolFees = l.protocolFees + vars.totalFeeInAssets;
             l.totalAssets = l.totalAssets - vars.totalFeeInAssets;
@@ -1019,6 +1026,8 @@ contract UnderwriterVault is
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
                 _updateTimeOfDeposit(to, amount);
             }
+
+            emit UpdateQuotes();
         }
     }
 

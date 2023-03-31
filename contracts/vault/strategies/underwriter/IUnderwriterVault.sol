@@ -10,19 +10,10 @@ import {IVault} from "../../../vault/IVault.sol";
 
 interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Errors
-    error Vault__TradeMustBeBuy();
-    error Vault__ZeroSize();
     error Vault__OptionTypeMismatchWithVault();
-    error Vault__InsufficientFunds();
-    error Vault__OptionExpired();
-    error Vault__OptionPoolNotListed();
-    error Vault__ZeroShares();
-    error Vault__AddressZero();
-    error Vault__ZeroAsset();
-    error Vault__StrikeZero();
     error Vault__OutOfTradeBounds(string valueName);
+    error Vault__TradeMustBeBuy();
     error Vault__UtilisationOutOfBounds();
-    error Vault__TransferExceedsBalance();
 
     // Structs
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors

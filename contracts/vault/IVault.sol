@@ -8,6 +8,18 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 interface IVault is IERC4626Internal, IERC20Internal {
+    // Errors
+    error Vault__AddressZero();
+    error Vault__InsufficientFunds();
+    error Vault__OptionExpired();
+    error Vault__OptionPoolNotListed();
+    error Vault__StrikeZero();
+    error Vault__TransferExceedsBalance();
+    error Vault__ZeroAsset();
+    error Vault__ZeroShares();
+    error Vault__ZeroSize();
+
+    // Events
     event UpdateQuotes();
 
     event Trade(
