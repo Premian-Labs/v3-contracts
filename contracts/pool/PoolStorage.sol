@@ -146,9 +146,6 @@ library PoolStorage {
     // TODO: Fetch price at maturity
     function fetchAndCacheQuote(Layout storage l) internal returns (UD60x18) {
         if (l.spot == ZERO) {
-            if (block.timestamp < l.maturity)
-                revert IPoolInternal.Pool__OptionNotExpired();
-
             l.spot = IOracleAdapter(l.oracleAdapter).quoteFrom(
                 l.base,
                 l.quote,
