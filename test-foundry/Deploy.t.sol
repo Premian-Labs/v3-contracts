@@ -24,6 +24,7 @@ import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
 import {IPool} from "contracts/pool/IPool.sol";
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
@@ -267,6 +268,58 @@ contract DeployTest is Test, Assertions {
         );
 
         vm.stopPrank();
+    }
+
+    function encodeSwapData(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountOut,
+        uint256 amountInMaximum
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodePacked(
+                bytes4(
+                    keccak256(
+                        "exactOutputSingle((address,address,uint24,address,uint256,uint256,uint160))"
+                    )
+                ),
+                abi.encode(
+                    tokenIn,
+                    tokenOut,
+                    3000,
+                    address(exchangeHelper),
+                    amountOut,
+                    amountInMaximum,
+                    0
+                )
+            );
+    }
+
+    function getSwapArgs(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountInMax,
+        uint256 amountOutMin,
+        address refundAddress
+    ) internal view returns (IPoolInternal.SwapArgs memory) {
+        bytes memory data = encodeSwapData(
+            tokenIn,
+            tokenOut,
+            amountOutMin,
+            amountInMax
+        );
+
+        return
+            IPoolInternal.SwapArgs({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                amountInMax: amountInMax,
+                amountOutMin: amountOutMin,
+                callee: address(uniswapRouter),
+                allowanceTarget: address(uniswapRouter),
+                data: data,
+                refundAddress: refundAddress
+            });
     }
 
     function getPoolToken(bool isCall) internal view returns (address) {

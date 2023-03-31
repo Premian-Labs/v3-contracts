@@ -6,15 +6,9 @@ import {UD60x18} from "@prb/math/src/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
-
-import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
-import {IPool} from "contracts/pool/IPool.sol";
-import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 import {DeployTest} from "../Deploy.t.sol";

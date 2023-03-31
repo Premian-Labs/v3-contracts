@@ -45,33 +45,13 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
 
         IERC20(swapToken).approve(address(router), type(uint256).max);
 
-        bytes memory data = abi.encodePacked(
-            bytes4(
-                keccak256(
-                    "exactOutputSingle((address,address,uint24,address,uint256,uint256,uint160))"
-                )
-            ),
-            abi.encode(
-                swapToken,
-                poolToken,
-                3000,
-                address(exchangeHelper),
-                collateralValue,
-                swapQuote,
-                0
-            )
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+            swapToken,
+            poolToken,
+            swapQuote,
+            collateralValue,
+            users.lp
         );
-
-        IPoolInternal.SwapArgs memory swapArgs = IPoolInternal.SwapArgs({
-            tokenIn: swapToken,
-            tokenOut: poolToken,
-            amountInMax: swapQuote,
-            amountOutMin: collateralValue,
-            callee: address(uniswapRouter),
-            allowanceTarget: address(uniswapRouter),
-            data: data,
-            refundAddress: users.lp
-        });
 
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
