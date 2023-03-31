@@ -61,8 +61,8 @@ library PoolStorage {
         UD60x18 shortRate;
         // Current tick normalized price
         UD60x18 currentTick;
-        // Spot price after maturity // ToDo : Save the spot price
-        UD60x18 spot;
+        // Settlement price of option
+        UD60x18 settlementPrice;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
         // Size of quotes already filled (provider -> quoteHash -> amountFilled)
@@ -141,17 +141,16 @@ library PoolStorage {
         return l.isCallPool ? l.base : l.quote;
     }
 
-    // TODO: Fetch price at maturity
-    function fetchAndCacheQuote(Layout storage l) internal returns (UD60x18) {
-        if (l.spot == ZERO) {
-            l.spot = IOracleAdapter(l.oracleAdapter).quoteFrom(
+    function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
+        if (l.settlementPrice == ZERO) {
+            l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(
                 l.base,
                 l.quote,
                 l.maturity
             );
         }
 
-        return l.spot;
+        return l.settlementPrice;
     }
 
     /// @notice calculate ERC1155 token id for given option parameters

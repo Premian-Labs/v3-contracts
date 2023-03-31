@@ -79,7 +79,7 @@ interface IPoolEvents {
         address indexed holder,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
-        UD60x18 spot,
+        UD60x18 settlementPrice,
         UD60x18 fee
     );
 
@@ -87,7 +87,7 @@ interface IPoolEvents {
         address indexed user,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
-        UD60x18 spot,
+        UD60x18 settlementPrice,
         UD60x18 fee
     );
 
@@ -100,7 +100,7 @@ interface IPoolEvents {
         UD60x18 collateral,
         UD60x18 exerciseValue,
         UD60x18 feesClaimed,
-        UD60x18 spot,
+        UD60x18 settlementPrice,
         UD60x18 fee
     );
 
