@@ -44,9 +44,7 @@ library PoolStorage {
         address quote;
         address oracleAdapter;
         // token metadata
-        // TODO: Remove if not used
         uint8 baseDecimals;
-        // TODO: Remove if not used
         uint8 quoteDecimals;
         uint64 maturity;
         // Whether its a call or put pool
