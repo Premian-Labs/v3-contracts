@@ -137,13 +137,9 @@ contract UniswapV3Adapter is
         }
 
         if (decimals[0] == 0) {
-            uint8[] memory temp = decimals;
-            _resizeArray(temp, 0);
-            decimals = temp;
+            _resizeArray(decimals, 0);
         } else if (decimals[1] == 0) {
-            uint8[] memory temp = decimals;
-            _resizeArray(temp, 1);
-            decimals = temp;
+            _resizeArray(decimals, 1);
         }
     }
 
