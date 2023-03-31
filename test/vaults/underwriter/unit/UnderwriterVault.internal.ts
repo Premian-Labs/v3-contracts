@@ -550,6 +550,7 @@ describe('UnderwriterVault.internal', () => {
             it(`totalAssets equals ${amounts.newTotalAssets}`, async () => {
               let { vault } = await loadFixture(setupVaultForSettlement);
               await increaseTo(test.timestamp);
+              await vault.setTimestamp(test.timestamp);
               await vault.settle();
               let delta = isCall ? 0.00001 : 0;
               const decimals = await token.decimals();
@@ -582,10 +583,7 @@ describe('UnderwriterVault.internal', () => {
             });
             it(`lastSpreadUnlockUpdate equals ${test.timestamp}`, async () => {
               const lsuu = await vault.lastSpreadUnlockUpdate();
-              expect(parseInt(lsuu.toString())).to.be.closeTo(
-                test.timestamp,
-                2,
-              );
+              expect(parseInt(lsuu.toString())).to.eq(test.timestamp);
             });
             counter++;
           });
