@@ -110,4 +110,70 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
     function test_swapAndDeposit_Success() public {
         _test_swapAndDeposit_Success(poolKey.isCallPool);
     }
+
+    function _test_swapAndDeposit_RevertIf_NotOperator(bool isCall) internal {
+        vm.prank(users.lp);
+        vm.expectRevert(IPoolInternal.Pool__NotAuthorized.selector);
+
+        posKey.operator = users.trader;
+
+        IPoolInternal.SwapArgs memory swapArgs = IPoolInternal.SwapArgs({
+            tokenIn: getSwapToken(isCall),
+            tokenOut: getSwapToken(isCall),
+            amountInMax: 0,
+            amountOutMin: 0,
+            callee: address(uniswapRouter),
+            allowanceTarget: address(uniswapRouter),
+            data: "",
+            refundAddress: users.lp
+        });
+
+        pool.swapAndDeposit(
+            swapArgs,
+            posKey,
+            ZERO,
+            ZERO,
+            THREE,
+            ZERO,
+            ONE,
+            Permit2.emptyPermit()
+        );
+    }
+
+    function test_swapAndDeposit_RevertIf_NotOperator() public {
+        _test_swapAndDeposit_RevertIf_NotOperator(poolKey.isCallPool);
+    }
+
+    function _test_swapAndDeposit_RevertIf_InvalidSwapTokenOut(
+        bool isCall
+    ) internal {
+        vm.prank(users.lp);
+        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
+
+        IPoolInternal.SwapArgs memory swapArgs = IPoolInternal.SwapArgs({
+            tokenIn: getSwapToken(isCall),
+            tokenOut: getSwapToken(isCall),
+            amountInMax: 0,
+            amountOutMin: 0,
+            callee: address(uniswapRouter),
+            allowanceTarget: address(uniswapRouter),
+            data: "",
+            refundAddress: users.lp
+        });
+
+        pool.swapAndDeposit(
+            swapArgs,
+            posKey,
+            ZERO,
+            ZERO,
+            THREE,
+            ZERO,
+            ONE,
+            Permit2.emptyPermit()
+        );
+    }
+
+    function test_swapAndDeposit_RevertIf_InvalidSwapTokenOut() public {
+        _test_swapAndDeposit_RevertIf_InvalidSwapTokenOut(poolKey.isCallPool);
+    }
 }
