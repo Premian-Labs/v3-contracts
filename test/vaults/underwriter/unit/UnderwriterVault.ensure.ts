@@ -135,19 +135,20 @@ describe('test ensure functions', () => {
         it(`should raise ${test.error} error when ${test.message}`, async () => {
           const { callVault } = await loadFixture(vaultSetup);
           vault = callVault;
+          await vault.setTimestamp(test.timestamp);
 
           await expect(
-            vault.ensureValidOption(test.timestamp, test.strike, test.maturity),
+            vault.ensureValidOption(test.strike, test.maturity),
           ).to.be.revertedWithCustomError(vault, test.error);
         });
       } else {
         it(`should not raise an error when ${test.message}`, async () => {
           const { callVault } = await loadFixture(vaultSetup);
           vault = callVault;
+          await vault.setTimestamp(test.timestamp);
 
-          await expect(
-            vault.ensureValidOption(test.timestamp, test.strike, test.maturity),
-          ).to.not.be.rejected;
+          await expect(vault.ensureValidOption(test.strike, test.maturity)).to
+            .not.be.rejected;
         });
       }
     });

@@ -22,6 +22,7 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     error Vault__StrikeZero();
     error Vault__OutOfTradeBounds(string valueName);
     error Vault__UtilisationOutOfBounds();
+    error Vault__TransferExceedsBalance();
 
     // Structs
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors

@@ -587,12 +587,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _ensureTradeableWithVault(isCallVault, isCallOption, isBuy);
     }
 
-    function ensureValidOption(
-        uint256 timestamp,
-        UD60x18 strike,
-        uint256 maturity
-    ) external pure {
-        _ensureValidOption(timestamp, strike, maturity);
+    function ensureValidOption(UD60x18 strike, uint256 maturity) external view {
+        _ensureValidOption(strike, maturity);
     }
 
     function ensureSufficientFunds(

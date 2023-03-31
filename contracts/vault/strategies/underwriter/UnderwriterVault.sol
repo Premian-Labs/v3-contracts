@@ -624,14 +624,13 @@ contract UnderwriterVault is
     }
 
     function _ensureValidOption(
-        uint256 timestamp,
         UD60x18 strike,
         uint256 maturity
-    ) internal pure {
+    ) internal view {
         // Check non Zero Strike
         if (strike == ZERO) revert Vault__StrikeZero();
         // Check valid maturity
-        if (timestamp >= maturity) revert Vault__OptionExpired();
+        if (_getBlockTimestamp() >= maturity) revert Vault__OptionExpired();
     }
 
     function _ensureSufficientFunds(
@@ -680,7 +679,7 @@ contract UnderwriterVault is
 
         _ensureNonZeroSize(size);
         _ensureTradeableWithVault(l.isCall, isCall, isBuy);
-        _ensureValidOption(timestamp, strike, maturity);
+        _ensureValidOption(strike, maturity);
         _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
 
         QuoteVars memory vars;
@@ -988,7 +987,7 @@ contract UnderwriterVault is
             UD60x18 shares = UD60x18.wrap(amount);
 
             if (shares > _maxTransferableShares(from))
-                revert ERC20Base__TransferExceedsBalance();
+                revert Vault__TransferExceedsBalance();
             FeeVars memory vars = _getFeeVars(from, shares);
 
             _burn(from, vars.totalFeeInShares.unwrap());
@@ -1023,6 +1022,7 @@ contract UnderwriterVault is
         }
     }
 
+    /// @notice Transfers fees to the FEE_RECEIVER.
     function _claimFees() internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();

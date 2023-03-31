@@ -546,7 +546,7 @@ describe('UnderwriterVault.fees', () => {
             ),
           ).to.be.revertedWithCustomError(
             vault,
-            'ERC20Base__TransferExceedsBalance',
+            'Vault__TransferExceedsBalance',
           );
           // check that this passes
           await vault.beforeTokenTransfer(
