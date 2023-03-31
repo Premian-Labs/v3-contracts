@@ -1,19 +1,10 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  addDeposit,
-  addMockDeposit,
-  callVault,
-  createPool,
-  increaseTotalAssets,
-  putVault,
-  vaultSetup,
-} from '../VaultSetup';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { addDeposit, createPool, vaultSetup } from '../VaultSetup';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import {
   getValidMaturity,
   increaseTo,
-  latest,
   ONE_DAY,
   ONE_HOUR,
   ONE_WEEK,
@@ -21,8 +12,6 @@ import {
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { BigNumber, ethers } from 'ethers';
 import { setMaturities } from '../VaultSetup';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { put } from 'axios';
 
 let vault: UnderwriterVaultMock;
 let token: ERC20Mock;

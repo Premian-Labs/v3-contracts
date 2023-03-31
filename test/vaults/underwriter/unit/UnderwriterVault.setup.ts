@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addMockDeposit, p, vaultSetup } from '../VaultSetup';
+import { p, vaultSetup } from '../VaultSetup';
 import {
   formatEther,
   formatUnits,
@@ -11,7 +11,6 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { IPoolMock__factory } from '../../../../typechain';
 import { TokenType } from '../../../../utils/sdk/types';
-import { getValidMaturity } from '../../../../utils/time';
 
 describe('#vaultSetup', () => {
   it('returns addressZero from factory non existing pool', async () => {

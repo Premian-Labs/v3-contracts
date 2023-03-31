@@ -1,11 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  addDeposit,
-  addMockDeposit,
-  callVault,
-  increaseTotalShares,
-  vaultSetup,
-} from '../VaultSetup';
+import { addDeposit, callVault, vaultSetup } from '../VaultSetup';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';

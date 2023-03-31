@@ -1,47 +1,19 @@
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
 import {
-  addDeposit,
   addMockDeposit,
-  feeReceiver,
   increaseTotalAssets,
   increaseTotalShares,
   vaultSetup,
 } from '../VaultSetup';
-import {
-  formatEther,
-  formatUnits,
-  parseEther,
-  parseUnits,
-} from 'ethers/lib/utils';
+import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
-import {
-  getValidMaturity,
-  increaseTo,
-  latest,
-  ONE_DAY,
-  ONE_HOUR,
-  ONE_WEEK,
-  ONE_YEAR,
-} from '../../../../utils/time';
-import {
-  ERC20Mock,
-  IPoolMock,
-  UnderwriterVaultMock,
-} from '../../../../typechain';
-import { BigNumber, ethers } from 'ethers';
+import { increaseTo, ONE_DAY, ONE_YEAR } from '../../../../utils/time';
+import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
+import { ethers } from 'ethers';
 import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { MockContract } from '@ethereum-waffle/mock-contract';
-import { PoolUtil } from '../../../../utils/PoolUtil';
-import { PoolKey, TokenType } from '../../../../utils/sdk/types';
-import exp from 'constants';
-import { start } from 'repl';
-import { Sign } from 'crypto';
-import { put } from 'axios';
 
-let startTime: number;
 let vault: UnderwriterVaultMock;
-let token: ERC20Mock;
 
 describe('UnderwriterVault.fees', () => {
   describe('#_claimFees', () => {
@@ -113,8 +85,6 @@ describe('UnderwriterVault.fees', () => {
 
     expect(await vault.totalSupply()).to.eq(totalSupply);
     expect(await vault.getPricePerShare()).to.eq(pps);
-
-    //expect(await vault.getAveragePricePerShare(caller.address)).to.eq(pps);
 
     return { vault, caller, token };
   }
@@ -434,7 +404,7 @@ describe('UnderwriterVault.fees', () => {
       timestamp: 3000000000 + ONE_DAY,
       maxTransferableShares: 0.0,
     };
-    //testsFeeVars.push(test);
+
     const myClonedArray: any = [];
     testsFeeVars.forEach((val) => myClonedArray.push(Object.assign({}, val)));
     myClonedArray.push(test);

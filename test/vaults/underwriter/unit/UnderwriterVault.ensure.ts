@@ -1,39 +1,10 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  addMockDeposit,
-  createPool,
-  increaseTotalAssets,
-  vaultSetup,
-} from '../VaultSetup';
-import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { vaultSetup } from '../VaultSetup';
+import { parseEther } from 'ethers/lib/utils';
 import { expect } from 'chai';
-import {
-  getValidMaturity,
-  increaseTo,
-  latest,
-  ONE_DAY,
-  ONE_HOUR,
-  ONE_WEEK,
-} from '../../../../utils/time';
-import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
-import { BigNumber } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-
-let startTime: number;
-let spot: number;
-let minMaturity: number;
-let maxMaturity: number;
-
-let t0: number;
-let t1: number;
-let t2: number;
-let t3: number;
+import { UnderwriterVaultMock } from '../../../../typechain';
 
 let vault: UnderwriterVaultMock;
-
-let caller: SignerWithAddress;
-let base: ERC20Mock;
-let quote: ERC20Mock;
 
 describe('test ensure functions', () => {
   describe('#_ensureTradeableWithVault', () => {

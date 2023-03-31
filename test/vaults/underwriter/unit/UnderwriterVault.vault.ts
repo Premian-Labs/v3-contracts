@@ -1,15 +1,5 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
-import {
-  addDeposit,
-  base,
-  createPool,
-  increaseTotalAssets,
-  oracleAdapter,
-  poolKey,
-  quote,
-  trader,
-  vaultSetup,
-} from '../VaultSetup';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { addDeposit, base, createPool, quote, vaultSetup } from '../VaultSetup';
 import {
   formatEther,
   formatUnits,
@@ -17,31 +7,9 @@ import {
   parseUnits,
 } from 'ethers/lib/utils';
 import { expect } from 'chai';
-import {
-  getValidMaturity,
-  increaseTo,
-  latest,
-  ONE_DAY,
-  ONE_HOUR,
-  ONE_WEEK,
-} from '../../../../utils/time';
-import {
-  ERC20Mock,
-  IPoolMock,
-  UnderwriterVaultMock,
-} from '../../../../typechain';
-import { BigNumber } from 'ethers';
-import { setMaturities } from '../VaultSetup';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { MockContract } from '@ethereum-waffle/mock-contract';
-import { PoolUtil } from '../../../../utils/PoolUtil';
-import { PoolKey, TokenType } from '../../../../utils/sdk/types';
-import exp from 'constants';
-
-let startTime: number;
-let spot: number;
-let minMaturity: number;
-let maxMaturity: number;
+import { getValidMaturity, ONE_HOUR } from '../../../../utils/time';
+import { UnderwriterVaultMock } from '../../../../typechain';
+import { TokenType } from '../../../../utils/sdk/types';
 
 let vault: UnderwriterVaultMock;
 
