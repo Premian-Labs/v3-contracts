@@ -8,7 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
+import {ZERO} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
@@ -18,7 +18,9 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolSwapAndTradeTest is DeployTest {
-    function _test_swapAndTrade_Buy50Options(bool isCall) internal {
+    function _test_swapAndTrade_Buy50Options_WithApproval(
+        bool isCall
+    ) internal {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -55,11 +57,13 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), 0);
     }
 
-    function test_swapAndTrade_Buy50Options() public {
-        _test_swapAndTrade_Buy50Options(poolKey.isCallPool);
+    function test_swapAndTrade_Buy50Options_WithApproval() public {
+        _test_swapAndTrade_Buy50Options_WithApproval(poolKey.isCallPool);
     }
 
-    function _test_swapAndTrade_Sell50Options(bool isCall) internal {
+    function _test_swapAndTrade_Sell50Options_WithApproval(
+        bool isCall
+    ) internal {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
@@ -104,7 +108,29 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), totalPremium);
     }
 
-    function test_swapAndTrade_Sell50Options() public {
-        _test_swapAndTrade_Sell50Options(poolKey.isCallPool);
+    function test_swapAndTrade_Sell50Options_WithApproval() public {
+        _test_swapAndTrade_Sell50Options_WithApproval(poolKey.isCallPool);
+    }
+
+    function _test_swapAndTrade_RevertIf_InvalidSwapTokenOut(
+        bool isCall
+    ) internal {
+        vm.prank(users.lp);
+        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
+
+        address swapToken = getSwapToken(isCall);
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+            swapToken,
+            swapToken,
+            0,
+            0,
+            users.trader
+        );
+
+        pool.swapAndTrade(swapArgs, ZERO, true, 0, Permit2.emptyPermit());
+    }
+
+    function test_swapAndTrade_RevertIf_InvalidSwapTokenOut() public {
+        _test_swapAndTrade_RevertIf_InvalidSwapTokenOut(poolKey.isCallPool);
     }
 }

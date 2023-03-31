@@ -88,16 +88,14 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
 
         posKey.operator = users.trader;
 
-        IPoolInternal.SwapArgs memory swapArgs = IPoolInternal.SwapArgs({
-            tokenIn: getSwapToken(isCall),
-            tokenOut: getSwapToken(isCall),
-            amountInMax: 0,
-            amountOutMin: 0,
-            callee: address(uniswapRouter),
-            allowanceTarget: address(uniswapRouter),
-            data: "",
-            refundAddress: users.lp
-        });
+        address swapToken = getSwapToken(isCall);
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+            swapToken,
+            swapToken,
+            0,
+            0,
+            users.lp
+        );
 
         pool.swapAndDeposit(
             swapArgs,
@@ -121,16 +119,14 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
         vm.prank(users.lp);
         vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
 
-        IPoolInternal.SwapArgs memory swapArgs = IPoolInternal.SwapArgs({
-            tokenIn: getSwapToken(isCall),
-            tokenOut: getSwapToken(isCall),
-            amountInMax: 0,
-            amountOutMin: 0,
-            callee: address(uniswapRouter),
-            allowanceTarget: address(uniswapRouter),
-            data: "",
-            refundAddress: users.lp
-        });
+        address swapToken = getSwapToken(isCall);
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+            swapToken,
+            swapToken,
+            0,
+            0,
+            users.lp
+        );
 
         pool.swapAndDeposit(
             swapArgs,
