@@ -34,7 +34,6 @@ const {
   PKEY_ETH_MAIN,
   PKEY_ETH_TEST,
   REPORT_GAS,
-  CACHE_PATH,
 } = process.env;
 
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
