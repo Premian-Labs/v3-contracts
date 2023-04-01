@@ -23,10 +23,11 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
-import {IPool} from "contracts/pool/IPool.sol";
+import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
+import {PoolCoreMock} from "contracts/test/pool/PoolCoreMock.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
@@ -51,9 +52,8 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
-    UD60x18 depositSize;
 
-    IPool pool;
+    IPoolMock pool;
 
     IV3SwapRouter constant uniswapRouter =
         IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
@@ -61,6 +61,8 @@ contract DeployTest is Test, Assertions {
         IQuoterV2(0x61fFE014bA17989E743c5F6cB21bF9697530B21e);
 
     Position.Key posKey;
+
+    IPoolInternal.TradeQuote tradeQuote;
 
     Users users;
 
@@ -70,6 +72,7 @@ contract DeployTest is Test, Assertions {
     }
 
     bytes4[] internal poolBaseSelectors;
+    bytes4[] internal poolCoreMockSelectors;
     bytes4[] internal poolCoreSelectors;
     bytes4[] internal poolTradeSelectors;
 
@@ -86,7 +89,7 @@ contract DeployTest is Test, Assertions {
         mainnetFork = vm.createFork(ETH_RPC_URL);
         vm.selectFork(mainnetFork);
 
-        users = Users({lp: address(0x111), trader: address(0x222)});
+        users = Users({lp: vm.addr(1), trader: vm.addr(2)});
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
 
@@ -103,6 +106,16 @@ contract DeployTest is Test, Assertions {
             strike: UD60x18.wrap(1000 ether),
             maturity: 1682668800,
             isCallPool: true
+        });
+
+        tradeQuote = IPoolInternal.TradeQuote({
+            provider: users.lp,
+            taker: address(0),
+            price: UD60x18.wrap(0.1 ether),
+            size: UD60x18.wrap(10 ether),
+            isBuy: false,
+            deadline: block.timestamp + 1 hours,
+            salt: block.timestamp
         });
 
         diamond = new Premia();
@@ -125,6 +138,14 @@ contract DeployTest is Test, Assertions {
         exchangeHelper = new ExchangeHelper();
 
         PoolBase poolBaseImpl = new PoolBase();
+
+        PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
+            address(factory),
+            address(router),
+            address(exchangeHelper),
+            address(base),
+            feeReceiver
+        );
 
         PoolCore poolCoreImpl = new PoolCore(
             address(factory),
@@ -158,6 +179,13 @@ contract DeployTest is Test, Assertions {
         poolBaseSelectors.push(poolBaseImpl.tokensByAccount.selector);
         poolBaseSelectors.push(poolBaseImpl.totalHolders.selector);
         poolBaseSelectors.push(poolBaseImpl.totalSupply.selector);
+
+        // PoolCoreMock
+        poolCoreMockSelectors.push(poolCoreMockImpl._getPricing.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.tradeQuoteHash.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
@@ -202,7 +230,7 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.tradeAndSwap.selector);
 
         IDiamondWritableInternal.FacetCut[]
-            memory facetCuts = new IDiamondWritableInternal.FacetCut[](3);
+            memory facetCuts = new IDiamondWritableInternal.FacetCut[](4);
 
         facetCuts[0] = IDiamondWritableInternal.FacetCut(
             address(poolBaseImpl),
@@ -211,12 +239,18 @@ contract DeployTest is Test, Assertions {
         );
 
         facetCuts[1] = IDiamondWritableInternal.FacetCut(
+            address(poolCoreMockImpl),
+            IDiamondWritableInternal.FacetCutAction.ADD,
+            poolCoreMockSelectors
+        );
+
+        facetCuts[2] = IDiamondWritableInternal.FacetCut(
             address(poolCoreImpl),
             IDiamondWritableInternal.FacetCutAction.ADD,
             poolCoreSelectors
         );
 
-        facetCuts[2] = IDiamondWritableInternal.FacetCut(
+        facetCuts[3] = IDiamondWritableInternal.FacetCut(
             address(poolTradeImpl),
             IDiamondWritableInternal.FacetCutAction.ADD,
             poolTradeSelectors

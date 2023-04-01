@@ -12,7 +12,6 @@ import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
-import {IPool} from "contracts/pool/IPool.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
