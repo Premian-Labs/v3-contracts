@@ -32,11 +32,15 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        uint256 swapQuote = getSwapQuote(swapToken, poolToken, totalPremium);
+        uint256 swapQuote = getSwapQuoteExactOutput(
+            swapToken,
+            poolToken,
+            totalPremium
+        );
         deal(swapToken, users.trader, swapQuote);
         IERC20(swapToken).approve(address(router), type(uint256).max);
 
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             poolToken,
             swapQuote,
@@ -79,7 +83,7 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        uint256 swapQuote = getSwapQuote(
+        uint256 swapQuote = getSwapQuoteExactOutput(
             swapToken,
             poolToken,
             collateralScaled
@@ -87,7 +91,7 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
         deal(swapToken, users.trader, swapQuote);
         IERC20(swapToken).approve(address(router), type(uint256).max);
 
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             poolToken,
             swapQuote,
@@ -119,7 +123,7 @@ abstract contract PoolSwapAndTradeTest is DeployTest {
         vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
 
         address swapToken = getSwapToken(isCall);
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             swapToken,
             0,

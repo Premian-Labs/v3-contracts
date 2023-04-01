@@ -30,13 +30,17 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
         UD60x18 collateral = contractsToCollateral(depositSize, isCall);
         uint256 collateralValue = scaleDecimals(collateral * avgPrice, isCall);
 
-        uint256 swapQuote = getSwapQuote(swapToken, poolToken, collateralValue);
+        uint256 swapQuote = getSwapQuoteExactOutput(
+            swapToken,
+            poolToken,
+            collateralValue
+        );
 
         deal(swapToken, users.lp, swapQuote);
 
         IERC20(swapToken).approve(address(router), type(uint256).max);
 
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             poolToken,
             swapQuote,
@@ -89,7 +93,7 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
         posKey.operator = users.trader;
 
         address swapToken = getSwapToken(isCall);
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             swapToken,
             0,
@@ -120,7 +124,7 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
         vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
 
         address swapToken = getSwapToken(isCall);
-        IPoolInternal.SwapArgs memory swapArgs = getSwapArgs(
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             swapToken,
             0,

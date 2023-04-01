@@ -10,7 +10,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
-import {iZERO} from "../libraries/Constants.sol";
+import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
@@ -134,9 +134,10 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             permit
         );
 
-        if (delta.collateral <= iZERO) return (totalPremium, delta, 0, 0);
+        if (isBuy || _totalPremium == ZERO)
+            return (l.toPoolTokenDecimals(_totalPremium), delta, 0, 0);
 
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+        s.amountInMax = l.toPoolTokenDecimals(_totalPremium);
 
         address poolToken = l.getPoolToken();
         if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();

@@ -270,7 +270,7 @@ contract DeployTest is Test, Assertions {
         vm.stopPrank();
     }
 
-    function encodeSwapData(
+    function encodeSwapDataExactOutput(
         address tokenIn,
         address tokenOut,
         uint256 amountOut,
@@ -295,20 +295,85 @@ contract DeployTest is Test, Assertions {
             );
     }
 
-    function getSwapArgs(
+    function encodeSwapDataExactInput(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOutMinimum
+    ) internal view returns (bytes memory) {
+        return
+            abi.encodePacked(
+                bytes4(
+                    keccak256(
+                        "exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))"
+                    )
+                ),
+                abi.encode(
+                    tokenIn,
+                    tokenOut,
+                    3000,
+                    address(exchangeHelper),
+                    amountIn,
+                    amountOutMinimum,
+                    0
+                )
+            );
+    }
+
+    function getSwapArgsExactOutput(
         address tokenIn,
         address tokenOut,
         uint256 amountInMax,
         uint256 amountOutMin,
         address refundAddress
     ) internal view returns (IPoolInternal.SwapArgs memory) {
-        bytes memory data = encodeSwapData(
-            tokenIn,
-            tokenOut,
-            amountOutMin,
-            amountInMax
-        );
+        return
+            getSwapArgs(
+                tokenIn,
+                tokenOut,
+                amountInMax,
+                amountOutMin,
+                encodeSwapDataExactOutput(
+                    tokenIn,
+                    tokenOut,
+                    amountOutMin,
+                    amountInMax
+                ),
+                refundAddress
+            );
+    }
 
+    function getSwapArgsExactInput(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountInMax,
+        uint256 amountOutMin,
+        address refundAddress
+    ) internal view returns (IPoolInternal.SwapArgs memory) {
+        return
+            getSwapArgs(
+                tokenIn,
+                tokenOut,
+                amountInMax,
+                amountOutMin,
+                encodeSwapDataExactInput(
+                    tokenIn,
+                    tokenOut,
+                    amountInMax,
+                    amountOutMin
+                ),
+                refundAddress
+            );
+    }
+
+    function getSwapArgs(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountInMax,
+        uint256 amountOutMin,
+        bytes memory data,
+        address refundAddress
+    ) internal pure returns (IPoolInternal.SwapArgs memory) {
         return
             IPoolInternal.SwapArgs({
                 tokenIn: tokenIn,
@@ -322,7 +387,7 @@ contract DeployTest is Test, Assertions {
             });
     }
 
-    function getSwapQuote(
+    function getSwapQuoteExactOutput(
         address tokenIn,
         address tokenOut,
         uint256 amount
@@ -333,6 +398,25 @@ contract DeployTest is Test, Assertions {
                     tokenIn: tokenIn,
                     tokenOut: tokenOut,
                     amount: amount,
+                    fee: 3000,
+                    sqrtPriceLimitX96: 0
+                })
+            );
+
+        return swapQuote;
+    }
+
+    function getSwapQuoteExactInput(
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) internal returns (uint256) {
+        (uint256 swapQuote, , , ) = IQuoterV2(uniswapQuoter)
+            .quoteExactInputSingle(
+                IQuoterV2.QuoteExactInputSingleParams({
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    amountIn: amount,
                     fee: 3000,
                     sqrtPriceLimitX96: 0
                 })
