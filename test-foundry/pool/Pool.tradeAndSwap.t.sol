@@ -6,6 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
+import {ZERO} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
@@ -76,5 +77,48 @@ abstract contract PoolTradeAndSwapTest is DeployTest {
         _test_tradeAndSwap_Sell50OptionsAndSwapPremium_WithApproval(
             poolKey.isCallPool
         );
+    }
+
+    function _test_tradeAndSwap_RevertIf_InvalidSwapTokenIn(
+        bool isCall
+    ) internal {
+        deposit(1000 ether);
+
+        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+        uint256 collateralScaled = scaleDecimals(
+            contractsToCollateral(tradeSize, isCall),
+            isCall
+        );
+
+        uint256 totalPremium = pool.getTradeQuote(tradeSize, false);
+
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, collateralScaled);
+        IERC20(poolToken).approve(address(router), collateralScaled);
+
+        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+            swapToken,
+            swapToken,
+            0,
+            0,
+            users.trader
+        );
+
+        pool.tradeAndSwap(
+            swapArgs,
+            tradeSize,
+            false,
+            totalPremium - totalPremium / 10,
+            Permit2.emptyPermit()
+        );
+    }
+
+    function test_tradeAndSwap_RevertIf_InvalidSwapTokenIn() public {
+        _test_tradeAndSwap_RevertIf_InvalidSwapTokenIn(poolKey.isCallPool);
     }
 }
