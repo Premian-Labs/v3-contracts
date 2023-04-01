@@ -1041,52 +1041,57 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
         Permit2.Data memory permit
-    ) internal {
+    ) internal returns (UD60x18 premiumTaker, Delta memory deltaTaker) {
         if (args.size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
-        _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
+        bytes32 tradeQuoteHash;
+        PremiumAndFeeInternal memory premiumAndFee;
+        Delta memory deltaMaker;
 
-        PremiumAndFeeInternal
-            memory premiumAndFee = _calculateQuotePremiumAndFee(
+        {
+            PoolStorage.Layout storage l = PoolStorage.layout();
+            tradeQuoteHash = _tradeQuoteHash(tradeQuote);
+            _ensureQuoteIsValid(l, args, tradeQuote, tradeQuoteHash);
+
+            premiumAndFee = _calculateQuotePremiumAndFee(
                 l,
                 args.size,
                 tradeQuote.price,
                 tradeQuote.isBuy
             );
 
-        // Update amount filled for this quote
-        l.tradeQuoteAmountFilled[tradeQuote.provider][tradeQuoteHash] =
-            l.tradeQuoteAmountFilled[tradeQuote.provider][tradeQuoteHash] +
-            args.size;
+            // Update amount filled for this quote
+            l.tradeQuoteAmountFilled[tradeQuote.provider][tradeQuoteHash] =
+                l.tradeQuoteAmountFilled[tradeQuote.provider][tradeQuoteHash] +
+                args.size;
 
-        // Update protocol fees
-        l.protocolFees = l.protocolFees + premiumAndFee.protocolFee;
+            // Update protocol fees
+            l.protocolFees = l.protocolFees + premiumAndFee.protocolFee;
 
-        // Process trade taker
-        Delta memory deltaTaker = _calculateAndUpdateUserAssets(
-            l,
-            args.user,
-            premiumAndFee.premiumTaker,
-            args.size,
-            !tradeQuote.isBuy,
-            0,
-            true,
-            permit
-        );
+            // Process trade taker
+            deltaTaker = _calculateAndUpdateUserAssets(
+                l,
+                args.user,
+                premiumAndFee.premiumTaker,
+                args.size,
+                !tradeQuote.isBuy,
+                0,
+                true,
+                permit
+            );
 
-        // Process trade maker
-        Delta memory deltaMaker = _calculateAndUpdateUserAssets(
-            l,
-            tradeQuote.provider,
-            premiumAndFee.premiumMaker,
-            args.size,
-            tradeQuote.isBuy,
-            0,
-            true,
-            Permit2.emptyPermit()
-        );
+            // Process trade maker
+            deltaMaker = _calculateAndUpdateUserAssets(
+                l,
+                tradeQuote.provider,
+                premiumAndFee.premiumMaker,
+                args.size,
+                tradeQuote.isBuy,
+                0,
+                true,
+                Permit2.emptyPermit()
+            );
+        }
 
         emit FillQuote(
             tradeQuoteHash,
@@ -1099,6 +1104,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             premiumAndFee.protocolFee,
             !tradeQuote.isBuy
         );
+
+        return (premiumAndFee.premiumTaker, deltaTaker);
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.

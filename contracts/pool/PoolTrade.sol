@@ -50,12 +50,95 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
-    ) external {
-        _fillQuote(
+    ) external returns (uint256 premiumTaker, Delta memory delta) {
+        UD60x18 premium;
+        (premium, delta) = _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature),
             tradeQuote,
             permit
         );
+
+        return (PoolStorage.layout().toPoolTokenDecimals(premium), delta);
+    }
+
+    /// @inheritdoc IPoolTrade
+    function swapAndFillQuote(
+        SwapArgs memory s,
+        TradeQuote memory tradeQuote,
+        UD60x18 size,
+        Signature memory signature,
+        Permit2.Data memory permit
+    )
+        external
+        returns (
+            uint256 premiumTaker,
+            Delta memory delta,
+            uint256 swapOutAmount
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        (swapOutAmount, ) = _swap(s, permit);
+
+        UD60x18 premium;
+        (premium, delta) = _fillQuote(
+            FillQuoteArgsInternal(msg.sender, size, signature),
+            tradeQuote,
+            permit
+        );
+
+        return (l.toPoolTokenDecimals(premium), delta, swapOutAmount);
+    }
+
+    /// @inheritdoc IPoolTrade
+    function fillQuoteAndSwap(
+        SwapArgs memory s,
+        TradeQuote memory tradeQuote,
+        UD60x18 size,
+        Signature memory signature,
+        Permit2.Data memory permit
+    )
+        external
+        returns (
+            uint256 premiumTaker,
+            Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 premium;
+        (premium, delta) = _fillQuote(
+            FillQuoteArgsInternal(msg.sender, size, signature),
+            tradeQuote,
+            permit
+        );
+
+        uint256 premiumScaled = l.toPoolTokenDecimals(premium);
+
+        if (!tradeQuote.isBuy || premium == ZERO)
+            return (premiumScaled, delta, 0, 0);
+
+        s.amountInMax = premiumScaled;
+
+        address poolToken = l.getPoolToken();
+        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(
+            s,
+            Permit2.emptyPermit()
+        );
+
+        if (tokenOutReceived > 0) {
+            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
+        }
+
+        if (collateralReceived > 0) {
+            IERC20(s.tokenIn).safeTransfer(s.refundAddress, collateralReceived);
+        }
+
+        return (premiumScaled, delta, collateralReceived, tokenOutReceived);
     }
 
     /// @inheritdoc IPoolTrade
@@ -134,10 +217,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             permit
         );
 
-        if (isBuy || _totalPremium == ZERO)
-            return (l.toPoolTokenDecimals(_totalPremium), delta, 0, 0);
+        uint256 totalPremiumScaled = l.toPoolTokenDecimals(_totalPremium);
 
-        s.amountInMax = l.toPoolTokenDecimals(_totalPremium);
+        if (isBuy || _totalPremium == ZERO)
+            return (totalPremiumScaled, delta, 0, 0);
+
+        s.amountInMax = totalPremiumScaled;
 
         address poolToken = l.getPoolToken();
         if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
@@ -155,7 +240,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         }
 
         return (
-            l.toPoolTokenDecimals(_totalPremium),
+            totalPremiumScaled,
             delta,
             collateralReceived,
             tokenOutReceived

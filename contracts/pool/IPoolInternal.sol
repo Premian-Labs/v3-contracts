@@ -183,7 +183,7 @@ interface IPoolInternal is IPosition, IPricing {
         address user;
         // The size to fill from the quote | 18 decimals
         UD60x18 size;
-        // secp256k1 concatenated 'r', 's', and 'v' value
+        // secp256k1 'r', 's', and 'v' value
         Signature signature;
     }
 
