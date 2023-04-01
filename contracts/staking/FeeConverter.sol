@@ -6,7 +6,7 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 

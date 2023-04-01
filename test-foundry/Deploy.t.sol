@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IV3SwapRouter} from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
 import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
@@ -79,7 +79,10 @@ contract DeployTest is Test, Assertions {
     receive() external payable {}
 
     function setUp() public virtual {
-        string memory ETH_RPC_URL = vm.envString("ETH_RPC_URL");
+        string memory ETH_RPC_URL = string.concat(
+            "https://eth-mainnet.alchemyapi.io/v2/",
+            vm.envString("API_KEY_ALCHEMY")
+        );
         mainnetFork = vm.createFork(ETH_RPC_URL);
         vm.selectFork(mainnetFork);
 
