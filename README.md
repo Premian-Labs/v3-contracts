@@ -9,9 +9,7 @@ TBD
 <!---
 | Network          |                                      |
 | ---------------- | ------------------------------------ |
-| Ethereum Mainnet | [📜](./docs/deployments/ETHEREUM.md) |
 | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
-| Fantom           | [📜](./docs/deployments/FANTOM.md)   |
 -->
 
 ## Development
@@ -25,25 +23,18 @@ yarn install
 Setup Husky to format code on commit:
 
 ```bash
-yarn prepare
+yarn postinstall
 ```
 
 Create a `.env` file with the following values defined:
 
-| Key                 | Description                                                              |
-| ------------------- | ------------------------------------------------------------------------ |
-| `ETH_RPC_URL`       | RPC URL used for Foundry tests using fork mode                           |
-| `API_KEY_ALCHEMY`   | [Alchemy](https://www.alchemy.com/) API key for node connectivity        |
-| `API_KEY_ETHERSCAN` | [Etherscan](https://etherscan.io//) API key for source code verification |
-| `PKEY_ETH_TEST`     | private key for test/development use on testnets                         |
-| `FORK_MODE`         | if `true`, the local Hardhat network will be forked from mainnet         |
-| `REPORT_GAS`        | if `true`, a gas report will be generated after running tests            |
-
-Create a `.env.secret` file with the following values defined:
-
-| Key             | Description                                |
-| --------------- | ------------------------------------------ |
-| `PKEY_ETH_MAIN` | private key for production use on mainnets |
+| Key                | Description                                                             | Required for           |
+| ------------------ | ----------------------------------------------------------------------- | ---------------------- |
+| `API_KEY_ALCHEMY`  | [Alchemy](https://www.alchemy.com/) API key for node connectivity       | Tests + deployments    |
+| `API_KEY_ARBISCAN` | [Arbiscan](https://arbiscan.io//) API key for source code verification  | Contracts verification |
+| `PKEY_ETH_MAIN`    | private key for production use on mainnets                              | Mainnet deployment     |
+| `PKEY_ETH_TEST`    | private key for test/development use on testnets                        | Testnet deployment     |
+| `REPORT_GAS`       | if `true`, a gas report will be generated after running tests (hardhat) | Optional               |
 
 ### Testing
 
@@ -51,6 +42,12 @@ Test contracts via Hardhat:
 
 ```bash
 yarn run hardhat test
+```
+
+Test contracts via Forge:
+
+```bash
+forge test -vvv
 ```
 
 Activate gas usage reporting by setting the `REPORT_GAS` environment variable to `"true"`:
@@ -65,11 +62,12 @@ Generate a code coverage report using `solidity-coverage`:
 yarn run hardhat coverage
 ```
 
+Generate a code coverage report using Forge:
+
+```bash
+forge coverage
+```
+
 ## Licensing
 
-The primary license for Premia contracts is the Business Source License 1.1 (`BUSL-1.1`), see [`LICENSE`](./LICENSE).
-
-### Exceptions
-
-- Interfaces are licensed under `LGPL-3.0-or-later` (as indicated in their SPDX headers), see [`LICENSE_LGPL`](./LICENSE_LGPL)
-- All files in `contracts/test` remain unlicensed.
+TBD

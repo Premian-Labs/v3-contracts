@@ -14,8 +14,19 @@ import 'hardhat-docgen';
 import 'hardhat-gas-reporter';
 import 'hardhat-spdx-license-identifier';
 import 'solidity-coverage';
+import 'hardhat-preprocessor';
+import fs from 'fs';
 
 Dotenv.config();
+
+function getRemappings() {
+  return fs
+    .readFileSync('remappings.txt', 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .filter((el) => !el.includes('node_modules'))
+    .map((line: string) => line.trim().split('='));
+}
 
 const {
   API_KEY_ALCHEMY,
@@ -23,7 +34,6 @@ const {
   PKEY_ETH_MAIN,
   PKEY_ETH_TEST,
   REPORT_GAS,
-  CACHE_PATH,
 } = process.env;
 
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
@@ -64,7 +74,22 @@ export default {
     },
   },
   paths: {
-    cache: CACHE_PATH ?? './cache',
+    cache: './cache_hardhat',
+  },
+  // This fully resolves paths for imports in the ./lib directory for Hardhat
+  preprocess: {
+    eachLine: (hre: any) => ({
+      transform: (line: string) => {
+        if (line.match(/^\s*import /i)) {
+          getRemappings().forEach(([find, replace]) => {
+            if (line.match(find)) {
+              line = line.replace(find, replace);
+            }
+          });
+        }
+        return line;
+      },
+    }),
   },
   networks: {
     hardhat: {
