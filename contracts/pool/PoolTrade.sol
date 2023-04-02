@@ -53,7 +53,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     ) external returns (uint256 premiumTaker, Delta memory delta) {
         UD60x18 premium;
         (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, signature),
+            FillQuoteArgsInternal(msg.sender, size, signature, 0, true),
             tradeQuote,
             permit
         );
@@ -83,7 +83,13 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         UD60x18 premium;
         (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, signature),
+            FillQuoteArgsInternal(
+                msg.sender,
+                size,
+                signature,
+                swapOutAmount,
+                true
+            ),
             tradeQuote,
             permit
         );
@@ -111,7 +117,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         UD60x18 premium;
         (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, signature),
+            FillQuoteArgsInternal(msg.sender, size, signature, 0, false),
             tradeQuote,
             permit
         );
@@ -269,7 +275,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         return
             _areQuoteAndBalanceValid(
                 l,
-                FillQuoteArgsInternal(msg.sender, size, sig),
+                FillQuoteArgsInternal(msg.sender, size, sig, 0, true),
                 tradeQuote,
                 tradeQuoteHash
             );

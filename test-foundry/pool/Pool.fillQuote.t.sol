@@ -18,7 +18,7 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolFillQuoteTest is DeployTest {
-    function init() internal {
+    function mintAndApprove() internal {
         uint256 initialCollateral = getInitialCollateral();
         address poolToken = getPoolToken(poolKey.isCallPool);
 
@@ -56,7 +56,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
     }
 
     function _test_fillQuote_Success_WithApproval(bool isCall) internal {
-        init();
+        mintAndApprove();
 
         address poolToken = getPoolToken(isCall);
 
@@ -143,7 +143,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
     }
 
     function test_fillQuote_RevertIf_Overfilled() public {
-        init();
+        mintAndApprove();
 
         vm.startPrank(users.trader);
 
@@ -168,5 +168,160 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteSignature.selector);
         pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+    }
+
+    function _test_fillQuoteAndSwap_Success_WithApproval(bool isCall) internal {
+        mintAndApprove();
+
+        tradeQuote.isBuy = true;
+
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        vm.startPrank(users.trader);
+
+        uint256 premium = scaleDecimals(
+            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            isCall
+        );
+        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 initialCollateral = getInitialCollateral();
+
+        uint256 swapQuote = getSwapQuoteExactInput(
+            poolToken,
+            swapToken,
+            premium - protocolFee
+        );
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+            poolToken,
+            swapToken,
+            premium - protocolFee,
+            swapQuote,
+            users.trader
+        );
+
+        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+
+        pool.fillQuoteAndSwap(
+            swapArgs,
+            tradeQuote,
+            tradeQuote.size,
+            sig,
+            Permit2.emptyPermit()
+        );
+
+        assertEq(
+            IERC20(poolToken).balanceOf(users.lp),
+            initialCollateral - premium,
+            "poolToken LP"
+        );
+
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            0,
+            "poolToken trader"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            swapQuote,
+            "swapToken trader"
+        );
+
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            tradeQuote.size
+        );
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 0);
+
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), 0);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), tradeQuote.size);
+    }
+
+    function test_fillQuoteAndSwap_Success_WithApproval() public {
+        _test_fillQuoteAndSwap_Success_WithApproval(poolKey.isCallPool);
+    }
+
+    function _test_swapAndFillQuote_Success_WithApproval(bool isCall) internal {
+        uint256 initialCollateral = getInitialCollateral();
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        deal(poolToken, users.lp, initialCollateral);
+
+        vm.prank(users.lp);
+        IERC20(poolToken).approve(address(router), initialCollateral);
+
+        //
+
+        uint256 premium = scaleDecimals(
+            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            isCall
+        );
+
+        vm.startPrank(users.trader);
+
+        uint256 swapQuote = getSwapQuoteExactOutput(
+            swapToken,
+            poolToken,
+            premium
+        );
+
+        deal(swapToken, users.trader, swapQuote);
+        IERC20(swapToken).approve(address(router), type(uint256).max);
+
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
+            swapToken,
+            poolToken,
+            swapQuote,
+            premium,
+            users.trader
+        );
+
+        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+
+        pool.swapAndFillQuote(
+            swapArgs,
+            tradeQuote,
+            tradeQuote.size,
+            sig,
+            Permit2.emptyPermit()
+        );
+
+        uint256 collateral = scaleDecimals(
+            contractsToCollateral(tradeQuote.size, isCall),
+            isCall
+        );
+
+        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+
+        assertEq(
+            IERC20(poolToken).balanceOf(users.lp),
+            initialCollateral - collateral + premium - protocolFee,
+            "poolToken LP"
+        );
+
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            0,
+            "poolToken trader"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            0,
+            "swapToken trader"
+        );
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            tradeQuote.size
+        );
+
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeQuote.size);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
+    }
+
+    function test_swapAndFillQuote_Success_WithApproval() public {
+        _test_swapAndFillQuote_Success_WithApproval(poolKey.isCallPool);
     }
 }

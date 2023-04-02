@@ -1075,8 +1075,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 premiumAndFee.premiumTaker,
                 args.size,
                 !tradeQuote.isBuy,
-                0,
-                true,
+                args.creditAmount,
+                args.transferCollateralToUser,
                 permit
             );
 

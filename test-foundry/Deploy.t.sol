@@ -220,6 +220,8 @@ contract DeployTest is Test, Assertions {
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelTradeQuotes.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuote.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteAndSwap.selector);
+        poolTradeSelectors.push(poolTradeImpl.swapAndFillQuote.selector);
         poolTradeSelectors.push(poolTradeImpl.getTradeQuote.selector);
         poolTradeSelectors.push(
             poolTradeImpl.getTradeQuoteFilledAmount.selector

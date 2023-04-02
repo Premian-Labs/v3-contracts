@@ -185,6 +185,10 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
+        // Amount already credited before the _fillQuote function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        uint256 creditAmount;
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        bool transferCollateralToUser;
     }
 
     struct PremiumAndFeeInternal {
