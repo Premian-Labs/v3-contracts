@@ -1420,7 +1420,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @return tokenInRefunded amount of tokenIn left and refunded to refundAddress | tokenIn decimals
     function _swap(
         IPoolInternal.SwapArgs memory s,
-        Permit2.Data memory permit
+        Permit2.Data memory permit,
+        bool transferFromPool
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
         if (msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
@@ -1429,13 +1430,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
         }
         if (s.amountInMax > 0) {
-            _transferFromWithPermitOrRouter(
-                permit,
-                s.tokenIn,
-                msg.sender,
-                EXCHANGE_HELPER,
-                s.amountInMax
-            );
+            if (transferFromPool) {
+                IERC20(s.tokenIn).safeTransfer(EXCHANGE_HELPER, s.amountInMax);
+            } else {
+                _transferFromWithPermitOrRouter(
+                    permit,
+                    s.tokenIn,
+                    msg.sender,
+                    EXCHANGE_HELPER,
+                    s.amountInMax
+                );
+            }
         }
 
         (amountCredited, tokenInRefunded) = IExchangeHelper(EXCHANGE_HELPER)

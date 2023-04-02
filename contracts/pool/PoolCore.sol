@@ -181,7 +181,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (uint256 creditAmount, ) = _swap(s, permit);
+        (uint256 creditAmount, ) = _swap(s, permit, false);
 
         _deposit(
             p.toKeyInternal(l.strike, l.isCallPool),

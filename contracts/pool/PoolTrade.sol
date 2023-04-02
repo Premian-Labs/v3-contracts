@@ -79,7 +79,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (swapOutAmount, ) = _swap(s, permit);
+        (swapOutAmount, ) = _swap(s, permit, false);
 
         UD60x18 premium;
         (premium, delta) = _fillQuote(
@@ -124,8 +124,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         uint256 premiumScaled = l.toPoolTokenDecimals(premium);
 
-        if (!tradeQuote.isBuy || premium == ZERO)
-            return (premiumScaled, delta, 0, 0);
+        if (delta.collateral.unwrap() <= 0) return (premiumScaled, delta, 0, 0);
 
         s.amountInMax = premiumScaled;
 
@@ -133,15 +132,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
         (tokenOutReceived, collateralReceived) = _swap(
             s,
-            Permit2.emptyPermit()
+            Permit2.emptyPermit(),
+            true
         );
 
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
-        }
-
-        if (collateralReceived > 0) {
-            IERC20(s.tokenIn).safeTransfer(s.refundAddress, collateralReceived);
         }
 
         return (premiumScaled, delta, collateralReceived, tokenOutReceived);
@@ -182,7 +178,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (swapOutAmount, ) = _swap(s, permit);
+        (swapOutAmount, ) = _swap(s, permit, false);
 
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
@@ -225,7 +221,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         uint256 totalPremiumScaled = l.toPoolTokenDecimals(_totalPremium);
 
-        if (isBuy || _totalPremium == ZERO)
+        if (delta.collateral.unwrap() <= 0)
             return (totalPremiumScaled, delta, 0, 0);
 
         s.amountInMax = totalPremiumScaled;
@@ -234,15 +230,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
         (tokenOutReceived, collateralReceived) = _swap(
             s,
-            Permit2.emptyPermit()
+            Permit2.emptyPermit(),
+            true
         );
 
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
-        }
-
-        if (collateralReceived > 0) {
-            IERC20(s.tokenIn).safeTransfer(s.refundAddress, collateralReceived);
         }
 
         return (
