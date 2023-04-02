@@ -48,8 +48,6 @@ describe('Pool', () => {
           let isBuy = true;
           let args = await pool._getPricing(isBuy);
 
-          console.log(2);
-
           expect(args.liquidityRate).to.eq(0);
           expect(args.marketPrice).to.eq(parseEther('0.001'));
           expect(args.lower).to.eq(parseEther('0.001'));
