@@ -255,7 +255,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
             users.trader
         );
 
-        (, IPoolInternal.Delta memory delta, , ) = pool.fillQuoteAndSwap(
+        (, Position.Delta memory delta, , ) = pool.fillQuoteAndSwap(
             swapArgs,
             tradeQuote,
             tradeQuote.size,
@@ -346,7 +346,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuote(tradeQuote);
 
-        (, IPoolInternal.Delta memory delta, , ) = pool.fillQuoteAndSwap(
+        (, Position.Delta memory delta, , ) = pool.fillQuoteAndSwap(
             swapArgs,
             tradeQuote,
             tradeQuote.size,

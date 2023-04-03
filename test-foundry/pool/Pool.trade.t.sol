@@ -249,7 +249,7 @@ abstract contract PoolTradeTest is DeployTest {
             users.trader
         );
 
-        (, IPoolInternal.Delta memory delta, , ) = pool.tradeAndSwap(
+        (, Position.Delta memory delta, , ) = pool.tradeAndSwap(
             swapArgs,
             tradeSize,
             false,
@@ -334,7 +334,7 @@ abstract contract PoolTradeTest is DeployTest {
             users.trader
         );
 
-        (, IPoolInternal.Delta memory delta, , ) = pool.tradeAndSwap(
+        (, Position.Delta memory delta, , ) = pool.tradeAndSwap(
             swapArgs,
             tradeSize,
             false,

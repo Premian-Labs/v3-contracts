@@ -101,12 +101,6 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 salt;
     }
 
-    struct Delta {
-        SD59x18 collateral;
-        SD59x18 longs;
-        SD59x18 shorts;
-    }
-
     enum InvalidQuoteError {
         None,
         QuoteExpired,

@@ -322,17 +322,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param p The position key
     /// @param args The deposit parameters
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
+    /// @return delta The net collateral / longs / shorts change
     function _deposit(
         Position.KeyInternal memory p,
         DepositArgsInternal memory args,
         Permit2.Data memory permit
-    ) internal {
-        _deposit(
-            p,
-            args,
-            permit,
-            p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
-        );
+    ) internal returns (Position.Delta memory delta) {
+        return
+            _deposit(
+                p,
+                args,
+                permit,
+                p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
+            );
     }
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -340,12 +342,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param args The deposit parameters
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
+    /// @return delta The net collateral / longs / shorts change
     function _deposit(
         Position.KeyInternal memory p,
         DepositArgsInternal memory args,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) internal {
+    ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         // Set the market price correctly in case it's stranded
@@ -375,7 +378,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.orderType
         );
 
-        Position.Delta memory delta = p.calculatePositionUpdate(
+        delta = p.calculatePositionUpdate(
             _balanceOfUD60x18(p.owner, tokenId),
             args.size.intoSD59x18(),
             l.marketPrice
@@ -479,12 +482,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param size The position size to withdraw | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @return delta The net collateral / longs / shorts change
     function _withdraw(
         Position.KeyInternal memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
-    ) internal {
+    ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureNotExpired(l);
 
@@ -536,8 +540,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         // Check whether it's a full withdrawal before updating the position
-
-        Position.Delta memory delta;
 
         {
             UD60x18 collateralToTransfer;
@@ -605,8 +607,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.liquidityRate,
             l.currentTick
         );
-
-        // ToDo : Add return values ?
     }
 
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
@@ -718,7 +718,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _trade(
         TradeArgsInternal memory args,
         Permit2.Data memory permit
-    ) internal returns (UD60x18 totalPremium, Delta memory delta) {
+    ) internal returns (UD60x18 totalPremium, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(args.size);
@@ -885,7 +885,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         UD60x18 size,
         bool isBuy
-    ) internal view returns (Delta memory delta) {
+    ) internal view returns (Position.Delta memory delta) {
         UD60x18 longs = _balanceOfUD60x18(user, PoolStorage.LONG);
         UD60x18 shorts = _balanceOfUD60x18(user, PoolStorage.SHORT);
 
@@ -908,7 +908,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 creditAmount,
         bool transferCollateralToUser,
         Permit2.Data memory permit
-    ) internal returns (Delta memory delta) {
+    ) internal returns (Position.Delta memory delta) {
         delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
 
         _updateUserAssets(
@@ -927,7 +927,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 totalPremium,
         UD60x18 size,
         bool isBuy
-    ) internal view returns (Delta memory delta) {
+    ) internal view returns (Position.Delta memory delta) {
         delta = _getTradeDelta(user, size, isBuy);
 
         bool _isBuy = delta.longs > iZERO || delta.shorts < iZERO;
@@ -961,7 +961,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _updateUserAssets(
         PoolStorage.Layout storage l,
         address user,
-        Delta memory delta,
+        Position.Delta memory delta,
         uint256 creditAmount,
         bool transferCollateralToUser,
         Permit2.Data memory permit
@@ -1048,12 +1048,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
         Permit2.Data memory permit
-    ) internal returns (UD60x18 premiumTaker, Delta memory deltaTaker) {
+    )
+        internal
+        returns (UD60x18 premiumTaker, Position.Delta memory deltaTaker)
+    {
         if (args.size > tradeQuote.size) revert Pool__AboveQuoteSize();
 
         bytes32 tradeQuoteHash;
         PremiumAndFeeInternal memory premiumAndFee;
-        Delta memory deltaMaker;
+        Position.Delta memory deltaMaker;
 
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
@@ -2172,7 +2175,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 tradeQuote.isBuy
             );
 
-        Delta memory delta = _calculateAssetsUpdate(
+        Position.Delta memory delta = _calculateAssetsUpdate(
             l,
             args.user,
             premiumAndFee.premium,

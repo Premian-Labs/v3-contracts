@@ -74,7 +74,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external;
+    ) external returns (Position.Delta memory delta);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
@@ -95,7 +95,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external;
+    ) external returns (Position.Delta memory delta);
 
     /// @notice Swap tokens and deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
@@ -116,7 +116,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external payable;
+    ) external payable returns (Position.Delta memory delta);
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
@@ -129,7 +129,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
-    ) external;
+    ) external returns (Position.Delta memory delta);
 
     /// @notice Underwrite an option by depositing collateral
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)

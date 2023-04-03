@@ -12,6 +12,7 @@ import {IPoolTrade} from "./IPoolTrade.sol";
 
 import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Permit2} from "../libraries/Permit2.sol";
+import {Position} from "../libraries/Position.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
     using SafeERC20 for IERC20;
@@ -53,7 +54,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
-    ) external returns (uint256 premiumTaker, Delta memory delta) {
+    ) external returns (uint256 premiumTaker, Position.Delta memory delta) {
         UD60x18 premium;
         (premium, delta) = _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature, 0, true),
@@ -75,7 +76,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         external
         returns (
             uint256 premiumTaker,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 swapOutAmount
         )
     {
@@ -111,7 +112,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         external
         returns (
             uint256 premiumTaker,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
         )
@@ -152,7 +153,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         bool isBuy,
         uint256 premiumLimit,
         Permit2.Data memory permit
-    ) external returns (uint256 totalPremium, Delta memory delta) {
+    ) external returns (uint256 totalPremium, Position.Delta memory delta) {
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true),
@@ -174,7 +175,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         payable
         returns (
             uint256 totalPremium,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 swapOutAmount
         )
     {
@@ -210,7 +211,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         external
         returns (
             uint256 totalPremium,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
         )
