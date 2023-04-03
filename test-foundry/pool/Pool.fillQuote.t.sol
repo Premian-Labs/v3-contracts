@@ -288,11 +288,10 @@ abstract contract PoolFillQuoteTest is DeployTest {
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
             initialCollateral -
-                (collateral + collateral0) +
+                (collateral0 - collateral) +
                 premium0 -
-                protocolFee0 +
-                premium -
-                protocolFee,
+                protocolFee0 -
+                premium,
             "poolToken lp"
         );
 

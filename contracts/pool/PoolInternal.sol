@@ -938,14 +938,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
+        SD59x18 iShortCollateral = shortCollateral.intoSD59x18();
+        if (delta.shorts < iZERO) {
+            iShortCollateral = -iShortCollateral;
+        }
+
         if (_isBuy) {
             delta.collateral =
-                -PRBMathExtra.min(shortCollateral, ZERO).intoSD59x18() -
+                -PRBMathExtra.min(iShortCollateral, iZERO) -
                 totalPremium.intoSD59x18();
         } else {
             delta.collateral =
                 totalPremium.intoSD59x18() -
-                PRBMathExtra.max(shortCollateral, ZERO).intoSD59x18();
+                PRBMathExtra.max(iShortCollateral, iZERO);
         }
 
         return delta;
