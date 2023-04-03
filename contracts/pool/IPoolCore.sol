@@ -87,7 +87,7 @@ interface IPoolCore is IPoolInternal {
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts deposited
     function deposit(
         Position.Key memory p,
         UD60x18 belowLower,
@@ -109,7 +109,7 @@ interface IPoolCore is IPoolInternal {
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts deposited
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
@@ -127,7 +127,7 @@ interface IPoolCore is IPoolInternal {
     /// @param size The position size to withdraw | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts withdrawn
     function withdraw(
         Position.Key memory p,
         UD60x18 size,
@@ -142,7 +142,7 @@ interface IPoolCore is IPoolInternal {
     /// @param size The position size to withdraw | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts withdrawn
     /// @return collateralReceived The amount of un-swapped collateral received from the trade. | s.tokenOut decimals
     /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. | poolToken decimals
     function withdrawAndSwap(

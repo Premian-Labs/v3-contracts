@@ -322,7 +322,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param p The position key
     /// @param args The deposit parameters
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts deposited
     function _deposit(
         Position.KeyInternal memory p,
         DepositArgsInternal memory args,
@@ -342,7 +342,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param args The deposit parameters
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts deposited
     function _deposit(
         Position.KeyInternal memory p,
         DepositArgsInternal memory args,
@@ -483,7 +483,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
     /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts withdrawn
     function _withdraw(
         Position.KeyInternal memory p,
         UD60x18 size,
@@ -562,9 +562,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l.marketPrice
             );
 
+            delta.collateral = delta.collateral.abs();
+            delta.longs = delta.longs.abs();
+            delta.shorts = delta.shorts.abs();
+
             collateralToTransfer =
                 collateralToTransfer +
-                delta.collateral.abs().intoUD60x18();
+                delta.collateral.intoUD60x18();
 
             _burn(p.owner, vars.tokenId, size);
 
@@ -577,8 +581,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     : 0,
                 0,
                 address(0),
-                delta.longs.abs().intoUD60x18(),
-                delta.shorts.abs().intoUD60x18(),
+                delta.longs.intoUD60x18(),
+                delta.shorts.intoUD60x18(),
                 Permit2.emptyPermit()
             );
         }
@@ -602,9 +606,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit Withdrawal(
             p.owner,
             vars.tokenId,
-            delta.collateral.abs().intoUD60x18(),
-            delta.longs.abs().intoUD60x18(),
-            delta.shorts.abs().intoUD60x18(),
+            delta.collateral.intoUD60x18(),
+            delta.longs.intoUD60x18(),
+            delta.shorts.intoUD60x18(),
             pData.lastFeeRate,
             pData.claimableFees,
             l.marketPrice,
