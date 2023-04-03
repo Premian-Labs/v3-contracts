@@ -37,11 +37,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256) {
-        return
-            PoolStorage.layout().toPoolTokenDecimals(
-                _getTradeQuote(size, isBuy)
-            );
+    ) external view returns (uint256 premiumNet, uint256 takerFee) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        (UD60x18 _premiumNet, UD60x18 _takerFee) = _getTradeQuote(size, isBuy);
+
+        return (
+            l.toPoolTokenDecimals(_premiumNet),
+            l.toPoolTokenDecimals(_takerFee)
+        );
     }
 
     /// @inheritdoc IPoolTrade

@@ -21,7 +21,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
 
         address poolToken = getPoolToken(isCall);
 
@@ -54,7 +54,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
 
@@ -85,7 +85,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -136,7 +136,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -200,7 +200,102 @@ abstract contract PoolTradeTest is DeployTest {
 
     function _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(
         bool isCall
-    ) internal {}
+    ) internal {
+        posKey.orderType = Position.OrderType.CS;
+        deposit(1000 ether);
+
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
+        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, true);
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, totalPremium0);
+        IERC20(poolToken).approve(address(router), totalPremium0);
+
+        pool.trade(
+            tradeSize0,
+            true,
+            totalPremium0 + totalPremium0 / 10,
+            Permit2.emptyPermit()
+        );
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize0);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize0);
+        assertEq(IERC20(poolToken).balanceOf(users.trader), 0);
+        assertEq(IERC20(swapToken).balanceOf(users.trader), 0);
+
+        //
+
+        UD60x18 tradeSize = UD60x18.wrap(300 ether);
+        uint256 collateralScaled = scaleDecimals(
+            contractsToCollateral(UD60x18.wrap(1000 ether), isCall),
+            isCall
+        );
+
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+
+        uint256 swapQuote = getSwapQuoteExactInput(
+            poolToken,
+            swapToken,
+            totalPremium
+        );
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+            poolToken,
+            swapToken,
+            totalPremium,
+            swapQuote,
+            users.trader
+        );
+
+        (, IPoolInternal.Delta memory delta, , ) = pool.tradeAndSwap(
+            swapArgs,
+            tradeSize,
+            false,
+            totalPremium - totalPremium / 10,
+            Permit2.emptyPermit()
+        );
+
+        assertGt(delta.collateral.unwrap(), 0);
+
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            0,
+            "trader short"
+        );
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            tradeSize0 - tradeSize,
+            "trader long"
+        );
+        assertEq(
+            pool.balanceOf(address(pool), PoolStorage.LONG),
+            0,
+            "pool long"
+        );
+        assertEq(
+            pool.balanceOf(address(pool), PoolStorage.SHORT),
+            tradeSize0 - tradeSize,
+            "pool short"
+        );
+
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            collateralScaled + totalPremium0 - totalPremium,
+            "pool token"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            0,
+            "poolToken trader"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            swapQuote,
+            "swapToken trader"
+        );
+    }
 
     function test_tradeAndSwap_Swap_IfPositiveDeltaCollateral() public {
         _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(poolKey.isCallPool);
@@ -217,7 +312,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -272,20 +367,36 @@ abstract contract PoolTradeTest is DeployTest {
     function _test_tradeAndSwap_RevertIf_InvalidSwapTokenIn(
         bool isCall
     ) internal {
+        posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
-        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
+        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, true);
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, totalPremium0);
+        IERC20(poolToken).approve(address(router), totalPremium0);
+
+        pool.trade(
+            tradeSize0,
+            true,
+            totalPremium0 + totalPremium0 / 10,
+            Permit2.emptyPermit()
+        );
+
+        //
+
+        UD60x18 tradeSize = UD60x18.wrap(300 ether);
         uint256 collateralScaled = scaleDecimals(
             contractsToCollateral(tradeSize, isCall),
             isCall
         );
 
-        uint256 totalPremium = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
 
-        address poolToken = getPoolToken(isCall);
-        address swapToken = getSwapToken(isCall);
-
-        vm.startPrank(users.trader);
         deal(poolToken, users.trader, collateralScaled);
         IERC20(poolToken).approve(address(router), collateralScaled);
 

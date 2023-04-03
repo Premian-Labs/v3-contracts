@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console.sol";
-
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
@@ -119,7 +117,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) internal view returns (UD60x18) {
+    ) internal view returns (UD60x18 totalNetPremium, UD60x18 totalTakerFee) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(size);
@@ -166,9 +164,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.isCallPool
                 );
 
-                totalPremium =
-                    totalPremium +
-                    (isBuy ? premium + takerFee : premium - takerFee);
+                totalTakerFee = totalTakerFee + takerFee;
+                totalPremium = totalPremium + premium;
             }
 
             pricing.marketPrice = nextPrice;
@@ -199,7 +196,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        return totalPremium;
+        return (
+            isBuy ? totalPremium + totalTakerFee : totalPremium - totalTakerFee,
+            totalTakerFee
+        );
     }
 
     // @notice Returns amount of claimable fees from pending update of claimable fees for the position. This does not include pData.claimableFees
@@ -1098,12 +1098,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 true,
                 Permit2.emptyPermit()
             );
-
-            console.log("MAKER");
-            console.logInt(deltaMaker.collateral.unwrap());
-            console.logInt(deltaMaker.longs.unwrap());
-            console.logInt(deltaMaker.shorts.unwrap());
-            console.log("---");
         }
 
         emit FillQuote(

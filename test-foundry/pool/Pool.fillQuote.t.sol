@@ -200,28 +200,28 @@ abstract contract PoolFillQuoteTest is DeployTest {
         assertEq(
             IERC20(poolToken).balanceOf(address(pool)),
             collateral0 + protocolFee0,
-            "poolToken pool"
+            "poolToken pool 0"
         );
         assertEq(
             IERC20(poolToken).balanceOf(users.trader),
             initialCollateral - premium0,
-            "poolToken trader"
+            "poolToken trader 0"
         );
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
             initialCollateral - collateral0 + premium0 - protocolFee0,
-            "poolToken lp"
+            "poolToken lp 0"
         );
 
         assertEq(
             pool.balanceOf(users.trader, PoolStorage.SHORT),
             0,
-            "short trader"
+            "short trader 0"
         );
         assertEq(
             pool.balanceOf(users.trader, PoolStorage.LONG),
             FIVE,
-            "long trader"
+            "long trader 0"
         );
 
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), FIVE, "short lp");
@@ -264,10 +264,6 @@ abstract contract PoolFillQuoteTest is DeployTest {
         );
 
         assertGt(delta.collateral.unwrap(), 0);
-
-        console.log(collateral, protocolFee0, protocolFee);
-        console.log("Premium");
-        console.log(premium);
 
         assertEq(
             IERC20(poolToken).balanceOf(address(pool)),
@@ -391,6 +387,45 @@ abstract contract PoolFillQuoteTest is DeployTest {
         _test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral(
             poolKey.isCallPool
         );
+    }
+
+    function _test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn(
+        bool isCall
+    ) internal {
+        mintAndApprove();
+
+        address swapToken = getSwapToken(isCall);
+
+        tradeQuote.size = FIVE;
+        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+
+        vm.startPrank(users.trader);
+        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+
+        tradeQuote.size = THREE;
+        tradeQuote.isBuy = true;
+        sig = signQuote(tradeQuote);
+
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+            swapToken,
+            swapToken,
+            0,
+            0,
+            users.trader
+        );
+
+        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+        pool.fillQuoteAndSwap(
+            swapArgs,
+            tradeQuote,
+            tradeQuote.size,
+            sig,
+            Permit2.emptyPermit()
+        );
+    }
+
+    function test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn() public {
+        _test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn(poolKey.isCallPool);
     }
 
     function _test_swapAndFillQuote_Success_WithApproval(bool isCall) internal {

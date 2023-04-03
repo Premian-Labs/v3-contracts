@@ -13,11 +13,12 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium which has to be paid to complete the trade | poolToken decimals
+    /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) | poolToken decimals
+    /// @return takerFee The taker fees to pay (Included in `premiumNet`) | poolToken decimals
     function getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256);
+    ) external view returns (uint256 premiumNet, uint256 takerFee);
 
     /// @notice Functionality to support the RFQ / OTC system.
     ///         An LP can create a quote for which he will do an OTC trade through
