@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
