@@ -7,7 +7,7 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
-  ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+  API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
   check:

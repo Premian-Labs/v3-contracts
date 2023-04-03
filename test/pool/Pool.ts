@@ -1,4 +1,4 @@
-import { ONE_ETHER, PERMIT2, THREE_ETHER } from '../../utils/constants';
+import { ONE_ETHER, THREE_ETHER } from '../../utils/constants';
 import { average } from '../../utils/sdk/math';
 import { calculateQuoteRFQHash, signQuote } from '../../utils/sdk/quoteRFQ';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
@@ -34,6 +34,7 @@ import {
   getEmptyPremiaPermit2,
   getRandomPermit2Nonce,
   signPremiaPermit2,
+  PERMIT2,
 } from '../../utils/sdk/permit2';
 
 describe('Pool', () => {
@@ -47,8 +48,6 @@ describe('Pool', () => {
 
           let isBuy = true;
           let args = await pool._getPricing(isBuy);
-
-          console.log(2);
 
           expect(args.liquidityRate).to.eq(0);
           expect(args.marketPrice).to.eq(parseEther('0.001'));
