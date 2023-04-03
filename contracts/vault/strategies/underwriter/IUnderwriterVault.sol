@@ -18,12 +18,15 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Structs
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
     struct UnexpiredListingVars {
+        UD60x18 spot;
+        UD60x18 riskFreeRate;
         // A list of strikes for a set of listings
         UD60x18[] strikes;
         // A list of time until maturity (years) for a set of listings
         UD60x18[] timeToMaturities;
         // A list of maturities for a set of listings
         uint256[] maturities;
+        UD60x18[] sigmas;
     }
 
     struct LockedSpreadVars {

@@ -457,8 +457,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getSpotPrice();
     }
 
-    function getSpotPrice(uint256 timestamp) public view returns (UD60x18) {
-        return _getSpotPrice(timestamp);
+    function getSettlementPrice(
+        uint256 timestamp
+    ) public view returns (UD60x18) {
+        return _getSettlementPrice(timestamp);
     }
 
     function getTradeBounds()

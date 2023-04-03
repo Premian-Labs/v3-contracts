@@ -96,7 +96,9 @@ contract UnderwriterVault is
     /// @notice Gets the spot price at the given timestamp
     /// @param timestamp The time to get the spot price for.
     /// @return The spot price at the given timestamp
-    function _getSpotPrice(uint256 timestamp) internal view returns (UD60x18) {
+    function _getSettlementPrice(
+        uint256 timestamp
+    ) internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return
@@ -116,7 +118,7 @@ contract UnderwriterVault is
         UD60x18 total = ZERO;
 
         while (current <= _getBlockTimestamp() && current != 0) {
-            UD60x18 spot = _getSpotPrice(current);
+            UD60x18 settlement = _getSettlementPrice(current);
 
             for (
                 uint256 i = 0;
@@ -126,7 +128,7 @@ contract UnderwriterVault is
                 UD60x18 strike = l.maturityToStrikes[current].at(i);
 
                 UD60x18 price = OptionMath.blackScholesPrice(
-                    spot,
+                    settlement,
                     strike,
                     ZERO,
                     ONE,
@@ -135,7 +137,7 @@ contract UnderwriterVault is
                 );
 
                 UD60x18 size = l.positionSizes[current][strike];
-                UD60x18 premium = l.isCall ? (price / spot) : price;
+                UD60x18 premium = l.isCall ? (price / settlement) : price;
                 total = total + premium * size;
             }
 
@@ -162,10 +164,13 @@ contract UnderwriterVault is
         // Compute fair value for options that have not expired
         uint256 n = l.getNumberOfUnexpiredListings(timestamp);
 
-        UnexpiredListingVars memory listings = UnexpiredListingVars({
+        UnexpiredListingVars memory vars = UnexpiredListingVars({
+            spot: _getSpotPrice(),
+            riskFreeRate: IVolatilityOracle(IV_ORACLE).getRiskFreeRate(),
             strikes: new UD60x18[](n),
             timeToMaturities: new UD60x18[](n),
-            maturities: new uint256[](n)
+            maturities: new uint256[](n),
+            sigmas: new UD60x18[](n)
         });
 
         uint256 i = 0;
@@ -179,38 +184,36 @@ contract UnderwriterVault is
                 j < l.maturityToStrikes[current].length();
                 j++
             ) {
-                listings.strikes[i] = l.maturityToStrikes[current].at(j);
-                listings.timeToMaturities[i] = timeToMaturity;
-                listings.maturities[i] = current;
+                vars.strikes[i] = l.maturityToStrikes[current].at(j);
+                vars.timeToMaturities[i] = timeToMaturity;
+                vars.maturities[i] = current;
                 i++;
             }
 
             current = l.maturities.next(current);
         }
 
-        UD60x18[] memory sigmas = IVolatilityOracle(IV_ORACLE).getVolatility(
+        vars.sigmas = IVolatilityOracle(IV_ORACLE).getVolatility(
             l.base,
-            _getSpotPrice(),
-            listings.strikes,
-            listings.timeToMaturities
+            vars.spot,
+            vars.strikes,
+            vars.timeToMaturities
         );
 
         for (uint256 k = 0; k < n; k++) {
             UD60x18 price = OptionMath.blackScholesPrice(
-                _getSpotPrice(),
-                listings.strikes[k],
-                listings.timeToMaturities[k],
-                sigmas[k],
-                IVolatilityOracle(IV_ORACLE).getRiskFreeRate(),
+                vars.spot,
+                vars.strikes[k],
+                vars.timeToMaturities[k],
+                vars.sigmas[k],
+                vars.riskFreeRate,
                 l.isCall
             );
-            UD60x18 size = l.positionSizes[listings.maturities[k]][
-                listings.strikes[k]
-            ];
+            UD60x18 size = l.positionSizes[vars.maturities[k]][vars.strikes[k]];
             total = total + price * size;
         }
 
-        return l.isCall ? total / _getSpotPrice() : total;
+        return l.isCall ? total / vars.spot : total;
     }
 
     /// @notice Gets the total liabilities of the basket of options underwritten

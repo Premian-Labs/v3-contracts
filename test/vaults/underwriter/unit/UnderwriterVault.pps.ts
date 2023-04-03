@@ -15,7 +15,7 @@ let t3: number;
 
 let vault: UnderwriterVaultMock;
 
-describe('UnderwriterVault.internal.pps', () => {
+describe('UnderwriterVault.pps', () => {
   describe('#_getTotalLiabilitiesExpired', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
@@ -648,11 +648,13 @@ describe('UnderwriterVault.internal.pps', () => {
       const { callVault } = await loadFixture(vaultSetup);
       vault = callVault;
 
-      let spot = parseFloat(formatEther(await callVault['getSpotPrice()']()));
+      let spot = parseFloat(formatEther(await callVault.getSpotPrice()));
       expect(spot).to.eq(1500);
     });
+  });
 
-    it('should get the spot price at a particular timestamp', async () => {
+  describe('#_getSettlementPrice', () => {
+    it('should get the settlement price at a particular timestamp', async () => {
       const currentTime = 1878113571;
       const t0 = currentTime + 7 * ONE_DAY;
       const t1 = currentTime + 10 * ONE_DAY;
@@ -670,13 +672,11 @@ describe('UnderwriterVault.internal.pps', () => {
         .returns(parseUnits('1400', 18));
 
       let spot = parseFloat(
-        formatEther(await callVault['getSpotPrice(uint256)'](t0)),
+        formatEther(await callVault.getSettlementPrice(t0)),
       );
       expect(spot).to.eq(1000);
 
-      spot = parseFloat(
-        formatEther(await callVault['getSpotPrice(uint256)'](t1)),
-      );
+      spot = parseFloat(formatEther(await callVault.getSettlementPrice(t1)));
       expect(spot).to.eq(1400);
     });
   });
