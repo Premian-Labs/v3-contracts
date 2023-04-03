@@ -17,7 +17,7 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
-abstract contract PoolFillQuoteTest is DeployTest {
+abstract contract PoolFillQuoteRFQTest is DeployTest {
     function mintAndApprove() internal {
         uint256 initialCollateral = getInitialCollateral();
         address poolToken = getPoolToken(poolKey.isCallPool);
