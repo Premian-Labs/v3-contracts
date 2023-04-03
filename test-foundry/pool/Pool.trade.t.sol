@@ -198,7 +198,15 @@ abstract contract PoolTradeTest is DeployTest {
         _test_swapAndTrade_RevertIf_InvalidSwapTokenOut(poolKey.isCallPool);
     }
 
-    function _test_tradeAndSwap_Sell50OptionsAndSwapPremium_WithApproval(
+    function _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(
+        bool isCall
+    ) internal {}
+
+    function test_tradeAndSwap_Swap_IfPositiveDeltaCollateral() public {
+        _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(poolKey.isCallPool);
+    }
+
+    function _test_tradeAndSwap_NotSwap_IfNegativeDeltaCollateral(
         bool isCall
     ) internal {
         deposit(1000 ether);
@@ -231,7 +239,7 @@ abstract contract PoolTradeTest is DeployTest {
             users.trader
         );
 
-        pool.tradeAndSwap(
+        (, IPoolInternal.Delta memory delta, , ) = pool.tradeAndSwap(
             swapArgs,
             tradeSize,
             false,
@@ -239,24 +247,24 @@ abstract contract PoolTradeTest is DeployTest {
             Permit2.emptyPermit()
         );
 
+        assertLt(delta.collateral.unwrap(), 0);
+
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
         assertEq(
             IERC20(poolToken).balanceOf(users.trader),
-            0,
+            totalPremium,
             "poolToken balance"
         );
         assertEq(
             IERC20(swapToken).balanceOf(users.trader),
-            swapQuote,
+            0,
             "swapToken balance"
         );
     }
 
-    function test_tradeAndSwap_Sell50OptionsAndSwapPremium_WithApproval()
-        public
-    {
-        _test_tradeAndSwap_Sell50OptionsAndSwapPremium_WithApproval(
+    function test_tradeAndSwap_NotSwap_IfNegativeDeltaCollateral() public {
+        _test_tradeAndSwap_NotSwap_IfNegativeDeltaCollateral(
             poolKey.isCallPool
         );
     }

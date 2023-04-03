@@ -8,7 +8,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ZERO, TWO} from "contracts/libraries/Constants.sol";
+import {ZERO, TWO, THREE, FIVE} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
@@ -170,7 +170,156 @@ abstract contract PoolFillQuoteTest is DeployTest {
         pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
     }
 
-    function _test_fillQuoteAndSwap_Success_WithApproval(bool isCall) internal {
+    function _test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral(
+        bool isCall
+    ) internal {
+        mintAndApprove();
+
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        tradeQuote.size = FIVE;
+        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+
+        vm.startPrank(users.trader);
+        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+
+        uint256 premium0 = scaleDecimals(
+            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            isCall
+        );
+        uint256 protocolFee0 = pool.takerFee(tradeQuote.size, premium0, false);
+
+        uint256 collateral0 = scaleDecimals(
+            contractsToCollateral(tradeQuote.size, isCall),
+            isCall
+        );
+
+        uint256 initialCollateral = getInitialCollateral();
+
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            collateral0 + protocolFee0,
+            "poolToken pool"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            initialCollateral - premium0,
+            "poolToken trader"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.lp),
+            initialCollateral - collateral0 + premium0 - protocolFee0,
+            "poolToken lp"
+        );
+
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            0,
+            "short trader"
+        );
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            FIVE,
+            "long trader"
+        );
+
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), FIVE, "short lp");
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
+
+        tradeQuote.size = THREE;
+        tradeQuote.isBuy = true;
+        sig = signQuote(tradeQuote);
+
+        uint256 premium = scaleDecimals(
+            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            isCall
+        );
+        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+
+        uint256 collateral = scaleDecimals(
+            contractsToCollateral(tradeQuote.size, isCall),
+            isCall
+        );
+
+        uint256 swapQuote = getSwapQuoteExactInput(
+            poolToken,
+            swapToken,
+            premium - protocolFee
+        );
+        IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+            poolToken,
+            swapToken,
+            premium - protocolFee,
+            swapQuote,
+            users.trader
+        );
+
+        (, IPoolInternal.Delta memory delta, , ) = pool.fillQuoteAndSwap(
+            swapArgs,
+            tradeQuote,
+            tradeQuote.size,
+            sig,
+            Permit2.emptyPermit()
+        );
+
+        assertGt(delta.collateral.unwrap(), 0);
+
+        console.log(collateral, protocolFee0, protocolFee);
+        console.log("Premium");
+        console.log(premium);
+
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            collateral0 - collateral + protocolFee0 + protocolFee,
+            "poolToken pool"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            swapQuote,
+            "swapToken trader"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            initialCollateral - premium0,
+            "poolToken trader"
+        );
+        assertEq(IERC20(swapToken).balanceOf(users.lp), 0, "swapToken lp");
+        assertEq(
+            IERC20(poolToken).balanceOf(users.lp),
+            initialCollateral -
+                (collateral + collateral0) +
+                premium0 -
+                protocolFee0 +
+                premium -
+                protocolFee,
+            "poolToken lp"
+        );
+
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            0,
+            "short trader"
+        );
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            TWO,
+            "long trader"
+        );
+
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), TWO, "short lp");
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
+    }
+
+    function test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral() public {
+        _test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral(
+            poolKey.isCallPool
+        );
+    }
+
+    function _test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral(
+        bool isCall
+    ) internal {
         mintAndApprove();
 
         tradeQuote.isBuy = true;
@@ -202,13 +351,15 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuote(tradeQuote);
 
-        pool.fillQuoteAndSwap(
+        (, IPoolInternal.Delta memory delta, , ) = pool.fillQuoteAndSwap(
             swapArgs,
             tradeQuote,
             tradeQuote.size,
             sig,
             Permit2.emptyPermit()
         );
+
+        assertLt(delta.collateral.unwrap(), 0);
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
@@ -218,12 +369,12 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         assertEq(
             IERC20(poolToken).balanceOf(users.trader),
-            0,
+            premium - protocolFee,
             "poolToken trader"
         );
         assertEq(
             IERC20(swapToken).balanceOf(users.trader),
-            swapQuote,
+            0,
             "swapToken trader"
         );
 
@@ -237,8 +388,10 @@ abstract contract PoolFillQuoteTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), tradeQuote.size);
     }
 
-    function test_fillQuoteAndSwap_Success_WithApproval() public {
-        _test_fillQuoteAndSwap_Success_WithApproval(poolKey.isCallPool);
+    function test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral() public {
+        _test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral(
+            poolKey.isCallPool
+        );
     }
 
     function _test_swapAndFillQuote_Success_WithApproval(bool isCall) internal {

@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console.sol";
+
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
@@ -1091,6 +1093,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 true,
                 Permit2.emptyPermit()
             );
+
+            console.log("MAKER");
+            console.logInt(deltaMaker.collateral.unwrap());
+            console.logInt(deltaMaker.longs.unwrap());
+            console.logInt(deltaMaker.shorts.unwrap());
+            console.log("---");
         }
 
         emit FillQuote(
