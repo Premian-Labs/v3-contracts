@@ -482,12 +482,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param size The position size to withdraw | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
     /// @return delta The net collateral / longs / shorts change
     function _withdraw(
         Position.KeyInternal memory p,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        bool transferCollateralToUser
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureNotExpired(l);
@@ -570,7 +572,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 address(this),
                 p.operator,
-                l.toPoolTokenDecimals(collateralToTransfer),
+                transferCollateralToUser
+                    ? l.toPoolTokenDecimals(collateralToTransfer)
+                    : 0,
                 0,
                 address(0),
                 delta.longs.abs().intoUD60x18(),
@@ -579,21 +583,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        {
-            SD59x18 tickDelta = p
+        vars.tickDelta =
+            p
                 .liquidityPerTick(_balanceOfUD60x18(p.owner, vars.tokenId))
-                .intoSD59x18() - vars.liquidityPerTick.intoSD59x18();
+                .intoSD59x18() -
+            vars.liquidityPerTick.intoSD59x18();
 
-            _updateTicks(
-                p.lower,
-                p.upper,
-                l.marketPrice,
-                tickDelta, // Adjust tick deltas (reverse of deposit)
-                false,
-                vars.isFullWithdrawal,
-                p.orderType
-            );
-        }
+        _updateTicks(
+            p.lower,
+            p.upper,
+            l.marketPrice,
+            vars.tickDelta, // Adjust tick deltas (reverse of deposit)
+            false,
+            vars.isFullWithdrawal,
+            p.orderType
+        );
 
         emit Withdrawal(
             p.owner,

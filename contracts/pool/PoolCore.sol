@@ -4,6 +4,9 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
@@ -16,6 +19,7 @@ import {IPoolCore} from "./IPoolCore.sol";
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
+    using SafeERC20 for IERC20;
 
     constructor(
         address factory,
@@ -216,8 +220,54 @@ contract PoolCore is IPoolCore, PoolInternal {
                 p.toKeyInternal(l.strike, l.isCallPool),
                 size,
                 minMarketPrice,
-                maxMarketPrice
+                maxMarketPrice,
+                true
             );
+    }
+
+    /// @inheritdoc IPoolCore
+    function withdrawAndSwap(
+        SwapArgs memory s,
+        Position.Key memory p,
+        UD60x18 size,
+        UD60x18 minMarketPrice,
+        UD60x18 maxMarketPrice
+    )
+        external
+        returns (
+            Position.Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        )
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _ensureOperator(p.operator);
+        delta = _withdraw(
+            p.toKeyInternal(l.strike, l.isCallPool),
+            size,
+            minMarketPrice,
+            maxMarketPrice,
+            false
+        );
+
+        if (delta.collateral.unwrap() <= 0) return (delta, 0, 0);
+
+        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+
+        address poolToken = l.getPoolToken();
+        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(
+            s,
+            Permit2.emptyPermit(),
+            true
+        );
+
+        if (tokenOutReceived > 0) {
+            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
+        }
+
+        return (delta, collateralReceived, tokenOutReceived);
     }
 
     /// @inheritdoc IPoolCore

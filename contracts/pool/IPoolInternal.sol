@@ -164,6 +164,7 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 initialSize;
         UD60x18 liquidityPerTick;
         bool isFullWithdrawal;
+        SD59x18 tickDelta;
     }
 
     struct Signature {
