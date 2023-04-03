@@ -3,10 +3,10 @@ pragma solidity >=0.8.19;
 
 import {StdAssertions} from "forge-std/StdAssertions.sol";
 
-import {SD1x18} from "@prb/math/src/sd1x18/ValueType.sol";
-import {SD59x18} from "@prb/math/src/sd59x18/ValueType.sol";
-import {UD2x18} from "@prb/math/src/ud2x18/ValueType.sol";
-import {UD60x18} from "@prb/math/src/ud60x18/ValueType.sol";
+import {SD1x18} from "@prb/math/sd1x18/ValueType.sol";
+import {SD59x18} from "@prb/math/sd59x18/ValueType.sol";
+import {UD2x18} from "@prb/math/ud2x18/ValueType.sol";
+import {UD60x18} from "@prb/math/ud60x18/ValueType.sol";
 
 /// @notice Derived from https://github.com/PaulRBerg/prb-math/blob/main/src/test/Assertions.sol
 contract Assertions is StdAssertions {

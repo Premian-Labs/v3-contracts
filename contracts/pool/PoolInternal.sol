@@ -11,8 +11,8 @@ import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
@@ -1195,15 +1195,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (UD60x18) {
         if (size == ZERO) return ZERO;
 
-        UD60x18 spot = l.fetchAndCacheQuote();
+        UD60x18 settlementPrice = l.getSettlementPrice();
         UD60x18 strike = l.strike;
         bool isCall = l.isCallPool;
 
         UD60x18 intrinsicValue;
-        if (isCall && spot > strike) {
-            intrinsicValue = spot - strike;
-        } else if (!isCall && spot < strike) {
-            intrinsicValue = strike - spot;
+        if (isCall && settlementPrice > strike) {
+            intrinsicValue = settlementPrice - strike;
+        } else if (!isCall && settlementPrice < strike) {
+            intrinsicValue = strike - settlementPrice;
         } else {
             return ZERO;
         }
@@ -1211,7 +1211,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 exerciseValue = size * intrinsicValue;
 
         if (isCall) {
-            exerciseValue = exerciseValue.div(spot);
+            exerciseValue = exerciseValue.div(settlementPrice);
         }
 
         return exerciseValue;
@@ -1249,7 +1249,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
         }
 
-        emit Exercise(holder, size, exerciseValue, l.spot, ZERO);
+        emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
         return exerciseValue;
     }
@@ -1280,7 +1280,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
         }
 
-        emit Settle(holder, size, exerciseValue, l.spot, ZERO);
+        emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
         return collateralValue;
     }
@@ -1375,7 +1375,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             collateral - claimableFees,
             payoff,
             claimableFees,
-            l.spot,
+            l.settlementPrice,
             ZERO
         );
 

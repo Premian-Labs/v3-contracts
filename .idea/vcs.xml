@@ -4,6 +4,10 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/forge-std" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/forge-std/lib/ds-test" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/lib/prb-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/prb-math" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/prb-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/solidstate-solidity" vcs="Git" />
   </component>
 </project>

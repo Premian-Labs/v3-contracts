@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
 UD60x18 constant ZERO = UD60x18.wrap(0);
 UD60x18 constant ONE_HALF = UD60x18.wrap(0.5e18);
