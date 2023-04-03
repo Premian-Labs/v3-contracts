@@ -254,13 +254,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         bool isCall
     ) internal {
         UD60x18 depositSize = UD60x18.wrap(1000 ether);
-        uint256 initialCollateral = deposit(depositSize);
+        deposit(depositSize);
         vm.warp(block.timestamp + 60);
-
-        uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(UD60x18.wrap(200 ether), isCall),
-            isCall
-        );
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
