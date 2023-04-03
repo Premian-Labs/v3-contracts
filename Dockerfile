@@ -1,7 +1,12 @@
 # Use the latest foundry image
+# Base of this image is alpine linux 3.16
 FROM ghcr.io/foundry-rs/foundry
 
-# Copy our source code into the container
-WORKDIR /app
+# Install node and yarn
+RUN apk add nodejs npm
+RUN npm install --global yarn
 
-COPY . .
+# Copy our source code into the container
+WORKDIR /premia-v3-contracts-private
+
+ENTRYPOINT ["/bin/sh"]

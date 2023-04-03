@@ -68,6 +68,24 @@ Generate a code coverage report using Forge:
 forge coverage
 ```
 
+## Docker
+
+To run the code in developer mode using docker, start by building the docker image:
+
+```bash
+docker build -t premia-v3 .
+```
+
+Then run the docker container by using the command:
+
+```bash
+docker run -it -u=$(id -u $USER):$(id -g $USER) \
+           -v $PWD:/premia-v3-contracts-private \
+           premia-v3
+```
+
+Upon executing, you will have access to the command line inside the container and will be able to run the commands for forge and hardhat.
+
 ## Licensing
 
 TBD

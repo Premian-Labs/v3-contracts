@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 library EnumerableSetUD60x18 {

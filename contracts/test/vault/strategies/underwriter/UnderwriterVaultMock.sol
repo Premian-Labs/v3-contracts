@@ -9,11 +9,10 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";
 import {IPool} from "../../../../pool/IPool.sol";
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
 import {IPoolFactory} from "../../../../factory/IPoolFactory.sol";
 
 import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.sol";
