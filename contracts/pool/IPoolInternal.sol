@@ -25,8 +25,8 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidBelowPrice();
     error Pool__InvalidPermitRecipient();
     error Pool__InvalidPermittedToken();
-    error Pool__InvalidQuoteSignature();
-    error Pool__InvalidQuoteTaker();
+    error Pool__InvalidQuoteRFQSignature();
+    error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange();
     error Pool__InvalidReconciliation();
     error Pool__InvalidTransfer();
@@ -47,9 +47,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
-    error Pool__QuoteCancelled();
-    error Pool__QuoteExpired();
-    error Pool__QuoteOverfilled();
+    error Pool__QuoteRFQCancelled();
+    error Pool__QuoteRFQExpired();
+    error Pool__QuoteRFQOverfilled();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
@@ -84,7 +84,7 @@ interface IPoolInternal is IPosition, IPricing {
         address refundAddress;
     }
 
-    struct TradeQuote {
+    struct QuoteRFQ {
         // The provider of the quote
         address provider;
         // The taker of the quote (address(0) if quote should be usable by anyone)
@@ -101,7 +101,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 salt;
     }
 
-    enum InvalidQuoteError {
+    enum InvalidQuoteRFQError {
         None,
         QuoteExpired,
         QuoteCancelled,
@@ -173,7 +173,7 @@ interface IPoolInternal is IPosition, IPricing {
         bytes32 s;
     }
 
-    struct FillQuoteArgsInternal {
+    struct FillQuoteRFQArgsInternal {
         // The user filling the quote
         address user;
         // The size to fill from the quote | 18 decimals

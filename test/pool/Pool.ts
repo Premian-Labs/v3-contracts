@@ -115,15 +115,15 @@ describe('Pool', () => {
       });
     });
 
-    describe('#_tradeQuoteHash', () => {
+    describe('#_quoteRFQHash', () => {
       runCallAndPutTests((isCallPool: boolean) => {
         it('should successfully calculate a trade quote hash', async () => {
-          const { getTradeQuote, pool, lp } = await loadFixture(
+          const { getQuoteRFQ, pool, lp } = await loadFixture(
             isCallPool ? deploy_CALL : deploy_PUT,
           );
 
-          const quote = await getTradeQuote();
-          expect(await pool.tradeQuoteHash(quote)).to.eq(
+          const quote = await getQuoteRFQ();
+          expect(await pool.quoteRFQHash(quote)).to.eq(
             await calculateQuoteHash(lp.provider!, quote, pool.address),
           );
         });
@@ -1557,7 +1557,7 @@ describe('Pool', () => {
           pool,
           lp,
           trader,
-          getTradeQuote,
+          getQuoteRFQ,
           initialCollateral,
           contractsToCollateral,
         } = await loadFixture(
@@ -1566,13 +1566,13 @@ describe('Pool', () => {
             : deployAndMintForTraderAndLP_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
         await pool
           .connect(trader)
-          .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2());
+          .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2());
 
         let premium = scaleDecimals(
           contractsToCollateral(quote.price.mul(quote.size).div(ONE_ETHER)),
@@ -1607,7 +1607,7 @@ describe('Pool', () => {
           pool,
           lp,
           trader,
-          getTradeQuote,
+          getQuoteRFQ,
           initialCollateral,
           contractsToCollateral,
           router,
@@ -1617,7 +1617,7 @@ describe('Pool', () => {
             : deployAndMintForTraderAndLP_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
@@ -1642,7 +1642,7 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .fillQuote(
+          .fillQuoteRFQ(
             quote,
             quote.size,
             sig,
@@ -1672,11 +1672,11 @@ describe('Pool', () => {
       });
 
       it('should revert if quote is expired', async () => {
-        const { pool, lp, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
         quote.deadline = BigNumber.from((await latest()) - 1);
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
@@ -1684,16 +1684,16 @@ describe('Pool', () => {
         await expect(
           pool
             .connect(trader)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteExpired');
       });
 
       it('should revert if quote price is out of bounds', async () => {
-        const { pool, lp, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
         quote.price = BigNumber.from(1);
 
         let sig = await signQuote(lp.provider!, pool.address, quote);
@@ -1701,7 +1701,7 @@ describe('Pool', () => {
         await expect(
           pool
             .connect(trader)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__OutOfBoundsPrice');
 
         quote.price = parseEther('1').add(1);
@@ -1710,16 +1710,16 @@ describe('Pool', () => {
         await expect(
           pool
             .connect(trader)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__OutOfBoundsPrice');
       });
 
       it('should revert if quote is used by someone else than taker', async () => {
-        const { pool, lp, trader, deployer, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, deployer, getQuoteRFQ } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
         quote.taker = trader.address;
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
@@ -1727,24 +1727,24 @@ describe('Pool', () => {
         await expect(
           pool
             .connect(deployer)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteTaker');
       });
 
       it('should revert if quote is over filled', async () => {
-        const { pool, lp, deployer, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, deployer, trader, getQuoteRFQ } = await loadFixture(
           isCallPool
             ? deployAndMintForTraderAndLP_CALL
             : deployAndMintForTraderAndLP_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
         await pool
           .connect(trader)
-          .fillQuote(
+          .fillQuoteRFQ(
             quote,
             BigNumber.from(quote.size).div(2),
             sig,
@@ -1754,21 +1754,21 @@ describe('Pool', () => {
         await expect(
           pool
             .connect(deployer)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteOverfilled');
       });
 
       it('should revert if signed message does not match quote', async () => {
-        const { pool, lp, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
         await expect(
-          pool.connect(trader).fillQuote(
+          pool.connect(trader).fillQuoteRFQ(
             { ...quote, size: BigNumber.from(quote.size).mul(2).toString() },
             quote.size,
             sig,
@@ -1780,27 +1780,27 @@ describe('Pool', () => {
     });
   });
 
-  describe('#cancelTradeQuotes', async () => {
+  describe('#cancelQuotesRFQ', async () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully cancel a trade quote', async () => {
-        const { pool, lp, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
           isCallPool ? deploy_CALL : deploy_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
         await pool
           .connect(lp)
-          .cancelTradeQuotes([
+          .cancelQuotesRFQ([
             await calculateQuoteHash(lp.provider!, quote, pool.address),
           ]);
 
         await expect(
           pool
             .connect(trader)
-            .fillQuote(quote, quote.size, sig, getEmptyPremiaPermit2()),
+            .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteCancelled');
       });
     });
@@ -1809,19 +1809,19 @@ describe('Pool', () => {
   describe('#getTradeQuoteFilledAmount', async () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully return filled amount of a trade quote', async () => {
-        const { pool, lp, trader, getTradeQuote } = await loadFixture(
+        const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
           isCallPool
             ? deployAndMintForTraderAndLP_CALL
             : deployAndMintForTraderAndLP_PUT,
         );
 
-        const quote = await getTradeQuote();
+        const quote = await getQuoteRFQ();
 
         const sig = await signQuote(lp.provider!, pool.address, quote);
 
         await pool
           .connect(trader)
-          .fillQuote(quote, quote.size.div(2), sig, getEmptyPremiaPermit2());
+          .fillQuoteRFQ(quote, quote.size.div(2), sig, getEmptyPremiaPermit2());
 
         const tradeQuoteHash = await calculateQuoteHash(
           lp.provider!,
@@ -1829,7 +1829,7 @@ describe('Pool', () => {
           pool.address,
         );
         expect(
-          await pool.getTradeQuoteFilledAmount(quote.provider, tradeQuoteHash),
+          await pool.getQuoteRFQFilledAmount(quote.provider, tradeQuoteHash),
         ).to.eq(quote.size.div(2));
       });
     });

@@ -33,9 +33,9 @@ abstract contract PoolFillQuoteTest is DeployTest {
     }
 
     function signQuote(
-        IPoolInternal.TradeQuote memory _tradeQuote
+        IPoolInternal.QuoteRFQ memory _quoteRFQ
     ) internal view returns (IPoolInternal.Signature memory) {
-        bytes32 hash = pool.tradeQuoteHash(_tradeQuote);
+        bytes32 hash = pool.quoteRFQHash(_quoteRFQ);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
             1, // 1 = users.lp
@@ -62,21 +62,21 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
-        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
 
         uint256 initialCollateral = getInitialCollateral();
 
@@ -91,12 +91,9 @@ abstract contract PoolFillQuoteTest is DeployTest {
         );
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
-        assertEq(
-            pool.balanceOf(users.trader, PoolStorage.LONG),
-            tradeQuote.size
-        );
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), quoteRFQ.size);
 
-        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeQuote.size);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), quoteRFQ.size);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
     }
 
@@ -105,41 +102,41 @@ abstract contract PoolFillQuoteTest is DeployTest {
     }
 
     function test_fillQuote_RevertIf_QuoteExpired() public {
-        tradeQuote.deadline = block.timestamp - 1 hours;
+        quoteRFQ.deadline = block.timestamp - 1 hours;
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.prank(users.trader);
-        vm.expectRevert(IPoolInternal.Pool__QuoteExpired.selector);
+        vm.expectRevert(IPoolInternal.Pool__QuoteRFQExpired.selector);
 
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
     function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
         vm.startPrank(users.trader);
 
-        tradeQuote.price = UD60x18.wrap(1);
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        quoteRFQ.price = UD60x18.wrap(1);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
-        tradeQuote.price = UD60x18.wrap(1 ether + 1);
-        sig = signQuote(tradeQuote);
+        quoteRFQ.price = UD60x18.wrap(1 ether + 1);
+        sig = signQuote(quoteRFQ);
 
         vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
     function test_fillQuote_RevertIf_NotSpecifiedTaker() public {
-        tradeQuote.taker = address(0x99999);
+        quoteRFQ.taker = address(0x99999);
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.prank(users.trader);
-        vm.expectRevert(IPoolInternal.Pool__InvalidQuoteTaker.selector);
+        vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQTaker.selector);
 
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
     function test_fillQuote_RevertIf_Overfilled() public {
@@ -147,27 +144,27 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
-        pool.fillQuote(
-            tradeQuote,
-            tradeQuote.size / TWO,
+        pool.fillQuoteRFQ(
+            quoteRFQ,
+            quoteRFQ.size / TWO,
             sig,
             Permit2.emptyPermit()
         );
 
-        vm.expectRevert(IPoolInternal.Pool__QuoteOverfilled.selector);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        vm.expectRevert(IPoolInternal.Pool__QuoteRFQOverfilled.selector);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
     function test_fillQuote_RevertIf_WrongSignedMessage() public {
         vm.prank(users.trader);
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
-        tradeQuote.size = tradeQuote.size * TWO;
+        quoteRFQ.size = quoteRFQ.size * TWO;
 
-        vm.expectRevert(IPoolInternal.Pool__InvalidQuoteSignature.selector);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQSignature.selector);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
     function _test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral(
@@ -178,20 +175,20 @@ abstract contract PoolFillQuoteTest is DeployTest {
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
 
-        tradeQuote.size = FIVE;
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        quoteRFQ.size = FIVE;
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.startPrank(users.trader);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         uint256 premium0 = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee0 = pool.takerFee(tradeQuote.size, premium0, false);
+        uint256 protocolFee0 = pool.takerFee(quoteRFQ.size, premium0, false);
 
         uint256 collateral0 = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
@@ -227,18 +224,18 @@ abstract contract PoolFillQuoteTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), FIVE, "short lp");
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
 
-        tradeQuote.size = THREE;
-        tradeQuote.isBuy = true;
-        sig = signQuote(tradeQuote);
+        quoteRFQ.size = THREE;
+        quoteRFQ.isBuy = true;
+        sig = signQuote(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
@@ -255,10 +252,10 @@ abstract contract PoolFillQuoteTest is DeployTest {
             users.trader
         );
 
-        (, Position.Delta memory delta, , ) = pool.fillQuoteAndSwap(
+        (, Position.Delta memory delta, , ) = pool.fillQuoteRFQAndSwap(
             swapArgs,
-            tradeQuote,
-            tradeQuote.size,
+            quoteRFQ,
+            quoteRFQ.size,
             sig,
             Permit2.emptyPermit()
         );
@@ -317,7 +314,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
     ) internal {
         mintAndApprove();
 
-        tradeQuote.isBuy = true;
+        quoteRFQ.isBuy = true;
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -325,10 +322,10 @@ abstract contract PoolFillQuoteTest is DeployTest {
         vm.startPrank(users.trader);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
         uint256 initialCollateral = getInitialCollateral();
 
         uint256 swapQuote = getSwapQuoteExactInput(
@@ -344,12 +341,12 @@ abstract contract PoolFillQuoteTest is DeployTest {
             users.trader
         );
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
-        (, Position.Delta memory delta, , ) = pool.fillQuoteAndSwap(
+        (, Position.Delta memory delta, , ) = pool.fillQuoteRFQAndSwap(
             swapArgs,
-            tradeQuote,
-            tradeQuote.size,
+            quoteRFQ,
+            quoteRFQ.size,
             sig,
             Permit2.emptyPermit()
         );
@@ -375,12 +372,12 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         assertEq(
             pool.balanceOf(users.trader, PoolStorage.SHORT),
-            tradeQuote.size
+            quoteRFQ.size
         );
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 0);
 
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), 0);
-        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), tradeQuote.size);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), quoteRFQ.size);
     }
 
     function test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral() public {
@@ -396,15 +393,15 @@ abstract contract PoolFillQuoteTest is DeployTest {
 
         address swapToken = getSwapToken(isCall);
 
-        tradeQuote.size = FIVE;
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        quoteRFQ.size = FIVE;
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.startPrank(users.trader);
-        pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
-        tradeQuote.size = THREE;
-        tradeQuote.isBuy = true;
-        sig = signQuote(tradeQuote);
+        quoteRFQ.size = THREE;
+        quoteRFQ.isBuy = true;
+        sig = signQuote(quoteRFQ);
 
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
             swapToken,
@@ -415,10 +412,10 @@ abstract contract PoolFillQuoteTest is DeployTest {
         );
 
         vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
-        pool.fillQuoteAndSwap(
+        pool.fillQuoteRFQAndSwap(
             swapArgs,
-            tradeQuote,
-            tradeQuote.size,
+            quoteRFQ,
+            quoteRFQ.size,
             sig,
             Permit2.emptyPermit()
         );
@@ -441,7 +438,7 @@ abstract contract PoolFillQuoteTest is DeployTest {
         //
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
 
@@ -464,22 +461,22 @@ abstract contract PoolFillQuoteTest is DeployTest {
             users.trader
         );
 
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
-        pool.swapAndFillQuote(
+        pool.swapAndFillQuoteRFQ(
             swapArgs,
-            tradeQuote,
-            tradeQuote.size,
+            quoteRFQ,
+            quoteRFQ.size,
             sig,
             Permit2.emptyPermit()
         );
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
-        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
@@ -499,12 +496,9 @@ abstract contract PoolFillQuoteTest is DeployTest {
         );
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
-        assertEq(
-            pool.balanceOf(users.trader, PoolStorage.LONG),
-            tradeQuote.size
-        );
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), quoteRFQ.size);
 
-        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeQuote.size);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), quoteRFQ.size);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
     }
 

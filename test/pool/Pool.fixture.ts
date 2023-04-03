@@ -102,7 +102,7 @@ async function _deploy(isCall: boolean) {
 
   const pool = await deployPool(isCall);
 
-  const getTradeQuote = async () => {
+  const getQuoteRFQ = async () => {
     const timestamp = BigNumber.from(await latest());
     return {
       provider: lp.address,
@@ -146,7 +146,7 @@ async function _deploy(isCall: boolean) {
     pKey,
     poolToken,
     poolTokenDecimals,
-    getTradeQuote,
+    getQuoteRFQ,
     contractsToCollateral,
     scaleDecimals,
   };
