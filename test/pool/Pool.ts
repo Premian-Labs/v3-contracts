@@ -1,6 +1,6 @@
 import { ONE_ETHER, PERMIT2, THREE_ETHER } from '../../utils/constants';
 import { average } from '../../utils/sdk/math';
-import { calculateQuoteHash, signQuote } from '../../utils/sdk/quote';
+import { calculateQuoteHash, signQuote } from '../../utils/sdk/quoteRFQ';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { increase, increaseTo, latest } from '../../utils/time';
@@ -1685,7 +1685,7 @@ describe('Pool', () => {
           pool
             .connect(trader)
             .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
-        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteExpired');
+        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQExpired');
       });
 
       it('should revert if quote price is out of bounds', async () => {
@@ -1728,7 +1728,7 @@ describe('Pool', () => {
           pool
             .connect(deployer)
             .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
-        ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteTaker');
+        ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteRFQTaker');
       });
 
       it('should revert if quote is over filled', async () => {
@@ -1755,7 +1755,7 @@ describe('Pool', () => {
           pool
             .connect(deployer)
             .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
-        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteOverfilled');
+        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQOverfilled');
       });
 
       it('should revert if signed message does not match quote', async () => {
@@ -1775,7 +1775,7 @@ describe('Pool', () => {
 
             getEmptyPremiaPermit2(),
           ),
-        ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteSignature');
+        ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteRFQSignature');
       });
     });
   });
@@ -1801,7 +1801,7 @@ describe('Pool', () => {
           pool
             .connect(trader)
             .fillQuoteRFQ(quote, quote.size, sig, getEmptyPremiaPermit2()),
-        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteCancelled');
+        ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQCancelled');
       });
     });
   });
