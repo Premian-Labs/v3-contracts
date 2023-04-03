@@ -114,7 +114,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
-    function _getTradeQuote(
+    function _getQuoteAMM(
         UD60x18 size,
         bool isBuy
     ) internal view returns (UD60x18 totalNetPremium, UD60x18 totalTakerFee) {
@@ -756,11 +756,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     UD60x18 premium;
 
                     {
-                        UD60x18 tradeQuotePrice = l.marketPrice.avg(
+                        UD60x18 quoteAMMPrice = l.marketPrice.avg(
                             nextMarketPrice
                         );
 
-                        premium = tradeQuotePrice * tradeSize;
+                        premium = quoteAMMPrice * tradeSize;
                     }
                     UD60x18 takerFee = _takerFee(l, tradeSize, premium, true);
 

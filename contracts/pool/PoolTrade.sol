@@ -35,12 +35,12 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     {}
 
     /// @inheritdoc IPoolTrade
-    function getTradeQuote(
+    function getQuoteAMM(
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        (UD60x18 _premiumNet, UD60x18 _takerFee) = _getTradeQuote(size, isBuy);
+        (UD60x18 _premiumNet, UD60x18 _takerFee) = _getQuoteAMM(size, isBuy);
 
         return (
             l.toPoolTokenDecimals(_premiumNet),

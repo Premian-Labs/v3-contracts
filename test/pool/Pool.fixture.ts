@@ -338,7 +338,7 @@ async function _deployAndBuy(isCall: boolean) {
     f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
-  const totalPremium = (await f.pool.getTradeQuote(tradeSize, true)).premiumNet;
+  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, true)).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 
@@ -389,8 +389,7 @@ async function _deployAndSell(isCall: boolean) {
     true,
   );
 
-  const totalPremium = (await f.pool.getTradeQuote(tradeSize, false))
-    .premiumNet;
+  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, false)).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 

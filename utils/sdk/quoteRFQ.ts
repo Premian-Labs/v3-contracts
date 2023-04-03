@@ -74,7 +74,7 @@ export async function signQuote(
   return { ...sig, ...message };
 }
 
-export async function calculateQuoteHash(
+export async function calculateQuoteRFQHash(
   w3Provider: Provider,
   quoteRFQ: QuoteRFQ,
   poolAddress: string,

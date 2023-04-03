@@ -15,7 +15,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param isBuy Whether the taker is buying or selling
     /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) | poolToken decimals
     /// @return takerFee The taker fees to pay (Included in `premiumNet`) | poolToken decimals
-    function getTradeQuote(
+    function getQuoteAMM(
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee);

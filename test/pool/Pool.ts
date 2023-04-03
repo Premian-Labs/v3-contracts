@@ -1,6 +1,6 @@
 import { ONE_ETHER, PERMIT2, THREE_ETHER } from '../../utils/constants';
 import { average } from '../../utils/sdk/math';
-import { calculateQuoteHash, signQuote } from '../../utils/sdk/quoteRFQ';
+import { calculateQuoteRFQHash, signQuote } from '../../utils/sdk/quoteRFQ';
 import { formatTokenId, parseTokenId } from '../../utils/sdk/token';
 import { OrderType, TokenType } from '../../utils/sdk/types';
 import { increase, increaseTo, latest } from '../../utils/time';
@@ -124,14 +124,14 @@ describe('Pool', () => {
 
           const quote = await getQuoteRFQ();
           expect(await pool.quoteRFQHash(quote)).to.eq(
-            await calculateQuoteHash(lp.provider!, quote, pool.address),
+            await calculateQuoteRFQHash(lp.provider!, quote, pool.address),
           );
         });
       });
     });
   });
 
-  describe('#getTradeQuote', () => {
+  describe('#getQuoteAMM', () => {
     runCallAndPutTests((isCallPool: boolean) => {
       it('should successfully return a buy trade quote', async () => {
         const { pool, pKey, contractsToCollateral, scaleDecimals } =
@@ -155,7 +155,7 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).add(takerFee);
 
-        expect((await pool.getTradeQuote(tradeSize, true)).premiumNet).to.eq(
+        expect((await pool.getQuoteAMM(tradeSize, true)).premiumNet).to.eq(
           quote,
         );
       });
@@ -182,7 +182,7 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).sub(takerFee);
 
-        expect((await pool.getTradeQuote(tradeSize, false)).premiumNet).to.eq(
+        expect((await pool.getQuoteAMM(tradeSize, false)).premiumNet).to.eq(
           quote,
         );
       });
@@ -195,7 +195,7 @@ describe('Pool', () => {
         );
 
         await expect(
-          pool.getTradeQuote(depositSize.add(1), true),
+          pool.getQuoteAMM(depositSize.add(1), true),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientLiquidity');
       });
 
@@ -207,7 +207,7 @@ describe('Pool', () => {
         );
 
         await expect(
-          pool.getTradeQuote(depositSize.add(1), false),
+          pool.getQuoteAMM(depositSize.add(1), false),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientLiquidity');
       });
     });
@@ -962,7 +962,7 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, true))
           .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
@@ -994,7 +994,7 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, true))
           .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
@@ -1050,7 +1050,7 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize),
         );
 
-        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, false))
           .premiumNet;
 
         await poolToken.mint(trader.address, collateralScaled);
@@ -1094,7 +1094,7 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize),
         );
 
-        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, false))
           .premiumNet;
 
         await poolToken.mint(trader.address, collateralScaled);
@@ -1138,7 +1138,7 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, true))
           .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
@@ -1164,7 +1164,7 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+        const totalPremium = (await pool.getQuoteAMM(tradeSize, false))
           .premiumNet;
 
         await poolToken.mint(trader.address, tradeSize);
@@ -1548,7 +1548,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#fillQuote', () => {
+  describe('#fillQuoteRFQ', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully fill a valid quote with approval', async () => {
         const {
@@ -1794,7 +1794,7 @@ describe('Pool', () => {
         await pool
           .connect(lp)
           .cancelQuotesRFQ([
-            await calculateQuoteHash(lp.provider!, quote, pool.address),
+            await calculateQuoteRFQHash(lp.provider!, quote, pool.address),
           ]);
 
         await expect(
@@ -1806,7 +1806,7 @@ describe('Pool', () => {
     });
   });
 
-  describe('#getTradeQuoteFilledAmount', async () => {
+  describe('#getQuoteRFQFilledAmount', async () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully return filled amount of a trade quote', async () => {
         const { pool, lp, trader, getQuoteRFQ } = await loadFixture(
@@ -1823,13 +1823,13 @@ describe('Pool', () => {
           .connect(trader)
           .fillQuoteRFQ(quote, quote.size.div(2), sig, getEmptyPremiaPermit2());
 
-        const tradeQuoteHash = await calculateQuoteHash(
+        const quoteRFQHash = await calculateQuoteRFQHash(
           lp.provider!,
           quote,
           pool.address,
         );
         expect(
-          await pool.getQuoteRFQFilledAmount(quote.provider, tradeQuoteHash),
+          await pool.getQuoteRFQFilledAmount(quote.provider, quoteRFQHash),
         ).to.eq(quote.size.div(2));
       });
     });
