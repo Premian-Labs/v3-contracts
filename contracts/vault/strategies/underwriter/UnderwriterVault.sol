@@ -842,11 +842,10 @@ contract UnderwriterVault is
         // Add listing
         l.addListing(vars.strike, vars.maturity);
 
-        // Collect option premium from buyer
-
         // Add everything except mintingFee
         l.totalAssets = l.totalAssets + vars.premium + vars.spread;
 
+        // Collect option premium from buyer
         uint256 transferAmountScaled = l.convertAssetFromUD60x18(totalPremium);
 
         IERC20(_asset()).safeTransferFrom(
