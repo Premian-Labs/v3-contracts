@@ -1,4 +1,6 @@
 [profile.default]
+auto_detect_solc = false
+solc = "0.8.19"
 src = 'contracts'
 out = 'out'
 libs = ['lib']
