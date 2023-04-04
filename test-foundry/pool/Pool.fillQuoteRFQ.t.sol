@@ -55,7 +55,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         return scaleDecimals(initialCollateral, poolKey.isCallPool);
     }
 
-    function _test_fillQuote_Success_WithApproval(bool isCall) internal {
+    function _test_fillQuoteRFQ_Success_WithApproval(bool isCall) internal {
         mintAndApprove();
 
         address poolToken = getPoolToken(isCall);
@@ -97,11 +97,11 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
     }
 
-    function test_fillQuote_Success_WithApproval() public {
-        _test_fillQuote_Success_WithApproval(poolKey.isCallPool);
+    function test_fillQuoteRFQ_Success_WithApproval() public {
+        _test_fillQuoteRFQ_Success_WithApproval(poolKey.isCallPool);
     }
 
-    function test_fillQuote_RevertIf_QuoteExpired() public {
+    function test_fillQuoteRFQ_RevertIf_QuoteExpired() public {
         quoteRFQ.deadline = block.timestamp - 1 hours;
 
         IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
@@ -112,7 +112,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
+    function test_fillQuoteRFQ_RevertIf_QuotePriceOutOfBounds() public {
         vm.startPrank(users.trader);
 
         quoteRFQ.price = UD60x18.wrap(1);
@@ -128,7 +128,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function test_fillQuote_RevertIf_NotSpecifiedTaker() public {
+    function test_fillQuoteRFQ_RevertIf_NotSpecifiedTaker() public {
         quoteRFQ.taker = address(0x99999);
 
         IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
@@ -139,7 +139,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function test_fillQuote_RevertIf_Overfilled() public {
+    function test_fillQuoteRFQ_RevertIf_Overfilled() public {
         mintAndApprove();
 
         vm.startPrank(users.trader);
@@ -157,7 +157,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function test_fillQuote_RevertIf_WrongSignedMessage() public {
+    function test_fillQuoteRFQ_RevertIf_WrongSignedMessage() public {
         vm.prank(users.trader);
         IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
@@ -167,7 +167,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function _test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral(
+    function _test_fillQuoteRFQAndSwap_Swap_IfPositiveDeltaCollateral(
         bool isCall
     ) internal {
         mintAndApprove();
@@ -303,13 +303,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
     }
 
-    function test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral() public {
-        _test_fillQuoteAndSwap_Swap_IfPositiveDeltaCollateral(
+    function test_fillQuoteRFQAndSwap_Swap_IfPositiveDeltaCollateral() public {
+        _test_fillQuoteRFQAndSwap_Swap_IfPositiveDeltaCollateral(
             poolKey.isCallPool
         );
     }
 
-    function _test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral(
+    function _test_fillQuoteRFQAndSwap_NotSwap_IfNegativeDeltaCollateral(
         bool isCall
     ) internal {
         mintAndApprove();
@@ -380,13 +380,15 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), quoteRFQ.size);
     }
 
-    function test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral() public {
-        _test_fillQuoteAndSwap_NotSwap_IfNegativeDeltaCollateral(
+    function test_fillQuoteRFQAndSwap_NotSwap_IfNegativeDeltaCollateral()
+        public
+    {
+        _test_fillQuoteRFQAndSwap_NotSwap_IfNegativeDeltaCollateral(
             poolKey.isCallPool
         );
     }
 
-    function _test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn(
+    function _test_fillQuoteRFQAndSwap_RevertIf_InvalidSwapTokenIn(
         bool isCall
     ) internal {
         mintAndApprove();
@@ -421,11 +423,15 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         );
     }
 
-    function test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn() public {
-        _test_fillQuoteAndSwap_RevertIf_InvalidSwapTokenIn(poolKey.isCallPool);
+    function test_fillQuoteRFQAndSwap_RevertIf_InvalidSwapTokenIn() public {
+        _test_fillQuoteRFQAndSwap_RevertIf_InvalidSwapTokenIn(
+            poolKey.isCallPool
+        );
     }
 
-    function _test_swapAndFillQuote_Success_WithApproval(bool isCall) internal {
+    function _test_swapAndFillQuoteRFQ_Success_WithApproval(
+        bool isCall
+    ) internal {
         uint256 initialCollateral = getInitialCollateral();
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -502,7 +508,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
     }
 
-    function test_swapAndFillQuote_Success_WithApproval() public {
-        _test_swapAndFillQuote_Success_WithApproval(poolKey.isCallPool);
+    function test_swapAndFillQuoteRFQ_Success_WithApproval() public {
+        _test_swapAndFillQuoteRFQ_Success_WithApproval(poolKey.isCallPool);
     }
 }
