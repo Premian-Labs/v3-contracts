@@ -5,7 +5,7 @@ pragma solidity >=0.8.19;
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
@@ -62,11 +62,11 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             .powu(discountFactor)
             .intoUD60x18();
 
-        UD60x18 spot = _fetchQuote(k.oracleAdapter, k.base, k.quote);
+        UD60x18 spot = _getSpotPrice(k.oracleAdapter, k.base, k.quote);
         UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        UD60x18 wrappedNativeUSDPrice = _fetchWrappedNativeUSDQuote();
+        UD60x18 wrappedNativeUSDSpot = _getWrappedNativeUSDSpotPrice();
 
-        return (fee * discount) / wrappedNativeUSDPrice;
+        return (fee * discount) / wrappedNativeUSDSpot;
     }
 
     /// @inheritdoc IPoolFactory
@@ -178,9 +178,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
-    // @notice We use the given oracle adapter to fetch the price of the base/quote pair.
+    // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
     //         This is used in the calculation of the initializationFee and to check the strike increment
-    function _fetchQuote(
+    function _getSpotPrice(
         address oracleAdapter,
         address base,
         address quote
@@ -188,9 +188,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
-    // @notice We use the Premia Chainlink Adapter to fetch the price of the wrapped native token.
+    // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
     //         This is used to convert the initializationFee from USD to native token
-    function _fetchWrappedNativeUSDQuote() internal view returns (UD60x18) {
+    function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
         return
             IOracleAdapter(CHAINLINK_ADAPTER).quote(
                 WRAPPED_NATIVE_TOKEN,
@@ -207,7 +207,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     ) internal view {
         if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
 
-        UD60x18 spot = _fetchQuote(oracleAdapter, base, quote);
+        UD60x18 spot = _getSpotPrice(oracleAdapter, base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != ZERO)

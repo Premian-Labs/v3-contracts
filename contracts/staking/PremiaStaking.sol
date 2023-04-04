@@ -8,7 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC2612} from "@solidstate/contracts/token/ERC20/permit/IERC2612.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IExchangeHelper} from "../IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";

@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 /// @title The interface for an oracle adapter that provides price quotes
 /// @notice These methods allow users to add support for pairs, and then ask for quotes

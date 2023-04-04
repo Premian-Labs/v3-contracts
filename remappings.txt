@@ -1,4 +1,4 @@
 @chainlink=node_modules/@chainlink
-@prb/math=node_modules/@prb/math
+@prb/math/=lib/prb-math/src/
 @solidstate=node_modules/@solidstate
 @uniswap=node_modules/@uniswap
