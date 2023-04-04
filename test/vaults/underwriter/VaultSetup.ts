@@ -16,6 +16,8 @@ import {
   VolatilityOracleMock,
   VolatilityOracleMock__factory,
   IOracleAdapter__factory,
+  VaultSettings__factory,
+  VaultSettings,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
@@ -75,6 +77,8 @@ export let shortCall: ERC20Mock;
 export let oracleAdapter: MockContract;
 export let volOracle: VolatilityOracleMock;
 export let volOracleProxy: ProxyUpgradeableOwnable;
+
+export let vaultSettings: VaultSettings;
 
 export const log = true;
 
@@ -337,10 +341,16 @@ export async function vaultSetup() {
 
   const factoryAddress = p.poolFactory.address;
 
+  // ====================================================================================
+  // Vault Settings
+  vaultSettings = await new VaultSettings__factory(deployer).deploy();
+
+  // ====================================================================================
+
   //=====================================================================================
   // Mock Vault setup
-
   vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
+    vaultSettings.address,
     feeReceiver.address,
     volOracle.address,
     p.poolFactory.address,

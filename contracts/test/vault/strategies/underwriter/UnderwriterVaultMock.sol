@@ -39,12 +39,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
     UD60x18 mockSpot;
 
     constructor(
+        address settings,
         address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address routerAddress
     )
         UnderwriterVault(
+            settings,
             feeReceiver,
             oracleAddress,
             factoryAddress,

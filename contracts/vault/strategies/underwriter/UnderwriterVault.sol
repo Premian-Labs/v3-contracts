@@ -46,6 +46,9 @@ contract UnderwriterVault is
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
+    bytes32 internal constant VAULT_TYPE = keccak256("UnderwriterVault");
+
+    address internal immutable SETTINGS;
     address internal immutable FEE_RECEIVER;
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
@@ -55,11 +58,13 @@ contract UnderwriterVault is
     /// @param oracleAddress The address for the volatility oracle
     /// @param factoryAddress The pool factory address
     constructor(
+        address settings,
         address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address router
     ) {
+        SETTINGS = settings;
         FEE_RECEIVER = feeReceiver;
         IV_ORACLE = oracleAddress;
         FACTORY = factoryAddress;
