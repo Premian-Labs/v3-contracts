@@ -78,10 +78,18 @@ docker build -t premia-v3 .
 
 Then run the docker container by using the command:
 
+**Linux**
+
 ```bash
 docker run -it -u=$(id -u $USER):$(id -g $USER) \
-           -v $PWD:/premia-v3-contracts-private \
+           -v $PWD:/src \
            premia-v3
+```
+
+**Windows**
+
+```bash
+docker run -it -v %CD%:/src premia-v3
 ```
 
 Upon executing, you will have access to the command line inside the container and will be able to run the commands for forge and hardhat.
