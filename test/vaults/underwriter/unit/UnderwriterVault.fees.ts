@@ -1,8 +1,9 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addMockDeposit,
   increaseTotalAssets,
   increaseTotalShares,
+  setMaturities,
   vaultSetup,
 } from '../VaultSetup';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
@@ -10,7 +11,6 @@ import { expect } from 'chai';
 import { increaseTo, ONE_DAY, ONE_YEAR } from '../../../../utils/time';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { ethers } from 'ethers';
-import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 let vault: UnderwriterVaultMock;

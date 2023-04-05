@@ -184,7 +184,12 @@ describe('UnderwriterVault.internal', () => {
       };
 
       await vault.setTimestamp(startTime + ONE_DAY);
-      await vault.afterBuy(afterBuyArgs);
+      await vault.afterBuy(
+        afterBuyArgs.strike,
+        afterBuyArgs.maturity,
+        afterBuyArgs.size,
+        afterBuyArgs.spread,
+      );
       console.log('Processed afterBuy.');
       return { vault };
     }

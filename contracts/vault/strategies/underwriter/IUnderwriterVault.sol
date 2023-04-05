@@ -11,13 +11,14 @@ import {IVault} from "../../../vault/IVault.sol";
 interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Errors
     error Vault__OptionTypeMismatchWithVault();
-    error Vault__OutOfTradeBounds(string valueName);
+    error Vault__OutOfDeltaBounds();
+    error Vault__OutOfDTEBounds();
     error Vault__TradeMustBeBuy();
     error Vault__UtilisationOutOfBounds();
 
     // Structs
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
-    struct UnexpiredListingVars {
+    struct UnexpiredListingVarsInternal {
         UD60x18 spot;
         UD60x18 riskFreeRate;
         // A list of strikes for a set of listings
@@ -35,17 +36,9 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         uint256 lastSpreadUnlockUpdate;
     }
 
-    struct QuoteVars {
-        // timestamp of the quote/trade
-        uint256 timestamp;
+    struct QuoteVarsInternal {
         // spot price
         UD60x18 spot;
-        // strike price of the listing
-        UD60x18 strike;
-        // maturity of the listing
-        uint256 maturity;
-        // pool address of the listing
-        address poolAddr;
         // time until maturity (years)
         UD60x18 tau;
         // implied volatility of the listing
@@ -56,12 +49,15 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         SD59x18 delta;
         // option price
         UD60x18 price;
-        // size of quote/trade
-        UD60x18 size;
-        // premium associated to the BSM price of the option (price * size)
-        UD60x18 premium;
         // C-level post-trade
         UD60x18 cLevel;
+    }
+
+    struct QuoteVars {
+        // strike price of the listing
+        address poolAddr;
+        // premium associated to the BSM price of the option (price * size)
+        UD60x18 premium;
         // spread added on to premium due to C-level
         UD60x18 spread;
         // fee for minting the option through the pool

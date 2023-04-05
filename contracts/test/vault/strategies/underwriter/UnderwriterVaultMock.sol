@@ -182,7 +182,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 maturity,
         UD60x18 strike,
         UD60x18 posSize
-    ) external onlyOwner {
+    ) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.positionSizes[maturity][strike] =
@@ -194,7 +194,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         uint256 maturity,
         UD60x18 strike,
         UD60x18 posSize
-    ) external onlyOwner {
+    ) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.positionSizes[maturity][strike] =
@@ -213,11 +213,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.layout().lastTradeTimestamp = timestamp;
     }
 
-    function setTotalLockedAssets(UD60x18 value) external onlyOwner {
+    function setTotalLockedAssets(UD60x18 value) external {
         UnderwriterVaultStorage.layout().totalLockedAssets = value;
     }
 
-    function setLastSpreadUnlockUpdate(uint256 value) external onlyOwner {
+    function setLastSpreadUnlockUpdate(uint256 value) external {
         UnderwriterVaultStorage.layout().lastSpreadUnlockUpdate = value;
     }
 
@@ -225,7 +225,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().minMaturity;
     }
 
-    function setMinMaturity(uint256 value) external onlyOwner {
+    function setMinMaturity(uint256 value) external {
         UnderwriterVaultStorage.layout().minMaturity = value;
     }
 
@@ -233,17 +233,15 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().maxMaturity;
     }
 
-    function setMaxMaturity(uint256 value) external onlyOwner {
+    function setMaxMaturity(uint256 value) external {
         UnderwriterVaultStorage.layout().maxMaturity = value;
     }
 
-    function setIsCall(bool value) external onlyOwner {
+    function setIsCall(bool value) external {
         UnderwriterVaultStorage.layout().isCall = value;
     }
 
-    function setListingsAndSizes(
-        MaturityInfo[] memory infos
-    ) external onlyOwner {
+    function setListingsAndSizes(MaturityInfo[] memory infos) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -268,7 +266,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.maxMaturity = current;
     }
 
-    function clearListingsAndSizes() external onlyOwner {
+    function clearListingsAndSizes() external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -303,23 +301,20 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.maxMaturity = 0;
     }
 
-    function insertMaturity(
-        uint256 maturity,
-        uint256 newMaturity
-    ) external onlyOwner {
+    function insertMaturity(uint256 maturity, uint256 newMaturity) external {
         UnderwriterVaultStorage.layout().maturities.insertAfter(
             maturity,
             newMaturity
         );
     }
 
-    function insertStrike(uint256 maturity, UD60x18 strike) external onlyOwner {
+    function insertStrike(uint256 maturity, UD60x18 strike) external {
         UnderwriterVaultStorage.layout().maturityToStrikes[maturity].add(
             strike
         );
     }
 
-    function increaseSpreadUnlockingRate(UD60x18 value) external onlyOwner {
+    function increaseSpreadUnlockingRate(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.spreadUnlockingRate = l.spreadUnlockingRate + value;
@@ -328,7 +323,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function increaseSpreadUnlockingTick(
         uint256 maturity,
         UD60x18 value
-    ) external onlyOwner {
+    ) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.spreadUnlockingTicks[maturity] =
@@ -336,15 +331,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
             value;
     }
 
-    function increaseTotalLockedAssetsNoTransfer(
-        UD60x18 value
-    ) external onlyOwner {
+    function increaseTotalLockedAssetsNoTransfer(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalLockedAssets = l.totalLockedAssets + value;
     }
 
-    function increaseTotalLockedAssets(UD60x18 value) external onlyOwner {
+    function increaseTotalLockedAssets(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalLockedAssets = l.totalLockedAssets + value;
@@ -352,30 +345,30 @@ contract UnderwriterVaultMock is UnderwriterVault {
         IERC20(_asset()).transfer(address(1), transfer);
     }
 
-    function increaseTotalLockedSpread(UD60x18 value) external onlyOwner {
+    function increaseTotalLockedSpread(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalLockedSpread = l.totalLockedSpread + value;
     }
 
-    function increaseTotalShares(uint256 value) external onlyOwner {
+    function increaseTotalShares(uint256 value) external {
         ERC20BaseStorage.Layout storage l = ERC20BaseStorage.layout();
         l.totalSupply += value;
     }
 
-    function setTotalAssets(UD60x18 value) external onlyOwner {
+    function setTotalAssets(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalAssets = value;
     }
 
-    function increaseTotalAssets(UD60x18 value) external onlyOwner {
+    function increaseTotalAssets(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.totalAssets = l.totalAssets + value;
     }
 
-    function mintMock(address receiver, uint256 value) external onlyOwner {
+    function mintMock(address receiver, uint256 value) external {
         _mint(receiver, value);
     }
 
@@ -448,8 +441,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getFactoryAddress(strike, maturity);
     }
 
-    function afterBuy(QuoteVars memory vars) external {
-        _afterBuy(vars);
+    function afterBuy(
+        UD60x18 strike,
+        uint256 maturity,
+        UD60x18 size,
+        UD60x18 spread
+    ) external {
+        _afterBuy(strike, maturity, size, spread);
     }
 
     function getSpotPrice() public view returns (UD60x18) {
@@ -601,22 +599,20 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _ensureSufficientFunds(isCallVault, strike, size, availableAssets);
     }
 
-    function ensureWithinTradeBounds(
-        string memory valueName,
+    function ensureWithinDTEBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
     ) external pure {
-        _ensureWithinTradeBounds(valueName, value, minimum, maximum);
+        _ensureWithinDTEBounds(value, minimum, maximum);
     }
 
-    function ensureWithinTradeBounds(
-        string memory valueName,
+    function ensureWithinDeltaBounds(
         SD59x18 value,
         SD59x18 minimum,
         SD59x18 maximum
     ) external pure {
-        _ensureWithinTradeBounds(valueName, value, minimum, maximum);
+        _ensureWithinDeltaBounds(value, minimum, maximum);
     }
 
     function computeCLevel(

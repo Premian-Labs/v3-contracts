@@ -12,6 +12,7 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
+import {ZERO, iZERO, iONE, iTWO} from "../libraries/Constants.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
@@ -22,12 +23,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using SafeCast for int256;
     using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;
-
-    UD60x18 internal constant ZERO = UD60x18.wrap(0);
-
-    SD59x18 internal constant iZERO = SD59x18.wrap(0);
-    SD59x18 internal constant ONE = SD59x18.wrap(1e18);
-    SD59x18 internal constant TWO = SD59x18.wrap(2e18);
 
     uint256 private constant DECIMALS = 12;
 
@@ -219,15 +214,16 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 value1,
         SD59x18 value2
     ) internal pure returns (SD59x18) {
-        return (ONE - lam) * value1 + (lam * value2);
+        return (iONE - lam) * value1 + (lam * value2);
     }
 
-    function _getVolatility(
+    /// @inheritdoc IVolatilityOracle
+    function getVolatility(
         address token,
         UD60x18 spot,
         UD60x18 strike,
         UD60x18 timeToMaturity
-    ) internal view returns (UD60x18) {
+    ) public view returns (UD60x18) {
         if (spot == ZERO) revert VolatilityOracle__SpotIsZero();
         if (strike == ZERO) revert VolatilityOracle__StrikeIsZero();
         if (timeToMaturity == ZERO)
@@ -304,22 +300,12 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 phi = info.psi / info.theta;
 
         // Use powu(2) instead of pow(TWO) here (o.w. LogInputTooSmall Error)
-        SD59x18 term = (phi * k + info.rho).powu(2) + (ONE - info.rho.powu(2));
+        SD59x18 term = (phi * k + info.rho).powu(2) + (iONE - info.rho.powu(2));
 
-        SD59x18 w = info.theta / TWO;
-        w = w * (ONE + info.rho * phi * k + term.sqrt());
+        SD59x18 w = info.theta / iTWO;
+        w = w * (iONE + info.rho * phi * k + term.sqrt());
 
         return (w / _timeToMaturity).sqrt().intoUD60x18();
-    }
-
-    /// @inheritdoc IVolatilityOracle
-    function getVolatility(
-        address token,
-        UD60x18 spot,
-        UD60x18 strike,
-        UD60x18 timeToMaturity
-    ) external view returns (UD60x18) {
-        return _getVolatility(token, spot, strike, timeToMaturity);
     }
 
     // @inheritdoc IVolatilityOracle
@@ -335,12 +321,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18[] memory sigma = new UD60x18[](strike.length);
 
         for (uint256 i = 0; i < sigma.length; i++) {
-            sigma[i] = _getVolatility(
-                token,
-                spot,
-                strike[i],
-                timeToMaturity[i]
-            );
+            sigma[i] = getVolatility(token, spot, strike[i], timeToMaturity[i]);
         }
 
         return sigma;
