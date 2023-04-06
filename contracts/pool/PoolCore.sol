@@ -136,7 +136,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                     minMarketPrice,
                     maxMarketPrice,
                     _wrapETH(l),
-                    address(0)
+                    msg.sender
                 ),
                 permit
             );
@@ -166,7 +166,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                     minMarketPrice,
                     maxMarketPrice,
                     _wrapETH(l),
-                    address(0)
+                    msg.sender
                 ),
                 permit,
                 isBidIfStrandedMarketPrice
