@@ -59,6 +59,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @notice Gets the timestamp of the current block.
+    /// @dev We are using a virtual internal function to be able to override in Mock contract for testing purpose
     function _getBlockTimestamp() internal view virtual returns (uint256) {
         return block.timestamp;
     }

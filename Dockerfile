@@ -7,6 +7,6 @@ RUN apk add nodejs npm
 RUN npm install --global yarn
 
 # Copy our source code into the container
-WORKDIR /premia-v3-contracts-private
+WORKDIR /src
 
 ENTRYPOINT ["/bin/sh"]
