@@ -154,7 +154,9 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).add(takerFee);
 
-        expect(await pool.getTradeQuote(tradeSize, true)).to.eq(quote);
+        expect((await pool.getTradeQuote(tradeSize, true)).premiumNet).to.eq(
+          quote,
+        );
       });
 
       it('should successfully return a sell trade quote', async () => {
@@ -179,7 +181,9 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).sub(takerFee);
 
-        expect(await pool.getTradeQuote(tradeSize, false)).to.eq(quote);
+        expect((await pool.getTradeQuote(tradeSize, false)).premiumNet).to.eq(
+          quote,
+        );
       });
 
       it('should revert if not enough liquidity to buy', async () => {
@@ -957,7 +961,8 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = await pool.getTradeQuote(tradeSize, true);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+          .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
         await poolToken.connect(trader).approve(router.address, totalPremium);
@@ -988,7 +993,8 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = await pool.getTradeQuote(tradeSize, true);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+          .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
 
@@ -1043,7 +1049,8 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize),
         );
 
-        const totalPremium = await pool.getTradeQuote(tradeSize, false);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+          .premiumNet;
 
         await poolToken.mint(trader.address, collateralScaled);
         await poolToken
@@ -1086,7 +1093,8 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize),
         );
 
-        const totalPremium = await pool.getTradeQuote(tradeSize, false);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+          .premiumNet;
 
         await poolToken.mint(trader.address, collateralScaled);
         await poolToken
@@ -1129,7 +1137,8 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = await pool.getTradeQuote(tradeSize, true);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, true))
+          .premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
         await poolToken.connect(trader).approve(router.address, totalPremium);
@@ -1154,7 +1163,8 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = await pool.getTradeQuote(tradeSize, false);
+        const totalPremium = (await pool.getTradeQuote(tradeSize, false))
+          .premiumNet;
 
         await poolToken.mint(trader.address, tradeSize);
         await poolToken.connect(trader).approve(router.address, tradeSize);

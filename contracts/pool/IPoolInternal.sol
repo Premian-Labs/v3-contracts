@@ -102,12 +102,6 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 salt;
     }
 
-    struct Delta {
-        SD59x18 collateral;
-        SD59x18 longs;
-        SD59x18 shorts;
-    }
-
     enum InvalidQuoteError {
         None,
         QuoteExpired,
@@ -171,12 +165,13 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 initialSize;
         UD60x18 liquidityPerTick;
         bool isFullWithdrawal;
+        SD59x18 tickDelta;
     }
 
     struct Signature {
+        uint8 v;
         bytes32 r;
         bytes32 s;
-        uint8 v;
     }
 
     struct FillQuoteArgsInternal {
@@ -184,8 +179,12 @@ interface IPoolInternal is IPosition, IPricing {
         address user;
         // The size to fill from the quote | 18 decimals
         UD60x18 size;
-        // secp256k1 concatenated 'r', 's', and 'v' value
+        // secp256k1 'r', 's', and 'v' value
         Signature signature;
+        // Amount already credited before the _fillQuote function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        uint256 creditAmount;
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        bool transferCollateralToUser;
     }
 
     struct PremiumAndFeeInternal {
