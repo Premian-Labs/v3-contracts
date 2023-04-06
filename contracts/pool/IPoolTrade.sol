@@ -59,7 +59,7 @@ interface IPoolTrade is IPoolInternal {
             uint256 swapOutAmount
         );
 
-    /// @notice Execute a swap and fill an RFQ quote
+    /// @notice Fill an RFQ quote and then execute a swap
     /// @param s The swap arguments
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
