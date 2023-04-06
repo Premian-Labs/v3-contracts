@@ -679,9 +679,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function maxTransferableShares(
-        address owner
+        FeeVars memory vars
     ) external view returns (uint256) {
-        return _maxTransferableShares(owner).unwrap();
+        return _maxTransferableShares(vars).unwrap();
     }
 
     function getAveragePricePerShare(
@@ -704,9 +704,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
 
     function getFeeVars(
         address from,
-        UD60x18 shares
+        UD60x18 shares,
+        UD60x18 pps
     ) external view returns (FeeVars memory) {
-        return _getFeeVars(from, shares);
+        return _getFeeVars(from, shares, pps);
     }
 
     function afterDeposit(

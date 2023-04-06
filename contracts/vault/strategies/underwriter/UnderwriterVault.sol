@@ -34,6 +34,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
 
+    uint256 internal constant WAD = 1e18;
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
@@ -163,9 +164,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         uint256 i = 0;
         while (current <= l.maxMaturity && current != 0) {
-            UD60x18 timeToMaturity = UD60x18.wrap(
-                (current - timestamp) * 1e18
-            ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * 1e18);
+            UD60x18 timeToMaturity = UD60x18.wrap((current - timestamp) * WAD) /
+                UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
 
             for (
                 uint256 j = 0;
@@ -241,7 +241,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         while (current <= timestamp && current != 0) {
             vars.totalLockedSpread =
                 vars.totalLockedSpread -
-                UD60x18.wrap((current - vars.lastSpreadUnlockUpdate) * 1e18) *
+                UD60x18.wrap((current - vars.lastSpreadUnlockUpdate) * WAD) *
                 vars.spreadUnlockingRate;
 
             vars.spreadUnlockingRate =
@@ -253,10 +253,16 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         vars.totalLockedSpread =
             vars.totalLockedSpread -
-            UD60x18.wrap((timestamp - vars.lastSpreadUnlockUpdate) * 1e18) *
+            UD60x18.wrap((timestamp - vars.lastSpreadUnlockUpdate) * WAD) *
             vars.spreadUnlockingRate;
         vars.lastSpreadUnlockUpdate = timestamp;
         return vars;
+    }
+
+    function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
+        // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
+        // therefore no further scaling has to be applied
+        return UD60x18.wrap(_balanceOf(owner));
     }
 
     function _balanceOfAssetUD60x18(
@@ -292,9 +298,17 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Gets the current price per share for the vault
     /// @return The current price per share
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
-        return
-            (_availableAssetsUD60x18() + _getTotalFairValue()) /
-            _totalSupplyUD60x18();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 supply = _totalSupplyUD60x18();
+
+        if ((supply != ZERO) && (l.totalAssets != ZERO))
+            return
+                (_availableAssetsUD60x18() + _getTotalFairValue()) /
+                _totalSupplyUD60x18();
+
+        return ONE;
     }
 
     function _getAveragePricePerShareUD60x18(
@@ -323,7 +337,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     function _convertToSharesUD60x18(
-        UD60x18 assetAmount
+        UD60x18 assetAmount,
+        UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -336,7 +351,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             if (l.totalAssets == ZERO) {
                 shareAmount = assetAmount;
             } else {
-                shareAmount = assetAmount / _getPricePerShareUD60x18();
+                shareAmount = assetAmount / pps;
             }
         }
     }
@@ -347,20 +362,22 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     ) internal view override returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
+        UD60x18 pps = _getPricePerShareUD60x18();
         return
-            _convertToSharesUD60x18(l.convertAssetToUD60x18(assetAmount))
+            _convertToSharesUD60x18(l.convertAssetToUD60x18(assetAmount), pps)
                 .unwrap();
     }
 
     function _convertToAssetsUD60x18(
-        UD60x18 shareAmount
+        UD60x18 shareAmount,
+        UD60x18 pps
     ) internal view returns (UD60x18 assetAmount) {
         UD60x18 supply = _totalSupplyUD60x18();
 
         if (supply == ZERO) {
             revert Vault__ZeroShares();
         } else {
-            assetAmount = shareAmount * _getPricePerShareUD60x18();
+            assetAmount = shareAmount * pps;
         }
     }
 
@@ -370,50 +387,25 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     ) internal view virtual override returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        UD60x18 assets = _convertToAssetsUD60x18(UD60x18.wrap(shareAmount));
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 assets = _convertToAssetsUD60x18(
+            UD60x18.wrap(shareAmount),
+            pps
+        );
         assetAmount = l.convertAssetFromUD60x18(assets);
     }
 
-    function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
-        // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
-        // therefore no further scaling has to be applied
-        return UD60x18.wrap(_balanceOf(owner));
-    }
-
-    function _maxWithdrawUD60x18(
-        address owner
-    ) internal view returns (UD60x18 withdrawableAssets) {
-        if (owner == address(0)) {
-            revert Vault__AddressZero();
-        }
-
-        UD60x18 sharesOwner = _maxTransferableShares(owner);
-        UD60x18 pps = _getPricePerShareUD60x18();
-        UD60x18 assetsOwner = sharesOwner * pps;
-        UD60x18 availableAssets = _availableAssetsUD60x18();
-
-        if (assetsOwner > availableAssets) {
-            withdrawableAssets = availableAssets;
-        } else {
-            withdrawableAssets = assetsOwner;
-        }
-    }
-
     /// @inheritdoc ERC4626BaseInternal
-    function _maxWithdraw(
-        address owner
-    ) internal view virtual override returns (uint256 withdrawableAssets) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        UD60x18 assets = _maxWithdrawUD60x18(owner);
-        withdrawableAssets = l.convertAssetFromUD60x18(assets);
-    }
+    function _deposit(
+        uint256 assetAmount,
+        address receiver
+    ) internal virtual override returns (uint256 shareAmount) {
+        if (assetAmount > _maxDeposit(receiver))
+            revert Vault__MaximumAmountExceeded();
 
-    /// @inheritdoc ERC4626BaseInternal
-    function _maxRedeem(
-        address owner
-    ) internal view virtual override returns (uint256) {
-        return _convertToShares(_maxWithdraw(owner));
+        shareAmount = _previewDeposit(assetAmount);
+
+        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
     }
 
     function _previewMintUD60x18(
@@ -438,13 +430,105 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         assetAmount = l.convertAssetFromUD60x18(assets);
     }
 
+    /// @inheritdoc ERC4626BaseInternal
+    function _mint(
+        uint256 shareAmount,
+        address receiver
+    ) internal virtual override returns (uint256 assetAmount) {
+        if (shareAmount > _maxMint(receiver))
+            revert Vault__MaximumAmountExceeded();
+
+        assetAmount = _previewMint(shareAmount);
+
+        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
+    }
+
+    function _maxRedeemUD60x18(
+        address owner,
+        UD60x18 pps
+    ) internal view returns (UD60x18 shareAmount) {
+        if (owner == address(0)) {
+            revert Vault__AddressZero();
+        }
+
+        UD60x18 assets = _maxWithdrawUD60x18(owner, pps);
+
+        return assets / pps;
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _maxRedeem(
+        address owner
+    ) internal view virtual override returns (uint256) {
+        UD60x18 pps = _getPricePerShareUD60x18();
+        return _maxRedeemUD60x18(owner, pps).unwrap();
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _redeem(
+        uint256 shareAmount,
+        address receiver,
+        address owner
+    ) internal virtual override returns (uint256 assetAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 shares = UD60x18.wrap(shareAmount);
+        UD60x18 pps = _getPricePerShareUD60x18();
+
+        if (shares > _maxRedeemUD60x18(owner, pps))
+            revert Vault__MaximumAmountExceeded();
+
+        UD60x18 assets = shares * pps;
+        assetAmount = l.convertAssetFromUD60x18(assets);
+
+        _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+    }
+
+    function _maxWithdrawUD60x18(
+        address owner,
+        UD60x18 pps
+    ) internal view returns (UD60x18 withdrawableAssets) {
+        if (owner == address(0)) {
+            revert Vault__AddressZero();
+        }
+
+        UD60x18 balance = _balanceOfUD60x18(owner);
+
+        FeeVars memory vars = _getFeeVars(owner, balance, pps);
+        UD60x18 sharesOwner = _maxTransferableShares(vars);
+
+        UD60x18 assetsOwner = sharesOwner * pps;
+        UD60x18 availableAssets = _availableAssetsUD60x18();
+
+        if (assetsOwner > availableAssets) {
+            withdrawableAssets = availableAssets;
+        } else {
+            withdrawableAssets = assetsOwner;
+        }
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _maxWithdraw(
+        address owner
+    ) internal view virtual override returns (uint256 withdrawableAssets) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 assets = _maxWithdrawUD60x18(owner, pps);
+
+        withdrawableAssets = l.convertAssetFromUD60x18(assets);
+    }
+
     function _previewWithdrawUD60x18(
-        UD60x18 assetAmount
+        UD60x18 assetAmount,
+        UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
         if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
         if (_availableAssetsUD60x18() == ZERO)
             revert Vault__InsufficientFunds();
-        shareAmount = assetAmount / _getPricePerShareUD60x18();
+        shareAmount = assetAmount / pps;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -453,8 +537,32 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     ) internal view virtual override returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        UD60x18 assetAmountScaled = l.convertAssetToUD60x18(assetAmount);
-        shareAmount = _previewWithdrawUD60x18(assetAmountScaled).unwrap();
+        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+
+        UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 shares = _previewWithdrawUD60x18(assets, pps);
+        shareAmount = shares.unwrap();
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _withdraw(
+        uint256 assetAmount,
+        address receiver,
+        address owner
+    ) internal virtual override returns (uint256 shareAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
+        UD60x18 pps = _getPricePerShareUD60x18();
+
+        if (assets > _maxWithdrawUD60x18(owner, pps))
+            revert Vault__MaximumAmountExceeded();
+
+        UD60x18 shares = _previewWithdrawUD60x18(assets, pps);
+        shareAmount = shares.unwrap();
+
+        _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
     function _updateTimeOfDeposit(address owner, uint256 shareAmount) internal {
@@ -463,13 +571,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         UD60x18 balance = _balanceOfUD60x18(owner);
         UD60x18 shares = UD60x18.wrap(shareAmount);
-        UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * 1e18);
-        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * 1e18);
+        UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * WAD);
+        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * WAD);
 
         UD60x18 updated = (depositTimestamp * balance + timestamp * shares) /
             (balance + shares);
 
-        l.timeOfDeposit[owner] = updated.unwrap() / 1e18;
+        l.timeOfDeposit[owner] = updated.unwrap() / WAD;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -539,7 +647,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 secondsToExpiration = maturity - _getBlockTimestamp();
 
         _updateState();
-        UD60x18 spreadRate = spread / UD60x18.wrap(secondsToExpiration * 1e18);
+        UD60x18 spreadRate = spread / UD60x18.wrap(secondsToExpiration * WAD);
         UD60x18 collateral = l.isCall ? size : size * strike;
 
         l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRate;
@@ -684,6 +792,21 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             revert Vault__OutOfDeltaBounds();
     }
 
+    /// @notice Ensures that a value is within the delta bounds.
+    /// @param totalPremium The total premium of the trade
+    /// @param premiumLimit The premium limit of the trade
+    /// @param isBuy Whether the trade is a buy or a sell.
+    function _ensureBelowTradeMaxSlippage(
+        UD60x18 totalPremium,
+        UD60x18 premiumLimit,
+        bool isBuy
+    ) internal pure {
+        if (isBuy && totalPremium > premiumLimit)
+            revert Vault__AboveMaxSlippage();
+        if (!isBuy && totalPremium < premiumLimit)
+            revert Vault__AboveMaxSlippage();
+    }
+
     /// @notice Get the variables needed in order to compute the quote for a trade.
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
@@ -716,8 +839,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         // Compute time until maturity and check bounds
         internalVars.tau =
-            UD60x18.wrap((maturity - timestamp) * 1e18) /
-            UD60x18.wrap(ONE_YEAR * 1e18);
+            UD60x18.wrap((maturity - timestamp) * WAD) /
+            UD60x18.wrap(ONE_YEAR * WAD);
         _ensureWithinDTEBounds(
             internalVars.tau * UD60x18.wrap(365e18),
             l.minDTE,
@@ -763,8 +886,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 utilisation = (l.totalLockedAssets + collateral) /
             l.totalAssets;
         UD60x18 hoursSinceLastTx = UD60x18.wrap(
-            (timestamp - l.lastTradeTimestamp) * 1e18
-        ) / UD60x18.wrap(ONE_HOUR * 1e18);
+            (timestamp - l.lastTradeTimestamp) * WAD
+        ) / UD60x18.wrap(ONE_HOUR * WAD);
 
         internalVars.cLevel = _computeCLevel(
             utilisation,
@@ -820,7 +943,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint64 maturity,
         bool isCall,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     ) external override {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -833,6 +957,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             isBuy
         );
         UD60x18 totalPremium = vars.premium + vars.spread + vars.mintingFee;
+
+        _ensureBelowTradeMaxSlippage(
+            totalPremium,
+            l.convertAssetToUD60x18(premiumLimit),
+            isBuy
+        );
 
         // Add listing
         l.addListing(strike, maturity);
@@ -944,10 +1074,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Computes the fee variables needed for computed performance and management fees.
     /// @param owner The owner of the shares.
     /// @param shares The amount of shares to be transferred.
+    /// @param pps The price per share.
     /// @return The fee variables needed for computed performance and management fees.
     function _getFeeVars(
         address owner,
-        UD60x18 shares
+        UD60x18 shares,
+        UD60x18 pps
     ) internal view returns (FeeVars memory) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -956,40 +1088,43 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         FeeVars memory vars;
 
-        vars.pps = _getPricePerShareUD60x18();
-        vars.ppsAvg = _getAveragePricePerShareUD60x18(owner);
-        vars.performance = vars.pps / vars.ppsAvg;
-        vars.shares = shares;
-        vars.assets = vars.shares * vars.pps;
         vars.balanceShares = _balanceOfUD60x18(owner);
 
-        if (vars.performance > ONE) {
-            vars.performanceFeeInShares =
-                vars.shares *
-                (vars.performance - ONE) *
+        UD60x18 ppsAvg;
+        UD60x18 performance;
+        if (vars.balanceShares > ZERO) {
+            ppsAvg = _getAveragePricePerShareUD60x18(owner);
+            performance = pps / ppsAvg;
+            vars.assets = shares * pps;
+        }
+
+        //vars.assets = shares * pps;
+        //vars.balanceShares = _balanceOfUD60x18(owner);
+
+        UD60x18 performanceFeeInShares;
+
+        if (performance > ONE) {
+            performanceFeeInShares =
+                shares *
+                (performance - ONE) *
                 l.performanceFeeRate;
 
-            vars.performanceFeeInAssets =
-                vars.performanceFeeInShares *
-                vars.pps;
+            vars.performanceFeeInAssets = performanceFeeInShares * pps;
         }
 
         UD60x18 timeSinceLastDeposit = UD60x18.wrap(
-            (timestamp - l.timeOfDeposit[owner]) * 1e18
-        ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * 1e18);
+            (timestamp - l.timeOfDeposit[owner]) * WAD
+        ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
 
-        vars.managementFeeInShares =
-            vars.balanceShares *
+        UD60x18 managementFeeInShares = vars.balanceShares *
             l.managementFeeRate *
             timeSinceLastDeposit;
         vars.managementFeeInAssets =
-            _convertToAssetsUD60x18(vars.balanceShares) *
+            _convertToAssetsUD60x18(vars.balanceShares, pps) *
             l.managementFeeRate *
             timeSinceLastDeposit;
 
-        vars.totalFeeInShares =
-            vars.managementFeeInShares +
-            vars.performanceFeeInShares;
+        vars.totalFeeInShares = managementFeeInShares + performanceFeeInShares;
         vars.totalFeeInAssets =
             vars.managementFeeInAssets +
             vars.performanceFeeInAssets;
@@ -998,16 +1133,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @notice Gets the maximum amount of shares a user can transfer.
-    /// @param owner The owner of the shares.
+    /// @param vars The variables needed to compute fees.
     /// @return The maximum amount of shares a user can transfer.
     function _maxTransferableShares(
-        address owner
+        FeeVars memory vars
     ) internal view returns (UD60x18) {
-        UD60x18 balance = _balanceOfUD60x18(owner);
-
-        if (balance == ZERO) return ZERO;
-
-        FeeVars memory vars = _getFeeVars(owner, balance);
+        if (vars.balanceShares == ZERO) return ZERO;
         return vars.balanceShares - vars.totalFeeInShares;
     }
 
@@ -1024,11 +1155,17 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             UD60x18 shares = UD60x18.wrap(amount);
 
-            if (shares > _maxTransferableShares(from))
-                revert Vault__TransferExceedsBalance();
-            FeeVars memory vars = _getFeeVars(from, shares);
+            UD60x18 pps = _getPricePerShareUD60x18();
 
-            _burn(from, vars.totalFeeInShares.unwrap());
+            FeeVars memory vars = _getFeeVars(from, shares, pps);
+
+            if (shares > _maxTransferableShares(vars))
+                revert Vault__TransferExceedsBalance();
+
+            if (vars.totalFeeInShares > ZERO) {
+                _burn(from, vars.totalFeeInShares.unwrap());
+            }
+
             // fees collected denominated in the reference token
             // fees are tracked in order to keep the pps unaffected during the burn
             // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps

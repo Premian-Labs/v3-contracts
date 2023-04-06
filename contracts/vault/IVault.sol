@@ -17,6 +17,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     error Vault__ZeroAsset();
     error Vault__ZeroShares();
     error Vault__ZeroSize();
+    error Vault__MaximumAmountExceeded();
+    error Vault__AboveMaxSlippage();
 
     // Events
     event UpdateQuotes();
@@ -88,6 +90,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         uint64 maturity,
         bool isCall,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     ) external;
 }

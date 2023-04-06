@@ -29,6 +29,10 @@ library UnderwriterVaultStorage {
         address base;
         // ERC20 token address for the quote asset
         address quote;
+        // Base precision
+        uint8 baseDecimals;
+        // Quote precision
+        uint8 quoteDecimals;
         // Address for the oracle adapter to get spot prices for base/quote
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
@@ -102,8 +106,7 @@ library UnderwriterVaultStorage {
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {
-        address asset = l.isCall ? l.base : l.quote;
-        return IERC20Metadata(asset).decimals();
+        return l.isCall ? l.baseDecimals : l.quoteDecimals;
     }
 
     function convertAssetToUD60x18(
