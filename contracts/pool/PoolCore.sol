@@ -4,6 +4,8 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
+
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
@@ -117,7 +119,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external {
+    ) external payable {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -129,7 +131,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                 size,
                 minMarketPrice,
                 maxMarketPrice,
-                0,
+                _wrapETH(l),
                 address(0)
             ),
             permit
@@ -146,7 +148,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external {
+    ) external payable {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -158,12 +160,27 @@ contract PoolCore is IPoolCore, PoolInternal {
                 size,
                 minMarketPrice,
                 maxMarketPrice,
-                0,
+                _wrapETH(l),
                 address(0)
             ),
             permit,
             isBidIfStrandedMarketPrice
         );
+    }
+
+    /// @notice Wraps ETH into WETH if the pool is a WETH pool
+    /// @return The amount of ETH wrapped into WETH
+    function _wrapETH(PoolStorage.Layout storage l) internal returns (uint256) {
+        uint256 wrappedAmount;
+        if (msg.value > 0) {
+            if (l.getPoolToken() != WRAPPED_NATIVE_TOKEN)
+                revert Pool__NotWethPool();
+
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            wrappedAmount = msg.value;
+        }
+
+        return wrappedAmount;
     }
 
     /// @inheritdoc IPoolCore

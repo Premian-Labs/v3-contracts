@@ -74,7 +74,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external;
+    ) external payable;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
@@ -95,7 +95,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external;
+    ) external payable;
 
     /// @notice Swap tokens and deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
