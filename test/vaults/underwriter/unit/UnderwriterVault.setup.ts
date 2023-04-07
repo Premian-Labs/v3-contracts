@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { p, vaultSetup } from '../VaultSetup';
+import { p, vaultSetup } from '../UnderwriterVault.fixture';
 import {
   formatEther,
   formatUnits,
@@ -10,6 +10,7 @@ import { BigNumber, BigNumberish } from 'ethers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { IPoolMock__factory } from '../../../../typechain';
+import { getEmptyPremiaPermit2 } from '../../../../utils/sdk/permit2';
 import { TokenType } from '../../../../utils/sdk/types';
 
 describe('#vaultSetup', () => {
@@ -132,6 +133,7 @@ describe('#vaultSetup', () => {
         underwriter.address,
         trader.address,
         size,
+        getEmptyPremiaPermit2(),
       );
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -170,6 +172,7 @@ describe('#vaultSetup', () => {
         underwriter.address,
         trader.address,
         size,
+        getEmptyPremiaPermit2(),
       );
       expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
       expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(

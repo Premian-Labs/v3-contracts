@@ -43,7 +43,7 @@ describe('PoolFactory', () => {
       oracleAdapter.address,
       deployer.address,
       parseEther('0.1'), // 10%
-      true,
+      false,
       true,
     );
 

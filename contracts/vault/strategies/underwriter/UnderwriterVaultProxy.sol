@@ -4,6 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
 import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 
@@ -24,7 +25,7 @@ contract UnderwriterVaultProxy is
         UD60x18 minCLevel;
         // The maximum C-level allowed by the C-level mechanism
         UD60x18 maxCLevel;
-        // (fill in with better description)
+        // The curvature parameter
         UD60x18 alphaCLevel;
         // The decay rate of the C-level back down to ordinary level
         UD60x18 hourlyDecayDiscount;
@@ -67,6 +68,13 @@ contract UnderwriterVaultProxy is
         l.isCall = isCall;
         l.base = base;
         l.quote = quote;
+
+        uint8 baseDecimals = IERC20Metadata(base).decimals();
+        uint8 quoteDecimals = IERC20Metadata(quote).decimals();
+
+        l.baseDecimals = baseDecimals;
+        l.quoteDecimals = quoteDecimals;
+
         l.maxDTE = tradeBounds.maxDTE;
         l.minDTE = tradeBounds.minDTE;
         l.minDelta = tradeBounds.minDelta;

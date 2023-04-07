@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { vaultSetup } from '../VaultSetup';
+import { vaultSetup } from '../UnderwriterVault.fixture';
 import { parseEther } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { UnderwriterVaultMock } from '../../../../typechain';
@@ -245,21 +245,19 @@ describe('test ensure functions', () => {
     });
   });
 
-  describe('#_ensureWithinTradeBounds', () => {
+  describe('#_ensureWithinDTEBounds', () => {
     let tests = [
       {
         value: parseEther('3'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
-        error: 'Vault__OutOfTradeBounds',
+        error: 'Vault__OutOfDTEBounds',
         message: 'below the lower bound',
       },
       {
         value: parseEther('5'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'equal to the lower bound',
       },
@@ -267,7 +265,6 @@ describe('test ensure functions', () => {
         value: parseEther('7'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'within the bounds',
       },
@@ -275,7 +272,6 @@ describe('test ensure functions', () => {
         value: parseEther('10'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
         error: null,
         message: 'equal to the upper bound',
       },
@@ -283,48 +279,7 @@ describe('test ensure functions', () => {
         value: parseEther('12'),
         minimum: parseEther('5'),
         maximum: parseEther('10'),
-        signature: 'ensureWithinTradeBounds(string,uint256,uint256,uint256)',
-        error: 'Vault__OutOfTradeBounds',
-        message: 'above the upper bound',
-      },
-      {
-        value: parseEther('-7'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
-        error: 'Vault__OutOfTradeBounds',
-        message: 'below the lower bound',
-      },
-      {
-        value: parseEther('-5'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
-        error: null,
-        message: 'equal to the lower bound',
-      },
-      {
-        value: parseEther('0'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
-        error: null,
-        message: 'within the bounds',
-      },
-      {
-        value: parseEther('5'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
-        error: null,
-        message: 'equal to the upper bound',
-      },
-      {
-        value: parseEther('7'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
-        signature: 'ensureWithinTradeBounds(string,int256,int256,int256)',
-        error: 'Vault__OutOfTradeBounds',
+        error: 'Vault__OutOfDTEBounds',
         message: 'above the upper bound',
       },
     ];
@@ -336,8 +291,69 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault[test.signature](
-              'value',
+            vault.ensureWithinDTEBounds(test.value, test.minimum, test.maximum),
+          ).to.be.revertedWithCustomError(vault, test.error);
+        });
+      } else {
+        it(`should not raise an error when ${test.message}`, async () => {
+          const { callVault } = await loadFixture(vaultSetup);
+          vault = callVault;
+
+          await expect(
+            vault.ensureWithinDTEBounds(test.value, test.minimum, test.maximum),
+          ).to.not.be.rejected;
+        });
+      }
+    });
+  });
+
+  describe('#_ensureWithinDeltaBounds', () => {
+    let tests = [
+      {
+        value: parseEther('-7'),
+        minimum: parseEther('-5'),
+        maximum: parseEther('5'),
+        error: 'Vault__OutOfDeltaBounds',
+        message: 'below the lower bound',
+      },
+      {
+        value: parseEther('-5'),
+        minimum: parseEther('-5'),
+        maximum: parseEther('5'),
+        error: null,
+        message: 'equal to the lower bound',
+      },
+      {
+        value: parseEther('0'),
+        minimum: parseEther('-5'),
+        maximum: parseEther('5'),
+        error: null,
+        message: 'within the bounds',
+      },
+      {
+        value: parseEther('5'),
+        minimum: parseEther('-5'),
+        maximum: parseEther('5'),
+        error: null,
+        message: 'equal to the upper bound',
+      },
+      {
+        value: parseEther('7'),
+        minimum: parseEther('-5'),
+        maximum: parseEther('5'),
+        error: 'Vault__OutOfDeltaBounds',
+        message: 'above the upper bound',
+      },
+    ];
+
+    tests.forEach(async (test) => {
+      if (test.error != null) {
+        it(`should raise ${test.error} error when ${test.message}`, async () => {
+          const { callVault } = await loadFixture(vaultSetup);
+          vault = callVault;
+
+          await expect(
+            vault.ensureWithinDeltaBounds(
               test.value,
               test.minimum,
               test.maximum,
@@ -350,8 +366,7 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault[test.signature](
-              'value',
+            vault.ensureWithinDeltaBounds(
               test.value,
               test.minimum,
               test.maximum,

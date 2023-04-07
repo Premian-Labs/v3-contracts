@@ -4,7 +4,6 @@ pragma solidity >=0.8.19;
 
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
 import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.sol";
-import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IVault is IERC4626Internal, IERC20Internal {
@@ -18,6 +17,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     error Vault__ZeroAsset();
     error Vault__ZeroShares();
     error Vault__ZeroSize();
+    error Vault__MaximumAmountExceeded();
+    error Vault__AboveMaxSlippage();
 
     // Events
     event UpdateQuotes();
@@ -36,8 +37,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     event Swap(
         address indexed sender,
         address recipient,
-        IERC20 indexed tokenIn,
-        IERC20 indexed tokenOut,
+        address indexed tokenIn,
+        address indexed tokenOut,
         UD60x18 amountIn,
         UD60x18 amountOut,
         UD60x18 takerFee,
@@ -48,8 +49,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     event Borrow(
         bytes32 indexed borrowId,
         address indexed from,
-        IERC20 indexed borrowToken,
-        IERC20 collateralToken,
+        address indexed borrowToken,
+        address collateralToken,
         UD60x18 sizeBorrowed,
         UD60x18 collateralLocked,
         UD60x18 borrowFee
@@ -58,15 +59,15 @@ interface IVault is IERC4626Internal, IERC20Internal {
     event BorrowLiquidated(
         bytes32 indexed borrowId,
         address indexed from,
-        IERC20 indexed collateralToken,
+        address indexed collateralToken,
         UD60x18 collateralLiquidated
     );
 
     event RepayBorrow(
         bytes32 indexed borrowId,
         address indexed from,
-        IERC20 indexed borrowToken,
-        IERC20 collateralToken,
+        address indexed borrowToken,
+        address collateralToken,
         UD60x18 amountRepaid,
         UD60x18 collateralUnlocked,
         UD60x18 repayFee
@@ -76,7 +77,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
-    function getTradeQuote(
+    function getQuote(
         UD60x18 strike,
         uint64 maturity,
         bool isCall,
@@ -89,6 +90,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         uint64 maturity,
         bool isCall,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        uint256 premiumLimit
     ) external;
 }

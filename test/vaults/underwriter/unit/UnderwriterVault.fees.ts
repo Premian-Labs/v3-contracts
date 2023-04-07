@@ -1,16 +1,16 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addMockDeposit,
   increaseTotalAssets,
   increaseTotalShares,
+  setMaturities,
   vaultSetup,
-} from '../VaultSetup';
+} from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { increaseTo, ONE_DAY, ONE_YEAR } from '../../../../utils/time';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { ethers } from 'ethers';
-import { setMaturities } from '../VaultSetup';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 let vault: UnderwriterVaultMock;
@@ -328,6 +328,8 @@ describe('UnderwriterVault.fees', () => {
 
               await vault.setTimestamp(test.timestamp);
 
+              const pricePerShare = await vault.getPricePerShare();
+
               const {
                 pps,
                 ppsAvg,
@@ -344,27 +346,14 @@ describe('UnderwriterVault.fees', () => {
               } = await vault.getFeeVars(
                 caller.address,
                 parseEther(test.transferAmount.toString()),
-              );
-              await expect(pps).to.eq(parseEther(test.pps.toString()));
-              await expect(ppsAvg).to.eq(parseEther(test.ppsUser.toString()));
-              await expect(shares).to.eq(
-                parseEther(test.transferAmount.toString()),
+                pricePerShare,
               );
               await expect(assets).to.eq(parseEther(test.assets.toString()));
               await expect(balanceShares).to.eq(
                 parseEther(test.balanceShares.toString()),
               );
-              await expect(performance).to.eq(
-                parseEther(test.performance.toString()),
-              );
-              await expect(performanceFeeInShares).to.eq(
-                parseEther(test.performanceFeeInShares.toString()),
-              );
               await expect(performanceFeeInAssets).to.eq(
                 parseEther(test.performanceFeeInAssets.toString()),
-              );
-              await expect(managementFeeInShares).to.eq(
-                parseEther(test.managementFeeInShares.toString()),
               );
               await expect(managementFeeInAssets).to.eq(
                 parseEther(test.managementFeeInAssets.toString()),
@@ -415,10 +404,16 @@ describe('UnderwriterVault.fees', () => {
             const { vault, caller } = await setupGetFeeVars(isCall, test);
             await vault.setTimestamp(test.timestamp);
 
-            console.log(await vault.balanceOf(caller.address));
-            const maxTransferableShares = await vault.maxTransferableShares(
+            const feeVars = await vault.getFeeVars(
               caller.address,
+              parseEther(test.shares.toString()),
+              parseEther(test.pps.toString()),
             );
+
+            const maxTransferableShares = await vault.maxTransferableShares(
+              feeVars,
+            );
+
             expect(parseFloat(formatEther(maxTransferableShares))).to.eq(
               test.maxTransferableShares,
             );

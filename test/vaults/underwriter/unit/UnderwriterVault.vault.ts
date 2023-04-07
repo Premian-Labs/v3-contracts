@@ -1,5 +1,11 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, base, createPool, quote, vaultSetup } from '../VaultSetup';
+import {
+  addDeposit,
+  base,
+  createPool,
+  quote,
+  vaultSetup,
+} from '../UnderwriterVault.fixture';
 import {
   formatEther,
   formatUnits,
@@ -68,7 +74,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_getTradeQuote', () => {
+  describe('#_getQuote', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         let vault: UnderwriterVaultMock;
@@ -127,7 +133,7 @@ describe('UnderwriterVault', () => {
 
           const quoteSize = parseEther('3');
 
-          const output = await vault.getTradeQuote(
+          const output = await vault.getQuote(
             strike,
             maturity,
             isCall,
@@ -154,13 +160,7 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getTradeQuote(
-              strike,
-              maturity,
-              isCall,
-              parseEther('3'),
-              true,
-            ),
+            vault.getQuote(strike, maturity, isCall, parseEther('3'), true),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
         });
 
@@ -174,7 +174,7 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('0');
 
           await expect(
-            vault.getTradeQuote(strike, maturity, isCall, quoteSize, true),
+            vault.getQuote(strike, maturity, isCall, quoteSize, true),
           ).to.be.revertedWithCustomError(vault, 'Vault__ZeroSize');
         });
 
@@ -188,13 +188,7 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getTradeQuote(
-              parseEther('0'),
-              maturity,
-              isCall,
-              quoteSize,
-              true,
-            ),
+            vault.getQuote(parseEther('0'), maturity, isCall, quoteSize, true),
           ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
         });
 
@@ -208,7 +202,7 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getTradeQuote(strike, maturity, !isCall, quoteSize, true),
+            vault.getQuote(strike, maturity, !isCall, quoteSize, true),
           ).to.be.revertedWithCustomError(
             vault,
             'Vault__OptionTypeMismatchWithVault',
@@ -225,7 +219,7 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getTradeQuote(strike, maturity, isCall, quoteSize, false),
+            vault.getQuote(strike, maturity, isCall, quoteSize, false),
           ).to.be.revertedWithCustomError(vault, 'Vault__TradeMustBeBuy');
         });
 
@@ -239,7 +233,7 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getTradeQuote(strike, maturity, isCall, quoteSize, true),
+            vault.getQuote(strike, maturity, isCall, quoteSize, true),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
         });
 
@@ -303,8 +297,8 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getTradeQuote(strike, maturity, isCall, quoteSize, true),
-          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfTradeBounds');
+            vault.getQuote(strike, maturity, isCall, quoteSize, true),
+          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDTEBounds');
         });
 
         it('should revert on trying to buy an option not within the delta bounds', async () => {
@@ -355,8 +349,8 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getTradeQuote(strike, maturity, isCall, quoteSize, true),
-          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfTradeBounds');
+            vault.getQuote(strike, maturity, isCall, quoteSize, true),
+          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDeltaBounds');
         });
       });
     }
@@ -447,7 +441,7 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const quoteOutput = await vault.getTradeQuote(
+          const quoteOutput = await vault.getQuote(
             strike,
             maturity,
             isCall,
@@ -465,7 +459,14 @@ describe('UnderwriterVault', () => {
           expect(
             await vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           )
             .to.emit(vault, 'UpdateQuotes')
             .to.emit(vault, 'Trade');
@@ -507,6 +508,56 @@ describe('UnderwriterVault', () => {
           expect(poolBalance).to.be.eq(collateral.add(mintingFee));
         });
 
+        it('should revert on being above allowed slippage', async () => {
+          const {
+            pool,
+            trader,
+            vault,
+            maturity,
+            spot,
+            strike,
+            timestamp,
+            base,
+            quote,
+          } = await loadFixture(setup);
+
+          const tradeSize = parseEther('3');
+
+          // Check that the premium has been transferred
+          await vault.setTimestamp(timestamp);
+          await vault.setSpotPrice(spot);
+
+          const quoteOutput = await vault.getQuote(
+            strike,
+            maturity,
+            isCall,
+            tradeSize,
+            true,
+          );
+          const totalPremium = quoteOutput[1];
+
+          // Approve amount for trader to trade with
+          const token = isCall ? base : quote;
+          await token
+            .connect(trader)
+            .approve(vault.address, parseEther('1000'));
+
+          const multiplier = parseUnits('0.5', await token.decimals());
+
+          expect(
+            await vault
+              .connect(trader)
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                totalPremium.mul(multiplier),
+              ),
+          ).to.be.revertedWithCustomError(vault, 'Vault__AboveMaxSlippage');
+        });
+
         it('should revert on pool not existing', async () => {
           const { vault, trader, spot, strike } = await loadFixture(setup);
           const timestamp = await getValidMaturity(2, 'weeks');
@@ -526,7 +577,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
         });
 
@@ -542,7 +600,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__ZeroSize');
         });
 
@@ -558,7 +623,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(parseEther('0'), maturity, isCall, tradeSize, true),
+              .trade(
+                parseEther('0'),
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
         });
 
@@ -574,7 +646,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, !isCall, tradeSize, true),
+              .trade(
+                strike,
+                maturity,
+                !isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(
             vault,
             'Vault__OptionTypeMismatchWithVault',
@@ -593,7 +672,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, false),
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                false,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__TradeMustBeBuy');
         });
 
@@ -609,7 +695,14 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
         });
 
@@ -667,8 +760,15 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
-          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfTradeBounds');
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
+          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDTEBounds');
         });
 
         it('should revert on trying to buy an option not within the delta bounds', async () => {
@@ -722,8 +822,15 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(strike, maturity, isCall, tradeSize, true),
-          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfTradeBounds');
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
+          ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDeltaBounds');
         });
       });
     }

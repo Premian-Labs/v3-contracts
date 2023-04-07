@@ -161,14 +161,14 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(
             bytes4(
                 keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)"
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
                 )
             )
         );
         poolCoreSelectors.push(
             bytes4(
                 keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,bool)"
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
                 )
             )
         );
