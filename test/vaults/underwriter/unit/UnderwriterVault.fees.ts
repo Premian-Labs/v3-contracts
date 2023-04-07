@@ -5,7 +5,7 @@ import {
   increaseTotalShares,
   setMaturities,
   vaultSetup,
-} from '../VaultSetup';
+} from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { increaseTo, ONE_DAY, ONE_YEAR } from '../../../../utils/time';

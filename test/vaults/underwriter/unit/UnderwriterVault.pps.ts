@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, vaultSetup } from '../VaultSetup';
+import { addDeposit, vaultSetup } from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { latest, ONE_DAY } from '../../../../utils/time';

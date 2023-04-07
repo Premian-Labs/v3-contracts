@@ -1,5 +1,11 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, base, createPool, quote, vaultSetup } from '../VaultSetup';
+import {
+  addDeposit,
+  base,
+  createPool,
+  quote,
+  vaultSetup,
+} from '../UnderwriterVault.fixture';
 import {
   formatEther,
   formatUnits,

@@ -272,9 +272,6 @@ export async function vaultSetup() {
       ['6'],
     );
 
-  if (log)
-    console.log(`Mock oracleAdapter Implementation : ${oracleAdapter.address}`);
-
   //=====================================================================================
   // Mock Volatility Oracle setup
 
@@ -288,8 +285,6 @@ export async function vaultSetup() {
   await volOracle.mock.getVolatility
     .withArgs(base.address, parseEther('1500'), [], [])
     .returns([]);
-
-  if (log) console.log(`volOracle Address : ${volOracle.address}`);
 
   //=====================================================================================
   // Mock Factory/Pool setup
@@ -318,9 +313,6 @@ export async function vaultSetup() {
     p,
   );
 
-  if (log)
-    console.log(`WETH/USDC 1500 Call (ATM) exp. 2 weeks : ${callPoolAddress}`);
-
   const [putPool, putPoolAddress, putPoolKey] = await createPool(
     strike,
     maturity,
@@ -331,9 +323,6 @@ export async function vaultSetup() {
     oracleAdapter,
     p,
   );
-
-  if (log)
-    console.log(`WETH/USDC 1500 Put (ATM) exp. 2 weeks : ${putPoolAddress}`);
 
   const factoryAddress = p.poolFactory.address;
 
@@ -347,8 +336,6 @@ export async function vaultSetup() {
     p.router.address,
   );
   await vaultImpl.deployed();
-  if (log)
-    console.log(`UnderwriterVault Implementation : ${vaultImpl.address}`);
 
   const _cLevelParams: CLevel = {
     minCLevel: parseEther('1.0'),
@@ -382,7 +369,6 @@ export async function vaultSetup() {
     callVaultProxy.address,
     deployer,
   );
-  if (log) console.log(`UnderwriterCallVaultProxy : ${callVaultProxy.address}`);
 
   putVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
     vaultImpl.address,
@@ -400,7 +386,6 @@ export async function vaultSetup() {
     putVaultProxy.address,
     deployer,
   );
-  if (log) console.log(`UnderwriterPutVaultProxy : ${putVaultProxy.address}`);
 
   return {
     deployer,

@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { vaultSetup } from '../VaultSetup';
+import { vaultSetup } from '../UnderwriterVault.fixture';
 import { parseEther } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { UnderwriterVaultMock } from '../../../../typechain';

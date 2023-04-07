@@ -1,5 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { p, vaultSetup } from '../VaultSetup';
+import { p, vaultSetup } from '../UnderwriterVault.fixture';
 import {
   formatEther,
   formatUnits,

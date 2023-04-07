@@ -1,9 +1,9 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, callVault, vaultSetup } from '../VaultSetup';
+import { addDeposit, callVault, vaultSetup } from '../UnderwriterVault.fixture';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
-import { setMaturities } from '../VaultSetup';
+import { setMaturities } from '../UnderwriterVault.fixture';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
@@ -191,8 +191,7 @@ describe('#ERC4626 overridden functions', () => {
           );
           await setMaturities(callVault);
           await addDeposit(callVault, receiver, 2, base, quote);
-          let pps = await callVault.getPricePerShare();
-          console.log(pps);
+
           await callVault.increaseTotalLockedSpread(parseEther('0.2'));
           const assetAmount = await callVault.previewMint(parseEther('4'));
           expect(assetAmount).to.eq(parseEther('3.6'));

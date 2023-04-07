@@ -1,5 +1,9 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, createPool, vaultSetup } from '../VaultSetup';
+import {
+  addDeposit,
+  createPool,
+  vaultSetup,
+} from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import {
@@ -11,7 +15,7 @@ import {
 } from '../../../../utils/time';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { BigNumber, ethers } from 'ethers';
-import { setMaturities } from '../VaultSetup';
+import { setMaturities } from '../UnderwriterVault.fixture';
 
 let vault: UnderwriterVaultMock;
 let token: ERC20Mock;
@@ -20,9 +24,7 @@ let startTime: number = 1678435200 + 500 * ONE_WEEK;
 let t0: number = 1981440000; // startTime + 7 * ONE_DAY;
 let t1: number = 1981699200; // + 10 * ONE_DAY;
 let t2: number = 1982044800; // startTime + 14 * ONE_DAY;
-console.log(t0);
-console.log(t1);
-console.log(t2);
+
 async function setupSpreadsVault() {
   /*
   Example
@@ -152,7 +154,6 @@ describe('UnderwriterVault.internal', () => {
       const { callVault: vault } = await loadFixture(setupSpreadsVault);
       expect(await vault.spreadUnlockingRate()).to.eq('17744708994709');
       await vault.setIsCall(isCall);
-      console.log('Setup vault.');
 
       await vault.increasePositionSize(
         t0,
@@ -190,7 +191,7 @@ describe('UnderwriterVault.internal', () => {
         afterBuyArgs.size,
         afterBuyArgs.spread,
       );
-      console.log('Processed afterBuy.');
+
       return { vault };
     }
 
@@ -288,12 +289,10 @@ describe('UnderwriterVault.internal', () => {
             token = quote;
           }
 
-          console.log('Depositing assets.');
           await addDeposit(vault, caller, deposit, base, quote);
           expect(await vault.totalAssets()).to.eq(
             parseUnits(deposit.toString(), await token.decimals()),
           );
-          console.log('Deposited assets.');
 
           const infos = [
             {
@@ -456,15 +455,10 @@ describe('UnderwriterVault.internal', () => {
             .withArgs(base.address, quote.address, t2)
             .returns(parseUnits('1500', 18));
 
-          console.log('Depositing assets.');
           await addDeposit(vault, caller, totalAssets, base, quote);
-          /*expect(await vault.totalAssets()).to.eq(
-            parseUnits(totalAssets.toString(), await token.decimals()),
-          );*/
-          console.log('Deposited assets.');
 
           await vault.setListingsAndSizes(infos);
-          //await vault.increaseTotalLockedAssets(totalLockedAssets);
+
           for (let info of infos) {
             for (const [i, strike] of info.strikes.entries()) {
               await createPool(
@@ -476,9 +470,6 @@ describe('UnderwriterVault.internal', () => {
                 quote,
                 oracleAdapter,
                 p,
-              );
-              console.log(
-                `Minting ${info.sizes[i]} options with strike ${strike} and maturity ${info.maturity}.`,
               );
               await vault
                 .connect(caller)
