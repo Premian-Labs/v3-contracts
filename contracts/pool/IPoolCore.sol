@@ -5,6 +5,8 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
+
+import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolCore is IPoolInternal {
@@ -57,20 +59,21 @@ interface IPoolCore is IPoolInternal {
     ) external view returns (uint256);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
-
     /// @param p The position key
     /// @param belowLower The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
     /// @param belowUpper The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
     /// @param size The position size to deposit | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function deposit(
         Position.Key memory p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        Permit2.Data memory permit
     ) external;
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -81,6 +84,7 @@ interface IPoolCore is IPoolInternal {
     /// @param size The position size to deposit | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     function deposit(
         Position.Key memory p,
@@ -89,6 +93,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
+        Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
     ) external;
 
@@ -101,6 +106,7 @@ interface IPoolCore is IPoolInternal {
     /// @param size The position size to deposit | 18 decimals
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function swapAndDeposit(
         IPoolInternal.SwapArgs memory s,
         Position.Key memory p,
@@ -108,7 +114,8 @@ interface IPoolCore is IPoolInternal {
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
+        UD60x18 maxMarketPrice,
+        Permit2.Data memory permit
     ) external payable;
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
@@ -128,10 +135,12 @@ interface IPoolCore is IPoolInternal {
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
     /// @param longReceiver The address which will receive the long token
     /// @param size The number of contracts being underwritten | 18 decimals
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        Permit2.Data memory permit
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
