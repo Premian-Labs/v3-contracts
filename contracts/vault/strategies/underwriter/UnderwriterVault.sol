@@ -18,6 +18,7 @@ import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
+import {Permit2} from "../../../libraries/Permit2.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 import {IPool} from "../../../pool/IPool.sol";
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
@@ -989,7 +990,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
         // Mint option and allocate long token
-        IPool(vars.poolAddr).writeFrom(address(this), msg.sender, size);
+        IPool(vars.poolAddr).writeFrom(
+            address(this),
+            msg.sender,
+            size,
+            Permit2.emptyPermit()
+        );
 
         // Handle the premiums and spread capture generated
         _afterBuy(strike, maturity, size, vars.spread);

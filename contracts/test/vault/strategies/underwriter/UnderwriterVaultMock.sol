@@ -12,6 +12,7 @@ import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20Base
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";
+import {Permit2} from "../../../../libraries/Permit2.sol";
 import {IPool} from "../../../../pool/IPool.sol";
 import {IPoolFactory} from "../../../../factory/IPoolFactory.sol";
 
@@ -572,7 +573,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
             IPool(listingAddr).takerFee(size, 0, true)
         );
 
-        IPool(listingAddr).writeFrom(address(this), msg.sender, size);
+        IPool(listingAddr).writeFrom(
+            address(this),
+            msg.sender,
+            size,
+            Permit2.emptyPermit()
+        );
 
         l.totalLockedAssets = l.totalLockedAssets + locked;
         l.totalAssets = l.totalAssets - mintingFee;
