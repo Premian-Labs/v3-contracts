@@ -42,8 +42,16 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function getPoolAddress(PoolKey memory k) external view returns (address) {
-        return _getPoolAddress(k.poolKey());
+    function getPoolAddress(
+        PoolKey memory k
+    ) external view returns (address pool, bool isDeployed) {
+        pool = _getPoolAddress(k.poolKey());
+        isDeployed = true;
+
+        if (pool == address(0)) {
+            pool = _calculatePoolAddress(k);
+            isDeployed = false;
+        }
     }
 
     function _getPoolAddress(bytes32 poolKey) internal view returns (address) {
@@ -114,8 +122,20 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             payable(msg.sender).transfer(msg.value - fee);
         }
 
+        bytes32 salt = keccak256(
+            abi.encode(
+                DIAMOND,
+                k.base,
+                k.quote,
+                k.oracleAdapter,
+                k.strike,
+                k.maturity,
+                k.isCallPool
+            )
+        );
+
         poolAddress = address(
-            new PoolProxy(
+            new PoolProxy{salt: salt}(
                 DIAMOND,
                 k.base,
                 k.quote,
@@ -176,6 +196,33 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
         PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
+    }
+
+    function _calculatePoolAddress(
+        PoolKey memory k
+    ) internal view returns (address) {
+        bytes memory args = abi.encode(
+            DIAMOND,
+            k.base,
+            k.quote,
+            k.oracleAdapter,
+            k.strike,
+            k.maturity,
+            k.isCallPool
+        );
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff), // 0
+                address(this), // address of factory contract
+                keccak256(args), // salt
+                // The contract bytecode
+                keccak256(abi.encodePacked(type(PoolProxy).creationCode, args))
+            )
+        );
+
+        // Cast last 20 bytes of hash to address
+        return address(uint160(uint256(hash)));
     }
 
     // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
