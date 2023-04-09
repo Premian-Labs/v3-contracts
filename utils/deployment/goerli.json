@@ -10,6 +10,8 @@
   },
   "ChainlinkAdapterImplementation": "0x7C2e0b228702e86FDA07A0ce6B0E6F7448817616",
   "ChainlinkAdapterProxy": "0x64E4C241f5850cA2d48A1c17d3c942b6FC88b2a2",
+  "InitFeeCalculatorImplementation": "",
+  "InitFeeCalculatorProxy": "",
   "PremiaDiamond": "0xf2439075543Ea756744AB00BCB88e44f19091514",
   "PoolFactoryImplementation": "0xc95eE873c10e5F040756733Fa9Eb96c185D842A4",
   "PoolFactoryProxy": "0x27A7Ac95aC4B52620f555A446D04c78Dd898f95b",

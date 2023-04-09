@@ -12,6 +12,8 @@ import {
   PoolTrade__factory,
   ERC20Router__factory,
   ERC20Router,
+  InitFeeCalculator__factory,
+  ProxyUpgradeableOwnable__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -154,10 +156,27 @@ export class PoolUtil {
     // PoolFactory //
     /////////////////
 
+    const initFeeImpl = await new InitFeeCalculator__factory(deployer).deploy(
+      wrappedNativeToken,
+      chainlinkAdapter,
+    );
+
+    await initFeeImpl.deployed();
+
+    if (log) console.log(`InitFeeCalculator impl: ${initFeeImpl.address}`);
+
+    const initFeeProxy = await new ProxyUpgradeableOwnable__factory(
+      deployer,
+    ).deploy(initFeeImpl.address);
+
+    await initFeeProxy.deployed();
+
+    if (log) console.log(`InitFeeCalculator proxy: ${initFeeProxy.address}`);
+
     const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
       premiaDiamond.address,
       chainlinkAdapter,
-      wrappedNativeToken,
+      initFeeProxy.address,
     );
 
     await poolFactoryImpl.deployed();

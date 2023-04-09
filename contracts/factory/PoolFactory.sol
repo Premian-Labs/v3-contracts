@@ -2,11 +2,11 @@
 
 pragma solidity >=0.8.19;
 
-import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IInitFeeCalculator} from "./IInitFeeCalculator.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
@@ -23,17 +23,17 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
     address internal immutable CHAINLINK_ADAPTER;
-    // Wrapped native token address (eg WETH, WFTM, etc)
-    address internal immutable WRAPPED_NATIVE_TOKEN;
+    // Contract handling the calculation of initialization fee
+    address internal immutable INIT_FEE_CALCULATOR;
 
     constructor(
         address diamond,
         address chainlinkAdapter,
-        address wrappedNativeToken
+        address initFeeCalculator
     ) {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
-        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+        INIT_FEE_CALCULATOR = initFeeCalculator;
     }
 
     /// @inheritdoc IPoolFactory
@@ -62,19 +62,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     function initializationFee(PoolKey memory k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
-        uint256 discountFactor = l.maturityCount[k.maturityKey()] +
-            l.strikeCount[k.strikeKey()];
-
-        UD60x18 discount = (ONE - l.discountPerPool)
-            .intoSD59x18()
-            .powu(discountFactor)
-            .intoUD60x18();
-
-        UD60x18 spot = _getSpotPrice(k.oracleAdapter, k.base, k.quote);
-        UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
-        UD60x18 wrappedNativeUSDSpot = _getWrappedNativeUSDSpotPrice();
-
-        return (fee * discount) / wrappedNativeUSDSpot;
+        return
+            IInitFeeCalculator(INIT_FEE_CALCULATOR).initializationFee(
+                k,
+                l.discountPerPool,
+                l.maturityCount[k.maturityKey()],
+                l.strikeCount[k.strikeKey()]
+            );
     }
 
     /// @inheritdoc IPoolFactory
@@ -114,12 +108,15 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         if (_getPoolAddress(poolKey) != address(0))
             revert PoolFactory__PoolAlreadyDeployed();
 
-        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
+        if (fee > 0) {
+            if (msg.value < fee)
+                revert PoolFactory__InitializationFeeRequired();
 
-        payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
+            payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
 
-        if (msg.value > fee) {
-            payable(msg.sender).transfer(msg.value - fee);
+            if (msg.value > fee) {
+                payable(msg.sender).transfer(msg.value - fee);
+            }
         }
 
         bytes32 salt = keccak256(
@@ -226,23 +223,13 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
-    //         This is used in the calculation of the initializationFee and to check the strike increment
+    //         This to check the strike increment
     function _getSpotPrice(
         address oracleAdapter,
         address base,
         address quote
     ) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).quote(base, quote);
-    }
-
-    // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
-    //         This is used to convert the initializationFee from USD to native token
-    function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
-        return
-            IOracleAdapter(CHAINLINK_ADAPTER).quote(
-                WRAPPED_NATIVE_TOKEN,
-                Denominations.USD
-            );
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
