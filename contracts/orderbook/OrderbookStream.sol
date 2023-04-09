@@ -8,9 +8,24 @@ contract OrderbookStream {
         uint8 v;
     }
 
+    struct PoolKey {
+        // Address of base token
+        address base;
+        // Address of quote token
+        address quote;
+        // Address of oracle adapter
+        address oracleAdapter;
+        // The strike of the option | 18 decimals
+        uint256 strike;
+        // The maturity timestamp of the option
+        uint64 maturity;
+        // Whether the pool is for call or put options
+        bool isCallPool;
+    }
+
     struct Quote {
-        // The pool address of the option quoted
-        address pool;
+        // The pool key
+        PoolKey poolKey;
         // The provider of the quote
         address provider;
         // The taker of the quote (address(0) if quote should be usable by anyone)
@@ -28,9 +43,8 @@ contract OrderbookStream {
         // Signature of the quote
         Signature signature;
     }
-
     event PublishQuote(
-        address indexed pool,
+        PoolKey indexed poolKey,
         address indexed provider,
         address taker,
         uint256 price,
@@ -44,7 +58,7 @@ contract OrderbookStream {
     function add(Quote[] memory quote) external {
         for (uint256 i = 0; i < quote.length; i++) {
             emit PublishQuote(
-                quote[i].pool,
+                quote[i].poolKey,
                 quote[i].provider,
                 quote[i].taker,
                 quote[i].price,
