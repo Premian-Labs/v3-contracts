@@ -55,6 +55,7 @@
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "ethers": "5.7.2",
+    "forge-std": "1.1.2",
     "hardhat": "^2.13.0",
     "hardhat-abi-exporter": "^2.10.1",
     "hardhat-artifactor": "^0.2.0",

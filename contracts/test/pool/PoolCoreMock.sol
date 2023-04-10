@@ -73,4 +73,42 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.toPoolTokenDecimals(l.protocolFees);
     }
+
+    function _getStrandedArea()
+        external
+        view
+        returns (UD60x18 lower, UD60x18 upper)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return _getStrandedArea(l);
+    }
+
+    function _currentTick() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.currentTick;
+    }
+
+    function _liquidityRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.liquidityRate;
+    }
+
+    function _crossTick(bool isBuy) external {
+        _cross(isBuy);
+    }
+
+    function _isMarketPriceStrandedMock(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external view returns (bool) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return _isMarketPriceStranded(l, p, isBid);
+    }
+
+    function _getStrandedMarketPriceUpdateMock(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external pure returns (UD60x18) {
+        return _getStrandedMarketPriceUpdate(p, isBid);
+    }
 }
