@@ -6,9 +6,6 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
-/// @title An implementation of IOracleAdapter that uses Uniswap feeds
-/// @notice This oracle adapter will attempt to use all available feeds to determine
-///         prices between pairs
 interface IUniswapV3Adapter is IOracleAdapter {
     /// @notice Returns the address of the Uniswap V3 factory
     /// @dev This value is assigned during deployment and cannot be changed

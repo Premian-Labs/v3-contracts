@@ -14,7 +14,9 @@ import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles
+/// @title An implementation of IOracleAdapter that uses Chainlink feeds
+/// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
+/// @dev derived from https://github.com/Mean-Finance/oracles
 contract ChainlinkAdapter is
     ChainlinkAdapterInternal,
     IChainlinkAdapter,

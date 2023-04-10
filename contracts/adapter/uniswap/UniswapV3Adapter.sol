@@ -15,8 +15,9 @@ import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
+/// @title An implementation of IOracleAdapter that uses Uniswap feeds
+/// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
+/// @dev derived from https://github.com/Mean-Finance/oracles and https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
