@@ -5,7 +5,6 @@ pragma solidity >=0.8.19;
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
@@ -16,15 +15,15 @@ import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
+/// @title An implementation of IOracleAdapter that uses Uniswap feeds
+/// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
+/// @dev derived from https://github.com/Mean-Finance/oracles and https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
     SafeOwnable,
     UniswapV3AdapterInternal
 {
-    using SafeCast for uint256;
     using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
@@ -88,7 +87,7 @@ contract UniswapV3Adapter is
         uint256 target
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
-        return _quoteFrom(tokenIn, tokenOut, target.toUint32());
+        return _quoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -162,7 +161,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function cardinalityPerMinute() external view returns (uint8) {
+    function cardinalityPerMinute() external view returns (uint256) {
         return UniswapV3AdapterStorage.layout().cardinalityPerMinute;
     }
 
@@ -204,7 +203,7 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function setCardinalityPerMinute(
-        uint8 newCardinalityPerMinute
+        uint256 newCardinalityPerMinute
     ) external onlyOwner {
         if (newCardinalityPerMinute == 0)
             revert UniswapV3Adapter__CardinalityPerMinuteNotSet();

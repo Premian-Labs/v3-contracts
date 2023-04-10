@@ -6,7 +6,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IOracleAdapterInternal} from "./IOracleAdapterInternal.sol";
 
-/// @title Base oracle adapter internal implementation
 abstract contract OracleAdapterInternal is IOracleAdapterInternal {
     using SafeCast for int8;
 

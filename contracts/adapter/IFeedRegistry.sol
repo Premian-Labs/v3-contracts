@@ -2,7 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-/// @title The interface for an adapter feed registry
 interface IFeedRegistry {
     struct FeedMappingArgs {
         address token;
