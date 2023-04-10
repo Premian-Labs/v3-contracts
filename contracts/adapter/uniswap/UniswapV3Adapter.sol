@@ -112,7 +112,7 @@ contract UniswapV3Adapter is
             address[] memory pool = new address[](1);
             pool[0] = Denominations.ETH;
             path[0] = pool;
-            decimals[0] = uint8(int8(ETH_DECIMALS));
+            decimals[0] = ETH_DECIMALS;
         } else {
             address[] memory pools = _getAllPoolsForPair(
                 token,

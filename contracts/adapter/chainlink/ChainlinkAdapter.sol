@@ -125,7 +125,7 @@ contract ChainlinkAdapter is
 
         if (path[0].length > 0) {
             decimals[0] = path[0][0] == Denominations.ETH
-                ? uint8(int8(ETH_DECIMALS))
+                ? ETH_DECIMALS
                 : _aggregatorDecimals(path[0][0]);
         }
 
