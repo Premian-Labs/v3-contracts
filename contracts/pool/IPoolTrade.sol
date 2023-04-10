@@ -29,6 +29,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
