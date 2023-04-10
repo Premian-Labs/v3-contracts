@@ -9,6 +9,10 @@ import {OracleAdapter} from "../OracleAdapter.sol";
 
 import {CompositeAdapterInternal} from "./CompositeAdapterInternal.sol";
 
+/// @title An implementation of IOracleAdapter that combines the UniswapV3 and Chainlink adapter feeds
+/// @notice This oracle adapter will fetch the price for tokenIn/ETH from UniswapV3 adapter, then
+///         convert to tokenIn/tokenOut using ETH/tokenOut from the Chainlink adapter.
+///         i.e. tokenIn/ETH * ETH/tokenOut -> tokenIn/tokenOut
 contract CompositeAdapter is CompositeAdapterInternal, OracleAdapter {
     constructor(
         IOracleAdapter chainlinkAdapter,
