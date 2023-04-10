@@ -8,7 +8,7 @@ import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol"
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
-import {Tokens} from "../Tokens.sol";
+import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
 
 import {ChainlinkAdapterInternal} from "./ChainlinkAdapterInternal.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
@@ -125,7 +125,7 @@ contract ChainlinkAdapter is
 
         if (path[0].length > 0) {
             decimals[0] = path[0][0] == Denominations.ETH
-                ? 18
+                ? ETH_DECIMALS
                 : _aggregatorDecimals(path[0][0]);
         }
 
@@ -143,13 +143,9 @@ contract ChainlinkAdapter is
         }
 
         if (decimals[0] == 0) {
-            uint8[] memory temp = decimals;
-            _resizeArray(temp, 0);
-            decimals = temp;
+            _resizeArray(decimals, 0);
         } else if (decimals[1] == 0) {
-            uint8[] memory temp = decimals;
-            _resizeArray(temp, 1);
-            decimals = temp;
+            _resizeArray(decimals, 1);
         }
     }
 

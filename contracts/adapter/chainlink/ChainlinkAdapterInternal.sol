@@ -135,9 +135,9 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 factor = PricingPath.TOKEN_USD_TOKEN == path
-            ? ETH_DECIMALS - FOREX_DECIMALS
-            : int256(0);
+        int8 factor = PricingPath.TOKEN_USD_TOKEN == path
+            ? int8(ETH_DECIMALS - FOREX_DECIMALS)
+            : int8(0);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -463,7 +463,7 @@ abstract contract ChainlinkAdapterInternal is
                 : UD60x18.wrap(
                     _scale(
                         _fetchQuote(token, Denominations.USD, target),
-                        ETH_DECIMALS - FOREX_DECIMALS
+                        int8(ETH_DECIMALS - FOREX_DECIMALS)
                     )
                 );
     }
@@ -483,7 +483,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(Denominations.ETH, Denominations.USD, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
@@ -493,7 +493,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(Denominations.BTC, Denominations.USD, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
@@ -503,7 +503,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
