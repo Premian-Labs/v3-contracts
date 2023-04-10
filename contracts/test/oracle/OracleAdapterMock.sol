@@ -44,7 +44,7 @@ contract OracleAdapterMock {
     function quoteFrom(
         address,
         address,
-        uint32
+        uint256
     ) external view returns (UD60x18) {
         return quoteFromAmount;
     }

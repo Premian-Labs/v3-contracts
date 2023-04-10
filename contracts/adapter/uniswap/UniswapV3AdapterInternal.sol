@@ -48,7 +48,7 @@ contract UniswapV3AdapterInternal is
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint32 target
+        uint256 target
     ) internal view returns (UD60x18) {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
@@ -89,7 +89,7 @@ contract UniswapV3AdapterInternal is
     function _fetchWeightedTick(
         address[] memory pools,
         uint32 period,
-        uint32 target
+        uint256 target
     ) internal view returns (int24) {
         OracleLibrary.WeightedTickData[]
             memory tickData = new OracleLibrary.WeightedTickData[](
@@ -110,18 +110,16 @@ contract UniswapV3AdapterInternal is
     function _calculateRange(
         address pool,
         uint32 period,
-        uint32 target
+        uint256 target
     ) internal view returns (uint32[] memory) {
         uint32[] memory range = new uint32[](2);
 
         range[0] = period;
         range[1] = 0;
 
-        uint32 blockTimestamp = block.timestamp.toUint32();
-
         if (target > 0) {
-            range[0] = blockTimestamp - (target - period); // rangeStart
-            range[1] = blockTimestamp - target; // rangeEnd
+            range[0] = (block.timestamp - (target - period)).toUint32(); // rangeStart
+            range[1] = (block.timestamp - target).toUint32(); // rangeEnd
         }
 
         uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(

@@ -80,7 +80,7 @@ contract UniswapV3Adapter is
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint32 target
+        uint256 target
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
         return _quoteFrom(tokenIn, tokenOut, target);
@@ -120,7 +120,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function cardinalityPerMinute() external view returns (uint8) {
+    function cardinalityPerMinute() external view returns (uint256) {
         return UniswapV3AdapterStorage.layout().cardinalityPerMinute;
     }
 
@@ -162,7 +162,7 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function setCardinalityPerMinute(
-        uint8 newCardinalityPerMinute
+        uint256 newCardinalityPerMinute
     ) external onlyOwner {
         if (newCardinalityPerMinute == 0)
             revert UniswapV3Adapter__CardinalityPerMinuteNotSet();

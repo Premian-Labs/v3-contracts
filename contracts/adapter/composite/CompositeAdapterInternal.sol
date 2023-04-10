@@ -30,7 +30,7 @@ contract CompositeAdapterInternal is
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint32 target
+        uint256 target
     ) internal view returns (UD60x18) {
         {
             (, bool hasPath) = UNISWAP_ADAPTER.isPairSupported(

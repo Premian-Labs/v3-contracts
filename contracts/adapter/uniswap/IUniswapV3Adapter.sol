@@ -21,7 +21,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
 
     /// @notice Returns the cardinality per minute used for adding support to pairs
     /// @return The cardinality per minute used for increase cardinality calculations
-    function cardinalityPerMinute() external view returns (uint8);
+    function cardinalityPerMinute() external view returns (uint256);
 
     /// @notice Returns the target observation cardinality for pools
     /// @return The target observation cardinality for pools
@@ -62,8 +62,8 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @dev Will revert if the given cardinality is zero
     ///      Can only be called by users with the admin role
     ///      WARNING: increasing the cardinality per minute will make adding support to a pair significantly costly
-    /// @param cardinalityPerMinute The new cardinality per minute
-    function setCardinalityPerMinute(uint8 cardinalityPerMinute) external;
+    /// @param newCardinalityPerMinute The new cardinality per minute
+    function setCardinalityPerMinute(uint256 newCardinalityPerMinute) external;
 
     /// @notice Inserts a new fee tier
     /// @dev Will revert if the given tier is invalid, or already supported

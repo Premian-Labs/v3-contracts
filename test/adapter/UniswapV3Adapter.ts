@@ -63,17 +63,14 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
-      cardinalityPerMinute,
       period,
+      cardinalityPerMinute,
       implementation.address,
     );
 
     await proxy.deployed();
 
     const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
-
-    await instance.setPeriod(period);
-    await instance.setCardinalityPerMinute(cardinalityPerMinute);
 
     return { deployer, instance, notOwner };
   }
@@ -90,8 +87,8 @@ describe('UniswapV3Adapter', () => {
     await implementation.deployed();
 
     const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
-      cardinalityPerMinute,
       period,
+      cardinalityPerMinute,
       implementation.address,
     );
 
@@ -114,8 +111,8 @@ describe('UniswapV3Adapter', () => {
 
       await expect(
         new UniswapV3AdapterProxy__factory(deployer).deploy(
-          0,
           period,
+          0,
           implementation.address,
         ),
       ).to.be.revertedWithCustomError(
@@ -135,8 +132,8 @@ describe('UniswapV3Adapter', () => {
 
       await expect(
         new UniswapV3AdapterProxy__factory(deployer).deploy(
-          cardinalityPerMinute,
           0,
+          cardinalityPerMinute,
           implementation.address,
         ),
       ).to.be.revertedWithCustomError(

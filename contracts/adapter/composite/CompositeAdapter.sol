@@ -96,7 +96,7 @@ contract CompositeAdapter is CompositeAdapterInternal, OracleAdapter {
     function quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint32 target
+        uint256 target
     ) external view returns (UD60x18) {
         _ensureTokenNotWrappedNative(tokenIn);
         _ensureTokenNotWrappedNative(tokenOut);
