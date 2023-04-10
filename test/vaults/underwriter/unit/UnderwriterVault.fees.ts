@@ -318,7 +318,7 @@ describe('UnderwriterVault.fees', () => {
     });
   });
 
-  describe('#_getFeeVars', () => {
+  describe('#_getFeeInternal', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         testsFeeVars.forEach(async (test) => {
@@ -331,19 +331,13 @@ describe('UnderwriterVault.fees', () => {
               const pricePerShare = await vault.getPricePerShare();
 
               const {
-                pps,
-                ppsAvg,
-                shares,
                 assets,
                 balanceShares,
-                performance,
-                performanceFeeInShares,
                 performanceFeeInAssets,
-                managementFeeInShares,
                 managementFeeInAssets,
                 totalFeeInShares,
                 totalFeeInAssets,
-              } = await vault.getFeeVars(
+              } = await vault.getFeeInternal(
                 caller.address,
                 parseEther(test.transferAmount.toString()),
                 pricePerShare,
@@ -404,7 +398,7 @@ describe('UnderwriterVault.fees', () => {
             const { vault, caller } = await setupGetFeeVars(isCall, test);
             await vault.setTimestamp(test.timestamp);
 
-            const feeVars = await vault.getFeeVars(
+            const feeVars = await vault.getFeeInternal(
               caller.address,
               parseEther(test.shares.toString()),
               parseEther(test.pps.toString()),
