@@ -17,14 +17,14 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolStrandedTest is DeployTest {
-    function deposit2(
+    function deposit_specific(
         uint256 depositSize,
         uint256 lower,
         uint256 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
         return
-            deposit2(
+            deposit_specific(
                 UD60x18.wrap(depositSize),
                 UD60x18.wrap(lower),
                 UD60x18.wrap(upper),
@@ -32,7 +32,7 @@ abstract contract PoolStrandedTest is DeployTest {
             );
     }
 
-    function deposit2(
+    function deposit_specific(
         UD60x18 depositSize,
         UD60x18 lower,
         UD60x18 upper,
@@ -75,13 +75,254 @@ abstract contract PoolStrandedTest is DeployTest {
         vm.stopPrank();
     }
 
-    function test_hello_() public {
-        // 1) liquidity zero in marked area (x):
-        //          |------|xxxx|------|
-        deposit2(1, 0.1 ether, 0.3 ether, Position.OrderType.LC);
-        deposit2(1, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+    function withdraw_specific(
+        uint256 withdrawSize,
+        uint256 lower,
+        uint256 upper,
+        Position.OrderType orderType
+    ) internal returns (uint256 initialCollateral) {
+        return
+            withdraw_specific(
+                UD60x18.wrap(withdrawSize),
+                UD60x18.wrap(lower),
+                UD60x18.wrap(upper),
+                orderType
+            );
+    }
 
-        // create two non-overlapping CS and LC order
-        // 2)
+    function withdraw_specific(
+        UD60x18 withdrawSize,
+        UD60x18 lower,
+        UD60x18 upper,
+        Position.OrderType orderType
+    ) internal returns (uint256 initialCollateral) {
+        bool isCall = poolKey.isCallPool;
+
+        IERC20 token = IERC20(getPoolToken(isCall));
+        initialCollateral = scaleDecimals(
+            isCall ? withdrawSize : withdrawSize * poolKey.strike,
+            isCall
+        );
+
+        vm.startPrank(users.lp);
+
+        posKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: lower,
+            upper: upper,
+            orderType: orderType
+        });
+
+        pool.withdraw(
+            posKey,
+            withdrawSize,
+            UD60x18.wrap(0.001 ether),
+            UD60x18.wrap(1 ether)
+        );
+
+        vm.stopPrank();
+    }
+
+    function test_zero_liquidity_empty_pool() public {
+        // - zero liquidity area marked with (x)
+        // - non-zero liquidity area marked with (L)
+        //          |xxxxxxxxxxxxxxxxxxxxxxx|
+        assertEq(pool._liquidityRate(), 0 ether);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.001 ether);
+        assertEq(upper.unwrap(), 1 ether);
+    }
+
+    function test_zero_liquidity_two_deposits() public {
+        // - zero liquidity area marked with (x)
+        // - non-zero liquidity area marked with (L)
+        //
+        //                 market price (0.4)
+        //                 right tick of current (0.4)
+        //                       v
+        //          |---|LLL|xxxx|LLL|------|
+        //                  ^
+        //             current tick (0.3)
+
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        assertEq(pool._liquidityRate(), 0 ether);
+        assertEq(pool.marketPrice(), 0.4 ether);
+
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.3 ether);
+        assertEq(upper.unwrap(), 0.4 ether);
+    }
+
+    function test_zero_liquidity_market_price_within() public {
+        // - zero liquidity area marked with (x)
+        // - non-zero liquidity area marked with (L)
+        //             market price (0.35)
+        //                    v
+        //                 right tick of current (0.4)
+        //                       v
+        //          |---|LLL|xxxx|LLL|------|
+        //                  ^
+        //             current tick (0.3)
+        vm.warp(0);
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        deposit_specific(1 ether, 0.35 ether, 0.4 ether, Position.OrderType.CS);
+        vm.warp(600);
+        withdraw_specific(
+            1 ether,
+            0.35 ether,
+            0.4 ether,
+            Position.OrderType.CS
+        );
+        assertEq(pool._liquidityRate(), 0 ether);
+        assertEq(pool.marketPrice(), 0.35 ether);
+
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.3 ether);
+        assertEq(upper.unwrap(), 0.4 ether);
+    }
+
+    function test_bid_bound_price_single_deposit() public {
+        //            market price (0.3)
+        //                      v
+        //          |-------|LLL|------|
+        //                  ^
+        //             current tick (0.1)
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        UD60x18 currentTick = pool._currentTick();
+        assertEq(currentTick, 0.1 ether);
+        assertEq(pool.marketPrice(), 0.3 ether);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.3 ether);
+        assertEq(upper.unwrap(), 1.0 ether);
+    }
+
+    function test_ask_bound_price_single_deposit() public {
+        //            market price (0.4)
+        //                  v
+        //          |-------|LLL|------|
+        //                  ^
+        //             current tick (0.4)
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        pool._crossTick(true);
+        UD60x18 currentTick = pool._currentTick();
+        assertEq(currentTick, 0.4 ether);
+        assertEq(pool.marketPrice(), 0.4 ether);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.001 ether);
+        assertEq(upper.unwrap(), 0.4 ether);
+    }
+
+    function test_bid_bound_price_two_deposits() public {
+        //            market price (0.3)
+        //                      v
+        //          |-------|LLL|--|LLL|----|
+        //                  ^
+        //             current tick (0.1)
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        UD60x18 currentTick = pool._currentTick();
+        assertEq(currentTick, 0.1 ether);
+        assertEq(pool.marketPrice(), 0.3 ether);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.3 ether);
+        assertEq(upper.unwrap(), 0.4 ether);
+    }
+
+    function test_ask_bound_price_two_deposits() public {
+        //                 market price (0.4)
+        //                       v
+        //          |-----|LLL|--|LLL|------|
+        //                       ^
+        //                 current tick (0.4)
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        pool._crossTick(true);
+        UD60x18 currentTick = pool._currentTick();
+        assertEq(currentTick, 0.4 ether);
+        assertEq(pool.marketPrice(), 0.4 ether);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+        assertEq(lower.unwrap(), 0.3 ether);
+        assertEq(upper.unwrap(), 0.4 ether);
+    }
+
+    function test_isMarketPriceStranded() public {
+        deposit_specific(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
+        deposit_specific(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        (UD60x18 lower, UD60x18 upper) = pool._getStrandedArea();
+
+        Position.KeyInternal memory posKeyInternal = Position.KeyInternal({
+            owner: users.lp,
+            operator: users.lp,
+            lower: UD60x18.wrap(0.002 ether),
+            upper: UD60x18.wrap(0.32 ether),
+            orderType: Position.OrderType.LC,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        bool isStranded = pool._isMarketPriceStrandedMock(posKeyInternal, true);
+        assertEq(isStranded, true);
+
+        posKeyInternal = Position.KeyInternal({
+            owner: users.lp,
+            operator: users.lp,
+            lower: UD60x18.wrap(0.002 ether),
+            upper: UD60x18.wrap(0.28 ether),
+            orderType: Position.OrderType.LC,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        isStranded = pool._isMarketPriceStrandedMock(posKeyInternal, true);
+        assertEq(isStranded, false);
+
+        posKeyInternal = Position.KeyInternal({
+            owner: users.lp,
+            operator: users.lp,
+            lower: UD60x18.wrap(0.38 ether),
+            upper: UD60x18.wrap(0.7 ether),
+            orderType: Position.OrderType.CS,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        isStranded = pool._isMarketPriceStrandedMock(posKeyInternal, false);
+        assertEq(isStranded, true);
+
+        posKeyInternal = Position.KeyInternal({
+            owner: users.lp,
+            operator: users.lp,
+            lower: UD60x18.wrap(0.48 ether),
+            upper: UD60x18.wrap(0.7 ether),
+            orderType: Position.OrderType.CS,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        isStranded = pool._isMarketPriceStrandedMock(posKeyInternal, false);
+        assertEq(isStranded, false);
+    }
+
+    function test_getStrandedMarketPriceUpdate() public {
+        Position.KeyInternal memory posKeyInternal = Position.KeyInternal({
+            owner: users.lp,
+            operator: users.lp,
+            lower: UD60x18.wrap(0.48 ether),
+            upper: UD60x18.wrap(0.7 ether),
+            orderType: Position.OrderType.CS,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+        UD60x18 price = pool._getStrandedMarketPriceUpdateMock(
+            posKeyInternal,
+            true
+        );
+        assertEq(price.unwrap(), 0.7 ether);
+
+        price = pool._getStrandedMarketPriceUpdateMock(posKeyInternal, false);
+        assertEq(price.unwrap(), 0.48 ether);
     }
 }
