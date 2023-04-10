@@ -171,12 +171,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _updateState();
     }
 
-    function getLockedSpreadVars()
+    function getLockedSpreadInternal()
         external
         view
-        returns (LockedSpreadVars memory)
+        returns (LockedSpreadInternal memory)
     {
-        return _getLockedSpreadVars();
+        return _getLockedSpreadInternal();
     }
 
     function increasePositionSize(
@@ -685,8 +685,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function maxTransferableShares(
-        FeeVars memory vars
-    ) external view returns (uint256) {
+        FeeInternal memory vars
+    ) external pure returns (uint256) {
         return _maxTransferableShares(vars).unwrap();
     }
 
@@ -708,12 +708,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _claimFees();
     }
 
-    function getFeeVars(
+    function getFeeInternal(
         address from,
         UD60x18 shares,
         UD60x18 pps
-    ) external view returns (FeeVars memory) {
-        return _getFeeVars(from, shares, pps);
+    ) external view returns (FeeInternal memory) {
+        return _getFeeInternal(from, shares, pps);
     }
 
     function afterDeposit(

@@ -142,7 +142,7 @@ describe('UnderwriterVault', () => {
           );
           const token = isCall ? base : quote;
           const totalPremium = parseFloat(
-            formatUnits(output.price, await token.decimals()),
+            formatUnits(output.premium, await token.decimals()),
           );
           const expectedPremium = isCall
             ? 0.15828885563446596

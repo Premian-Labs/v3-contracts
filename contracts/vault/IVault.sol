@@ -83,7 +83,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         bool isCall,
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256 maxSize, uint256 price);
+    ) external view returns (uint256 maxSize, uint256 premium);
 
     function trade(
         UD60x18 strike,

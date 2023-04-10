@@ -621,14 +621,14 @@ describe('UnderwriterVault.internal', () => {
     },
   ];
 
-  describe('#_getLockedSpreadVars', () => {
+  describe('#_getLockedSpreadInternal', () => {
     tests.forEach(async (test) => {
       it(`at timestamp ${test.timestamp} totalLockedSpread equals ${test.totalLockedSpread} and spreadUnlockingRate equals ${test.spreadUnlockingRate}.`, async () => {
         let { callVault: vault } = await loadFixture(setupSpreadsVault);
         await vault.setTimestamp(test.timestamp);
 
         const [totalLockedSpread, spreadUnlockingRate, lastSpreadUnlockUpdate] =
-          await vault.getLockedSpreadVars();
+          await vault.getLockedSpreadInternal();
         const tlsParsed = parseFloat(formatEther(totalLockedSpread));
         const surParsed = parseFloat(formatEther(spreadUnlockingRate));
         expect(tlsParsed).to.be.closeTo(test.totalLockedSpread, 0.001);
