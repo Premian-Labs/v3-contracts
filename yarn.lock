@@ -4075,13 +4075,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"forge-std@npm:1.1.2":
-  version: 1.1.2
-  resolution: "forge-std@npm:1.1.2"
-  checksum: d5b36b909269a39dd30b619ac09a78e59b1a65e7887872ef99304298c4ffe2aa16f5dc5238c77e481a5e615582191b446401098a2ed567283d7df87e099a9d3c
-  languageName: node
-  linkType: hard
-
 "form-data@npm:^2.2.0":
   version: 2.5.1
   resolution: "form-data@npm:2.5.1"
@@ -7012,7 +7005,6 @@ __metadata:
     chai: ^4.3.7
     dotenv: ^16.0.3
     ethers: 5.7.2
-    forge-std: 1.1.2
     hardhat: ^2.13.0
     hardhat-abi-exporter: ^2.10.1
     hardhat-artifactor: ^0.2.0
