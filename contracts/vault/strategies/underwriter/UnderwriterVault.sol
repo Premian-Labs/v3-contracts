@@ -26,6 +26,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/Doub
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
+import {IVaultSettings} from "../../../vault/IVaultSettings.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -39,9 +40,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
-    bytes32 internal constant VAULT_TYPE = keccak256("UnderwriterVault");
+    bytes32 public constant VAULT_TYPE = keccak256("UnderwriterVault");
 
-    address internal immutable SETTINGS;
+    address internal immutable VAULT_REGISTRY;
     address internal immutable FEE_RECEIVER;
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
@@ -51,17 +52,26 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param oracleAddress The address for the volatility oracle
     /// @param factoryAddress The pool factory address
     constructor(
-        address settings,
+        address vaultRegistry,
         address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address router
     ) {
-        SETTINGS = settings;
+        VAULT_REGISTRY = vaultRegistry;
         FEE_RECEIVER = feeReceiver;
         IV_ORACLE = oracleAddress;
         FACTORY = factoryAddress;
         ROUTER = router;
+    }
+
+    function updateSettings(bytes memory settings) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+        // If msg.sender != address of vault registry
+        require(msg.sender != VAULT_REGISTRY, "Error!");
+        // Decode data and update storage variable
+        l.updateSettings(settings);
     }
 
     /// @notice Gets the timestamp of the current block.
@@ -791,9 +801,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param minimum The minimum value the variable can be.
     /// @param maximum The maximum value the variable can be.
     function _ensureWithinDeltaBounds(
-        SD59x18 value,
-        SD59x18 minimum,
-        SD59x18 maximum
+        UD60x18 value,
+        UD60x18 minimum,
+        UD60x18 maximum
     ) internal pure {
         if (value < minimum || value > maximum)
             revert Vault__OutOfDeltaBounds();
@@ -874,7 +884,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
                 l.isCall
             )
             .abs();
-        _ensureWithinDeltaBounds(internalVars.delta, l.minDelta, l.maxDelta);
+        _ensureWithinDeltaBounds(
+            internalVars.delta.intoUD60x18(),
+            l.minDelta,
+            l.maxDelta
+        );
 
         internalVars.price = OptionMath.blackScholesPrice(
             internalVars.spot,

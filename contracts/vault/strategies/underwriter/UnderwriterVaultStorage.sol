@@ -12,6 +12,8 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 
+import "hardhat/console.sol";
+
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeCast for int256;
@@ -52,9 +54,9 @@ library UnderwriterVaultStorage {
         // Maximum days until maturity which can be underwritten by the vault, default 30
         UD60x18 maxDTE;
         // Minimum option delta which can be underwritten by the vault, default 0.1
-        SD59x18 minDelta;
+        UD60x18 minDelta;
         // Maximum option delta which can be underwritten by the vault, default 0.7
-        SD59x18 maxDelta;
+        UD60x18 maxDelta;
         // ====================================================================
         // C-Level Parameters
         // ====================================================================
@@ -103,6 +105,22 @@ library UnderwriterVaultStorage {
         assembly {
             l.slot := slot
         }
+    }
+
+    function updateSettings(Layout storage l, bytes memory settings) internal {
+        // Handle decoding of settings and updating storage
+        require(settings.length != 0, "Empty!");
+
+        uint256[] memory arr = abi.decode(settings, (uint256[]));
+
+        l.alphaCLevel = UD60x18.wrap(arr[0]);
+        l.hourlyDecayDiscount = UD60x18.wrap(arr[1]);
+        l.minCLevel = UD60x18.wrap(arr[2]);
+        l.maxCLevel = UD60x18.wrap(arr[3]);
+        l.minDTE = UD60x18.wrap(arr[4]);
+        l.maxDTE = UD60x18.wrap(arr[5]);
+        l.minDelta = UD60x18.wrap(arr[6]);
+        l.maxDelta = UD60x18.wrap(arr[7]);
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {

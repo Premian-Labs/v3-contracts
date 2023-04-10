@@ -4,9 +4,9 @@ pragma solidity >=0.8.19;
 import {IVaultSettings} from "./IVaultSettings.sol";
 import {VaultSettingsStorage} from "./VaultSettingsStorage.sol";
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
-contract VaultSettings is IVaultSettings, SafeOwnable {
+contract VaultSettings is IVaultSettings, OwnableInternal {
     using VaultSettingsStorage for VaultSettingsStorage.Layout;
 
     function getSettings(
@@ -22,5 +22,20 @@ contract VaultSettings is IVaultSettings, SafeOwnable {
     ) external onlyOwner {
         VaultSettingsStorage.Layout storage l = VaultSettingsStorage.layout();
         l.settings[vaultType] = updatedSettings;
+    }
+
+    function getImplementation(
+        bytes32 vaultType
+    ) external view returns (address) {
+        VaultSettingsStorage.Layout storage l = VaultSettingsStorage.layout();
+        return l.implementations[vaultType];
+    }
+
+    function setImplementation(
+        bytes32 vaultType,
+        address implementation
+    ) external onlyOwner {
+        VaultSettingsStorage.Layout storage l = VaultSettingsStorage.layout();
+        l.implementations[vaultType] = implementation;
     }
 }

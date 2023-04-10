@@ -7,17 +7,23 @@ import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol"
 
 import {VaultRegistryStorage} from "./VaultRegistryStorage.sol";
 import {IVaultRegistry} from "./IVaultRegistry.sol";
+import {IVault} from "./IVault.sol";
+import {VaultSettings} from "./VaultSettings.sol";
 
-contract VaultRegistry is IVaultRegistry, SafeOwnable {
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+
+contract VaultRegistry is IVaultRegistry, OwnableInternal {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    function vault(address _vaultAddress) external view returns (Vault memory) {
+    function getVault(
+        address _vaultAddress
+    ) external view returns (Vault memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaults[_vaultAddress];
     }
 
-    function vaultAddress(uint256 index) external view returns (address) {
+    function getVaultAddressAt(uint256 index) external view returns (address) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaultAddresses.at(index);
     }
@@ -31,7 +37,7 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-    function vaultsPerTradeSide(
+    function getVaultsByTradeSide(
         TradeSide side
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
@@ -44,7 +50,7 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-    function vaultsPerOptionType(
+    function getVaultsByOptionType(
         OptionType optionType
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
@@ -63,14 +69,27 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         return vaultsToReturn;
     }
 
-    function vaultsLength() external view returns (uint256) {
+    function getVaultsByType(
+        bytes32 vaultType
+    ) external view returns (Vault[] memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        Vault[] memory vaultsToReturn = new Vault[](
+            l.vaultsByType[vaultType].length()
+        );
+        for (uint256 i = 0; i < l.vaultsByType[vaultType].length(); i++) {
+            vaultsToReturn[i] = l.vaults[l.vaultsByType[vaultType].at(i)];
+        }
+        return vaultsToReturn;
+    }
+
+    function getNumberOfVaults() external view returns (uint256) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaultAddresses.length();
     }
 
     function getVaults(
-        IVaultRegistry.TradeSide[] memory sides,
-        IVaultRegistry.OptionType[] memory optionTypes
+        TradeSide[] memory sides,
+        OptionType[] memory optionTypes
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
@@ -117,14 +136,18 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
 
     function addVault(
         address _vault,
-        IVaultRegistry.TradeSide side,
-        IVaultRegistry.OptionType optionType
+        bytes32 vaultType,
+        TradeSide side,
+        OptionType optionType
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        // TODO: test to make sure settings update works for already existing instances
 
         l.vaults[_vault] = Vault(_vault, side, optionType);
 
         l.vaultAddresses.add(_vault);
+        l.vaultsByType[vaultType].add(_vault);
         l.vaultsPerTradeSide[side].add(_vault);
         l.vaultsPerOptionType[optionType].add(_vault);
 
@@ -140,5 +163,42 @@ contract VaultRegistry is IVaultRegistry, SafeOwnable {
         l.vaultsPerOptionType[_vault.optionType].remove(_vault.vault);
 
         emit VaultRemoved(_vault.vault);
+    }
+
+    function getSettings(
+        bytes32 vaultType
+    ) external view returns (bytes memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return l.settings[vaultType];
+    }
+
+    function updateSettings(
+        bytes32 vaultType,
+        bytes memory updatedSettings
+    ) external onlyOwner {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        l.settings[vaultType] = updatedSettings;
+
+        // Loop through the vaults == vaultType
+        for (uint256 i = 0; i < l.vaultsByType[vaultType].length(); i++) {
+            IVault(l.vaultsByType[vaultType].at(i)).updateSettings(
+                updatedSettings
+            );
+        }
+    }
+
+    function getImplementation(
+        bytes32 vaultType
+    ) external view returns (address) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return l.implementations[vaultType];
+    }
+
+    function setImplementation(
+        bytes32 vaultType,
+        address implementation
+    ) external {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        l.implementations[vaultType] = implementation;
     }
 }

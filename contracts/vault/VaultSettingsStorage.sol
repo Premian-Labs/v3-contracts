@@ -9,6 +9,7 @@ library VaultSettingsStorage {
 
     struct Layout {
         mapping(bytes32 => bytes) settings;
+        mapping(bytes32 => address) implementations;
     }
 
     function layout() internal pure returns (Layout storage l) {

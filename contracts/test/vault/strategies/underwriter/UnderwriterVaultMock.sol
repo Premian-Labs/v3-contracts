@@ -40,14 +40,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
     UD60x18 mockSpot;
 
     constructor(
-        address settings,
+        address vaultRegistry,
         address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address routerAddress
     )
         UnderwriterVault(
-            settings,
+            vaultRegistry,
             feeReceiver,
             oracleAddress,
             factoryAddress,
@@ -466,7 +466,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function getTradeBounds()
         public
         view
-        returns (UD60x18, UD60x18, SD59x18, SD59x18)
+        returns (UD60x18, UD60x18, UD60x18, UD60x18)
     {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -616,9 +616,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function ensureWithinDeltaBounds(
-        SD59x18 value,
-        SD59x18 minimum,
-        SD59x18 maximum
+        UD60x18 value,
+        UD60x18 minimum,
+        UD60x18 maximum
     ) external pure {
         _ensureWithinDeltaBounds(value, minimum, maximum);
     }

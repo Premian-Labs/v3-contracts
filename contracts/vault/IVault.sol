@@ -77,6 +77,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
+    function updateSettings(bytes memory settings) external;
+
     function getQuote(
         UD60x18 strike,
         uint64 maturity,
