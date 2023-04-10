@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+
 contract OrderbookStream {
     struct Signature {
         bytes32 r;
@@ -8,24 +10,9 @@ contract OrderbookStream {
         uint8 v;
     }
 
-    struct PoolKey {
-        // Address of base token
-        address base;
-        // Address of quote token
-        address quote;
-        // Address of oracle adapter
-        address oracleAdapter;
-        // The strike of the option | 18 decimals
-        uint256 strike;
-        // The maturity timestamp of the option
-        uint64 maturity;
-        // Whether the pool is for call or put options
-        bool isCallPool;
-    }
-
     struct Quote {
         // The pool key
-        PoolKey poolKey;
+        IPoolFactory.PoolKey poolKey;
         // The provider of the quote
         address provider;
         // The taker of the quote (address(0) if quote should be usable by anyone)
@@ -44,7 +31,7 @@ contract OrderbookStream {
         Signature signature;
     }
     event PublishQuote(
-        PoolKey indexed poolKey,
+        IPoolFactory.PoolKey indexed poolKey,
         address indexed provider,
         address taker,
         uint256 price,
