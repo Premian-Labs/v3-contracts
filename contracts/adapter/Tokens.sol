@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-int256 constant FOREX_DECIMALS = 8;
-int256 constant ETH_DECIMALS = 18;
+uint8 constant FOREX_DECIMALS = 8;
+uint8 constant ETH_DECIMALS = 18;
 
 library Tokens {
     function keyForUnsortedPair(

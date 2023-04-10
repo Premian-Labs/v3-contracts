@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: UNLICENSED
 
 pragma solidity >=0.8.19;
 
@@ -8,7 +8,7 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
-contract ChainlinkAdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
+contract CompositeAdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
     constructor(
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {

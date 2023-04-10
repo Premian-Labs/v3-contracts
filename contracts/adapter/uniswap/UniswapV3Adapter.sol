@@ -2,38 +2,40 @@
 
 pragma solidity >=0.8.19;
 
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
-import {Tokens} from "../Tokens.sol";
+import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
 
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 import {UniswapV3AdapterInternal} from "./UniswapV3AdapterInternal.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
-/// @notice derived from https://github.com/Mean-Finance/oracles and
-///         https://github.com/Mean-Finance/uniswap-v3-oracle
+/// @title An implementation of IOracleAdapter that uses Uniswap feeds
+/// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
+/// @dev derived from https://github.com/Mean-Finance/oracles and https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
     SafeOwnable,
     UniswapV3AdapterInternal
 {
-    using SafeCast for uint256;
     using Tokens for address;
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     constructor(
         IUniswapV3Factory uniswapV3Factory,
+        address wrappedNativeToken,
         uint256 _gasPerCardinality,
         uint256 _gasPerPool
     )
         UniswapV3AdapterInternal(
             uniswapV3Factory,
+            wrappedNativeToken,
             _gasPerCardinality,
             _gasPerPool
         )
@@ -85,7 +87,7 @@ contract UniswapV3Adapter is
         uint256 target
     ) external view returns (UD60x18) {
         _ensureTargetNonZero(target);
-        return _quoteFrom(tokenIn, tokenOut, target.toUint32());
+        return _quoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -100,7 +102,44 @@ contract UniswapV3Adapter is
             uint8[] memory decimals
         )
     {
-        // ToDo : Implement
+        adapterType = AdapterType.UNISWAP_V3;
+
+        path = new address[][](1);
+        decimals = new uint8[](2);
+
+        if (token == WRAPPED_NATIVE_TOKEN) {
+            address[] memory pool = new address[](1);
+            pool[0] = Denominations.ETH;
+            path[0] = pool;
+            decimals[0] = ETH_DECIMALS;
+        } else {
+            address[] memory pools = _getAllPoolsForPair(
+                token,
+                WRAPPED_NATIVE_TOKEN
+            );
+
+            if (pools.length > 0) {
+                path[0] = pools;
+
+                (address token0, address token1) = token.sortTokens(
+                    WRAPPED_NATIVE_TOKEN
+                );
+
+                decimals[0] = _decimals(token0);
+                decimals[1] = _decimals(token1);
+            }
+        }
+
+        if (path[0].length == 0) {
+            address[][] memory temp = new address[][](0);
+            path = temp;
+        }
+
+        if (decimals[0] == 0) {
+            _resizeArray(decimals, 0);
+        } else if (decimals[1] == 0) {
+            _resizeArray(decimals, 1);
+        }
     }
 
     /// @inheritdoc IUniswapV3Adapter
@@ -122,7 +161,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function cardinalityPerMinute() external view returns (uint8) {
+    function cardinalityPerMinute() external view returns (uint256) {
         return UniswapV3AdapterStorage.layout().cardinalityPerMinute;
     }
 
@@ -164,7 +203,7 @@ contract UniswapV3Adapter is
 
     /// @inheritdoc IUniswapV3Adapter
     function setCardinalityPerMinute(
-        uint8 newCardinalityPerMinute
+        uint256 newCardinalityPerMinute
     ) external onlyOwner {
         if (newCardinalityPerMinute == 0)
             revert UniswapV3Adapter__CardinalityPerMinuteNotSet();

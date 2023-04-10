@@ -29,7 +29,8 @@ interface IPoolTrade is IPoolInternal {
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
-    function fillQuoteRFQ(
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    function fillQuote(
         QuoteRFQ memory quoteRFQ,
         UD60x18 size,
         Signature memory signature,
@@ -59,7 +60,7 @@ interface IPoolTrade is IPoolInternal {
             uint256 swapOutAmount
         );
 
-    /// @notice Execute a swap and fill an RFQ quote
+    /// @notice Fill an RFQ quote and then execute a swap
     /// @param s The swap arguments
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
