@@ -27,6 +27,7 @@ contract UniswapV3AdapterInternal is
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     IUniswapV3Factory internal immutable UNISWAP_V3_FACTORY;
+    address internal immutable WRAPPED_NATIVE_TOKEN;
 
     /// @dev init bytecode from the deployed version of Uniswap V3 Pool contract
     bytes32 internal constant POOL_INIT_CODE_HASH =
@@ -37,10 +38,12 @@ contract UniswapV3AdapterInternal is
 
     constructor(
         IUniswapV3Factory uniswapV3Factory,
+        address wrappedNativeToken,
         uint256 gasPerCardinality,
         uint256 gasToSupportPool
     ) {
         UNISWAP_V3_FACTORY = uniswapV3Factory;
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         GAS_PER_CARDINALITY = gasPerCardinality;
         GAS_TO_SUPPORT_POOL = gasToSupportPool;
     }
@@ -48,7 +51,7 @@ contract UniswapV3AdapterInternal is
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
-        uint32 target
+        uint256 target
     ) internal view returns (UD60x18) {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
@@ -68,13 +71,13 @@ contract UniswapV3AdapterInternal is
         }
 
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
-        int256 factor = ETH_DECIMALS - _decimals(tokenOut);
+        int8 factor = int8(ETH_DECIMALS) - int8(_decimals(tokenOut));
 
         UD60x18 price = UD60x18.wrap(
             _scale(
                 OracleLibrary.getQuoteAtTick(
                     weightedTick,
-                    uint128(10 ** uint256(_decimals(tokenIn))),
+                    (10 ** uint256(_decimals(tokenIn))).toUint128(),
                     tokenIn,
                     tokenOut
                 ),
@@ -89,7 +92,7 @@ contract UniswapV3AdapterInternal is
     function _fetchWeightedTick(
         address[] memory pools,
         uint32 period,
-        uint32 target
+        uint256 target
     ) internal view returns (int24) {
         OracleLibrary.WeightedTickData[]
             memory tickData = new OracleLibrary.WeightedTickData[](
@@ -110,18 +113,16 @@ contract UniswapV3AdapterInternal is
     function _calculateRange(
         address pool,
         uint32 period,
-        uint32 target
+        uint256 target
     ) internal view returns (uint32[] memory) {
         uint32[] memory range = new uint32[](2);
 
         range[0] = period;
         range[1] = 0;
 
-        uint32 blockTimestamp = block.timestamp.toUint32();
-
         if (target > 0) {
-            range[0] = blockTimestamp - (target - period); // rangeStart
-            range[1] = blockTimestamp - target; // rangeEnd
+            range[0] = (block.timestamp - (target - period)).toUint32(); // rangeStart
+            range[1] = (block.timestamp - target).toUint32(); // rangeEnd
         }
 
         uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(
@@ -235,8 +236,8 @@ contract UniswapV3AdapterInternal is
             ];
     }
 
-    function _decimals(address token) internal view returns (int256) {
-        return int256(uint256(IERC20Metadata(token).decimals()));
+    function _decimals(address token) internal view returns (uint8) {
+        return IERC20Metadata(token).decimals();
     }
 
     function _isInitialized(address pool) internal view returns (bool) {

@@ -26,11 +26,11 @@ interface IUniswapV3AdapterInternal {
 
     /// @notice Emitted when a new period is set
     /// @param period The new period
-    event UpdatedPeriod(uint32 period);
+    event UpdatedPeriod(uint256 period);
 
     /// @notice Emitted when a new cardinality per minute is set
     /// @param cardinalityPerMinute The new cardinality per minute
-    event UpdatedCardinalityPerMinute(uint8 cardinalityPerMinute);
+    event UpdatedCardinalityPerMinute(uint256 cardinalityPerMinute);
 
     /// @notice Emitted when support is updated (added or modified) for a new pair
     /// @param tokenA One of the pair's tokens

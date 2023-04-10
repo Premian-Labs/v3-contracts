@@ -66,7 +66,7 @@ interface IPoolCore is IPoolInternal {
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) (18 decimals)
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return delta The net collateral / longs / shorts change
+    /// @return delta The amount of collateral / longs / shorts deposited
     function deposit(
         Position.Key memory p,
         UD60x18 belowLower,
