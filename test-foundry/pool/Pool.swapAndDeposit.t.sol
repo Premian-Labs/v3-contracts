@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -10,6 +10,7 @@ import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.so
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
+import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {IPool} from "contracts/pool/IPool.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
@@ -82,7 +83,8 @@ abstract contract PoolSwapAndDepositTest is DeployTest {
             nearestBelowUpper,
             THREE,
             ZERO,
-            ONE
+            ONE,
+            Permit2.emptyPermit()
         );
 
         assertEq(

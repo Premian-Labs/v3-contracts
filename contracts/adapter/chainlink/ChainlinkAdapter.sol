@@ -3,7 +3,7 @@
 pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";

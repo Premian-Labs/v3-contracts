@@ -2,8 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
-import {SD59x18} from "@prb/math/src/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
@@ -19,9 +19,12 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientCollateralBalance();
     error Pool__InsufficientLiquidity();
     error Pool__InsufficientLongBalance();
+    error Pool__InsufficientPermit();
     error Pool__InsufficientShortBalance();
     error Pool__InvalidAssetUpdate();
     error Pool__InvalidBelowPrice();
+    error Pool__InvalidPermitRecipient();
+    error Pool__InvalidPermittedToken();
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
     error Pool__InvalidRange();
@@ -104,6 +107,21 @@ interface IPoolInternal is IPosition, IPricing {
         SD59x18 shorts;
     }
 
+    enum InvalidQuoteError {
+        None,
+        QuoteExpired,
+        QuoteCancelled,
+        QuoteOverfilled,
+        OutOfBoundsPrice,
+        InvalidQuoteTaker,
+        InvalidQuoteSignature,
+        InvalidAssetUpdate,
+        InsufficientCollateralAllowance,
+        InsufficientCollateralBalance,
+        InsufficientLongBalance,
+        InsufficientShortBalance
+    }
+
     ////////////////////
     ////////////////////
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
@@ -174,20 +192,5 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
-    }
-
-    enum InvalidQuoteError {
-        None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
-        OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
-        InvalidAssetUpdate,
-        InsufficientCollateralAllowance,
-        InsufficientCollateralBalance,
-        InsufficientLongBalance,
-        InsufficientShortBalance
     }
 }

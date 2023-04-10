@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
 import {iZERO} from "../libraries/Constants.sol";
+import {Permit2} from "../libraries/Permit2.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal {
+    using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
@@ -43,11 +48,13 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
-        Signature memory signature
+        Signature memory signature,
+        Permit2.Data memory permit
     ) external {
         _fillQuote(
             FillQuoteArgsInternal(msg.sender, size, signature),
-            tradeQuote
+            tradeQuote,
+            permit
         );
     }
 
@@ -55,11 +62,13 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2.Data memory permit
     ) external returns (uint256 totalPremium, Delta memory delta) {
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true)
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true),
+            permit
         );
 
         return (PoolStorage.layout().toPoolTokenDecimals(_totalPremium), delta);
@@ -70,7 +79,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2.Data memory permit
     )
         external
         payable
@@ -83,7 +93,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
-        (swapOutAmount, ) = _swap(s);
+        (swapOutAmount, ) = _swap(s, permit);
 
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
@@ -94,7 +104,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 premiumLimit,
                 swapOutAmount,
                 true
-            )
+            ),
+            Permit2.emptyPermit()
         );
 
         return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
@@ -105,7 +116,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         SwapArgs memory s,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        Permit2.Data memory permit
     )
         external
         returns (
@@ -118,15 +130,28 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false)
+            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false),
+            permit
         );
 
         if (delta.collateral <= iZERO) return (totalPremium, delta, 0, 0);
 
-        s.amountInMax = delta.collateral.intoUD60x18().unwrap();
+        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        if (l.getPoolToken() != s.tokenIn) revert Pool__InvalidSwapTokenIn();
-        (tokenOutReceived, collateralReceived) = _swap(s);
+        address poolToken = l.getPoolToken();
+        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        (tokenOutReceived, collateralReceived) = _swap(
+            s,
+            Permit2.emptyPermit()
+        );
+
+        if (tokenOutReceived > 0) {
+            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
+        }
+
+        if (collateralReceived > 0) {
+            IERC20(s.tokenIn).safeTransfer(s.refundAddress, collateralReceived);
+        }
 
         return (
             l.toPoolTokenDecimals(_totalPremium),

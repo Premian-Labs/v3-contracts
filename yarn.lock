@@ -1038,13 +1038,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prb/math@https://github.com/Lumyo/prb-math.git#head=yarn":
-  version: 3.3.0
-  resolution: "@prb/math@https://github.com/Lumyo/prb-math.git#commit=12ed8a4309fbf1d9a12b9ef494ec61f507b36b08"
-  checksum: 45070e7b4649b15eeb199beda7f093f75c3e07c9b29cd0166b8effcb7fd4131820b560aaa1873c6e78fe6c85abe200e7bde000facd21b19887cda9ea72f0d43e
-  languageName: node
-  linkType: hard
-
 "@scure/base@npm:~1.1.0":
   version: 1.1.1
   resolution: "@scure/base@npm:1.1.1"
@@ -1510,6 +1503,16 @@ __metadata:
   version: 4.0.1-alpha
   resolution: "@uniswap/lib@npm:4.0.1-alpha"
   checksum: d7bbacccef40966af16c7e215ab085f575686d316b2802c9e1cfd03f7ad351970e547535670a28b2279c3cfcc4fb02888614c46f94efe2987af2309f3ec86127
+  languageName: node
+  linkType: hard
+
+"@uniswap/permit2-sdk@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "@uniswap/permit2-sdk@npm:1.2.0"
+  dependencies:
+    ethers: ^5.3.1
+    tiny-invariant: ^1.3.1
+  checksum: 524519c4f5492a721de9215f4c74c18af4a8a4f676273ccc9c01512fe36c8e8ac51dd3474b19021522b76ef2edd25d9c871b0eb051e22b6564e37cd2b9422920
   languageName: node
   linkType: hard
 
@@ -3424,6 +3427,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"encode-utf8@npm:^1.0.2":
+  version: 1.0.3
+  resolution: "encode-utf8@npm:1.0.3"
+  checksum: 550224bf2a104b1d355458c8a82e9b4ea07f9fc78387bc3a49c151b940ad26473de8dc9e121eefc4e84561cb0b46de1e4cd2bc766f72ee145e9ea9541482817f
+  languageName: node
+  linkType: hard
+
 "encoding@npm:^0.1.13":
   version: 0.1.13
   resolution: "encoding@npm:0.1.13"
@@ -3782,7 +3792,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethers@npm:5.7.2, ethers@npm:^5.5.2":
+"ethers@npm:5.7.2, ethers@npm:^5.3.1, ethers@npm:^5.5.2":
   version: 5.7.2
   resolution: "ethers@npm:5.7.2"
   dependencies:
@@ -4036,6 +4046,15 @@ __metadata:
   bin:
     flat: cli.js
   checksum: 12a1536ac746db74881316a181499a78ef953632ddd28050b7a3a43c62ef5462e3357c8c29d76072bb635f147f7a9a1f0c02efef6b4be28f8db62ceb3d5c7f5d
+  languageName: node
+  linkType: hard
+
+"fmix@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "fmix@npm:0.1.0"
+  dependencies:
+    imul: ^1.0.0
+  checksum: c465344d4f169eaf10d45c33949a1e7a633f09dba2ac7063ce8ae8be743df5979d708f7f24900163589f047f5194ac5fc2476177ce31175e8805adfa7b8fb7a4
   languageName: node
   linkType: hard
 
@@ -4618,6 +4637,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"hardhat-preprocessor@npm:^0.1.5":
+  version: 0.1.5
+  resolution: "hardhat-preprocessor@npm:0.1.5"
+  dependencies:
+    murmur-128: ^0.2.1
+  peerDependencies:
+    hardhat: ^2.0.5
+  checksum: 7d543c2965828441741950b153d584ff096d7a006975f06af9870e05a928e56122b463c4a1b3b346f9a3baccaa6ee2dec1dfd026a434ac714ebf127bbe842fef
+  languageName: node
+  linkType: hard
+
 "hardhat-spdx-license-identifier@npm:^2.1.0":
   version: 2.1.0
   resolution: "hardhat-spdx-license-identifier@npm:2.1.0"
@@ -5036,6 +5066,13 @@ __metadata:
   version: 4.2.1
   resolution: "immutable@npm:4.2.1"
   checksum: 525bd78c4b8550df1b5f12d3bc7eb8bb3daed24f97df4018ec99a16436fc2a03fcebfcb4d3d36c86c46039292a583ea9eceb8a55704932f70a0cc5f15695b42a
+  languageName: node
+  linkType: hard
+
+"imul@npm:^1.0.0":
+  version: 1.0.1
+  resolution: "imul@npm:1.0.1"
+  checksum: 6c2af3d5f09e2135e14d565a2c108412b825b221eb2c881f9130467f2adccf7ae201773ae8bcf1be169e2d090567a1fdfa9cf20d3b7da7b9cecb95b920ff3e52
   languageName: node
   linkType: hard
 
@@ -6290,6 +6327,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"murmur-128@npm:^0.2.1":
+  version: 0.2.1
+  resolution: "murmur-128@npm:0.2.1"
+  dependencies:
+    encode-utf8: ^1.0.2
+    fmix: ^0.1.0
+    imul: ^1.0.0
+  checksum: 94ff8b39bf1a1a7bde83b6d13f656bbe591e0a5b5ffe4384c39470120ab70e9eadf0af38557742a30d24421ddc63aea6bba1028a1d6b66553038ee86a660dd92
+  languageName: node
+  linkType: hard
+
 "nanoid@npm:3.3.3":
   version: 3.3.3
   resolution: "nanoid@npm:3.3.3"
@@ -6939,7 +6987,6 @@ __metadata:
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.2
     "@nomiclabs/hardhat-etherscan": ^3.1.7
-    "@prb/math": "https://github.com/Lumyo/prb-math.git#head=yarn"
     "@solidstate/contracts": ^0.0.54
     "@solidstate/hardhat-4byte-uploader": ^1.0.2
     "@solidstate/hardhat-test-short-circuit": ^1.0.2
@@ -6950,6 +6997,7 @@ __metadata:
     "@types/chai": ^4.3.4
     "@types/mocha": ^10.0.1
     "@types/node": ^18.15.2
+    "@uniswap/permit2-sdk": ^1.2.0
     "@uniswap/swap-router-contracts": ^1.3.0
     "@uniswap/v3-core": ^1.0.1
     "@uniswap/v3-periphery": ^1.4.3
@@ -6964,6 +7012,7 @@ __metadata:
     hardhat-dependency-compiler: ^1.1.3
     hardhat-docgen: ^1.3.0
     hardhat-gas-reporter: ^1.0.9
+    hardhat-preprocessor: ^0.1.5
     hardhat-spdx-license-identifier: ^2.1.0
     husky: ^8.0.3
     mocha: ^10.2.0
@@ -8336,6 +8385,13 @@ __metadata:
     promise: ^8.0.0
     qs: ^6.4.0
   checksum: a24a4fc95dd8591966bf3752f024f5cd4d53c2b2c29b23b4e40c3322df6a432d939bc17b589d8e9d760b90e92ab860f6f361a4dfcfe3542019e1615fb51afccc
+  languageName: node
+  linkType: hard
+
+"tiny-invariant@npm:^1.3.1":
+  version: 1.3.1
+  resolution: "tiny-invariant@npm:1.3.1"
+  checksum: 872dbd1ff20a21303a2fd20ce3a15602cfa7fcf9b228bd694a52e2938224313b5385a1078cb667ed7375d1612194feaca81c4ecbe93121ca1baebe344de4f84c
   languageName: node
   linkType: hard
 

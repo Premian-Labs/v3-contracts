@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/src/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
