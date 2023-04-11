@@ -2,9 +2,9 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
 import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.sol";
-import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IVault is IERC4626Internal, IERC20Internal {
     // Errors
@@ -85,7 +85,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         bool isCall,
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256 maxSize, uint256 premium);
+    ) external view returns (uint256 premium);
 
     function trade(
         UD60x18 strike,
