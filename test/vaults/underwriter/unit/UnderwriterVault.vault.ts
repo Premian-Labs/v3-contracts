@@ -74,7 +74,7 @@ describe('UnderwriterVault', () => {
     });
   });
 
-  describe('#_getQuote', () => {
+  describe('#getQuote', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         let vault: UnderwriterVaultMock;
@@ -133,7 +133,7 @@ describe('UnderwriterVault', () => {
 
           const quoteSize = parseEther('3');
 
-          const output = await vault.getQuote(
+          const premium = await vault.getQuote(
             strike,
             maturity,
             isCall,
@@ -142,13 +142,25 @@ describe('UnderwriterVault', () => {
           );
           const token = isCall ? base : quote;
           const totalPremium = parseFloat(
-            formatUnits(output.premium, await token.decimals()),
+            formatUnits(premium, await token.decimals()),
           );
           const expectedPremium = isCall
             ? 0.15828885563446596
             : 469.9068335343156;
           const delta = isCall ? 1e-6 : 1e-2;
           expect(totalPremium).to.be.closeTo(expectedPremium, delta);
+        });
+
+        it('should revert if there is not enough available assets', async () => {
+          const { base, quote, vault, maturity, spot, strike, timestamp } =
+            await loadFixture(setup);
+
+          await vault.setTimestamp(timestamp);
+          await vault.setSpotPrice(spot);
+
+          await expect(
+            vault.getQuote(strike, maturity, isCall, parseEther('6'), true),
+          ).to.be.revertedWithCustomError(vault, 'Vault__InsufficientFunds');
         });
 
         it('should revert on pool not existing', async () => {
@@ -356,7 +368,7 @@ describe('UnderwriterVault', () => {
     }
   });
 
-  describe('#_trade', () => {
+  describe('#trade', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         let vault: UnderwriterVaultMock;
@@ -441,14 +453,13 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const quoteOutput = await vault.getQuote(
+          const totalPremium = await vault.getQuote(
             strike,
             maturity,
             isCall,
             tradeSize,
             true,
           );
-          const totalPremium = quoteOutput[1];
 
           // Approve amount for trader to trade with
           const token = isCall ? base : quote;
@@ -508,6 +519,35 @@ describe('UnderwriterVault', () => {
           expect(poolBalance).to.be.eq(collateral.add(mintingFee));
         });
 
+        it('should revert on pool not existing', async () => {
+          const { vault, trader, spot, strike, timestamp, maturity } =
+            await loadFixture(setup);
+
+          await vault.setTimestamp(timestamp);
+          await vault.setSpotPrice(spot);
+
+          // Approve amount for trader to trade with
+          const token = isCall ? base : quote;
+          await token
+            .connect(trader)
+            .approve(vault.address, parseEther('1000'));
+
+          const tradeSize = parseEther('6');
+
+          await expect(
+            vault
+              .connect(trader)
+              .trade(
+                strike,
+                maturity,
+                isCall,
+                tradeSize,
+                true,
+                parseEther('1000'),
+              ),
+          ).to.be.revertedWithCustomError(vault, 'Vault__InsufficientFunds');
+        });
+
         it('should revert on being above allowed slippage', async () => {
           const {
             pool,
@@ -527,14 +567,13 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const quoteOutput = await vault.getQuote(
+          const totalPremium = await vault.getQuote(
             strike,
             maturity,
             isCall,
             tradeSize,
             true,
           );
-          const totalPremium = quoteOutput[1];
 
           // Approve amount for trader to trade with
           const token = isCall ? base : quote;

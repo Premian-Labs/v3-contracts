@@ -2,30 +2,26 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
-import {ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20BaseStorage.sol";
-
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
-import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
+import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
+import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
+import {ZERO, ONE} from "../../../libraries/Constants.sol";
+import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {Permit2} from "../../../libraries/Permit2.sol";
-import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {IPool} from "../../../pool/IPool.sol";
-import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
-import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../../../libraries/DoublyLinkedListUD60x18.sol";
-import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
-import {ZERO, iZERO, ONE, iONE} from "../../../libraries/Constants.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
+import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
+import {IPool} from "../../../pool/IPool.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option
 ///        contracts by using collateral deposited by users
@@ -914,7 +910,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         bool isCall,
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256 maxSize, uint256 premium) {
+    ) external view returns (uint256 premium) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
@@ -925,10 +921,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             size,
             isBuy
         );
-
-        maxSize = isCall
-            ? _availableAssetsUD60x18().unwrap()
-            : (_availableAssetsUD60x18() / strike).unwrap();
 
         premium = l.convertAssetFromUD60x18(
             quote.premium + quote.spread + quote.mintingFee

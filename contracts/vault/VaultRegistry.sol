@@ -2,11 +2,11 @@
 
 pragma solidity >=0.8.19;
 
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {VaultRegistryStorage} from "./VaultRegistryStorage.sol";
 import {IVaultRegistry} from "./IVaultRegistry.sol";
+import {VaultRegistryStorage} from "./VaultRegistryStorage.sol";
 
 contract VaultRegistry is IVaultRegistry, SafeOwnable {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;

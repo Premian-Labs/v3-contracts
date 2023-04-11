@@ -2,16 +2,15 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
 import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 
-import {ProxyUpgradeableOwnable} from "../../../proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
-
 import {ZERO} from "../../../libraries/Constants.sol";
+import {ProxyUpgradeableOwnable} from "../../../proxy/ProxyUpgradeableOwnable.sol";
 
 contract UnderwriterVaultProxy is
     ProxyUpgradeableOwnable,
