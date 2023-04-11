@@ -1,6 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import {
-  IOracleAdapter,
   ERC20Mock,
   ERC20Mock__factory,
   IPoolMock,
@@ -8,28 +7,23 @@ import {
   OptionMathMock,
   OptionMathMock__factory,
   ProxyUpgradeableOwnable,
-  ProxyUpgradeableOwnable__factory,
   UnderwriterVaultMock,
   UnderwriterVaultMock__factory,
   UnderwriterVaultProxy,
   UnderwriterVaultProxy__factory,
   VolatilityOracleMock,
-  VolatilityOracleMock__factory,
-  IOracleAdapter__factory,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
 import { AdapterType, PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
-import { BigNumber, BigNumberish, Signer } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import {
   deployMockContract,
   MockContract,
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
 import { parseEther, parseUnits } from 'ethers/lib/utils';
-import { expect } from 'chai';
-import { now } from 'moment-timezone';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
@@ -298,7 +292,7 @@ export async function vaultSetup() {
     oracleAdapter.address, // chainlinkAdapter
     deployer.address, // feeReceiver
     parseEther('0.1'), // 10% discountPerPool
-    true, // log
+    false, // log
     true, // isDevMode
   );
 
