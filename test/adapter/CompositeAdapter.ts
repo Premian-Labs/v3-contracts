@@ -79,7 +79,7 @@ describe('CompositeAdapter', () => {
 
     const uniswapImplementation = await new UniswapV3Adapter__factory(
       deployer,
-    ).deploy(UNISWAP_V3_FACTORY, 22250, 30000);
+    ).deploy(UNISWAP_V3_FACTORY, tokens.WETH.address, 22250, 30000);
 
     await uniswapImplementation.deployed();
 
