@@ -37,23 +37,6 @@ library ChainlinkAdapterStorage {
         aggregatorRoundId = uint64(roundId);
     }
 
-    function decimalsFactor(
-        IChainlinkAdapterInternal.PricingPath path
-    ) internal pure returns (int256) {
-        if (
-            path == IChainlinkAdapterInternal.PricingPath.ETH_USD ||
-            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD ||
-            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD_TOKEN ||
-            path == IChainlinkAdapterInternal.PricingPath.A_USD_ETH_B ||
-            path == IChainlinkAdapterInternal.PricingPath.A_ETH_USD_B ||
-            path == IChainlinkAdapterInternal.PricingPath.TOKEN_USD_BTC_WBTC
-        ) {
-            return ETH_DECIMALS - FOREX_DECIMALS;
-        }
-
-        return 0;
-    }
-
     function isUSD(address token) internal pure returns (bool) {
         return token == Denominations.USD;
     }

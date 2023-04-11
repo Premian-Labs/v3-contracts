@@ -6,9 +6,8 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IOracleAdapterInternal} from "./IOracleAdapterInternal.sol";
 
-/// @title Base oracle adapter internal implementation
 abstract contract OracleAdapterInternal is IOracleAdapterInternal {
-    using SafeCast for int256;
+    using SafeCast for int8;
 
     function _keyForUnsortedPair(
         address tokenA,
@@ -29,7 +28,7 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
 
     function _scale(
         uint256 amount,
-        int256 factor
+        int8 factor
     ) internal pure returns (uint256) {
         if (factor == 0) return amount;
 

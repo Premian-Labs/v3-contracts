@@ -9,9 +9,9 @@ library UniswapV3AdapterStorage {
         keccak256("premia.contracts.storage.UniswapV3Adapter");
 
     struct Layout {
-        uint8 cardinalityPerMinute;
         uint16 targetCardinality;
         uint32 period;
+        uint256 cardinalityPerMinute;
         uint24[] feeTiers;
         mapping(bytes32 => address[]) poolsForPair;
     }

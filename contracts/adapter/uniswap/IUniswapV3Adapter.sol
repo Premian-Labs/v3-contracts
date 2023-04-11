@@ -6,9 +6,6 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
-/// @title An implementation of IOracleAdapter that uses Uniswap feeds
-/// @notice This oracle adapter will attempt to use all available feeds to determine
-///         prices between pairs
 interface IUniswapV3Adapter is IOracleAdapter {
     /// @notice Returns the address of the Uniswap V3 factory
     /// @dev This value is assigned during deployment and cannot be changed
@@ -21,7 +18,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
 
     /// @notice Returns the cardinality per minute used for adding support to pairs
     /// @return The cardinality per minute used for increase cardinality calculations
-    function cardinalityPerMinute() external view returns (uint8);
+    function cardinalityPerMinute() external view returns (uint256);
 
     /// @notice Returns the target observation cardinality for pools
     /// @return The target observation cardinality for pools
@@ -62,8 +59,8 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @dev Will revert if the given cardinality is zero
     ///      Can only be called by users with the admin role
     ///      WARNING: increasing the cardinality per minute will make adding support to a pair significantly costly
-    /// @param cardinalityPerMinute The new cardinality per minute
-    function setCardinalityPerMinute(uint8 cardinalityPerMinute) external;
+    /// @param newCardinalityPerMinute The new cardinality per minute
+    function setCardinalityPerMinute(uint256 newCardinalityPerMinute) external;
 
     /// @notice Inserts a new fee tier
     /// @dev Will revert if the given tier is invalid, or already supported

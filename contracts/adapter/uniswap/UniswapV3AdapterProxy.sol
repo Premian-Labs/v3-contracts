@@ -20,8 +20,8 @@ contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
     error UniswapV3AdapterProxy__PeriodNotSet();
 
     constructor(
-        uint8 cardinalityPerMinute,
         uint32 period,
+        uint256 cardinalityPerMinute,
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {
         if (cardinalityPerMinute == 0)
@@ -33,7 +33,6 @@ contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
             .layout();
 
         l.targetCardinality = uint16((period * cardinalityPerMinute) / 60) + 1;
-
         l.cardinalityPerMinute = cardinalityPerMinute;
         l.period = period;
 
