@@ -13,27 +13,6 @@ interface IPoolCoreMock {
         bool isBuy
     ) external view returns (Pricing.Args memory);
 
-    function _getStrandedArea()
-        external
-        view
-        returns (UD60x18 lower, UD60x18 upper);
-
-    function _currentTick() external view returns (UD60x18);
-
-    function _crossTick(bool isBuy) external;
-
-    function _isMarketPriceStrandedMock(
-        Position.KeyInternal memory p,
-        bool isBid
-    ) external view returns (bool);
-
-    function _getStrandedMarketPriceUpdateMock(
-        Position.KeyInternal memory p,
-        bool isBid
-    ) external pure returns (UD60x18);
-
-    function _liquidityRate() external view returns (UD60x18);
-
     function formatTokenId(
         address operator,
         UD60x18 lower,
@@ -59,4 +38,25 @@ interface IPoolCoreMock {
         );
 
     function protocolFees() external view returns (uint256);
+
+    function exposed_cross(bool isBuy) external;
+
+    function exposed_getStrandedArea()
+        external
+        view
+        returns (UD60x18 lower, UD60x18 upper);
+
+    function exposed_getStrandedMarketPriceUpdate(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external pure returns (UD60x18);
+
+    function exposed_isMarketPriceStranded(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external view returns (bool);
+
+    function get_currentTick() external view returns (UD60x18);
+
+    function get_liquidityRate() external view returns (UD60x18);
 }

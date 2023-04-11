@@ -74,7 +74,11 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return l.toPoolTokenDecimals(l.protocolFees);
     }
 
-    function _getStrandedArea()
+    function exposed_cross(bool isBuy) external {
+        _cross(isBuy);
+    }
+
+    function exposed_getStrandedArea()
         external
         view
         returns (UD60x18 lower, UD60x18 upper)
@@ -83,21 +87,14 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _getStrandedArea(l);
     }
 
-    function _currentTick() external view returns (UD60x18) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.currentTick;
+    function exposed_getStrandedMarketPriceUpdate(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external pure returns (UD60x18) {
+        return _getStrandedMarketPriceUpdate(p, isBid);
     }
 
-    function _liquidityRate() external view returns (UD60x18) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.liquidityRate;
-    }
-
-    function _crossTick(bool isBuy) external {
-        _cross(isBuy);
-    }
-
-    function _isMarketPriceStrandedMock(
+    function exposed_isMarketPriceStranded(
         Position.KeyInternal memory p,
         bool isBid
     ) external view returns (bool) {
@@ -105,10 +102,13 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _isMarketPriceStranded(l, p, isBid);
     }
 
-    function _getStrandedMarketPriceUpdateMock(
-        Position.KeyInternal memory p,
-        bool isBid
-    ) external pure returns (UD60x18) {
-        return _getStrandedMarketPriceUpdate(p, isBid);
+    function get_currentTick() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.currentTick;
+    }
+
+    function get_liquidityRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.liquidityRate;
     }
 }
