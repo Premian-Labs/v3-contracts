@@ -10,8 +10,6 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 
-import "hardhat/console.sol";
-
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeCast for int256;

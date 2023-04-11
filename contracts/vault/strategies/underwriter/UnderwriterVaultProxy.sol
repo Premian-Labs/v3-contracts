@@ -12,8 +12,6 @@ import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC46
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IVaultRegistry} from "../../IVaultRegistry.sol";
 
-import "hardhat/console.sol";
-
 contract UnderwriterVaultProxy is Proxy, ERC20MetadataInternal {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
 

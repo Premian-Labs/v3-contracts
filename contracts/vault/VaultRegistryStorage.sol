@@ -19,8 +19,8 @@ library VaultRegistryStorage {
         mapping(bytes32 => address) implementations;
         mapping(address => IVaultRegistry.Vault) vaults;
         mapping(bytes32 => EnumerableSet.AddressSet) vaultsByType;
-        mapping(IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsPerTradeSide;
-        mapping(IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsPerOptionType;
+        mapping(IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsByTradeSide;
+        mapping(IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsByOptionType;
     }
 
     function layout() internal pure returns (Layout storage l) {
