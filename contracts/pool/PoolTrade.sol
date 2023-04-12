@@ -131,7 +131,10 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         if (delta.collateral.unwrap() <= 0) return (premiumScaled, delta, 0, 0);
 
-        s.amountInMax = premiumScaled;
+        uint256 deltaCollateral = l.toPoolTokenDecimals(
+            delta.collateral.intoUD60x18()
+        );
+        s.amountInMax = deltaCollateral;
 
         _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
