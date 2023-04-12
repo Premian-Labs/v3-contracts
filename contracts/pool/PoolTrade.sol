@@ -80,9 +80,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 swapOutAmount
         )
     {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        _ensureValidSwapTokenOut(s.tokenOut);
         (swapOutAmount, ) = _swap(s, permit, false);
 
         UD60x18 premium;
@@ -95,10 +93,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 true
             ),
             quoteRFQ,
-            permit
+            Permit2.emptyPermit()
         );
 
-        return (l.toPoolTokenDecimals(premium), delta, swapOutAmount);
+        return (
+            PoolStorage.layout().toPoolTokenDecimals(premium),
+            delta,
+            swapOutAmount
+        );
     }
 
     /// @inheritdoc IPoolTrade
@@ -117,8 +119,6 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 tokenOutReceived
         )
     {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
         UD60x18 premium;
         (premium, delta) = _fillQuoteRFQ(
             FillQuoteRFQArgsInternal(msg.sender, size, signature, 0, false),
@@ -126,14 +126,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             permit
         );
 
+        PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 premiumScaled = l.toPoolTokenDecimals(premium);
 
         if (delta.collateral.unwrap() <= 0) return (premiumScaled, delta, 0, 0);
 
-        s.amountInMax = premiumScaled;
+        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        address poolToken = l.getPoolToken();
-        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
@@ -179,9 +179,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 swapOutAmount
         )
     {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
+        _ensureValidSwapTokenOut(s.tokenOut);
         (swapOutAmount, ) = _swap(s, permit, false);
 
         UD60x18 _totalPremium;
@@ -197,7 +195,11 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             Permit2.emptyPermit()
         );
 
-        return (l.toPoolTokenDecimals(_totalPremium), delta, swapOutAmount);
+        return (
+            PoolStorage.layout().toPoolTokenDecimals(_totalPremium),
+            delta,
+            swapOutAmount
+        );
     }
 
     /// @inheritdoc IPoolTrade
@@ -216,22 +218,21 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 tokenOutReceived
         )
     {
-        PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 _totalPremium;
         (_totalPremium, delta) = _trade(
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false),
             permit
         );
 
+        PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 totalPremiumScaled = l.toPoolTokenDecimals(_totalPremium);
 
         if (delta.collateral.unwrap() <= 0)
             return (totalPremiumScaled, delta, 0, 0);
 
-        s.amountInMax = totalPremiumScaled;
+        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        address poolToken = l.getPoolToken();
-        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
