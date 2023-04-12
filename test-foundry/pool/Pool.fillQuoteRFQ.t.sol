@@ -319,26 +319,21 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
 
-        tradeQuote.size = FIVE;
-        tradeQuote.isBuy = true;
-        IPoolInternal.Signature memory sig = signQuote(tradeQuote);
+        quoteRFQ.size = FIVE;
+        quoteRFQ.isBuy = true;
+        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
 
         vm.startPrank(users.trader);
-        pool.fillQuoteRFQ(
-            tradeQuote,
-            tradeQuote.size,
-            sig,
-            Permit2.emptyPermit()
-        );
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         uint256 premium0 = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee0 = pool.takerFee(tradeQuote.size, premium0, false);
+        uint256 protocolFee0 = pool.takerFee(quoteRFQ.size, premium0, false);
 
         uint256 collateral0 = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
@@ -374,18 +369,18 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), 0, "short lp");
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), FIVE, "long lp");
 
-        tradeQuote.size = THREE;
-        tradeQuote.isBuy = false;
-        sig = signQuote(tradeQuote);
+        quoteRFQ.size = THREE;
+        quoteRFQ.isBuy = false;
+        sig = signQuote(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(tradeQuote.price * tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(tradeQuote.size, premium, false);
+        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeQuote.size, isCall),
+            contractsToCollateral(quoteRFQ.size, isCall),
             isCall
         );
 
@@ -404,8 +399,8 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         (, Position.Delta memory delta, , ) = pool.fillQuoteRFQAndSwap(
             swapArgs,
-            tradeQuote,
-            tradeQuote.size,
+            quoteRFQ,
+            quoteRFQ.size,
             sig,
             Permit2.emptyPermit()
         );

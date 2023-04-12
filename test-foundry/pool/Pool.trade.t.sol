@@ -320,7 +320,7 @@ abstract contract PoolTradeTest is DeployTest {
         address swapToken = getSwapToken(isCall);
 
         UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
-        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, false);
+        (uint256 totalPremium0, ) = pool.getQuoteAMM(tradeSize0, false);
 
         uint256 traderCollateral0 = scaleDecimals(
             contractsToCollateral(tradeSize0, isCall),
@@ -369,7 +369,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
 
         uint256 swapQuote = getSwapQuoteExactInput(
             poolToken,
