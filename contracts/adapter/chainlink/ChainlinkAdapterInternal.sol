@@ -29,10 +29,10 @@ abstract contract ChainlinkAdapterInternal is
 
     /// @dev If a fresh price is unavailable the adapter will wait the duration of
     ///      MAX_DELAY before returning the stale price
-    uint32 internal constant MAX_DELAY = 12 hours;
+    uint256 internal constant MAX_DELAY = 12 hours;
     /// @dev If the difference between target and last update is greater than the
     ///      PRICE_STALE_THRESHOLD, the price is considered stale
-    uint32 internal constant PRICE_STALE_THRESHOLD = 25 hours;
+    uint256 internal constant PRICE_STALE_THRESHOLD = 25 hours;
 
     constructor(
         address _wrappedNativeToken,
@@ -135,9 +135,9 @@ abstract contract ChainlinkAdapterInternal is
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int256 factor = PricingPath.TOKEN_USD_TOKEN == path
-            ? ETH_DECIMALS - FOREX_DECIMALS
-            : int256(0);
+        int8 factor = PricingPath.TOKEN_USD_TOKEN == path
+            ? int8(ETH_DECIMALS - FOREX_DECIMALS)
+            : int8(0);
 
         address base = path == PricingPath.TOKEN_USD_TOKEN
             ? Denominations.USD
@@ -463,7 +463,7 @@ abstract contract ChainlinkAdapterInternal is
                 : UD60x18.wrap(
                     _scale(
                         _fetchQuote(token, Denominations.USD, target),
-                        ETH_DECIMALS - FOREX_DECIMALS
+                        int8(ETH_DECIMALS - FOREX_DECIMALS)
                     )
                 );
     }
@@ -483,7 +483,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(Denominations.ETH, Denominations.USD, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
@@ -493,7 +493,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(Denominations.BTC, Denominations.USD, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
@@ -503,7 +503,7 @@ abstract contract ChainlinkAdapterInternal is
             UD60x18.wrap(
                 _scale(
                     _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target),
-                    ETH_DECIMALS - FOREX_DECIMALS
+                    int8(ETH_DECIMALS - FOREX_DECIMALS)
                 )
             );
     }
