@@ -29,6 +29,7 @@ interface IPoolTrade is IPoolInternal {
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
@@ -60,6 +61,7 @@ interface IPoolTrade is IPoolInternal {
         );
 
     /// @notice Fill an RFQ quote and then execute a swap
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
@@ -126,6 +128,7 @@ interface IPoolTrade is IPoolInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling

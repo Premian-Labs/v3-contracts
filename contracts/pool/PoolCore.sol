@@ -184,10 +184,11 @@ contract PoolCore is IPoolCore, PoolInternal {
         Permit2.Data memory permit
     ) external payable returns (Position.Delta memory delta) {
         _ensureOperator(p.operator);
-        PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureValidSwapTokenOut(s.tokenOut);
 
-        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (uint256 creditAmount, ) = _swap(s, permit, false);
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
 
         return
             _deposit(
@@ -255,8 +256,7 @@ contract PoolCore is IPoolCore, PoolInternal {
 
         s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        address poolToken = l.getPoolToken();
-        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),

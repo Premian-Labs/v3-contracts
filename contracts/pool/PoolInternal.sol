@@ -2248,4 +2248,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _ensureOperator(address operator) internal view {
         if (operator != msg.sender) revert Pool__NotAuthorized();
     }
+
+    function _ensureValidSwapTokenIn(address tokenIn) internal view {
+        if (PoolStorage.layout().getPoolToken() != tokenIn)
+            revert Pool__InvalidSwapTokenIn();
+    }
+
+    function _ensureValidSwapTokenOut(address tokenOut) internal view {
+        if (PoolStorage.layout().getPoolToken() != tokenOut)
+            revert Pool__InvalidSwapTokenOut();
+    }
 }
