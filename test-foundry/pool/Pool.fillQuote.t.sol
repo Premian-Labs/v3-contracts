@@ -121,13 +121,23 @@ abstract contract PoolFillQuoteTest is DeployTest {
         tradeQuote.price = UD60x18.wrap(1);
         IPoolInternal.Signature memory sig = signQuote(tradeQuote);
 
-        vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__OutOfBoundsPrice.selector,
+                tradeQuote.price
+            )
+        );
         pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
 
         tradeQuote.price = UD60x18.wrap(1 ether + 1);
         sig = signQuote(tradeQuote);
 
-        vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__OutOfBoundsPrice.selector,
+                tradeQuote.price
+            )
+        );
         pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
     }
 
@@ -156,7 +166,14 @@ abstract contract PoolFillQuoteTest is DeployTest {
             Permit2.emptyPermit()
         );
 
-        vm.expectRevert(IPoolInternal.Pool__QuoteOverfilled.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__QuoteOverfilled.selector,
+                tradeQuote.size / TWO,
+                tradeQuote.size,
+                tradeQuote.size
+            )
+        );
         pool.fillQuote(tradeQuote, tradeQuote.size, sig, Permit2.emptyPermit());
     }
 
@@ -557,7 +574,13 @@ abstract contract PoolFillQuoteTest is DeployTest {
             users.trader
         );
 
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenIn.selector,
+                swapToken,
+                getPoolToken(isCall)
+            )
+        );
         pool.fillQuoteAndSwap(
             swapArgs,
             tradeQuote,
