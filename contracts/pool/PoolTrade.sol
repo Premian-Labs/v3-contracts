@@ -93,7 +93,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 true
             ),
             tradeQuote,
-            permit
+            Permit2.emptyPermit()
         );
 
         return (
