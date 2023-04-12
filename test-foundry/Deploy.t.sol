@@ -192,8 +192,8 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(
             poolCoreMockImpl.exposed_isMarketPriceStranded.selector
         );
-        poolCoreMockSelectors.push(poolCoreMockImpl.get_currentTick.selector);
-        poolCoreMockSelectors.push(poolCoreMockImpl.get_liquidityRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.tradeQuoteHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);

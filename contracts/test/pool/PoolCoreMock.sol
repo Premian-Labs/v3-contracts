@@ -102,12 +102,12 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _isMarketPriceStranded(l, p, isBid);
     }
 
-    function get_currentTick() external view returns (UD60x18) {
+    function getCurrentTick() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.currentTick;
     }
 
-    function get_liquidityRate() external view returns (UD60x18) {
+    function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.liquidityRate;
     }
