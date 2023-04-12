@@ -61,6 +61,7 @@ interface IPoolTrade is IPoolInternal {
         );
 
     /// @notice Fill an RFQ quote and then execute a swap
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
@@ -127,6 +128,7 @@ interface IPoolTrade is IPoolInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
