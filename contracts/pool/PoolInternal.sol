@@ -519,7 +519,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         vars.initialSize = _balanceOfUD60x18(p.owner, vars.tokenId);
 
-        if (vars.initialSize == ZERO) revert Pool__PositionDoesNotExist();
+        if (vars.initialSize == ZERO)
+            revert Pool__PositionDoesNotExist(p.owner, vars.tokenId);
 
         vars.isFullWithdrawal = vars.initialSize == size;
 
@@ -632,7 +633,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         // Safeguard, should never happen
         if (longs > ZERO && shorts > ZERO)
-            revert Pool__PositionCantHoldLongAndShort();
+            revert Pool__PositionCantHoldLongAndShort(longs, shorts);
 
         address poolToken = l.getPoolToken();
         if (collateral > collateralCredit) {
@@ -682,7 +683,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 msg.sender
             ] ==
             false
-        ) revert Pool__NotAuthorized();
+        ) revert Pool__NotAuthorized(msg.sender);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1190,10 +1191,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 srcP.orderType
             );
 
-        UD60x18 srcSize = _balanceOfUD60x18(srcP.owner, srcTokenId);
-        if (size > srcSize) revert Pool__NotEnoughTokens();
+        UD60x18 balance = _balanceOfUD60x18(srcP.owner, srcTokenId);
+        if (size > balance) revert Pool__NotEnoughTokens(balance, size);
 
-        UD60x18 proportionTransferred = size.div(srcSize);
+        UD60x18 proportionTransferred = size.div(balance);
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
         Position.Data storage srcData = l.positions[srcKey];
@@ -1233,7 +1234,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _mint(newOwner, dstTokenId, size);
         }
 
-        if (size == srcSize) delete l.positions[srcKey];
+        if (size == balance) delete l.positions[srcKey];
 
         emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
@@ -1443,7 +1444,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
         if (msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
-                revert Pool__InvalidSwapTokenIn();
+                revert Pool__InvalidSwapTokenIn(
+                    s.tokenIn,
+                    WRAPPED_NATIVE_TOKEN
+                );
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
         }
@@ -1521,7 +1525,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             next = l.tickIndex.next(left);
         }
 
-        if (left == ZERO) revert Pool__TickNotFound();
+        if (left == ZERO) revert Pool__TickNotFound(price);
 
         return left;
     }
@@ -1529,7 +1533,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Get a tick, reverts if tick is not found
     function _getTick(UD60x18 price) internal view returns (Tick memory) {
         (Tick memory tick, bool tickFound) = _tryGetTick(price);
-        if (!tickFound) revert Pool__TickNotFound();
+        if (!tickFound) revert Pool__TickNotFound(price);
 
         return tick;
     }
@@ -1541,7 +1545,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _verifyTickWidth(price);
 
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
-            revert Pool__TickOutOfRange();
+            revert Pool__TickOutOfRange(price);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1605,13 +1609,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             price < Pricing.MAX_TICK_PRICE &&
             tick.counter == 0 // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
         ) {
-            if (tick.delta != iZERO) revert Pool__TickDeltaNotZero();
+            if (tick.delta != iZERO) revert Pool__TickDeltaNotZero(tick.delta);
 
             if (price == l.currentTick) {
                 UD60x18 newCurrentTick = l.tickIndex.prev(price);
 
                 if (newCurrentTick < Pricing.MIN_TICK_PRICE)
-                    revert Pool__TickOutOfRange();
+                    revert Pool__TickOutOfRange(newCurrentTick);
 
                 l.currentTick = newCurrentTick;
             }
@@ -1801,7 +1805,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (isBuy) {
             UD60x18 right = l.tickIndex.next(l.currentTick);
-            if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange();
+            if (right >= Pricing.MAX_TICK_PRICE)
+                revert Pool__TickOutOfRange(right);
             l.currentTick = right;
         }
 
@@ -1822,7 +1827,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
-                revert Pool__TickOutOfRange();
+                revert Pool__TickOutOfRange(l.currentTick);
             l.currentTick = l.tickIndex.prev(l.currentTick);
         }
     }
@@ -1953,7 +1958,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _verifyTickWidth(UD60x18 price) internal pure {
         if (price % Pricing.MIN_TICK_DISTANCE != ZERO)
-            revert Pool__TickWidthInvalid();
+            revert Pool__TickWidthInvalid(price);
     }
 
     function _tradeQuoteHash(
@@ -2066,8 +2071,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _ensureWithdrawalDelayElapsed(
         Position.Data storage position
     ) internal view {
-        if (block.timestamp < position.lastDeposit + WITHDRAWAL_DELAY)
-            revert Pool__WithdrawalDelayNotElapsed();
+        uint256 unlockTime = position.lastDeposit + WITHDRAWAL_DELAY;
+        if (block.timestamp < unlockTime)
+            revert Pool__WithdrawalDelayNotElapsed(unlockTime);
     }
 
     function _ensureBelowTradeMaxSlippage(
@@ -2148,7 +2154,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         if (filledAmount + args.size > tradeQuote.size) {
-            if (revertIfInvalid) revert Pool__QuoteOverfilled();
+            if (revertIfInvalid)
+                revert Pool__QuoteOverfilled(
+                    filledAmount,
+                    args.size,
+                    tradeQuote.size
+                );
             return (false, InvalidQuoteError.QuoteOverfilled);
         }
 
@@ -2156,7 +2167,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||
             tradeQuote.price > Pricing.MAX_TICK_PRICE
         ) {
-            if (revertIfInvalid) revert Pool__OutOfBoundsPrice();
+            if (revertIfInvalid)
+                revert Pool__OutOfBoundsPrice(tradeQuote.price);
             return (false, InvalidQuoteError.OutOfBoundsPrice);
         }
 
@@ -2246,16 +2258,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     function _ensureOperator(address operator) internal view {
-        if (operator != msg.sender) revert Pool__NotAuthorized();
+        if (operator != msg.sender) revert Pool__NotAuthorized(msg.sender);
     }
 
     function _ensureValidSwapTokenIn(address tokenIn) internal view {
-        if (PoolStorage.layout().getPoolToken() != tokenIn)
-            revert Pool__InvalidSwapTokenIn();
+        address poolToken = PoolStorage.layout().getPoolToken();
+        if (poolToken != tokenIn)
+            revert Pool__InvalidSwapTokenIn(tokenIn, poolToken);
     }
 
     function _ensureValidSwapTokenOut(address tokenOut) internal view {
-        if (PoolStorage.layout().getPoolToken() != tokenOut)
-            revert Pool__InvalidSwapTokenOut();
+        address poolToken = PoolStorage.layout().getPoolToken();
+        if (poolToken != tokenOut)
+            revert Pool__InvalidSwapTokenOut(tokenOut, poolToken);
     }
 }
