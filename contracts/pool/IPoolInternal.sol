@@ -41,7 +41,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 amountOutMin
     );
     error Pool__NotEnoughTokens();
-    error Pool__NotWethPool();
+    error Pool__NotWrappedNativeTokenPool();
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();

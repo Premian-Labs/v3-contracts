@@ -135,7 +135,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    _wrapETH(l),
+                    _wrapNativeToken(l),
                     msg.sender
                 ),
                 permit
@@ -165,7 +165,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    _wrapETH(l),
+                    _wrapNativeToken(l),
                     msg.sender
                 ),
                 permit,
@@ -173,19 +173,18 @@ contract PoolCore is IPoolCore, PoolInternal {
             );
     }
 
-    /// @notice Wraps ETH into WETH if the pool is a WETH pool
-    /// @return The amount of ETH wrapped into WETH
-    function _wrapETH(PoolStorage.Layout storage l) internal returns (uint256) {
-        uint256 wrappedAmount;
+    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
+    /// @return wrappedAmount The amount of native tokens wrapped
+    function _wrapNativeToken(
+        PoolStorage.Layout storage l
+    ) internal returns (uint256 wrappedAmount) {
         if (msg.value > 0) {
             if (l.getPoolToken() != WRAPPED_NATIVE_TOKEN)
-                revert Pool__NotWethPool();
+                revert Pool__NotWrappedNativeTokenPool();
 
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             wrappedAmount = msg.value;
         }
-
-        return wrappedAmount;
     }
 
     /// @inheritdoc IPoolCore
