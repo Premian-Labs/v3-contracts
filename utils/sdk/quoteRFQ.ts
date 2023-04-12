@@ -32,7 +32,7 @@ const EIP712Domain = [
   { name: 'verifyingContract', type: 'address' },
 ];
 
-export async function signQuote(
+export async function signQuoteRFQ(
   w3Provider: Provider,
   poolAddress: string,
   quoteRFQ: QuoteRFQ,
@@ -55,7 +55,7 @@ export async function signQuote(
   const typedData = {
     types: {
       EIP712Domain,
-      FillQuote: [
+      FillQuoteRFQ: [
         { name: 'provider', type: 'address' },
         { name: 'taker', type: 'address' },
         { name: 'price', type: 'uint256' },
@@ -65,7 +65,7 @@ export async function signQuote(
         { name: 'salt', type: 'uint256' },
       ],
     },
-    primaryType: 'FillQuote',
+    primaryType: 'FillQuoteRFQ',
     domain,
     message,
   };
@@ -79,9 +79,9 @@ export async function calculateQuoteRFQHash(
   quoteRFQ: QuoteRFQ,
   poolAddress: string,
 ) {
-  const FILL_QUOTE_TYPE_HASH = keccak256(
+  const FILL_QUOTE_RFQ_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
+      'FillQuoteRFQ(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
   );
 
@@ -124,7 +124,7 @@ export async function calculateQuoteRFQHash(
         'uint256',
       ],
       [
-        FILL_QUOTE_TYPE_HASH,
+        FILL_QUOTE_RFQ_TYPE_HASH,
         quoteRFQ.provider,
         quoteRFQ.taker,
         quoteRFQ.price,

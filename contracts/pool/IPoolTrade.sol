@@ -21,11 +21,11 @@ interface IPoolTrade is IPoolInternal {
     ) external view returns (uint256 premiumNet, uint256 takerFee);
 
     /// @notice Functionality to support the RFQ / OTC system.
-    ///         An LP can create a quote for which he will do an OTC trade through
+    ///         An LP can create a RFQ quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote | 18 decimals
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
@@ -40,7 +40,7 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Execute a swap and fill an RFQ quote
     /// @param s The swap arguments
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote | 18 decimals
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
@@ -63,7 +63,7 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Fill an RFQ quote and then execute a swap
     /// @param s The swap arguments
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote | 18 decimals
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
@@ -152,14 +152,14 @@ interface IPoolTrade is IPoolInternal {
         );
 
     /// @notice Cancel given RFQ quotes
-    /// @dev No check is done to ensure the given hash correspond to a quote provider by msg.sender,
-    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a quote created by another provider
+    /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a RFQ quote created by another provider
     /// @param hashes The hashes of the RFQ quotes to cancel
     function cancelQuotesRFQ(bytes32[] calldata hashes) external;
 
     /// @notice Returns whether or not an RFQ quote is valid, given a fill size
     /// @param quoteRFQ The RFQ quote to check
-    /// @param size Size to fill from the quote | 18 decimals
+    /// @param size Size to fill from the RFQ quote | 18 decimals
     /// @param sig secp256k1 Signature
     function isQuoteRFQValid(
         QuoteRFQ memory quoteRFQ,
@@ -167,8 +167,8 @@ interface IPoolTrade is IPoolInternal {
         Signature memory sig
     ) external view returns (bool, InvalidQuoteRFQError);
 
-    /// @notice Returns the size already filled for a given quote
-    /// @param provider Provider of the quote
+    /// @notice Returns the size already filled for a given RFQ quote
+    /// @param provider Provider of the RFQ quote
     /// @param quoteRFQHash Hash of the RFQ quote
     /// @return The size already filled | 18 decimals
     function getQuoteRFQFilledAmount(
