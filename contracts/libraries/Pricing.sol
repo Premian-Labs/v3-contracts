@@ -39,9 +39,10 @@ library Pricing {
         UD60x18 upper,
         UD60x18 marketPrice
     ) internal pure returns (UD60x18) {
-        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper)
+            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
         if (lower > marketPrice || marketPrice > upper)
-            revert IPricing.Pricing__PriceOutOfRange();
+            revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPrice);
 
         return (marketPrice - lower) / (upper - lower);
     }
@@ -66,7 +67,8 @@ library Pricing {
         UD60x18 lower,
         UD60x18 upper
     ) internal pure returns (UD60x18) {
-        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper)
+            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
         return (upper - lower) / MIN_TICK_DISTANCE;
     }

@@ -7,22 +7,22 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
-    error PoolFactory__ZeroAddress();
     error PoolFactory__IdenticalAddresses();
-    error PoolFactory__InitializationFeeRequired();
-    error PoolFactory__InvalidMaturity();
-    error PoolFactory__InvalidStrike();
-    error PoolFactory__NegativeSpotPrice();
+    error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
     error PoolFactory__NotAuthorized();
-    error PoolFactory__OptionExpired();
-    error PoolFactory__OptionMaturityExceedsMax();
-    error PoolFactory__OptionMaturityNot8UTC();
-    error PoolFactory__OptionMaturityNotFriday();
-    error PoolFactory__OptionMaturityNotLastFriday();
+    error PoolFactory__OptionExpired(uint256 maturity);
+    error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
+    error PoolFactory__OptionMaturityNot8UTC(uint256 maturity);
+    error PoolFactory__OptionMaturityNotFriday(uint256 maturity);
+    error PoolFactory__OptionMaturityNotLastFriday(uint256 maturity);
     error PoolFactory__OptionStrikeEqualsZero();
-    error PoolFactory__OptionStrikeInvalid();
-    error PoolFactory__PoolAlreadyDeployed();
+    error PoolFactory__OptionStrikeInvalid(
+        UD60x18 strike,
+        UD60x18 strikeInterval
+    );
+    error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
+    error PoolFactory__ZeroAddress();
 
     struct PoolKey {
         // Address of base token

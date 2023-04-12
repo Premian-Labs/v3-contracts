@@ -1496,7 +1496,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         view
         returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
-        if (lower >= upper) revert Position__LowerGreaterOrEqualUpper();
+        if (lower >= upper)
+            revert Position__LowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
         nearestBelowUpper = _getNearestTickBelow(upper);

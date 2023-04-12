@@ -8,7 +8,7 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
-    error VolatilityOracle__RelayerNotWhitelisted();
+    error VolatilityOracle__RelayerNotWhitelisted(address sender);
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
