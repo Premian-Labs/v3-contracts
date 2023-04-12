@@ -10,25 +10,29 @@ import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
-    error Pool__AboveQuoteSize();
-    error Pool__AboveMaxSlippage();
-    error Pool__ErrorNotHandled();
+    error Pool__AboveQuoteSize(UD60x18 size, UD60x18 quoteSize);
+    error Pool__AboveMaxSlippage(
+        uint256 value,
+        uint256 minimum,
+        uint256 maximum
+    );
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
-    error Pool__InsufficientCollateralAllowance();
-    error Pool__InsufficientCollateralBalance();
     error Pool__InsufficientLiquidity();
-    error Pool__InsufficientLongBalance();
-    error Pool__InsufficientPermit();
-    error Pool__InsufficientShortBalance();
-    error Pool__InvalidAssetUpdate();
-    error Pool__InvalidBelowPrice();
-    error Pool__InvalidPermitRecipient();
-    error Pool__InvalidPermittedToken();
+    error Pool__InsufficientPermit(
+        uint256 requestedAmount,
+        uint256 permittedAmount
+    );
+    error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
+    error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
+    error Pool__InvalidPermittedToken(
+        address permittedToken,
+        address expectedToken
+    );
     error Pool__InvalidQuoteSignature();
     error Pool__InvalidQuoteTaker();
-    error Pool__InvalidRange();
-    error Pool__InvalidReconciliation();
+    error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
+    error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidTransfer();
     error Pool__InvalidSwapTokenIn();
     error Pool__InvalidSwapTokenOut();

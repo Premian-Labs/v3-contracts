@@ -978,7 +978,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             (delta.longs == iZERO && delta.shorts == iZERO) ||
             (delta.longs > iZERO && delta.shorts > iZERO) ||
             (delta.longs < iZERO && delta.shorts < iZERO)
-        ) revert Pool__InvalidAssetUpdate();
+        ) revert Pool__InvalidAssetUpdate(delta.longs, delta.shorts);
 
         // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
         // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
@@ -1060,7 +1060,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         internal
         returns (UD60x18 premiumTaker, Position.Delta memory deltaTaker)
     {
-        if (args.size > tradeQuote.size) revert Pool__AboveQuoteSize();
+        if (args.size > tradeQuote.size)
+            revert Pool__AboveQuoteSize(args.size, tradeQuote.size);
 
         bytes32 tradeQuoteHash;
         PremiumAndFeeInternal memory premiumAndFee;
@@ -1154,7 +1155,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address newOperator,
         UD60x18 size
     ) internal {
-        // ToDo : Add this logic into the ERC1155 transfer function
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 
@@ -1576,7 +1576,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             !l.tickIndex.contains(priceBelow) ||
             l.tickIndex.next(priceBelow) <= price
-        ) revert Pool__InvalidBelowPrice();
+        ) revert Pool__InvalidBelowPrice(price, priceBelow);
 
         tick = Tick({
             delta: iZERO,
@@ -1781,7 +1781,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 crossings++;
             }
 
-            if (crossings > 2) revert Pool__InvalidReconciliation();
+            if (crossings > 2) revert Pool__InvalidReconciliation(crossings);
         } else {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
@@ -2027,10 +2027,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal {
         if (permit.signature.length > 0) {
             if (permit.permittedToken != token)
-                revert Pool__InvalidPermittedToken();
+                revert Pool__InvalidPermittedToken(
+                    permit.permittedToken,
+                    token
+                );
 
             if (permit.permittedAmount < amount)
-                revert Pool__InsufficientPermit();
+                revert Pool__InsufficientPermit(amount, permit.permittedAmount);
 
             Permit2.permitTransferFrom(permit, owner, to, amount);
         } else {
@@ -2045,7 +2048,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower >= upper ||
             lower < Pricing.MIN_TICK_PRICE ||
             upper > Pricing.MAX_TICK_PRICE
-        ) revert Pool__InvalidRange();
+        ) revert Pool__InvalidRange(lower, upper);
     }
 
     function _ensureNonZeroSize(UD60x18 size) internal pure {
@@ -2073,9 +2076,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal pure {
         if (isBuy && totalPremium > premiumLimit)
-            revert Pool__AboveMaxSlippage();
+            revert Pool__AboveMaxSlippage(premiumLimit, 0, totalPremium);
         if (!isBuy && totalPremium < premiumLimit)
-            revert Pool__AboveMaxSlippage();
+            revert Pool__AboveMaxSlippage(
+                premiumLimit,
+                totalPremium,
+                type(uint256).max
+            );
     }
 
     function _ensureBelowDepositWithdrawMaxSlippage(
@@ -2084,7 +2091,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 maxMarketPrice
     ) internal pure {
         if (marketPrice > maxMarketPrice || marketPrice < minMarketPrice)
-            revert Pool__AboveMaxSlippage();
+            revert Pool__AboveMaxSlippage(
+                marketPrice.unwrap(),
+                minMarketPrice.unwrap(),
+                maxMarketPrice.unwrap()
+            );
     }
 
     function _areQuoteAndBalanceValid(
@@ -2093,7 +2104,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         TradeQuote memory tradeQuote,
         bytes32 tradeQuoteHash
     ) internal view returns (bool isValid, InvalidQuoteError error) {
-        (isValid, error) = _isQuoteValid(l, args, tradeQuote, tradeQuoteHash);
+        (isValid, error) = _isQuoteValid(
+            l,
+            args,
+            tradeQuote,
+            tradeQuoteHash,
+            false
+        );
         if (!isValid) {
             return (isValid, error);
         }
@@ -2106,57 +2123,47 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         TradeQuote memory tradeQuote,
         bytes32 tradeQuoteHash
     ) internal view {
-        (bool isValid, InvalidQuoteError error) = _isQuoteValid(
-            l,
-            args,
-            tradeQuote,
-            tradeQuoteHash
-        );
-
-        if (isValid) return;
-
-        if (error == InvalidQuoteError.QuoteExpired)
-            revert Pool__QuoteExpired();
-        if (error == InvalidQuoteError.QuoteCancelled)
-            revert Pool__QuoteCancelled();
-        if (error == InvalidQuoteError.QuoteOverfilled)
-            revert Pool__QuoteOverfilled();
-        if (error == InvalidQuoteError.OutOfBoundsPrice)
-            revert Pool__OutOfBoundsPrice();
-        if (error == InvalidQuoteError.InvalidQuoteTaker)
-            revert Pool__InvalidQuoteTaker();
-        if (error == InvalidQuoteError.InvalidQuoteSignature)
-            revert Pool__InvalidQuoteSignature();
-
-        revert Pool__ErrorNotHandled();
+        _isQuoteValid(l, args, tradeQuote, tradeQuoteHash, true);
     }
 
     function _isQuoteValid(
         PoolStorage.Layout storage l,
         FillQuoteArgsInternal memory args,
         TradeQuote memory tradeQuote,
-        bytes32 tradeQuoteHash
+        bytes32 tradeQuoteHash,
+        bool revertIfInvalid
     ) internal view returns (bool, InvalidQuoteError) {
-        if (block.timestamp > tradeQuote.deadline)
+        if (block.timestamp > tradeQuote.deadline) {
+            if (revertIfInvalid) revert Pool__QuoteExpired();
             return (false, InvalidQuoteError.QuoteExpired);
+        }
 
         UD60x18 filledAmount = l.tradeQuoteAmountFilled[tradeQuote.provider][
             tradeQuoteHash
         ];
 
-        if (filledAmount.unwrap() == type(uint256).max)
+        if (filledAmount.unwrap() == type(uint256).max) {
+            if (revertIfInvalid) revert Pool__QuoteCancelled();
             return (false, InvalidQuoteError.QuoteCancelled);
+        }
 
-        if (filledAmount + args.size > tradeQuote.size)
+        if (filledAmount + args.size > tradeQuote.size) {
+            if (revertIfInvalid) revert Pool__QuoteOverfilled();
             return (false, InvalidQuoteError.QuoteOverfilled);
+        }
 
         if (
             Pricing.MIN_TICK_PRICE > tradeQuote.price ||
             tradeQuote.price > Pricing.MAX_TICK_PRICE
-        ) return (false, InvalidQuoteError.OutOfBoundsPrice);
+        ) {
+            if (revertIfInvalid) revert Pool__OutOfBoundsPrice();
+            return (false, InvalidQuoteError.OutOfBoundsPrice);
+        }
 
-        if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker)
+        if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker) {
+            if (revertIfInvalid) revert Pool__InvalidQuoteTaker();
             return (false, InvalidQuoteError.InvalidQuoteTaker);
+        }
 
         address signer = ECDSA.recover(
             tradeQuoteHash,
@@ -2164,8 +2171,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.signature.r,
             args.signature.s
         );
-        if (signer != tradeQuote.provider)
+        if (signer != tradeQuote.provider) {
+            if (revertIfInvalid) revert Pool__InvalidQuoteSignature();
             return (false, InvalidQuoteError.InvalidQuoteSignature);
+        }
 
         return (true, InvalidQuoteError.None);
     }
