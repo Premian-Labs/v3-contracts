@@ -321,7 +321,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         quoteRFQ.size = FIVE;
         quoteRFQ.isBuy = true;
-        IPoolInternal.Signature memory sig = signQuote(quoteRFQ);
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         vm.startPrank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
@@ -371,7 +371,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         quoteRFQ.size = THREE;
         quoteRFQ.isBuy = false;
-        sig = signQuote(quoteRFQ);
+        sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
