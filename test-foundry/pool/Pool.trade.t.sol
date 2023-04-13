@@ -21,7 +21,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
 
         address poolToken = getPoolToken(isCall);
 
@@ -54,7 +54,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
 
@@ -85,7 +85,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -136,7 +136,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -208,7 +208,7 @@ abstract contract PoolTradeTest is DeployTest {
         address swapToken = getSwapToken(isCall);
 
         UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
-        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, true);
+        (uint256 totalPremium0, ) = pool.getQuoteAMM(tradeSize0, true);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, totalPremium0);
@@ -234,7 +234,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
         uint256 swapQuote = getSwapQuoteExactInput(
             poolToken,
@@ -320,7 +320,7 @@ abstract contract PoolTradeTest is DeployTest {
         address swapToken = getSwapToken(isCall);
 
         UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
-        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, false);
+        (uint256 totalPremium0, ) = pool.getQuoteAMM(tradeSize0, false);
 
         uint256 traderCollateral0 = scaleDecimals(
             contractsToCollateral(tradeSize0, isCall),
@@ -369,7 +369,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, true);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
 
         uint256 swapQuote = getSwapQuoteExactInput(
             poolToken,
@@ -458,7 +458,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
@@ -520,7 +520,7 @@ abstract contract PoolTradeTest is DeployTest {
         address swapToken = getSwapToken(isCall);
 
         UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
-        (uint256 totalPremium0, ) = pool.getTradeQuote(tradeSize0, true);
+        (uint256 totalPremium0, ) = pool.getQuoteAMM(tradeSize0, true);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, totalPremium0);
@@ -541,7 +541,7 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getTradeQuote(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
         deal(poolToken, users.trader, collateralScaled);
         IERC20(poolToken).approve(address(router), collateralScaled);

@@ -67,8 +67,8 @@ library PoolStorage {
         UD60x18 settlementPrice;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Size of quotes already filled (provider -> quoteHash -> amountFilled)
-        mapping(address => mapping(bytes32 => UD60x18)) tradeQuoteAmountFilled;
+        // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
+        mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }

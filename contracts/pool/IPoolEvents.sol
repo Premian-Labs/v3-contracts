@@ -44,8 +44,8 @@ interface IPoolEvents {
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
-    event FillQuote(
-        bytes32 indexed tradeQuoteHash,
+    event FillQuoteRFQ(
+        bytes32 indexed quoteRFQHash,
         address indexed user,
         address indexed provider,
         UD60x18 contractSize,
@@ -113,5 +113,5 @@ interface IPoolEvents {
         uint256 destTokenId
     );
 
-    event CancelTradeQuote(address indexed provider, bytes32 tradeQuoteHash);
+    event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
 }
