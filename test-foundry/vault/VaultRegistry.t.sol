@@ -3,7 +3,6 @@
 pragma solidity >=0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console.sol";
 
 import {Assertions} from "../Assertions.sol";
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
@@ -19,96 +18,161 @@ contract VaultRegistryHarness is VaultRegistry {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.settings[vaultType].length != 0;
     }
+
+    function hasImplementation(bytes32 vaultType) external view returns (bool) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return l.implementations[vaultType] != address(0);
+    }
 }
 
 contract VaultRegistryTest is Test, Assertions {
+    // Events
+    event VaultAdded(
+        address indexed vault,
+        bytes32 vaultType,
+        IVaultRegistry.TradeSide side,
+        IVaultRegistry.OptionType optionType
+    );
+
+    event VaultRemoved(address indexed vault);
+
+    // Variables
     address deployer;
     address user = address(1);
     bytes32 vaultType = keccak256("NewVaultWhoDis");
-    VaultRegistry registryImpl;
-    ProxyUpgradeableOwnable registry;
+    VaultRegistryHarness registry;
 
     function setUp() public {
         deployer = msg.sender;
         vm.startPrank(deployer);
 
         // 1. Create registry implementation
-        registryImpl = new VaultRegistryHarness();
+        VaultRegistryHarness impl = new VaultRegistryHarness();
 
         // 2. Create registry proxy
-        registry = new ProxyUpgradeableOwnable(address(registryImpl));
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(
+            address(impl)
+        );
+
+        registry = VaultRegistryHarness(address(proxy));
 
         vm.stopPrank();
     }
 
-    function test_setup() public {
+    function test_setUp() public {
         assert(address(registry) != address(0));
 
-        assertEq(IVaultRegistry(address(registry)).getNumberOfVaults(), 0);
+        assertEq(registry.getNumberOfVaults(), 0);
     }
 
-    function test_addVault() public {
+    function test_getNumberOfVaults() public {
+        uint256 n = registry.getNumberOfVaults();
+        assertEq(n, 0);
+
+        // Add a vault
         vm.prank(deployer);
-        IVaultRegistry(address(registry)).addVault(
-            address(123),
-            keccak256("NewVaultWhoDis"),
+        registry.addVault(
+            address(10),
+            vaultType,
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Call
         );
 
-        assertEq(IVaultRegistry(address(registry)).getNumberOfVaults(), 1);
+        n = registry.getNumberOfVaults();
+        assertEq(n, 1);
+
+        // Add another vault
+        vm.prank(deployer);
+        registry.addVault(
+            address(11),
+            vaultType,
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Call
+        );
+
+        n = registry.getNumberOfVaults();
+        assertEq(n, 2);
+
+        // Remove a vault
+        vm.prank(deployer);
+        registry.removeVault(address(11));
+
+        n = registry.getNumberOfVaults();
+        assertEq(n, 1);
+    }
+
+    function test_addVault() public {
+        vm.prank(deployer);
+        registry.addVault(
+            address(123),
+            vaultType,
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Call
+        );
+
+        assertEq(registry.getNumberOfVaults(), 1);
     }
 
     function test_addVault_revertIf_NotOwner() public {
         vm.prank(user);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        IVaultRegistry(address(registry)).addVault(
+        registry.addVault(
             address(123),
-            keccak256("NewVaultWhoDis"),
+            vaultType,
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Call
         );
     }
 
     function test_removeVault() public {
-        vm.prank(deployer);
-        IVaultRegistry(address(registry)).addVault(
+        vm.startPrank(deployer);
+
+        // Add vault to registry
+        vm.expectEmit(true, true, true, true, address(registry));
+        emit VaultAdded(
             address(123),
-            keccak256("NewVaultWhoDis"),
+            vaultType,
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Call
         );
 
-        assertEq(IVaultRegistry(address(registry)).getNumberOfVaults(), 1);
+        registry.addVault(
+            address(123),
+            vaultType,
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Call
+        );
 
-        vm.prank(deployer);
-        IVaultRegistry(address(registry)).removeVault(address(123));
-        assertEq(IVaultRegistry(address(registry)).getNumberOfVaults(), 0);
+        assertEq(registry.getNumberOfVaults(), 1);
+
+        // Remove vault from registry
+        registry.removeVault(address(123));
+        assertEq(registry.getNumberOfVaults(), 0);
     }
 
     function test_removeVault_revertIf_NotOwner() public {
         vm.prank(deployer);
-        IVaultRegistry(address(registry)).addVault(
+        registry.addVault(
             address(123),
-            keccak256("NewVaultWhoDis"),
+            vaultType,
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Call
         );
 
-        assertEq(IVaultRegistry(address(registry)).getNumberOfVaults(), 1);
+        assertEq(registry.getNumberOfVaults(), 1);
 
         vm.prank(user);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        IVaultRegistry(address(registry)).removeVault(address(123));
+        registry.removeVault(address(123));
     }
 
     function test_updateSettings() public {
         bytes memory settings = abi.encode("1) What", "2) H", 9000000000, 0);
 
         vm.prank(deployer);
-        IVaultRegistry(address(registry)).updateSettings(vaultType, settings);
+        registry.updateSettings(vaultType, settings);
 
-        assert(VaultRegistryHarness(address(registry)).hasSettings(vaultType));
+        assert(registry.hasSettings(vaultType));
     }
 
     function test_updateSettings_revertIf_NotOwner() public {
@@ -116,21 +180,19 @@ contract VaultRegistryTest is Test, Assertions {
 
         vm.prank(user);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        IVaultRegistry(address(registry)).updateSettings(vaultType, settings);
+        registry.updateSettings(vaultType, settings);
 
-        assert(!VaultRegistryHarness(address(registry)).hasSettings(vaultType));
+        assert(!registry.hasSettings(vaultType));
     }
 
     function test_getSettings() public {
         bytes memory settings = abi.encode("1) What", "2) H", 9000000000, 0);
 
         vm.prank(deployer);
-        IVaultRegistry(address(registry)).updateSettings(vaultType, settings);
+        registry.updateSettings(vaultType, settings);
 
         vm.prank(user);
-        settings = VaultRegistryHarness(address(registry)).getSettings(
-            vaultType
-        );
+        settings = registry.getSettings(vaultType);
 
         (
             string memory word1,
@@ -143,5 +205,30 @@ contract VaultRegistryTest is Test, Assertions {
         assertEq(word2, "2) H");
         assertEq(num1, 9000000000);
         assertEq(num2, 0);
+    }
+
+    function test_setImplementation() public {
+        vm.prank(deployer);
+        registry.setImplementation(vaultType, address(123));
+
+        assert(registry.hasImplementation(vaultType));
+    }
+
+    function test_setImplementation_revertIf_NotOwner() public {
+        vm.prank(user);
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        registry.setImplementation(vaultType, address(123));
+
+        assert(!registry.hasImplementation(vaultType));
+    }
+
+    function test_getImplementation() public {
+        vm.prank(deployer);
+        registry.setImplementation(vaultType, address(123));
+
+        vm.prank(user);
+        address impl = registry.getImplementation(vaultType);
+
+        assertEq(impl, address(123));
     }
 }

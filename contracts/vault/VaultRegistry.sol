@@ -26,8 +26,6 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        // TODO: test to make sure settings update works for already existing instances
-
         l.vaults[_vault] = Vault(_vault, vaultType, side, optionType);
 
         l.vaultAddresses.add(_vault);
@@ -35,7 +33,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         l.vaultsByTradeSide[side].add(_vault);
         l.vaultsByOptionType[optionType].add(_vault);
 
-        emit VaultAdded(_vault, side, optionType);
+        emit VaultAdded(_vault, vaultType, side, optionType);
     }
 
     function removeVault(address _vaultAddress) public onlyOwner {
@@ -70,33 +68,32 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         return vaultsToReturn;
     }
 
-    function getVaults(
+    function getVaultsByFilter(
         TradeSide[] memory sides,
         OptionType[] memory optionTypes
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        uint256 length = l.vaultAddresses.length();
-        Vault[] memory vaultsToReturn = new Vault[](length);
+        uint256 n = l.vaultAddresses.length();
+        Vault[] memory vaults = new Vault[](n);
 
-        uint256 index = 0;
-        bool breakToVaultAddress;
-        for (uint256 i = 0; i < l.vaultAddresses.length(); i++) {
-            address _vaultAddress = l.vaultAddresses.at(i);
-            Vault memory _vault = l.vaults[_vaultAddress];
+        uint256 index;
 
-            breakToVaultAddress = false;
+        for (uint256 i = 0; i < n; i++) {
+            Vault memory vault = l.vaults[l.vaultAddresses.at(i)];
+
+            bool isDone = false;
 
             for (uint256 j = 0; j < sides.length; j++) {
-                if (breakToVaultAddress) break;
+                if (isDone) break;
 
-                if (_vault.side == sides[j]) {
+                if (vault.side == sides[j]) {
                     for (uint256 k = 0; k < optionTypes.length; k++) {
-                        if (_vault.optionType == optionTypes[k]) {
-                            vaultsToReturn[index] = _vault;
+                        if (vault.optionType == optionTypes[k]) {
+                            vaults[index] = vault;
                             index++;
 
-                            breakToVaultAddress = true;
+                            isDone = true;
                             break;
                         }
                     }
@@ -105,16 +102,13 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         }
 
         // Remove empty elements from array
-        if (index < length) {
+        if (index < n) {
             assembly {
-                mstore(
-                    vaultsToReturn,
-                    sub(mload(vaultsToReturn), sub(length, index))
-                )
+                mstore(vaults, sub(mload(vaults), sub(n, index)))
             }
         }
 
-        return vaultsToReturn;
+        return vaults;
     }
 
     function getSettings(
@@ -149,7 +143,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     function setImplementation(
         bytes32 vaultType,
         address implementation
-    ) external {
+    ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         l.implementations[vaultType] = implementation;
     }

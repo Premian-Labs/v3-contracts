@@ -26,6 +26,7 @@ interface IVaultRegistry {
     // Events
     event VaultAdded(
         address indexed vault,
+        bytes32 vaultType,
         TradeSide side,
         OptionType optionType
     );
@@ -51,7 +52,7 @@ interface IVaultRegistry {
 
     function getVaults() external view returns (Vault[] memory);
 
-    function getVaults(
+    function getVaultsByFilter(
         TradeSide[] memory sides,
         OptionType[] memory optionTypes
     ) external view returns (Vault[] memory);
