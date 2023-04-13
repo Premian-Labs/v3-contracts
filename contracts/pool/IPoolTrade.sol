@@ -13,11 +13,12 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Gives a quote for a trade
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
-    /// @return The premium which has to be paid to complete the trade | poolToken decimals
+    /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) | poolToken decimals
+    /// @return takerFee The taker fees to pay (Included in `premiumNet`) | poolToken decimals
     function getTradeQuote(
         UD60x18 size,
         bool isBuy
-    ) external view returns (uint256);
+    ) external view returns (uint256 premiumNet, uint256 takerFee);
 
     /// @notice Functionality to support the RFQ / OTC system.
     ///         An LP can create a quote for which he will do an OTC trade through
@@ -25,14 +26,65 @@ interface IPoolTrade is IPoolInternal {
     ///         fully while having the price guaranteed.
     /// @param tradeQuote The quote given by the provider
     /// @param size The size to fill from the quote | 18 decimals
-    /// @param signature  secp256k1 concatenated 'r', 's', and 'v' value
+    /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
+    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuote(
         TradeQuote memory tradeQuote,
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
-    ) external;
+    ) external returns (uint256 premiumTaker, Position.Delta memory delta);
+
+    /// @notice Execute a swap and fill an RFQ quote
+    /// @param s The swap arguments
+    /// @param tradeQuote The quote given by the provider
+    /// @param size The size to fill from the quote | 18 decimals
+    /// @param signature secp256k1 'r', 's', and 'v' value
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
+    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap | poolToken decimals
+    function swapAndFillQuote(
+        IPoolInternal.SwapArgs memory s,
+        TradeQuote memory tradeQuote,
+        UD60x18 size,
+        Signature memory signature,
+        Permit2.Data memory permit
+    )
+        external
+        returns (
+            uint256 premiumTaker,
+            Position.Delta memory delta,
+            uint256 swapOutAmount
+        );
+
+    /// @notice Fill an RFQ quote and then execute a swap
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
+    /// @param s The swap arguments
+    /// @param tradeQuote The quote given by the provider
+    /// @param size The size to fill from the quote | 18 decimals
+    /// @param signature secp256k1 'r', 's', and 'v' value
+    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
+    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return delta The net collateral / longs / shorts change for taker of the trade.
+    /// @return collateralReceived The amount of collateral received by the taker | collateral decimals
+    /// @return tokenOutReceived The amount of tokenOut received by the taker | tokenOut decimals
+    function fillQuoteAndSwap(
+        IPoolInternal.SwapArgs memory s,
+        TradeQuote memory tradeQuote,
+        UD60x18 size,
+        Signature memory signature,
+        Permit2.Data memory permit
+    )
+        external
+        returns (
+            uint256 premiumTaker,
+            Position.Delta memory delta,
+            uint256 collateralReceived,
+            uint256 tokenOutReceived
+        );
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -47,7 +99,7 @@ interface IPoolTrade is IPoolInternal {
         bool isBuy,
         uint256 premiumLimit,
         Permit2.Data memory permit
-    ) external returns (uint256 totalPremium, Delta memory delta);
+    ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -70,12 +122,13 @@ interface IPoolTrade is IPoolInternal {
         payable
         returns (
             uint256 totalPremium,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 swapOutAmount
         );
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
+    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param size The number of contracts being traded | 18 decimals
     /// @param isBuy Whether the taker is buying or selling
@@ -95,7 +148,7 @@ interface IPoolTrade is IPoolInternal {
         external
         returns (
             uint256 totalPremium,
-            Delta memory delta,
+            Position.Delta memory delta,
             uint256 collateralReceived,
             uint256 tokenOutReceived
         );

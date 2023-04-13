@@ -92,6 +92,10 @@ export default {
     }),
   },
   networks: {
+    anvil: {
+      url: `http://127.0.0.1:8545`,
+      accounts: [pkeyTestnet],
+    },
     hardhat: {
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,

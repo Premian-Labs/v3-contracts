@@ -6,7 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
-import {IPool} from "contracts/pool/IPool.sol";
+import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
@@ -17,6 +17,6 @@ contract PoolCallTest is PoolTest {
         super.setUp();
 
         poolKey.isCallPool = true;
-        pool = IPool(factory.deployPool{value: 1 ether}(poolKey));
+        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
     }
 }
