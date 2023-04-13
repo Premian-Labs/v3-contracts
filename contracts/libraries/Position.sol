@@ -29,9 +29,9 @@ library Position {
         address owner;
         // The Agent that can control modifications to the Position
         address operator;
-        // The lower tick normalized price of the range order | 18 decimals
+        // The lower tick normalized price of the range order (18 decimals)
         UD60x18 lower;
-        // The upper tick normalized price of the range order | 18 decimals
+        // The upper tick normalized price of the range order (18 decimals)
         UD60x18 upper;
         OrderType orderType;
     }
@@ -42,22 +42,22 @@ library Position {
         address owner;
         // The Agent that can control modifications to the Position
         address operator;
-        // The lower tick normalized price of the range order | 18 decimals
+        // The lower tick normalized price of the range order (18 decimals)
         UD60x18 lower;
-        // The upper tick normalized price of the range order | 18 decimals
+        // The upper tick normalized price of the range order (18 decimals)
         UD60x18 upper;
         OrderType orderType;
         // ---- Values under are not used to compute the key hash but are included in this struct to reduce stack depth
         bool isCall;
-        // The option strike | 18 decimals
+        // The option strike (18 decimals)
         UD60x18 strike;
     }
 
     // All the data required to be saved in storage
     struct Data {
-        // Used to track claimable fees over time | 18 decimals
+        // Used to track claimable fees over time (18 decimals)
         UD60x18 lastFeeRate;
-        // The amount of fees a user can claim now. Resets after claim | 18 decimals
+        // The amount of fees a user can claim now. Resets after claim (18 decimals)
         UD60x18 claimableFees;
         // The timestamp of the last deposit. Used to enforce withdrawal delay
         uint256 lastDeposit;
@@ -298,10 +298,10 @@ library Position {
     ///         decreases them. Returns the change in collateral, longs, shorts.
     ///         These are transferred to (withdrawal) or transferred from (deposit)
     ///         the Agent (Position.operator).
-    /// @param currentBalance The current balance of tokens | 18 decimals
-    /// @param amount The number of tokens deposited or withdrawn | 18 decimals
+    /// @param currentBalance The current balance of tokens (18 decimals)
+    /// @param amount The number of tokens deposited or withdrawn (18 decimals)
     /// @param price The current market price, used to compute the change in
-    ///              collateral, long and shorts due to the change in tokens | 18 decimals
+    ///              collateral, long and shorts due to the change in tokens (18 decimals)
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         KeyInternal memory self,
