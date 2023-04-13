@@ -1,5 +1,5 @@
 import { signData } from './rpc';
-import { TradeQuote } from './types';
+import { QuoteRFQ } from './types';
 import { Provider } from '@ethersproject/providers';
 import {
   defaultAbiCoder,
@@ -8,7 +8,7 @@ import {
   toUtf8Bytes,
 } from 'ethers/lib/utils';
 
-interface QuoteMessage {
+interface QuoteRFQMessage {
   provider: string;
   taker: string;
   price: string;
@@ -32,10 +32,10 @@ const EIP712Domain = [
   { name: 'verifyingContract', type: 'address' },
 ];
 
-export async function signQuote(
+export async function signQuoteRFQ(
   w3Provider: Provider,
   poolAddress: string,
-  quote: TradeQuote,
+  quoteRFQ: QuoteRFQ,
 ) {
   const domain: Domain = {
     name: 'Premia',
@@ -44,18 +44,18 @@ export async function signQuote(
     verifyingContract: poolAddress,
   };
 
-  const message: QuoteMessage = {
-    ...quote,
-    price: quote.price.toString(),
-    size: quote.size.toString(),
-    deadline: quote.deadline.toString(),
-    salt: quote.salt.toString(),
+  const message: QuoteRFQMessage = {
+    ...quoteRFQ,
+    price: quoteRFQ.price.toString(),
+    size: quoteRFQ.size.toString(),
+    deadline: quoteRFQ.deadline.toString(),
+    salt: quoteRFQ.salt.toString(),
   };
 
   const typedData = {
     types: {
       EIP712Domain,
-      FillQuote: [
+      FillQuoteRFQ: [
         { name: 'provider', type: 'address' },
         { name: 'taker', type: 'address' },
         { name: 'price', type: 'uint256' },
@@ -65,23 +65,23 @@ export async function signQuote(
         { name: 'salt', type: 'uint256' },
       ],
     },
-    primaryType: 'FillQuote',
+    primaryType: 'FillQuoteRFQ',
     domain,
     message,
   };
-  const sig = await signData(w3Provider, quote.provider, typedData);
+  const sig = await signData(w3Provider, quoteRFQ.provider, typedData);
 
   return { ...sig, ...message };
 }
 
-export async function calculateQuoteHash(
+export async function calculateQuoteRFQHash(
   w3Provider: Provider,
-  quote: TradeQuote,
+  quoteRFQ: QuoteRFQ,
   poolAddress: string,
 ) {
-  const FILL_QUOTE_TYPE_HASH = keccak256(
+  const FILL_QUOTE_RFQ_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuote(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
+      'FillQuoteRFQ(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
   );
 
@@ -124,14 +124,14 @@ export async function calculateQuoteHash(
         'uint256',
       ],
       [
-        FILL_QUOTE_TYPE_HASH,
-        quote.provider,
-        quote.taker,
-        quote.price,
-        quote.size,
-        quote.isBuy,
-        quote.deadline,
-        quote.salt,
+        FILL_QUOTE_RFQ_TYPE_HASH,
+        quoteRFQ.provider,
+        quoteRFQ.taker,
+        quoteRFQ.price,
+        quoteRFQ.size,
+        quoteRFQ.isBuy,
+        quoteRFQ.deadline,
+        quoteRFQ.salt,
       ],
     ),
   );

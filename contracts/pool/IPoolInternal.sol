@@ -10,7 +10,7 @@ import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
-    error Pool__AboveQuoteSize();
+    error Pool__AboveQuoteRFQSize();
     error Pool__AboveMaxSlippage();
     error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
@@ -25,8 +25,8 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidBelowPrice();
     error Pool__InvalidPermitRecipient();
     error Pool__InvalidPermittedToken();
-    error Pool__InvalidQuoteSignature();
-    error Pool__InvalidQuoteTaker();
+    error Pool__InvalidQuoteRFQSignature();
+    error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange();
     error Pool__InvalidReconciliation();
     error Pool__InvalidTransfer();
@@ -48,9 +48,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
-    error Pool__QuoteCancelled();
-    error Pool__QuoteExpired();
-    error Pool__QuoteOverfilled();
+    error Pool__QuoteRFQCancelled();
+    error Pool__QuoteRFQExpired();
+    error Pool__QuoteRFQOverfilled();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
@@ -71,9 +71,9 @@ interface IPoolInternal is IPosition, IPricing {
         address tokenIn;
         // Token result from the swap (Must be poolToken for `swapAndDeposit` / `swapAndTrade`)
         address tokenOut;
-        // amount of tokenIn to trade | poolToken decimals
+        // amount of tokenIn to trade (poolToken decimals)
         uint256 amountInMax;
-        // min amount out to be used to purchase | poolToken decimals
+        // min amount out to be used to purchase (poolToken decimals)
         uint256 amountOutMin;
         // exchange address to call to execute the trade
         address callee;
@@ -85,31 +85,31 @@ interface IPoolInternal is IPosition, IPricing {
         address refundAddress;
     }
 
-    struct TradeQuote {
-        // The provider of the quote
+    struct QuoteRFQ {
+        // The provider of the RFQ quote
         address provider;
-        // The taker of the quote (address(0) if quote should be usable by anyone)
+        // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
         address taker;
-        // The normalized option price | 18 decimals
+        // The normalized option price (18 decimals)
         UD60x18 price;
-        // The max size | 18 decimals
+        // The max size (18 decimals)
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // Timestamp until which the quote is valid
+        // Timestamp until which the RFQ quote is valid
         uint256 deadline;
-        // Salt to make quote unique
+        // Salt to make RFQ quote unique
         uint256 salt;
     }
 
-    enum InvalidQuoteError {
+    enum InvalidQuoteRFQError {
         None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
+        QuoteRFQExpired,
+        QuoteRFQCancelled,
+        QuoteRFQOverfilled,
         OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
+        InvalidQuoteRFQTaker,
+        InvalidQuoteRFQSignature,
         InvalidAssetUpdate,
         InsufficientCollateralAllowance,
         InsufficientCollateralBalance,
@@ -124,19 +124,20 @@ interface IPoolInternal is IPosition, IPricing {
     struct TradeArgsInternal {
         // The account doing the trade
         address user;
-        // The number of contracts being traded | 18 decimals
+        // The number of contracts being traded (18 decimals)
         UD60x18 size;
         // Whether the taker is buying or selling
         bool isBuy;
-        // Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+        // Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
         uint256 premiumLimit;
-        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap (poolToken decimals)
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;
     }
 
     struct TradeVarsInternal {
+        UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
         UD60x18 longDelta;
@@ -144,17 +145,17 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct DepositArgsInternal {
-        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
         UD60x18 belowLower;
-        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas | 18 decimals
+        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
         UD60x18 belowUpper;
-        // The position size to deposit | 18 decimals
+        // The position size to deposit (18 decimals)
         UD60x18 size;
-        // minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
+        // minMarketPrice Min market price, as normalized value. (If below, tx will revert) (18 decimals)
         UD60x18 minMarketPrice;
-        // maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+        // maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
         UD60x18 maxMarketPrice;
-        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap | poolToken decimals
+        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap (poolToken decimals)
         uint256 collateralCredit;
         // The address to which refund excess credit
         address refundAddress;
@@ -174,14 +175,14 @@ interface IPoolInternal is IPosition, IPricing {
         bytes32 s;
     }
 
-    struct FillQuoteArgsInternal {
-        // The user filling the quote
+    struct FillQuoteRFQArgsInternal {
+        // The user filling the RFQ quote
         address user;
-        // The size to fill from the quote | 18 decimals
+        // The size to fill from the RFQ quote (18 decimals)
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Amount already credited before the _fillQuote function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        // Amount already credited before the _fillQuoteRFQ function call. In case of a `swapAndTrade` this would be the amount resulting from the swap (poolToken decimals)
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;

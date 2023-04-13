@@ -67,8 +67,8 @@ library PoolStorage {
         UD60x18 settlementPrice;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Size of quotes already filled (provider -> quoteHash -> amountFilled)
-        mapping(address => mapping(bytes32 => UD60x18)) tradeQuoteAmountFilled;
+        // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
+        mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
     }
@@ -157,8 +157,8 @@ library PoolStorage {
 
     /// @notice calculate ERC1155 token id for given option parameters
     /// @param operator The current operator of the position
-    /// @param lower The lower bound normalized option price | 18 decimals
-    /// @param upper The upper bound normalized option price | 18 decimals
+    /// @param lower The lower bound normalized option price (18 decimals)
+    /// @param upper The upper bound normalized option price (18 decimals)
     /// @return tokenId token id
     function formatTokenId(
         address operator,
@@ -178,8 +178,8 @@ library PoolStorage {
     /// @param tokenId token id
     /// @return version The version of LP token, used to know how to decode it, if upgrades are made
     /// @return operator The current operator of the position
-    /// @return lower The lower bound normalized option price | 18 decimals
-    /// @return upper The upper bound normalized option price | 18 decimals
+    /// @return lower The lower bound normalized option price (18 decimals)
+    /// @return upper The upper bound normalized option price (18 decimals)
     function parseTokenId(
         uint256 tokenId
     )
