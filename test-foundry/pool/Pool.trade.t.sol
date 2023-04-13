@@ -198,7 +198,7 @@ abstract contract PoolTradeTest is DeployTest {
         _test_swapAndTrade_RevertIf_InvalidSwapTokenOut(poolKey.isCallPool);
     }
 
-    function _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(
+    function _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenSellingLongs(
         bool isCall
     ) internal {
         posKey.orderType = Position.OrderType.CS;
@@ -297,8 +297,154 @@ abstract contract PoolTradeTest is DeployTest {
         );
     }
 
-    function test_tradeAndSwap_Swap_IfPositiveDeltaCollateral() public {
-        _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral(poolKey.isCallPool);
+    function test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenSellingLongs()
+        public
+    {
+        _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenSellingLongs(
+            poolKey.isCallPool
+        );
+    }
+
+    function _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenClosingShorts(
+        bool isCall
+    ) internal {
+        posKey.orderType = Position.OrderType.LC;
+        deposit(1000 ether);
+
+        uint256 initialPoolCollateral = scaleDecimals(
+            contractsToCollateral(UD60x18.wrap(200 ether), isCall),
+            isCall
+        );
+
+        address poolToken = getPoolToken(isCall);
+        address swapToken = getSwapToken(isCall);
+
+        UD60x18 tradeSize0 = UD60x18.wrap(500 ether);
+        (uint256 totalPremium0, ) = pool.getQuoteAMM(tradeSize0, false);
+
+        uint256 traderCollateral0 = scaleDecimals(
+            contractsToCollateral(tradeSize0, isCall),
+            isCall
+        );
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, traderCollateral0);
+        IERC20(poolToken).approve(address(router), traderCollateral0);
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            initialPoolCollateral,
+            "pool token 0"
+        );
+
+        pool.trade(
+            tradeSize0,
+            false,
+            totalPremium0 - totalPremium0 / 10,
+            Permit2.emptyPermit()
+        );
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize0);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize0);
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            initialPoolCollateral + traderCollateral0 - totalPremium0,
+            "pool token 0"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            totalPremium0,
+            "poolToken trader 0"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            0,
+            "swapToken trader 0"
+        );
+
+        //
+
+        UD60x18 tradeSize = UD60x18.wrap(300 ether);
+        uint256 traderCollateral = scaleDecimals(
+            contractsToCollateral(tradeSize, isCall),
+            isCall
+        );
+
+        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
+
+        uint256 swapQuote = getSwapQuoteExactInput(
+            poolToken,
+            swapToken,
+            traderCollateral - totalPremium
+        );
+
+        {
+            IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
+                poolToken,
+                swapToken,
+                traderCollateral - totalPremium,
+                swapQuote,
+                users.trader
+            );
+
+            (, Position.Delta memory delta, , ) = pool.tradeAndSwap(
+                swapArgs,
+                tradeSize,
+                true,
+                totalPremium + totalPremium / 10,
+                Permit2.emptyPermit()
+            );
+
+            assertGt(delta.collateral.unwrap(), 0);
+        }
+
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            tradeSize0 - tradeSize,
+            "trader short"
+        );
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            0,
+            "trader long"
+        );
+        assertEq(
+            pool.balanceOf(address(pool), PoolStorage.LONG),
+            tradeSize0 - tradeSize,
+            "pool long"
+        );
+        assertEq(
+            pool.balanceOf(address(pool), PoolStorage.SHORT),
+            0,
+            "pool short"
+        );
+
+        assertEq(
+            IERC20(poolToken).balanceOf(address(pool)),
+            initialPoolCollateral +
+                traderCollateral0 -
+                totalPremium0 -
+                traderCollateral +
+                totalPremium,
+            "pool token"
+        );
+        assertEq(
+            IERC20(poolToken).balanceOf(users.trader),
+            totalPremium0,
+            "poolToken trader"
+        );
+        assertEq(
+            IERC20(swapToken).balanceOf(users.trader),
+            swapQuote,
+            "swapToken trader"
+        );
+    }
+
+    function test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenClosingShorts()
+        public
+    {
+        _test_tradeAndSwap_Swap_IfPositiveDeltaCollateral_WhenClosingShorts(
+            poolKey.isCallPool
+        );
     }
 
     function _test_tradeAndSwap_NotSwap_IfNegativeDeltaCollateral(

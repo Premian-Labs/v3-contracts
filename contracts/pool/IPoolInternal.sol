@@ -10,7 +10,7 @@ import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
-    error Pool__AboveQuoteSize();
+    error Pool__AboveQuoteRFQSize();
     error Pool__AboveMaxSlippage();
     error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
@@ -85,9 +85,9 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct QuoteRFQ {
-        // The provider of the quote
+        // The provider of the RFQ quote
         address provider;
-        // The taker of the quote (address(0) if quote should be usable by anyone)
+        // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
         address taker;
         // The normalized option price | 18 decimals
         UD60x18 price;
@@ -95,20 +95,20 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // Timestamp until which the quote is valid
+        // Timestamp until which the RFQ quote is valid
         uint256 deadline;
-        // Salt to make quote unique
+        // Salt to make RFQ quote unique
         uint256 salt;
     }
 
     enum InvalidQuoteRFQError {
         None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
+        QuoteRFQExpired,
+        QuoteRFQCancelled,
+        QuoteRFQOverfilled,
         OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
+        InvalidQuoteRFQTaker,
+        InvalidQuoteRFQSignature,
         InvalidAssetUpdate,
         InsufficientCollateralAllowance,
         InsufficientCollateralBalance,
@@ -136,6 +136,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
+        UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
         UD60x18 longDelta;
@@ -174,13 +175,13 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct FillQuoteRFQArgsInternal {
-        // The user filling the quote
+        // The user filling the RFQ quote
         address user;
-        // The size to fill from the quote | 18 decimals
+        // The size to fill from the RFQ quote | 18 decimals
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Amount already credited before the _fillQuote function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        // Amount already credited before the _fillQuoteRFQ function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;

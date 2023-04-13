@@ -8,6 +8,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
@@ -22,6 +23,7 @@ import {IERC20Router} from "../router/IERC20Router.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
+    using SafeCast for uint64;
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
@@ -65,7 +67,7 @@ library PoolStorage {
         UD60x18 settlementPrice;
         // key -> positionData
         mapping(bytes32 => Position.Data) positions;
-        // Size of RFQ quotes already filled (provider -> quoteHash -> amountFilled)
+        // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
         mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
         // Set to true after maturity, to handle factory initialization discount
         bool hasRemoved;
@@ -146,7 +148,7 @@ library PoolStorage {
             l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(
                 l.base,
                 l.quote,
-                l.maturity
+                l.maturity.toUint32()
             );
         }
 
