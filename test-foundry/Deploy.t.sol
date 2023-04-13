@@ -62,7 +62,7 @@ contract DeployTest is Test, Assertions {
 
     Position.Key posKey;
 
-    IPoolInternal.TradeQuote tradeQuote;
+    IPoolInternal.QuoteRFQ quoteRFQ;
 
     Users users;
 
@@ -108,7 +108,7 @@ contract DeployTest is Test, Assertions {
             isCallPool: true
         });
 
-        tradeQuote = IPoolInternal.TradeQuote({
+        quoteRFQ = IPoolInternal.QuoteRFQ({
             provider: users.lp,
             taker: address(0),
             price: UD60x18.wrap(0.1 ether),
@@ -195,7 +195,7 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
-        poolCoreMockSelectors.push(poolCoreMockImpl.tradeQuoteHash.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.quoteRFQHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
 
@@ -231,15 +231,13 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
 
         // PoolTrade
-        poolTradeSelectors.push(poolTradeImpl.cancelTradeQuotes.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuote.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuoteAndSwap.selector);
-        poolTradeSelectors.push(poolTradeImpl.swapAndFillQuote.selector);
-        poolTradeSelectors.push(poolTradeImpl.getTradeQuote.selector);
-        poolTradeSelectors.push(
-            poolTradeImpl.getTradeQuoteFilledAmount.selector
-        );
-        poolTradeSelectors.push(poolTradeImpl.isTradeQuoteValid.selector);
+        poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQAndSwap.selector);
+        poolTradeSelectors.push(poolTradeImpl.swapAndFillQuoteRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
+        poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
+        poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
         poolTradeSelectors.push(poolTradeImpl.swapAndTrade.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
         poolTradeSelectors.push(poolTradeImpl.tradeAndSwap.selector);

@@ -679,7 +679,7 @@ describe('ChainlinkAdapter', () => {
         expect(description.path).to.deep.eq([
           ['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'],
         ]);
-        expect(description.decimals).to.deep.eq(['18']);
+        expect(description.decimals).to.deep.eq([18]);
 
         description = await instance.describePricingPath(tokens.DAI.address);
 
@@ -687,7 +687,7 @@ describe('ChainlinkAdapter', () => {
         expect(description.path).to.deep.eq([
           ['0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC'],
         ]);
-        expect(description.decimals).to.deep.eq(['18']);
+        expect(description.decimals).to.deep.eq([18]);
 
         description = await instance.describePricingPath(tokens.ENS.address);
 
@@ -696,7 +696,7 @@ describe('ChainlinkAdapter', () => {
           ['0x780f1bD91a5a22Ede36d4B2b2c0EcCB9b1726a28'],
           ['0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6'],
         ]);
-        expect(description.decimals).to.deep.eq(['8', '8']);
+        expect(description.decimals).to.deep.eq([8, 8]);
       });
     });
   });
