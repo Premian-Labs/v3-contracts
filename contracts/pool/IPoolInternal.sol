@@ -10,7 +10,7 @@ import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
-    error Pool__AboveQuoteSize();
+    error Pool__AboveQuoteRFQSize();
     error Pool__AboveMaxSlippage();
     error Pool__ErrorNotHandled();
     error Pool__InsufficientAskLiquidity();
@@ -25,8 +25,8 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidBelowPrice();
     error Pool__InvalidPermitRecipient();
     error Pool__InvalidPermittedToken();
-    error Pool__InvalidQuoteSignature();
-    error Pool__InvalidQuoteTaker();
+    error Pool__InvalidQuoteRFQSignature();
+    error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange();
     error Pool__InvalidReconciliation();
     error Pool__InvalidTransfer();
@@ -47,9 +47,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice();
     error Pool__PositionDoesNotExist();
     error Pool__PositionCantHoldLongAndShort();
-    error Pool__QuoteCancelled();
-    error Pool__QuoteExpired();
-    error Pool__QuoteOverfilled();
+    error Pool__QuoteRFQCancelled();
+    error Pool__QuoteRFQExpired();
+    error Pool__QuoteRFQOverfilled();
     error Pool__TickDeltaNotZero();
     error Pool__TickNotFound();
     error Pool__TickOutOfRange();
@@ -84,10 +84,10 @@ interface IPoolInternal is IPosition, IPricing {
         address refundAddress;
     }
 
-    struct TradeQuote {
-        // The provider of the quote
+    struct QuoteRFQ {
+        // The provider of the RFQ quote
         address provider;
-        // The taker of the quote (address(0) if quote should be usable by anyone)
+        // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
         address taker;
         // The normalized option price | 18 decimals
         UD60x18 price;
@@ -95,26 +95,20 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // Timestamp until which the quote is valid
+        // Timestamp until which the RFQ quote is valid
         uint256 deadline;
-        // Salt to make quote unique
+        // Salt to make RFQ quote unique
         uint256 salt;
     }
 
-    struct Delta {
-        SD59x18 collateral;
-        SD59x18 longs;
-        SD59x18 shorts;
-    }
-
-    enum InvalidQuoteError {
+    enum InvalidQuoteRFQError {
         None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
+        QuoteRFQExpired,
+        QuoteRFQCancelled,
+        QuoteRFQOverfilled,
         OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
+        InvalidQuoteRFQTaker,
+        InvalidQuoteRFQSignature,
         InvalidAssetUpdate,
         InsufficientCollateralAllowance,
         InsufficientCollateralBalance,
@@ -142,6 +136,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
+        UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
         UD60x18 longDelta;
@@ -170,21 +165,26 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 initialSize;
         UD60x18 liquidityPerTick;
         bool isFullWithdrawal;
+        SD59x18 tickDelta;
     }
 
     struct Signature {
+        uint8 v;
         bytes32 r;
         bytes32 s;
-        uint8 v;
     }
 
-    struct FillQuoteArgsInternal {
-        // The user filling the quote
+    struct FillQuoteRFQArgsInternal {
+        // The user filling the RFQ quote
         address user;
-        // The size to fill from the quote | 18 decimals
+        // The size to fill from the RFQ quote | 18 decimals
         UD60x18 size;
-        // secp256k1 concatenated 'r', 's', and 'v' value
+        // secp256k1 'r', 's', and 'v' value
         Signature signature;
+        // Amount already credited before the _fillQuoteRFQ function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        uint256 creditAmount;
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        bool transferCollateralToUser;
     }
 
     struct PremiumAndFeeInternal {
