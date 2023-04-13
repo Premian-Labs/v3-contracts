@@ -102,7 +102,7 @@ async function _deploy(isCall: boolean) {
 
   const pool = await deployPool(isCall);
 
-  const getTradeQuote = async () => {
+  const getQuoteRFQ = async () => {
     const timestamp = BigNumber.from(await latest());
     return {
       provider: lp.address,
@@ -146,7 +146,7 @@ async function _deploy(isCall: boolean) {
     pKey,
     poolToken,
     poolTokenDecimals,
-    getTradeQuote,
+    getQuoteRFQ,
     contractsToCollateral,
     scaleDecimals,
   };
@@ -338,7 +338,7 @@ async function _deployAndBuy(isCall: boolean) {
     f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
-  const totalPremium = await f.pool.getTradeQuote(tradeSize, true);
+  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, true)).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 
@@ -389,7 +389,7 @@ async function _deployAndSell(isCall: boolean) {
     true,
   );
 
-  const totalPremium = await f.pool.getTradeQuote(tradeSize, false);
+  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, false)).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 

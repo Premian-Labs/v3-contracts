@@ -2,9 +2,11 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
+
 import {IPoolInternal} from "./IPoolInternal.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {Position} from "../libraries/Position.sol";
 
 interface IPoolEvents {
     event Deposit(
@@ -42,13 +44,13 @@ interface IPoolEvents {
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
-    event FillQuote(
-        bytes32 indexed tradeQuoteHash,
+    event FillQuoteRFQ(
+        bytes32 indexed quoteRFQHash,
         address indexed user,
         address indexed provider,
         UD60x18 contractSize,
-        IPoolInternal.Delta deltaMaker,
-        IPoolInternal.Delta deltaTaker,
+        Position.Delta deltaMaker,
+        Position.Delta deltaTaker,
         UD60x18 premium,
         UD60x18 protocolFee,
         bool isBuy
@@ -65,7 +67,7 @@ interface IPoolEvents {
     event Trade(
         address indexed user,
         UD60x18 contractSize,
-        IPoolInternal.Delta delta,
+        Position.Delta delta,
         UD60x18 premium,
         UD60x18 takerFee,
         UD60x18 protocolFee,
@@ -111,5 +113,5 @@ interface IPoolEvents {
         uint256 destTokenId
     );
 
-    event CancelTradeQuote(address indexed provider, bytes32 tradeQuoteHash);
+    event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
 }
