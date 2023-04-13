@@ -78,28 +78,7 @@ describe('UniswapV3Adapter', () => {
   }
 
   async function deployAtBlock() {
-    const [deployer] = await ethers.getSigners();
-
-    const implementation = await new UniswapV3Adapter__factory(deployer).deploy(
-      UNISWAP_V3_FACTORY,
-      tokens.WETH.address,
-      22250,
-      30000,
-    );
-
-    await implementation.deployed();
-
-    const proxy = await new UniswapV3AdapterProxy__factory(deployer).deploy(
-      period,
-      cardinalityPerMinute,
-      implementation.address,
-    );
-
-    await proxy.deployed();
-
-    const instance = UniswapV3Adapter__factory.connect(proxy.address, deployer);
-
-    return { deployer, instance };
+    return { ...(await deploy()) };
   }
 
   describe('#constructor', () => {
