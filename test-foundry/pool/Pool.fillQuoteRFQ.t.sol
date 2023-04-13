@@ -124,10 +124,10 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.price
             )
         );
-        pool.fillQuote(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         quoteRFQ.price = UD60x18.wrap(1 ether + 1);
-        sig = signQuote(quoteRFQ);
+        sig = signQuoteRFQ(quoteRFQ);
 
         vm.expectRevert(
             abi.encodeWithSelector(

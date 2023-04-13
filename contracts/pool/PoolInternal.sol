@@ -1082,7 +1082,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         returns (uint256 premiumTaker, Position.Delta memory deltaTaker)
     {
         if (args.size > quoteRFQ.size)
-            revert Pool__AboveQuoteRFQSize(args.size, tradeQuote.size);
+            revert Pool__AboveQuoteSize(args.size, quoteRFQ.size);
 
         bytes32 quoteRFQHash;
         PremiumAndFeeInternal memory premiumAndFee;
@@ -2165,56 +2165,55 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 quoteRFQHash,
         bool revertIfInvalid
     ) internal view returns (bool, InvalidQuoteRFQError) {
-        if (block.timestamp > tradeQuote.deadline) {
-            if (revertIfInvalid) revert Pool__QuoteExpired();
-            return (false, InvalidQuoteError.QuoteExpired);
+        if (block.timestamp > quoteRFQ.deadline) {
+            if (revertIfInvalid) revert Pool__QuoteRFQExpired();
+            return (false, InvalidQuoteRFQError.QuoteRFQExpired);
         }
 
-        UD60x18 filledAmount = l.tradeQuoteAmountFilled[tradeQuote.provider][
-            tradeQuoteHash
+        UD60x18 filledAmount = l.quoteRFQAmountFilled[quoteRFQ.provider][
+            quoteRFQHash
         ];
 
         if (filledAmount.unwrap() == type(uint256).max) {
-            if (revertIfInvalid) revert Pool__QuoteCancelled();
-            return (false, InvalidQuoteError.QuoteCancelled);
+            if (revertIfInvalid) revert Pool__QuoteRFQCancelled();
+            return (false, InvalidQuoteRFQError.QuoteRFQCancelled);
         }
 
-        if (filledAmount + args.size > tradeQuote.size) {
+        if (filledAmount + args.size > quoteRFQ.size) {
             if (revertIfInvalid)
-                revert Pool__QuoteOverfilled(
+                revert Pool__QuoteRFQOverfilled(
                     filledAmount,
                     args.size,
-                    tradeQuote.size
+                    quoteRFQ.size
                 );
-            return (false, InvalidQuoteError.QuoteOverfilled);
+            return (false, InvalidQuoteRFQError.QuoteRFQOverfilled);
         }
 
         if (
-            Pricing.MIN_TICK_PRICE > tradeQuote.price ||
-            tradeQuote.price > Pricing.MAX_TICK_PRICE
+            Pricing.MIN_TICK_PRICE > quoteRFQ.price ||
+            quoteRFQ.price > Pricing.MAX_TICK_PRICE
         ) {
-            if (revertIfInvalid)
-                revert Pool__OutOfBoundsPrice(tradeQuote.price);
-            return (false, InvalidQuoteError.OutOfBoundsPrice);
+            if (revertIfInvalid) revert Pool__OutOfBoundsPrice(quoteRFQ.price);
+            return (false, InvalidQuoteRFQError.OutOfBoundsPrice);
         }
 
-        if (tradeQuote.taker != address(0) && args.user != tradeQuote.taker) {
-            if (revertIfInvalid) revert Pool__InvalidQuoteTaker();
-            return (false, InvalidQuoteError.InvalidQuoteTaker);
+        if (quoteRFQ.taker != address(0) && args.user != quoteRFQ.taker) {
+            if (revertIfInvalid) revert Pool__InvalidQuoteRFQTaker();
+            return (false, InvalidQuoteRFQError.InvalidQuoteRFQTaker);
         }
 
         address signer = ECDSA.recover(
-            tradeQuoteHash,
+            quoteRFQHash,
             args.signature.v,
             args.signature.r,
             args.signature.s
         );
-        if (signer != tradeQuote.provider) {
-            if (revertIfInvalid) revert Pool__InvalidQuoteSignature();
-            return (false, InvalidQuoteError.InvalidQuoteSignature);
+        if (signer != quoteRFQ.provider) {
+            if (revertIfInvalid) revert Pool__InvalidQuoteRFQSignature();
+            return (false, InvalidQuoteRFQError.InvalidQuoteRFQSignature);
         }
 
-        return (true, InvalidQuoteError.None);
+        return (true, InvalidQuoteRFQError.None);
     }
 
     function _isQuoteRFQBalanceValid(
