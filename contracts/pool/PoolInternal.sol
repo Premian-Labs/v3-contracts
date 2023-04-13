@@ -114,10 +114,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
+    /// @notice Gives a quote for a trade
+    /// @param size The number of contracts being traded (18 decimals)
+    /// @param isBuy Whether the taker is buying or selling
+    /// @return totalNetPremium The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
+    /// @return totalTakerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function _getQuoteAMM(
         UD60x18 size,
         bool isBuy
-    ) internal view returns (UD60x18 totalNetPremium, UD60x18 totalTakerFee) {
+    ) internal view returns (uint256 totalNetPremium, uint256 totalTakerFee) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(size);
@@ -135,6 +140,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 maxSize = pricing.maxTradeSize();
 
         UD60x18 totalPremium;
+        UD60x18 _totalTakerFee;
 
         while (size > ZERO) {
             UD60x18 tradeSize = PRBMathExtra.min(size, maxSize);
@@ -164,7 +170,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.isCallPool
                 );
 
-                totalTakerFee = totalTakerFee + takerFee;
+                _totalTakerFee = _totalTakerFee + takerFee;
                 totalPremium = totalPremium + premium;
             }
 
@@ -197,8 +203,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         return (
-            isBuy ? totalPremium + totalTakerFee : totalPremium - totalTakerFee,
-            totalTakerFee
+            l.toPoolTokenDecimals(
+                isBuy
+                    ? totalPremium + _totalTakerFee
+                    : totalPremium - _totalTakerFee
+            ),
+            l.toPoolTokenDecimals(_totalTakerFee)
         );
     }
 
@@ -280,19 +290,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.
+    /// @param p The position to claim fees for
+    /// @return claimedFees The amount of fees claimed (poolToken decimals)
     function _claim(
         Position.KeyInternal memory p
-    ) internal returns (UD60x18 claimedFees) {
+    ) internal returns (uint256 claimedFees) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
         Position.Data storage pData = l.positions[p.keyHash()];
         _updateClaimableFees(l, p, pData);
-        claimedFees = pData.claimableFees;
+        UD60x18 _claimedFees = pData.claimableFees;
 
         pData.claimableFees = ZERO;
-        IERC20(l.getPoolToken()).safeTransfer(p.operator, claimedFees);
+        IERC20(l.getPoolToken()).safeTransfer(p.operator, _claimedFees);
 
         emit ClaimFees(
             p.owner,
@@ -302,16 +314,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 p.upper,
                 p.orderType
             ),
-            claimedFees,
+            _claimedFees,
             pData.lastFeeRate
         );
+
+        return l.toPoolTokenDecimals(_claimedFees);
     }
 
-    function _claimProtocolFees() internal returns (UD60x18 claimedFees) {
+    function _claimProtocolFees() internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        claimedFees = l.protocolFees;
+        UD60x18 claimedFees = l.protocolFees;
 
-        if (claimedFees == ZERO) return ZERO;
+        if (claimedFees == ZERO) return;
 
         l.protocolFees = ZERO;
         IERC20(l.getPoolToken()).safeTransfer(FEE_RECEIVER, claimedFees);
@@ -721,12 +735,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium paid or received by the taker for the trade | 18 decimals
+    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
         TradeArgsInternal memory args,
         Permit2.Data memory permit
-    ) internal returns (UD60x18 totalPremium, Position.Delta memory delta) {
+    ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureNonZeroSize(args.size);
@@ -787,8 +801,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     // is_buy: taker has to pay premium + fees
                     // ~is_buy: taker receives premium - fees
-                    totalPremium =
-                        totalPremium +
+                    vars.totalPremium =
+                        vars.totalPremium +
                         (args.isBuy ? premium + takerFee : premium - takerFee);
                     vars.totalTakerFees = vars.totalTakerFees + takerFee;
 
@@ -826,8 +840,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
+        totalPremium = l.toPoolTokenDecimals(vars.totalPremium);
+
         _ensureBelowTradeMaxSlippage(
-            l.toPoolTokenDecimals(totalPremium),
+            totalPremium,
             args.premiumLimit,
             args.isBuy
         );
@@ -835,7 +851,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         delta = _calculateAndUpdateUserAssets(
             l,
             args.user,
-            totalPremium,
+            vars.totalPremium,
             args.size,
             args.isBuy,
             args.creditAmount,
@@ -861,7 +877,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.user,
             args.size,
             delta,
-            args.isBuy ? totalPremium - vars.totalTakerFees : totalPremium,
+            args.isBuy
+                ? vars.totalPremium - vars.totalTakerFees
+                : vars.totalPremium,
             vars.totalTakerFees,
             vars.totalProtocolFees,
             l.marketPrice,
@@ -1052,13 +1070,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param args The fillQuoteRFQ parameters
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
+    /// @return premiumTaker The premium paid by the taker (poolToken decimals)
+    /// @return deltaTaker The net collateral / longs / shorts change for taker of the trade.
     function _fillQuoteRFQ(
         FillQuoteRFQArgsInternal memory args,
         QuoteRFQ memory quoteRFQ,
         Permit2.Data memory permit
     )
         internal
-        returns (UD60x18 premiumTaker, Position.Delta memory deltaTaker)
+        returns (uint256 premiumTaker, Position.Delta memory deltaTaker)
     {
         if (args.size > quoteRFQ.size) revert Pool__AboveQuoteRFQSize();
 
@@ -1123,7 +1143,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             !quoteRFQ.isBuy
         );
 
-        return (premiumAndFee.premiumTaker, deltaTaker);
+        return (
+            PoolStorage.layout().toPoolTokenDecimals(
+                premiumAndFee.premiumTaker
+            ),
+            deltaTaker
+        );
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
@@ -1279,14 +1304,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
-    function _exercise(address holder) internal returns (UD60x18) {
+    function _exercise(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
         UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.LONG);
-        if (size == ZERO) return ZERO;
+        if (size == ZERO) return 0;
 
         UD60x18 exerciseValue = _calculateExerciseValue(l, size);
 
@@ -1300,19 +1325,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
-        return exerciseValue;
+        return l.toPoolTokenDecimals(exerciseValue);
     }
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
-    function _settle(address holder) internal returns (UD60x18) {
+    function _settle(address holder) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
         UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.SHORT);
-        if (size == ZERO) return ZERO;
+        if (size == ZERO) return 0;
 
         UD60x18 exerciseValue = _calculateExerciseValue(l, size);
         UD60x18 collateralValue = _calculateCollateralValue(
@@ -1331,14 +1356,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
-        return collateralValue;
+        return l.toPoolTokenDecimals(collateralValue);
     }
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     function _settlePosition(
         Position.KeyInternal memory p
-    ) internal returns (UD60x18) {
+    ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
         _removeFromFactory(l);
@@ -1358,7 +1383,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
-        if (size == ZERO) return ZERO;
+        if (size == ZERO) return 0;
 
         {
             // Update claimable fees
@@ -1428,7 +1453,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ZERO
         );
 
-        return collateral;
+        return l.toPoolTokenDecimals(collateral);
     }
 
     /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper
