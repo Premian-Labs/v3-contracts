@@ -112,7 +112,9 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         if (delta.collateral.unwrap() <= 0) return (premiumTaker, delta, 0, 0);
 
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
+            delta.collateral.intoUD60x18()
+        );
 
         _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
@@ -202,7 +204,9 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
         if (delta.collateral.unwrap() <= 0) return (totalPremium, delta, 0, 0);
 
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
+            delta.collateral.intoUD60x18()
+        );
 
         _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
