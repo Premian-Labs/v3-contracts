@@ -44,7 +44,7 @@ interface IPoolEvents {
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
-    event FillQuote(
+    event FillQuoteRFQ(
         bytes32 indexed quoteRFQHash,
         address indexed user,
         address indexed provider,

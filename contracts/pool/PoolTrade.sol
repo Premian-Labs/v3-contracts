@@ -271,7 +271,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteRFQHash = _quoteRFQHash(quoteRFQ);
         return
-            _areQuoteAndBalanceValid(
+            _areQuoteRFQAndBalanceValid(
                 l,
                 FillQuoteRFQArgsInternal(msg.sender, size, sig, 0, true),
                 quoteRFQ,
