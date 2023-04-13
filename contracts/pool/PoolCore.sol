@@ -88,11 +88,7 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function claim(Position.Key memory p) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
-        return
-            l.toPoolTokenDecimals(
-                _claim(p.toKeyInternal(l.strike, l.isCallPool))
-            );
+        return _claim(p.toKeyInternal(l.strike, l.isCallPool));
     }
 
     /// @inheritdoc IPoolCore
@@ -184,10 +180,11 @@ contract PoolCore is IPoolCore, PoolInternal {
         Permit2.Data memory permit
     ) external payable returns (Position.Delta memory delta) {
         _ensureOperator(p.operator);
-        PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureValidSwapTokenOut(s.tokenOut);
 
-        if (l.getPoolToken() != s.tokenOut) revert Pool__InvalidSwapTokenOut();
         (uint256 creditAmount, ) = _swap(s, permit, false);
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
 
         return
             _deposit(
@@ -255,8 +252,7 @@ contract PoolCore is IPoolCore, PoolInternal {
 
         s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
 
-        address poolToken = l.getPoolToken();
-        if (poolToken != s.tokenIn) revert Pool__InvalidSwapTokenIn();
+        _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
@@ -287,22 +283,18 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function exercise(address holder) external returns (uint256) {
-        return PoolStorage.layout().toPoolTokenDecimals(_exercise(holder));
+        return _exercise(holder);
     }
 
     /// @inheritdoc IPoolCore
     function settle(address holder) external returns (uint256) {
-        return PoolStorage.layout().toPoolTokenDecimals(_settle(holder));
+        return _settle(holder);
     }
 
     /// @inheritdoc IPoolCore
     function settlePosition(Position.Key memory p) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
-        return
-            PoolStorage.layout().toPoolTokenDecimals(
-                _settlePosition(p.toKeyInternal(l.strike, l.isCallPool))
-            );
+        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
     }
 
     /// @inheritdoc IPoolCore
