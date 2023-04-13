@@ -29,8 +29,8 @@ interface IPoolInternal is IPosition, IPricing {
         address permittedToken,
         address expectedToken
     );
-    error Pool__InvalidQuoteSignature();
-    error Pool__InvalidQuoteTaker();
+    error Pool__InvalidQuoteRFQSignature();
+    error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidTransfer();
@@ -47,9 +47,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice(UD60x18 price);
     error Pool__PositionDoesNotExist(address owner, uint256 tokenId);
     error Pool__PositionCantHoldLongAndShort(UD60x18 longs, UD60x18 shorts);
-    error Pool__QuoteCancelled();
-    error Pool__QuoteExpired();
-    error Pool__QuoteOverfilled(
+    error Pool__QuoteRFQCancelled();
+    error Pool__QuoteRFQExpired();
+    error Pool__QuoteRFQOverfilled(
         UD60x18 filledAmount,
         UD60x18 size,
         UD60x18 quoteRFQSize
@@ -88,10 +88,10 @@ interface IPoolInternal is IPosition, IPricing {
         address refundAddress;
     }
 
-    struct TradeQuote {
-        // The provider of the quote
+    struct QuoteRFQ {
+        // The provider of the RFQ quote
         address provider;
-        // The taker of the quote (address(0) if quote should be usable by anyone)
+        // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
         address taker;
         // The normalized option price | 18 decimals
         UD60x18 price;
@@ -99,20 +99,20 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // Timestamp until which the quote is valid
+        // Timestamp until which the RFQ quote is valid
         uint256 deadline;
-        // Salt to make quote unique
+        // Salt to make RFQ quote unique
         uint256 salt;
     }
 
-    enum InvalidQuoteError {
+    enum InvalidQuoteRFQError {
         None,
-        QuoteExpired,
-        QuoteCancelled,
-        QuoteOverfilled,
+        QuoteRFQExpired,
+        QuoteRFQCancelled,
+        QuoteRFQOverfilled,
         OutOfBoundsPrice,
-        InvalidQuoteTaker,
-        InvalidQuoteSignature,
+        InvalidQuoteRFQTaker,
+        InvalidQuoteRFQSignature,
         InvalidAssetUpdate,
         InsufficientCollateralAllowance,
         InsufficientCollateralBalance,
@@ -140,6 +140,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
+        UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
         UD60x18 longDelta;
@@ -177,14 +178,14 @@ interface IPoolInternal is IPosition, IPricing {
         bytes32 s;
     }
 
-    struct FillQuoteArgsInternal {
-        // The user filling the quote
+    struct FillQuoteRFQArgsInternal {
+        // The user filling the RFQ quote
         address user;
-        // The size to fill from the quote | 18 decimals
+        // The size to fill from the RFQ quote | 18 decimals
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Amount already credited before the _fillQuote function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
+        // Amount already credited before the _fillQuoteRFQ function call. In case of a `swapAndTrade` this would be the amount resulting from the swap | poolToken decimals
         uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;

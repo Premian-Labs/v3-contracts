@@ -35,40 +35,32 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     {}
 
     /// @inheritdoc IPoolTrade
-    function getTradeQuote(
+    function getQuoteAMM(
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        (UD60x18 _premiumNet, UD60x18 _takerFee) = _getTradeQuote(size, isBuy);
-
-        return (
-            l.toPoolTokenDecimals(_premiumNet),
-            l.toPoolTokenDecimals(_takerFee)
-        );
+        return _getQuoteAMM(size, isBuy);
     }
 
     /// @inheritdoc IPoolTrade
-    function fillQuote(
-        TradeQuote memory tradeQuote,
+    function fillQuoteRFQ(
+        QuoteRFQ memory quoteRFQ,
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
     ) external returns (uint256 premiumTaker, Position.Delta memory delta) {
-        UD60x18 premium;
-        (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, signature, 0, true),
-            tradeQuote,
-            permit
-        );
-
-        return (PoolStorage.layout().toPoolTokenDecimals(premium), delta);
+        return
+            _fillQuoteRFQ(
+                FillQuoteRFQArgsInternal(msg.sender, size, signature, 0, true),
+                quoteRFQ,
+                permit
+            );
     }
 
     /// @inheritdoc IPoolTrade
-    function swapAndFillQuote(
+    function swapAndFillQuoteRFQ(
         SwapArgs memory s,
-        TradeQuote memory tradeQuote,
+        QuoteRFQ memory quoteRFQ,
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
@@ -83,30 +75,23 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         _ensureValidSwapTokenOut(s.tokenOut);
         (swapOutAmount, ) = _swap(s, permit, false);
 
-        UD60x18 premium;
-        (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(
+        (premiumTaker, delta) = _fillQuoteRFQ(
+            FillQuoteRFQArgsInternal(
                 msg.sender,
                 size,
                 signature,
                 swapOutAmount,
                 true
             ),
-            tradeQuote,
-            permit
-        );
-
-        return (
-            PoolStorage.layout().toPoolTokenDecimals(premium),
-            delta,
-            swapOutAmount
+            quoteRFQ,
+            Permit2.emptyPermit()
         );
     }
 
     /// @inheritdoc IPoolTrade
-    function fillQuoteAndSwap(
+    function fillQuoteRFQAndSwap(
         SwapArgs memory s,
-        TradeQuote memory tradeQuote,
+        QuoteRFQ memory quoteRFQ,
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
@@ -119,19 +104,17 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 tokenOutReceived
         )
     {
-        UD60x18 premium;
-        (premium, delta) = _fillQuote(
-            FillQuoteArgsInternal(msg.sender, size, signature, 0, false),
-            tradeQuote,
+        (premiumTaker, delta) = _fillQuoteRFQ(
+            FillQuoteRFQArgsInternal(msg.sender, size, signature, 0, false),
+            quoteRFQ,
             permit
         );
 
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 premiumScaled = l.toPoolTokenDecimals(premium);
+        if (delta.collateral.unwrap() <= 0) return (premiumTaker, delta, 0, 0);
 
-        if (delta.collateral.unwrap() <= 0) return (premiumScaled, delta, 0, 0);
-
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
+            delta.collateral.intoUD60x18()
+        );
 
         _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
@@ -143,8 +126,6 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
         }
-
-        return (premiumScaled, delta, collateralReceived, tokenOutReceived);
     }
 
     /// @inheritdoc IPoolTrade
@@ -154,13 +135,18 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         uint256 premiumLimit,
         Permit2.Data memory permit
     ) external returns (uint256 totalPremium, Position.Delta memory delta) {
-        UD60x18 _totalPremium;
-        (_totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, true),
-            permit
-        );
-
-        return (PoolStorage.layout().toPoolTokenDecimals(_totalPremium), delta);
+        return
+            _trade(
+                TradeArgsInternal(
+                    msg.sender,
+                    size,
+                    isBuy,
+                    premiumLimit,
+                    0,
+                    true
+                ),
+                permit
+            );
     }
 
     /// @inheritdoc IPoolTrade
@@ -182,8 +168,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         _ensureValidSwapTokenOut(s.tokenOut);
         (swapOutAmount, ) = _swap(s, permit, false);
 
-        UD60x18 _totalPremium;
-        (_totalPremium, delta) = _trade(
+        (totalPremium, delta) = _trade(
             TradeArgsInternal(
                 msg.sender,
                 size,
@@ -193,12 +178,6 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                 true
             ),
             Permit2.emptyPermit()
-        );
-
-        return (
-            PoolStorage.layout().toPoolTokenDecimals(_totalPremium),
-            delta,
-            swapOutAmount
         );
     }
 
@@ -218,19 +197,16 @@ contract PoolTrade is IPoolTrade, PoolInternal {
             uint256 tokenOutReceived
         )
     {
-        UD60x18 _totalPremium;
-        (_totalPremium, delta) = _trade(
+        (totalPremium, delta) = _trade(
             TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false),
             permit
         );
 
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 totalPremiumScaled = l.toPoolTokenDecimals(_totalPremium);
+        if (delta.collateral.unwrap() <= 0) return (totalPremium, delta, 0, 0);
 
-        if (delta.collateral.unwrap() <= 0)
-            return (totalPremiumScaled, delta, 0, 0);
-
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
+        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
+            delta.collateral.intoUD60x18()
+        );
 
         _ensureValidSwapTokenIn(s.tokenIn);
         (tokenOutReceived, collateralReceived) = _swap(
@@ -242,51 +218,42 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
         }
-
-        return (
-            totalPremiumScaled,
-            delta,
-            collateralReceived,
-            tokenOutReceived
-        );
     }
 
     /// @inheritdoc IPoolTrade
-    function cancelTradeQuotes(bytes32[] calldata hashes) external {
+    function cancelQuotesRFQ(bytes32[] calldata hashes) external {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
-            l.tradeQuoteAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
+            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
                 type(uint256).max
             );
-            emit CancelTradeQuote(msg.sender, hashes[i]);
+            emit CancelQuoteRFQ(msg.sender, hashes[i]);
         }
     }
 
     /// @inheritdoc IPoolTrade
-    function isTradeQuoteValid(
-        TradeQuote memory tradeQuote,
+    function isQuoteRFQValid(
+        QuoteRFQ memory quoteRFQ,
         UD60x18 size,
         Signature memory sig
-    ) external view returns (bool, InvalidQuoteError) {
+    ) external view returns (bool, InvalidQuoteRFQError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        bytes32 tradeQuoteHash = _tradeQuoteHash(tradeQuote);
+        bytes32 quoteRFQHash = _quoteRFQHash(quoteRFQ);
         return
-            _areQuoteAndBalanceValid(
+            _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteArgsInternal(msg.sender, size, sig, 0, true),
-                tradeQuote,
-                tradeQuoteHash
+                FillQuoteRFQArgsInternal(msg.sender, size, sig, 0, true),
+                quoteRFQ,
+                quoteRFQHash
             );
     }
 
     /// @inheritdoc IPoolTrade
-    function getTradeQuoteFilledAmount(
+    function getQuoteRFQFilledAmount(
         address provider,
-        bytes32 tradeQuoteHash
+        bytes32 quoteRFQHash
     ) external view returns (UD60x18) {
         return
-            PoolStorage.layout().tradeQuoteAmountFilled[provider][
-                tradeQuoteHash
-            ];
+            PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
     }
 }
