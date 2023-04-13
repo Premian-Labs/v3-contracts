@@ -81,10 +81,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
-    /// @param size The size of a trade (number of contracts) | 18 decimals
-    /// @param premium The total cost of option(s) for a purchase | 18 decimals
+    /// @param size The size of a trade (number of contracts) (18 decimals)
+    /// @param premium The total cost of option(s) for a purchase (18 decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
-    /// @return The taker fee for an option trade denormalized | 18 decimals
+    /// @return The taker fee for an option trade denormalized (18 decimals)
     function _takerFee(
         PoolStorage.Layout storage l,
         UD60x18 size,
@@ -493,9 +493,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
-    /// @param size The position size to withdraw | 18 decimals
-    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) | 18 decimals
-    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) | 18 decimals
+    /// @param size The position size to withdraw (18 decimals)
+    /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) (18 decimals)
+    /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
     /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
     /// @return delta The amount of collateral / longs / shorts withdrawn
     function _withdraw(
@@ -1459,8 +1459,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper
     /// @param s swap arguments
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return amountCredited amount of tokenOut we got from the trade. | poolToken decimals
-    /// @return tokenInRefunded amount of tokenIn left and refunded to refundAddress | tokenIn decimals
+    /// @return amountCredited amount of tokenOut we got from the trade. (poolToken decimals)
+    /// @return tokenInRefunded amount of tokenIn left and refunded to refundAddress (tokenIn decimals)
     function _swap(
         IPoolInternal.SwapArgs memory s,
         Permit2.Data memory permit,
@@ -1585,8 +1585,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Creates a Tick for a given price, or returns the existing tick.
-    /// @param price The price of the Tick | 18 decimals
-    /// @param priceBelow The price of the nearest Tick below | 18 decimals
+    /// @param price The price of the Tick (18 decimals)
+    /// @param priceBelow The price of the nearest Tick below (18 decimals)
     /// @return tick The Tick for a given price
     function _getOrCreateTick(
         UD60x18 price,
@@ -1906,8 +1906,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         s the stranded market area the maximum tick price for both the lower
     ///         and the upper, in which case the market price is not stranded given
     ///         any range order info order.
-    /// @return lower Lower bound of the stranded market price area (Default : 1e18) | 18 decimals
-    /// @return upper Upper bound of the stranded market price area (Default : 1e18) | 18 decimals
+    /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
+    /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(
         PoolStorage.Layout storage l
     ) internal view returns (UD60x18 lower, UD60x18 upper) {
