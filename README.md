@@ -78,7 +78,7 @@ docker build -t premia-v3 .
 
 Then run the docker container by using the command:
 
-**Linux**
+**MacOS/Linux**
 
 ```bash
 docker run -it -u=$(id -u $USER):$(id -g $USER) \
