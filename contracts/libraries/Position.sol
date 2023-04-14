@@ -132,7 +132,10 @@ library Position {
     ) internal pure returns (UD60x18) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert IPosition.Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper(
+                self.lower,
+                self.upper
+            );
         if (price <= self.lower) return ZERO;
         else if (self.lower < price && price < self.upper)
             return Pricing.proportion(self.lower, self.upper, price);
@@ -145,7 +148,10 @@ library Position {
     ) internal pure returns (UD60x18) {
         // ToDo : Move check somewhere else ?
         if (self.lower >= self.upper)
-            revert IPosition.Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper(
+                self.lower,
+                self.upper
+            );
 
         UD60x18 a;
         if (price <= self.lower) {
@@ -304,7 +310,10 @@ library Position {
         UD60x18 price
     ) internal pure returns (Delta memory delta) {
         if (currentBalance.intoSD59x18() + amount < iZERO)
-            revert IPosition.Position__InvalidPositionUpdate();
+            revert IPosition.Position__InvalidPositionUpdate(
+                currentBalance,
+                amount
+            );
 
         UD60x18 absChangeTokens = amount.abs().intoUD60x18();
         SD59x18 sign = amount > iZERO
