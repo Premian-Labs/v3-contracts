@@ -71,14 +71,25 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         vm.warp(block.timestamp + 55);
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__WithdrawalDelayNotElapsed.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__WithdrawalDelayNotElapsed.selector,
+                block.timestamp + 5
+            )
+        );
 
         pool.withdraw(posKey, UD60x18.wrap(100 ether), ZERO, ONE);
     }
 
     function test_withdraw_RevertIf_NotOperator() public {
         posKey.operator = users.trader;
-        vm.expectRevert(IPoolInternal.Pool__NotAuthorized.selector);
+        vm.prank(users.lp);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotAuthorized.selector,
+                users.lp
+            )
+        );
         pool.withdraw(posKey, UD60x18.wrap(100 ether), ZERO, ONE);
     }
 
@@ -89,21 +100,29 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         vm.startPrank(users.lp);
 
-        vm.expectRevert(IPoolInternal.Pool__AboveMaxSlippage.selector);
-        pool.withdraw(
-            posKey,
-            THREE,
-            posKey.upper + UD60x18.wrap(1),
-            posKey.upper
+        UD60x18 minPrice = posKey.upper + UD60x18.wrap(1);
+        UD60x18 maxPrice = posKey.upper;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__AboveMaxSlippage.selector,
+                posKey.upper,
+                minPrice,
+                maxPrice
+            )
         );
+        pool.withdraw(posKey, THREE, minPrice, maxPrice);
 
-        vm.expectRevert(IPoolInternal.Pool__AboveMaxSlippage.selector);
-        pool.withdraw(
-            posKey,
-            THREE,
-            posKey.upper - UD60x18.wrap(10),
-            posKey.upper - UD60x18.wrap(1)
+        minPrice = posKey.upper - UD60x18.wrap(10);
+        maxPrice = posKey.upper - UD60x18.wrap(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__AboveMaxSlippage.selector,
+                posKey.upper,
+                minPrice,
+                maxPrice
+            )
         );
+        pool.withdraw(posKey, THREE, minPrice, maxPrice);
     }
 
     function test_withdraw_RevertIf_ZeroSize() public {
@@ -124,7 +143,13 @@ abstract contract PoolWithdrawTest is DeployTest {
     function test_withdraw_RevertIf_NonExistingPosition() public {
         vm.startPrank(users.lp);
 
-        vm.expectRevert(IPoolInternal.Pool__PositionDoesNotExist.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__PositionDoesNotExist.selector,
+                posKey.owner,
+                tokenId()
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
     }
 
@@ -134,27 +159,57 @@ abstract contract PoolWithdrawTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ZERO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ZERO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = ONE_HALF;
         posKey.upper = ONE_HALF / TWO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = UD60x18.wrap(0.0001e18);
         posKey.upper = posKeySave.upper;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(1.01e18);
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
     }
 
@@ -163,13 +218,23 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         Position.Key memory posKeySave = posKey;
 
-        vm.expectRevert(IPoolInternal.Pool__TickWidthInvalid.selector);
         posKey.lower = UD60x18.wrap(0.2501e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__TickWidthInvalid.selector,
+                posKey.lower
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
-        vm.expectRevert(IPoolInternal.Pool__TickWidthInvalid.selector);
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(0.7501e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__TickWidthInvalid.selector,
+                posKey.upper
+            )
+        );
         pool.withdraw(posKey, THREE, ZERO, ONE);
     }
 
@@ -281,7 +346,13 @@ abstract contract PoolWithdrawTest is DeployTest {
         );
 
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenIn.selector,
+                swapToken,
+                poolToken
+            )
+        );
         pool.withdrawAndSwap(swapArgs, posKey, withdrawSize, ZERO, ONE);
     }
 

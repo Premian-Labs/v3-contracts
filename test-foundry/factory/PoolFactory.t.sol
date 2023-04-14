@@ -83,9 +83,14 @@ contract PoolFactoryTest is DeployTest {
     }
 
     function test_deployPool_RevertIf_AlreadyDeployed() public {
-        factory.deployPool{value: 1 ether}(poolKey);
+        address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
-        vm.expectRevert(IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector,
+                poolAddress
+            )
+        );
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
@@ -97,11 +102,17 @@ contract PoolFactoryTest is DeployTest {
             uint256(11 ether)
         ];
 
+        uint256 strikeInterval = 100 ether;
+
         for (uint256 i; i < strike.length; i++) {
             poolKey.strike = UD60x18.wrap(strike[i]);
 
             vm.expectRevert(
-                IPoolFactory.PoolFactory__OptionStrikeInvalid.selector
+                abi.encodeWithSelector(
+                    IPoolFactory.PoolFactory__OptionStrikeInvalid.selector,
+                    strike[i],
+                    strikeInterval
+                )
             );
 
             factory.deployPool{value: 1 ether}(poolKey);
@@ -111,7 +122,12 @@ contract PoolFactoryTest is DeployTest {
     function test_deployPool_RevertIf_MaturityExpired() public {
         poolKey.maturity = 1679758930;
 
-        vm.expectRevert(IPoolFactory.PoolFactory__OptionExpired.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__OptionExpired.selector,
+                poolKey.maturity
+            )
+        );
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
@@ -119,7 +135,10 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1679768950;
 
         vm.expectRevert(
-            IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector,
+                poolKey.maturity
+            )
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -128,7 +147,10 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1680163200;
 
         vm.expectRevert(
-            IPoolFactory.PoolFactory__OptionMaturityNotFriday.selector
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__OptionMaturityNotFriday.selector,
+                poolKey.maturity
+            )
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -137,7 +159,10 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1683878400;
 
         vm.expectRevert(
-            IPoolFactory.PoolFactory__OptionMaturityNotLastFriday.selector
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__OptionMaturityNotLastFriday.selector,
+                poolKey.maturity
+            )
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -146,7 +171,10 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1714118400;
 
         vm.expectRevert(
-            IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector
+            abi.encodeWithSelector(
+                IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector,
+                poolKey.maturity
+            )
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
