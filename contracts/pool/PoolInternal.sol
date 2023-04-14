@@ -182,7 +182,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 // Cross tick
                 size = size - maxSize;
 
-                // ToDo : Make sure this cant underflow
                 // Adjust liquidity rate
                 pricing.liquidityRate = pricing.liquidityRate.add(
                     l.ticks[isBuy ? pricing.upper : pricing.lower].delta
@@ -1179,7 +1178,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address newOperator,
         UD60x18 size
     ) internal {
-        // ToDo : Add this logic into the ERC1155 transfer function
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 
@@ -1517,7 +1515,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         view
         returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
-        if (lower >= upper) revert Position__LowerGreaterOrEqualUpper();
+        Position.ensureLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
         nearestBelowUpper = _getNearestTickBelow(upper);
