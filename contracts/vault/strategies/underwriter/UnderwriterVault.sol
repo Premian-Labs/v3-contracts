@@ -817,7 +817,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         bool isCall,
         UD60x18 size,
         bool isBuy
-    ) internal view returns (QuoteInternal memory) {
+    ) internal view returns (QuoteInternal memory quote) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
