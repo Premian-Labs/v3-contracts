@@ -120,17 +120,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
             }
         }
 
-        bytes32 salt = keccak256(
-            abi.encode(
-                DIAMOND,
-                k.base,
-                k.quote,
-                k.oracleAdapter,
-                k.strike,
-                k.maturity,
-                k.isCallPool
-            )
-        );
+        bytes32 salt = keccak256(_encodePoolProxyArgs(k));
 
         poolAddress = address(
             new PoolProxy{salt: salt}(
@@ -196,18 +186,25 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
+    function _encodePoolProxyArgs(
+        PoolKey memory k
+    ) internal view returns (bytes memory) {
+        return
+            abi.encode(
+                DIAMOND,
+                k.base,
+                k.quote,
+                k.oracleAdapter,
+                k.strike,
+                k.maturity,
+                k.isCallPool
+            );
+    }
+
     function _calculatePoolAddress(
         PoolKey memory k
     ) internal view returns (address) {
-        bytes memory args = abi.encode(
-            DIAMOND,
-            k.base,
-            k.quote,
-            k.oracleAdapter,
-            k.strike,
-            k.maturity,
-            k.isCallPool
-        );
+        bytes memory args = _encodePoolProxyArgs(k);
 
         bytes32 hash = keccak256(
             abi.encodePacked(
