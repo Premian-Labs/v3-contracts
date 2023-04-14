@@ -828,7 +828,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _ensureValidOption(strike, maturity);
         _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
 
-        address poolAddr = _getFactoryAddress(strike, maturity);
+        address pool = _getFactoryAddress(strike, maturity);
 
         QuoteVars memory vars;
 
