@@ -7,22 +7,22 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
-    error PoolFactory__ZeroAddress();
     error PoolFactory__IdenticalAddresses();
-    error PoolFactory__InitializationFeeRequired();
-    error PoolFactory__InvalidMaturity();
-    error PoolFactory__InvalidStrike();
-    error PoolFactory__NegativeSpotPrice();
+    error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
     error PoolFactory__NotAuthorized();
-    error PoolFactory__OptionExpired();
-    error PoolFactory__OptionMaturityExceedsMax();
-    error PoolFactory__OptionMaturityNot8UTC();
-    error PoolFactory__OptionMaturityNotFriday();
-    error PoolFactory__OptionMaturityNotLastFriday();
+    error PoolFactory__OptionExpired(uint256 maturity);
+    error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
+    error PoolFactory__OptionMaturityNot8UTC(uint256 maturity);
+    error PoolFactory__OptionMaturityNotFriday(uint256 maturity);
+    error PoolFactory__OptionMaturityNotLastFriday(uint256 maturity);
     error PoolFactory__OptionStrikeEqualsZero();
-    error PoolFactory__OptionStrikeInvalid();
-    error PoolFactory__PoolAlreadyDeployed();
+    error PoolFactory__OptionStrikeInvalid(
+        UD60x18 strike,
+        UD60x18 strikeInterval
+    );
+    error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
+    error PoolFactory__ZeroAddress();
 
     struct PoolKey {
         // Address of base token
@@ -31,7 +31,7 @@ interface IPoolFactory is IPoolFactoryEvents {
         address quote;
         // Address of oracle adapter
         address oracleAdapter;
-        // The strike of the option | 18 decimals
+        // The strike of the option (18 decimals)
         UD60x18 strike;
         // The maturity timestamp of the option
         uint64 maturity;
@@ -51,13 +51,13 @@ interface IPoolFactory is IPoolFactoryEvents {
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key
-    /// @return The fee required to initialize this pool | 18 decimals
+    /// @return The fee required to initialize this pool (18 decimals)
     function initializationFee(
         PoolKey memory k
     ) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
-    /// @param discountPerPool The new discount percentage | 18 decimals
+    /// @param discountPerPool The new discount percentage (18 decimals)
     function setDiscountPerPool(UD60x18 discountPerPool) external;
 
     /// @notice Set the feeReceiver for initialization fees - only callable by owner

@@ -38,4 +38,25 @@ interface IPoolCoreMock {
         );
 
     function protocolFees() external view returns (uint256);
+
+    function exposed_cross(bool isBuy) external;
+
+    function exposed_getStrandedArea()
+        external
+        view
+        returns (UD60x18 lower, UD60x18 upper);
+
+    function exposed_getStrandedMarketPriceUpdate(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external pure returns (UD60x18);
+
+    function exposed_isMarketPriceStranded(
+        Position.KeyInternal memory p,
+        bool isBid
+    ) external view returns (bool);
+
+    function getCurrentTick() external view returns (UD60x18);
+
+    function getLiquidityRate() external view returns (UD60x18);
 }

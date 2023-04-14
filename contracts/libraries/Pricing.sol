@@ -27,10 +27,10 @@ library Pricing {
     UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
 
     struct Args {
-        UD60x18 liquidityRate; // Amount of liquidity | 18 decimals
-        UD60x18 marketPrice; // The current market price | 18 decimals
-        UD60x18 lower; // The normalized price of the lower bound of the range | 18 decimals
-        UD60x18 upper; // The normalized price of the upper bound of the range | 18 decimals
+        UD60x18 liquidityRate; // Amount of liquidity (18 decimals)
+        UD60x18 marketPrice; // The current market price (18 decimals)
+        UD60x18 lower; // The normalized price of the lower bound of the range (18 decimals)
+        UD60x18 upper; // The normalized price of the upper bound of the range (18 decimals)
         bool isBuy; // The direction of the trade
     }
 
@@ -39,9 +39,10 @@ library Pricing {
         UD60x18 upper,
         UD60x18 marketPrice
     ) internal pure returns (UD60x18) {
-        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper)
+            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
         if (lower > marketPrice || marketPrice > upper)
-            revert IPricing.Pricing__PriceOutOfRange();
+            revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPrice);
 
         return (marketPrice - lower) / (upper - lower);
     }
@@ -66,7 +67,8 @@ library Pricing {
         UD60x18 lower,
         UD60x18 upper
     ) internal pure returns (UD60x18) {
-        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower();
+        if (lower >= upper)
+            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
         return (upper - lower) / MIN_TICK_DISTANCE;
     }

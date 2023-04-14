@@ -180,7 +180,6 @@ abstract contract PoolTradeTest is DeployTest {
         bool isCall
     ) internal {
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
 
         address swapToken = getSwapToken(isCall);
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
@@ -191,6 +190,13 @@ abstract contract PoolTradeTest is DeployTest {
             users.trader
         );
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenOut.selector,
+                swapToken,
+                getPoolToken(isCall)
+            )
+        );
         pool.swapAndTrade(swapArgs, ZERO, true, 0, Permit2.emptyPermit());
     }
 
@@ -546,7 +552,13 @@ abstract contract PoolTradeTest is DeployTest {
         deal(poolToken, users.trader, collateralScaled);
         IERC20(poolToken).approve(address(router), collateralScaled);
 
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenIn.selector,
+                swapToken,
+                poolToken
+            )
+        );
 
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactInput(
             swapToken,

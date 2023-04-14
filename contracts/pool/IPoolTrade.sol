@@ -11,10 +11,10 @@ import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal {
     /// @notice Gives a quote for an AMM trade
-    /// @param size The number of contracts being traded | 18 decimals
+    /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
-    /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) | poolToken decimals
-    /// @return takerFee The taker fees to pay (Included in `premiumNet`) | poolToken decimals
+    /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
+    /// @return takerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function getQuoteAMM(
         UD60x18 size,
         bool isBuy
@@ -25,10 +25,10 @@ interface IPoolTrade is IPoolInternal {
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
         QuoteRFQ memory quoteRFQ,
@@ -40,12 +40,12 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Execute a swap and fill an RFQ quote
     /// @param s The swap arguments
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return swapOutAmount The amount of pool tokens resulting from the swap | poolToken decimals
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndFillQuoteRFQ(
         IPoolInternal.SwapArgs memory s,
         QuoteRFQ memory quoteRFQ,
@@ -64,13 +64,13 @@ interface IPoolTrade is IPoolInternal {
     ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote | 18 decimals
+    /// @param size The size to fill from the RFQ quote(18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return premiumTaker The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return collateralReceived The amount of collateral received by the taker | collateral decimals
-    /// @return tokenOutReceived The amount of tokenOut received by the taker | tokenOut decimals
+    /// @return collateralReceived The amount of collateral received by the taker (collateral decimals)
+    /// @return tokenOutReceived The amount of tokenOut received by the taker (tokenOut decimals)
     function fillQuoteRFQAndSwap(
         IPoolInternal.SwapArgs memory s,
         QuoteRFQ memory quoteRFQ,
@@ -88,11 +88,11 @@ interface IPoolTrade is IPoolInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
-    /// @param size The number of contracts being traded | 18 decimals
+    /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         UD60x18 size,
@@ -104,13 +104,13 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param s The swap arguments
-    /// @param size The number of contracts being traded | 18 decimals
+    /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium paid or received by the taker for the trade | poolToken decimals
+    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return swapOutAmount The amount of pool tokens resulting from the swap | poolToken decimals
+    /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndTrade(
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
@@ -130,14 +130,14 @@ interface IPoolTrade is IPoolInternal {
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
     /// @param s The swap arguments
-    /// @param size The number of contracts being traded | 18 decimals
+    /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. | poolToken decimals
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium received by the taker of the trade | poolToken decimals
+    /// @return totalPremium The premium received by the taker of the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return collateralReceived The amount of un-swapped collateral received from the trade. | s.tokenOut decimals
-    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. | poolToken decimals
+    /// @return collateralReceived The amount of un-swapped collateral received from the trade. (s.tokenOut decimals)
+    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. (poolToken decimals)
     function tradeAndSwap(
         IPoolInternal.SwapArgs memory s,
         UD60x18 size,
@@ -161,7 +161,7 @@ interface IPoolTrade is IPoolInternal {
 
     /// @notice Returns whether or not an RFQ quote is valid, given a fill size
     /// @param quoteRFQ The RFQ quote to check
-    /// @param size Size to fill from the RFQ quote | 18 decimals
+    /// @param size Size to fill from the RFQ quote (18 decimals)
     /// @param sig secp256k1 Signature
     function isQuoteRFQValid(
         QuoteRFQ memory quoteRFQ,
@@ -172,7 +172,7 @@ interface IPoolTrade is IPoolInternal {
     /// @notice Returns the size already filled for a given RFQ quote
     /// @param provider Provider of the RFQ quote
     /// @param quoteRFQHash Hash of the RFQ quote
-    /// @return The size already filled | 18 decimals
+    /// @return The size already filled (18 decimals)
     function getQuoteRFQFilledAmount(
         address provider,
         bytes32 quoteRFQHash
