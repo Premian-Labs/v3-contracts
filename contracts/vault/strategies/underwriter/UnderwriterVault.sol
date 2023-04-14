@@ -894,7 +894,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         // Compute output variables
         QuoteInternal memory quote;
-        quote.pool = poolAddr;
+        quote.pool = pool;
         quote.premium = vars.price * size;
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
         quote.mintingFee = l.convertAssetToUD60x18(
