@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -117,7 +118,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external returns (Position.Delta memory delta) {
+    ) external payable returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -130,8 +131,8 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    0,
-                    address(0)
+                    _wrapNativeToken(l),
+                    msg.sender
                 ),
                 permit
             );
@@ -147,7 +148,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external returns (Position.Delta memory delta) {
+    ) external payable returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -160,12 +161,26 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    0,
-                    address(0)
+                    _wrapNativeToken(l),
+                    msg.sender
                 ),
                 permit,
                 isBidIfStrandedMarketPrice
             );
+    }
+
+    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
+    /// @return wrappedAmount The amount of native tokens wrapped
+    function _wrapNativeToken(
+        PoolStorage.Layout storage l
+    ) internal returns (uint256 wrappedAmount) {
+        if (msg.value > 0) {
+            if (l.getPoolToken() != WRAPPED_NATIVE_TOKEN)
+                revert Pool__NotWrappedNativeTokenPool();
+
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            wrappedAmount = msg.value;
+        }
     }
 
     /// @inheritdoc IPoolCore

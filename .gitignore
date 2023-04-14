@@ -29,6 +29,8 @@ out/
 # Docs
 docs/
 
+.gas-snapshot
+
 
 ###################
 

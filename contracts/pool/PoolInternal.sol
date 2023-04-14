@@ -649,22 +649,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__PositionCantHoldLongAndShort(longs, shorts);
 
         address poolToken = l.getPoolToken();
-        if (collateral > collateralCredit) {
-            if (from == address(this)) {
-                IERC20(poolToken).safeTransfer(
-                    to,
-                    collateral - collateralCredit
-                );
-            } else {
-                _transferFromWithPermitOrRouter(
-                    permit,
-                    poolToken,
-                    from,
-                    to,
-                    collateral - collateralCredit
-                );
-            }
-        } else if (collateralCredit > collateral) {
+
+        if (from == address(this)) {
+            require(collateralCredit == 0); // Just a safety check, should never fail
+            IERC20(poolToken).safeTransfer(to, collateral);
+        } else if (collateral > collateralCredit) {
+            _transferFromWithPermitOrRouter(
+                permit,
+                poolToken,
+                from,
+                to,
+                collateral - collateralCredit
+            );
+        } else if (collateral < collateralCredit) {
             // If there was too much collateral credit, we refund the excess
             IERC20(poolToken).safeTransfer(
                 refundAddress,
