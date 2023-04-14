@@ -10,32 +10,33 @@ import {IPricing} from "../libraries/IPricing.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
-    error Pool__AboveQuoteRFQSize();
-    error Pool__AboveMaxSlippage();
-    error Pool__ErrorNotHandled();
+    error Pool__AboveQuoteSize(UD60x18 size, UD60x18 quoteSize);
+    error Pool__AboveMaxSlippage(
+        uint256 value,
+        uint256 minimum,
+        uint256 maximum
+    );
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
-    error Pool__InsufficientCollateralAllowance();
-    error Pool__InsufficientCollateralBalance();
     error Pool__InsufficientLiquidity();
-    error Pool__InsufficientLongBalance();
-    error Pool__InsufficientPermit();
-    error Pool__InsufficientShortBalance();
-    error Pool__InvalidAssetUpdate();
-    error Pool__InvalidBelowPrice();
-    error Pool__InvalidPermitRecipient();
-    error Pool__InvalidPermittedToken();
+    error Pool__InsufficientPermit(
+        uint256 requestedAmount,
+        uint256 permittedAmount
+    );
+    error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
+    error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
+    error Pool__InvalidPermittedToken(
+        address permittedToken,
+        address expectedToken
+    );
     error Pool__InvalidQuoteRFQSignature();
     error Pool__InvalidQuoteRFQTaker();
-    error Pool__InvalidRange();
-    error Pool__InvalidReconciliation();
+    error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
+    error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidTransfer();
-    error Pool__InvalidSwapTokenIn();
-    error Pool__InvalidSwapTokenOut();
-    error Pool__InvalidVersion();
-    error Pool__LongOrShortMustBeZero();
-    error Pool__NegativeSpotPrice();
-    error Pool__NotAuthorized();
+    error Pool__InvalidSwapTokenIn(address tokenIn, address expectedTokenIn);
+    error Pool__InvalidSwapTokenOut(address tokenOut, address expectedTokenOut);
+    error Pool__NotAuthorized(address sender);
     error Pool__NotEnoughSwapOutput(
         uint256 amountCredited,
         uint256 amountOutMin
@@ -45,17 +46,21 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
-    error Pool__OutOfBoundsPrice();
-    error Pool__PositionDoesNotExist();
-    error Pool__PositionCantHoldLongAndShort();
+    error Pool__OutOfBoundsPrice(UD60x18 price);
+    error Pool__PositionDoesNotExist(address owner, uint256 tokenId);
+    error Pool__PositionCantHoldLongAndShort(UD60x18 longs, UD60x18 shorts);
     error Pool__QuoteRFQCancelled();
     error Pool__QuoteRFQExpired();
-    error Pool__QuoteRFQOverfilled();
-    error Pool__TickDeltaNotZero();
-    error Pool__TickNotFound();
-    error Pool__TickOutOfRange();
-    error Pool__TickWidthInvalid();
-    error Pool__WithdrawalDelayNotElapsed();
+    error Pool__QuoteRFQOverfilled(
+        UD60x18 filledAmount,
+        UD60x18 size,
+        UD60x18 quoteRFQSize
+    );
+    error Pool__TickDeltaNotZero(SD59x18 tickDelta);
+    error Pool__TickNotFound(UD60x18 price);
+    error Pool__TickOutOfRange(UD60x18 price);
+    error Pool__TickWidthInvalid(UD60x18 price);
+    error Pool__WithdrawalDelayNotElapsed(uint256 unlockTime);
     error Pool__ZeroSize();
 
     struct Tick {

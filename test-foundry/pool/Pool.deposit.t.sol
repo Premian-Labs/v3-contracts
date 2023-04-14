@@ -168,7 +168,12 @@ abstract contract PoolDepositTest is DeployTest {
         posKey.operator = users.trader;
 
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__NotAuthorized.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotAuthorized.selector,
+                users.lp
+            )
+        );
 
         pool.deposit(
             posKey,
@@ -190,25 +195,43 @@ abstract contract PoolDepositTest is DeployTest {
 
         vm.startPrank(users.lp);
 
-        vm.expectRevert(IPoolInternal.Pool__AboveMaxSlippage.selector);
+        UD60x18 minPrice = posKey.upper + UD60x18.wrap(1);
+        UD60x18 maxPrice = posKey.upper;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__AboveMaxSlippage.selector,
+                posKey.upper,
+                minPrice,
+                maxPrice
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
             ZERO,
             THREE,
-            posKey.upper + UD60x18.wrap(1),
-            posKey.upper,
+            minPrice,
+            maxPrice,
             Permit2.emptyPermit()
         );
 
-        vm.expectRevert(IPoolInternal.Pool__AboveMaxSlippage.selector);
+        minPrice = posKey.upper - UD60x18.wrap(10);
+        maxPrice = posKey.upper - UD60x18.wrap(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__AboveMaxSlippage.selector,
+                posKey.upper,
+                minPrice,
+                maxPrice
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
             ZERO,
             THREE,
-            posKey.upper - UD60x18.wrap(10),
-            posKey.upper - UD60x18.wrap(1),
+            minPrice,
+            maxPrice,
             Permit2.emptyPermit()
         );
     }
@@ -255,7 +278,13 @@ abstract contract PoolDepositTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ZERO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -268,7 +297,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ZERO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -281,7 +316,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         posKey.lower = ONE_HALF;
         posKey.upper = ONE_HALF / TWO;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -294,7 +335,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         posKey.lower = UD60x18.wrap(0.0001e18);
         posKey.upper = posKeySave.upper;
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -307,7 +354,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(1.01e18);
-        vm.expectRevert(IPoolInternal.Pool__InvalidRange.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidRange.selector,
+                posKey.lower,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -324,8 +377,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         Position.Key memory posKeySave = posKey;
 
-        vm.expectRevert(IPoolInternal.Pool__TickWidthInvalid.selector);
         posKey.lower = UD60x18.wrap(0.2501e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__TickWidthInvalid.selector,
+                posKey.lower
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -336,9 +394,14 @@ abstract contract PoolDepositTest is DeployTest {
             Permit2.emptyPermit()
         );
 
-        vm.expectRevert(IPoolInternal.Pool__TickWidthInvalid.selector);
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(0.7501e18);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__TickWidthInvalid.selector,
+                posKey.upper
+            )
+        );
         pool.deposit(
             posKey,
             ZERO,
@@ -420,7 +483,12 @@ abstract contract PoolDepositTest is DeployTest {
 
     function _test_swapAndDeposit_RevertIf_NotOperator(bool isCall) internal {
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__NotAuthorized.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotAuthorized.selector,
+                users.lp
+            )
+        );
 
         posKey.operator = users.trader;
 
@@ -453,7 +521,6 @@ abstract contract PoolDepositTest is DeployTest {
         bool isCall
     ) internal {
         vm.prank(users.lp);
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenOut.selector);
 
         address swapToken = getSwapToken(isCall);
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
@@ -462,6 +529,14 @@ abstract contract PoolDepositTest is DeployTest {
             0,
             0,
             users.lp
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenOut.selector,
+                swapToken,
+                getPoolToken(isCall)
+            )
         );
 
         pool.swapAndDeposit(
