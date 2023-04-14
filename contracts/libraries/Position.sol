@@ -296,7 +296,10 @@ library Position {
         UD60x18 price
     ) internal pure returns (Delta memory delta) {
         if (currentBalance.intoSD59x18() + amount < iZERO)
-            revert IPosition.Position__InvalidPositionUpdate();
+            revert IPosition.Position__InvalidPositionUpdate(
+                currentBalance,
+                amount
+            );
 
         UD60x18 absChangeTokens = amount.abs().intoUD60x18();
         SD59x18 sign = amount > iZERO
@@ -318,6 +321,6 @@ library Position {
         UD60x18 upper
     ) internal pure {
         if (lower >= upper)
-            revert IPosition.Position__LowerGreaterOrEqualUpper();
+            revert IPosition.Position__LowerGreaterOrEqualUpper(lower, upper);
     }
 }
