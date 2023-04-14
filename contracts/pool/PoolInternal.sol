@@ -1461,9 +1461,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _swap(
         IPoolInternal.SwapArgs memory s,
         Permit2.Data memory permit,
-        bool transferFromPool
+        bool transferFromPool,
+        bool creditMessageValue
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
-        if (msg.value > 0) {
+        if (creditMessageValue && msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
                 revert Pool__InvalidSwapTokenIn(
                     s.tokenIn,
@@ -1498,6 +1499,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         if (amountCredited < s.amountOutMin)
             revert Pool__NotEnoughSwapOutput(amountCredited, s.amountOutMin);
+    }
+
+    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
+    /// @return wrappedAmount The amount of native tokens wrapped
+    function _wrapNativeToken() internal returns (uint256 wrappedAmount) {
+        if (msg.value > 0) {
+            if (PoolStorage.layout().getPoolToken() != WRAPPED_NATIVE_TOKEN)
+                revert Pool__NotWrappedNativeTokenPool();
+
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            wrappedAmount = msg.value;
+        }
     }
 
     ////////////////////////////////////////////////////////////////
