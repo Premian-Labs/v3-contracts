@@ -171,83 +171,82 @@ contract VaultRegistryTest is Test, Assertions {
         vm.prank(user);
 
         // 1. [buy] [call]
-        IVaultRegistry.TradeSide[]
-            memory sides = new IVaultRegistry.TradeSide[](1);
-        sides[0] = IVaultRegistry.TradeSide.Buy;
-        IVaultRegistry.OptionType[]
-            memory optionTypes = new IVaultRegistry.OptionType[](1);
-        optionTypes[0] = IVaultRegistry.OptionType.Call;
-
         IVaultRegistry.Vault[] memory vaults = registry.getVaultsByFilter(
-            sides,
-            optionTypes
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Call
         );
 
-        assertEq(vaults.length, 1);
-        assertEq(vaults[0].vault, address(14));
+        assertEq(vaults.length, 4);
+        assertEq(vaults[0].vault, address(12));
 
-        // 2. [buy] [put]
-        optionTypes[0] = IVaultRegistry.OptionType.Put;
+        //2. [buy] [put]
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Put
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 1);
-        assertEq(vaults[0].vault, address(15));
+        assertEq(vaults.length, 4);
+        assertEq(vaults[0].vault, address(13));
 
         // 3. [buy] [both]
-        optionTypes[0] = IVaultRegistry.OptionType.Both;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Both
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 1);
+        assertEq(vaults.length, 2);
         assertEq(vaults[0].vault, address(18));
 
         // 4. [sell] [call]
-        sides[0] = IVaultRegistry.TradeSide.Sell;
-        optionTypes[0] = IVaultRegistry.OptionType.Call;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Sell,
+            IVaultRegistry.OptionType.Call
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 2);
+        assertEq(vaults.length, 5);
         assertEq(vaults[0].vault, address(10));
 
         // 5. [sell] [put]
-        optionTypes[0] = IVaultRegistry.OptionType.Put;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Sell,
+            IVaultRegistry.OptionType.Put
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 2);
+        assertEq(vaults.length, 5);
         assertEq(vaults[0].vault, address(11));
 
         // 6. [sell] [both]
-        optionTypes[0] = IVaultRegistry.OptionType.Both;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Sell,
+            IVaultRegistry.OptionType.Both
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 1);
+        assertEq(vaults.length, 2);
         assertEq(vaults[0].vault, address(19));
 
         // 7. [both] [call]
-        sides[0] = IVaultRegistry.TradeSide.Both;
-        optionTypes[0] = IVaultRegistry.OptionType.Call;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Call
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 1);
+        assertEq(vaults.length, 2);
         assertEq(vaults[0].vault, address(12));
 
         // 8. [both] [put]
-        optionTypes[0] = IVaultRegistry.OptionType.Put;
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Put
+        );
 
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
-
-        assertEq(vaults.length, 1);
+        assertEq(vaults.length, 2);
         assertEq(vaults[0].vault, address(13));
 
         // 9. [both] [both]
-        optionTypes[0] = IVaultRegistry.OptionType.Both;
-
-        vaults = registry.getVaultsByFilter(sides, optionTypes);
+        vaults = registry.getVaultsByFilter(
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Both
+        );
 
         assertEq(vaults.length, 1);
         assertEq(vaults[0].vault, address(20));
@@ -259,12 +258,12 @@ contract VaultRegistryTest is Test, Assertions {
             IVaultRegistry.TradeSide.Buy
         );
 
-        assertEq(vaults.length, 3);
+        assertEq(vaults.length, 6);
 
         // Sell
         vaults = registry.getVaultsByTradeSide(IVaultRegistry.TradeSide.Sell);
 
-        assertEq(vaults.length, 5);
+        assertEq(vaults.length, 8);
         assertEq(vaults[0].vault, address(10));
 
         // Both
@@ -279,13 +278,13 @@ contract VaultRegistryTest is Test, Assertions {
             IVaultRegistry.OptionType.Call
         );
 
-        assertEq(vaults.length, 4);
+        assertEq(vaults.length, 7);
         assertEq(vaults[0].vault, address(10));
 
         // Put
         vaults = registry.getVaultsByOptionType(IVaultRegistry.OptionType.Put);
 
-        assertEq(vaults.length, 4);
+        assertEq(vaults.length, 7);
         assertEq(vaults[0].vault, address(11));
 
         // Both
