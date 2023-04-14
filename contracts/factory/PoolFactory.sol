@@ -103,10 +103,12 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k).unwrap();
 
-        if (_getPoolAddress(poolKey) != address(0))
-            revert PoolFactory__PoolAlreadyDeployed();
+        address _poolAddress = _getPoolAddress(poolKey);
+        if (_poolAddress != address(0))
+            revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
-        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired();
+        if (msg.value < fee)
+            revert PoolFactory__InitializationFeeRequired(msg.value, fee);
 
         payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
 
@@ -211,28 +213,30 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
         if (strike % strikeInterval != ZERO)
-            revert PoolFactory__OptionStrikeInvalid();
+            revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
     }
 
     /// @notice Ensure that the maturity is a valid option maturity, revert otherwise
     function _ensureOptionMaturityIsValid(uint64 maturity) internal view {
-        if (maturity <= block.timestamp) revert PoolFactory__OptionExpired();
+        if (maturity <= block.timestamp)
+            revert PoolFactory__OptionExpired(maturity);
 
         if ((maturity % 24 hours) % 8 hours != 0)
-            revert PoolFactory__OptionMaturityNot8UTC();
+            revert PoolFactory__OptionMaturityNot8UTC(maturity);
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
         if (ttm >= 3 days && ttm <= 30 days) {
             if (!OptionMath.isFriday(maturity))
-                revert PoolFactory__OptionMaturityNotFriday();
+                revert PoolFactory__OptionMaturityNotFriday(maturity);
         }
 
         if (ttm > 30 days) {
             if (!OptionMath.isLastFriday(maturity))
-                revert PoolFactory__OptionMaturityNotLastFriday();
+                revert PoolFactory__OptionMaturityNotLastFriday(maturity);
         }
 
-        if (ttm > 365 days) revert PoolFactory__OptionMaturityExceedsMax();
+        if (ttm > 365 days)
+            revert PoolFactory__OptionMaturityExceedsMax(maturity);
     }
 }

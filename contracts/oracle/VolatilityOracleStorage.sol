@@ -15,7 +15,7 @@ library VolatilityOracleStorage {
     // START_BIT = PARAM_BITS * (PARAM_AMOUNT - 1)
     uint256 internal constant START_BIT = 204;
 
-    error VolatilityOracle__OutOfBounds();
+    error VolatilityOracle__OutOfBounds(int256 value);
 
     struct Update {
         uint256 updatedAt;
@@ -107,7 +107,7 @@ library VolatilityOracleStorage {
         unchecked {
             for (uint256 i = 0; i < PARAM_AMOUNT; i++) {
                 if (params[i] >= max || params[i] <= -max)
-                    revert VolatilityOracle__OutOfBounds();
+                    revert VolatilityOracle__OutOfBounds(params[i]);
             }
         }
 

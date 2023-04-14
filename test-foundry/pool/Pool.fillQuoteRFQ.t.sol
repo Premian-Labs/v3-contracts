@@ -112,19 +112,29 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
-    function test_fillQuoteRFQ_RevertIf_QuoteRFQPriceOutOfBounds() public {
+    function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
         vm.startPrank(users.trader);
 
         quoteRFQ.price = UD60x18.wrap(1);
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__OutOfBoundsPrice.selector,
+                quoteRFQ.price
+            )
+        );
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         quoteRFQ.price = UD60x18.wrap(1 ether + 1);
         sig = signQuoteRFQ(quoteRFQ);
 
-        vm.expectRevert(IPoolInternal.Pool__OutOfBoundsPrice.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__OutOfBoundsPrice.selector,
+                quoteRFQ.price
+            )
+        );
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
@@ -153,7 +163,14 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             Permit2.emptyPermit()
         );
 
-        vm.expectRevert(IPoolInternal.Pool__QuoteRFQOverfilled.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__QuoteRFQOverfilled.selector,
+                quoteRFQ.size / TWO,
+                quoteRFQ.size,
+                quoteRFQ.size
+            )
+        );
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
     }
 
@@ -556,7 +573,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             users.trader
         );
 
-        vm.expectRevert(IPoolInternal.Pool__InvalidSwapTokenIn.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidSwapTokenIn.selector,
+                swapToken,
+                getPoolToken(isCall)
+            )
+        );
         pool.fillQuoteRFQAndSwap(
             swapArgs,
             quoteRFQ,

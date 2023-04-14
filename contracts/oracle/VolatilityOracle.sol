@@ -122,7 +122,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             .layout();
 
         if (!l.whitelistedRelayers.contains(msg.sender))
-            revert IVolatilityOracle.VolatilityOracle__RelayerNotWhitelisted();
+            revert IVolatilityOracle.VolatilityOracle__RelayerNotWhitelisted(
+                msg.sender
+            );
 
         for (uint256 i = 0; i < length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({

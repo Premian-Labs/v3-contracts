@@ -8,7 +8,7 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
-    error VolatilityOracle__RelayerNotWhitelisted();
+    error VolatilityOracle__RelayerNotWhitelisted(address sender);
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
     error VolatilityOracle__TimeToMaturityIsZero();
