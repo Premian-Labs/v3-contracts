@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
+import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+
 contract OrderbookStream {
     struct Signature {
         bytes32 r;
@@ -9,8 +11,8 @@ contract OrderbookStream {
     }
 
     struct Quote {
-        // The pool address of the option quoted
-        address pool;
+        // The pool key
+        IPoolFactory.PoolKey poolKey;
         // The provider of the quote
         address provider;
         // The taker of the quote (address(0) if quote should be usable by anyone)
@@ -28,9 +30,8 @@ contract OrderbookStream {
         // Signature of the quote
         Signature signature;
     }
-
     event PublishQuote(
-        address indexed pool,
+        IPoolFactory.PoolKey indexed poolKey,
         address indexed provider,
         address taker,
         uint256 price,
@@ -44,7 +45,7 @@ contract OrderbookStream {
     function add(Quote[] memory quote) external {
         for (uint256 i = 0; i < quote.length; i++) {
             emit PublishQuote(
-                quote[i].pool,
+                quote[i].poolKey,
                 quote[i].provider,
                 quote[i].taker,
                 quote[i].price,

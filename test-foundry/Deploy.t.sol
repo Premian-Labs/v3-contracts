@@ -20,6 +20,7 @@ import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
+import {InitFeeCalculator} from "contracts/factory/InitFeeCalculator.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
@@ -32,6 +33,7 @@ import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 import {Premia} from "contracts/proxy/Premia.sol";
+import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
@@ -120,19 +122,28 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        PoolFactory impl = new PoolFactory(
-            address(diamond),
-            address(oracleAdapter),
-            address(base)
+        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(
+            address(base),
+            address(oracleAdapter)
         );
 
-        PoolFactoryProxy proxy = new PoolFactoryProxy(
-            address(impl),
+        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(
+                address(initFeeCalculatorImpl)
+            );
+
+        PoolFactory factoryImpl = new PoolFactory(
+            address(diamond),
+            address(oracleAdapter),
+            address(initFeeCalculatorProxy)
+        );
+
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(
+            address(factoryImpl),
             UD60x18.wrap(0.1 ether),
             feeReceiver
         );
 
-        factory = PoolFactory(address(proxy));
+        factory = PoolFactory(address(factoryProxy));
 
         router = new ERC20Router(address(factory));
         exchangeHelper = new ExchangeHelper();

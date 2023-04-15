@@ -10,6 +10,8 @@
 
   "ChainlinkAdapterImplementation": "",
   "ChainlinkAdapterProxy": "",
+  "InitFeeCalculatorImplementation": "",
+  "InitFeeCalculatorProxy": "",
   "PremiaDiamond": "",
   "PoolFactoryImplementation": "",
   "PoolFactoryProxy": "",
