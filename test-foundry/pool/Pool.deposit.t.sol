@@ -443,7 +443,10 @@ abstract contract PoolDepositTest is DeployTest {
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        if (!useMsgValue) {
+        if (useMsgValue) {
+            startHoax(users.lp);
+        } else {
+            vm.startPrank(users.lp);
             deal(swapToken, users.lp, swapQuote);
             IERC20(swapToken).approve(address(router), type(uint256).max);
         }
@@ -479,24 +482,13 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.marketPrice(), posKey.upper, "market price");
     }
 
-    function _test_swapAndDeposit_Success_WithToken(bool isCall) internal {
-        vm.startPrank(users.lp);
-        _test_swapAndDeposit_Success(isCall, false);
-    }
-
     function test_swapAndDeposit_Success_WithToken() public {
-        _test_swapAndDeposit_Success_WithToken(poolKey.isCallPool);
-    }
-
-    function _test_swapAndDeposit_Success_WithETH(bool isCall) internal {
-        if (isCall) return;
-
-        startHoax(users.lp);
-        _test_swapAndDeposit_Success(isCall, true);
+        _test_swapAndDeposit_Success(poolKey.isCallPool, false);
     }
 
     function test_swapAndDeposit_Success_WithETH() public {
-        _test_swapAndDeposit_Success_WithETH(poolKey.isCallPool);
+        if (poolKey.isCallPool) return;
+        _test_swapAndDeposit_Success(poolKey.isCallPool, true);
     }
 
     function _test_swapAndDeposit_RevertIf_NotOperator(bool isCall) internal {
