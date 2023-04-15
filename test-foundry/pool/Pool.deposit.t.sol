@@ -413,11 +413,12 @@ abstract contract PoolDepositTest is DeployTest {
         );
     }
 
-    function _test_swapAndDeposit_Success(bool isCall) internal {
+    function _test_swapAndDeposit_Success(
+        bool isCall,
+        bool useMsgValue
+    ) internal {
         address swapToken = getSwapToken(isCall);
         address poolToken = getPoolToken(isCall);
-
-        vm.startPrank(users.lp);
 
         UD60x18 depositSize = THREE;
 
@@ -431,10 +432,6 @@ abstract contract PoolDepositTest is DeployTest {
             collateralValue
         );
 
-        deal(swapToken, users.lp, swapQuote);
-
-        IERC20(swapToken).approve(address(router), type(uint256).max);
-
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
             poolToken,
@@ -446,7 +443,12 @@ abstract contract PoolDepositTest is DeployTest {
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        pool.swapAndDeposit(
+        if (!useMsgValue) {
+            deal(swapToken, users.lp, swapQuote);
+            IERC20(swapToken).approve(address(router), type(uint256).max);
+        }
+
+        pool.swapAndDeposit{value: useMsgValue ? swapQuote : 0}(
             swapArgs,
             posKey,
             nearestBelowLower,
@@ -477,8 +479,24 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.marketPrice(), posKey.upper, "market price");
     }
 
-    function test_swapAndDeposit_Success() public {
-        _test_swapAndDeposit_Success(poolKey.isCallPool);
+    function _test_swapAndDeposit_Success_WithToken(bool isCall) internal {
+        vm.startPrank(users.lp);
+        _test_swapAndDeposit_Success(isCall, false);
+    }
+
+    function test_swapAndDeposit_Success_WithToken() public {
+        _test_swapAndDeposit_Success_WithToken(poolKey.isCallPool);
+    }
+
+    function _test_swapAndDeposit_Success_WithETH(bool isCall) internal {
+        if (isCall) return;
+
+        startHoax(users.lp);
+        _test_swapAndDeposit_Success(isCall, true);
+    }
+
+    function test_swapAndDeposit_Success_WithETH() public {
+        _test_swapAndDeposit_Success_WithETH(poolKey.isCallPool);
     }
 
     function _test_swapAndDeposit_RevertIf_NotOperator(bool isCall) internal {

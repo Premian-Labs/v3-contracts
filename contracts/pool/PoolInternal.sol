@@ -1464,6 +1464,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool transferFromPool,
         bool creditMessageValue
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
+        uint256 creditedMessageValue = 0;
         if (creditMessageValue && msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
                 revert Pool__InvalidSwapTokenIn(
@@ -1472,17 +1473,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
+            creditedMessageValue = msg.value;
         }
+
         if (s.amountInMax > 0) {
             if (transferFromPool) {
                 IERC20(s.tokenIn).safeTransfer(EXCHANGE_HELPER, s.amountInMax);
-            } else {
+            } else if (creditedMessageValue < s.amountInMax) {
                 _transferFromWithPermitOrRouter(
                     permit,
                     s.tokenIn,
                     msg.sender,
                     EXCHANGE_HELPER,
-                    s.amountInMax
+                    s.amountInMax - creditedMessageValue
                 );
             }
         }
