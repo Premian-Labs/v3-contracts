@@ -26,17 +26,14 @@ interface IOracleAdapter {
         address tokenB
     ) external view returns (bool isCached, bool hasPath);
 
-    /// @notice Maps the given token pair to a path or updates an existing mapping. This function will
+    /// @notice Stores or updates the given token pair data provider configuration. This function will
     ///         let the adapter take some actions to configure the pair, in preparation for future quotes.
     ///         Can be called many times in order to let the adapter re-configure for a new context
-    /// @dev Will revert if pair cannot be supported or has already been added. tokenA and tokenB may be
-    ///      passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     function upsertPair(address tokenA, address tokenB) external;
 
     /// @notice Returns a quote, based on the given token pair
-    /// @dev Will revert if pair isn't supported
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @return Spot price of base denominated in quote token (18 decimals)
@@ -46,7 +43,6 @@ interface IOracleAdapter {
     ) external view returns (UD60x18);
 
     /// @notice Returns a quote closest to the target timestamp, based on the given token pair
-    /// @dev Will revert if pair isn't supported
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @param target Reference timestamp of the quote

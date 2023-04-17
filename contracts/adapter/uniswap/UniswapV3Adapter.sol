@@ -17,7 +17,6 @@ import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
 /// @title An implementation of IOracleAdapter that uses Uniswap feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
-/// @dev derived from https://github.com/Mean-Finance/oracles and https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
@@ -73,6 +72,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IOracleAdapter
+    /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
     function quote(
         address tokenIn,
         address tokenOut
@@ -81,6 +81,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IOracleAdapter
+    /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
     function quoteFrom(
         address tokenIn,
         address tokenOut,

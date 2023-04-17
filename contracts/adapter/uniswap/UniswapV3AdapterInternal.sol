@@ -65,6 +65,8 @@ contract UniswapV3AdapterInternal is
         if (allDeployedPools.length == 0)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
+        /// if a pool has been deployed but not added to the adapter, we may use it for the quote
+        /// only if it has sufficient cardinality.
         if (pools.length == 0 || pools.length < allDeployedPools.length) {
             _validatePoolCardinality(l, allDeployedPools);
             pools = allDeployedPools;
