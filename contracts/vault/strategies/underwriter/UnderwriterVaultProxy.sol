@@ -5,14 +5,14 @@ pragma solidity >=0.8.19;
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
+import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
-import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
 import {ERC4626BaseStorage} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseStorage.sol";
 
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IVaultRegistry} from "../../IVaultRegistry.sol";
 
-contract UnderwriterVaultProxy is Proxy, ERC20MetadataInternal {
+contract UnderwriterVaultProxy is Proxy {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
 
     // Constants
@@ -34,11 +34,13 @@ contract UnderwriterVaultProxy is Proxy, ERC20MetadataInternal {
     ) {
         VAULT_REGISTRY = vaultRegistry;
 
-        ERC4626BaseStorage.layout().asset = isCall ? base : quote;
+        ERC20MetadataStorage.Layout storage metadata = ERC20MetadataStorage
+            .layout();
+        metadata.name = name;
+        metadata.symbol = symbol;
+        metadata.decimals = 18;
 
-        _setName(name);
-        _setSymbol(symbol);
-        _setDecimals(18);
+        ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();

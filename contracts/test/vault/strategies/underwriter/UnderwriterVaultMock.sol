@@ -436,11 +436,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.removeListing(strike, maturity);
     }
 
-    function getFactoryAddress(
+    function getPoolAddress(
         UD60x18 strike,
         uint256 maturity
     ) external view returns (address) {
-        return _getFactoryAddress(strike, maturity);
+        return _getPoolAddress(strike, maturity);
     }
 
     function afterBuy(
@@ -559,7 +559,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) public {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        address listingAddr = _getFactoryAddress(strike, maturity);
+        address pool = _getPoolAddress(strike, maturity);
         UD60x18 allowance = UD60x18.wrap(2e18) * size;
         UD60x18 locked;
         if (!l.isCall) {
@@ -571,10 +571,10 @@ contract UnderwriterVaultMock is UnderwriterVault {
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
 
         UD60x18 mintingFee = l.convertAssetToUD60x18(
-            IPool(listingAddr).takerFee(size, 0, true)
+            IPool(pool).takerFee(size, 0, true)
         );
 
-        IPool(listingAddr).writeFrom(
+        IPool(pool).writeFrom(
             address(this),
             msg.sender,
             size,
