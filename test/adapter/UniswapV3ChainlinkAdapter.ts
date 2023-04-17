@@ -3,9 +3,9 @@ import {
   ChainlinkAdapterProxy__factory,
   UniswapV3Adapter__factory,
   UniswapV3AdapterProxy__factory,
-  CompositeAdapter,
-  CompositeAdapter__factory,
-  CompositeAdapterProxy__factory,
+  UniswapV3ChainlinkAdapter,
+  UniswapV3ChainlinkAdapter__factory,
+  UniswapV3ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import {
   UNISWAP_V3_FACTORY,
@@ -54,7 +54,7 @@ let pairs: { tokenIn: Token; tokenOut: Token }[];
   ]
 }
 
-describe('CompositeAdapter', () => {
+describe('UniswapV3ChainlinkAdapter', () => {
   async function deploy() {
     const [deployer] = await ethers.getSigners();
 
@@ -97,21 +97,22 @@ describe('CompositeAdapter', () => {
     await uniswapInstance.setPeriod(period);
     await uniswapInstance.setCardinalityPerMinute(cardinalityPerMinute);
 
-    const implementation = await new CompositeAdapter__factory(deployer).deploy(
-      chainlinkProxy.address,
-      uniswapProxy.address,
-      tokens.WETH.address,
-    );
+    const implementation = await new UniswapV3ChainlinkAdapter__factory(
+      deployer,
+    ).deploy(chainlinkProxy.address, uniswapProxy.address, tokens.WETH.address);
 
     await implementation.deployed();
 
-    const proxy = await new CompositeAdapterProxy__factory(deployer).deploy(
-      implementation.address,
-    );
+    const proxy = await new UniswapV3ChainlinkAdapterProxy__factory(
+      deployer,
+    ).deploy(implementation.address);
 
     await proxy.deployed();
 
-    const instance = CompositeAdapter__factory.connect(proxy.address, deployer);
+    const instance = UniswapV3ChainlinkAdapter__factory.connect(
+      proxy.address,
+      deployer,
+    );
 
     return { deployer, instance };
   }
@@ -124,14 +125,14 @@ describe('CompositeAdapter', () => {
         instance.isPairSupported(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
 
       await expect(
         instance.isPairSupported(tokens.DAI.address, tokens.WETH.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
     });
 
@@ -180,14 +181,14 @@ describe('CompositeAdapter', () => {
         instance.upsertPair(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
 
       await expect(
         instance.upsertPair(tokens.DAI.address, tokens.WETH.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
     });
 
@@ -235,14 +236,14 @@ describe('CompositeAdapter', () => {
         instance.quote(tokens.WETH.address, tokens.DAI.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
 
       await expect(
         instance.quote(tokens.DAI.address, tokens.WETH.address),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
     });
 
@@ -273,14 +274,14 @@ describe('CompositeAdapter', () => {
         instance.quoteFrom(tokens.WETH.address, tokens.DAI.address, target),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
 
       await expect(
         instance.quoteFrom(tokens.DAI.address, tokens.WETH.address, target),
       ).to.be.revertedWithCustomError(
         instance,
-        'CompositeAdapter__TokenCannotBeWrappedNative',
+        'UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative',
       );
     });
 
@@ -324,7 +325,7 @@ describe('CompositeAdapter', () => {
 
   for (let i = 0; i < pairs.length; i++) {
     const { tokenIn, tokenOut } = pairs[i];
-    let instance: CompositeAdapter;
+    let instance: UniswapV3ChainlinkAdapter;
 
     describe(`${tokenIn.symbol}-${tokenOut.symbol}`, () => {
       beforeEach(async () => {
