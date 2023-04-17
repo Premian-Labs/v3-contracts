@@ -519,7 +519,7 @@ describe('UnderwriterVault', () => {
           expect(poolBalance).to.be.eq(collateral.add(mintingFee));
         });
 
-        it('should revert on pool not existing', async () => {
+        it('should revert on not having enough available capital', async () => {
           const { vault, trader, spot, strike, timestamp, maturity } =
             await loadFixture(setup);
 

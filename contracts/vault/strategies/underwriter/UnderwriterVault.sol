@@ -218,11 +218,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @notice Gets the total locked spread for the vault
-    /// @return The total locked spread
+    /// @return vars The total locked spread
     function _getLockedSpreadInternal()
         internal
         view
-        returns (LockedSpreadInternal memory)
+        returns (LockedSpreadInternal memory vars)
     {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -230,7 +230,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 current = l.getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
         uint256 timestamp = _getBlockTimestamp();
 
-        LockedSpreadInternal memory vars;
         vars.spreadUnlockingRate = l.spreadUnlockingRate;
         vars.totalLockedSpread = l.totalLockedSpread;
         vars.lastSpreadUnlockUpdate = l.lastSpreadUnlockUpdate;
@@ -253,7 +252,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             UD60x18.wrap((timestamp - vars.lastSpreadUnlockUpdate) * WAD) *
             vars.spreadUnlockingRate;
         vars.lastSpreadUnlockUpdate = timestamp;
-        return vars;
     }
 
     function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
@@ -659,12 +657,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.lastTradeTimestamp = _getBlockTimestamp();
     }
 
-    /// @notice Gets the pool factory address corresponding to the given strike
-    ///         and maturity.
+    /// @notice Gets the pool address corresponding to the given strike and maturity.
     /// @param strike The strike price for the pool
     /// @param maturity The maturity for the pool
     /// @return The pool factory address
-    function _getFactoryAddress(
+    function _getPoolAddress(
         UD60x18 strike,
         uint256 maturity
     ) internal view returns (address) {
@@ -680,9 +677,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _poolKey.maturity = uint64(maturity);
         _poolKey.isCallPool = l.isCall;
 
-        address listingAddr = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
-        if (listingAddr == address(0)) revert Vault__OptionPoolNotListed();
-        return listingAddr;
+        address pool = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
+        if (pool == address(0)) revert Vault__OptionPoolNotListed();
+        return pool;
     }
 
     /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
@@ -810,7 +807,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param isCall Whether the option is a call or a put.
     /// @param size The amount of contracts.
     /// @param isBuy Whether the trade is a buy or a sell.
-    /// @return The variables needed in order to compute the quote for a trade.
+    /// @return quote The variables needed in order to compute the quote for a trade.
     function _getQuoteInternal(
         UD60x18 strike,
         uint256 maturity,
@@ -828,7 +825,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _ensureValidOption(strike, maturity);
         _ensureSufficientFunds(isCall, strike, size, _availableAssetsUD60x18());
 
-        address pool = _getFactoryAddress(strike, maturity);
+        address pool = _getPoolAddress(strike, maturity);
 
         QuoteVars memory vars;
 
@@ -893,7 +890,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         // Compute output variables
-        QuoteInternal memory quote;
         quote.pool = pool;
         quote.premium = vars.price * size;
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
@@ -1017,9 +1013,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
                 ? positionSize
                 : positionSize * strike;
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
-            address listingAddr = _getFactoryAddress(strike, maturity);
+            address pool = _getPoolAddress(strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(
-                IPool(listingAddr).settle(address(this))
+                IPool(pool).settle(address(this))
             );
             l.totalAssets =
                 l.totalAssets -

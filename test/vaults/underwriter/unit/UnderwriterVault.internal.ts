@@ -678,7 +678,7 @@ describe('UnderwriterVault.internal', () => {
     });
   });
 
-  describe('#_getFactoryAddress', () => {
+  describe('#_getPoolAddress', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         it('should return the poolAddress', async () => {
@@ -698,7 +698,7 @@ describe('UnderwriterVault.internal', () => {
             vault = putVault;
             relevantAddress = putPoolAddress;
           }
-          const poolAddress = await vault.getFactoryAddress(strike, maturity);
+          const poolAddress = await vault.getPoolAddress(strike, maturity);
           await expect(poolAddress).to.eq(relevantAddress);
         });
 
@@ -713,15 +713,15 @@ describe('UnderwriterVault.internal', () => {
           else vault = putVault;
 
           await expect(
-            vault.getFactoryAddress(badStrike, maturity),
+            vault.getPoolAddress(badStrike, maturity),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
 
           await expect(
-            vault.getFactoryAddress(strike, badMaturity),
+            vault.getPoolAddress(strike, badMaturity),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
 
           await expect(
-            vault.getFactoryAddress(badStrike, badMaturity),
+            vault.getPoolAddress(badStrike, badMaturity),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
         });
       });
