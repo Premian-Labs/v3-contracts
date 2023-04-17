@@ -62,7 +62,7 @@ contract UniswapV3Adapter is
 
         address[] memory poolsToSupport = new address[](pools.length);
 
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             address pool = pools[i];
             _tryIncreaseCardinality(pool, l.targetCardinality);
             poolsToSupport[i] = pool;
@@ -228,7 +228,7 @@ contract UniswapV3Adapter is
         uint24[] storage feeTiers = UniswapV3AdapterStorage.layout().feeTiers;
         uint256 feeTiersLength = feeTiers.length;
 
-        for (uint256 i; i < feeTiersLength; i++) {
+        for (uint256 i = 0; i < feeTiersLength; i++) {
             if (feeTiers[i] == feeTier)
                 revert UniswapV3Adapter__FeeTierExists(feeTier);
         }

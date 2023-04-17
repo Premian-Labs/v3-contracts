@@ -99,7 +99,7 @@ contract UniswapV3AdapterInternal is
                 pools.length
             );
 
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             uint32[] memory range = _calculateRange(pools[i], period, target);
             (tickData[i].tick, tickData[i].weight) = _consult(pools[i], range);
         }
@@ -153,7 +153,7 @@ contract UniswapV3AdapterInternal is
         UniswapV3AdapterStorage.Layout storage l,
         address[] memory pools
     ) internal view {
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             address pool = pools[i];
 
             (
@@ -178,7 +178,7 @@ contract UniswapV3AdapterInternal is
         pools = new address[](feeTiers.length);
         uint256 validPools;
 
-        for (uint256 i; i < feeTiers.length; i++) {
+        for (uint256 i = 0; i < feeTiers.length; i++) {
             address pool = _computeAddress(
                 address(UNISWAP_V3_FACTORY),
                 PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
