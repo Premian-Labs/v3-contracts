@@ -140,7 +140,10 @@ contract UniswapV3AdapterInternal is
             //        rangeStart   rangeEnd
 
             if (oldestObservation < period)
-                revert UniswapV3Adapter__InsufficientObservationPeriod();
+                revert UniswapV3Adapter__InsufficientObservationPeriod(
+                    oldestObservation,
+                    period
+                );
 
             range[0] = oldestObservation;
             range[1] = oldestObservation - period;
@@ -158,11 +161,14 @@ contract UniswapV3AdapterInternal is
 
             (
                 bool currentCardinalityBelowTarget,
-
+                uint16 currentCardinality
             ) = _isCurrentCardinalityBelowTarget(pool, l.targetCardinality);
 
             if (currentCardinalityBelowTarget)
-                revert UniswapV3Adapter__ObservationCardinalityTooLow();
+                revert UniswapV3Adapter__ObservationCardinalityTooLow(
+                    currentCardinality,
+                    l.targetCardinality
+                );
         }
     }
 
@@ -214,7 +220,10 @@ contract UniswapV3AdapterInternal is
             );
         } else {
             // If the cardinality cannot be increased due to gas cost, revert
-            revert UniswapV3Adapter__ObservationCardinalityTooLow();
+            revert UniswapV3Adapter__ObservationCardinalityTooLow(
+                currentCardinality,
+                targetCardinality
+            );
         }
     }
 
@@ -256,7 +265,7 @@ contract UniswapV3AdapterInternal is
         returns (int24 arithmeticMeanTick, uint128 harmonicMeanLiquidity)
     {
         if (range.length != 2 || range[0] <= range[1])
-            revert UniswapV3Adapter__InvalidTimeRange();
+            revert UniswapV3Adapter__InvalidTimeRange(range[0], range[1]);
 
         uint32 span = range[0] - range[1];
 
