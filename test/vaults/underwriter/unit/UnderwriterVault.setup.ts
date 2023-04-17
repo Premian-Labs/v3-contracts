@@ -28,18 +28,16 @@ describe('#vaultSetup', () => {
         maturity: BigNumber.from(maturity),
         isCallPool: isCall,
       };
-      const listingAddr = await p.poolFactory.getPoolAddress(
-        nonExistingPoolKey,
-      );
+      const output = await p.poolFactory.getPoolAddress(nonExistingPoolKey);
 
-      expect(listingAddr).to.be.eq(ethers.constants.AddressZero);
+      expect(output[1]).to.be.eq(false);
     }
   });
 
   it('returns the proper pool address from factory', async () => {
     const { p, callPoolKey, callPool } = await loadFixture(vaultSetup);
-    const listingAddr = await p.poolFactory.getPoolAddress(callPoolKey);
-    expect(listingAddr).to.be.eq(callPool.address);
+    const output = await p.poolFactory.getPoolAddress(callPoolKey);
+    expect(output[0]).to.be.eq(callPool.address);
   });
 
   it('responds to mock oracle adapter query', async () => {
@@ -83,9 +81,8 @@ describe('#vaultSetup', () => {
 
   it('should properly initialize a new option pool', async () => {
     const { p, callPoolKey, callPool } = await loadFixture(vaultSetup);
-    expect(await p.poolFactory.getPoolAddress(callPoolKey)).to.eq(
-      callPool.address,
-    );
+    const output = await p.poolFactory.getPoolAddress(callPoolKey);
+    expect(output[0]).to.eq(callPool.address);
   });
 
   it('should properly hydrate accounts with funds', async () => {
