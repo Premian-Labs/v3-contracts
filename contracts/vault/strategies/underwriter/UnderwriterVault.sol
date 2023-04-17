@@ -691,8 +691,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _poolKey.maturity = uint64(maturity);
         _poolKey.isCallPool = l.isCall;
 
-        address pool = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
-        if (pool == address(0)) revert Vault__OptionPoolNotListed();
+        (address pool, bool isDeployed) = IPoolFactory(FACTORY).getPoolAddress(
+            _poolKey
+        );
+        if (!isDeployed) revert Vault__OptionPoolNotListed();
         return pool;
     }
 
