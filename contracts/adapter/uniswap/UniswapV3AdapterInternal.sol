@@ -117,12 +117,12 @@ contract UniswapV3AdapterInternal is
     ) internal view returns (uint32[] memory) {
         uint32[] memory range = new uint32[](2);
 
-        range[0] = period;
-        range[1] = 0;
-
         if (target > 0) {
             range[0] = (block.timestamp - (target - period)).toUint32(); // rangeStart
             range[1] = (block.timestamp - target).toUint32(); // rangeEnd
+        } else {
+            range[0] = period;
+            range[1] = 0;
         }
 
         uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(
