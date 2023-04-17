@@ -15,14 +15,19 @@ contract PoolFactoryTest is DeployTest {
         vm.warp(1679758940);
     }
 
-    function test_getPoolAddress_ReturnAddress0IfNotDeployed() public {
-        assertEq(factory.getPoolAddress(poolKey), address(0));
+    function test_getPoolAddress_ReturnIsDeployedFalse() public {
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+
+        assert(pool != address(0));
+        assertFalse(isDeployed);
     }
 
-    function test_getPoolAddress_ReturnPoolAddressIfDeployed() public {
+    function test_getPoolAddress_ReturnIsDeployedTrue() public {
         address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
-        assertEq(factory.getPoolAddress(poolKey), poolAddress);
+        (address pool, bool isDeployed) = factory.getPoolAddress(poolKey);
+        assertEq(pool, poolAddress);
+        assertTrue(isDeployed);
     }
 
     function test_deployPool_DeployPool() public {

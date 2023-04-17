@@ -17,7 +17,7 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolDepositTest is DeployTest {
-    function _test_deposit_1000LC(bool isCall) internal {
+    function _test_deposit_1000_LC(bool isCall) internal {
         poolKey.isCallPool = isCall;
 
         IERC20 token = IERC20(getPoolToken(isCall));
@@ -39,7 +39,7 @@ abstract contract PoolDepositTest is DeployTest {
     }
 
     function test_deposit_1000_LC() public {
-        _test_deposit_1000LC(poolKey.isCallPool);
+        _test_deposit_1000_LC(poolKey.isCallPool);
     }
 
     function test_deposit_revertIf_SenderNotOperator() public {
