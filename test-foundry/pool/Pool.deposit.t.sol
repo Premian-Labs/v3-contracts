@@ -415,7 +415,8 @@ abstract contract PoolDepositTest is DeployTest {
 
     function _test_swapAndDeposit_Success(
         bool isCall,
-        bool useMsgValue
+        bool useMsgValue,
+        bool usePartialMsgValue
     ) internal {
         address swapToken = getSwapToken(isCall);
         address poolToken = getPoolToken(isCall);
@@ -443,15 +444,23 @@ abstract contract PoolDepositTest is DeployTest {
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
 
+        uint256 value;
         if (useMsgValue) {
             startHoax(users.lp);
+            value = swapQuote;
+
+            if (usePartialMsgValue) {
+                value = swapQuote / 3;
+                deal(swapToken, users.lp, swapQuote - value);
+                IERC20(swapToken).approve(address(router), type(uint256).max);
+            }
         } else {
             vm.startPrank(users.lp);
             deal(swapToken, users.lp, swapQuote);
             IERC20(swapToken).approve(address(router), type(uint256).max);
         }
 
-        pool.swapAndDeposit{value: useMsgValue ? swapQuote : 0}(
+        pool.swapAndDeposit{value: value}(
             swapArgs,
             posKey,
             nearestBelowLower,
@@ -483,12 +492,17 @@ abstract contract PoolDepositTest is DeployTest {
     }
 
     function test_swapAndDeposit_Success_WithToken() public {
-        _test_swapAndDeposit_Success(poolKey.isCallPool, false);
+        _test_swapAndDeposit_Success(poolKey.isCallPool, false, false);
     }
 
     function test_swapAndDeposit_Success_WithETH() public {
         if (poolKey.isCallPool) return;
-        _test_swapAndDeposit_Success(poolKey.isCallPool, true);
+        _test_swapAndDeposit_Success(poolKey.isCallPool, true, false);
+    }
+
+    function test_swapAndDeposit_Success_WithETHAndToken() public {
+        if (poolKey.isCallPool) return;
+        _test_swapAndDeposit_Success(poolKey.isCallPool, true, true);
     }
 
     function _test_swapAndDeposit_RevertIf_NotOperator(bool isCall) internal {
