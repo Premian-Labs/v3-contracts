@@ -19,7 +19,6 @@ contract UnderwriterVaultProxy is Proxy {
     address internal immutable VAULT_REGISTRY;
 
     // Errors
-    error VaultProxy__CLevelBounds();
 
     constructor(
         address vaultRegistry,
@@ -62,13 +61,7 @@ contract UnderwriterVaultProxy is Proxy {
     }
 
     /// @inheritdoc Proxy
-    function _getImplementation()
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function _getImplementation() internal view override returns (address) {
         return IVaultRegistry(VAULT_REGISTRY).getImplementation(VAULT_TYPE);
     }
 

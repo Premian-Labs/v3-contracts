@@ -35,7 +35,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
-    bytes32 public constant VAULT_TYPE = keccak256("UnderwriterVault");
 
     address internal immutable VAULT_REGISTRY;
     address internal immutable FEE_RECEIVER;
