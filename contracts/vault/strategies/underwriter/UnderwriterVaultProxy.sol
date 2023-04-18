@@ -63,13 +63,7 @@ contract UnderwriterVaultProxy is Proxy {
     }
 
     /// @inheritdoc Proxy
-    function _getImplementation()
-        internal
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function _getImplementation() internal view override returns (address) {
         return IVaultRegistry(VAULT_REGISTRY).getImplementation(VAULT_TYPE);
     }
 
