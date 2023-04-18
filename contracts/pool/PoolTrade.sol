@@ -8,6 +8,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
+import {IFlashLoanCallback} from "./IFlashLoanCallback.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
 import {iZERO, ZERO} from "../libraries/Constants.sol";
@@ -17,6 +18,10 @@ import {Position} from "../libraries/Position.sol";
 contract PoolTrade is IPoolTrade, PoolInternal {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
+
+    // ToDo : Define final value
+    // ToDo : Make this part of global pool settings ?
+    UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
     constructor(
         address factory,
@@ -218,6 +223,31 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         if (tokenOutReceived > 0) {
             IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
         }
+    }
+
+    /// @inheritdoc IPoolTrade
+    function flashLoan(uint256 amount, bytes calldata data) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        IERC20 token = IERC20(l.getPoolToken());
+        uint256 startBalance = token.balanceOf(address(this));
+        token.safeTransfer(msg.sender, amount);
+
+        UD60x18 fee = l.fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
+        uint256 _fee = l.toPoolTokenDecimals(fee);
+
+        IFlashLoanCallback(msg.sender).premiaFlashLoanCallback(
+            address(token),
+            amount + _fee,
+            data
+        );
+
+        uint256 endBalance = token.balanceOf(address(this));
+        uint256 endBalanceRequired = startBalance + _fee;
+
+        if (endBalance < endBalanceRequired) revert Pool__FlashLoanNotRepayed();
+
+        emit FlashLoan(msg.sender, l.fromPoolTokenDecimals(amount), fee);
     }
 
     /// @inheritdoc IPoolTrade

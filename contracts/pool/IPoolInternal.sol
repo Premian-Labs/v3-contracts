@@ -16,6 +16,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 minimum,
         uint256 maximum
     );
+    error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientLiquidity();

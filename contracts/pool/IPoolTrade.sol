@@ -4,6 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IFlashLoanCallback} from "./IFlashLoanCallback.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 import {Permit2} from "../libraries/Permit2.sol";
@@ -152,6 +153,12 @@ interface IPoolTrade is IPoolInternal {
             uint256 collateralReceived,
             uint256 tokenOutReceived
         );
+
+    /// @notice Flash loan collaterals sitting in this contract
+    ///         Loaned amount + fee must be repaid by the end of the transaction for the transaction to not be reverted
+    /// @param amount Amount to flashLoan
+    /// @param data Data to pass to the callback
+    function flashLoan(uint256 amount, bytes calldata data) external;
 
     /// @notice Cancel given RFQ quotes
     /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,

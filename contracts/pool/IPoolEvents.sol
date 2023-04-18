@@ -114,4 +114,6 @@ interface IPoolEvents {
     );
 
     event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
+
+    event FlashLoan(address indexed user, UD60x18 amount, UD60x18 fee);
 }
