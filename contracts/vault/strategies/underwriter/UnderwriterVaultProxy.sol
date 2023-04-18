@@ -21,7 +21,6 @@ contract UnderwriterVaultProxy is Proxy {
     address internal immutable VAULT_REGISTRY;
 
     // Errors
-    error VaultProxy__CLevelBounds();
 
     constructor(
         address vaultRegistry,
