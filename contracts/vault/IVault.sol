@@ -19,6 +19,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     error Vault__ZeroSize();
     error Vault__MaximumAmountExceeded();
     error Vault__AboveMaxSlippage();
+    error Vault__SettingsNotFromRegistry();
+    error Vault__SettingsUpdateIsEmpty();
 
     // Events
     event UpdateQuotes();

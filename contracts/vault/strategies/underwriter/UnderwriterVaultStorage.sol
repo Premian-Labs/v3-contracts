@@ -7,6 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {IVault} from "../../IVault.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 
@@ -105,7 +106,7 @@ library UnderwriterVaultStorage {
 
     function updateSettings(Layout storage l, bytes memory settings) internal {
         // Handle decoding of settings and updating storage
-        require(settings.length != 0, "Empty!");
+        if (settings.length == 0) revert IVault.Vault__SettingsUpdateIsEmpty();
 
         uint256[] memory arr = abi.decode(settings, (uint256[]));
 

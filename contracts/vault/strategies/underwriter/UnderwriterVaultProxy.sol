@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {SD59x18} from "@prb/math/SD59x18.sol";
-import {UD60x18} from "@prb/math/UD60x18.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";

@@ -63,8 +63,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function updateSettings(bytes memory settings) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        // If msg.sender != address of vault registry
-        require(msg.sender != VAULT_REGISTRY, "Error!");
+
+        if (msg.sender != VAULT_REGISTRY)
+            revert Vault__SettingsNotFromRegistry();
+
         // Decode data and update storage variable
         l.updateSettings(settings);
     }
