@@ -54,6 +54,8 @@ contract FlashLoanMock is IFlashLoanCallback {
             );
         }
 
+        // Logic can be inserted here to do something with the funds, before repaying all flash loans
+
         IERC20(token).transfer(
             msg.sender,
             repayFull ? amountToRepay : amountToRepay - 1
