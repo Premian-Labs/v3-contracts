@@ -8,19 +8,23 @@ import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.so
 
 interface IVault is IERC4626Internal, IERC20Internal {
     // Errors
+    error Vault__AboveMaxSlippage(UD60x18 totalPremium, UD60x18 premiumLimit);
     error Vault__AddressZero();
     error Vault__InsufficientFunds();
+    error Vault__MaximumAmountExceeded(UD60x18 maximum, UD60x18 amount);
     error Vault__OptionExpired();
     error Vault__OptionPoolNotListed();
+    error Vault__OptionTypeMismatchWithVault();
+    error Vault__OutOfDeltaBounds();
+    error Vault__OutOfDTEBounds();
+    error Vault__SettingsNotFromRegistry();
+    error Vault__SettingsUpdateIsEmpty();
     error Vault__StrikeZero();
-    error Vault__TransferExceedsBalance();
+    error Vault__TradeMustBeBuy();
+    error Vault__TransferExceedsBalance(UD60x18 balance, UD60x18 amount);
     error Vault__ZeroAsset();
     error Vault__ZeroShares();
     error Vault__ZeroSize();
-    error Vault__MaximumAmountExceeded();
-    error Vault__AboveMaxSlippage();
-    error Vault__SettingsNotFromRegistry();
-    error Vault__SettingsUpdateIsEmpty();
 
     // Events
     event UpdateQuotes();

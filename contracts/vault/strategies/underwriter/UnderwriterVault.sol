@@ -35,7 +35,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     uint256 internal constant ONE_YEAR = 365 days;
     uint256 internal constant ONE_HOUR = 1 hours;
 
-
     address internal immutable VAULT_REGISTRY;
     address internal immutable FEE_RECEIVER;
     address internal immutable IV_ORACLE;
@@ -410,8 +409,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 assetAmount,
         address receiver
     ) internal virtual override returns (uint256 shareAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
         if (assetAmount > _maxDeposit(receiver))
-            revert Vault__MaximumAmountExceeded();
+            revert Vault__MaximumAmountExceeded(
+                l.convertAssetToUD60x18(_maxDeposit(receiver)),
+                l.convertAssetToUD60x18(assetAmount)
+            );
 
         shareAmount = _previewDeposit(assetAmount);
 
@@ -446,7 +451,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         address receiver
     ) internal virtual override returns (uint256 assetAmount) {
         if (shareAmount > _maxMint(receiver))
-            revert Vault__MaximumAmountExceeded();
+            revert Vault__MaximumAmountExceeded(
+                UD60x18.wrap(_maxMint(receiver)),
+                UD60x18.wrap(shareAmount)
+            );
 
         assetAmount = _previewMint(shareAmount);
 
@@ -487,7 +495,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 pps = _getPricePerShareUD60x18();
 
         if (shares > _maxRedeemUD60x18(owner, pps))
-            revert Vault__MaximumAmountExceeded();
+            revert Vault__MaximumAmountExceeded(
+                _maxRedeemUD60x18(owner, pps),
+                shares
+            );
 
         UD60x18 assets = shares * pps;
         assetAmount = l.convertAssetFromUD60x18(assets);
@@ -567,7 +578,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 pps = _getPricePerShareUD60x18();
 
         if (assets > _maxWithdrawUD60x18(owner, pps))
-            revert Vault__MaximumAmountExceeded();
+            revert Vault__MaximumAmountExceeded(
+                _maxWithdrawUD60x18(owner, pps),
+                assets
+            );
 
         UD60x18 shares = _previewWithdrawUD60x18(assets, pps);
         shareAmount = shares.unwrap();
@@ -813,9 +827,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         bool isBuy
     ) internal pure {
         if (isBuy && totalPremium > premiumLimit)
-            revert Vault__AboveMaxSlippage();
+            revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
         if (!isBuy && totalPremium < premiumLimit)
-            revert Vault__AboveMaxSlippage();
+            revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
     /// @notice Get the variables needed in order to compute the quote for a trade.
@@ -1170,8 +1184,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             FeeInternal memory vars = _getFeeInternal(from, shares, pps);
 
-            if (shares > _maxTransferableShares(vars))
-                revert Vault__TransferExceedsBalance();
+            UD60x18 maxShares = _maxTransferableShares(vars);
+
+            if (shares > maxShares)
+                revert Vault__TransferExceedsBalance(maxShares, shares);
 
             if (vars.totalFeeInShares > ZERO) {
                 _burn(from, vars.totalFeeInShares.unwrap());
