@@ -10,10 +10,6 @@ import {IVault} from "../../../vault/IVault.sol";
 
 interface IUnderwriterVault is ISolidStateERC4626, IVault {
     // Errors
-    error Vault__OptionTypeMismatchWithVault();
-    error Vault__OutOfDeltaBounds();
-    error Vault__OutOfDTEBounds();
-    error Vault__TradeMustBeBuy();
     error Vault__UtilisationOutOfBounds();
 
     // Structs
