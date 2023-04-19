@@ -2,7 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -661,13 +660,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             .layout();
 
         // generate struct to grab pool address
-        IPoolFactory.PoolKey memory _poolKey;
-        _poolKey.base = l.base;
-        _poolKey.quote = l.quote;
-        _poolKey.oracleAdapter = l.oracleAdapter;
-        _poolKey.strike = strike;
-        _poolKey.maturity = uint64(maturity);
-        _poolKey.isCallPool = l.isCall;
+        IPoolFactory.PoolKey memory _poolKey = IPoolFactory.PoolKey({
+            base: l.base,
+            quote: l.quote,
+            oracleAdapter: l.oracleAdapter,
+            strike: strike,
+            maturity: uint64(maturity),
+            isCallPool: l.isCall
+        });
 
         (address pool, bool isDeployed) = IPoolFactory(FACTORY).getPoolAddress(
             _poolKey
@@ -1023,16 +1023,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             .layout();
         // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
         _updateState();
-        // Get last maturity that is greater than the current time
-        uint256 lastExpired;
+
         uint256 timestamp = _getBlockTimestamp();
 
-        if (timestamp >= l.maxMaturity) {
-            lastExpired = l.maxMaturity;
-        } else {
-            lastExpired = l.getMaturityAfterTimestamp(timestamp);
-            lastExpired = l.maturities.prev(lastExpired);
-        }
+        // Get last maturity that is greater than the current time
+        uint256 lastExpired = timestamp >= l.maxMaturity
+            ? l.maxMaturity
+            : l.maturities.prev(l.getMaturityAfterTimestamp(timestamp));
 
         uint256 current = l.minMaturity;
 
