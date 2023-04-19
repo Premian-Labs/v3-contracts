@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {Assertions} from "../Assertions.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 import {IVaultRegistry} from "../../contracts/vault/IVaultRegistry.sol";
 import {VaultRegistry} from "../../contracts/vault/VaultRegistry.sol";
@@ -13,6 +14,7 @@ import {ProxyUpgradeableOwnable} from "../../contracts/proxy/ProxyUpgradeableOwn
 
 contract VaultRegistryHarness is VaultRegistry {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     function hasSettings(bytes32 vaultType) external view returns (bool) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
@@ -22,6 +24,50 @@ contract VaultRegistryHarness is VaultRegistry {
     function hasImplementation(bytes32 vaultType) external view returns (bool) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.implementations[vaultType] != address(0);
+    }
+
+    function hasPurgedVaultFromStorage(
+        address vaultAddress,
+        bytes32 vaultType
+    ) external view returns (bool) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        IVaultRegistry.Vault memory vault = l.vaults[vaultAddress];
+
+        if (vault.vault != address(0)) return false;
+        if (l.vaultsByType[vaultType].contains(vaultAddress)) return false;
+        if (
+            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Buy].contains(
+                vaultAddress
+            )
+        ) return false;
+        if (
+            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Sell].contains(
+                vaultAddress
+            )
+        ) return false;
+        if (
+            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Both].contains(
+                vaultAddress
+            )
+        ) return false;
+        if (
+            l.vaultsByOptionType[IVaultRegistry.OptionType.Call].contains(
+                vaultAddress
+            )
+        ) return false;
+        if (
+            l.vaultsByOptionType[IVaultRegistry.OptionType.Put].contains(
+                vaultAddress
+            )
+        ) return false;
+        if (
+            l.vaultsByOptionType[IVaultRegistry.OptionType.Both].contains(
+                vaultAddress
+            )
+        ) return false;
+
+        return true;
     }
 }
 
@@ -148,6 +194,43 @@ contract VaultRegistryTest is Test, Assertions {
         // Remove vault from registry
         registry.removeVault(address(123));
         assertEq(registry.getNumberOfVaults(), 0);
+        assert(registry.hasPurgedVaultFromStorage(address(123), vaultType));
+
+        // Remove vault with OptionType.Both from registry
+        registry.addVault(
+            address(123),
+            vaultType,
+            IVaultRegistry.TradeSide.Buy,
+            IVaultRegistry.OptionType.Both
+        );
+
+        registry.removeVault(address(123));
+        assertEq(registry.getNumberOfVaults(), 0);
+        assert(registry.hasPurgedVaultFromStorage(address(123), vaultType));
+
+        // Remove vault with TradeSide.Both from registry
+        registry.addVault(
+            address(123),
+            vaultType,
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Call
+        );
+
+        registry.removeVault(address(123));
+        assertEq(registry.getNumberOfVaults(), 0);
+        assert(registry.hasPurgedVaultFromStorage(address(123), vaultType));
+
+        // Remove vault with OptionType.Both and TradeSide.Both from registry
+        registry.addVault(
+            address(123),
+            vaultType,
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Both
+        );
+
+        registry.removeVault(address(123));
+        assertEq(registry.getNumberOfVaults(), 0);
+        assert(registry.hasPurgedVaultFromStorage(address(123), vaultType));
     }
 
     function test_removeVault_revertIf_NotOwner() public {

@@ -51,19 +51,26 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     /// @inheritdoc IVaultRegistry
     function removeVault(address vault) public onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        Vault memory _vault = l.vaults[vault];
 
-        l.vaultAddresses.remove(_vault.vault);
-        l.vaultsByTradeSide[_vault.side].remove(_vault.vault);
-        l.vaultsByOptionType[_vault.optionType].remove(_vault.vault);
+        l.vaultAddresses.remove(vault);
+        l.vaultsByType[l.vaults[vault].vaultType].remove(vault);
+        l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
+        l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
 
-        emit VaultRemoved(_vault.vault);
-    }
+        if (l.vaults[vault].side == TradeSide.Both) {
+            l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
+            l.vaultsByTradeSide[TradeSide.Sell].remove(vault);
+        }
 
-    /// @inheritdoc IVaultRegistry
-    function getVaultAddressAt(uint256 index) external view returns (address) {
-        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        return l.vaultAddresses.at(index);
+        if (l.vaults[vault].optionType == OptionType.Both) {
+            l.vaultsByOptionType[OptionType.Call].remove(vault);
+            l.vaultsByOptionType[OptionType.Put].remove(vault);
+        }
+
+        Vault memory _vault;
+        l.vaults[vault] = _vault;
+
+        emit VaultRemoved(vault);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -72,14 +79,24 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         return l.vaults[vault];
     }
 
+    function _getVaultsFromAddressSet(
+        EnumerableSet.AddressSet storage vaultSet
+    ) internal view returns (Vault[] memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        uint256 length = vaultSet.length();
+        Vault[] memory vaults = new Vault[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            vaults[i] = l.vaults[vaultSet.at(i)];
+        }
+        return vaults;
+    }
+
     /// @inheritdoc IVaultRegistry
     function getVaults() external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-        Vault[] memory vaults = new Vault[](l.vaultAddresses.length());
-        for (uint256 i = 0; i < l.vaultAddresses.length(); i++) {
-            vaults[i] = l.vaults[l.vaultAddresses.at(i)];
-        }
-        return vaults;
+        return _getVaultsFromAddressSet(l.vaultAddresses);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -89,25 +106,25 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        uint256 n = l.vaultsByOptionType[optionType].length();
-        Vault[] memory vaults = new Vault[](n);
+        uint256 length = l.vaultsByOptionType[optionType].length();
+        Vault[] memory vaults = new Vault[](length);
 
-        uint256 index;
-        for (uint256 i = 0; i < n; i++) {
+        uint256 count;
+        for (uint256 i = 0; i < length; i++) {
             Vault memory vault = l.vaults[
                 l.vaultsByOptionType[optionType].at(i)
             ];
 
             if (vault.side == side || vault.side == TradeSide.Both) {
-                vaults[index] = vault;
-                index++;
+                vaults[count] = vault;
+                count++;
             }
         }
 
         // Remove empty elements from array
-        if (index < n) {
+        if (count < length) {
             assembly {
-                mstore(vaults, index)
+                mstore(vaults, count)
             }
         }
 
@@ -119,14 +136,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         TradeSide side
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-
-        Vault[] memory vaults = new Vault[](l.vaultsByTradeSide[side].length());
-        uint256 n = l.vaultsByTradeSide[side].length();
-
-        for (uint256 i = 0; i < n; i++) {
-            vaults[i] = l.vaults[l.vaultsByTradeSide[side].at(i)];
-        }
-        return vaults;
+        return _getVaultsFromAddressSet(l.vaultsByTradeSide[side]);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -134,14 +144,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         OptionType optionType
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-
-        uint256 n = l.vaultsByOptionType[optionType].length();
-        Vault[] memory vaults = new Vault[](n);
-
-        for (uint256 i = 0; i < n; i++) {
-            vaults[i] = l.vaults[l.vaultsByOptionType[optionType].at(i)];
-        }
-        return vaults;
+        return _getVaultsFromAddressSet(l.vaultsByOptionType[optionType]);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -149,14 +152,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         bytes32 vaultType
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
-
-        uint256 n = l.vaultsByType[vaultType].length();
-        Vault[] memory vaults = new Vault[](n);
-
-        for (uint256 i = 0; i < n; i++) {
-            vaults[i] = l.vaults[l.vaultsByType[vaultType].at(i)];
-        }
-        return vaults;
+        return _getVaultsFromAddressSet(l.vaultsByType[vaultType]);
     }
 
     /// @inheritdoc IVaultRegistry

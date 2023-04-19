@@ -124,16 +124,6 @@ contract VaultRegistryTest is Test, Assertions {
         vm.stopPrank();
     }
 
-    function test_getVaultAddressAt() public {
-        // At index 0
-        address vaultAddr = registry.getVaultAddressAt(0);
-        assertEq(vaultAddr, address(10));
-
-        // At index 7
-        vaultAddr = registry.getVaultAddressAt(7);
-        assertEq(vaultAddr, address(17));
-    }
-
     function test_getVault() public {
         IVaultRegistry.Vault memory vault = registry.getVault(address(10));
         assertEq(vault.vault, address(10));

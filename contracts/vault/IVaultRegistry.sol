@@ -55,11 +55,6 @@ interface IVaultRegistry {
     /// @param vault The proxy address of the vault.
     function removeVault(address vault) external;
 
-    /// @notice Gets the proxy address of the vault at the specified index.
-    /// @param index The specified index.
-    /// @return The vault at the specified index.
-    function getVaultAddressAt(uint256 index) external view returns (address);
-
     /// @notice Gets the vault at the specified by the proxy address.
     /// @param vault The proxy address of the vault.
     /// @return The vault associated with the proxy address.
