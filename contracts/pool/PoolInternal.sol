@@ -1816,6 +1816,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
         }
+
+        emit UpdateTick(
+            lower,
+            lowerTick.delta,
+            lowerTick.externalFeeRate,
+            lowerTick.longDelta,
+            lowerTick.shortDelta,
+            lowerTick.counter
+        );
+
+        emit UpdateTick(
+            upper,
+            upperTick.delta,
+            upperTick.externalFeeRate,
+            upperTick.longDelta,
+            upperTick.shortDelta,
+            upperTick.counter
+        );
     }
 
     function _updateGlobalFeeRate(
@@ -1850,6 +1868,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         currentTick.externalFeeRate =
             l.globalFeeRate -
             currentTick.externalFeeRate;
+
+        emit UpdateTick(
+            l.currentTick,
+            currentTick.delta,
+            currentTick.externalFeeRate,
+            currentTick.longDelta,
+            currentTick.shortDelta,
+            currentTick.counter
+        );
 
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
