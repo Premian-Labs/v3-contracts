@@ -14,11 +14,15 @@ import {
   ERC20Router,
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
+  ERC20Mock__factory,
+  PremiaStaking__factory,
+  PremiaStakingProxyMock__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
+import { tokens } from '../utils/addresses';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -48,6 +52,7 @@ export class PoolUtil {
     poolFactory: string,
     router: string,
     exchangeHelper: string,
+    premiaStaking: string,
     wrappedNativeToken: string,
     feeReceiver: string,
     log = true,
@@ -77,6 +82,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      premiaStaking,
     );
     await poolCoreImpl.deployed();
 
@@ -97,6 +103,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      premiaStaking,
     );
     await poolTradeImpl.deployed();
 
@@ -120,6 +127,7 @@ export class PoolUtil {
         exchangeHelper,
         wrappedNativeToken,
         feeReceiver,
+        premiaStaking,
       );
       await poolCoreMockImpl.deployed();
 
@@ -215,11 +223,36 @@ export class PoolUtil {
 
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
+    // PremiaStaking
+    const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+    const usdc = await new ERC20Mock__factory(deployer).deploy(
+      'USDC',
+      tokens.USDC.decimals,
+    );
+
+    const premiaStakingImpl = await new PremiaStaking__factory(deployer).deploy(
+      constants.AddressZero,
+      premia.address,
+      usdc.address,
+      exchangeHelper.address,
+    );
+
+    await premiaStakingImpl.deployed();
+
+    const premiaStakingProxy = await new PremiaStakingProxyMock__factory(
+      deployer,
+    ).deploy(premiaStakingImpl.address);
+
+    await premiaStakingProxy.deployed();
+
+    if (log) console.log(`PremiaStaking : ${premiaStakingProxy.address}`);
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
       exchangeHelper.address,
+      premiaStakingProxy.address,
       wrappedNativeToken,
       feeReceiver,
       log,

@@ -76,7 +76,12 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
 
         uint256 initialCollateral = getInitialCollateral();
 
@@ -202,7 +207,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee0 = pool.takerFee(quoteRFQ.size, premium0, false);
+
+        uint256 protocolFee0 = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium0,
+            false
+        );
 
         uint256 collateral0 = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -249,7 +260,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
+
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
 
         uint256 collateral = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -347,7 +364,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee0 = pool.takerFee(quoteRFQ.size, premium0, false);
+
+        uint256 protocolFee0 = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium0,
+            false
+        );
 
         uint256 collateral0 = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -394,7 +417,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
+
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
 
         uint256 collateral = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -485,7 +514,14 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
         );
-        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
+
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
+
         uint256 initialCollateral = getInitialCollateral();
 
         uint256 swapQuote = getSwapQuoteExactInput(
@@ -648,7 +684,12 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        uint256 protocolFee = pool.takerFee(quoteRFQ.size, premium, false);
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
