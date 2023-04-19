@@ -342,13 +342,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 assetAmount,
         UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
         if (_totalSupplyUD60x18() == ZERO) {
             shareAmount = assetAmount;
         } else {
-            if (l.totalAssets == ZERO) {
+            if (UnderwriterVaultStorage.layout().totalAssets == ZERO) {
                 shareAmount = assetAmount;
             } else {
                 shareAmount = assetAmount / pps;
@@ -491,9 +488,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         address owner,
         UD60x18 pps
     ) internal view returns (UD60x18 withdrawableAssets) {
-        if (owner == address(0)) {
-            revert Vault__AddressZero();
-        }
+        if (owner == address(0)) revert Vault__AddressZero();
 
         FeeInternal memory vars = _getFeeInternal(
             owner,
@@ -503,11 +498,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 assetsOwner = _maxTransferableShares(vars) * pps;
         UD60x18 availableAssets = _availableAssetsUD60x18();
 
-        if (assetsOwner > availableAssets) {
-            withdrawableAssets = availableAssets;
-        } else {
-            withdrawableAssets = assetsOwner;
-        }
+        withdrawableAssets = assetsOwner > availableAssets
+            ? availableAssets
+            : assetsOwner;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -719,6 +712,20 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         if (size == ZERO) revert Vault__ZeroSize();
     }
 
+    /// @notice Ensures that an option is tradeable with the vault.
+    /// @param isCallVault Whether the vault is a call or put vault.
+    /// @param isCallOption Whether the option is a call or put.
+    /// @param isBuy Whether the trade is a buy or a sell.
+    function _ensureTradeableWithVault(
+        bool isCallVault,
+        bool isCallOption,
+        bool isBuy
+    ) internal pure {
+        if (!isBuy) revert Vault__TradeMustBeBuy();
+        if (isCallOption != isCallVault)
+            revert Vault__OptionTypeMismatchWithVault();
+    }
+
     /// @notice Ensures that an option is valid for trading.
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
@@ -798,6 +805,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _getQuoteInternal(
         UD60x18 strike,
         uint256 maturity,
+        bool isCall,
         UD60x18 size,
         bool isBuy
     ) internal view returns (QuoteInternal memory quote) {
@@ -806,9 +814,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         uint256 timestamp = _getBlockTimestamp();
 
-        if (!isBuy) revert Vault__TradeMustBeBuy();
-
         _ensureNonZeroSize(size);
+        _ensureTradeableWithVault(l.isCall, isCall, isBuy);
         _ensureValidOption(strike, maturity);
         _ensureSufficientFunds(strike, size, _availableAssetsUD60x18());
 
@@ -892,7 +899,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function getQuote(
         UD60x18 strike,
         uint64 maturity,
-        bool,
+        bool isCall,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premium) {
@@ -902,6 +909,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         QuoteInternal memory quote = _getQuoteInternal(
             strike,
             maturity,
+            isCall,
             size,
             isBuy
         );
@@ -915,7 +923,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function trade(
         UD60x18 strike,
         uint64 maturity,
-        bool,
+        bool isCall,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
@@ -926,6 +934,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         QuoteInternal memory quote = _getQuoteInternal(
             strike,
             maturity,
+            isCall,
             size,
             isBuy
         );
