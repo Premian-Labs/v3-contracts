@@ -819,6 +819,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _ensureValidOption(strike, maturity);
         _ensureSufficientFunds(strike, size, _availableAssetsUD60x18());
 
+        quote.pool = _getPoolAddress(strike, maturity);
+
         QuoteVars memory vars;
 
         vars.spot = _getSpotPrice();
@@ -886,7 +888,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         // Compute output variables
-        quote.pool = _getPoolAddress(strike, maturity);
         quote.premium = vars.price * size;
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
         quote.mintingFee = l.convertAssetToUD60x18(
