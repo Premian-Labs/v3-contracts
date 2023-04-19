@@ -60,6 +60,8 @@ contract UnderwriterVaultProxy is Proxy {
         l.oracleAdapter = oracleAdapter;
     }
 
+    receive() external payable {}
+
     /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return IVaultRegistry(VAULT_REGISTRY).getImplementation(VAULT_TYPE);
