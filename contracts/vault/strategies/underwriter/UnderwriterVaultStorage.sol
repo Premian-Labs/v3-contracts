@@ -124,6 +124,14 @@ library UnderwriterVaultStorage {
         return l.isCall ? l.baseDecimals : l.quoteDecimals;
     }
 
+    function collateral(
+        Layout storage l,
+        UD60x18 size,
+        UD60x18 strike
+    ) internal view returns (UD60x18) {
+        return l.isCall ? size : size * strike;
+    }
+
     function convertAssetToUD60x18(
         Layout storage l,
         uint256 value

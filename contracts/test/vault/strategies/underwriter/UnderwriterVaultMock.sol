@@ -585,25 +585,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalAssets = l.totalAssets - mintingFee;
     }
 
-    function ensureTradeableWithVault(
-        bool isCallVault,
-        bool isCallOption,
-        bool isBuy
-    ) external pure {
-        _ensureTradeableWithVault(isCallVault, isCallOption, isBuy);
-    }
-
     function ensureValidOption(UD60x18 strike, uint256 maturity) external view {
         _ensureValidOption(strike, maturity);
     }
 
     function ensureSufficientFunds(
-        bool isCallVault,
         UD60x18 strike,
         UD60x18 size,
         UD60x18 availableAssets
-    ) external pure {
-        _ensureSufficientFunds(isCallVault, strike, size, availableAssets);
+    ) external view {
+        _ensureSufficientFunds(strike, size, availableAssets);
     }
 
     function ensureWithinDTEBounds(
