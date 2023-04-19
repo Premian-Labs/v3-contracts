@@ -5,7 +5,6 @@ pragma solidity >=0.8.19;
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IVault} from "../../IVault.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
@@ -13,7 +12,6 @@ import {OptionMath} from "../../../libraries/OptionMath.sol";
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
-    using SafeCast for int256;
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
 
