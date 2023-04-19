@@ -773,7 +773,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         // Check non Zero Strike
         if (strike == ZERO) revert Vault__StrikeZero();
         // Check valid maturity
-        if (_getBlockTimestamp() >= maturity) revert Vault__OptionExpired();
+        if (_getBlockTimestamp() >= maturity)
+            revert Vault__OptionExpired(_getBlockTimestamp(), maturity);
     }
 
     /// @notice Ensures there is sufficient funds for processing a trade.

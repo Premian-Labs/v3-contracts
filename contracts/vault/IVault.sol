@@ -12,7 +12,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
     error Vault__AddressZero();
     error Vault__InsufficientFunds();
     error Vault__MaximumAmountExceeded(UD60x18 maximum, UD60x18 amount);
-    error Vault__OptionExpired();
+    error Vault__OptionExpired(uint256 timestamp, uint256 maturity);
     error Vault__OptionPoolNotListed();
     error Vault__OptionTypeMismatchWithVault();
     error Vault__OutOfDeltaBounds();
