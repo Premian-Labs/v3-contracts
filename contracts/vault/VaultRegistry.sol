@@ -107,7 +107,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         // Remove empty elements from array
         if (index < n) {
             assembly {
-                mstore(vaults, sub(mload(vaults), sub(n, index)))
+                mstore(vaults, index)
             }
         }
 
