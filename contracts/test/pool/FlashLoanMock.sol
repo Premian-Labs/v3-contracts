@@ -52,9 +52,9 @@ contract FlashLoanMock is IFlashLoanCallback {
                 nextLoan.amount,
                 abi.encode(loans, true)
             );
+        } else {
+            // Logic can be inserted here to do something with the funds, before repaying all flash loans
         }
-
-        // Logic can be inserted here to do something with the funds, before repaying all flash loans
 
         IERC20(token).transfer(
             msg.sender,
