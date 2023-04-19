@@ -12,6 +12,8 @@ import {Position} from "../libraries/Position.sol";
 interface IPoolEvents {
     event UpdateTick(
         UD60x18 indexed tick,
+        UD60x18 indexed prev,
+        UD60x18 indexed next,
         SD59x18 delta,
         UD60x18 externalFeeRate,
         SD59x18 longDelta,

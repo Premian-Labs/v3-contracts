@@ -1819,6 +1819,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         emit UpdateTick(
             lower,
+            l.tickIndex.prev(lower),
+            l.tickIndex.next(lower),
             lowerTick.delta,
             lowerTick.externalFeeRate,
             lowerTick.longDelta,
@@ -1828,6 +1830,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         emit UpdateTick(
             upper,
+            l.tickIndex.prev(upper),
+            l.tickIndex.next(upper),
             upperTick.delta,
             upperTick.externalFeeRate,
             upperTick.longDelta,
@@ -1871,6 +1875,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         emit UpdateTick(
             l.currentTick,
+            l.tickIndex.prev(l.currentTick),
+            l.tickIndex.next(l.currentTick),
             currentTick.delta,
             currentTick.externalFeeRate,
             currentTick.longDelta,
