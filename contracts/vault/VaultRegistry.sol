@@ -67,8 +67,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             l.vaultsByOptionType[OptionType.Put].remove(vault);
         }
 
-        Vault memory _vault;
-        l.vaults[vault] = _vault;
+        delete l.vaults[vault];
 
         emit VaultRemoved(vault);
     }
