@@ -90,10 +90,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param timestamp The time to get the spot price for.
     /// @return The spot price at the given timestamp
     function _getSettlementPrice(
+        UnderwriterVaultStorage.Layout storage l,
         uint256 timestamp
     ) internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
         return
             IOracleAdapter(l.oracleAdapter).quoteFrom(
                 l.base,
@@ -105,16 +104,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Gets the total liabilities value of the basket of expired
     ///         options underwritten by this vault at the current time
     /// @return The total liabilities of the basket of expired options underwritten
-    function _getTotalLiabilitiesExpired() internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _getTotalLiabilitiesExpired(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18) {
         // Compute fair value for expired unsettled options
         uint256 current = l.minMaturity;
 
         UD60x18 total;
         while (current <= _getBlockTimestamp() && current != 0) {
-            UD60x18 settlement = _getSettlementPrice(current);
+            UD60x18 settlement = _getSettlementPrice(l, current);
 
             for (
                 uint256 i = 0;
@@ -145,10 +143,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Gets the total liabilities value of the basket of unexpired
     ///         options underwritten by this vault at the current time
     /// @return The the total liabilities of the basket of unexpired options underwritten
-    function _getTotalLiabilitiesUnexpired() internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _getTotalLiabilitiesUnexpired(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18) {
         uint256 timestamp = _getBlockTimestamp();
 
         if (l.maxMaturity <= timestamp) return ZERO;
@@ -215,29 +212,27 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Gets the total liabilities of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total liabilities of the basket of options underwritten
-    function _getTotalLiabilities() internal view returns (UD60x18) {
-        return _getTotalLiabilitiesUnexpired() + _getTotalLiabilitiesExpired();
+    function _getTotalLiabilities(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18) {
+        return
+            _getTotalLiabilitiesUnexpired(l) + _getTotalLiabilitiesExpired(l);
     }
 
     /// @notice Gets the total fair value of the basket of options underwritten
     ///         by this vault at the current time
     /// @return The total fair value of the basket of options underwritten
-    function _getTotalFairValue() internal view returns (UD60x18) {
-        return
-            UnderwriterVaultStorage.layout().totalLockedAssets -
-            _getTotalLiabilities();
+    function _getTotalFairValue(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18) {
+        return l.totalLockedAssets - _getTotalLiabilities(l);
     }
 
     /// @notice Gets the total locked spread for the vault
     /// @return vars The total locked spread
-    function _getLockedSpreadInternal()
-        internal
-        view
-        returns (LockedSpreadInternal memory vars)
-    {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _getLockedSpreadInternal(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (LockedSpreadInternal memory vars) {
         uint256 current = l.getMaturityAfterTimestamp(l.lastSpreadUnlockUpdate);
         uint256 timestamp = _getBlockTimestamp();
 
@@ -292,24 +287,24 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
     /// @notice Gets the current amount of available assets
     /// @return The amount of available assets
-    function _availableAssetsUD60x18() internal view returns (UD60x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+    function _availableAssetsUD60x18(
+        UnderwriterVaultStorage.Layout storage l
+    ) internal view returns (UD60x18) {
         return
             l.totalAssets -
             l.totalLockedAssets -
-            _getLockedSpreadInternal().totalLockedSpread;
+            _getLockedSpreadInternal(l).totalLockedSpread;
     }
 
     /// @notice Gets the current price per share for the vault
     /// @return The current price per share
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
-        if (
-            (_totalSupplyUD60x18() != ZERO) &&
-            (UnderwriterVaultStorage.layout().totalAssets != ZERO)
-        )
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        if ((_totalSupplyUD60x18() != ZERO) && (l.totalAssets != ZERO))
             return
-                (_availableAssetsUD60x18() + _getTotalFairValue()) /
+                (_availableAssetsUD60x18(l) + _getTotalFairValue(l)) /
                 _totalSupplyUD60x18();
 
         return ONE;
@@ -324,12 +319,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
-    function _updateState() internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _updateState(UnderwriterVaultStorage.Layout storage l) internal {
         if (l.maxMaturity > l.lastSpreadUnlockUpdate) {
-            LockedSpreadInternal memory vars = _getLockedSpreadInternal();
+            LockedSpreadInternal memory vars = _getLockedSpreadInternal(l);
 
             l.totalLockedSpread = vars.totalLockedSpread;
             l.spreadUnlockingRate = vars.spreadUnlockingRate;
@@ -445,19 +437,25 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     function _maxRedeemUD60x18(
+        UnderwriterVaultStorage.Layout storage l,
         address owner,
         UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
         if (owner == address(0)) revert Vault__AddressZero();
 
-        return _maxWithdrawUD60x18(owner, pps) / pps;
+        return _maxWithdrawUD60x18(l, owner, pps) / pps;
     }
 
     /// @inheritdoc ERC4626BaseInternal
     function _maxRedeem(
         address owner
     ) internal view virtual override returns (uint256) {
-        return _maxRedeemUD60x18(owner, _getPricePerShareUD60x18()).unwrap();
+        return
+            _maxRedeemUD60x18(
+                UnderwriterVaultStorage.layout(),
+                owner,
+                _getPricePerShareUD60x18()
+            ).unwrap();
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -471,12 +469,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
+        UD60x18 maxRedeem = _maxRedeemUD60x18(l, owner, pps);
 
-        if (shares > _maxRedeemUD60x18(owner, pps))
-            revert Vault__MaximumAmountExceeded(
-                _maxRedeemUD60x18(owner, pps),
-                shares
-            );
+        if (shares > maxRedeem)
+            revert Vault__MaximumAmountExceeded(maxRedeem, shares);
 
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
@@ -484,18 +480,20 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     function _maxWithdrawUD60x18(
+        UnderwriterVaultStorage.Layout storage l,
         address owner,
         UD60x18 pps
     ) internal view returns (UD60x18 withdrawableAssets) {
         if (owner == address(0)) revert Vault__AddressZero();
 
         FeeInternal memory vars = _getFeeInternal(
+            l,
             owner,
             _balanceOfUD60x18(owner),
             pps
         );
         UD60x18 assetsOwner = _maxTransferableShares(vars) * pps;
-        UD60x18 availableAssets = _availableAssetsUD60x18();
+        UD60x18 availableAssets = _availableAssetsUD60x18(l);
 
         withdrawableAssets = assetsOwner > availableAssets
             ? availableAssets
@@ -506,19 +504,21 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _maxWithdraw(
         address owner
     ) internal view virtual override returns (uint256 withdrawableAssets) {
-        withdrawableAssets = UnderwriterVaultStorage
-            .layout()
-            .convertAssetFromUD60x18(
-                _maxWithdrawUD60x18(owner, _getPricePerShareUD60x18())
-            );
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
+        withdrawableAssets = l.convertAssetFromUD60x18(
+            _maxWithdrawUD60x18(l, owner, _getPricePerShareUD60x18())
+        );
     }
 
     function _previewWithdrawUD60x18(
+        UnderwriterVaultStorage.Layout storage l,
         UD60x18 assetAmount,
         UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
         if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
-        if (_availableAssetsUD60x18() == ZERO)
+        if (_availableAssetsUD60x18(l) == ZERO)
             revert Vault__InsufficientFunds();
         shareAmount = assetAmount / pps;
     }
@@ -527,8 +527,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _previewWithdraw(
         uint256 assetAmount
     ) internal view virtual override returns (uint256 shareAmount) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
+            .layout();
+
         shareAmount = _previewWithdrawUD60x18(
-            UnderwriterVaultStorage.layout().convertAssetToUD60x18(assetAmount),
+            l,
+            l.convertAssetToUD60x18(assetAmount),
             _getPricePerShareUD60x18()
         ).unwrap();
     }
@@ -544,20 +548,21 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
-        UD60x18 maxWithdraw = _maxWithdrawUD60x18(owner, pps);
+        UD60x18 maxWithdraw = _maxWithdrawUD60x18(l, owner, pps);
 
         if (assets > maxWithdraw)
             revert Vault__MaximumAmountExceeded(maxWithdraw, assets);
 
-        shareAmount = _previewWithdrawUD60x18(assets, pps).unwrap();
+        shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
-    function _updateTimeOfDeposit(address owner, uint256 shareAmount) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _updateTimeOfDeposit(
+        UnderwriterVaultStorage.Layout storage l,
+        address owner,
+        uint256 shareAmount
+    ) internal {
         UD60x18 balance = _balanceOfUD60x18(owner);
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * WAD);
@@ -589,7 +594,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        _updateTimeOfDeposit(receiver, shareAmount);
+        _updateTimeOfDeposit(l, receiver, shareAmount);
 
         emit UpdateQuotes();
     }
@@ -622,17 +627,16 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param size The amount of contracts.
     /// @param spread The spread added on to the premium due to C-level
     function _afterBuy(
+        UnderwriterVaultStorage.Layout storage l,
         UD60x18 strike,
         uint256 maturity,
         UD60x18 size,
         UD60x18 spread
     ) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
-        _updateState();
+        _updateState(l);
         UD60x18 spreadRate = spread /
             UD60x18.wrap((maturity - _getBlockTimestamp()) * WAD);
 
@@ -653,12 +657,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param maturity The maturity for the pool
     /// @return The pool factory address
     function _getPoolAddress(
+        UnderwriterVaultStorage.Layout storage l,
         UD60x18 strike,
         uint256 maturity
     ) internal view returns (address) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
         // generate struct to grab pool address
         IPoolFactory.PoolKey memory _poolKey = IPoolFactory.PoolKey({
             base: l.base,
@@ -803,23 +805,19 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param isBuy Whether the trade is a buy or a sell.
     /// @return quote The variables needed in order to compute the quote for a trade.
     function _getQuoteInternal(
+        UnderwriterVaultStorage.Layout storage l,
         UD60x18 strike,
         uint256 maturity,
         bool isCall,
         UD60x18 size,
         bool isBuy
     ) internal view returns (QuoteInternal memory quote) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
-        uint256 timestamp = _getBlockTimestamp();
-
         _ensureNonZeroSize(size);
         _ensureTradeableWithVault(l.isCall, isCall, isBuy);
         _ensureValidOption(strike, maturity);
-        _ensureSufficientFunds(strike, size, _availableAssetsUD60x18());
+        _ensureSufficientFunds(strike, size, _availableAssetsUD60x18(l));
 
-        quote.pool = _getPoolAddress(strike, maturity);
+        quote.pool = _getPoolAddress(l, strike, maturity);
 
         QuoteVars memory vars;
 
@@ -827,7 +825,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         // Compute time until maturity and check bounds
         vars.tau =
-            UD60x18.wrap((maturity - timestamp) * WAD) /
+            UD60x18.wrap((maturity - _getBlockTimestamp()) * WAD) /
             UD60x18.wrap(ONE_YEAR * WAD);
         _ensureWithinDTEBounds(
             vars.tau * UD60x18.wrap(365e18),
@@ -875,7 +873,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 utilisation = (l.totalLockedAssets +
             l.collateral(size, strike)) / l.totalAssets;
         UD60x18 hoursSinceLastTx = UD60x18.wrap(
-            (timestamp - l.lastTradeTimestamp) * WAD
+            (_getBlockTimestamp() - l.lastTradeTimestamp) * WAD
         ) / UD60x18.wrap(ONE_HOUR * WAD);
 
         vars.cLevel = _computeCLevel(
@@ -908,6 +906,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             .layout();
 
         QuoteInternal memory quote = _getQuoteInternal(
+            l,
             strike,
             maturity,
             isCall,
@@ -933,6 +932,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             .layout();
 
         QuoteInternal memory quote = _getQuoteInternal(
+            l,
             strike,
             maturity,
             isCall,
@@ -976,7 +976,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         // Handle the premiums and spread capture generated
-        _afterBuy(strike, maturity, size, quote.spread);
+        _afterBuy(l, strike, maturity, size, quote.spread);
 
         // Emit trade event
         emit Trade(
@@ -996,10 +996,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
     /// @notice Settles all options that are on a single maturity
     /// @param maturity The maturity that options will be settled for
-    function _settleMaturity(uint256 maturity) internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _settleMaturity(
+        UnderwriterVaultStorage.Layout storage l,
+        uint256 maturity
+    ) internal {
         for (uint256 i = 0; i < l.maturityToStrikes[maturity].length(); i++) {
             UD60x18 strike = l.maturityToStrikes[maturity].at(i);
             UD60x18 positionSize = l.positionSizes[maturity][strike];
@@ -1007,7 +1007,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
                 ? positionSize
                 : positionSize * strike;
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
-            address pool = _getPoolAddress(strike, maturity);
+            address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(
                 IPool(pool).settle(address(this))
             );
@@ -1022,7 +1022,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
-        _updateState();
+        _updateState(l);
 
         uint256 timestamp = _getBlockTimestamp();
 
@@ -1034,7 +1034,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 current = l.minMaturity;
 
         while (current <= lastExpired && current != 0) {
-            _settleMaturity(current);
+            _settleMaturity(l, current);
 
             // Remove maturity from data structure
             uint256 next = l.maturities.next(current);
@@ -1048,7 +1048,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         }
 
         // Claim protocol fees
-        _claimFees();
+        _claimFees(l);
 
         emit UpdateQuotes();
     }
@@ -1059,13 +1059,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param pps The price per share.
     /// @return The fee variables needed for computed performance and management fees.
     function _getFeeInternal(
+        UnderwriterVaultStorage.Layout storage l,
         address owner,
         UD60x18 shares,
         UD60x18 pps
     ) internal view returns (FeeInternal memory) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
         FeeInternal memory vars;
 
         vars.balanceShares = _balanceOfUD60x18(owner);
@@ -1132,6 +1130,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             UD60x18 shares = UD60x18.wrap(amount);
 
             FeeInternal memory vars = _getFeeInternal(
+                l,
                 from,
                 shares,
                 _getPricePerShareUD60x18()
@@ -1172,7 +1171,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                _updateTimeOfDeposit(to, amount);
+                _updateTimeOfDeposit(l, to, amount);
             }
 
             emit UpdateQuotes();
@@ -1180,10 +1179,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @notice Transfers fees to the FEE_RECEIVER.
-    function _claimFees() internal {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-
+    function _claimFees(UnderwriterVaultStorage.Layout storage l) internal {
         uint256 claimedFees = l.convertAssetFromUD60x18(l.protocolFees);
 
         l.protocolFees = ZERO;
