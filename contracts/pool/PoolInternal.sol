@@ -1812,9 +1812,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             if (crossings > 2) revert Pool__InvalidReconciliation(crossings);
-        } else {
-            _removeTickIfNotActive(lower);
-            _removeTickIfNotActive(upper);
         }
 
         emit UpdateTick(
@@ -1838,6 +1835,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upperTick.shortDelta,
             upperTick.counter
         );
+
+        if (delta <= iZERO) {
+            _removeTickIfNotActive(lower);
+            _removeTickIfNotActive(upper);
+        }
     }
 
     function _updateGlobalFeeRate(

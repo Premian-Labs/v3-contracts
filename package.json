@@ -24,7 +24,9 @@
     "compile:force": "hardhat compile --force",
     "deploy:orderbook": "hardhat run \"./scripts/deploy/0001-deployOrderbook.ts\" --network arbitrumNova",
     "postinstall": "husky install",
-    "test": "hardhat test",
+    "test:hardhat": "hardhat test",
+    "test:foundry": "forge test",
+    "test": "yarn test:hardhat && yarn test:foundry",
     "contract-size": "yarn run hardhat size-contracts",
     "prettier": "prettier --write .",
     "build-docs": "forge doc --build && npx replace-in-files --string '%5C' --replacement '/' './docs/book/**/*'"
