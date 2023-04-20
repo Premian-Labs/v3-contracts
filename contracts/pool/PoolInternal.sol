@@ -1828,7 +1828,31 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             if (crossings > 2) revert Pool__InvalidReconciliation(crossings);
-        } else {
+        }
+
+        emit UpdateTick(
+            lower,
+            l.tickIndex.prev(lower),
+            l.tickIndex.next(lower),
+            lowerTick.delta,
+            lowerTick.externalFeeRate,
+            lowerTick.longDelta,
+            lowerTick.shortDelta,
+            lowerTick.counter
+        );
+
+        emit UpdateTick(
+            upper,
+            l.tickIndex.prev(upper),
+            l.tickIndex.next(upper),
+            upperTick.delta,
+            upperTick.externalFeeRate,
+            upperTick.longDelta,
+            upperTick.shortDelta,
+            upperTick.counter
+        );
+
+        if (delta <= iZERO) {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
         }
@@ -1866,6 +1890,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         currentTick.externalFeeRate =
             l.globalFeeRate -
             currentTick.externalFeeRate;
+
+        emit UpdateTick(
+            l.currentTick,
+            l.tickIndex.prev(l.currentTick),
+            l.tickIndex.next(l.currentTick),
+            currentTick.delta,
+            currentTick.externalFeeRate,
+            currentTick.longDelta,
+            currentTick.shortDelta,
+            currentTick.counter
+        );
 
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
