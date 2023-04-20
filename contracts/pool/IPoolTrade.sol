@@ -11,11 +11,13 @@ import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal {
     /// @notice Gives a quote for an AMM trade
+    /// @param taker The taker of the trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
     /// @return takerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function getQuoteAMM(
+        address taker,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee);

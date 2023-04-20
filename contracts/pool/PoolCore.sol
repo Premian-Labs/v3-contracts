@@ -26,14 +26,16 @@ contract PoolCore is IPoolCore, PoolInternal {
         address router,
         address exchangeHelper,
         address wrappedNativeToken,
-        address feeReceiver
+        address feeReceiver,
+        address premiaStaking
     )
         PoolInternal(
             factory,
             router,
             exchangeHelper,
             wrappedNativeToken,
-            feeReceiver
+            feeReceiver,
+            premiaStaking
         )
     {}
 
@@ -44,6 +46,7 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function takerFee(
+        address taker,
         UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized
@@ -54,6 +57,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             l.toPoolTokenDecimals(
                 _takerFee(
                     l,
+                    taker,
                     size,
                     l.fromPoolTokenDecimals(premium),
                     isPremiumNormalized
