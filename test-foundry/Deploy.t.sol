@@ -37,6 +37,7 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {IPremiaStaking} from "contracts/staking/IPremiaStaking.sol";
 import {PremiaStaking} from "contracts/staking/PremiaStaking.sol";
 
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
@@ -58,6 +59,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    IPremiaStaking premiaStaking;
 
     IPoolMock pool;
 
@@ -155,7 +157,7 @@ contract DeployTest is Test, Assertions {
 
         PremiaStaking premiaStakingImpl = new PremiaStaking(
             address(0),
-            address(premia),
+            premia,
             address(quote),
             address(exchangeHelper)
         );
@@ -163,6 +165,8 @@ contract DeployTest is Test, Assertions {
         ProxyUpgradeableOwnable premiaStakingProxy = new ProxyUpgradeableOwnable(
                 address(premiaStakingImpl)
             );
+
+        premiaStaking = IPremiaStaking(address(premiaStakingProxy));
 
         PoolBase poolBaseImpl = new PoolBase();
 
@@ -172,7 +176,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStakingProxy)
+            address(premiaStaking)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
@@ -181,7 +185,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStakingProxy)
+            address(premiaStaking)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -190,7 +194,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStakingProxy)
+            address(premiaStaking)
         );
 
         /////////////////////
@@ -518,6 +522,13 @@ contract DeployTest is Test, Assertions {
         bool isCall
     ) internal view returns (UD60x18) {
         return isCall ? amount : amount * poolKey.strike;
+    }
+
+    function collateralToContracts(
+        UD60x18 amount,
+        bool isCall
+    ) internal view returns (UD60x18) {
+        return isCall ? amount : amount / poolKey.strike;
     }
 
     function scaleDecimals(
