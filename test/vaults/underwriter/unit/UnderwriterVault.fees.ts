@@ -290,6 +290,8 @@ describe('UnderwriterVault.fees', () => {
         timeOfDeposit: 0,
         timestamp: 300000,
         timeOfDepositNew: 300000,
+        message:
+          'should update the time of deposit to be the timestamp of first deposit',
       },
       {
         sharesInitial: 2,
@@ -297,11 +299,13 @@ describe('UnderwriterVault.fees', () => {
         timeOfDeposit: 300000,
         timestamp: 300000 + ONE_DAY,
         timeOfDepositNew: 351840,
+        message:
+          'should update the time of deposit to be the weighted average based on shares',
       },
     ];
 
     tests.forEach(async (test) => {
-      it('', async () => {
+      it(test.message, async () => {
         let { vault, caller } = await setup(test);
 
         await vault.setTimestamp(test.timestamp);
@@ -322,43 +326,41 @@ describe('UnderwriterVault.fees', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         testsFeeVars.forEach(async (test) => {
-          describe('', () => {
-            it('', async () => {
-              let { vault, caller } = await setupGetFeeVars(isCall, test);
+          it('should compute the correct internal fee variables for the user with shares=${test.sharesInitial}', async () => {
+            let { vault, caller } = await setupGetFeeVars(isCall, test);
 
-              await vault.setTimestamp(test.timestamp);
+            await vault.setTimestamp(test.timestamp);
 
-              const pricePerShare = await vault.getPricePerShare();
+            const pricePerShare = await vault.getPricePerShare();
 
-              const {
-                assets,
-                balanceShares,
-                performanceFeeInAssets,
-                managementFeeInAssets,
-                totalFeeInShares,
-                totalFeeInAssets,
-              } = await vault.getFeeInternal(
-                caller.address,
-                parseEther(test.transferAmount.toString()),
-                pricePerShare,
-              );
-              await expect(assets).to.eq(parseEther(test.assets.toString()));
-              await expect(balanceShares).to.eq(
-                parseEther(test.balanceShares.toString()),
-              );
-              await expect(performanceFeeInAssets).to.eq(
-                parseEther(test.performanceFeeInAssets.toString()),
-              );
-              await expect(managementFeeInAssets).to.eq(
-                parseEther(test.managementFeeInAssets.toString()),
-              );
-              await expect(totalFeeInShares).to.eq(
-                parseEther(test.totalFeeInShares.toString()),
-              );
-              await expect(totalFeeInAssets).to.eq(
-                parseEther(test.totalFeeInAssets.toString()),
-              );
-            });
+            const {
+              assets,
+              balanceShares,
+              performanceFeeInAssets,
+              managementFeeInAssets,
+              totalFeeInShares,
+              totalFeeInAssets,
+            } = await vault.getFeeInternal(
+              caller.address,
+              parseEther(test.transferAmount.toString()),
+              pricePerShare,
+            );
+            await expect(assets).to.eq(parseEther(test.assets.toString()));
+            await expect(balanceShares).to.eq(
+              parseEther(test.balanceShares.toString()),
+            );
+            await expect(performanceFeeInAssets).to.eq(
+              parseEther(test.performanceFeeInAssets.toString()),
+            );
+            await expect(managementFeeInAssets).to.eq(
+              parseEther(test.managementFeeInAssets.toString()),
+            );
+            await expect(totalFeeInShares).to.eq(
+              parseEther(test.totalFeeInShares.toString()),
+            );
+            await expect(totalFeeInAssets).to.eq(
+              parseEther(test.totalFeeInAssets.toString()),
+            );
           });
         });
       });
