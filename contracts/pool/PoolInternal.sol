@@ -145,22 +145,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isBuy
         );
 
-        UD60x18 liquidity = pricing.liquidity();
-        UD60x18 maxSize = pricing.maxTradeSize();
-
-        UD60x18 totalPremium;
-        UD60x18 _totalTakerFee;
+        QuoteAMMVarsInternal memory vars;
+        vars.liquidity = pricing.liquidity();
+        vars.maxSize = pricing.maxTradeSize();
 
         while (size > ZERO) {
-            UD60x18 tradeSize = PRBMathExtra.min(size, maxSize);
+            UD60x18 tradeSize = PRBMathExtra.min(size, vars.maxSize);
 
             UD60x18 nextPrice;
             // Compute next price
-            if (liquidity == ZERO) {
+            if (vars.liquidity == ZERO) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
                 UD60x18 priceDelta = ((pricing.upper - pricing.lower) *
-                    tradeSize) / liquidity;
+                    tradeSize) / vars.liquidity;
 
                 nextPrice = isBuy
                     ? pricing.marketPrice + priceDelta
@@ -180,17 +178,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.isCallPool
                 );
 
-                _totalTakerFee = _totalTakerFee + takerFee;
-                totalPremium = totalPremium + premium;
+                vars.totalTakerFee = vars.totalTakerFee + takerFee;
+                vars.totalPremium = vars.totalPremium + premium;
             }
 
             pricing.marketPrice = nextPrice;
 
-            if (maxSize >= size) {
+            if (vars.maxSize >= size) {
                 size = ZERO;
             } else {
                 // Cross tick
-                size = size - maxSize;
+                size = size - vars.maxSize;
 
                 // ToDo : Make sure this cant underflow
                 // Adjust liquidity rate
@@ -207,18 +205,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 if (pricing.upper == ZERO) revert Pool__InsufficientLiquidity();
 
                 // Compute new liquidity
-                liquidity = pricing.liquidity();
-                maxSize = pricing.maxTradeSize();
+                vars.liquidity = pricing.liquidity();
+                vars.maxSize = pricing.maxTradeSize();
             }
         }
 
         return (
             l.toPoolTokenDecimals(
                 isBuy
-                    ? totalPremium + _totalTakerFee
-                    : totalPremium - _totalTakerFee
+                    ? vars.totalPremium + vars.totalTakerFee
+                    : vars.totalPremium - vars.totalTakerFee
             ),
-            l.toPoolTokenDecimals(_totalTakerFee)
+            l.toPoolTokenDecimals(vars.totalTakerFee)
         );
     }
 
@@ -2244,6 +2242,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PremiumAndFeeInternal
             memory premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
+                args.user,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
