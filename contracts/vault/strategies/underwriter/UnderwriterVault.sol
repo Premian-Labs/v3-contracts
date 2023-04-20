@@ -266,21 +266,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         return UD60x18.wrap(_balanceOf(owner));
     }
 
-    function _balanceOfAssetUD60x18(
-        address owner
-    ) internal view returns (UD60x18 balanceScaled) {
-        balanceScaled = UnderwriterVaultStorage.layout().convertAssetToUD60x18(
-            IERC20(_asset()).balanceOf(owner)
-        );
-    }
-
-    function _balanceOfAsset(address owner) internal view returns (uint256) {
-        return
-            UnderwriterVaultStorage.layout().convertAssetFromUD60x18(
-                _balanceOfAssetUD60x18(owner)
-            );
-    }
-
     function _totalSupplyUD60x18() internal view returns (UD60x18) {
         return UD60x18.wrap(_totalSupply());
     }
@@ -361,11 +346,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 shareAmount,
         UD60x18 pps
     ) internal view returns (UD60x18 assetAmount) {
-        if (_totalSupplyUD60x18() == ZERO) {
-            revert Vault__ZeroShares();
-        } else {
-            assetAmount = shareAmount * pps;
-        }
+        if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
+
+        assetAmount = shareAmount * pps;
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -403,11 +386,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _previewMintUD60x18(
         UD60x18 shareAmount
     ) internal view returns (UD60x18 assetAmount) {
-        if (_totalSupplyUD60x18() == ZERO) {
-            assetAmount = shareAmount;
-        } else {
-            assetAmount = shareAmount * _getPricePerShareUD60x18();
-        }
+        assetAmount = _totalSupplyUD60x18() == ZERO
+            ? shareAmount
+            : shareAmount * _getPricePerShareUD60x18();
     }
 
     /// @inheritdoc ERC4626BaseInternal

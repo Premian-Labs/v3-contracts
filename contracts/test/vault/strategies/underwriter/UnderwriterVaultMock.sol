@@ -653,10 +653,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.protocolFees = value;
     }
 
-    function balanceOfAsset(address owner) external view returns (uint256) {
-        return _balanceOfAsset(owner);
-    }
-
     function setManagementFeeRate(UD60x18 value) external {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
