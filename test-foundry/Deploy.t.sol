@@ -29,6 +29,7 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolCoreMock} from "contracts/test/pool/PoolCoreMock.sol";
+import {PoolDepositWithdraw} from "contracts/pool/PoolDepositWithdraw.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
@@ -79,6 +80,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolBaseSelectors;
     bytes4[] internal poolCoreMockSelectors;
     bytes4[] internal poolCoreSelectors;
+    bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
     address public constant feeReceiver =
@@ -171,6 +173,14 @@ contract DeployTest is Test, Assertions {
             feeReceiver
         );
 
+        PoolDepositWithdraw poolDepositWithdrawImpl = new PoolDepositWithdraw(
+            address(factory),
+            address(router),
+            address(exchangeHelper),
+            address(base),
+            feeReceiver
+        );
+
         PoolTrade poolTradeImpl = new PoolTrade(
             address(factory),
             address(router),
@@ -218,20 +228,6 @@ contract DeployTest is Test, Assertions {
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
-                )
-            )
-        );
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
-                )
-            )
-        );
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
@@ -239,12 +235,34 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
-        poolCoreSelectors.push(poolCoreImpl.swapAndDeposit.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
-        poolCoreSelectors.push(poolCoreImpl.withdraw.selector);
-        poolCoreSelectors.push(poolCoreImpl.withdrawAndSwap.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
+
+        // PoolDepositWithdraw
+        poolDepositWithdrawSelectors.push(
+            bytes4(
+                keccak256(
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
+                )
+            )
+        );
+        poolDepositWithdrawSelectors.push(
+            bytes4(
+                keccak256(
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
+                )
+            )
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.swapAndDeposit.selector
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.withdraw.selector
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.withdrawAndSwap.selector
+        );
 
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
@@ -260,7 +278,7 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.tradeAndSwap.selector);
 
         IDiamondWritableInternal.FacetCut[]
-            memory facetCuts = new IDiamondWritableInternal.FacetCut[](4);
+            memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
 
         facetCuts[0] = IDiamondWritableInternal.FacetCut(
             address(poolBaseImpl),
@@ -281,6 +299,12 @@ contract DeployTest is Test, Assertions {
         );
 
         facetCuts[3] = IDiamondWritableInternal.FacetCut(
+            address(poolDepositWithdrawImpl),
+            IDiamondWritableInternal.FacetCutAction.ADD,
+            poolDepositWithdrawSelectors
+        );
+
+        facetCuts[4] = IDiamondWritableInternal.FacetCut(
             address(poolTradeImpl),
             IDiamondWritableInternal.FacetCutAction.ADD,
             poolTradeSelectors
