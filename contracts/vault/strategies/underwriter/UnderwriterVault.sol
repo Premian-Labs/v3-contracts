@@ -151,7 +151,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         if (l.maxMaturity <= timestamp) return ZERO;
 
         uint256 current = l.getMaturityAfterTimestamp(timestamp);
-        UD60x18 total = ZERO;
+        UD60x18 total;
 
         // Compute fair value for options that have not expired
         uint256 n = l.getNumberOfUnexpiredListings(timestamp);
@@ -167,16 +167,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         uint256 i = 0;
         while (current <= l.maxMaturity && current != 0) {
-            UD60x18 timeToMaturity = UD60x18.wrap((current - timestamp) * WAD) /
-                UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
-
             for (
                 uint256 j = 0;
                 j < l.maturityToStrikes[current].length();
                 j++
             ) {
                 vars.strikes[i] = l.maturityToStrikes[current].at(j);
-                vars.timeToMaturities[i] = timeToMaturity;
+                vars.timeToMaturities[i] =
+                    UD60x18.wrap((current - timestamp) * WAD) /
+                    UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
                 vars.maturities[i] = current;
                 i++;
             }
@@ -544,15 +543,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         address owner,
         uint256 shareAmount
     ) internal {
-        UD60x18 balance = _balanceOfUD60x18(owner);
-        UD60x18 shares = UD60x18.wrap(shareAmount);
-        UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * WAD);
-        UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * WAD);
+        uint256 balance = _balanceOf(owner);
 
-        UD60x18 updated = (depositTimestamp * balance + timestamp * shares) /
-            (balance + shares);
-
-        l.timeOfDeposit[owner] = updated.unwrap() / WAD;
+        l.timeOfDeposit[owner] =
+            (l.timeOfDeposit[owner] *
+                balance +
+                _getBlockTimestamp() *
+                shareAmount) /
+            (balance + shareAmount);
     }
 
     /// @inheritdoc ERC4626BaseInternal
