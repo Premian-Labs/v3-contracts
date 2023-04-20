@@ -33,6 +33,8 @@ contract ExchangeHelper is IExchangeHelper {
             }
         }
 
+        IERC20(sourceToken).approve(allowanceTarget, 0);
+
         // refund unused sourceToken
         sourceLeft = IERC20(sourceToken).balanceOf(address(this));
         if (sourceLeft > 0)

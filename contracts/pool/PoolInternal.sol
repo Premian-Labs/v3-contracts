@@ -182,7 +182,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 // Cross tick
                 size = size - maxSize;
 
-                // ToDo : Make sure this cant underflow
                 // Adjust liquidity rate
                 pricing.liquidityRate = pricing.liquidityRate.add(
                     l.ticks[isBuy ? pricing.upper : pricing.lower].delta
@@ -1462,9 +1461,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _swap(
         IPoolInternal.SwapArgs memory s,
         Permit2.Data memory permit,
-        bool transferFromPool
+        bool transferFromPool,
+        bool creditMessageValue
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
-        if (msg.value > 0) {
+        uint256 amountInMax;
+        uint256 creditedMessageValue = 0;
+
+        if (creditMessageValue && msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
                 revert Pool__InvalidSwapTokenIn(
                     s.tokenIn,
@@ -1472,18 +1475,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
+            creditedMessageValue = msg.value;
+            amountInMax = msg.value;
         }
+
         if (s.amountInMax > 0) {
             if (transferFromPool) {
                 IERC20(s.tokenIn).safeTransfer(EXCHANGE_HELPER, s.amountInMax);
-            } else {
+                amountInMax += s.amountInMax;
+            } else if (creditedMessageValue < s.amountInMax) {
                 _transferFromWithPermitOrRouter(
                     permit,
                     s.tokenIn,
                     msg.sender,
                     EXCHANGE_HELPER,
-                    s.amountInMax
+                    s.amountInMax - creditedMessageValue
                 );
+                amountInMax = s.amountInMax;
             }
         }
 
@@ -1491,7 +1499,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             .swapWithToken(
                 s.tokenIn,
                 s.tokenOut,
-                s.amountInMax + msg.value,
+                amountInMax,
                 s.callee,
                 s.allowanceTarget,
                 s.data,
@@ -1499,6 +1507,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         if (amountCredited < s.amountOutMin)
             revert Pool__NotEnoughSwapOutput(amountCredited, s.amountOutMin);
+    }
+
+    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
+    /// @return wrappedAmount The amount of native tokens wrapped
+    function _wrapNativeToken() internal returns (uint256 wrappedAmount) {
+        if (msg.value > 0) {
+            if (PoolStorage.layout().getPoolToken() != WRAPPED_NATIVE_TOKEN)
+                revert Pool__NotWrappedNativeTokenPool();
+
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            wrappedAmount = msg.value;
+        }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -1518,8 +1538,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         view
         returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
-        if (lower >= upper)
-            revert Position__LowerGreaterOrEqualUpper(lower, upper);
+        Position.ensureLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
         nearestBelowUpper = _getNearestTickBelow(upper);

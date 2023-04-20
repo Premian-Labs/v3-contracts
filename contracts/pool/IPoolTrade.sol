@@ -35,7 +35,10 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
-    ) external returns (uint256 premiumTaker, Position.Delta memory delta);
+    )
+        external
+        payable
+        returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Execute a swap and fill an RFQ quote
     /// @param s The swap arguments
@@ -54,6 +57,7 @@ interface IPoolTrade is IPoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -79,6 +83,7 @@ interface IPoolTrade is IPoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -99,7 +104,10 @@ interface IPoolTrade is IPoolInternal {
         bool isBuy,
         uint256 premiumLimit,
         Permit2.Data memory permit
-    ) external returns (uint256 totalPremium, Position.Delta memory delta);
+    )
+        external
+        payable
+        returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -146,6 +154,7 @@ interface IPoolTrade is IPoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,

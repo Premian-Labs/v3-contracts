@@ -5,7 +5,6 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -131,7 +130,7 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    _wrapNativeToken(l),
+                    _wrapNativeToken(),
                     msg.sender
                 ),
                 permit
@@ -161,26 +160,12 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    _wrapNativeToken(l),
+                    _wrapNativeToken(),
                     msg.sender
                 ),
                 permit,
                 isBidIfStrandedMarketPrice
             );
-    }
-
-    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
-    /// @return wrappedAmount The amount of native tokens wrapped
-    function _wrapNativeToken(
-        PoolStorage.Layout storage l
-    ) internal returns (uint256 wrappedAmount) {
-        if (msg.value > 0) {
-            if (l.getPoolToken() != WRAPPED_NATIVE_TOKEN)
-                revert Pool__NotWrappedNativeTokenPool();
-
-            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
-            wrappedAmount = msg.value;
-        }
     }
 
     /// @inheritdoc IPoolCore
@@ -197,7 +182,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         _ensureOperator(p.operator);
         _ensureValidSwapTokenOut(s.tokenOut);
 
-        (uint256 creditAmount, ) = _swap(s, permit, false);
+        (uint256 creditAmount, ) = _swap(s, permit, false, true);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -271,7 +256,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
-            true
+            true,
+            false
         );
 
         if (tokenOutReceived > 0) {
