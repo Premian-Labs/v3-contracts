@@ -44,10 +44,13 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return Whether the given address is a pool
     function isPool(address contractAddress) external view returns (bool);
 
-    /// @notice Returns the address of a pool if it has been deployed with those parameters (or address(0) if not)
+    /// @notice Returns the address of a pool, and whether it has been deployed
     /// @param k The pool key
-    /// @return The pool address (Or address(0) if not deployed)
-    function getPoolAddress(PoolKey memory k) external view returns (address);
+    /// @return pool The pool address
+    /// @return isDeployed Whether the pool has been deployed
+    function getPoolAddress(
+        PoolKey memory k
+    ) external view returns (address pool, bool isDeployed);
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key
