@@ -41,43 +41,6 @@ describe('UnderwriterVaultStorage', () => {
     });
   });
 
-  describe('#convertAssetToSD59x18', () => {
-    let tests = [true, false];
-
-    tests.forEach(async (isCallVault) => {
-      let name = isCallVault ? 'call' : 'put';
-      it(`should convert a positive int256 to SD59x18 for ${name} vault`, async () => {
-        const { callVault, putVault } = await loadFixture(vaultSetup);
-        vault = isCallVault ? callVault : putVault;
-
-        const value = 11.2334;
-        const valueInUnits = parseUnits(
-          value.toString(),
-          await vault.assetDecimals(),
-        );
-        const valueIn18 = await vault.convertAssetToSD59x18(valueInUnits);
-        const convertedValue = parseFloat(formatEther(valueIn18));
-
-        expect(convertedValue).to.be.eq(value);
-      });
-
-      it(`should convert a negative int256 to SD59x18 for ${name} vault`, async () => {
-        const { callVault, putVault } = await loadFixture(vaultSetup);
-        vault = isCallVault ? callVault : putVault;
-
-        const value = -11.2334;
-        const valueInUnits = parseUnits(
-          value.toString(),
-          await vault.assetDecimals(),
-        );
-        const valueIn18 = await vault.convertAssetToSD59x18(valueInUnits);
-        const convertedValue = parseFloat(formatEther(valueIn18));
-
-        expect(convertedValue).to.be.eq(value);
-      });
-    });
-  });
-
   describe('#convertAssetFromUD60x18', () => {
     let tests = [true, false];
 
@@ -90,41 +53,6 @@ describe('UnderwriterVaultStorage', () => {
         const value = 11.2334;
         const valueIn18 = parseEther(value.toString());
         const valueInUnits = await vault.convertAssetFromUD60x18(valueIn18);
-        const convertedValue = parseFloat(
-          formatUnits(valueInUnits, await vault.assetDecimals()),
-        );
-
-        expect(convertedValue).to.be.eq(value);
-      });
-    });
-  });
-
-  describe('#convertAssetFromSD59x18', () => {
-    let tests = [true, false];
-
-    tests.forEach(async (isCallVault) => {
-      let name = isCallVault ? 'call' : 'put';
-      it(`should convert a positive int256 to SD59x18 for ${name} vault`, async () => {
-        const { callVault, putVault } = await loadFixture(vaultSetup);
-        vault = isCallVault ? callVault : putVault;
-
-        const value = 11.2334;
-        const valueIn18 = parseEther(value.toString());
-        const valueInUnits = await vault.convertAssetFromSD59x18(valueIn18);
-        const convertedValue = parseFloat(
-          formatUnits(valueInUnits, await vault.assetDecimals()),
-        );
-
-        expect(convertedValue).to.be.eq(value);
-      });
-
-      it(`should convert a negative int256 to SD59x18 for ${name} vault`, async () => {
-        const { callVault, putVault } = await loadFixture(vaultSetup);
-        vault = isCallVault ? callVault : putVault;
-
-        const value = -11.2334;
-        const valueIn18 = parseEther(value.toString());
-        const valueInUnits = await vault.convertAssetFromSD59x18(valueIn18);
         const convertedValue = parseFloat(
           formatUnits(valueInUnits, await vault.assetDecimals()),
         );

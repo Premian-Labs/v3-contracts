@@ -84,28 +84,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.convertAssetToUD60x18(value);
     }
 
-    function convertAssetToSD59x18(
-        int256 value
-    ) external view returns (SD59x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        return l.convertAssetToSD59x18(value);
-    }
-
     function convertAssetFromUD60x18(
         UD60x18 value
     ) external view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return l.convertAssetFromUD60x18(value);
-    }
-
-    function convertAssetFromSD59x18(
-        SD59x18 value
-    ) external view returns (int256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        return l.convertAssetFromSD59x18(value);
     }
 
     function getMaturityAfterTimestamp(

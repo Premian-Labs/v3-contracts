@@ -106,16 +106,16 @@ library UnderwriterVaultStorage {
         // Handle decoding of settings and updating storage
         if (settings.length == 0) revert IVault.Vault__SettingsUpdateIsEmpty();
 
-        uint256[] memory arr = abi.decode(settings, (uint256[]));
+        UD60x18[] memory arr = abi.decode(settings, (UD60x18[]));
 
-        l.alphaCLevel = UD60x18.wrap(arr[0]);
-        l.hourlyDecayDiscount = UD60x18.wrap(arr[1]);
-        l.minCLevel = UD60x18.wrap(arr[2]);
-        l.maxCLevel = UD60x18.wrap(arr[3]);
-        l.minDTE = UD60x18.wrap(arr[4]);
-        l.maxDTE = UD60x18.wrap(arr[5]);
-        l.minDelta = UD60x18.wrap(arr[6]);
-        l.maxDelta = UD60x18.wrap(arr[7]);
+        l.alphaCLevel = arr[0];
+        l.hourlyDecayDiscount = arr[1];
+        l.minCLevel = arr[2];
+        l.maxCLevel = arr[3];
+        l.minDTE = arr[4];
+        l.maxDTE = arr[5];
+        l.minDelta = arr[6];
+        l.maxDelta = arr[7];
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {
@@ -140,27 +140,10 @@ library UnderwriterVaultStorage {
             );
     }
 
-    function convertAssetToSD59x18(
-        Layout storage l,
-        int256 value
-    ) internal view returns (SD59x18) {
-        return
-            SD59x18.wrap(
-                OptionMath.scaleDecimals(value, l.assetDecimals(), 18)
-            );
-    }
-
     function convertAssetFromUD60x18(
         Layout storage l,
         UD60x18 value
     ) internal view returns (uint256) {
-        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
-    }
-
-    function convertAssetFromSD59x18(
-        Layout storage l,
-        SD59x18 value
-    ) internal view returns (int256) {
         return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
     }
 
