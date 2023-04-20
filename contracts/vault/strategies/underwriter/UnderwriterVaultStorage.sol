@@ -118,6 +118,8 @@ library UnderwriterVaultStorage {
         l.maxDTE = UD60x18.wrap(arr[5]);
         l.minDelta = UD60x18.wrap(arr[6]);
         l.maxDelta = UD60x18.wrap(arr[7]);
+        l.performanceFeeRate = UD60x18.wrap(arr[8]);
+        l.managementFeeRate = UD60x18.wrap(arr[9]);
     }
 
     function assetDecimals(Layout storage l) internal view returns (uint8) {
