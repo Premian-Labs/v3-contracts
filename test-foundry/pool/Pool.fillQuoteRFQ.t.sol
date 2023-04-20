@@ -55,20 +55,30 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         return scaleDecimals(initialCollateral, poolKey.isCallPool);
     }
 
-    function _test_fillQuoteRFQ_Success_WithApproval(bool isCall) internal {
-        mintAndApprove();
-
+    function _test_fillQuoteRFQ_Success(
+        bool isCall,
+        bool useMsgValue
+    ) internal {
         address poolToken = getPoolToken(isCall);
 
-        vm.startPrank(users.trader);
+        if (useMsgValue) {
+            startHoax(users.trader);
+        } else {
+            vm.startPrank(users.trader);
+        }
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
-
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         uint256 premium = scaleDecimals(
             contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
             isCall
+        );
+
+        pool.fillQuoteRFQ{value: useMsgValue ? premium : 0}(
+            quoteRFQ,
+            quoteRFQ.size,
+            sig,
+            Permit2.emptyPermit()
         );
 
         uint256 collateral = scaleDecimals(
@@ -82,23 +92,52 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
-            initialCollateral - collateral + premium - protocolFee
+            initialCollateral - collateral + premium - protocolFee,
+            "poolToken lp"
         );
 
         assertEq(
             IERC20(poolToken).balanceOf(users.trader),
-            initialCollateral - premium
+            useMsgValue ? 0 : initialCollateral - premium,
+            "poolToken trader"
         );
 
-        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
-        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), quoteRFQ.size);
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.SHORT),
+            0,
+            "short trader"
+        );
+        assertEq(
+            pool.balanceOf(users.trader, PoolStorage.LONG),
+            quoteRFQ.size,
+            "long trader"
+        );
 
-        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), quoteRFQ.size);
-        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
+        assertEq(
+            pool.balanceOf(users.lp, PoolStorage.SHORT),
+            quoteRFQ.size,
+            "short lp"
+        );
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
     }
 
     function test_fillQuoteRFQ_Success_WithApproval() public {
-        _test_fillQuoteRFQ_Success_WithApproval(poolKey.isCallPool);
+        mintAndApprove();
+        _test_fillQuoteRFQ_Success(poolKey.isCallPool, false);
+    }
+
+    function test_fillQuoteRFQ_Success_WithETH() public {
+        if (!poolKey.isCallPool) return;
+
+        uint256 initialCollateral = getInitialCollateral();
+        address poolToken = getPoolToken(poolKey.isCallPool);
+
+        deal(poolToken, users.lp, initialCollateral);
+
+        vm.prank(users.lp);
+        IERC20(poolToken).approve(address(router), initialCollateral);
+
+        _test_fillQuoteRFQ_Success(poolKey.isCallPool, true);
     }
 
     function test_fillQuoteRFQ_RevertIf_QuoteRFQExpired() public {
@@ -595,15 +634,15 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         );
     }
 
-    function _test_swapAndFillQuoteRFQ_Success_WithApproval(
-        bool isCall
+    function _test_swapAndFillQuoteRFQ_Success(
+        bool isCall,
+        bool useMsgValue
     ) internal {
         uint256 initialCollateral = getInitialCollateral();
         address poolToken = getPoolToken(isCall);
         address swapToken = getSwapToken(isCall);
 
         deal(poolToken, users.lp, initialCollateral);
-
         vm.prank(users.lp);
         IERC20(poolToken).approve(address(router), initialCollateral);
 
@@ -614,16 +653,19 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        vm.startPrank(users.trader);
-
         uint256 swapQuote = getSwapQuoteExactOutput(
             swapToken,
             poolToken,
             premium
         );
 
-        deal(swapToken, users.trader, swapQuote);
-        IERC20(swapToken).approve(address(router), type(uint256).max);
+        if (useMsgValue) {
+            startHoax(users.trader);
+        } else {
+            vm.startPrank(users.trader);
+            deal(swapToken, users.trader, swapQuote);
+            IERC20(swapToken).approve(address(router), type(uint256).max);
+        }
 
         IPoolInternal.SwapArgs memory swapArgs = getSwapArgsExactOutput(
             swapToken,
@@ -635,7 +677,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        pool.swapAndFillQuoteRFQ(
+        pool.swapAndFillQuoteRFQ{value: useMsgValue ? swapQuote : 0}(
             swapArgs,
             quoteRFQ,
             quoteRFQ.size,
@@ -675,6 +717,11 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
     }
 
     function test_swapAndFillQuoteRFQ_Success_WithApproval() public {
-        _test_swapAndFillQuoteRFQ_Success_WithApproval(poolKey.isCallPool);
+        _test_swapAndFillQuoteRFQ_Success(poolKey.isCallPool, false);
+    }
+
+    function test_swapAndFillQuoteRFQ_Success_WithETH() public {
+        if (poolKey.isCallPool) return;
+        _test_swapAndFillQuoteRFQ_Success(poolKey.isCallPool, true);
     }
 }
