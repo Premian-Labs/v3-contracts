@@ -23,3 +23,5 @@ SD59x18 constant iEIGHT = SD59x18.wrap(8e18);
 SD59x18 constant iTEN = SD59x18.wrap(10e18);
 
 uint256 constant WAD = 1e18;
+
+uint256 constant WAD = 1e18;

@@ -10,6 +10,7 @@ import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enu
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
+import {PoolName} from "../libraries/PoolName.sol";
 import {Position} from "../libraries/Position.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -22,22 +23,17 @@ contract PoolBase is
     ERC165Base,
     Multicall
 {
-    constructor() {}
-
     /// @notice see IPoolBase; inheritance not possible due to linearization issues
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        // ToDo : Differentiate name if a pool already exists with other oracles for this pair ?
-
         return
-            string(
-                abi.encodePacked(
-                    IERC20Metadata(l.base).symbol(),
-                    " / ",
-                    IERC20Metadata(l.quote).symbol(),
-                    " - Premia Options Pool"
-                )
+            PoolName.name(
+                l.base,
+                l.quote,
+                l.maturity,
+                l.strike.unwrap(),
+                l.isCallPool
             );
     }
 
