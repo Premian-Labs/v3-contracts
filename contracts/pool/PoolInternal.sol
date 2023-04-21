@@ -51,6 +51,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
+    address internal immutable SETTINGS;
 
     // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
@@ -71,13 +72,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address router,
         address exchangeHelper,
         address wrappedNativeToken,
-        address feeReceiver
+        address feeReceiver,
+        address settings
     ) {
         FACTORY = factory;
         ROUTER = router;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
+        SETTINGS = settings;
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade

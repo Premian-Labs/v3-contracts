@@ -14,6 +14,7 @@ import {
   ERC20Router,
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
+  UserSettings__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -48,6 +49,7 @@ export class PoolUtil {
     poolFactory: string,
     router: string,
     exchangeHelper: string,
+    userSettings: string,
     wrappedNativeToken: string,
     feeReceiver: string,
     log = true,
@@ -77,6 +79,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
     );
     await poolCoreImpl.deployed();
 
@@ -97,6 +100,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
     );
     await poolTradeImpl.deployed();
 
@@ -120,6 +124,7 @@ export class PoolUtil {
         exchangeHelper,
         wrappedNativeToken,
         feeReceiver,
+        userSettings,
       );
       await poolCoreMockImpl.deployed();
 
@@ -215,11 +220,26 @@ export class PoolUtil {
 
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
+    // UserSettings
+    const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
+    await userSettingsImpl.deployed();
+
+    if (log) console.log(`UserSettings : ${userSettingsImpl.address}`);
+
+    const userSettingsProxy = await new ProxyUpgradeableOwnable__factory(
+      deployer,
+    ).deploy(userSettingsImpl.address);
+
+    await userSettingsProxy.deployed();
+
+    if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
       exchangeHelper.address,
+      userSettingsProxy.address,
       wrappedNativeToken,
       feeReceiver,
       log,

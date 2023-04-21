@@ -41,6 +41,8 @@ import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
 
+import {UserSettings} from "contracts/settings/UserSettings.sol";
+
 import {Assertions} from "./Assertions.sol";
 
 contract DeployTest is Test, Assertions {
@@ -148,6 +150,12 @@ contract DeployTest is Test, Assertions {
         router = new ERC20Router(address(factory));
         exchangeHelper = new ExchangeHelper();
 
+        UserSettings userSettingsImpl = new UserSettings();
+
+        ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(
+            address(userSettingsImpl)
+        );
+
         PoolBase poolBaseImpl = new PoolBase();
 
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
@@ -155,7 +163,8 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(exchangeHelper),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(userSettingsProxy)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
@@ -163,7 +172,8 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(exchangeHelper),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(userSettingsProxy)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -171,7 +181,8 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(exchangeHelper),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(userSettingsProxy)
         );
 
         /////////////////////
@@ -227,7 +238,10 @@ contract DeployTest is Test, Assertions {
                 )
             )
         );
-        poolCoreSelectors.push(poolCoreImpl.exercise.selector);
+        poolCoreSelectors.push(bytes4(keccak256("exercise(address)")));
+        poolCoreSelectors.push(
+            bytes4(keccak256("exercise(address,uint256,uint256)"))
+        );
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);

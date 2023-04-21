@@ -23,14 +23,16 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         address router,
         address exchangeHelper,
         address wrappedNativeToken,
-        address feeReceiver
+        address feeReceiver,
+        address settings
     )
         PoolInternal(
             factory,
             router,
             exchangeHelper,
             wrappedNativeToken,
-            feeReceiver
+            feeReceiver,
+            settings
         )
     {}
 
