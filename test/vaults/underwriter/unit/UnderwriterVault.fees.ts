@@ -1,4 +1,4 @@
-import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addMockDeposit,
   increaseTotalAssets,
@@ -16,15 +16,192 @@ import {
 } from '../../../../utils/time';
 import {
   ERC20Mock,
-  ERC20Mock__factory,
   IERC20__factory,
   UnderwriterVaultMock,
 } from '../../../../typechain';
 import { ethers } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { ERC20__factory } from '../../../../typechain/packages/hardhat/test/fixture-projects/hardhat-project/typechain-types';
 
 let vault: UnderwriterVaultMock;
+let caller: SignerWithAddress;
+let receiver: SignerWithAddress;
+export let token: ERC20Mock;
+
+export async function setup(isCall: boolean, test: any) {
+  let { callVault, putVault, base, quote, caller } = await loadFixture(
+    vaultSetup,
+  );
+
+  vault = isCall ? callVault : putVault;
+  token = isCall ? base : quote;
+  const decimals = await token.decimals();
+
+  // set pps and totalSupply vault
+  const totalSupply = parseEther(test.totalSupply.toString());
+  await increaseTotalShares(
+    vault,
+    parseFloat((test.totalSupply - test.shares).toFixed(12)),
+  );
+  const pps = parseEther(test.pps.toString());
+  const vaultDeposit = parseUnits(
+    (test.pps * test.totalSupply).toFixed(12),
+    decimals,
+  );
+  await token.mint(vault.address, vaultDeposit);
+  await vault.increaseTotalAssets(
+    parseEther((test.pps * test.totalSupply).toFixed(12)),
+  );
+
+  // set pps and shares user
+  const userShares = parseEther(test.shares.toString());
+  await vault.mintMock(caller.address, userShares);
+  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+  await vault.setNetUserDeposit(caller.address, userDeposit);
+  const ppsUser = parseEther(test.ppsUser.toString());
+  const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+
+  expect(ppsAvg).to.eq(ppsUser);
+
+  expect(await vault.totalSupply()).to.eq(totalSupply);
+  expect(await vault.getPricePerShare()).to.eq(pps);
+
+  return { vault, caller, token };
+}
+
+async function setupGetFeeVars(isCall: boolean, test: any) {
+  let {
+    callVault,
+    putVault,
+    base,
+    quote,
+    caller: _caller,
+    receiver: _receiver,
+  } = await loadFixture(vaultSetup);
+
+  vault = isCall ? callVault : putVault;
+  token = isCall ? base : quote;
+  caller = _caller;
+  receiver = _receiver;
+
+  // set pps and totalSupply vault
+  const totalSupply = parseEther(test.totalSupply.toString());
+  await increaseTotalShares(
+    vault,
+    parseFloat((test.totalSupply - test.shares).toFixed(12)),
+  );
+  const pps = parseEther(test.pps.toString());
+  const vaultDeposit = parseUnits(
+    (test.pps * test.totalSupply).toFixed(12),
+    await token.decimals(),
+  );
+  await token.mint(vault.address, vaultDeposit);
+
+  await vault.increaseTotalAssets(
+    parseEther((test.pps * test.totalSupply).toFixed(12)),
+  );
+
+  // set pps and shares user caller
+  const userShares = parseEther(test.shares.toString());
+  await vault.mintMock(caller.address, userShares);
+  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+  await vault.setNetUserDeposit(caller.address, userDeposit);
+  await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
+
+  // check pps is as expected
+  const ppsUser = parseEther(test.ppsUser.toString());
+  if (test.shares > 0) {
+    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+    expect(ppsAvg).to.eq(ppsUser);
+  }
+
+  expect(await vault.totalSupply()).to.eq(totalSupply);
+  expect(await vault.getPricePerShare()).to.eq(pps);
+
+  await vault.setPerformanceFeeRate(
+    parseEther(test.performanceFeeRate.toString()),
+  );
+  await vault.setManagementFeeRate(
+    parseEther(test.managementFeeRate.toString()),
+  );
+  return { vault, caller, receiver, token };
+}
+
+export async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
+  let { vault, caller, receiver, token } = await setupGetFeeVars(isCall, test);
+
+  await token.mint(
+    vault.address,
+    parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
+  );
+  await vault.setProtocolFees(parseEther(test.protocolFeesInitial.toString()));
+  await vault.setNetUserDeposit(
+    receiver.address,
+    parseEther(test.netUserDepositReceiver.toString()),
+  );
+
+  return { vault, caller, receiver, token };
+}
+
+export const testsFeeVars = [
+  {
+    shares: 1.1,
+    pps: 1.0,
+    ppsUser: 1.0,
+    assets: 0.1,
+    balanceShares: 1.1,
+    totalSupply: 2.2,
+    performanceFeeRate: 0.01,
+    managementFeeRate: 0.02,
+    transferAmount: 0.1,
+    performance: 1.0,
+    performanceFeeInShares: 0,
+    performanceFeeInAssets: 0,
+    managementFeeInShares: 0.000005479452054794,
+    managementFeeInAssets: 0.000005479452054794,
+    totalFeeInShares: 0.000005479452054794,
+    totalFeeInAssets: 0.000005479452054794,
+    timeOfDeposit: 3000000000,
+    timestamp: 3000000000 + ONE_DAY,
+    maxTransferableShares: 1.0999397260273973,
+    // beforeTokenTransfer
+    protocolFeesInitial: 0.1,
+    protocolFees: 0.1 + 0.000005479452054794,
+    sharesAfter: 1.0999945204845256,
+    netUserDepositReceiver: 1.2,
+    netUserDepositReceiverAfter: 1.3,
+    netUserDepositCallerAfter: 0.9999945205, // 1,1 * 1,0 * ((1,1 - 0,1 - 0,000005479452054794) / 1,1)
+    timeOfDepositReceiverAfter: 3000000000 + ONE_DAY,
+  },
+  {
+    shares: 2.3,
+    pps: 1.5,
+    ppsUser: 1.2,
+    assets: 1.845,
+    balanceShares: 2.3,
+    totalSupply: 2.5,
+    performanceFeeRate: 0.05,
+    managementFeeRate: 0.02,
+    transferAmount: 1.23,
+    performance: 1.25,
+    performanceFeeInShares: 0.015375,
+    performanceFeeInAssets: 0.0230625,
+    managementFeeInShares: 0.0246,
+    managementFeeInAssets: 0.0369,
+    totalFeeInShares: 0.039975,
+    totalFeeInAssets: 0.0599625,
+    timeOfDeposit: 3000000000,
+    timestamp: 3000000000 + ONE_YEAR,
+    maxTransferableShares: 2.22525,
+    // beforeTokenTransfer
+    protocolFeesInitial: 0.1,
+    protocolFees: 0.1 + 0.0599625,
+    sharesAfter: 2.260025,
+    netUserDepositReceiver: 1.2,
+    netUserDepositReceiverAfter: 3.045,
+    netUserDepositCallerAfter: 1.23603, // 2,3 * 1,2 * ((2,3 - 1,23 - 0,039975) / 2,3)
+    timeOfDepositReceiverAfter: 3000000000 + ONE_YEAR,
+  },
+];
 
 describe('UnderwriterVault.fees', () => {
   describe('#_claimFees', () => {
@@ -46,6 +223,7 @@ describe('UnderwriterVault.fees', () => {
       await vault.claimFees();
       return { vault, feeReceiver, token };
     }
+
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         it(`protocolFees should be transferred to fee receiver address`, async () => {
@@ -58,47 +236,6 @@ describe('UnderwriterVault.fees', () => {
       });
     }
   });
-
-  async function setup(isCall: boolean, test: any) {
-    let { callVault, putVault, base, quote, caller } = await loadFixture(
-      vaultSetup,
-    );
-
-    vault = isCall ? callVault : putVault;
-    token = isCall ? base : quote;
-    const decimals = await token.decimals();
-
-    // set pps and totalSupply vault
-    const totalSupply = parseEther(test.totalSupply.toString());
-    await increaseTotalShares(
-      vault,
-      parseFloat((test.totalSupply - test.shares).toFixed(12)),
-    );
-    const pps = parseEther(test.pps.toString());
-    const vaultDeposit = parseUnits(
-      (test.pps * test.totalSupply).toFixed(12),
-      decimals,
-    );
-    await token.mint(vault.address, vaultDeposit);
-    await vault.increaseTotalAssets(
-      parseEther((test.pps * test.totalSupply).toFixed(12)),
-    );
-
-    // set pps and shares user
-    const userShares = parseEther(test.shares.toString());
-    await vault.mintMock(caller.address, userShares);
-    const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
-    await vault.setNetUserDeposit(caller.address, userDeposit);
-    const ppsUser = parseEther(test.ppsUser.toString());
-    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-
-    expect(ppsAvg).to.eq(ppsUser);
-
-    expect(await vault.totalSupply()).to.eq(totalSupply);
-    expect(await vault.getPricePerShare()).to.eq(pps);
-
-    return { vault, caller, token };
-  }
 
   describe('#_getAveragePricePerShare', () => {
     for (const isCall of [true, false]) {
@@ -134,161 +271,6 @@ describe('UnderwriterVault.fees', () => {
       });
     }
   });
-
-  async function setupMaxTransferable(isCall: boolean, test: any) {
-    let { vault, caller, token } = await setup(isCall, test);
-    await vault.setPerformanceFeeRate(
-      parseEther(test.performanceFeeRate.toString()),
-    );
-    await vault.setManagementFeeRate(
-      parseEther(test.managementFeeRate.toString()),
-    );
-    return { vault, caller, token };
-  }
-
-  let caller: SignerWithAddress;
-  let receiver: SignerWithAddress;
-  let token: ERC20Mock;
-
-  async function setupGetFeeVars(isCall: boolean, test: any) {
-    let {
-      callVault,
-      putVault,
-      base,
-      quote,
-      caller: _caller,
-      receiver: _receiver,
-    } = await loadFixture(vaultSetup);
-
-    vault = isCall ? callVault : putVault;
-    token = isCall ? base : quote;
-    caller = _caller;
-    receiver = _receiver;
-
-    // set pps and totalSupply vault
-    const totalSupply = parseEther(test.totalSupply.toString());
-    await increaseTotalShares(
-      vault,
-      parseFloat((test.totalSupply - test.shares).toFixed(12)),
-    );
-    const pps = parseEther(test.pps.toString());
-    const vaultDeposit = parseUnits(
-      (test.pps * test.totalSupply).toFixed(12),
-      await token.decimals(),
-    );
-    await token.mint(vault.address, vaultDeposit);
-
-    await vault.increaseTotalAssets(
-      parseEther((test.pps * test.totalSupply).toFixed(12)),
-    );
-
-    // set pps and shares user caller
-    const userShares = parseEther(test.shares.toString());
-    await vault.mintMock(caller.address, userShares);
-    const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
-    await vault.setNetUserDeposit(caller.address, userDeposit);
-    await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
-
-    // check pps is as expected
-    const ppsUser = parseEther(test.ppsUser.toString());
-    if (test.shares > 0) {
-      const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-      expect(ppsAvg).to.eq(ppsUser);
-    }
-
-    expect(await vault.totalSupply()).to.eq(totalSupply);
-    expect(await vault.getPricePerShare()).to.eq(pps);
-
-    await vault.setPerformanceFeeRate(
-      parseEther(test.performanceFeeRate.toString()),
-    );
-    await vault.setManagementFeeRate(
-      parseEther(test.managementFeeRate.toString()),
-    );
-    return { vault, caller, receiver, token };
-  }
-
-  async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
-    let { vault, caller, receiver, token } = await setupGetFeeVars(
-      isCall,
-      test,
-    );
-
-    await token.mint(
-      vault.address,
-      parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
-    );
-    await vault.setProtocolFees(
-      parseEther(test.protocolFeesInitial.toString()),
-    );
-    await vault.setNetUserDeposit(
-      receiver.address,
-      parseEther(test.netUserDepositReceiver.toString()),
-    );
-
-    return { vault, caller, receiver, token };
-  }
-
-  const testsFeeVars = [
-    {
-      shares: 1.1,
-      pps: 1.0,
-      ppsUser: 1.0,
-      assets: 0.1,
-      balanceShares: 1.1,
-      totalSupply: 2.2,
-      performanceFeeRate: 0.01,
-      managementFeeRate: 0.02,
-      transferAmount: 0.1,
-      performance: 1.0,
-      performanceFeeInShares: 0,
-      performanceFeeInAssets: 0,
-      managementFeeInShares: 0.000005479452054794,
-      managementFeeInAssets: 0.000005479452054794,
-      totalFeeInShares: 0.000005479452054794,
-      totalFeeInAssets: 0.000005479452054794,
-      timeOfDeposit: 3000000000,
-      timestamp: 3000000000 + ONE_DAY,
-      maxTransferableShares: 1.0999397260273973,
-      // beforeTokenTransfer
-      protocolFeesInitial: 0.1,
-      protocolFees: 0.1 + 0.000005479452054794,
-      sharesAfter: 1.0999945204845256,
-      netUserDepositReceiver: 1.2,
-      netUserDepositReceiverAfter: 1.3,
-      netUserDepositCallerAfter: 0.9999945205, // 1,1 * 1,0 * ((1,1 - 0,1 - 0,000005479452054794) / 1,1)
-      timeOfDepositReceiverAfter: 3000000000 + ONE_DAY,
-    },
-    {
-      shares: 2.3,
-      pps: 1.5,
-      ppsUser: 1.2,
-      assets: 1.845,
-      balanceShares: 2.3,
-      totalSupply: 2.5,
-      performanceFeeRate: 0.05,
-      managementFeeRate: 0.02,
-      transferAmount: 1.23,
-      performance: 1.25,
-      performanceFeeInShares: 0.015375,
-      performanceFeeInAssets: 0.0230625,
-      managementFeeInShares: 0.0246,
-      managementFeeInAssets: 0.0369,
-      totalFeeInShares: 0.039975,
-      totalFeeInAssets: 0.0599625,
-      timeOfDeposit: 3000000000,
-      timestamp: 3000000000 + ONE_YEAR,
-      maxTransferableShares: 2.22525,
-      // beforeTokenTransfer
-      protocolFeesInitial: 0.1,
-      protocolFees: 0.1 + 0.0599625,
-      sharesAfter: 2.260025,
-      netUserDepositReceiver: 1.2,
-      netUserDepositReceiverAfter: 3.045,
-      netUserDepositCallerAfter: 1.23603, // 2,3 * 1,2 * ((2,3 - 1,23 - 0,039975) / 2,3)
-      timeOfDepositReceiverAfter: 3000000000 + ONE_YEAR,
-    },
-  ];
 
   describe('#_updateTimeOfDeposit', () => {
     async function setup(test: any) {
@@ -606,97 +588,6 @@ describe('UnderwriterVault.fees', () => {
     }
   });
 
-  describe('#maxWithdraw', () => {
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        it('maxWithdraw should revert for a zero address', async () => {
-          const { callVault, base, quote, lp } = await loadFixture(vaultSetup);
-          await setMaturities(callVault);
-          await addMockDeposit(callVault, 2, base, quote);
-          await expect(
-            callVault.maxWithdraw(ethers.constants.AddressZero),
-          ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
-        });
-
-        let test = {
-          shares: 2.3,
-          pps: 1.5,
-          ppsUser: 1.2,
-          totalSupply: 2.5,
-          maxTransferable: 2.27125,
-          managementFeeRate: 0.0,
-          performanceFeeRate: 0.05,
-        };
-
-        it('should return max transferable assets of the caller', async () => {
-          // assets caller: 2.3 * 1.5
-          // tax caller: 2.3 * 1.5 * 0.05 * 0.25 = 0.43125
-          // maxWithdrawable = assets - tax = 3.406875
-          const { vault, caller } = await setupMaxTransferable(isCall, test);
-          const assetAmount = await vault.maxWithdraw(caller.address);
-          const decimals = await token.decimals();
-          expect(assetAmount).to.eq(parseUnits('3.406875', decimals));
-        });
-
-        it('should return available assets', async () => {
-          // maxWithdrawable = assets - tax = 3.406875
-          // available = assets - locked = 3.75 - 1.2 = 2.55
-          const { vault, caller } = await setupMaxTransferable(isCall, test);
-          await setMaturities(vault);
-          await vault.increaseTotalLockedAssets(parseEther('1.2'));
-          const assetAmount = await vault.maxWithdraw(caller.address);
-          const decimals = await token.decimals();
-          expect(assetAmount).to.eq(parseUnits('2.55', decimals));
-        });
-      });
-    }
-  });
-
-  describe('#maxRedeem', () => {
-    it('maxRedeem should revert for a zero address', async () => {
-      const { callVault, receiver, base, quote } = await loadFixture(
-        vaultSetup,
-      );
-      await setMaturities(callVault);
-      await addMockDeposit(callVault, 2, base, quote, 2, receiver.address);
-      await expect(
-        callVault.maxRedeem(ethers.constants.AddressZero),
-      ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
-    });
-
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        let test = {
-          shares: 2.3,
-          pps: 1.5,
-          ppsUser: 1.2,
-          totalSupply: 2.5,
-          managementFeeRate: 0.0,
-          performanceFeeRate: 0.05,
-        };
-
-        it('should return max transferable assets of the caller', async () => {
-          // assets caller: 2.3 * 1.5
-          // tax caller: 2.3 * 1.5 * 0.05 * 0.25 = 0.43125
-          // maxWithdrawable = assets - tax = 3.406875
-          const { vault, caller } = await setupMaxTransferable(isCall, test);
-          const assetAmount = await vault.maxRedeem(caller.address);
-          expect(assetAmount).to.eq(parseEther('2.27125'));
-        });
-
-        it('should return available assets', async () => {
-          // maxWithdrawable = assets - tax = 3.406875
-          // available = assets - locked = 3.75 - 1.2 = 2.55
-          const { vault, caller } = await setupMaxTransferable(isCall, test);
-          await setMaturities(vault);
-          await vault.increaseTotalLockedAssets(parseEther('1.2'));
-          const assetAmount = await vault.maxRedeem(caller.address);
-          expect(assetAmount).to.eq(parseEther('1.7'));
-        });
-      });
-    }
-  });
-
   describe('#_afterDeposit', () => {
     it('_afterDeposit should revert for a zero address', async () => {
       const { callVault } = await loadFixture(vaultSetup);
@@ -853,100 +744,5 @@ describe('UnderwriterVault.fees', () => {
         });
       });
     }
-  });
-
-  describe('#transfer', () => {
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        it('transfer should update the netUserDeposit of the receiver and timeOfDeposit', async () => {
-          const test = testsFeeVars[0];
-          const { vault, caller, receiver } = await setupBeforeTokenTransfer(
-            true,
-            test,
-          );
-          const addressToken = await vault.thisAddress();
-          const vaultToken = IERC20__factory.connect(addressToken, caller);
-
-          await vault.setTimestamp(test.timestamp);
-          await vaultToken
-            .connect(caller)
-            .transfer(
-              receiver.address,
-              parseEther(test.transferAmount.toString()),
-            );
-
-          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
-            test.timestamp,
-          );
-          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
-            parseEther(test.netUserDepositReceiverAfter.toString()),
-          );
-
-          await vault.setTimestamp(test.timestamp + ONE_YEAR);
-
-          await vaultToken
-            .connect(caller)
-            .transfer(
-              receiver.address,
-              parseEther(test.transferAmount.toString()),
-            );
-
-          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
-            test.timestamp + 0.5 * ONE_YEAR,
-          );
-          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
-            parseEther('1.4'),
-          );
-        });
-      });
-    }
-  });
-
-  describe('#deposit', () => {
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        it('should update fee-related numbers', async () => {
-          const test = testsFeeVars[0];
-          const { vault, caller, token } = await setupBeforeTokenTransfer(
-            true,
-            test,
-          );
-          const assetAmount = parseUnits('1.4', await token.decimals());
-          await token.mint(caller.address, assetAmount);
-          await token.connect(caller).approve(vault.address, assetAmount);
-          await vault.setTimestamp(test.timestamp);
-          await vault.connect(caller).deposit(assetAmount, caller.address);
-          // 1.1 + 1.4 = 2.5
-          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
-            parseEther('2.5'),
-          );
-          // (1.1 * 3000000000 + 1.4 * 3000086400) / 2.5
-          expect(await vault.getTimeOfDeposit(caller.address)).to.eq(
-            3000048384,
-          );
-        });
-      });
-    }
-  });
-
-  describe('#withdraw', () => {
-    it('should update all fee-related numbers', async () => {
-      const test = testsFeeVars[0];
-      const { vault, caller, token } = await setupBeforeTokenTransfer(
-        true,
-        test,
-      );
-
-      const assetAmount = parseUnits('0.4', await token.decimals());
-      await vault.setTimestamp(test.timestamp);
-      await vault
-        .connect(caller)
-        .withdraw(assetAmount, caller.address, caller.address);
-      expect(await vault.getNetUserDeposit(caller.address)).to.eq(
-        '699978082191780821',
-      );
-      expect(await vault.getTimeOfDeposit(caller.address)).to.eq(3000000000);
-      expect(await vault.balanceOf(caller.address)).to.eq('699978082191780822');
-    });
   });
 });
