@@ -1,0 +1,23 @@
+{
+  "tokens": {
+    "testWETH": "",
+    "WETH": "0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999",
+    "WBTC": "",
+    "PREMIA": "",
+    "LINK": "",
+    "USDC": "",
+    "DAI": ""
+  },
+  "ChainlinkAdapterImplementation": "",
+  "ChainlinkAdapterProxy": "",
+  "InitFeeCalculatorImplementation": "",
+  "InitFeeCalculatorProxy": "",
+  "PremiaDiamond": "",
+  "PoolFactoryImplementation": "",
+  "PoolFactoryProxy": "",
+  "ExchangeHelper": "",
+  "ERC20Router": "",
+  "PoolBase": "",
+  "PoolCore": "",
+  "PoolTrade": ""
+}

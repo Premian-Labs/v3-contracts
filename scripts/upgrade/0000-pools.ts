@@ -2,7 +2,8 @@ import { Premia__factory } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
-import { ContractAddresses } from '../../utils/deployment/types';
+import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import fs from 'fs';
 import { ethers } from 'hardhat';
@@ -24,16 +25,19 @@ async function main() {
   let feeReceiver: string;
   let updateFacets: boolean;
 
-  if (chainId === 42161) {
-    // Arbitrum
+  if (chainId === ChainID.Arbitrum) {
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     feeReceiver = '';
     updateFacets = false;
-  } else if (chainId === 5) {
-    // Goerli
+  } else if (chainId === ChainID.Goerli) {
     addresses = goerliAddresses;
     addressesPath = 'utils/deployment/goerli.json';
+    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+    updateFacets = true;
+  } else if (chainId === ChainID.ArbitrumGoerli) {
+    addresses = arbitrumGoerliAddresses;
+    addressesPath = 'utils/deployment/arbitrumGoerli.json';
     feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
     updateFacets = true;
   } else {

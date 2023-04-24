@@ -1,22 +1,35 @@
 import { PoolFactory__factory } from '../../../typechain';
 import goerliAddresses from '../../../utils/deployment/goerli.json';
+import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
 import { PoolKey } from '../../../utils/sdk/types';
 import { getValidMaturity } from '../../../utils/time';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { ChainID, ContractAddresses } from '../../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
+  const chainId = await deployer.getChainId();
+
+  let addresses: ContractAddresses;
+
+  if (chainId === ChainID.Goerli) {
+    addresses = goerliAddresses;
+  } else if (chainId === ChainID.ArbitrumGoerli) {
+    addresses = arbitrumGoerliAddresses;
+  } else {
+    throw new Error('ChainId not implemented');
+  }
 
   const poolFactory = PoolFactory__factory.connect(
-    goerliAddresses.PoolFactoryProxy,
+    addresses.PoolFactoryProxy,
     deployer,
   );
   const poolKey: PoolKey = {
-    base: goerliAddresses.tokens.testWETH,
-    quote: goerliAddresses.tokens.USDC,
-    oracleAdapter: goerliAddresses.ChainlinkAdapterProxy,
+    base: addresses.tokens.testWETH,
+    quote: addresses.tokens.USDC,
+    oracleAdapter: addresses.ChainlinkAdapterProxy,
     strike: parseEther('2000'),
     maturity: BigNumber.from(await getValidMaturity(1, 'months', false)),
     isCallPool: true,
