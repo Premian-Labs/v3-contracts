@@ -14,8 +14,10 @@ import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {IPoolFactory} from "../factory/IPoolFactory.sol";
+import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
+import {IPoolFactory} from "../factory/IPoolFactory.sol";
+import {IUserSettings} from "../settings/IUserSettings.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -1285,7 +1287,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 exerciseValue = size * intrinsicValue;
 
         if (isCall) {
-            exerciseValue = exerciseValue.div(settlementPrice);
+            exerciseValue = exerciseValue / settlementPrice;
         }
 
         return exerciseValue;
@@ -1302,9 +1304,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 : size * l.strike - exerciseValue;
     }
 
-    /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
+    /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    function _exercise(address holder) internal returns (uint256) {
+    /// @param txCost The estimated transaction cost (poolToken decimals)
+    /// @param fee The auto exercise fee (poolToken decimals)
+    function _exercise(
+        address holder,
+        UD60x18 txCost,
+        UD60x18 fee
+    ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
 
@@ -1319,12 +1327,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _burn(holder, PoolStorage.LONG, size);
 
-        if (exerciseValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
+        UD60x18 totalCost = txCost + fee;
+
+        if (totalCost > exerciseValue)
+            revert Pool__TotalCostExceedsExerciseValue(
+                totalCost,
+                exerciseValue
+            );
+
+        if (totalCost > ZERO) {
+            exerciseValue = exerciseValue - totalCost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
+            emit AutoExercise(msg.sender, txCost, fee);
         }
 
-        emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
+        if (exerciseValue > ZERO)
+            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
 
+        emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
         return l.toPoolTokenDecimals(exerciseValue);
     }
 
@@ -2353,5 +2373,51 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address poolToken = PoolStorage.layout().getPoolToken();
         if (poolToken != tokenOut)
             revert Pool__InvalidSwapTokenOut(tokenOut, poolToken);
+    }
+
+    function _ensureAuthorizedAgent(
+        address holder,
+        address agent
+    ) internal view {
+        address[] memory authorizedAgents = IUserSettings(SETTINGS)
+            .getAuthorizedAgents(holder);
+
+        bool agentIsAuthorized;
+        for (uint256 i = 0; i < authorizedAgents.length; i++) {
+            if (authorizedAgents[i] == agent) {
+                agentIsAuthorized = true;
+                break;
+            }
+        }
+
+        if (!agentIsAuthorized) revert Pool__UnauthorizedAgent();
+    }
+
+    function _ensureAuthorizedTxCostAndFee(
+        address holder,
+        UD60x18 totalCost
+    ) internal view {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        address poolToken = l.getPoolToken();
+
+        UD60x18 wrappedNativeQuote = poolToken == WRAPPED_NATIVE_TOKEN
+            ? ONE
+            : IOracleAdapter(l.oracleAdapter).quote(
+                WRAPPED_NATIVE_TOKEN,
+                poolToken
+            );
+
+        UD60x18 totalCostInWrappedNative = (totalCost * wrappedNativeQuote);
+
+        UD60x18 authorizedTxCostAndFee = UD60x18.wrap(
+            IUserSettings(SETTINGS).getAuthorizedTxCostAndFee(holder)
+        );
+
+        if (totalCostInWrappedNative > authorizedTxCostAndFee)
+            revert Pool__UnauthorizedTxCostAndFee(
+                totalCostInWrappedNative,
+                authorizedTxCostAndFee
+            );
     }
 }

@@ -56,10 +56,19 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size,
         UD60x18 quoteRFQSize
     );
+    error Pool__UnauthorizedAgent();
+    error Pool__UnauthorizedTxCostAndFee(
+        UD60x18 totalCostInWrappedNative,
+        UD60x18 authorizedTxCostAndFee
+    );
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
     error Pool__TickWidthInvalid(UD60x18 price);
+    error Pool__TotalCostExceedsExerciseValue(
+        UD60x18 totalCost,
+        UD60x18 exerciseValue
+    );
     error Pool__WithdrawalDelayNotElapsed(uint256 unlockTime);
     error Pool__ZeroSize();
 

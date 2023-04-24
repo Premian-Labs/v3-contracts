@@ -97,6 +97,8 @@ interface IPoolEvents {
         UD60x18 fee
     );
 
+    event AutoExercise(address indexed agent, UD60x18 txCost, UD60x18 fee);
+
     event Settle(
         address indexed user,
         UD60x18 contractSize,

@@ -7,14 +7,14 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {PoolStorage} from "./PoolStorage.sol";
-import {PoolInternal} from "./PoolInternal.sol";
-
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
+import {ZERO} from "../libraries/Constants.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
+import {PoolStorage} from "./PoolStorage.sol";
+import {PoolInternal} from "./PoolInternal.sol";
 
 contract PoolCore is IPoolCore, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
@@ -286,7 +286,24 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function exercise(address holder) external returns (uint256) {
-        return _exercise(holder);
+        return _exercise(holder, ZERO, ZERO);
+    }
+
+    /// @inheritdoc IPoolCore
+    function exercise(
+        address holder,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
+        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+
+        _ensureAuthorizedAgent(holder, msg.sender);
+        _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+
+        return _exercise(holder, _txCost, _fee);
     }
 
     /// @inheritdoc IPoolCore

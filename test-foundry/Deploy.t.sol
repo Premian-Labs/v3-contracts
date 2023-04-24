@@ -41,6 +41,7 @@ import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
 
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
 
 import {Assertions} from "./Assertions.sol";
@@ -56,6 +57,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    IUserSettings userSettings;
 
     IPoolMock pool;
 
@@ -73,6 +75,7 @@ contract DeployTest is Test, Assertions {
     struct Users {
         address lp;
         address trader;
+        address agent;
     }
 
     bytes4[] internal poolBaseSelectors;
@@ -93,7 +96,7 @@ contract DeployTest is Test, Assertions {
         mainnetFork = vm.createFork(ETH_RPC_URL);
         vm.selectFork(mainnetFork);
 
-        users = Users({lp: vm.addr(1), trader: vm.addr(2)});
+        users = Users({lp: vm.addr(1), trader: vm.addr(2), agent: vm.addr(3)});
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
 
@@ -156,6 +159,8 @@ contract DeployTest is Test, Assertions {
             address(userSettingsImpl)
         );
 
+        userSettings = IUserSettings(address(userSettingsProxy));
+
         PoolBase poolBaseImpl = new PoolBase();
 
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
@@ -164,7 +169,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettingsProxy)
+            address(userSettings)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
@@ -173,7 +178,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettingsProxy)
+            address(userSettings)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -182,7 +187,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettingsProxy)
+            address(userSettings)
         );
 
         /////////////////////
@@ -521,6 +526,14 @@ contract DeployTest is Test, Assertions {
     ) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
+    }
+
+    function scaleDecimalsTo(
+        uint256 amount,
+        bool isCall
+    ) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return OptionMath.scaleDecimals(amount, decimals, 18);
     }
 
     function tokenId() internal view returns (uint256) {

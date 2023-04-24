@@ -181,10 +181,22 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
-    /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
+    /// @notice Exercises all long options held by an `owner`, caller is not reimbursed.
     /// @param holder The holder of the contracts
-    /// @return The exercise value as amount of collateral paid out (poolToken decimals)
+    /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
     function exercise(address holder) external returns (uint256);
+
+    /// @notice Exercises all long options held by an `owner`, caller is reimbursed with txCost + fee deducted from the proceeds of the
+    ///         exercised options.
+    /// @param holder The holder of the contracts
+    /// @param txCost The estimated transaction cost (poolToken decimals)
+    /// @param fee The auto exercise fee (poolToken decimals)
+    /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
+    function exercise(
+        address holder,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256);
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
