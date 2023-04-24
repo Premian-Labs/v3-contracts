@@ -1,10 +1,14 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
-  addMockDeposit,
+  caller,
+  receiver,
+  vault,
   increaseTotalAssets,
-  increaseTotalShares,
-  setMaturities,
   vaultSetup,
+  setup,
+  setupBeforeTokenTransfer,
+  setupGetFeeVars,
+  token,
 } from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
@@ -14,133 +18,7 @@ import {
   ONE_WEEK,
   ONE_YEAR,
 } from '../../../../utils/time';
-import {
-  ERC20Mock,
-  IERC20__factory,
-  UnderwriterVaultMock,
-} from '../../../../typechain';
 import { ethers } from 'ethers';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-
-let vault: UnderwriterVaultMock;
-let caller: SignerWithAddress;
-let receiver: SignerWithAddress;
-export let token: ERC20Mock;
-
-export async function setup(isCall: boolean, test: any) {
-  let { callVault, putVault, base, quote, caller } = await loadFixture(
-    vaultSetup,
-  );
-
-  vault = isCall ? callVault : putVault;
-  token = isCall ? base : quote;
-  const decimals = await token.decimals();
-
-  // set pps and totalSupply vault
-  const totalSupply = parseEther(test.totalSupply.toString());
-  await increaseTotalShares(
-    vault,
-    parseFloat((test.totalSupply - test.shares).toFixed(12)),
-  );
-  const pps = parseEther(test.pps.toString());
-  const vaultDeposit = parseUnits(
-    (test.pps * test.totalSupply).toFixed(12),
-    decimals,
-  );
-  await token.mint(vault.address, vaultDeposit);
-  await vault.increaseTotalAssets(
-    parseEther((test.pps * test.totalSupply).toFixed(12)),
-  );
-
-  // set pps and shares user
-  const userShares = parseEther(test.shares.toString());
-  await vault.mintMock(caller.address, userShares);
-  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
-  await vault.setNetUserDeposit(caller.address, userDeposit);
-  const ppsUser = parseEther(test.ppsUser.toString());
-  const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-
-  expect(ppsAvg).to.eq(ppsUser);
-
-  expect(await vault.totalSupply()).to.eq(totalSupply);
-  expect(await vault.getPricePerShare()).to.eq(pps);
-
-  return { vault, caller, token };
-}
-
-async function setupGetFeeVars(isCall: boolean, test: any) {
-  let {
-    callVault,
-    putVault,
-    base,
-    quote,
-    caller: _caller,
-    receiver: _receiver,
-  } = await loadFixture(vaultSetup);
-
-  vault = isCall ? callVault : putVault;
-  token = isCall ? base : quote;
-  caller = _caller;
-  receiver = _receiver;
-
-  // set pps and totalSupply vault
-  const totalSupply = parseEther(test.totalSupply.toString());
-  await increaseTotalShares(
-    vault,
-    parseFloat((test.totalSupply - test.shares).toFixed(12)),
-  );
-  const pps = parseEther(test.pps.toString());
-  const vaultDeposit = parseUnits(
-    (test.pps * test.totalSupply).toFixed(12),
-    await token.decimals(),
-  );
-  await token.mint(vault.address, vaultDeposit);
-
-  await vault.increaseTotalAssets(
-    parseEther((test.pps * test.totalSupply).toFixed(12)),
-  );
-
-  // set pps and shares user caller
-  const userShares = parseEther(test.shares.toString());
-  await vault.mintMock(caller.address, userShares);
-  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
-  await vault.setNetUserDeposit(caller.address, userDeposit);
-  await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
-
-  // check pps is as expected
-  const ppsUser = parseEther(test.ppsUser.toString());
-  if (test.shares > 0) {
-    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
-    expect(ppsAvg).to.eq(ppsUser);
-  }
-
-  expect(await vault.totalSupply()).to.eq(totalSupply);
-  expect(await vault.getPricePerShare()).to.eq(pps);
-
-  await vault.setPerformanceFeeRate(
-    parseEther(test.performanceFeeRate.toString()),
-  );
-  await vault.setManagementFeeRate(
-    parseEther(test.managementFeeRate.toString()),
-  );
-  return { vault, caller, receiver, token };
-}
-
-export async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
-  let { vault, caller, receiver, token } = await setupGetFeeVars(isCall, test);
-
-  await token.mint(
-    vault.address,
-    parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
-  );
-  await vault.setProtocolFees(parseEther(test.protocolFeesInitial.toString()));
-  await vault.setNetUserDeposit(
-    receiver.address,
-    parseEther(test.netUserDepositReceiver.toString()),
-  );
-
-  return { vault, caller, receiver, token };
-}
 
 export const testsFeeVars = [
   {

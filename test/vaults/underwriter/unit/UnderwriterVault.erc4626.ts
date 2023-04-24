@@ -1,9 +1,11 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   addDeposit,
-  addMockDeposit,
   callVault,
   vaultSetup,
+  setMaturities,
+  setupBeforeTokenTransfer,
+  setup,
 } from '../UnderwriterVault.fixture';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -16,11 +18,6 @@ import {
 } from '../../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { latest, ONE_DAY, ONE_YEAR } from '../../../../utils/time';
-import {
-  setupBeforeTokenTransfer,
-  setup,
-  testsFeeVars,
-} from './UnderwriterVault.fees';
 
 describe('#ERC4626 overridden functions', () => {
   for (const isCall of [true, false]) {
@@ -378,9 +375,38 @@ describe('#ERC4626 overridden functions', () => {
         });
       });
 
+      const test = {
+        shares: 1.1,
+        pps: 1.0,
+        ppsUser: 1.0,
+        assets: 0.1,
+        balanceShares: 1.1,
+        totalSupply: 2.2,
+        performanceFeeRate: 0.01,
+        managementFeeRate: 0.02,
+        transferAmount: 0.1,
+        performance: 1.0,
+        performanceFeeInShares: 0,
+        performanceFeeInAssets: 0,
+        managementFeeInShares: 0.000005479452054794,
+        managementFeeInAssets: 0.000005479452054794,
+        totalFeeInShares: 0.000005479452054794,
+        totalFeeInAssets: 0.000005479452054794,
+        timeOfDeposit: 3000000000,
+        timestamp: 3000000000 + ONE_DAY,
+        maxTransferableShares: 1.0999397260273973,
+        // beforeTokenTransfer
+        protocolFeesInitial: 0.1,
+        protocolFees: 0.1 + 0.000005479452054794,
+        sharesAfter: 1.0999945204845256,
+        netUserDepositReceiver: 1.2,
+        netUserDepositReceiverAfter: 1.3,
+        netUserDepositCallerAfter: 0.9999945205, // 1,1 * 1,0 * ((1,1 - 0,1 - 0,000005479452054794) / 1,1)
+        timeOfDepositReceiverAfter: 3000000000 + ONE_DAY,
+      };
+
       describe('#transfer', () => {
         it('transfer should update the netUserDeposit of the receiver and timeOfDeposit', async () => {
-          const test = testsFeeVars[0];
           const { vault, caller, receiver } = await setupBeforeTokenTransfer(
             true,
             test,
@@ -428,7 +454,6 @@ describe('#ERC4626 overridden functions', () => {
 
       describe('#deposit', () => {
         it('should update fee-related numbers', async () => {
-          const test = testsFeeVars[0];
           const { vault, caller, token } = await setupBeforeTokenTransfer(
             true,
             test,
@@ -454,7 +479,6 @@ describe('#ERC4626 overridden functions', () => {
 
       describe('#withdraw', () => {
         it('should update all fee-related numbers', async () => {
-          const test = testsFeeVars[0];
           const { vault, caller, token } = await setupBeforeTokenTransfer(
             true,
             test,
