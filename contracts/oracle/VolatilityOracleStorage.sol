@@ -97,7 +97,7 @@ library VolatilityOracleStorage {
     }
 
     function formatParams(
-        int256[5] calldata params
+        int256[5] memory params
     ) internal pure returns (bytes32 result) {
         int256 max = int256(1 << PARAM_BITS_MINUS_ONE);
 
