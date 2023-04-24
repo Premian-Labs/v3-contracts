@@ -205,11 +205,14 @@ describe('UnderwriterVault.fees', () => {
     await vault.setManagementFeeRate(
       parseEther(test.managementFeeRate.toString()),
     );
-    return { vault, caller, receiver };
+    return { vault, caller, receiver, token };
   }
 
   async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
-    let { vault, caller, receiver } = await setupGetFeeVars(isCall, test);
+    let { vault, caller, receiver, token } = await setupGetFeeVars(
+      isCall,
+      test,
+    );
 
     await token.mint(
       vault.address,
@@ -223,7 +226,7 @@ describe('UnderwriterVault.fees', () => {
       parseEther(test.netUserDepositReceiver.toString()),
     );
 
-    return { vault, caller, receiver };
+    return { vault, caller, receiver, token };
   }
 
   const testsFeeVars = [
@@ -254,6 +257,7 @@ describe('UnderwriterVault.fees', () => {
       netUserDepositReceiver: 1.2,
       netUserDepositReceiverAfter: 1.3,
       netUserDepositCallerAfter: 0.9999945205, // 1,1 * 1,0 * ((1,1 - 0,1 - 0,000005479452054794) / 1,1)
+      timeOfDepositReceiverAfter: 3000000000 + ONE_DAY,
     },
     {
       shares: 2.3,
@@ -282,6 +286,7 @@ describe('UnderwriterVault.fees', () => {
       netUserDepositReceiver: 1.2,
       netUserDepositReceiverAfter: 3.045,
       netUserDepositCallerAfter: 1.23603, // 2,3 * 1,2 * ((2,3 - 1,23 - 0,039975) / 2,3)
+      timeOfDepositReceiverAfter: 3000000000 + ONE_YEAR,
     },
   ];
 
@@ -481,6 +486,16 @@ describe('UnderwriterVault.fees', () => {
               );
             });
             it(`netUserDeposit of receiver should equal ${test.netUserDepositReceiverAfter}`, async () => {
+              const netUserDeposit = parseFloat(
+                formatEther(await vault.getNetUserDeposit(receiver.address)),
+              );
+              const delta = 1e-8;
+              expect(netUserDeposit).to.be.closeTo(
+                test.netUserDepositReceiverAfter,
+                delta,
+              );
+            });
+            it(`timeOfDeposit of receiver should equal ${test.timeOfDepositReceiverAfter}`, async () => {
               const netUserDeposit = parseFloat(
                 formatEther(await vault.getNetUserDeposit(receiver.address)),
               );
@@ -852,7 +867,6 @@ describe('UnderwriterVault.fees', () => {
           const addressToken = await vault.thisAddress();
           const vaultToken = IERC20__factory.connect(addressToken, caller);
 
-          console.log(await vault.balanceOf(receiver.address));
           await vault.setTimestamp(test.timestamp);
           await vaultToken
             .connect(caller)
@@ -886,5 +900,53 @@ describe('UnderwriterVault.fees', () => {
         });
       });
     }
+  });
+
+  describe('#deposit', () => {
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        it('should update fee-related numbers', async () => {
+          const test = testsFeeVars[0];
+          const { vault, caller, token } = await setupBeforeTokenTransfer(
+            true,
+            test,
+          );
+          const assetAmount = parseUnits('1.4', await token.decimals());
+          await token.mint(caller.address, assetAmount);
+          await token.connect(caller).approve(vault.address, assetAmount);
+          await vault.setTimestamp(test.timestamp);
+          await vault.connect(caller).deposit(assetAmount, caller.address);
+          // 1.1 + 1.4 = 2.5
+          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
+            parseEther('2.5'),
+          );
+          // (1.1 * 3000000000 + 1.4 * 3000086400) / 2.5
+          expect(await vault.getTimeOfDeposit(caller.address)).to.eq(
+            3000048384,
+          );
+        });
+      });
+    }
+  });
+
+  describe('#withdraw', () => {
+    it('should update all fee-related numbers', async () => {
+      const test = testsFeeVars[0];
+      const { vault, caller, token } = await setupBeforeTokenTransfer(
+        true,
+        test,
+      );
+
+      const assetAmount = parseUnits('0.4', await token.decimals());
+      await vault.setTimestamp(test.timestamp);
+      await vault
+        .connect(caller)
+        .withdraw(assetAmount, caller.address, caller.address);
+      expect(await vault.getNetUserDeposit(caller.address)).to.eq(
+        '699978082191780821',
+      );
+      expect(await vault.getTimeOfDeposit(caller.address)).to.eq(3000000000);
+      expect(await vault.balanceOf(caller.address)).to.eq('699978082191780822');
+    });
   });
 });
