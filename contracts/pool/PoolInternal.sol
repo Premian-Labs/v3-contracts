@@ -16,7 +16,7 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
-import {IPremiaStaking} from "../staking/IPremiaStaking.sol";
+import {IVxPremia} from "../staking/IVxPremia.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -112,7 +112,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
-        uint256 discount = IPremiaStaking(VXPREMIA).getDiscount(taker);
+        uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
 
         if (discount > 0) {
             fee = fee - fee * UD60x18.wrap(discount);

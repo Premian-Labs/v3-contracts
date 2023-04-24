@@ -12,7 +12,7 @@ import {IExchangeHelper} from "../IExchangeHelper.sol";
 
 import {FeeConverterStorage} from "./FeeConverterStorage.sol";
 import {IFeeConverter} from "./IFeeConverter.sol";
-import {IPremiaStaking} from "./IPremiaStaking.sol";
+import {IVxPremia} from "./IVxPremia.sol";
 
 /// @author Premia
 /// @title A contract receiving all protocol fees, swapping them for premia
@@ -117,7 +117,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
 
         IERC20(USDC).safeTransfer(TREASURY, treasuryAmount);
         IERC20(USDC).approve(VXPREMIA, outAmount - treasuryAmount);
-        IPremiaStaking(VXPREMIA).addRewards(outAmount - treasuryAmount);
+        IVxPremia(VXPREMIA).addRewards(outAmount - treasuryAmount);
 
         emit Converted(
             msg.sender,
