@@ -1181,6 +1181,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 amount
     ) internal override {
         super._beforeTokenTransfer(from, to, amount);
+
+        // mint: from = address(0), in this case no fees have to be paid
+        // burn: to = address(0),
+        //      1. fees are paid already in _beforeWithdraw, we do not want to double charge.
+        //      2. furthermore, we need to call burn inside _beforeTokenTransfer, it would result in a nested call.
+        //         we bypass this by calling _beforeWithdraw and using to = address(this).
         if (from != address(0) && to != address(0)) {
             UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
                 .layout();
