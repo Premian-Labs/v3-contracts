@@ -6,6 +6,7 @@ import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { setMaturities } from '../UnderwriterVault.fixture';
 import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { latest, ONE_DAY } from '../../../../utils/time';
 
 describe('#ERC4626 overridden functions', () => {
   for (const isCall of [true, false]) {
@@ -110,31 +111,56 @@ describe('#ERC4626 overridden functions', () => {
           ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
         });
 
-        it('maxWithdraw should return the available assets for a non-zero address', async () => {
+        it('maxWithdraw should return the available assets when there are lets available assets in the vault then that are transferable', async () => {
           const { callVault, receiver, base, quote } = await loadFixture(
             vaultSetup,
           );
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
           await setMaturities(callVault);
           await addDeposit(callVault, receiver, 3, base, quote);
 
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
 
+          // incrementing time by a day does not have an effect on the max withdrawable assets
+          await callVault.setTimestamp(timestamp + ONE_DAY);
           const assetAmount = await callVault.maxWithdraw(receiver.address);
 
           expect(assetAmount).to.eq(parseEther('2.4'));
         });
 
-        it('maxWithdraw should return the assets the receiver owns', async () => {
+        it('maxWithdraw should return the max transferable assets (test 1)', async () => {
           const { callVault, caller, receiver, base, quote } =
             await loadFixture(vaultSetup);
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
+
+          await setMaturities(callVault);
+          await addDeposit(callVault, receiver, 2, base, quote);
+
+          await callVault.setTimestamp(timestamp + ONE_DAY);
+
+          const assetAmount = await callVault.maxWithdraw(receiver.address);
+          expect(assetAmount).to.eq(parseEther('1.999890410958904110'));
+        });
+
+        it('maxWithdraw should return the max transferable assets (test 2)', async () => {
+          const { callVault, caller, receiver, base, quote } =
+            await loadFixture(vaultSetup);
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
+
           await setMaturities(callVault);
           await addDeposit(callVault, caller, 8, base, quote);
           await addDeposit(callVault, receiver, 2, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.0'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+
+          await callVault.setTimestamp(timestamp + ONE_DAY);
+
           const assetAmount = await callVault.maxWithdraw(receiver.address);
-          expect(assetAmount).to.eq(parseEther('2'));
+          expect(assetAmount).to.eq(parseEther('1.999890410958904110'));
         });
 
         it('maxWithdraw should return the assets the receiver owns since there are sufficient funds', async () => {
