@@ -14,9 +14,15 @@ import {
   ONE_WEEK,
   ONE_YEAR,
 } from '../../../../utils/time';
-import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
+import {
+  ERC20Mock,
+  ERC20Mock__factory,
+  IERC20__factory,
+  UnderwriterVaultMock,
+} from '../../../../typechain';
 import { ethers } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { ERC20__factory } from '../../../../typechain/packages/hardhat/test/fixture-projects/hardhat-project/typechain-types';
 
 let vault: UnderwriterVaultMock;
 
@@ -828,6 +834,54 @@ describe('UnderwriterVault.fees', () => {
           // totalAssets remaining 3 - 2 - 0.12 = 0.88
           expect(await vault.totalAssets()).to.eq(
             parseUnits('0.88', await token.decimals()),
+          );
+        });
+      });
+    }
+  });
+
+  describe('#transfer', () => {
+    for (const isCall of [true, false]) {
+      describe(isCall ? 'call' : 'put', () => {
+        it('transfer should update the netUserDeposit of the receiver and timeOfDeposit', async () => {
+          const test = testsFeeVars[0];
+          const { vault, caller, receiver } = await setupBeforeTokenTransfer(
+            true,
+            test,
+          );
+          const addressToken = await vault.thisAddress();
+          const vaultToken = IERC20__factory.connect(addressToken, caller);
+
+          console.log(await vault.balanceOf(receiver.address));
+          await vault.setTimestamp(test.timestamp);
+          await vaultToken
+            .connect(caller)
+            .transfer(
+              receiver.address,
+              parseEther(test.transferAmount.toString()),
+            );
+
+          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
+            test.timestamp,
+          );
+          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+            parseEther(test.netUserDepositReceiverAfter.toString()),
+          );
+
+          await vault.setTimestamp(test.timestamp + ONE_YEAR);
+
+          await vaultToken
+            .connect(caller)
+            .transfer(
+              receiver.address,
+              parseEther(test.transferAmount.toString()),
+            );
+
+          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
+            test.timestamp + 0.5 * ONE_YEAR,
+          );
+          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+            parseEther('1.4'),
           );
         });
       });
