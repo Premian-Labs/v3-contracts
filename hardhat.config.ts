@@ -115,7 +115,7 @@ export default {
       timeout: 300000,
     },
     arbitrumGoerli: {
-      url: `https://arb-goerli.alchemyapi.io/v2/${API_KEY_ALCHEMY}`,
+      url: `https://arb-goerli.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
       accounts: [pkeyTestnet],
       timeout: 300000,
     },
