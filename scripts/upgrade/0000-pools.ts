@@ -19,7 +19,7 @@ async function main() {
   let poolFactory: string;
   let router: string;
   let exchangeHelper: string;
-  let premiaStaking: string;
+  let vxPremia: string;
   let weth: string;
   let chainlinkAdapter: string;
   let feeReceiver: string;
@@ -45,7 +45,7 @@ async function main() {
   poolFactory = addresses.PoolFactoryProxy;
   router = addresses.ERC20Router;
   exchangeHelper = addresses.ExchangeHelper;
-  premiaStaking = addresses.PremiaStaking;
+  vxPremia = addresses.VxPremia;
   weth = addresses.tokens.WETH;
   chainlinkAdapter = addresses.ChainlinkAdapterProxy;
 
@@ -59,7 +59,7 @@ async function main() {
     poolFactory,
     router,
     exchangeHelper,
-    premiaStaking,
+    vxPremia,
     weth,
     feeReceiver,
     log,

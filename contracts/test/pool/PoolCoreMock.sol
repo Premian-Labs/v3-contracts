@@ -21,7 +21,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
-        address premiaStaking
+        address vxPremia
     )
         PoolInternal(
             factory,
@@ -29,7 +29,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver,
-            premiaStaking
+            vxPremia
         )
     {}
 

@@ -21,7 +21,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
 
     address private immutable EXCHANGE_HELPER;
     address private immutable USDC;
-    address private immutable PREMIA_STAKING;
+    address private immutable VXPREMIA;
 
     // The treasury address which will receive a portion of the protocol fees
     address private immutable TREASURY;
@@ -41,12 +41,12 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     constructor(
         address exchangeHelper,
         address usdc,
-        address premiaStaking,
+        address vxPremia,
         address treasury
     ) {
         EXCHANGE_HELPER = exchangeHelper;
         USDC = usdc;
-        PREMIA_STAKING = premiaStaking;
+        VXPREMIA = vxPremia;
         TREASURY = treasury;
     }
 
@@ -116,8 +116,8 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
             .unwrap();
 
         IERC20(USDC).safeTransfer(TREASURY, treasuryAmount);
-        IERC20(USDC).approve(PREMIA_STAKING, outAmount - treasuryAmount);
-        IPremiaStaking(PREMIA_STAKING).addRewards(outAmount - treasuryAmount);
+        IERC20(USDC).approve(VXPREMIA, outAmount - treasuryAmount);
+        IPremiaStaking(VXPREMIA).addRewards(outAmount - treasuryAmount);
 
         emit Converted(
             msg.sender,

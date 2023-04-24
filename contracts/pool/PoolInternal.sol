@@ -52,7 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
-    address internal immutable PREMIA_STAKING;
+    address internal immutable VXPREMIA;
 
     // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
@@ -74,14 +74,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
-        address premiaStaking
+        address vxPremia
     ) {
         FACTORY = factory;
         ROUTER = router;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
-        PREMIA_STAKING = premiaStaking;
+        VXPREMIA = vxPremia;
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
@@ -112,7 +112,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
-        uint256 discount = IPremiaStaking(PREMIA_STAKING).getDiscount(taker);
+        uint256 discount = IPremiaStaking(VXPREMIA).getDiscount(taker);
 
         if (discount > 0) {
             fee = fee - fee * UD60x18.wrap(discount);
@@ -718,7 +718,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        UD60x18 protocolFee = _takerFee(l, longReceiver, size, ZERO, true);
+        UD60x18 protocolFee = _takerFee(l, underwriter, size, ZERO, true);
 
         _transferFromWithPermitOrRouter(
             permit,

@@ -15,8 +15,9 @@ import {
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
   ERC20Mock__factory,
-  PremiaStaking__factory,
-  PremiaStakingProxyMock__factory,
+  IVxPremia__factory,
+  VxPremia__factory,
+  VxPremiaProxy__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -52,7 +53,7 @@ export class PoolUtil {
     poolFactory: string,
     router: string,
     exchangeHelper: string,
-    premiaStaking: string,
+    vxPremia: string,
     wrappedNativeToken: string,
     feeReceiver: string,
     log = true,
@@ -82,7 +83,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
-      premiaStaking,
+      vxPremia,
     );
     await poolCoreImpl.deployed();
 
@@ -103,7 +104,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
-      premiaStaking,
+      vxPremia,
     );
     await poolTradeImpl.deployed();
 
@@ -127,7 +128,7 @@ export class PoolUtil {
         exchangeHelper,
         wrappedNativeToken,
         feeReceiver,
-        premiaStaking,
+        vxPremia,
       );
       await poolCoreMockImpl.deployed();
 
@@ -223,36 +224,40 @@ export class PoolUtil {
 
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
-    // PremiaStaking
+    // VxPremia
     const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
-    const usdc = await new ERC20Mock__factory(deployer).deploy(
-      'USDC',
-      tokens.USDC.decimals,
-    );
 
-    const premiaStakingImpl = await new PremiaStaking__factory(deployer).deploy(
+    const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+      constants.AddressZero,
       constants.AddressZero,
       premia.address,
-      usdc.address,
+      tokens.USDC.address,
       exchangeHelper.address,
     );
 
-    await premiaStakingImpl.deployed();
+    await vxPremiaImpl.deployed();
 
-    const premiaStakingProxy = await new PremiaStakingProxyMock__factory(
+    if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
+
+    const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
+      vxPremiaImpl.address,
+    );
+
+    await vxPremiaProxy.deployed();
+
+    if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
+
+    const vxPremia = IVxPremia__factory.connect(
+      vxPremiaProxy.address,
       deployer,
-    ).deploy(premiaStakingImpl.address);
-
-    await premiaStakingProxy.deployed();
-
-    if (log) console.log(`PremiaStaking : ${premiaStakingProxy.address}`);
+    );
 
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
       exchangeHelper.address,
-      premiaStakingProxy.address,
+      vxPremia.address,
       wrappedNativeToken,
       feeReceiver,
       log,

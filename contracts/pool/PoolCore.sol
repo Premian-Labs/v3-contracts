@@ -27,7 +27,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
-        address premiaStaking
+        address vxPremia
     )
         PoolInternal(
             factory,
@@ -35,7 +35,7 @@ contract PoolCore is IPoolCore, PoolInternal {
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver,
-            premiaStaking
+            vxPremia
         )
     {}
 

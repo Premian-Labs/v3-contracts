@@ -37,8 +37,9 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
-import {IPremiaStaking} from "contracts/staking/IPremiaStaking.sol";
-import {PremiaStaking} from "contracts/staking/PremiaStaking.sol";
+import {IVxPremia} from "contracts/staking/IVxPremia.sol";
+import {VxPremia} from "contracts/staking/VxPremia.sol";
+import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
@@ -59,7 +60,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
-    IPremiaStaking premiaStaking;
+    IVxPremia vxPremia;
 
     IPoolMock pool;
 
@@ -155,18 +156,17 @@ contract DeployTest is Test, Assertions {
         router = new ERC20Router(address(factory));
         exchangeHelper = new ExchangeHelper();
 
-        PremiaStaking premiaStakingImpl = new PremiaStaking(
+        VxPremia vxPremiaImpl = new VxPremia(
+            address(0),
             address(0),
             premia,
             address(quote),
             address(exchangeHelper)
         );
 
-        ProxyUpgradeableOwnable premiaStakingProxy = new ProxyUpgradeableOwnable(
-                address(premiaStakingImpl)
-            );
+        VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
 
-        premiaStaking = IPremiaStaking(address(premiaStakingProxy));
+        vxPremia = IVxPremia(address(vxPremiaProxy));
 
         PoolBase poolBaseImpl = new PoolBase();
 
@@ -176,7 +176,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStaking)
+            address(vxPremia)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
@@ -185,7 +185,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStaking)
+            address(vxPremia)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -194,7 +194,7 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(premiaStaking)
+            address(vxPremia)
         );
 
         /////////////////////

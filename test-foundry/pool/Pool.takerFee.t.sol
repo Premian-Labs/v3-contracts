@@ -18,8 +18,8 @@ abstract contract PoolTakerFeeTest is DeployTest {
         vm.startPrank(users.trader);
 
         deal(premia, users.trader, amount);
-        IERC20(premia).approve(address(premiaStaking), amount);
-        premiaStaking.stake(amount, uint64(2.5 * 365 days));
+        IERC20(premia).approve(address(vxPremia), amount);
+        vxPremia.stake(amount, uint64(2.5 * 365 days));
 
         vm.stopPrank();
     }
@@ -135,7 +135,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
     function test_takerFee_premium_fee_with_discount() public {
         stake(100_000 ether);
-        uint256 discount = premiaStaking.getDiscount(users.trader);
+        uint256 discount = vxPremia.getDiscount(users.trader);
 
         vm.startPrank(users.trader);
 
@@ -155,7 +155,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         public
     {
         stake(100_000 ether);
-        uint256 discount = premiaStaking.getDiscount(users.trader);
+        uint256 discount = vxPremia.getDiscount(users.trader);
 
         vm.startPrank(users.trader);
 
@@ -173,7 +173,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
     function test_takerFee_collateral_fee_with_discount() public {
         stake(100_000 ether);
-        uint256 discount = premiaStaking.getDiscount(users.trader);
+        uint256 discount = vxPremia.getDiscount(users.trader);
 
         vm.startPrank(users.trader);
 
@@ -193,7 +193,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         public
     {
         stake(100_000 ether);
-        uint256 discount = premiaStaking.getDiscount(users.trader);
+        uint256 discount = vxPremia.getDiscount(users.trader);
 
         vm.startPrank(users.trader);
 
