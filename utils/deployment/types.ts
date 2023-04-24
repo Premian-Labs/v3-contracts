@@ -14,3 +14,9 @@ export interface ContractAddresses {
   PoolCore: string;
   PoolTrade: string;
 }
+
+export enum ChainID {
+  Goerli = 5,
+  Arbitrum = 42161,
+  ArbitrumGoerli = 421613,
+}

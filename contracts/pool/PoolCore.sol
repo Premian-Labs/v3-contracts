@@ -121,7 +121,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external returns (Position.Delta memory delta) {
+    ) external payable returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -134,8 +134,8 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    0,
-                    address(0)
+                    _wrapNativeToken(),
+                    msg.sender
                 ),
                 permit
             );
@@ -151,7 +151,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external returns (Position.Delta memory delta) {
+    ) external payable returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -164,8 +164,8 @@ contract PoolCore is IPoolCore, PoolInternal {
                     size,
                     minMarketPrice,
                     maxMarketPrice,
-                    0,
-                    address(0)
+                    _wrapNativeToken(),
+                    msg.sender
                 ),
                 permit,
                 isBidIfStrandedMarketPrice
@@ -186,7 +186,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         _ensureOperator(p.operator);
         _ensureValidSwapTokenOut(s.tokenOut);
 
-        (uint256 creditAmount, ) = _swap(s, permit, false);
+        (uint256 creditAmount, ) = _swap(s, permit, false, true);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -260,7 +260,8 @@ contract PoolCore is IPoolCore, PoolInternal {
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
-            true
+            true,
+            false
         );
 
         if (tokenOutReceived > 0) {

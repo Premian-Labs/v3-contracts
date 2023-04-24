@@ -42,7 +42,6 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.base = base;
             l.quote = quote;
 
-            // TODO : Add checks for oracle
             l.oracleAdapter = oracleAdapter;
 
             l.strike = strike;

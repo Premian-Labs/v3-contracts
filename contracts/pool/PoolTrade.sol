@@ -51,10 +51,20 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         Signature memory signature,
         Permit2.Data memory permit
-    ) external returns (uint256 premiumTaker, Position.Delta memory delta) {
+    )
+        external
+        payable
+        returns (uint256 premiumTaker, Position.Delta memory delta)
+    {
         return
             _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(msg.sender, size, signature, 0, true),
+                FillQuoteRFQArgsInternal(
+                    msg.sender,
+                    size,
+                    signature,
+                    _wrapNativeToken(),
+                    true
+                ),
                 quoteRFQ,
                 permit
             );
@@ -69,6 +79,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -76,7 +87,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         )
     {
         _ensureValidSwapTokenOut(s.tokenOut);
-        (swapOutAmount, ) = _swap(s, permit, false);
+        (swapOutAmount, ) = _swap(s, permit, false, true);
 
         (premiumTaker, delta) = _fillQuoteRFQ(
             FillQuoteRFQArgsInternal(
@@ -100,6 +111,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -108,7 +120,13 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         )
     {
         (premiumTaker, delta) = _fillQuoteRFQ(
-            FillQuoteRFQArgsInternal(msg.sender, size, signature, 0, false),
+            FillQuoteRFQArgsInternal(
+                msg.sender,
+                size,
+                signature,
+                _wrapNativeToken(),
+                false
+            ),
             quoteRFQ,
             permit
         );
@@ -123,7 +141,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
-            true
+            true,
+            false
         );
 
         if (tokenOutReceived > 0) {
@@ -137,7 +156,11 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         bool isBuy,
         uint256 premiumLimit,
         Permit2.Data memory permit
-    ) external returns (uint256 totalPremium, Position.Delta memory delta) {
+    )
+        external
+        payable
+        returns (uint256 totalPremium, Position.Delta memory delta)
+    {
         return
             _trade(
                 TradeArgsInternal(
@@ -145,7 +168,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
                     size,
                     isBuy,
                     premiumLimit,
-                    0,
+                    _wrapNativeToken(),
                     true
                 ),
                 permit
@@ -169,7 +192,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         )
     {
         _ensureValidSwapTokenOut(s.tokenOut);
-        (swapOutAmount, ) = _swap(s, permit, false);
+        (swapOutAmount, ) = _swap(s, permit, false, true);
 
         (totalPremium, delta) = _trade(
             TradeArgsInternal(
@@ -193,6 +216,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         Permit2.Data memory permit
     )
         external
+        payable
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -201,7 +225,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         )
     {
         (totalPremium, delta) = _trade(
-            TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, 0, false),
+            TradeArgsInternal(
+                msg.sender,
+                size,
+                isBuy,
+                premiumLimit,
+                _wrapNativeToken(),
+                false
+            ),
             permit
         );
 
@@ -215,7 +246,8 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         (tokenOutReceived, collateralReceived) = _swap(
             s,
             Permit2.emptyPermit(),
-            true
+            true,
+            false
         );
 
         if (tokenOutReceived > 0) {
