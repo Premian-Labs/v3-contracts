@@ -589,11 +589,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
-    function _updateTimeOfDeposit(address owner, uint256 shareAmount) internal {
+    function _updateTimeOfDeposit(
+        address owner,
+        uint256 shareBalanceBefore,
+        uint256 shareAmount
+    ) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        UD60x18 balance = _balanceOfUD60x18(owner);
+        UD60x18 balance = UD60x18.wrap(shareBalanceBefore);
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * WAD);
         UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * WAD);
@@ -624,7 +628,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        _updateTimeOfDeposit(receiver, shareAmount);
+        uint256 shareBalanceBeforeDeposit = _balanceOf(receiver) - shareAmount;
+
+        _updateTimeOfDeposit(receiver, shareBalanceBeforeDeposit, shareAmount);
 
         emit UpdateQuotes();
     }
@@ -1220,7 +1226,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                _updateTimeOfDeposit(to, amount);
+                _updateTimeOfDeposit(to, vars.balanceShares.unwrap(), amount);
             }
 
             emit UpdateQuotes();
