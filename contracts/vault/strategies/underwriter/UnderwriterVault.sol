@@ -1148,7 +1148,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             (timestamp - l.timeOfDeposit[owner]) * WAD
         ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
 
-        UD60x18 managementFeeInShares = vars.balanceShares *
+        UD60x18 managementFeeInShares = shares *
             l.managementFeeRate *
             timeSinceLastDeposit;
         vars.managementFeeInAssets = _convertToAssetsUD60x18(
