@@ -385,8 +385,7 @@ describe('#ERC4626 overridden functions', () => {
             true,
             test,
           );
-          const addressToken = await vault.thisAddress();
-          const vaultToken = IERC20__factory.connect(addressToken, caller);
+          const vaultToken = IERC20__factory.connect(vault.address, caller);
 
           await vault.setTimestamp(test.timestamp);
           await vaultToken
