@@ -43,13 +43,13 @@ contract PoolDepositWithdraw is
 
     /// @inheritdoc IPoolDepositWithdraw
     function deposit(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external payable nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -72,13 +72,13 @@ contract PoolDepositWithdraw is
 
     /// @inheritdoc IPoolDepositWithdraw
     function deposit(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit,
+        Permit2.Data calldata permit,
         bool isBidIfStrandedMarketPrice
     ) external payable nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -103,14 +103,14 @@ contract PoolDepositWithdraw is
 
     /// @inheritdoc IPoolDepositWithdraw
     function swapAndDeposit(
-        SwapArgs memory s,
-        Position.Key memory p,
+        SwapArgs calldata s,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external payable nonReentrant returns (Position.Delta memory delta) {
         _ensureOperator(p.operator);
         _ensureValidSwapTokenOut(s.tokenOut);
@@ -137,7 +137,7 @@ contract PoolDepositWithdraw is
 
     /// @inheritdoc IPoolDepositWithdraw
     function withdraw(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
@@ -158,7 +158,7 @@ contract PoolDepositWithdraw is
     /// @inheritdoc IPoolDepositWithdraw
     function withdrawAndSwap(
         SwapArgs memory s,
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice

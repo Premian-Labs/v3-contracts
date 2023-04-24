@@ -23,13 +23,13 @@ interface IPoolDepositWithdraw is IPoolInternal {
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return delta The amount of collateral / longs / shorts deposited
     function deposit(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external payable returns (Position.Delta memory delta);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
@@ -46,13 +46,13 @@ interface IPoolDepositWithdraw is IPoolInternal {
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     /// @return delta The amount of collateral / longs / shorts deposited
     function deposit(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit,
+        Permit2.Data calldata permit,
         bool isBidIfStrandedMarketPrice
     ) external payable returns (Position.Delta memory delta);
 
@@ -68,14 +68,14 @@ interface IPoolDepositWithdraw is IPoolInternal {
     /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return delta The amount of collateral / longs / shorts deposited
     function swapAndDeposit(
-        IPoolInternal.SwapArgs memory s,
-        Position.Key memory p,
+        IPoolInternal.SwapArgs calldata s,
+        Position.Key calldata p,
         UD60x18 belowLower,
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external payable returns (Position.Delta memory delta);
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
@@ -86,7 +86,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
     /// @return delta The amount of collateral / longs / shorts withdrawn
     function withdraw(
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
@@ -104,7 +104,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
     /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. (poolToken decimals)
     function withdrawAndSwap(
         SwapArgs memory s,
-        Position.Key memory p,
+        Position.Key calldata p,
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice

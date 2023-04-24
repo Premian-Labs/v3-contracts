@@ -42,7 +42,7 @@ contract OrderbookStream {
         Signature signature
     );
 
-    function add(Quote[] memory quote) external {
+    function add(Quote[] calldata quote) external {
         for (uint256 i = 0; i < quote.length; i++) {
             emit PublishQuote(
                 quote[i].poolKey,

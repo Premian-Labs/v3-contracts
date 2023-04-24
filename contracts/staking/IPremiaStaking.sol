@@ -136,7 +136,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @param s swap arguments
     /// @param stakePeriod The lockup period (in seconds)
     function harvestAndStake(
-        IPremiaStaking.SwapArgs memory s,
+        IPremiaStaking.SwapArgs calldata s,
         uint64 stakePeriod
     ) external;
 
