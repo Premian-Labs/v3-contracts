@@ -43,6 +43,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         flashLoanMock.singleFlashLoan(
             FlashLoanMock.FlashLoan({
                 pool: address(pool),
+                token: poolToken,
                 amount: initialCollateral / 2
             }),
             true
@@ -78,6 +79,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         flashLoanMock.singleFlashLoan(
             FlashLoanMock.FlashLoan({
                 pool: address(pool),
+                token: poolToken,
                 amount: initialCollateral / 2
             }),
             false
@@ -146,16 +148,19 @@ abstract contract PoolFlashLoanTest is DeployTest {
             memory flashLoans = new FlashLoanMock.FlashLoan[](3);
         flashLoans[0] = FlashLoanMock.FlashLoan({
             pool: address(pool),
+            token: poolToken,
             amount: initialCollateral / 2
         });
 
         flashLoans[1] = FlashLoanMock.FlashLoan({
             pool: address(poolTwo),
+            token: poolToken,
             amount: initialCollateralTwo / 2
         });
 
         flashLoans[2] = FlashLoanMock.FlashLoan({
             pool: address(poolThree),
+            token: poolToken,
             amount: initialCollateralThree / 2
         });
 
