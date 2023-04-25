@@ -251,7 +251,10 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
-        poolCoreSelectors.push(poolCoreImpl.settle.selector);
+        poolCoreSelectors.push(bytes4(keccak256("settle(address)")));
+        poolCoreSelectors.push(
+            bytes4(keccak256("settle(address,uint256,uint256)"))
+        );
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
         poolCoreSelectors.push(poolCoreImpl.swapAndDeposit.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
