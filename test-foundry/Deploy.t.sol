@@ -6,9 +6,6 @@ import {Test} from "forge-std/Test.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IV3SwapRouter} from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
-import {IQuoterV2} from "@uniswap/v3-periphery/contracts/interfaces/IQuoterV2.sol";
-
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -58,11 +55,6 @@ contract DeployTest is Test, Assertions {
     ExchangeHelper exchangeHelper;
 
     IPoolMock pool;
-
-    IV3SwapRouter constant uniswapRouter =
-        IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-    IQuoterV2 constant uniswapQuoter =
-        IQuoterV2(0x61fFE014bA17989E743c5F6cB21bF9697530B21e);
 
     Position.Key posKey;
 
@@ -255,27 +247,17 @@ contract DeployTest is Test, Assertions {
             )
         );
         poolDepositWithdrawSelectors.push(
-            poolDepositWithdrawImpl.swapAndDeposit.selector
-        );
-        poolDepositWithdrawSelectors.push(
             poolDepositWithdrawImpl.withdraw.selector
-        );
-        poolDepositWithdrawSelectors.push(
-            poolDepositWithdrawImpl.withdrawAndSwap.selector
         );
 
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQAndSwap.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
-        poolTradeSelectors.push(poolTradeImpl.swapAndFillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
         poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
-        poolTradeSelectors.push(poolTradeImpl.swapAndTrade.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
-        poolTradeSelectors.push(poolTradeImpl.tradeAndSwap.selector);
 
         IDiamondWritableInternal.FacetCut[]
             memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
@@ -369,167 +351,8 @@ contract DeployTest is Test, Assertions {
         vm.stopPrank();
     }
 
-    function encodeSwapDataExactOutput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountOut,
-        uint256 amountInMaximum
-    ) internal view returns (bytes memory) {
-        return
-            abi.encodePacked(
-                bytes4(
-                    keccak256(
-                        "exactOutputSingle((address,address,uint24,address,uint256,uint256,uint160))"
-                    )
-                ),
-                abi.encode(
-                    tokenIn,
-                    tokenOut,
-                    3000,
-                    address(exchangeHelper),
-                    amountOut,
-                    amountInMaximum,
-                    0
-                )
-            );
-    }
-
-    function encodeSwapDataExactInput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOutMinimum
-    ) internal view returns (bytes memory) {
-        return
-            abi.encodePacked(
-                bytes4(
-                    keccak256(
-                        "exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))"
-                    )
-                ),
-                abi.encode(
-                    tokenIn,
-                    tokenOut,
-                    3000,
-                    address(exchangeHelper),
-                    amountIn,
-                    amountOutMinimum,
-                    0
-                )
-            );
-    }
-
-    function getSwapArgsExactOutput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountInMax,
-        uint256 amountOutMin,
-        address refundAddress
-    ) internal view returns (IPoolInternal.SwapArgs memory) {
-        return
-            getSwapArgs(
-                tokenIn,
-                tokenOut,
-                amountInMax,
-                amountOutMin,
-                encodeSwapDataExactOutput(
-                    tokenIn,
-                    tokenOut,
-                    amountOutMin,
-                    amountInMax
-                ),
-                refundAddress
-            );
-    }
-
-    function getSwapArgsExactInput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountInMax,
-        uint256 amountOutMin,
-        address refundAddress
-    ) internal view returns (IPoolInternal.SwapArgs memory) {
-        return
-            getSwapArgs(
-                tokenIn,
-                tokenOut,
-                amountInMax,
-                amountOutMin,
-                encodeSwapDataExactInput(
-                    tokenIn,
-                    tokenOut,
-                    amountInMax,
-                    amountOutMin
-                ),
-                refundAddress
-            );
-    }
-
-    function getSwapArgs(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountInMax,
-        uint256 amountOutMin,
-        bytes memory data,
-        address refundAddress
-    ) internal pure returns (IPoolInternal.SwapArgs memory) {
-        return
-            IPoolInternal.SwapArgs({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                amountInMax: amountInMax,
-                amountOutMin: amountOutMin,
-                callee: address(uniswapRouter),
-                allowanceTarget: address(uniswapRouter),
-                data: data,
-                refundAddress: refundAddress
-            });
-    }
-
-    function getSwapQuoteExactOutput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount
-    ) internal returns (uint256) {
-        (uint256 swapQuote, , , ) = IQuoterV2(uniswapQuoter)
-            .quoteExactOutputSingle(
-                IQuoterV2.QuoteExactOutputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    amount: amount,
-                    fee: 3000,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-
-        return swapQuote;
-    }
-
-    function getSwapQuoteExactInput(
-        address tokenIn,
-        address tokenOut,
-        uint256 amount
-    ) internal returns (uint256) {
-        (uint256 swapQuote, , , ) = IQuoterV2(uniswapQuoter)
-            .quoteExactInputSingle(
-                IQuoterV2.QuoteExactInputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    amountIn: amount,
-                    fee: 3000,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-
-        return swapQuote;
-    }
-
     function getPoolToken(bool isCall) internal view returns (address) {
         return isCall ? base : quote;
-    }
-
-    function getSwapToken(bool isCall) internal view returns (address) {
-        return isCall ? quote : base;
     }
 
     function contractsToCollateral(

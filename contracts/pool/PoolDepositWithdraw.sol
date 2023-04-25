@@ -102,40 +102,6 @@ contract PoolDepositWithdraw is
     }
 
     /// @inheritdoc IPoolDepositWithdraw
-    function swapAndDeposit(
-        SwapArgs calldata s,
-        Position.Key calldata p,
-        UD60x18 belowLower,
-        UD60x18 belowUpper,
-        UD60x18 size,
-        UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice,
-        Permit2.Data calldata permit
-    ) external payable nonReentrant returns (Position.Delta memory delta) {
-        _ensureOperator(p.operator);
-        _ensureValidSwapTokenOut(s.tokenOut);
-
-        (uint256 creditAmount, ) = _swap(s, permit, false, true);
-
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        return
-            _deposit(
-                p.toKeyInternal(l.strike, l.isCallPool),
-                DepositArgsInternal(
-                    belowLower,
-                    belowUpper,
-                    size,
-                    minMarketPrice,
-                    maxMarketPrice,
-                    creditAmount,
-                    s.refundAddress
-                ),
-                Permit2.emptyPermit()
-            );
-    }
-
-    /// @inheritdoc IPoolDepositWithdraw
     function withdraw(
         Position.Key calldata p,
         UD60x18 size,
@@ -153,51 +119,5 @@ contract PoolDepositWithdraw is
                 maxMarketPrice,
                 true
             );
-    }
-
-    /// @inheritdoc IPoolDepositWithdraw
-    function withdrawAndSwap(
-        SwapArgs memory s,
-        Position.Key calldata p,
-        UD60x18 size,
-        UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice
-    )
-        external
-        nonReentrant
-        returns (
-            Position.Delta memory delta,
-            uint256 collateralReceived,
-            uint256 tokenOutReceived
-        )
-    {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        _ensureOperator(p.operator);
-        delta = _withdraw(
-            p.toKeyInternal(l.strike, l.isCallPool),
-            size,
-            minMarketPrice,
-            maxMarketPrice,
-            false
-        );
-
-        if (delta.collateral.unwrap() <= 0) return (delta, 0, 0);
-
-        s.amountInMax = l.toPoolTokenDecimals(delta.collateral.intoUD60x18());
-
-        _ensureValidSwapTokenIn(s.tokenIn);
-        (tokenOutReceived, collateralReceived) = _swap(
-            s,
-            Permit2.emptyPermit(),
-            true,
-            false
-        );
-
-        if (tokenOutReceived > 0) {
-            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
-        }
-
-        return (delta, collateralReceived, tokenOutReceived);
     }
 }

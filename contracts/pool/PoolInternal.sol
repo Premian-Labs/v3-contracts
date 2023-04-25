@@ -1453,62 +1453,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.toPoolTokenDecimals(collateral);
     }
 
-    /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper
-    /// @param s swap arguments
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return amountCredited amount of tokenOut we got from the trade. (poolToken decimals)
-    /// @return tokenInRefunded amount of tokenIn left and refunded to refundAddress (tokenIn decimals)
-    function _swap(
-        IPoolInternal.SwapArgs memory s,
-        Permit2.Data memory permit,
-        bool transferFromPool,
-        bool creditMessageValue
-    ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
-        uint256 amountInMax;
-        uint256 creditedMessageValue = 0;
-
-        if (creditMessageValue && msg.value > 0) {
-            if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
-                revert Pool__InvalidSwapTokenIn(
-                    s.tokenIn,
-                    WRAPPED_NATIVE_TOKEN
-                );
-            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
-            IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
-            creditedMessageValue = msg.value;
-            amountInMax = msg.value;
-        }
-
-        if (s.amountInMax > 0) {
-            if (transferFromPool) {
-                IERC20(s.tokenIn).safeTransfer(EXCHANGE_HELPER, s.amountInMax);
-                amountInMax += s.amountInMax;
-            } else if (creditedMessageValue < s.amountInMax) {
-                _transferFromWithPermitOrRouter(
-                    permit,
-                    s.tokenIn,
-                    msg.sender,
-                    EXCHANGE_HELPER,
-                    s.amountInMax - creditedMessageValue
-                );
-                amountInMax = s.amountInMax;
-            }
-        }
-
-        (amountCredited, tokenInRefunded) = IExchangeHelper(EXCHANGE_HELPER)
-            .swapWithToken(
-                s.tokenIn,
-                s.tokenOut,
-                amountInMax,
-                s.callee,
-                s.allowanceTarget,
-                s.data,
-                s.refundAddress
-            );
-        if (amountCredited < s.amountOutMin)
-            revert Pool__NotEnoughSwapOutput(amountCredited, s.amountOutMin);
-    }
-
     /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
     /// @return wrappedAmount The amount of native tokens wrapped
     function _wrapNativeToken() internal returns (uint256 wrappedAmount) {
@@ -2338,17 +2282,5 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureOperator(address operator) internal view {
         if (operator != msg.sender) revert Pool__NotAuthorized(msg.sender);
-    }
-
-    function _ensureValidSwapTokenIn(address tokenIn) internal view {
-        address poolToken = PoolStorage.layout().getPoolToken();
-        if (poolToken != tokenIn)
-            revert Pool__InvalidSwapTokenIn(tokenIn, poolToken);
-    }
-
-    function _ensureValidSwapTokenOut(address tokenOut) internal view {
-        address poolToken = PoolStorage.layout().getPoolToken();
-        if (poolToken != tokenOut)
-            revert Pool__InvalidSwapTokenOut(tokenOut, poolToken);
     }
 }

@@ -35,16 +35,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidTransfer();
-    error Pool__InvalidSwapTokenIn(address tokenIn, address expectedTokenIn);
-    error Pool__InvalidSwapTokenOut(address tokenOut, address expectedTokenOut);
     error Pool__NotAuthorized(address sender);
-    error Pool__NotEnoughSwapOutput(
-        uint256 amountCredited,
-        uint256 amountOutMin
-    );
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
     error Pool__NotWrappedNativeTokenPool();
-    error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
     error Pool__OutOfBoundsPrice(UD60x18 price);
