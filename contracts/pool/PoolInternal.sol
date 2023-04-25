@@ -1304,6 +1304,29 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 : size * l.strike - exerciseValue;
     }
 
+    function _beforeExerciseOrSettle(
+        PoolStorage.Layout storage l,
+        bool isLong,
+        address holder
+    )
+        internal
+        returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateralValue)
+    {
+        _ensureExpired(l);
+        if (l.protocolFees > ZERO) _claimProtocolFees();
+
+        uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
+        size = _balanceOfUD60x18(holder, tokenId);
+        exerciseValue = _calculateExerciseValue(l, size);
+
+        if (size == ZERO) return (ZERO, ZERO, ZERO);
+
+        collateralValue = _calculateCollateralValue(l, size, exerciseValue);
+
+        _removeFromFactory(l);
+        _burn(holder, tokenId, size);
+    }
+
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
     /// @param txCost The estimated transaction cost (poolToken decimals)
@@ -1314,18 +1337,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 fee
     ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
 
-        if (l.protocolFees > ZERO) _claimProtocolFees();
+        (UD60x18 size, UD60x18 exerciseValue, ) = _beforeExerciseOrSettle(
+            l,
+            true,
+            holder
+        );
 
-        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.LONG);
         if (size == ZERO) return 0;
-
-        UD60x18 exerciseValue = _calculateExerciseValue(l, size);
-
-        _removeFromFactory(l);
-
-        _burn(holder, PoolStorage.LONG, size);
 
         UD60x18 totalCost = txCost + fee;
 
@@ -1348,28 +1367,25 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.toPoolTokenDecimals(exerciseValue);
     }
 
-    /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
+    /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    function _settle(address holder) internal returns (uint256) {
+    /// @param txCost The estimated transaction cost (poolToken decimals)
+    /// @param fee The auto settlement fee (poolToken decimals)
+    function _settle(
+        address holder,
+        UD60x18 txCost,
+        UD60x18 fee
+    ) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
 
-        if (l.protocolFees > ZERO) _claimProtocolFees();
+        (
+            UD60x18 size,
+            UD60x18 exerciseValue,
+            UD60x18 collateralValue
+        ) = _beforeExerciseOrSettle(l, false, holder);
 
-        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.SHORT);
         if (size == ZERO) return 0;
 
-        UD60x18 exerciseValue = _calculateExerciseValue(l, size);
-        UD60x18 collateralValue = _calculateCollateralValue(
-            l,
-            size,
-            exerciseValue
-        );
-
-        _removeFromFactory(l);
-
-        // Burn short and transfer collateral to operator
-        _burn(holder, PoolStorage.SHORT, size);
         if (collateralValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
         }
