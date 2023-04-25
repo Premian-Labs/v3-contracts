@@ -545,4 +545,33 @@ contract DeployTest is Test, Assertions {
                 posKey.orderType
             );
     }
+
+    function getSettlementPrice(
+        bool isCall,
+        bool isITM
+    ) internal pure returns (UD60x18) {
+        if (isCall) {
+            return isITM ? UD60x18.wrap(1200 ether) : UD60x18.wrap(800 ether);
+        } else {
+            return isITM ? UD60x18.wrap(800 ether) : UD60x18.wrap(1200 ether);
+        }
+    }
+
+    function getExerciseValue(
+        bool isCall,
+        bool isITM,
+        UD60x18 tradeSize,
+        UD60x18 settlementPrice
+    ) internal view returns (UD60x18 exerciseValue) {
+        if (isITM) {
+            if (isCall) {
+                exerciseValue = tradeSize * (settlementPrice - poolKey.strike);
+                exerciseValue = exerciseValue / settlementPrice;
+            } else {
+                exerciseValue = tradeSize * (poolKey.strike - settlementPrice);
+            }
+        }
+
+        return exerciseValue;
+    }
 }
