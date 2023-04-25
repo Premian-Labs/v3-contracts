@@ -38,8 +38,6 @@ import {ERC20Router} from "contracts/router/ERC20Router.sol";
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
-import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
-
 import {Assertions} from "./Assertions.sol";
 
 contract DeployTest is Test, Assertions {
@@ -52,7 +50,6 @@ contract DeployTest is Test, Assertions {
     PoolFactory factory;
     Premia diamond;
     ERC20Router router;
-    ExchangeHelper exchangeHelper;
 
     IPoolMock pool;
 
@@ -145,14 +142,12 @@ contract DeployTest is Test, Assertions {
         factory = PoolFactory(address(factoryProxy));
 
         router = new ERC20Router(address(factory));
-        exchangeHelper = new ExchangeHelper();
 
         PoolBase poolBaseImpl = new PoolBase();
 
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
             address(factory),
             address(router),
-            address(exchangeHelper),
             address(base),
             feeReceiver
         );
@@ -160,7 +155,6 @@ contract DeployTest is Test, Assertions {
         PoolCore poolCoreImpl = new PoolCore(
             address(factory),
             address(router),
-            address(exchangeHelper),
             address(base),
             feeReceiver
         );
@@ -168,7 +162,6 @@ contract DeployTest is Test, Assertions {
         PoolDepositWithdraw poolDepositWithdrawImpl = new PoolDepositWithdraw(
             address(factory),
             address(router),
-            address(exchangeHelper),
             address(base),
             feeReceiver
         );
@@ -176,7 +169,6 @@ contract DeployTest is Test, Assertions {
         PoolTrade poolTradeImpl = new PoolTrade(
             address(factory),
             address(router),
-            address(exchangeHelper),
             address(base),
             feeReceiver
         );

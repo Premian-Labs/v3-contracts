@@ -8,7 +8,6 @@ import {
   PoolCoreMock__factory,
   Premia,
   Premia__factory,
-  ExchangeHelper__factory,
   PoolTrade__factory,
   ERC20Router__factory,
   ERC20Router,
@@ -48,7 +47,6 @@ export class PoolUtil {
     deployer: SignerWithAddress,
     poolFactory: string,
     router: string,
-    exchangeHelper: string,
     wrappedNativeToken: string,
     feeReceiver: string,
     log = true,
@@ -75,7 +73,6 @@ export class PoolUtil {
     const poolCoreImpl = await poolCoreFactory.deploy(
       poolFactory,
       router,
-      exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
     );
@@ -97,7 +94,6 @@ export class PoolUtil {
     const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
       poolFactory,
       router,
-      exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
     );
@@ -119,7 +115,6 @@ export class PoolUtil {
     const poolTradeImpl = await poolTradeFactory.deploy(
       poolFactory,
       router,
-      exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
     );
@@ -142,7 +137,6 @@ export class PoolUtil {
       const poolCoreMockImpl = await poolCoreMockFactory.deploy(
         poolFactory,
         router,
-        exchangeHelper,
         wrappedNativeToken,
         feeReceiver,
       );
@@ -234,17 +228,10 @@ export class PoolUtil {
 
     if (log) console.log(`ERC20Router : ${router.address}`);
 
-    // ExchangeHelper
-    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-    await exchangeHelper.deployed();
-
-    if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
-
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
-      exchangeHelper.address,
       wrappedNativeToken,
       feeReceiver,
       log,

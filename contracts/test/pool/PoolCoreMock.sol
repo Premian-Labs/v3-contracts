@@ -18,18 +18,9 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     constructor(
         address factory,
         address router,
-        address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
-    )
-        PoolInternal(
-            factory,
-            router,
-            exchangeHelper,
-            wrappedNativeToken,
-            feeReceiver
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver) {}
 
     function _getPricing(
         bool isBuy

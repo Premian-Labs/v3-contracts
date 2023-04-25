@@ -28,18 +28,9 @@ contract PoolDepositWithdraw is
     constructor(
         address factory,
         address router,
-        address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver
-    )
-        PoolInternal(
-            factory,
-            router,
-            exchangeHelper,
-            wrappedNativeToken,
-            feeReceiver
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver) {}
 
     /// @inheritdoc IPoolDepositWithdraw
     function deposit(
