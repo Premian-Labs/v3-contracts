@@ -55,17 +55,10 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         return scaleDecimals(initialCollateral, poolKey.isCallPool);
     }
 
-    function _test_fillQuoteRFQ_Success(
-        bool isCall,
-        bool useMsgValue
-    ) internal {
+    function _test_fillQuoteRFQ_Success(bool isCall) internal {
         address poolToken = getPoolToken(isCall);
 
-        if (useMsgValue) {
-            startHoax(users.trader);
-        } else {
-            vm.startPrank(users.trader);
-        }
+        vm.startPrank(users.trader);
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
@@ -74,12 +67,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        pool.fillQuoteRFQ{value: useMsgValue ? premium : 0}(
-            quoteRFQ,
-            quoteRFQ.size,
-            sig,
-            Permit2.emptyPermit()
-        );
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, Permit2.emptyPermit());
 
         uint256 collateral = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -98,7 +86,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         assertEq(
             IERC20(poolToken).balanceOf(users.trader),
-            useMsgValue ? 0 : initialCollateral - premium,
+            initialCollateral - premium,
             "poolToken trader"
         );
 
@@ -123,21 +111,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
     function test_fillQuoteRFQ_Success_WithApproval() public {
         mintAndApprove();
-        _test_fillQuoteRFQ_Success(poolKey.isCallPool, false);
-    }
-
-    function test_fillQuoteRFQ_Success_WithETH() public {
-        if (!poolKey.isCallPool) return;
-
-        uint256 initialCollateral = getInitialCollateral();
-        address poolToken = getPoolToken(poolKey.isCallPool);
-
-        deal(poolToken, users.lp, initialCollateral);
-
-        vm.prank(users.lp);
-        IERC20(poolToken).approve(address(router), initialCollateral);
-
-        _test_fillQuoteRFQ_Success(poolKey.isCallPool, true);
+        _test_fillQuoteRFQ_Success(poolKey.isCallPool);
     }
 
     function test_fillQuoteRFQ_RevertIf_QuoteRFQExpired() public {

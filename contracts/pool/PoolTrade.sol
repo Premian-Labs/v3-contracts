@@ -47,19 +47,12 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         Permit2.Data calldata permit
     )
         external
-        payable
         nonReentrant
         returns (uint256 premiumTaker, Position.Delta memory delta)
     {
         return
             _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(
-                    msg.sender,
-                    size,
-                    signature,
-                    _wrapNativeToken(),
-                    true
-                ),
+                FillQuoteRFQArgsInternal(msg.sender, size, signature, true),
                 quoteRFQ,
                 permit
             );
@@ -73,20 +66,12 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         Permit2.Data calldata permit
     )
         external
-        payable
         nonReentrant
         returns (uint256 totalPremium, Position.Delta memory delta)
     {
         return
             _trade(
-                TradeArgsInternal(
-                    msg.sender,
-                    size,
-                    isBuy,
-                    premiumLimit,
-                    _wrapNativeToken(),
-                    true
-                ),
+                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true),
                 permit
             );
     }
@@ -141,7 +126,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(msg.sender, size, sig, 0, true),
+                FillQuoteRFQArgsInternal(msg.sender, size, sig, true),
                 quoteRFQ,
                 quoteRFQHash
             );

@@ -30,7 +30,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data calldata permit
-    ) external payable returns (Position.Delta memory delta);
+    ) external returns (Position.Delta memory delta);
 
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
@@ -54,7 +54,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data calldata permit,
         bool isBidIfStrandedMarketPrice
-    ) external payable returns (Position.Delta memory delta);
+    ) external returns (Position.Delta memory delta);
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.

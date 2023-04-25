@@ -41,7 +41,7 @@ contract PoolDepositWithdraw is
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data calldata permit
-    ) external payable nonReentrant returns (Position.Delta memory delta) {
+    ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -53,9 +53,7 @@ contract PoolDepositWithdraw is
                     belowUpper,
                     size,
                     minMarketPrice,
-                    maxMarketPrice,
-                    _wrapNativeToken(),
-                    msg.sender
+                    maxMarketPrice
                 ),
                 permit
             );
@@ -71,7 +69,7 @@ contract PoolDepositWithdraw is
         UD60x18 maxMarketPrice,
         Permit2.Data calldata permit,
         bool isBidIfStrandedMarketPrice
-    ) external payable nonReentrant returns (Position.Delta memory delta) {
+    ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -83,9 +81,7 @@ contract PoolDepositWithdraw is
                     belowUpper,
                     size,
                     minMarketPrice,
-                    maxMarketPrice,
-                    _wrapNativeToken(),
-                    msg.sender
+                    maxMarketPrice
                 ),
                 permit,
                 isBidIfStrandedMarketPrice

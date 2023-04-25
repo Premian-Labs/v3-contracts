@@ -7,7 +7,6 @@ import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enu
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {IWETH} from "@solidstate/contracts/interfaces/IWETH.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
@@ -398,8 +397,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             p.operator,
             address(this),
             l.toPoolTokenDecimals(delta.collateral.intoUD60x18()),
-            args.collateralCredit,
-            args.refundAddress,
             delta.longs.intoUD60x18(),
             delta.shorts.intoUD60x18(),
             permit
@@ -589,8 +586,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 transferCollateralToUser
                     ? l.toPoolTokenDecimals(collateralToTransfer)
                     : 0,
-                0,
-                address(0),
                 delta.longs.intoUD60x18(),
                 delta.shorts.intoUD60x18(),
                 Permit2.emptyPermit()
@@ -628,14 +623,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
-    ///         WARNING : `collateral` and `collateralCredit` must be scaled to the collateral token decimals
+    ///         WARNING : `collateral` must be scaled to the collateral token decimals
     function _transferTokens(
         PoolStorage.Layout storage l,
         address from,
         address to,
         uint256 collateral,
-        uint256 collateralCredit,
-        address refundAddress,
         UD60x18 longs,
         UD60x18 shorts,
         Permit2.Data memory permit
@@ -647,21 +640,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address poolToken = l.getPoolToken();
 
         if (from == address(this)) {
-            require(collateralCredit == 0); // Just a safety check, should never fail
             IERC20(poolToken).safeTransfer(to, collateral);
-        } else if (collateral > collateralCredit) {
+        } else {
             _transferFromWithPermitOrRouter(
                 permit,
                 poolToken,
                 from,
                 to,
-                collateral - collateralCredit
-            );
-        } else if (collateral < collateralCredit) {
-            // If there was too much collateral credit, we refund the excess
-            IERC20(poolToken).safeTransfer(
-                refundAddress,
-                collateralCredit - collateral
+                collateral
             );
         }
 
@@ -847,7 +833,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             vars.totalPremium,
             args.size,
             args.isBuy,
-            args.creditAmount,
             args.transferCollateralToUser,
             permit
         );
@@ -924,20 +909,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 totalPremium,
         UD60x18 size,
         bool isBuy,
-        uint256 creditAmount,
         bool transferCollateralToUser,
         Permit2.Data memory permit
     ) internal returns (Position.Delta memory delta) {
         delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
 
-        _updateUserAssets(
-            l,
-            user,
-            delta,
-            creditAmount,
-            transferCollateralToUser,
-            permit
-        );
+        _updateUserAssets(l, user, delta, transferCollateralToUser, permit);
     }
 
     function _calculateAssetsUpdate(
@@ -981,7 +958,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         address user,
         Position.Delta memory delta,
-        uint256 creditAmount,
         bool transferCollateralToUser,
         Permit2.Data memory permit
     ) internal {
@@ -991,26 +967,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             (delta.longs < iZERO && delta.shorts < iZERO)
         ) revert Pool__InvalidAssetUpdate(delta.longs, delta.shorts);
 
-        // We create a new `_deltaCollateral` variable instead of adding `creditAmount` to `delta.collateral`,
-        // as we will return `delta`, and want `delta.collateral` to reflect the absolute collateral change resulting from this update
-        int256 _deltaCollateral = l.toPoolTokenDecimals(delta.collateral);
-        if (creditAmount > 0) {
-            _deltaCollateral = _deltaCollateral + creditAmount.toInt256();
-        }
+        int256 deltaCollateral = l.toPoolTokenDecimals(delta.collateral);
 
         // Transfer collateral
-        if (_deltaCollateral < 0) {
+        if (deltaCollateral < 0) {
             _transferFromWithPermitOrRouter(
                 permit,
                 l.getPoolToken(),
                 user,
                 address(this),
-                uint256(-_deltaCollateral)
+                uint256(-deltaCollateral)
             );
-        } else if (_deltaCollateral > 0 && transferCollateralToUser) {
+        } else if (deltaCollateral > 0 && transferCollateralToUser) {
             IERC20(l.getPoolToken()).safeTransfer(
                 user,
-                uint256(_deltaCollateral)
+                uint256(deltaCollateral)
             );
         }
 
@@ -1107,7 +1078,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 premiumAndFee.premiumTaker,
                 args.size,
                 !quoteRFQ.isBuy,
-                args.creditAmount,
                 args.transferCollateralToUser,
                 permit
             );
@@ -1119,7 +1089,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 premiumAndFee.premiumMaker,
                 args.size,
                 quoteRFQ.isBuy,
-                0,
                 true,
                 Permit2.emptyPermit()
             );
@@ -1447,18 +1416,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         return l.toPoolTokenDecimals(collateral);
-    }
-
-    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
-    /// @return wrappedAmount The amount of native tokens wrapped
-    function _wrapNativeToken() internal returns (uint256 wrappedAmount) {
-        if (msg.value > 0) {
-            if (PoolStorage.layout().getPoolToken() != WRAPPED_NATIVE_TOKEN)
-                revert Pool__NotWrappedNativeTokenPool();
-
-            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
-            wrappedAmount = msg.value;
-        }
     }
 
     ////////////////////////////////////////////////////////////////
