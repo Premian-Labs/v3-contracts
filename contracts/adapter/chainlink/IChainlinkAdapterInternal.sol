@@ -40,7 +40,11 @@ interface IChainlinkAdapterInternal {
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
     /// @notice Thrown when the price after the target time is stale
-    error ChainlinkAdapter__PriceAfterTargetIsStale();
+    error ChainlinkAdapter__PriceAfterTargetIsStale(
+        uint256 target,
+        uint256 updatedAt,
+        uint256 blockTimestamp
+    );
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA One of the pair's tokens

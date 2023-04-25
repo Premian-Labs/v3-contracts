@@ -518,7 +518,11 @@ abstract contract ChainlinkAdapterInternal is
             target - updatedAt >= PRICE_STALE_THRESHOLD
         ) {
             // revert if 12 hours has not passed and price is stale
-            revert ChainlinkAdapter__PriceAfterTargetIsStale();
+            revert ChainlinkAdapter__PriceAfterTargetIsStale(
+                target,
+                updatedAt,
+                block.timestamp
+            );
         }
     }
 }

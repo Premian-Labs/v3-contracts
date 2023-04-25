@@ -36,10 +36,10 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @return The supported fee tiers
     function supportedFeeTiers() external view returns (uint24[] memory);
 
-    /// @notice When a pair is added to the oracle adapter, we will prepare all pools for the pair. Now, it could
-    ///         happen that certain pools are added for the pair at a later stage, and we can't be sure if those pools
-    ///         will be configured correctly. So be basically store the pools that ready for sure, and use only those
-    ///         for quotes. This functions returns this list of pools known to be prepared
+    /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could happen that
+    ///         pools are added for the pair at a later stage, and we can't be sure if those pools will be configured correctly.
+    ///         In this case, if a pool has an insufficient observation cardinality, `quote` and `quoteFrom` will revert.
+    ///         This functions returns this list of pools known to be prepared.
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The list of pools that will be used for quoting
@@ -49,21 +49,14 @@ interface IUniswapV3Adapter is IOracleAdapter {
     ) external view returns (address[] memory);
 
     /// @notice Sets the period to be used for the TWAP calculation
-    /// @dev Will revert it is lower than the minimum period or greater than maximum period.
-    ///      Can only be called by owner
-    ///      WARNING: increasing the period could cause big problems, because Uniswap V3 pools might not support a TWAP so old
     /// @param newPeriod The new period
     function setPeriod(uint32 newPeriod) external;
 
     /// @notice Sets the cardinality per minute to be used when increasing observation cardinality at the moment of adding support for pairs
-    /// @dev Will revert if the given cardinality is zero
-    ///      Can only be called by users with the admin role
-    ///      WARNING: increasing the cardinality per minute will make adding support to a pair significantly costly
     /// @param newCardinalityPerMinute The new cardinality per minute
     function setCardinalityPerMinute(uint256 newCardinalityPerMinute) external;
 
     /// @notice Inserts a new fee tier
-    /// @dev Will revert if the given tier is invalid, or already supported
     /// @param feeTier The new fee tier to add
     function insertFeeTier(uint24 feeTier) external;
 }
