@@ -1423,15 +1423,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Tick memory lowerTick = _getTick(p.lower);
         Tick memory upperTick = _getTick(p.upper);
 
-        uint256 tokenId = PoolStorage.formatTokenId(
+        SettlePositionVarsInternal memory vars;
+
+        vars.tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
-        if (size == ZERO) return 0;
+        vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
+        if (vars.size == ZERO) return 0;
 
         {
             // Update claimable fees
@@ -1443,7 +1445,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 upperTick.externalFeeRate
             );
 
-            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(size));
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(vars.size));
         }
 
         // using the market price here is okay as the market price cannot be
@@ -1453,26 +1455,28 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
 
-        UD60x18 claimableFees;
-        UD60x18 payoff;
-        UD60x18 collateral;
+        vars.claimableFees;
+        vars.payoff;
+        vars.collateral;
 
         {
-            UD60x18 longs = p.long(size, l.marketPrice);
-            UD60x18 shorts = p.short(size, l.marketPrice);
+            UD60x18 longs = p.long(vars.size, l.marketPrice);
+            UD60x18 shorts = p.short(vars.size, l.marketPrice);
 
-            claimableFees = pData.claimableFees;
-            payoff = _calculateExerciseValue(l, ONE);
-            collateral = p.collateral(size, l.marketPrice);
-            collateral = collateral + longs * payoff;
-            collateral =
-                collateral +
+            vars.claimableFees = pData.claimableFees;
+            vars.payoff = _calculateExerciseValue(l, ONE);
+
+            vars.collateral = p.collateral(vars.size, l.marketPrice);
+            vars.collateral = vars.collateral + longs * vars.payoff;
+
+            vars.collateral =
+                vars.collateral +
                 shorts *
-                ((l.isCallPool ? ONE : l.strike) - payoff);
+                ((l.isCallPool ? ONE : l.strike) - vars.payoff);
 
-            collateral = collateral + claimableFees;
+            vars.collateral = vars.collateral + vars.claimableFees;
 
-            _burn(p.owner, tokenId, size);
+            _burn(p.owner, vars.tokenId, vars.size);
 
             if (longs > ZERO) {
                 _burn(address(this), PoolStorage.LONG, longs);

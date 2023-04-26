@@ -212,4 +212,12 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
     }
+
+    struct SettlePositionVarsInternal {
+        uint256 tokenId;
+        UD60x18 claimableFees;
+        UD60x18 payoff;
+        UD60x18 collateral;
+        UD60x18 size;
+    }
 }
