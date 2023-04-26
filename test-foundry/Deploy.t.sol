@@ -539,6 +539,14 @@ contract DeployTest is Test, Assertions {
         return OptionMath.scaleDecimals(amount, decimals, 18);
     }
 
+    function scaleDecimalsTo(
+        UD60x18 amount,
+        bool isCall
+    ) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
+    }
+
     function tokenId() internal view returns (uint256) {
         return
             PoolStorage.formatTokenId(
@@ -576,5 +584,36 @@ contract DeployTest is Test, Assertions {
         }
 
         return exerciseValue;
+    }
+
+    function getCollateralValue(
+        bool isCall,
+        UD60x18 tradeSize,
+        UD60x18 exerciseValue
+    ) internal view returns (UD60x18) {
+        return
+            isCall
+                ? tradeSize - exerciseValue
+                : tradeSize * poolKey.strike - exerciseValue;
+    }
+
+    function handleExerciseSettleAuthorization(
+        bool isCall,
+        bool isITM,
+        uint256 authorizedTxCostAndFee
+    ) internal returns (UD60x18 settlementPrice) {
+        settlementPrice = getSettlementPrice(isCall, isITM);
+        oracleAdapter.setQuote(settlementPrice.inv());
+        oracleAdapter.setQuoteFrom(settlementPrice);
+
+        vm.startPrank(users.trader);
+
+        address[] memory agents = new address[](1);
+        agents[0] = users.agent;
+
+        userSettings.setAuthorizedAgents(agents);
+        userSettings.setAuthorizedTxCostAndFee(authorizedTxCostAndFee);
+
+        vm.stopPrank();
     }
 }
