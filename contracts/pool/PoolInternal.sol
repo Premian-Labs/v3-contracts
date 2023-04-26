@@ -1335,10 +1335,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address holder,
         UD60x18 txCost,
         UD60x18 fee
-    ) internal returns (uint256) {
+    ) internal returns (uint256 exerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        (UD60x18 size, UD60x18 exerciseValue, ) = _beforeExerciseOrSettle(
+        (UD60x18 size, UD60x18 _exerciseValue, ) = _beforeExerciseOrSettle(
             l,
             true,
             holder
@@ -1348,23 +1348,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         UD60x18 totalCost = txCost + fee;
 
-        if (totalCost > exerciseValue)
+        if (totalCost > _exerciseValue)
             revert Pool__TotalCostExceedsExerciseValue(
                 totalCost,
-                exerciseValue
+                _exerciseValue
             );
 
+        exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
+        emit Exercise(holder, size, _exerciseValue, l.settlementPrice, ZERO);
+
         if (totalCost > ZERO) {
-            exerciseValue = exerciseValue - totalCost;
+            _exerciseValue = _exerciseValue - totalCost;
             IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
             emit AutoExercise(msg.sender, txCost, fee);
         }
 
-        if (exerciseValue > ZERO)
-            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
-
-        emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
-        return l.toPoolTokenDecimals(exerciseValue);
+        if (_exerciseValue > ZERO)
+            IERC20(l.getPoolToken()).safeTransfer(holder, _exerciseValue);
     }
 
     /// @notice Settles all short options held by an `owner`
@@ -1375,37 +1375,37 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address holder,
         UD60x18 txCost,
         UD60x18 fee
-    ) internal returns (uint256) {
+    ) internal returns (uint256 collateralValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (
             UD60x18 size,
             UD60x18 exerciseValue,
-            UD60x18 collateralValue
+            UD60x18 _collateralValue
         ) = _beforeExerciseOrSettle(l, false, holder);
 
         if (size == ZERO) return 0;
 
         UD60x18 totalCost = txCost + fee;
 
-        if (totalCost > collateralValue)
+        if (totalCost > _collateralValue)
             revert Pool__TotalCostExceedsCollateralValue(
                 totalCost,
-                collateralValue
+                _collateralValue
             );
 
+        collateralValue = l.toPoolTokenDecimals(_collateralValue);
+        emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
+
         if (totalCost > ZERO) {
-            collateralValue = collateralValue - totalCost;
+            _collateralValue = _collateralValue - totalCost;
             IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
             emit AutoSettle(msg.sender, txCost, fee);
         }
 
-        if (collateralValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
+        if (_collateralValue > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(holder, _collateralValue);
         }
-
-        emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
-        return l.toPoolTokenDecimals(collateralValue);
     }
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
