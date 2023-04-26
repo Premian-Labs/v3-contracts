@@ -18,11 +18,11 @@ struct TradeInternal {
     uint256 traderCollateral;
     uint256 totalPremium;
     uint256 feeReceiverBalance;
-    UD60x18 tradeSize;
+    UD60x18 size;
 }
 
 abstract contract PoolSettleTest is DeployTest {
-    function _trade_Sell100Options(
+    function _test_settle_trade_Sell100Options(
         bool isCall
     ) internal returns (TradeInternal memory trade) {
         UD60x18 depositSize = UD60x18.wrap(1000 ether);
@@ -34,14 +34,14 @@ abstract contract PoolSettleTest is DeployTest {
             isCall
         );
 
-        trade.tradeSize = UD60x18.wrap(100 ether);
+        trade.size = UD60x18.wrap(100 ether);
 
         trade.traderCollateral = scaleDecimals(
-            contractsToCollateral(trade.tradeSize, isCall),
+            contractsToCollateral(trade.size, isCall),
             isCall
         );
 
-        (trade.totalPremium, ) = pool.getQuoteAMM(trade.tradeSize, false);
+        (trade.totalPremium, ) = pool.getQuoteAMM(trade.size, false);
 
         trade.poolToken = getPoolToken(isCall);
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
@@ -49,6 +49,7 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.startPrank(users.trader);
+
         deal(trade.poolToken, users.trader, trade.traderCollateral);
         IERC20(trade.poolToken).approve(
             address(router),
@@ -56,7 +57,7 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         pool.trade(
-            trade.tradeSize,
+            trade.size,
             false,
             trade.totalPremium - trade.totalPremium / 10,
             Permit2.emptyPermit()
@@ -66,7 +67,7 @@ abstract contract PoolSettleTest is DeployTest {
     }
 
     function _test_settle_Sell100Options(bool isCall, bool isITM) internal {
-        TradeInternal memory trade = _trade_Sell100Options(isCall);
+        TradeInternal memory trade = _test_settle_trade_Sell100Options(isCall);
 
         uint256 protocolFees = pool.protocolFees();
 
@@ -78,7 +79,7 @@ abstract contract PoolSettleTest is DeployTest {
         pool.settle(users.trader);
 
         uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isCall, isITM, trade.tradeSize, settlementPrice),
+            getExerciseValue(isCall, isITM, trade.size, settlementPrice),
             isCall
         );
 
@@ -103,10 +104,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
 
-        assertEq(
-            pool.balanceOf(address(pool), PoolStorage.LONG),
-            trade.tradeSize
-        );
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
     function test_settle_Sell100Options_ITM() public {
@@ -132,7 +130,7 @@ abstract contract PoolSettleTest is DeployTest {
             0.1 ether
         );
 
-        TradeInternal memory trade = _trade_Sell100Options(isCall);
+        TradeInternal memory trade = _test_settle_trade_Sell100Options(isCall);
 
         uint256 protocolFees = pool.protocolFees();
 
@@ -143,7 +141,7 @@ abstract contract PoolSettleTest is DeployTest {
         vm.warp(poolKey.maturity);
 
         uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isCall, isITM, trade.tradeSize, settlementPrice),
+            getExerciseValue(isCall, isITM, trade.size, settlementPrice),
             isCall
         );
 
@@ -176,10 +174,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
 
-        assertEq(
-            pool.balanceOf(address(pool), PoolStorage.LONG),
-            trade.tradeSize
-        );
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
     function test_settle_automatic_Sell100Options_ITM() public {
@@ -199,18 +194,18 @@ abstract contract PoolSettleTest is DeployTest {
         oracleAdapter.setQuote(settlementPrice.inv());
         oracleAdapter.setQuoteFrom(settlementPrice);
 
-        TradeInternal memory trade = _trade_Sell100Options(isCall);
+        TradeInternal memory trade = _test_settle_trade_Sell100Options(isCall);
 
         UD60x18 exerciseValue = getExerciseValue(
             isCall,
             false,
-            trade.tradeSize,
+            trade.size,
             settlementPrice
         );
 
         UD60x18 collateral = getCollateralValue(
             isCall,
-            trade.tradeSize,
+            trade.size,
             exerciseValue
         );
 

@@ -13,14 +13,12 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
-import "forge-std/console.sol";
-
 struct TradeInternal {
     address poolToken;
     uint256 initialCollateral;
     uint256 totalPremium;
     uint256 feeReceiverBalance;
-    UD60x18 tradeSize;
+    UD60x18 size;
 }
 
 abstract contract PoolSettlePositionTest is DeployTest {
@@ -30,8 +28,8 @@ abstract contract PoolSettlePositionTest is DeployTest {
         posKey.orderType = Position.OrderType.CS;
 
         trade.initialCollateral = deposit(1000 ether);
-        trade.tradeSize = UD60x18.wrap(100 ether);
-        (trade.totalPremium, ) = pool.getQuoteAMM(trade.tradeSize, true);
+        trade.size = UD60x18.wrap(100 ether);
+        (trade.totalPremium, ) = pool.getQuoteAMM(trade.size, true);
 
         trade.poolToken = getPoolToken(isCall);
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
@@ -44,7 +42,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         IERC20(trade.poolToken).approve(address(router), trade.totalPremium);
 
         pool.trade(
-            trade.tradeSize,
+            trade.size,
             true,
             trade.totalPremium + trade.totalPremium / 10,
             Permit2.emptyPermit()
@@ -71,7 +69,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
 
         UD60x18 payoff = getExerciseValue(isCall, isITM, ONE, settlementPrice);
-        uint256 exerciseValue = scaleDecimals(trade.tradeSize * payoff, isCall);
+        uint256 exerciseValue = scaleDecimals(trade.size * payoff, isCall);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
 
@@ -94,10 +92,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             protocolFees
         );
 
-        assertEq(
-            pool.balanceOf(users.trader, PoolStorage.LONG),
-            trade.tradeSize
-        );
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), trade.size);
 
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), 0);
     }
