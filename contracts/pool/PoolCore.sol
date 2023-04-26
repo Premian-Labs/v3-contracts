@@ -308,7 +308,24 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function settle(address holder) external returns (uint256) {
-        return _settle(holder);
+        return _settle(holder, ZERO, ZERO);
+    }
+
+    /// @inheritdoc IPoolCore
+    function settle(
+        address holder,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
+        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+
+        _ensureAuthorizedAgent(holder, msg.sender);
+        _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+
+        return _settle(holder, _txCost, _fee);
     }
 
     /// @inheritdoc IPoolCore

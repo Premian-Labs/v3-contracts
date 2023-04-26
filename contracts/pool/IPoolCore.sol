@@ -203,6 +203,18 @@ interface IPoolCore is IPoolInternal {
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
     function settle(address holder) external returns (uint256);
 
+    /// @notice Settles all short options held by an `owner`, caller is reimbursed with txCost + fee deducted from the proceeds of the
+    ///         settled options. Only authorized agents may execute this function on behalf of the option holder.
+    /// @param holder The holder of the contracts
+    /// @param txCost The estimated transaction cost (poolToken decimals)
+    /// @param fee The fee charged by the authorized agent (poolToken decimals)
+    /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
+    function settle(
+        address holder,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256);
+
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @return The amount of collateral left after settlement (poolToken decimals)

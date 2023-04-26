@@ -100,12 +100,14 @@ interface IPoolEvents {
     event AutoExercise(address indexed agent, UD60x18 txCost, UD60x18 fee);
 
     event Settle(
-        address indexed user,
+        address indexed holder,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 settlementPrice,
         UD60x18 fee
     );
+
+    event AutoSettle(address indexed agent, UD60x18 txCost, UD60x18 fee);
 
     event Annihilate(address indexed owner, UD60x18 contractSize, uint256 fee);
 

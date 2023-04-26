@@ -1386,12 +1386,25 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
+        UD60x18 totalCost = txCost + fee;
+
+        if (totalCost > collateralValue)
+            revert Pool__TotalCostExceedsCollateralValue(
+                totalCost,
+                collateralValue
+            );
+
+        if (totalCost > ZERO) {
+            collateralValue = collateralValue - totalCost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
+            emit AutoSettle(msg.sender, txCost, fee);
+        }
+
         if (collateralValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
         }
 
         emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
-
         return l.toPoolTokenDecimals(collateralValue);
     }
 

@@ -65,6 +65,10 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
     error Pool__TickWidthInvalid(UD60x18 price);
+    error Pool__TotalCostExceedsCollateralValue(
+        UD60x18 totalCost,
+        UD60x18 collateralValue
+    );
     error Pool__TotalCostExceedsExerciseValue(
         UD60x18 totalCost,
         UD60x18 exerciseValue
