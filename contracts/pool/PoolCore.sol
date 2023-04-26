@@ -300,8 +300,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
         UD60x18 _fee = l.fromPoolTokenDecimals(fee);
 
-        _ensureAuthorizedAgent(holder, msg.sender);
-        _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+        if (holder != msg.sender) {
+            _ensureAuthorizedAgent(holder, msg.sender);
+            _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+        }
 
         return _exercise(holder, _txCost, _fee);
     }
@@ -322,8 +324,10 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
         UD60x18 _fee = l.fromPoolTokenDecimals(fee);
 
-        _ensureAuthorizedAgent(holder, msg.sender);
-        _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+        if (holder != msg.sender) {
+            _ensureAuthorizedAgent(holder, msg.sender);
+            _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+        }
 
         return _settle(holder, _txCost, _fee);
     }
