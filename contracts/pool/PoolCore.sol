@@ -133,19 +133,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
     }
 
-    // ToDo : Move to PoolDepositWithdraw, as this is only used for deposit calls ?
-    /// @inheritdoc IPoolCore
-    function getNearestTicksBelow(
-        UD60x18 lower,
-        UD60x18 upper
-    )
-        external
-        view
-        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
-    {
-        return _getNearestTicksBelow(lower, upper);
-    }
-
     /// @inheritdoc IPoolCore
     function transferPosition(
         Position.Key calldata srcP,

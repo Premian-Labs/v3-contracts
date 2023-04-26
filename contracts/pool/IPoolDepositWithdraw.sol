@@ -64,4 +64,18 @@ interface IPoolDepositWithdraw is IPoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
     ) external returns (Position.Delta memory delta);
+
+    /// @notice Get nearest ticks below `lower` and `upper`.
+    ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
+    /// @param lower The lower bound of the range (18 decimals)
+    /// @param upper The upper bound of the range (18 decimals)
+    /// @return nearestBelowLower The nearest tick below `lower` (18 decimals)
+    /// @return nearestBelowUpper The nearest tick below `upper` (18 decimals)
+    function getNearestTicksBelow(
+        UD60x18 lower,
+        UD60x18 upper
+    )
+        external
+        view
+        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper);
 }

@@ -213,7 +213,6 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
-        poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
@@ -239,6 +238,9 @@ contract DeployTest is Test, Assertions {
         );
         poolDepositWithdrawSelectors.push(
             poolDepositWithdrawImpl.withdraw.selector
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.getNearestTicksBelow.selector
         );
 
         // PoolTrade

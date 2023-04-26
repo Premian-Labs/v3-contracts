@@ -102,4 +102,16 @@ contract PoolDepositWithdraw is
                 true
             );
     }
+
+    /// @inheritdoc IPoolDepositWithdraw
+    function getNearestTicksBelow(
+        UD60x18 lower,
+        UD60x18 upper
+    )
+        external
+        view
+        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
+    {
+        return _getNearestTicksBelow(lower, upper);
+    }
 }
