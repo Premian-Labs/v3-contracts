@@ -1409,9 +1409,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
+    /// @param txCost The estimated transaction cost (18 decimals)
+    /// @param fee The fee charged by the authorized agent (18 decimals)
     function _settlePosition(
-        Position.KeyInternal memory p
-    ) internal returns (uint256) {
+        Position.KeyInternal memory p,
+        UD60x18 txCost,
+        UD60x18 fee
+    ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
         _removeFromFactory(l);
@@ -1490,22 +1494,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, collateral);
-        }
+        UD60x18 totalCost = txCost + fee;
+
+        if (totalCost > vars.collateral)
+            revert Pool__TotalCostExceedsCollateralValue(
+                totalCost,
+                vars.collateral
+            );
+
+        collateral = l.toPoolTokenDecimals(vars.collateral);
 
         emit SettlePosition(
             p.owner,
-            tokenId,
-            size,
-            collateral - claimableFees,
-            payoff,
-            claimableFees,
+            vars.tokenId,
+            vars.size,
+            vars.collateral - vars.claimableFees,
+            vars.payoff,
+            vars.claimableFees,
             l.settlementPrice,
             ZERO
         );
 
-        return l.toPoolTokenDecimals(collateral);
+        if (totalCost > ZERO) {
+            vars.collateral = vars.collateral - totalCost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
+            emit AutoSettle(msg.sender, txCost, fee);
+        }
+
+        if (vars.collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
+        }
     }
 
     /// @dev pull token from user, send to exchangeHelper and trigger a trade from exchangeHelper

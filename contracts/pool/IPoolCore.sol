@@ -220,6 +220,17 @@ interface IPoolCore is IPoolInternal {
     /// @return The amount of collateral left after settlement (poolToken decimals)
     function settlePosition(Position.Key memory p) external returns (uint256);
 
+    /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
+    /// @param p The position key
+    /// @param txCost The estimated transaction cost (poolToken decimals)
+    /// @param fee The fee charged by the authorized agent (poolToken decimals)
+    /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
+    function settlePosition(
+        Position.Key memory p,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256);
+
     /// @notice Get nearest ticks below `lower` and `upper`.
     ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
     /// @param lower The lower bound of the range (18 decimals)

@@ -92,8 +92,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
             protocolFees
         );
 
-        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), trade.size);
+        assertEq(pool.getClaimableFees(posKey), 0);
+        assertEq(pool.protocolFees(), 0);
 
+        assertEq(pool.balanceOf(posKey.operator, tokenId()), 0);
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), trade.size);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), 0);
     }
 
@@ -108,5 +111,174 @@ abstract contract PoolSettlePositionTest is DeployTest {
     function test_settle_position_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
         pool.settlePosition(posKey);
+    }
+
+    function _test_settle_position_automatic_Buy100Options(
+        bool isCall,
+        bool isITM
+    ) internal {
+        UD60x18 settlementPrice = handleExerciseSettleAuthorization(
+            isCall,
+            isITM,
+            posKey.operator,
+            0.1 ether
+        );
+
+        TradeInternal memory trade = _test_settle_position_trade_Buy100Options(
+            isCall
+        );
+
+        uint256 protocolFees = pool.protocolFees();
+
+        uint256 txCost = scaleDecimals(UD60x18.wrap(0.09 ether), isCall);
+        uint256 fee = scaleDecimals(UD60x18.wrap(0.01 ether), isCall);
+        uint256 totalCost = txCost + fee;
+
+        vm.warp(poolKey.maturity);
+        vm.prank(users.agent);
+
+        pool.settlePosition(posKey, txCost, fee);
+
+        UD60x18 payoff = getExerciseValue(isCall, isITM, ONE, settlementPrice);
+        uint256 exerciseValue = scaleDecimals(trade.size * payoff, isCall);
+
+        assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
+
+        assertEq(
+            IERC20(trade.poolToken).balanceOf(address(pool)),
+            exerciseValue
+        );
+
+        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), totalCost);
+
+        assertEq(
+            IERC20(trade.poolToken).balanceOf(posKey.operator),
+            trade.initialCollateral +
+                trade.totalPremium -
+                exerciseValue -
+                protocolFees -
+                totalCost
+        );
+
+        assertEq(
+            IERC20(trade.poolToken).balanceOf(feeReceiver) -
+                trade.feeReceiverBalance,
+            protocolFees
+        );
+
+        assertEq(pool.getClaimableFees(posKey), 0);
+        assertEq(pool.protocolFees(), 0);
+
+        assertEq(pool.balanceOf(posKey.operator, tokenId()), 0);
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), trade.size);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), 0);
+    }
+
+    function test_settle_position_automatic_Buy100Options_ITM() public {
+        _test_settle_position_automatic_Buy100Options(poolKey.isCallPool, true);
+    }
+
+    function test_settle_position_automatic_Buy100Options_OTM() public {
+        _test_settle_position_automatic_Buy100Options(
+            poolKey.isCallPool,
+            false
+        );
+    }
+
+    function test_settle_position_automatic_RevertIf_TotalCostExceedsExerciseValue()
+        public
+    {
+        bool isCall = poolKey.isCallPool;
+
+        UD60x18 settlementPrice = getSettlementPrice(isCall, false);
+        UD60x18 quote = isCall ? ONE : settlementPrice.inv();
+        oracleAdapter.setQuote(quote);
+        oracleAdapter.setQuoteFrom(settlementPrice);
+
+        TradeInternal memory trade = _test_settle_position_trade_Buy100Options(
+            isCall
+        );
+
+        UD60x18 payoff = getExerciseValue(isCall, false, ONE, settlementPrice);
+
+        uint256 collateral = trade.initialCollateral +
+            trade.totalPremium -
+            scaleDecimals(trade.size * payoff, isCall) -
+            pool.protocolFees();
+
+        uint256 txCost = collateral;
+        uint256 fee = 1 wei;
+        uint256 totalCost = txCost + fee;
+
+        address[] memory agents = new address[](1);
+        agents[0] = users.agent;
+
+        vm.startPrank(posKey.operator);
+
+        userSettings.setAuthorizedAgents(agents);
+
+        // if !isCall, convert collateral to WETH
+        userSettings.setAuthorizedTxCostAndFee(
+            isCall
+                ? totalCost
+                : (UD60x18.wrap(scaleDecimalsTo(totalCost, isCall)) * quote)
+                    .unwrap()
+        );
+
+        vm.stopPrank();
+
+        vm.warp(poolKey.maturity);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__TotalCostExceedsCollateralValue.selector,
+                scaleDecimalsTo(totalCost, isCall),
+                scaleDecimalsTo(collateral, isCall)
+            )
+        );
+
+        vm.prank(users.agent);
+        pool.settlePosition(posKey, txCost, fee);
+    }
+
+    function test_settle_position_automatic_RevertIf_UnauthorizedAgent()
+        public
+    {
+        vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
+        vm.prank(users.agent);
+        pool.settlePosition(posKey, 0, 0);
+    }
+
+    function test_settle_position_automatic_RevertIf_UnauthorizedTxCostAndFee()
+        public
+    {
+        bool isCall = poolKey.isCallPool;
+
+        UD60x18 settlementPrice = getSettlementPrice(isCall, false);
+        UD60x18 quote = isCall ? ONE : settlementPrice.inv();
+        oracleAdapter.setQuote(quote);
+
+        address[] memory agents = new address[](1);
+        agents[0] = users.agent;
+
+        vm.prank(posKey.operator);
+        userSettings.setAuthorizedAgents(agents);
+
+        UD60x18 _txCost = UD60x18.wrap(0.09 ether);
+        UD60x18 _fee = UD60x18.wrap(0.01 ether);
+
+        uint256 txCost = scaleDecimals(_txCost, isCall);
+        uint256 fee = scaleDecimals(_fee, isCall);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__UnauthorizedTxCostAndFee.selector,
+                ((_txCost + _fee) * quote).unwrap(),
+                0
+            )
+        );
+
+        vm.prank(users.agent);
+        pool.settlePosition(posKey, txCost, fee);
     }
 }

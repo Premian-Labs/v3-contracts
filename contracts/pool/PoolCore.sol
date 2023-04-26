@@ -335,7 +335,36 @@ contract PoolCore is IPoolCore, PoolInternal {
     /// @inheritdoc IPoolCore
     function settlePosition(Position.Key memory p) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
+        return
+            _settlePosition(
+                p.toKeyInternal(l.strike, l.isCallPool),
+                ZERO,
+                ZERO
+            );
+    }
+
+    /// @inheritdoc IPoolCore
+    function settlePosition(
+        Position.Key memory p,
+        uint256 txCost,
+        uint256 fee
+    ) external returns (uint256) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
+        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+
+        if (p.operator != msg.sender) {
+            _ensureAuthorizedAgent(p.operator, msg.sender);
+            _ensureAuthorizedTxCostAndFee(p.operator, _txCost + _fee);
+        }
+
+        return
+            _settlePosition(
+                p.toKeyInternal(l.strike, l.isCallPool),
+                _txCost,
+                _fee
+            );
     }
 
     /// @inheritdoc IPoolCore

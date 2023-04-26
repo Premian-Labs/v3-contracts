@@ -255,7 +255,20 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(
             bytes4(keccak256("settle(address,uint256,uint256)"))
         );
-        poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
+        poolCoreSelectors.push(
+            bytes4(
+                keccak256(
+                    "settlePosition((address,address,uint256,uint256,uint8))"
+                )
+            )
+        );
+        poolCoreSelectors.push(
+            bytes4(
+                keccak256(
+                    "settlePosition((address,address,uint256,uint256,uint8),uint256,uint256)"
+                )
+            )
+        );
         poolCoreSelectors.push(poolCoreImpl.swapAndDeposit.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
@@ -600,13 +613,14 @@ contract DeployTest is Test, Assertions {
     function handleExerciseSettleAuthorization(
         bool isCall,
         bool isITM,
+        address user,
         uint256 authorizedTxCostAndFee
     ) internal returns (UD60x18 settlementPrice) {
         settlementPrice = getSettlementPrice(isCall, isITM);
         oracleAdapter.setQuote(settlementPrice.inv());
         oracleAdapter.setQuoteFrom(settlementPrice);
 
-        vm.startPrank(users.trader);
+        vm.startPrank(user);
 
         address[] memory agents = new address[](1);
         agents[0] = users.agent;
