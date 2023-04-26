@@ -187,10 +187,10 @@ interface IPoolCore is IPoolInternal {
     function exercise(address holder) external returns (uint256);
 
     /// @notice Exercises all long options held by an `owner`, caller is reimbursed with txCost + fee deducted from the proceeds of the
-    ///         exercised options.
+    ///         exercised options. Only authorized agents may execute this function on behalf of the option holder.
     /// @param holder The holder of the contracts
     /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The auto exercise fee (poolToken decimals)
+    /// @param fee The fee charged by the authorized agent (poolToken decimals)
     /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
     function exercise(
         address holder,
@@ -200,7 +200,7 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
-    /// @return The amount of collateral left after settlement (poolToken decimals)
+    /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
     function settle(address holder) external returns (uint256);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.

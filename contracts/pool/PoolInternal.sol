@@ -1329,8 +1329,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The auto exercise fee (poolToken decimals)
+    /// @param txCost The estimated transaction cost (18 decimals)
+    /// @param fee The fee charged by the authorized agent (18 decimals)
     function _exercise(
         address holder,
         UD60x18 txCost,
@@ -1369,8 +1369,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The auto settlement fee (poolToken decimals)
+    /// @param txCost The estimated transaction cost (18 decimals)
+    /// @param fee The fee charged by the authorized agent (18 decimals)
     function _settle(
         address holder,
         UD60x18 txCost,
