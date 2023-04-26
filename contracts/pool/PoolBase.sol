@@ -23,7 +23,7 @@ contract PoolBase is
     ERC165Base,
     Multicall
 {
-    /// @notice see IPoolBase; inheritance not possible due to linearization issues
+    /// @inheritdoc IPoolBase
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
