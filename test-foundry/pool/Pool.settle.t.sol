@@ -102,8 +102,9 @@ abstract contract PoolSettleTest is DeployTest {
             protocolFees
         );
 
-        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
+        assertEq(pool.protocolFees(), 0);
 
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
@@ -127,6 +128,7 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 settlementPrice = handleExerciseSettleAuthorization(
             isCall,
             isITM,
+            users.trader,
             0.1 ether
         );
 
@@ -139,14 +141,14 @@ abstract contract PoolSettleTest is DeployTest {
         uint256 totalCost = txCost + fee;
 
         vm.warp(poolKey.maturity);
+        vm.prank(users.agent);
+
+        pool.settle(users.trader, txCost, fee);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, isITM, trade.size, settlementPrice),
             isCall
         );
-
-        vm.prank(users.agent);
-        pool.settle(users.trader, txCost, fee);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
@@ -172,8 +174,9 @@ abstract contract PoolSettleTest is DeployTest {
             protocolFees
         );
 
-        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
+        assertEq(pool.protocolFees(), 0);
 
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
@@ -191,7 +194,8 @@ abstract contract PoolSettleTest is DeployTest {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
-        oracleAdapter.setQuote(settlementPrice.inv());
+        UD60x18 quote = isCall ? ONE : settlementPrice.inv();
+        oracleAdapter.setQuote(quote);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options(isCall);
@@ -209,17 +213,25 @@ abstract contract PoolSettleTest is DeployTest {
             exerciseValue
         );
 
+        uint256 txCost = collateral.unwrap();
+        uint256 fee = 1 wei;
+        uint256 totalCost = txCost + fee;
+
         address[] memory agents = new address[](1);
         agents[0] = users.agent;
 
         vm.startPrank(users.trader);
         userSettings.setAuthorizedAgents(agents);
-        userSettings.setAuthorizedTxCostAndFee(collateral.unwrap() + 0.1 ether);
-        vm.stopPrank();
 
-        uint256 txCost = scaleDecimals(collateral, isCall);
-        uint256 fee = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
-        uint256 totalCost = txCost + fee;
+        // if !isCall, convert collateral to WETH
+        userSettings.setAuthorizedTxCostAndFee(
+            isCall
+                ? totalCost
+                : (UD60x18.wrap(scaleDecimalsTo(totalCost, isCall)) * quote)
+                    .unwrap()
+        );
+
+        vm.stopPrank();
 
         vm.warp(poolKey.maturity);
 

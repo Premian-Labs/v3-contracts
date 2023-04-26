@@ -87,6 +87,8 @@ abstract contract PoolExerciseTest is DeployTest {
             protocolFees
         );
 
+        assertEq(pool.protocolFees(), 0);
+
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 0);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), trade.size);
     }
@@ -110,6 +112,7 @@ abstract contract PoolExerciseTest is DeployTest {
         UD60x18 settlementPrice = handleExerciseSettleAuthorization(
             isCall,
             true,
+            users.trader,
             0.1 ether
         );
 
@@ -122,14 +125,14 @@ abstract contract PoolExerciseTest is DeployTest {
         uint256 totalCost = txCost + fee;
 
         vm.warp(poolKey.maturity);
+        vm.prank(users.agent);
+
+        pool.exercise(users.trader, txCost, fee);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, true, trade.size, settlementPrice),
             isCall
         );
-
-        vm.prank(users.agent);
-        pool.exercise(users.trader, txCost, fee);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
@@ -152,6 +155,8 @@ abstract contract PoolExerciseTest is DeployTest {
             protocolFees
         );
 
+        assertEq(pool.protocolFees(), 0);
+
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 0);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), trade.size);
     }
@@ -161,9 +166,10 @@ abstract contract PoolExerciseTest is DeployTest {
     {
         bool isCall = poolKey.isCallPool;
 
-        UD60x18 settlementPrice = handleExerciseSettleAuthorization(
+        handleExerciseSettleAuthorization(
             isCall,
             false,
+            users.trader,
             0.1 ether
         );
 
