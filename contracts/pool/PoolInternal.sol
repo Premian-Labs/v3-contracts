@@ -1313,6 +1313,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateralValue)
     {
         _ensureExpired(l);
+        _removeFromFactory(l);
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
         uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
@@ -1322,8 +1323,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (size == ZERO) return (ZERO, ZERO, ZERO);
 
         collateralValue = _calculateCollateralValue(l, size, exerciseValue);
-
-        _removeFromFactory(l);
         _burn(holder, tokenId, size);
     }
 
