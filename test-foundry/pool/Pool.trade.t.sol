@@ -7,7 +7,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
-import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
@@ -29,12 +28,7 @@ abstract contract PoolTradeTest is DeployTest {
         deal(poolToken, users.trader, totalPremium);
         IERC20(poolToken).approve(address(router), totalPremium);
 
-        pool.trade(
-            tradeSize,
-            true,
-            totalPremium + totalPremium / 10,
-            Permit2.emptyPermit()
-        );
+        pool.trade(tradeSize, true, totalPremium + totalPremium / 10);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
@@ -62,12 +56,7 @@ abstract contract PoolTradeTest is DeployTest {
         deal(poolToken, users.trader, collateralScaled);
         IERC20(poolToken).approve(address(router), collateralScaled);
 
-        pool.trade(
-            tradeSize,
-            false,
-            totalPremium - totalPremium / 10,
-            Permit2.emptyPermit()
-        );
+        pool.trade(tradeSize, false, totalPremium - totalPremium / 10);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
@@ -108,12 +97,7 @@ abstract contract PoolTradeTest is DeployTest {
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
 
-        pool.trade(
-            tradeSize,
-            false,
-            totalPremium - totalPremium / 10,
-            Permit2.emptyPermit()
-        );
+        pool.trade(tradeSize, false, totalPremium - totalPremium / 10);
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),

@@ -13,7 +13,6 @@ import {IFlashLoanCallback} from "./IFlashLoanCallback.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
 import {iZERO, ZERO} from "../libraries/Constants.sol";
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
@@ -43,8 +42,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
+        Signature calldata signature
     )
         external
         nonReentrant
@@ -53,8 +51,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _fillQuoteRFQ(
                 FillQuoteRFQArgsInternal(msg.sender, size, signature, true),
-                quoteRFQ,
-                permit
+                quoteRFQ
             );
     }
 
@@ -62,8 +59,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
+        uint256 premiumLimit
     )
         external
         nonReentrant
@@ -71,8 +67,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     {
         return
             _trade(
-                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true),
-                permit
+                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true)
             );
     }
 

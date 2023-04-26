@@ -11,7 +11,6 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 import {IPoolDepositWithdraw} from "./IPoolDepositWithdraw.sol";
@@ -39,8 +38,7 @@ contract PoolDepositWithdraw is
         UD60x18 belowUpper,
         UD60x18 size,
         UD60x18 minMarketPrice,
-        UD60x18 maxMarketPrice,
-        Permit2.Data calldata permit
+        UD60x18 maxMarketPrice
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -54,8 +52,7 @@ contract PoolDepositWithdraw is
                     size,
                     minMarketPrice,
                     maxMarketPrice
-                ),
-                permit
+                )
             );
     }
 
@@ -67,7 +64,6 @@ contract PoolDepositWithdraw is
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
-        Permit2.Data calldata permit,
         bool isBidIfStrandedMarketPrice
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -83,7 +79,6 @@ contract PoolDepositWithdraw is
                     minMarketPrice,
                     maxMarketPrice
                 ),
-                permit,
                 isBidIfStrandedMarketPrice
             );
     }

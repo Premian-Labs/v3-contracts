@@ -7,7 +7,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
-import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
@@ -53,15 +52,7 @@ abstract contract PoolDepositTest is DeployTest {
             )
         );
 
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
     function _test_deposit_RevertIf_MarketPriceOutOfMinMax(
@@ -83,15 +74,7 @@ abstract contract PoolDepositTest is DeployTest {
                 maxPrice
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            minPrice,
-            maxPrice,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
 
         minPrice = posKey.upper - UD60x18.wrap(10);
         maxPrice = posKey.upper - UD60x18.wrap(1);
@@ -103,15 +86,7 @@ abstract contract PoolDepositTest is DeployTest {
                 maxPrice
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            minPrice,
-            maxPrice,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
     }
 
     function test_deposit_RevertIf_MarketPriceOutOfMinMax() public {
@@ -122,15 +97,7 @@ abstract contract PoolDepositTest is DeployTest {
         vm.prank(users.lp);
         vm.expectRevert(IPoolInternal.Pool__ZeroSize.selector);
 
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            ZERO,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, ZERO, ZERO, ONE);
     }
 
     function test_deposit_RevertIf_Expired() public {
@@ -139,15 +106,7 @@ abstract contract PoolDepositTest is DeployTest {
         vm.warp(poolKey.maturity + 1);
         vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
 
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
     function test_deposit_RevertIf_InvalidRange() public {
@@ -163,15 +122,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ZERO;
@@ -182,15 +133,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = ONE_HALF;
         posKey.upper = ONE_HALF / TWO;
@@ -201,15 +144,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = UD60x18.wrap(0.0001e18);
         posKey.upper = posKeySave.upper;
@@ -220,15 +155,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(1.01e18);
@@ -239,15 +166,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
     function test_deposit_RevertIf_InvalidTickWidth() public {
@@ -262,15 +181,7 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.lower
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = UD60x18.wrap(0.7501e18);
@@ -280,14 +191,6 @@ abstract contract PoolDepositTest is DeployTest {
                 posKey.upper
             )
         );
-        pool.deposit(
-            posKey,
-            ZERO,
-            ZERO,
-            THREE,
-            ZERO,
-            ONE,
-            Permit2.emptyPermit()
-        );
+        pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 }

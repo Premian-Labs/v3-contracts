@@ -18,7 +18,6 @@ import {IERC20Router} from "../router/IERC20Router.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
@@ -329,18 +328,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param args The deposit parameters
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return delta The amount of collateral / longs / shorts deposited
     function _deposit(
         Position.KeyInternal memory p,
-        DepositArgsInternal memory args,
-        Permit2.Data memory permit
+        DepositArgsInternal memory args
     ) internal returns (Position.Delta memory delta) {
         return
             _deposit(
                 p,
                 args,
-                permit,
                 p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
             );
     }
@@ -348,13 +344,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
     /// @param p The position key
     /// @param args The deposit parameters
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
     /// @return delta The amount of collateral / longs / shorts deposited
     function _deposit(
         Position.KeyInternal memory p,
         DepositArgsInternal memory args,
-        Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -398,8 +392,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             address(this),
             l.toPoolTokenDecimals(delta.collateral.intoUD60x18()),
             delta.longs.intoUD60x18(),
-            delta.shorts.intoUD60x18(),
-            permit
+            delta.shorts.intoUD60x18()
         );
 
         Position.Data storage pData = l.positions[p.keyHash()];
@@ -587,8 +580,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     ? l.toPoolTokenDecimals(collateralToTransfer)
                     : 0,
                 delta.longs.intoUD60x18(),
-                delta.shorts.intoUD60x18(),
-                Permit2.emptyPermit()
+                delta.shorts.intoUD60x18()
             );
         }
 
@@ -630,8 +622,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address to,
         uint256 collateral,
         UD60x18 longs,
-        UD60x18 shorts,
-        Permit2.Data memory permit
+        UD60x18 shorts
     ) internal {
         // Safeguard, should never happen
         if (longs > ZERO && shorts > ZERO)
@@ -642,8 +633,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (from == address(this)) {
             IERC20(poolToken).safeTransfer(to, collateral);
         } else {
-            _transferFromWithPermitOrRouter(
-                permit,
+            IERC20Router(ROUTER).safeTransferFrom(
                 poolToken,
                 from,
                 to,
@@ -666,8 +656,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size,
-        Permit2.Data memory permit
+        UD60x18 size
     ) internal {
         if (
             msg.sender != underwriter &&
@@ -689,8 +678,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
         UD60x18 protocolFee = _takerFee(l, size, ZERO, true);
 
-        _transferFromWithPermitOrRouter(
-            permit,
+        IERC20Router(ROUTER).safeTransferFrom(
             l.getPoolToken(),
             underwriter,
             address(this),
@@ -713,12 +701,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     /// @param args Trade parameters
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function _trade(
-        TradeArgsInternal memory args,
-        Permit2.Data memory permit
+        TradeArgsInternal memory args
     ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -833,8 +819,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             vars.totalPremium,
             args.size,
             args.isBuy,
-            args.transferCollateralToUser,
-            permit
+            args.transferCollateralToUser
         );
 
         if (args.isBuy) {
@@ -909,12 +894,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 totalPremium,
         UD60x18 size,
         bool isBuy,
-        bool transferCollateralToUser,
-        Permit2.Data memory permit
+        bool transferCollateralToUser
     ) internal returns (Position.Delta memory delta) {
         delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
 
-        _updateUserAssets(l, user, delta, transferCollateralToUser, permit);
+        _updateUserAssets(l, user, delta, transferCollateralToUser);
     }
 
     function _calculateAssetsUpdate(
@@ -958,8 +942,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         address user,
         Position.Delta memory delta,
-        bool transferCollateralToUser,
-        Permit2.Data memory permit
+        bool transferCollateralToUser
     ) internal {
         if (
             (delta.longs == iZERO && delta.shorts == iZERO) ||
@@ -971,8 +954,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         // Transfer collateral
         if (deltaCollateral < 0) {
-            _transferFromWithPermitOrRouter(
-                permit,
+            IERC20Router(ROUTER).safeTransferFrom(
                 l.getPoolToken(),
                 user,
                 address(this),
@@ -1033,13 +1015,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         fully while having the price guaranteed.
     /// @param args The fillQuoteRFQ parameters
     /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid by the taker (poolToken decimals)
     /// @return deltaTaker The net collateral / longs / shorts change for taker of the trade.
     function _fillQuoteRFQ(
         FillQuoteRFQArgsInternal memory args,
-        QuoteRFQ memory quoteRFQ,
-        Permit2.Data memory permit
+        QuoteRFQ memory quoteRFQ
     )
         internal
         returns (uint256 premiumTaker, Position.Delta memory deltaTaker)
@@ -1078,8 +1058,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 premiumAndFee.premiumTaker,
                 args.size,
                 !quoteRFQ.isBuy,
-                args.transferCollateralToUser,
-                permit
+                args.transferCollateralToUser
             );
 
             // Process trade maker
@@ -1089,8 +1068,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 premiumAndFee.premiumMaker,
                 args.size,
                 quoteRFQ.isBuy,
-                true,
-                Permit2.emptyPermit()
+                true
             );
         }
 
@@ -1977,47 +1955,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _burn(address account, uint256 id, UD60x18 amount) internal {
         _burn(account, id, amount.unwrap());
-    }
-
-    function _transferFromWithPermitOrRouter(
-        Permit2.Data memory permit,
-        address token,
-        address owner,
-        address to,
-        UD60x18 amount
-    ) internal {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-
-        _transferFromWithPermitOrRouter(
-            permit,
-            token,
-            owner,
-            to,
-            l.toPoolTokenDecimals(amount)
-        );
-    }
-
-    function _transferFromWithPermitOrRouter(
-        Permit2.Data memory permit,
-        address token,
-        address owner,
-        address to,
-        uint256 amount
-    ) internal {
-        if (permit.signature.length > 0) {
-            if (permit.permittedToken != token)
-                revert Pool__InvalidPermittedToken(
-                    permit.permittedToken,
-                    token
-                );
-
-            if (permit.permittedAmount < amount)
-                revert Pool__InsufficientPermit(amount, permit.permittedAmount);
-
-            Permit2.permitTransferFrom(permit, owner, to, amount);
-        } else {
-            IERC20Router(ROUTER).safeTransferFrom(token, owner, to, amount);
-        }
     }
 
     function _ensureValidRange(UD60x18 lower, UD60x18 upper) internal pure {

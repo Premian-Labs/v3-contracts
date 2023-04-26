@@ -12,7 +12,6 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
 
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
-import {Permit2} from "contracts/libraries/Permit2.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
@@ -227,14 +226,14 @@ contract DeployTest is Test, Assertions {
         poolDepositWithdrawSelectors.push(
             bytes4(
                 keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)"
                 )
             )
         );
         poolDepositWithdrawSelectors.push(
             bytes4(
                 keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,bool)"
                 )
             )
         );
@@ -336,8 +335,7 @@ contract DeployTest is Test, Assertions {
             nearestBelowUpper,
             depositSize,
             ZERO,
-            ONE,
-            Permit2.emptyPermit()
+            ONE
         );
 
         vm.stopPrank();

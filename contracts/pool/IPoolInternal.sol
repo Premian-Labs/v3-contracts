@@ -20,16 +20,8 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientLiquidity();
-    error Pool__InsufficientPermit(
-        uint256 requestedAmount,
-        uint256 permittedAmount
-    );
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
-    error Pool__InvalidPermittedToken(
-        address permittedToken,
-        address expectedToken
-    );
     error Pool__InvalidQuoteRFQSignature();
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);

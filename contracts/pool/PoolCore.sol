@@ -11,7 +11,6 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
@@ -106,10 +105,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size,
-        Permit2.Data calldata permit
+        UD60x18 size
     ) external nonReentrant {
-        return _writeFrom(underwriter, longReceiver, size, permit);
+        return _writeFrom(underwriter, longReceiver, size);
     }
 
     /// @inheritdoc IPoolCore

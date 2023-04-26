@@ -7,7 +7,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IFlashLoanCallback} from "./IFlashLoanCallback.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal {
@@ -28,14 +27,12 @@ interface IPoolTrade is IPoolInternal {
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
+        Signature calldata signature
     ) external returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -43,14 +40,12 @@ interface IPoolTrade is IPoolInternal {
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
+        uint256 premiumLimit
     ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Flash loan collaterals sitting in this contract

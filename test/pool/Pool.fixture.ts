@@ -7,7 +7,6 @@ import { PoolUtil } from '../../utils/PoolUtil';
 import { tokens } from '../../utils/addresses';
 import { ONE_ETHER } from '../../utils/constants';
 import { getEventArgs } from '../../utils/events';
-import { getEmptyPremiaPermit2 } from '../../utils/sdk/permit2';
 import { average, scaleDecimals as _scaleDecimals } from '../../utils/sdk/math';
 import { OrderType } from '../../utils/sdk/types';
 import { getValidMaturity, latest, ONE_HOUR } from '../../utils/time';
@@ -16,7 +15,7 @@ import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 
 export const depositFnSig =
-  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))';
+  'deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)';
 
 export const strike = parseEther('1200');
 export const protocolFeePercentage = 0.5;
@@ -244,7 +243,6 @@ async function deposit(
       depositSize,
       0,
       parseEther('1'),
-      getEmptyPremiaPermit2(),
     );
 
   return { ...f, tokenId, pKey, depositSize };
@@ -347,9 +345,7 @@ async function _deployAndBuy(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool
-    .connect(f.trader)
-    .trade(tradeSize, true, totalPremium, getEmptyPremiaPermit2());
+  await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
 
   const protocolFees = await f.pool.protocolFees();
 
@@ -403,9 +399,7 @@ async function _deployAndSell(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool
-    .connect(f.trader)
-    .trade(tradeSize, false, totalPremium, getEmptyPremiaPermit2());
+  await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
 
   const protocolFees = await f.pool.protocolFees();
 
