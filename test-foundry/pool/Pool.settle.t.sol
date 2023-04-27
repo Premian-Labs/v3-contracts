@@ -121,10 +121,7 @@ abstract contract PoolSettleTest is DeployTest {
         pool.settle(users.trader);
     }
 
-    function _test_settle_automatic_Sell100Options(
-        bool isCall,
-        bool isITM
-    ) internal {
+    function _test_settleFor_Sell100Options(bool isCall, bool isITM) internal {
         UD60x18 settlementPrice = handleExerciseSettleAuthorization(
             isCall,
             isITM,
@@ -141,7 +138,7 @@ abstract contract PoolSettleTest is DeployTest {
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.settle(users.trader, cost);
+        pool.settleFor(users.trader, cost);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, isITM, trade.size, settlementPrice),
@@ -175,17 +172,15 @@ abstract contract PoolSettleTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
-    function test_settle_automatic_Sell100Options_ITM() public {
-        _test_settle_automatic_Sell100Options(poolKey.isCallPool, true);
+    function test_settleFor_Sell100Options_ITM() public {
+        _test_settleFor_Sell100Options(poolKey.isCallPool, true);
     }
 
-    function test_settle_automatic_Sell100Options_OTM() public {
-        _test_settle_automatic_Sell100Options(poolKey.isCallPool, false);
+    function test_settleFor_Sell100Options_OTM() public {
+        _test_settleFor_Sell100Options(poolKey.isCallPool, false);
     }
 
-    function test_settle_automatic_RevertIf_TotalCostExceedsCollateralValue()
-        public
-    {
+    function test_settleFor_RevertIf_TotalCostExceedsCollateralValue() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -236,16 +231,16 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settle(users.trader, cost);
+        pool.settleFor(users.trader, cost);
     }
 
-    function test_settle_automatic_RevertIf_UnauthorizedAgent() public {
+    function test_settleFor_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.settle(users.trader, 0);
+        pool.settleFor(users.trader, 0);
     }
 
-    function test_settle_automatic_RevertIf_UnauthorizedTxCostAndFee() public {
+    function test_settleFor_RevertIf_UnauthorizedTxCostAndFee() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -270,6 +265,6 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settle(users.trader, cost);
+        pool.settleFor(users.trader, cost);
     }
 }

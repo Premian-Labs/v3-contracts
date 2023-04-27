@@ -1352,7 +1352,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (cost > ZERO) {
             _exerciseValue = _exerciseValue - cost;
             IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
-            emit AutoExercise(msg.sender, cost);
+            emit ExerciseFor(msg.sender, cost);
         }
 
         if (_exerciseValue > ZERO)
@@ -1385,7 +1385,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (cost > ZERO) {
             _collateralValue = _collateralValue - cost;
             IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
-            emit AutoSettle(msg.sender, cost);
+            emit SettleFor(msg.sender, cost);
         }
 
         if (_collateralValue > ZERO) {
@@ -1497,7 +1497,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (cost > ZERO) {
             vars.collateral = vars.collateral - cost;
             IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
-            emit AutoSettlePosition(msg.sender, cost);
+            emit SettlePositionFor(msg.sender, cost);
         }
 
         if (vars.collateral > ZERO) {

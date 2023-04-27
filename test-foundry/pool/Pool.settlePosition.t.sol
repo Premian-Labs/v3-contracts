@@ -22,7 +22,7 @@ struct TradeInternal {
 }
 
 abstract contract PoolSettlePositionTest is DeployTest {
-    function _test_settle_position_trade_Buy100Options(
+    function _test_settlePosition_trade_Buy100Options(
         bool isCall
     ) internal returns (TradeInternal memory trade) {
         posKey.orderType = Position.OrderType.CS;
@@ -51,11 +51,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.stopPrank();
     }
 
-    function _test_settle_position_Buy100Options(
+    function _test_settlePosition_Buy100Options(
         bool isCall,
         bool isITM
     ) internal {
-        TradeInternal memory trade = _test_settle_position_trade_Buy100Options(
+        TradeInternal memory trade = _test_settlePosition_trade_Buy100Options(
             isCall
         );
 
@@ -100,20 +100,20 @@ abstract contract PoolSettlePositionTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), 0);
     }
 
-    function test_settle_position_Buy100Options_ITM() public {
-        _test_settle_position_Buy100Options(poolKey.isCallPool, true);
+    function test_settlePosition_Buy100Options_ITM() public {
+        _test_settlePosition_Buy100Options(poolKey.isCallPool, true);
     }
 
-    function test_settle_position_Buy100Options_OTM() public {
-        _test_settle_position_Buy100Options(poolKey.isCallPool, false);
+    function test_settlePosition_Buy100Options_OTM() public {
+        _test_settlePosition_Buy100Options(poolKey.isCallPool, false);
     }
 
-    function test_settle_position_RevertIf_OptionNotExpired() public {
+    function test_settlePosition_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
         pool.settlePosition(posKey);
     }
 
-    function _test_settle_position_automatic_Buy100Options(
+    function _test_settlePositionFor_Buy100Options(
         bool isCall,
         bool isITM
     ) internal {
@@ -124,7 +124,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             0.1 ether
         );
 
-        TradeInternal memory trade = _test_settle_position_trade_Buy100Options(
+        TradeInternal memory trade = _test_settlePosition_trade_Buy100Options(
             isCall
         );
 
@@ -135,7 +135,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.settlePosition(posKey, cost);
+        pool.settlePositionFor(posKey, cost);
 
         UD60x18 payoff = getExerciseValue(isCall, isITM, ONE, settlementPrice);
         uint256 exerciseValue = scaleDecimals(trade.size * payoff, isCall);
@@ -172,18 +172,15 @@ abstract contract PoolSettlePositionTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), 0);
     }
 
-    function test_settle_position_automatic_Buy100Options_ITM() public {
-        _test_settle_position_automatic_Buy100Options(poolKey.isCallPool, true);
+    function test_settlePositionFor_Buy100Options_ITM() public {
+        _test_settlePositionFor_Buy100Options(poolKey.isCallPool, true);
     }
 
-    function test_settle_position_automatic_Buy100Options_OTM() public {
-        _test_settle_position_automatic_Buy100Options(
-            poolKey.isCallPool,
-            false
-        );
+    function test_settlePositionFor_Buy100Options_OTM() public {
+        _test_settlePositionFor_Buy100Options(poolKey.isCallPool, false);
     }
 
-    function test_settle_position_automatic_RevertIf_TotalCostExceedsExerciseValue()
+    function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue()
         public
     {
         bool isCall = poolKey.isCallPool;
@@ -193,7 +190,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         oracleAdapter.setQuote(quote);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
-        TradeInternal memory trade = _test_settle_position_trade_Buy100Options(
+        TradeInternal memory trade = _test_settlePosition_trade_Buy100Options(
             isCall
         );
 
@@ -233,20 +230,16 @@ abstract contract PoolSettlePositionTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settlePosition(posKey, cost);
+        pool.settlePositionFor(posKey, cost);
     }
 
-    function test_settle_position_automatic_RevertIf_UnauthorizedAgent()
-        public
-    {
+    function test_settlePositionFor_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.settlePosition(posKey, 0);
+        pool.settlePositionFor(posKey, 0);
     }
 
-    function test_settle_position_automatic_RevertIf_UnauthorizedTxCostAndFee()
-        public
-    {
+    function test_settlePositionFor_RevertIf_UnauthorizedTxCostAndFee() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -271,6 +264,6 @@ abstract contract PoolSettlePositionTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settlePosition(posKey, cost);
+        pool.settlePositionFor(posKey, cost);
     }
 }

@@ -243,28 +243,16 @@ contract DeployTest is Test, Assertions {
                 )
             )
         );
-        poolCoreSelectors.push(bytes4(keccak256("exercise(address)")));
-        poolCoreSelectors.push(bytes4(keccak256("exercise(address,uint256)")));
+        poolCoreSelectors.push(poolCoreImpl.exercise.selector);
+        poolCoreSelectors.push(poolCoreImpl.exerciseFor.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
-        poolCoreSelectors.push(bytes4(keccak256("settle(address)")));
-        poolCoreSelectors.push(bytes4(keccak256("settle(address,uint256)")));
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "settlePosition((address,address,uint256,uint256,uint8))"
-                )
-            )
-        );
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "settlePosition((address,address,uint256,uint256,uint8),uint256)"
-                )
-            )
-        );
+        poolCoreSelectors.push(poolCoreImpl.settle.selector);
+        poolCoreSelectors.push(poolCoreImpl.settleFor.selector);
+        poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
+        poolCoreSelectors.push(poolCoreImpl.settlePositionFor.selector);
         poolCoreSelectors.push(poolCoreImpl.swapAndDeposit.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);

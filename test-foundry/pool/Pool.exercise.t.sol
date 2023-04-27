@@ -106,7 +106,7 @@ abstract contract PoolExerciseTest is DeployTest {
         pool.exercise(users.trader);
     }
 
-    function test_exercise_automatic_Buy100Options_ITM() public {
+    function test_exerciseFor_Buy100Options_ITM() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = handleExerciseSettleAuthorization(
@@ -124,7 +124,7 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.exercise(users.trader, cost);
+        pool.exerciseFor(users.trader, cost);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, true, trade.size, settlementPrice),
@@ -158,9 +158,7 @@ abstract contract PoolExerciseTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), trade.size);
     }
 
-    function test_exercise_automatic_RevertIf_TotalCostExceedsExerciseValue()
-        public
-    {
+    function test_exerciseFor_RevertIf_TotalCostExceedsExerciseValue() public {
         bool isCall = poolKey.isCallPool;
 
         handleExerciseSettleAuthorization(
@@ -185,18 +183,16 @@ abstract contract PoolExerciseTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.exercise(users.trader, cost);
+        pool.exerciseFor(users.trader, cost);
     }
 
-    function test_exercise_automatic_RevertIf_UnauthorizedAgent() public {
+    function test_exerciseFor_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.exercise(users.trader, 0);
+        pool.exerciseFor(users.trader, 0);
     }
 
-    function test_exercise_automatic_RevertIf_UnauthorizedTxCostAndFee()
-        public
-    {
+    function test_exerciseFor_RevertIf_UnauthorizedTxCostAndFee() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -221,6 +217,6 @@ abstract contract PoolExerciseTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.exercise(users.trader, cost);
+        pool.exerciseFor(users.trader, cost);
     }
 }

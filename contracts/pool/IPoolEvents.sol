@@ -97,7 +97,7 @@ interface IPoolEvents {
         UD60x18 fee
     );
 
-    event AutoExercise(address indexed agent, UD60x18 cost);
+    event ExerciseFor(address indexed agent, UD60x18 cost);
 
     event Settle(
         address indexed holder,
@@ -107,7 +107,7 @@ interface IPoolEvents {
         UD60x18 fee
     );
 
-    event AutoSettle(address indexed agent, UD60x18 cost);
+    event SettleFor(address indexed agent, UD60x18 cost);
 
     event Annihilate(address indexed owner, UD60x18 contractSize, uint256 fee);
 
@@ -122,7 +122,7 @@ interface IPoolEvents {
         UD60x18 fee
     );
 
-    event AutoSettlePosition(address indexed agent, UD60x18 cost);
+    event SettlePositionFor(address indexed agent, UD60x18 cost);
 
     event TransferPosition(
         address indexed owner,

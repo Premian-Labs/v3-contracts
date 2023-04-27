@@ -290,7 +290,10 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(address holder, uint256 cost) external returns (uint256) {
+    function exerciseFor(
+        address holder,
+        uint256 cost
+    ) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(cost);
@@ -309,7 +312,10 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function settle(address holder, uint256 cost) external returns (uint256) {
+    function settleFor(
+        address holder,
+        uint256 cost
+    ) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(cost);
@@ -329,7 +335,7 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(
+    function settlePositionFor(
         Position.Key memory p,
         uint256 cost
     ) external returns (uint256) {

@@ -191,7 +191,10 @@ interface IPoolCore is IPoolInternal {
     /// @param holder The holder of the contracts
     /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
-    function exercise(address holder, uint256 cost) external returns (uint256);
+    function exerciseFor(
+        address holder,
+        uint256 cost
+    ) external returns (uint256);
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
@@ -203,7 +206,7 @@ interface IPoolCore is IPoolInternal {
     /// @param holder The holder of the contracts
     /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
-    function settle(address holder, uint256 cost) external returns (uint256);
+    function settleFor(address holder, uint256 cost) external returns (uint256);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
@@ -215,7 +218,7 @@ interface IPoolCore is IPoolInternal {
     /// @param p The position key
     /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
-    function settlePosition(
+    function settlePositionFor(
         Position.Key memory p,
         uint256 cost
     ) external returns (uint256);
