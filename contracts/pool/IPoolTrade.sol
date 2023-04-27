@@ -4,12 +4,13 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPoolTrade is IPoolInternal {
+interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @notice Gives a quote for an AMM trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling

@@ -37,6 +37,7 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
@@ -67,6 +68,8 @@ contract DeployTest is Test, Assertions {
     IPoolInternal.QuoteRFQ quoteRFQ;
 
     Users users;
+
+    FlashLoanMock flashLoanMock;
 
     struct Users {
         address lp;
@@ -142,6 +145,8 @@ contract DeployTest is Test, Assertions {
             UD60x18.wrap(0.1 ether),
             feeReceiver
         );
+
+        flashLoanMock = new FlashLoanMock();
 
         factory = PoolFactory(address(factoryProxy));
 
@@ -245,6 +250,9 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQAndSwap.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.swapAndFillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
@@ -302,11 +310,19 @@ contract DeployTest is Test, Assertions {
     function deposit(
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, poolKey.strike, depositSize);
+    }
+
+    function deposit(
+        IPoolMock _pool,
+        UD60x18 strike,
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
         bool isCall = poolKey.isCallPool;
 
         IERC20 token = IERC20(getPoolToken(isCall));
         initialCollateral = scaleDecimals(
-            isCall ? depositSize : depositSize * poolKey.strike,
+            isCall ? depositSize : depositSize * strike,
             isCall
         );
 
@@ -315,10 +331,10 @@ contract DeployTest is Test, Assertions {
         deal(address(token), users.lp, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        pool.deposit(
+        _pool.deposit(
             posKey,
             nearestBelowLower,
             nearestBelowUpper,
@@ -507,6 +523,14 @@ contract DeployTest is Test, Assertions {
     ) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
+    }
+
+    function scaleDecimals(
+        uint256 amount,
+        bool isCall
+    ) internal view returns (UD60x18) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return UD60x18.wrap(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
     function tokenId() internal view returns (uint256) {

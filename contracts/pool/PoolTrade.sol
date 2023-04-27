@@ -10,6 +10,8 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
+import {IERC3156FlashBorrower} from "../interfaces/IERC3156FlashBorrower.sol";
+import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
@@ -17,6 +19,13 @@ import {Position} from "../libraries/Position.sol";
 contract PoolTrade is IPoolTrade, PoolInternal {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
+
+    // ToDo : Define final value
+    // ToDo : Make this part of global pool settings ?
+    UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
+
+    bytes32 constant FLASH_LOAN_CALLBACK_SUCCESS =
+        keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(
         address factory,
@@ -287,5 +296,71 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     ) external view returns (UD60x18) {
         return
             PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function maxFlashLoan(address token) external view returns (uint256) {
+        _ensurePoolToken(token);
+        return IERC20(token).balanceOf(address(this));
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function flashFee(
+        address token,
+        uint256 amount
+    ) external view returns (uint256) {
+        _ensurePoolToken(token);
+        return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
+    }
+
+    function _flashFee(uint256 amount) internal view returns (UD60x18) {
+        return
+            PoolStorage.layout().fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external returns (bool) {
+        _ensurePoolToken(token);
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 startBalance = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(address(receiver), amount);
+
+        UD60x18 fee = _flashFee(amount);
+        uint256 _fee = l.toPoolTokenDecimals(fee);
+
+        if (
+            IERC3156FlashBorrower(receiver).onFlashLoan(
+                msg.sender,
+                token,
+                amount,
+                _fee,
+                data
+            ) != FLASH_LOAN_CALLBACK_SUCCESS
+        ) revert Pool__FlashLoanCallbackFailed();
+
+        uint256 endBalance = IERC20(token).balanceOf(address(this));
+        uint256 endBalanceRequired = startBalance + _fee;
+
+        if (endBalance < endBalanceRequired) revert Pool__FlashLoanNotRepayed();
+
+        emit FlashLoan(
+            msg.sender,
+            address(receiver),
+            l.fromPoolTokenDecimals(amount),
+            fee
+        );
+
+        return true;
+    }
+
+    function _ensurePoolToken(address token) internal view {
+        if (token != PoolStorage.layout().getPoolToken())
+            revert Pool__NotPoolToken(token);
     }
 }
