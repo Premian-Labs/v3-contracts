@@ -14,6 +14,7 @@ import {
   ERC20Router,
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
+  PoolDepositWithdraw__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -86,6 +87,30 @@ export class PoolUtil {
       name: 'PoolCore',
       address: poolCoreImpl.address,
       interface: poolCoreImpl.interface,
+    });
+
+    // PoolDepositWithdraw
+
+    const poolDepositWithdrawFactory = new PoolDepositWithdraw__factory(
+      deployer,
+    );
+    const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
+      poolFactory,
+      router,
+      exchangeHelper,
+      wrappedNativeToken,
+      feeReceiver,
+    );
+    await poolDepositWithdrawImpl.deployed();
+
+    if (log) {
+      console.log(`PoolDepositWithdraw : ${poolDepositWithdrawImpl.address}`);
+    }
+
+    result.push({
+      name: 'PoolDepositWithdraw',
+      address: poolDepositWithdrawImpl.address,
+      interface: poolDepositWithdrawImpl.interface,
     });
 
     // PoolTrade
