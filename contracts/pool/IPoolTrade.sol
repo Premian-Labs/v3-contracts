@@ -32,10 +32,10 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -51,11 +51,11 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndFillQuoteRFQ(
-        IPoolInternal.SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        IPoolInternal.SwapArgs calldata s,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -78,10 +78,10 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @return tokenOutReceived The amount of tokenOut received by the taker (tokenOut decimals)
     function fillQuoteRFQAndSwap(
         IPoolInternal.SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -104,7 +104,7 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -121,11 +121,11 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndTrade(
-        IPoolInternal.SwapArgs memory s,
+        IPoolInternal.SwapArgs calldata s,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -152,7 +152,7 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -174,9 +174,9 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @param size Size to fill from the RFQ quote (18 decimals)
     /// @param sig secp256k1 Signature
     function isQuoteRFQValid(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory sig
+        Signature calldata sig
     ) external view returns (bool, InvalidQuoteRFQError);
 
     /// @notice Returns the size already filled for a given RFQ quote

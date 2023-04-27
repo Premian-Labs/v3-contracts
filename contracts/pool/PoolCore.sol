@@ -88,7 +88,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function claim(
-        Position.Key memory p
+        Position.Key calldata p
     ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _claim(p.toKeyInternal(l.strike, l.isCallPool));
@@ -96,7 +96,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function getClaimableFees(
-        Position.Key memory p
+        Position.Key calldata p
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
@@ -116,7 +116,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address underwriter,
         address longReceiver,
         UD60x18 size,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external nonReentrant {
         return _writeFrom(underwriter, longReceiver, size, permit);
     }
@@ -138,7 +138,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function settlePosition(
-        Position.Key memory p
+        Position.Key calldata p
     ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
@@ -158,7 +158,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function transferPosition(
-        Position.Key memory srcP,
+        Position.Key calldata srcP,
         address newOwner,
         address newOperator,
         UD60x18 size

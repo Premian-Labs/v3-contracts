@@ -49,13 +49,13 @@ interface IPoolCore is IPoolInternal {
     ///         zero.
     /// @param p The position key
     /// @return The amount of claimed fees (poolToken decimals)
-    function claim(Position.Key memory p) external returns (uint256);
+    function claim(Position.Key calldata p) external returns (uint256);
 
     /// @notice Returns total claimable fees for the position
     /// @param p The position key
     /// @return The total claimable fees for the position (poolToken decimals)
     function getClaimableFees(
-        Position.Key memory p
+        Position.Key calldata p
     ) external view returns (uint256);
 
     /// @notice Underwrite an option by depositing collateral
@@ -67,7 +67,7 @@ interface IPoolCore is IPoolInternal {
         address underwriter,
         address longReceiver,
         UD60x18 size,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
@@ -88,7 +88,7 @@ interface IPoolCore is IPoolInternal {
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settlePosition(Position.Key memory p) external returns (uint256);
+    function settlePosition(Position.Key calldata p) external returns (uint256);
 
     /// @notice Get nearest ticks below `lower` and `upper`.
     ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
@@ -110,7 +110,7 @@ interface IPoolCore is IPoolInternal {
     /// @param newOperator The new operator
     /// @param size The size to transfer (18 decimals)
     function transferPosition(
-        Position.Key memory srcP,
+        Position.Key calldata srcP,
         address newOwner,
         address newOperator,
         UD60x18 size

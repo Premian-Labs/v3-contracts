@@ -54,10 +54,10 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolTrade
     function fillQuoteRFQ(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -80,11 +80,11 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolTrade
     function swapAndFillQuoteRFQ(
-        SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        SwapArgs calldata s,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -114,10 +114,10 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolTrade
     function fillQuoteRFQAndSwap(
         SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -165,7 +165,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -188,11 +188,11 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolTrade
     function swapAndTrade(
-        SwapArgs memory s,
+        SwapArgs calldata s,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -225,7 +225,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -281,9 +281,9 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolTrade
     function isQuoteRFQValid(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory sig
+        Signature calldata sig
     ) external view returns (bool, InvalidQuoteRFQError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteRFQHash = _quoteRFQHash(quoteRFQ);
