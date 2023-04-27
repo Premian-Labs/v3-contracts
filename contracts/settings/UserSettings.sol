@@ -19,16 +19,12 @@ contract UserSettings is IUserSettings {
     }
 
     /// @inheritdoc IUserSettings
-    function getAuthorizedTxCostAndFee(
-        address user
-    ) external view returns (uint256) {
-        return UserSettingsStorage.layout().authorizedTxCostAndFee[user];
+    function getAuthorizedCost(address user) external view returns (uint256) {
+        return UserSettingsStorage.layout().authorizedCost[user];
     }
 
     /// @inheritdoc IUserSettings
-    function setAuthorizedTxCostAndFee(uint256 amount) external {
-        UserSettingsStorage.layout().authorizedTxCostAndFee[
-            msg.sender
-        ] = amount;
+    function setAuthorizedCost(uint256 amount) external {
+        UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
     }
 }

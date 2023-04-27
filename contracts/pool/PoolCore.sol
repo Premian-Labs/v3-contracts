@@ -286,85 +286,63 @@ contract PoolCore is IPoolCore, PoolInternal {
 
     /// @inheritdoc IPoolCore
     function exercise(address holder) external returns (uint256) {
-        return _exercise(holder, ZERO, ZERO);
+        return _exercise(holder, ZERO);
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(
-        address holder,
-        uint256 txCost,
-        uint256 fee
-    ) external returns (uint256) {
+    function exercise(address holder, uint256 cost) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
-        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
         if (holder != msg.sender) {
             _ensureAuthorizedAgent(holder, msg.sender);
-            _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+            _ensureAuthorizedCost(holder, _cost);
         }
 
-        return _exercise(holder, _txCost, _fee);
+        return _exercise(holder, _cost);
     }
 
     /// @inheritdoc IPoolCore
     function settle(address holder) external returns (uint256) {
-        return _settle(holder, ZERO, ZERO);
+        return _settle(holder, ZERO);
     }
 
     /// @inheritdoc IPoolCore
-    function settle(
-        address holder,
-        uint256 txCost,
-        uint256 fee
-    ) external returns (uint256) {
+    function settle(address holder, uint256 cost) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
-        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
         if (holder != msg.sender) {
             _ensureAuthorizedAgent(holder, msg.sender);
-            _ensureAuthorizedTxCostAndFee(holder, _txCost + _fee);
+            _ensureAuthorizedCost(holder, _cost);
         }
 
-        return _settle(holder, _txCost, _fee);
+        return _settle(holder, _cost);
     }
 
     /// @inheritdoc IPoolCore
     function settlePosition(Position.Key memory p) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return
-            _settlePosition(
-                p.toKeyInternal(l.strike, l.isCallPool),
-                ZERO,
-                ZERO
-            );
+        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
     }
 
     /// @inheritdoc IPoolCore
     function settlePosition(
         Position.Key memory p,
-        uint256 txCost,
-        uint256 fee
+        uint256 cost
     ) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _txCost = l.fromPoolTokenDecimals(txCost);
-        UD60x18 _fee = l.fromPoolTokenDecimals(fee);
+        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
         if (p.operator != msg.sender) {
             _ensureAuthorizedAgent(p.operator, msg.sender);
-            _ensureAuthorizedTxCostAndFee(p.operator, _txCost + _fee);
+            _ensureAuthorizedCost(p.operator, _cost);
         }
 
-        return
-            _settlePosition(
-                p.toKeyInternal(l.strike, l.isCallPool),
-                _txCost,
-                _fee
-            );
+        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), _cost);
     }
 
     /// @inheritdoc IPoolCore

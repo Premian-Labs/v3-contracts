@@ -244,17 +244,13 @@ contract DeployTest is Test, Assertions {
             )
         );
         poolCoreSelectors.push(bytes4(keccak256("exercise(address)")));
-        poolCoreSelectors.push(
-            bytes4(keccak256("exercise(address,uint256,uint256)"))
-        );
+        poolCoreSelectors.push(bytes4(keccak256("exercise(address,uint256)")));
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(bytes4(keccak256("settle(address)")));
-        poolCoreSelectors.push(
-            bytes4(keccak256("settle(address,uint256,uint256)"))
-        );
+        poolCoreSelectors.push(bytes4(keccak256("settle(address,uint256)")));
         poolCoreSelectors.push(
             bytes4(
                 keccak256(
@@ -265,7 +261,7 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(
             bytes4(
                 keccak256(
-                    "settlePosition((address,address,uint256,uint256,uint8),uint256,uint256)"
+                    "settlePosition((address,address,uint256,uint256,uint8),uint256)"
                 )
             )
         );
@@ -614,7 +610,7 @@ contract DeployTest is Test, Assertions {
         bool isCall,
         bool isITM,
         address user,
-        uint256 authorizedTxCostAndFee
+        uint256 authorizedCost
     ) internal returns (UD60x18 settlementPrice) {
         settlementPrice = getSettlementPrice(isCall, isITM);
         oracleAdapter.setQuote(settlementPrice.inv());
@@ -626,7 +622,7 @@ contract DeployTest is Test, Assertions {
         agents[0] = users.agent;
 
         userSettings.setAuthorizedAgents(agents);
-        userSettings.setAuthorizedTxCostAndFee(authorizedTxCostAndFee);
+        userSettings.setAuthorizedCost(authorizedCost);
 
         vm.stopPrank();
     }

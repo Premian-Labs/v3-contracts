@@ -1328,12 +1328,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (18 decimals)
-    /// @param fee The fee charged by the authorized agent (18 decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     function _exercise(
         address holder,
-        UD60x18 txCost,
-        UD60x18 fee
+        UD60x18 cost
     ) internal returns (uint256 exerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1345,21 +1343,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        UD60x18 totalCost = txCost + fee;
-
-        if (totalCost > _exerciseValue)
-            revert Pool__TotalCostExceedsExerciseValue(
-                totalCost,
-                _exerciseValue
-            );
+        if (cost > _exerciseValue)
+            revert Pool__CostExceedsPayout(cost, _exerciseValue);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
         emit Exercise(holder, size, _exerciseValue, l.settlementPrice, ZERO);
 
-        if (totalCost > ZERO) {
-            _exerciseValue = _exerciseValue - totalCost;
-            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
-            emit AutoExercise(msg.sender, txCost, fee);
+        if (cost > ZERO) {
+            _exerciseValue = _exerciseValue - cost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
+            emit AutoExercise(msg.sender, cost);
         }
 
         if (_exerciseValue > ZERO)
@@ -1368,12 +1361,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (18 decimals)
-    /// @param fee The fee charged by the authorized agent (18 decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     function _settle(
         address holder,
-        UD60x18 txCost,
-        UD60x18 fee
+        UD60x18 cost
     ) internal returns (uint256 collateralValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1385,21 +1376,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        UD60x18 totalCost = txCost + fee;
-
-        if (totalCost > _collateralValue)
-            revert Pool__TotalCostExceedsCollateralValue(
-                totalCost,
-                _collateralValue
-            );
+        if (cost > _collateralValue)
+            revert Pool__CostExceedsPayout(cost, _collateralValue);
 
         collateralValue = l.toPoolTokenDecimals(_collateralValue);
         emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
-        if (totalCost > ZERO) {
-            _collateralValue = _collateralValue - totalCost;
-            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
-            emit AutoSettle(msg.sender, txCost, fee);
+        if (cost > ZERO) {
+            _collateralValue = _collateralValue - cost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
+            emit AutoSettle(msg.sender, cost);
         }
 
         if (_collateralValue > ZERO) {
@@ -1409,12 +1395,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @param txCost The estimated transaction cost (18 decimals)
-    /// @param fee The fee charged by the authorized agent (18 decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     function _settlePosition(
         Position.KeyInternal memory p,
-        UD60x18 txCost,
-        UD60x18 fee
+        UD60x18 cost
     ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
@@ -1494,13 +1478,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        UD60x18 totalCost = txCost + fee;
-
-        if (totalCost > vars.collateral)
-            revert Pool__TotalCostExceedsCollateralValue(
-                totalCost,
-                vars.collateral
-            );
+        if (cost > vars.collateral)
+            revert Pool__CostExceedsPayout(cost, vars.collateral);
 
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
@@ -1515,10 +1494,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ZERO
         );
 
-        if (totalCost > ZERO) {
-            vars.collateral = vars.collateral - totalCost;
-            IERC20(l.getPoolToken()).safeTransfer(msg.sender, totalCost);
-            emit AutoSettle(msg.sender, txCost, fee);
+        if (cost > ZERO) {
+            vars.collateral = vars.collateral - cost;
+            IERC20(l.getPoolToken()).safeTransfer(msg.sender, cost);
+            emit AutoSettlePosition(msg.sender, cost);
         }
 
         if (vars.collateral > ZERO) {
@@ -2443,10 +2422,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (!agentIsAuthorized) revert Pool__UnauthorizedAgent();
     }
 
-    function _ensureAuthorizedTxCostAndFee(
-        address holder,
-        UD60x18 totalCost
-    ) internal view {
+    function _ensureAuthorizedCost(address holder, UD60x18 cost) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         address poolToken = l.getPoolToken();
@@ -2458,16 +2434,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 poolToken
             );
 
-        UD60x18 totalCostInWrappedNative = (totalCost * wrappedNativeQuote);
+        UD60x18 costInWrappedNative = (cost * wrappedNativeQuote);
 
-        UD60x18 authorizedTxCostAndFee = UD60x18.wrap(
-            IUserSettings(SETTINGS).getAuthorizedTxCostAndFee(holder)
+        UD60x18 authorizedCost = UD60x18.wrap(
+            IUserSettings(SETTINGS).getAuthorizedCost(holder)
         );
 
-        if (totalCostInWrappedNative > authorizedTxCostAndFee)
-            revert Pool__UnauthorizedTxCostAndFee(
-                totalCostInWrappedNative,
-                authorizedTxCostAndFee
-            );
+        if (costInWrappedNative > authorizedCost)
+            revert Pool__UnauthorizedCost(costInWrappedNative, authorizedCost);
     }
 }

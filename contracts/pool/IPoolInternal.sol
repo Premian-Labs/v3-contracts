@@ -16,6 +16,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 minimum,
         uint256 maximum
     );
+    error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientLiquidity();
@@ -57,22 +58,14 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 quoteRFQSize
     );
     error Pool__UnauthorizedAgent();
-    error Pool__UnauthorizedTxCostAndFee(
-        UD60x18 totalCostInWrappedNative,
-        UD60x18 authorizedTxCostAndFee
+    error Pool__UnauthorizedCost(
+        UD60x18 costInWrappedNative,
+        UD60x18 authorizedCost
     );
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
     error Pool__TickWidthInvalid(UD60x18 price);
-    error Pool__TotalCostExceedsCollateralValue(
-        UD60x18 totalCost,
-        UD60x18 collateralValue
-    );
-    error Pool__TotalCostExceedsExerciseValue(
-        UD60x18 totalCost,
-        UD60x18 exerciseValue
-    );
     error Pool__WithdrawalDelayNotElapsed(uint256 unlockTime);
     error Pool__ZeroSize();
 

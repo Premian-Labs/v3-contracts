@@ -136,14 +136,12 @@ abstract contract PoolSettleTest is DeployTest {
 
         uint256 protocolFees = pool.protocolFees();
 
-        uint256 txCost = scaleDecimals(UD60x18.wrap(0.09 ether), isCall);
-        uint256 fee = scaleDecimals(UD60x18.wrap(0.01 ether), isCall);
-        uint256 totalCost = txCost + fee;
+        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.settle(users.trader, txCost, fee);
+        pool.settle(users.trader, cost);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, isITM, trade.size, settlementPrice),
@@ -152,13 +150,10 @@ abstract contract PoolSettleTest is DeployTest {
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
-            trade.traderCollateral +
-                trade.totalPremium -
-                exerciseValue -
-                totalCost
+            trade.traderCollateral + trade.totalPremium - exerciseValue - cost
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), totalCost);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
@@ -213,9 +208,7 @@ abstract contract PoolSettleTest is DeployTest {
             exerciseValue
         );
 
-        uint256 txCost = collateral.unwrap();
-        uint256 fee = 1 wei;
-        uint256 totalCost = txCost + fee;
+        uint256 cost = collateral.unwrap() + 1 wei;
 
         address[] memory agents = new address[](1);
         agents[0] = users.agent;
@@ -224,11 +217,10 @@ abstract contract PoolSettleTest is DeployTest {
         userSettings.setAuthorizedAgents(agents);
 
         // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedTxCostAndFee(
+        userSettings.setAuthorizedCost(
             isCall
-                ? totalCost
-                : (UD60x18.wrap(scaleDecimalsTo(totalCost, isCall)) * quote)
-                    .unwrap()
+                ? cost
+                : (UD60x18.wrap(scaleDecimalsTo(cost, isCall)) * quote).unwrap()
         );
 
         vm.stopPrank();
@@ -237,20 +229,20 @@ abstract contract PoolSettleTest is DeployTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__TotalCostExceedsCollateralValue.selector,
-                scaleDecimalsTo(totalCost, isCall),
+                IPoolInternal.Pool__CostExceedsPayout.selector,
+                scaleDecimalsTo(cost, isCall),
                 collateral.unwrap()
             )
         );
 
         vm.prank(users.agent);
-        pool.settle(users.trader, txCost, fee);
+        pool.settle(users.trader, cost);
     }
 
     function test_settle_automatic_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.settle(users.trader, 0, 0);
+        pool.settle(users.trader, 0);
     }
 
     function test_settle_automatic_RevertIf_UnauthorizedTxCostAndFee() public {
@@ -266,21 +258,18 @@ abstract contract PoolSettleTest is DeployTest {
         vm.prank(users.trader);
         userSettings.setAuthorizedAgents(agents);
 
-        UD60x18 _txCost = UD60x18.wrap(0.09 ether);
-        UD60x18 _fee = UD60x18.wrap(0.01 ether);
-
-        uint256 txCost = scaleDecimals(_txCost, isCall);
-        uint256 fee = scaleDecimals(_fee, isCall);
+        UD60x18 _cost = UD60x18.wrap(0.1 ether);
+        uint256 cost = scaleDecimals(_cost, isCall);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__UnauthorizedTxCostAndFee.selector,
-                ((_txCost + _fee) * quote).unwrap(),
+                IPoolInternal.Pool__UnauthorizedCost.selector,
+                (_cost * quote).unwrap(),
                 0
             )
         );
 
         vm.prank(users.agent);
-        pool.settle(users.trader, txCost, fee);
+        pool.settle(users.trader, cost);
     }
 }

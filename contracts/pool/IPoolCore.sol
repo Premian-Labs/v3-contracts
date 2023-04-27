@@ -186,49 +186,38 @@ interface IPoolCore is IPoolInternal {
     /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
     function exercise(address holder) external returns (uint256);
 
-    /// @notice Exercises all long options held by an `owner`, caller is reimbursed with txCost + fee deducted from the proceeds of the
+    /// @notice Exercises all long options held by an `owner`, caller is reimbursed with the cost deducted from the proceeds of the
     ///         exercised options. Only authorized agents may execute this function on behalf of the option holder.
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The fee charged by the authorized agent (poolToken decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
-    function exercise(
-        address holder,
-        uint256 txCost,
-        uint256 fee
-    ) external returns (uint256);
+    function exercise(address holder, uint256 cost) external returns (uint256);
 
     /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
     /// @param holder The holder of the contracts
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
     function settle(address holder) external returns (uint256);
 
-    /// @notice Settles all short options held by an `owner`, caller is reimbursed with txCost + fee deducted from the proceeds of the
+    /// @notice Settles all short options held by an `owner`, caller is reimbursed with the cost deducted from the proceeds of the
     ///         settled options. Only authorized agents may execute this function on behalf of the option holder.
     /// @param holder The holder of the contracts
-    /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The fee charged by the authorized agent (poolToken decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
-    function settle(
-        address holder,
-        uint256 txCost,
-        uint256 fee
-    ) external returns (uint256);
+    function settle(address holder, uint256 cost) external returns (uint256);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @return The amount of collateral left after settlement (poolToken decimals)
     function settlePosition(Position.Key memory p) external returns (uint256);
 
-    /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
+    /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration. Caller is reimbursed with the cost deducted
+    ///         from the proceeds of the settled position. Only authorized agents may execute this function on behalf of the option holder.
     /// @param p The position key
-    /// @param txCost The estimated transaction cost (poolToken decimals)
-    /// @param fee The fee charged by the authorized agent (poolToken decimals)
+    /// @param cost The cost charged by the authorized agent (18 decimals)
     /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
     function settlePosition(
         Position.Key memory p,
-        uint256 txCost,
-        uint256 fee
+        uint256 cost
     ) external returns (uint256);
 
     /// @notice Get nearest ticks below `lower` and `upper`.

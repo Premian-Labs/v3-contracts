@@ -119,15 +119,12 @@ abstract contract PoolExerciseTest is DeployTest {
         TradeInternal memory trade = _test_exercise_trade_Buy100Options(isCall);
 
         uint256 protocolFees = pool.protocolFees();
-
-        uint256 txCost = scaleDecimals(UD60x18.wrap(0.09 ether), isCall);
-        uint256 fee = scaleDecimals(UD60x18.wrap(0.01 ether), isCall);
-        uint256 totalCost = txCost + fee;
+        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.exercise(users.trader, txCost, fee);
+        pool.exercise(users.trader, cost);
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, true, trade.size, settlementPrice),
@@ -136,10 +133,10 @@ abstract contract PoolExerciseTest is DeployTest {
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
-            exerciseValue - totalCost
+            exerciseValue - cost
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), totalCost);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
@@ -175,28 +172,26 @@ abstract contract PoolExerciseTest is DeployTest {
 
         _test_exercise_trade_Buy100Options(isCall);
 
-        uint256 txCost = scaleDecimals(UD60x18.wrap(0.09 ether), isCall);
-        uint256 fee = scaleDecimals(UD60x18.wrap(0.01 ether), isCall);
-        uint256 totalCost = txCost + fee;
+        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__TotalCostExceedsExerciseValue.selector,
-                scaleDecimalsTo(totalCost, isCall),
+                IPoolInternal.Pool__CostExceedsPayout.selector,
+                scaleDecimalsTo(cost, isCall),
                 0
             )
         );
 
         vm.prank(users.agent);
-        pool.exercise(users.trader, txCost, fee);
+        pool.exercise(users.trader, cost);
     }
 
     function test_exercise_automatic_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.exercise(users.trader, 0, 0);
+        pool.exercise(users.trader, 0);
     }
 
     function test_exercise_automatic_RevertIf_UnauthorizedTxCostAndFee()
@@ -214,21 +209,18 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.prank(users.trader);
         userSettings.setAuthorizedAgents(agents);
 
-        UD60x18 _txCost = UD60x18.wrap(0.09 ether);
-        UD60x18 _fee = UD60x18.wrap(0.01 ether);
-
-        uint256 txCost = scaleDecimals(_txCost, isCall);
-        uint256 fee = scaleDecimals(_fee, isCall);
+        UD60x18 _cost = UD60x18.wrap(0.1 ether);
+        uint256 cost = scaleDecimals(_cost, isCall);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__UnauthorizedTxCostAndFee.selector,
-                ((_txCost + _fee) * quote).unwrap(),
+                IPoolInternal.Pool__UnauthorizedCost.selector,
+                (_cost * quote).unwrap(),
                 0
             )
         );
 
         vm.prank(users.agent);
-        pool.exercise(users.trader, txCost, fee);
+        pool.exercise(users.trader, cost);
     }
 }

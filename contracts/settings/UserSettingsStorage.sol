@@ -8,7 +8,7 @@ library UserSettingsStorage {
 
     struct Layout {
         mapping(address => address[]) authorizedAgents;
-        mapping(address => uint256) authorizedTxCostAndFee;
+        mapping(address => uint256) authorizedCost;
     }
 
     function layout() internal pure returns (Layout storage l) {

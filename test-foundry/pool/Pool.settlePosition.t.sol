@@ -130,14 +130,12 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         uint256 protocolFees = pool.protocolFees();
 
-        uint256 txCost = scaleDecimals(UD60x18.wrap(0.09 ether), isCall);
-        uint256 fee = scaleDecimals(UD60x18.wrap(0.01 ether), isCall);
-        uint256 totalCost = txCost + fee;
+        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.settlePosition(posKey, txCost, fee);
+        pool.settlePosition(posKey, cost);
 
         UD60x18 payoff = getExerciseValue(isCall, isITM, ONE, settlementPrice);
         uint256 exerciseValue = scaleDecimals(trade.size * payoff, isCall);
@@ -149,7 +147,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             exerciseValue
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), totalCost);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
@@ -157,7 +155,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
                 trade.totalPremium -
                 exerciseValue -
                 protocolFees -
-                totalCost
+                cost
         );
 
         assertEq(
@@ -206,9 +204,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             scaleDecimals(trade.size * payoff, isCall) -
             pool.protocolFees();
 
-        uint256 txCost = collateral;
-        uint256 fee = 1 wei;
-        uint256 totalCost = txCost + fee;
+        uint256 cost = collateral + 1 wei;
 
         address[] memory agents = new address[](1);
         agents[0] = users.agent;
@@ -218,11 +214,10 @@ abstract contract PoolSettlePositionTest is DeployTest {
         userSettings.setAuthorizedAgents(agents);
 
         // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedTxCostAndFee(
+        userSettings.setAuthorizedCost(
             isCall
-                ? totalCost
-                : (UD60x18.wrap(scaleDecimalsTo(totalCost, isCall)) * quote)
-                    .unwrap()
+                ? cost
+                : (UD60x18.wrap(scaleDecimalsTo(cost, isCall)) * quote).unwrap()
         );
 
         vm.stopPrank();
@@ -231,14 +226,14 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__TotalCostExceedsCollateralValue.selector,
-                scaleDecimalsTo(totalCost, isCall),
+                IPoolInternal.Pool__CostExceedsPayout.selector,
+                scaleDecimalsTo(cost, isCall),
                 scaleDecimalsTo(collateral, isCall)
             )
         );
 
         vm.prank(users.agent);
-        pool.settlePosition(posKey, txCost, fee);
+        pool.settlePosition(posKey, cost);
     }
 
     function test_settle_position_automatic_RevertIf_UnauthorizedAgent()
@@ -246,7 +241,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
     {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.settlePosition(posKey, 0, 0);
+        pool.settlePosition(posKey, 0);
     }
 
     function test_settle_position_automatic_RevertIf_UnauthorizedTxCostAndFee()
@@ -264,21 +259,18 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.prank(posKey.operator);
         userSettings.setAuthorizedAgents(agents);
 
-        UD60x18 _txCost = UD60x18.wrap(0.09 ether);
-        UD60x18 _fee = UD60x18.wrap(0.01 ether);
-
-        uint256 txCost = scaleDecimals(_txCost, isCall);
-        uint256 fee = scaleDecimals(_fee, isCall);
+        UD60x18 _cost = UD60x18.wrap(0.1 ether);
+        uint256 cost = scaleDecimals(_cost, isCall);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__UnauthorizedTxCostAndFee.selector,
-                ((_txCost + _fee) * quote).unwrap(),
+                IPoolInternal.Pool__UnauthorizedCost.selector,
+                (_cost * quote).unwrap(),
                 0
             )
         );
 
         vm.prank(users.agent);
-        pool.settlePosition(posKey, txCost, fee);
+        pool.settlePosition(posKey, cost);
     }
 }
