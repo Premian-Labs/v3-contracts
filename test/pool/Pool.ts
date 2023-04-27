@@ -27,9 +27,8 @@ import {
 } from './Pool.fixture';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber, ethers } from 'ethers';
+import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { PermitTransferFrom } from '@uniswap/permit2-sdk';
 
 describe('Pool', () => {
   describe('__internal', function () {
