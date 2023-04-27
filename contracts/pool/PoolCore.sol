@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -16,7 +17,7 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
 
-contract PoolCore is IPoolCore, PoolInternal {
+contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using SafeERC20 for IERC20;
@@ -86,7 +87,9 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function claim(Position.Key memory p) external returns (uint256) {
+    function claim(
+        Position.Key memory p
+    ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _claim(p.toKeyInternal(l.strike, l.isCallPool));
     }
@@ -117,7 +120,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external payable returns (Position.Delta memory delta) {
+    ) external payable nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -147,7 +150,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit,
         bool isBidIfStrandedMarketPrice
-    ) external payable returns (Position.Delta memory delta) {
+    ) external payable nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -178,7 +181,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice,
         Permit2.Data memory permit
-    ) external payable returns (Position.Delta memory delta) {
+    ) external payable nonReentrant returns (Position.Delta memory delta) {
         _ensureOperator(p.operator);
         _ensureValidSwapTokenOut(s.tokenOut);
 
@@ -208,7 +211,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 size,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
-    ) external returns (Position.Delta memory delta) {
+    ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(p.operator);
@@ -231,6 +234,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         UD60x18 maxMarketPrice
     )
         external
+        nonReentrant
         returns (
             Position.Delta memory delta,
             uint256 collateralReceived,
@@ -273,27 +277,29 @@ contract PoolCore is IPoolCore, PoolInternal {
         address longReceiver,
         UD60x18 size,
         Permit2.Data memory permit
-    ) external {
+    ) external nonReentrant {
         return _writeFrom(underwriter, longReceiver, size, permit);
     }
 
     /// @inheritdoc IPoolCore
-    function annihilate(UD60x18 size) external {
+    function annihilate(UD60x18 size) external nonReentrant {
         _annihilate(msg.sender, size);
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(address holder) external returns (uint256) {
+    function exercise(address holder) external nonReentrant returns (uint256) {
         return _exercise(holder);
     }
 
     /// @inheritdoc IPoolCore
-    function settle(address holder) external returns (uint256) {
+    function settle(address holder) external nonReentrant returns (uint256) {
         return _settle(holder);
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(Position.Key memory p) external returns (uint256) {
+    function settlePosition(
+        Position.Key memory p
+    ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
     }
@@ -315,7 +321,7 @@ contract PoolCore is IPoolCore, PoolInternal {
         address newOwner,
         address newOperator,
         UD60x18 size
-    ) external {
+    ) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         _ensureOperator(srcP.operator);

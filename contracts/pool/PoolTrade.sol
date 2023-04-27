@@ -2,6 +2,7 @@
 pragma solidity >=0.8.19;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -16,7 +17,7 @@ import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
-contract PoolTrade is IPoolTrade, PoolInternal {
+contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
@@ -60,6 +61,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (uint256 premiumTaker, Position.Delta memory delta)
     {
         return
@@ -86,6 +88,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -118,6 +121,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -165,6 +169,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (uint256 totalPremium, Position.Delta memory delta)
     {
         return
@@ -191,6 +196,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -223,6 +229,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -262,7 +269,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     }
 
     /// @inheritdoc IPoolTrade
-    function cancelQuotesRFQ(bytes32[] calldata hashes) external {
+    function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
             l.quoteRFQAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
@@ -324,7 +331,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         address token,
         uint256 amount,
         bytes calldata data
-    ) external returns (bool) {
+    ) external nonReentrant returns (bool) {
         _ensurePoolToken(token);
         PoolStorage.Layout storage l = PoolStorage.layout();
 
