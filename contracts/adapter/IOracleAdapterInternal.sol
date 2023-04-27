@@ -4,10 +4,10 @@ pragma solidity >=0.8.19;
 
 interface IOracleAdapterInternal {
     /// @notice Thrown when attempting to increase array size
-    error OracleAdapter__ArrayCannotExpand();
+    error OracleAdapter__ArrayCannotExpand(uint256 arrayLength, uint256 size);
 
     /// @notice Thrown when the target is zero or before the current block timestamp
-    error OracleAdapter__InvalidTarget();
+    error OracleAdapter__InvalidTarget(uint256 target, uint256 blockTimestamp);
 
     /// @notice Thrown when the price is non-positive
     error OracleAdapter__InvalidPrice(int256 price);

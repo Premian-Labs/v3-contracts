@@ -17,7 +17,6 @@ import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
 /// @title An implementation of IOracleAdapter that uses Uniswap feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
-/// @dev derived from https://github.com/Mean-Finance/oracles and https://github.com/Mean-Finance/uniswap-v3-oracle
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
@@ -62,7 +61,7 @@ contract UniswapV3Adapter is
 
         address[] memory poolsToSupport = new address[](pools.length);
 
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             address pool = pools[i];
             _tryIncreaseCardinality(pool, l.targetCardinality);
             poolsToSupport[i] = pool;
@@ -73,6 +72,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IOracleAdapter
+    /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
     function quote(
         address tokenIn,
         address tokenOut
@@ -81,6 +81,7 @@ contract UniswapV3Adapter is
     }
 
     /// @inheritdoc IOracleAdapter
+    /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
     function quoteFrom(
         address tokenIn,
         address tokenOut,
@@ -228,7 +229,7 @@ contract UniswapV3Adapter is
         uint24[] storage feeTiers = UniswapV3AdapterStorage.layout().feeTiers;
         uint256 feeTiersLength = feeTiers.length;
 
-        for (uint256 i; i < feeTiersLength; i++) {
+        for (uint256 i = 0; i < feeTiersLength; i++) {
             if (feeTiers[i] == feeTier)
                 revert UniswapV3Adapter__FeeTierExists(feeTier);
         }

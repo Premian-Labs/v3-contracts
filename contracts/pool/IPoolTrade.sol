@@ -4,13 +4,13 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IFlashLoanCallback} from "./IFlashLoanCallback.sol";
+import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPoolTrade is IPoolInternal {
+interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @notice Gives a quote for an AMM trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
@@ -162,12 +162,6 @@ interface IPoolTrade is IPoolInternal {
             uint256 collateralReceived,
             uint256 tokenOutReceived
         );
-
-    /// @notice Flash loan collaterals sitting in this contract
-    ///         Loaned amount + fee must be repaid by the end of the transaction for the transaction to not be reverted
-    /// @param amount Amount to flashLoan
-    /// @param data Data to pass to the callback
-    function flashLoan(uint256 amount, bytes calldata data) external;
 
     /// @notice Cancel given RFQ quotes
     /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,

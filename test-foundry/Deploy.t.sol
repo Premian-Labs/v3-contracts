@@ -251,6 +251,8 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQAndSwap.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.swapAndFillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);

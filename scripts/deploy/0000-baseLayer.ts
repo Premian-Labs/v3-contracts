@@ -3,11 +3,13 @@ import {
   ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { goerliFeeds } from '../../utils/addresses';
+import { goerliFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { ChainID } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -20,15 +22,17 @@ async function main() {
   let feeReceiver: string;
   let chainlinkAdapter: string;
 
-  if (chainId === 42161) {
-    // Arbitrum addresses
+  if (chainId === ChainID.Arbitrum) {
     weth = arbitrumAddresses.tokens.WETH;
     wbtc = arbitrumAddresses.tokens.WBTC;
-    feeReceiver = '';
-  } else if (chainId === 5) {
-    // Goerli addresses
+    feeReceiver = ''; // ToDo : Set fee receiver
+  } else if (chainId === ChainID.Goerli) {
     weth = goerliAddresses.tokens.WETH;
     wbtc = goerliAddresses.tokens.WBTC;
+    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+  } else if (chainId == ChainID.ArbitrumGoerli) {
+    weth = arbitrumGoerliAddresses.tokens.WETH;
+    wbtc = arbitrumGoerliAddresses.tokens.WBTC;
     feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
   } else {
     throw new Error('ChainId not implemented');
@@ -51,12 +55,17 @@ async function main() {
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
 
-  if (chainId === 5) {
+  if (chainId === ChainID.Goerli) {
     // Goerli
     await ChainlinkAdapter__factory.connect(
       chainlinkAdapter,
       deployer,
     ).batchRegisterFeedMappings(goerliFeeds);
+  } else if (chainId == ChainID.ArbitrumGoerli) {
+    await ChainlinkAdapter__factory.connect(
+      chainlinkAdapter,
+      deployer,
+    ).batchRegisterFeedMappings(arbitrumGoerliFeeds);
   } else {
     throw new Error('ChainId not implemented');
   }
