@@ -2,19 +2,18 @@
 
 pragma solidity >=0.8.19;
 
-import {ERC20MetadataInternal} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataInternal.sol";
+import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
-contract PremiaStakingProxyMock is
-    ProxyUpgradeableOwnable,
-    ERC20MetadataInternal
-{
+contract PremiaStakingProxyMock is ProxyUpgradeableOwnable {
     constructor(
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {
-        _setName("Staked Premia");
-        _setSymbol("xPREMIA");
-        _setDecimals(18);
+        ERC20MetadataStorage.Layout storage l = ERC20MetadataStorage.layout();
+
+        l.name = "Staked Premia";
+        l.symbol = "vxPREMIA";
+        l.decimals = 18;
     }
 }

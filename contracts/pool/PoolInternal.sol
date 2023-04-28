@@ -18,6 +18,7 @@ import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IUserSettings} from "../settings/IUserSettings.sol";
+import {IVxPremia} from "../staking/IVxPremia.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -54,6 +55,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
     address internal immutable SETTINGS;
+    address internal immutable VXPREMIA;
 
     // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
@@ -75,7 +77,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
-        address settings
+        address settings,
+        address vxPremia
     ) {
         FACTORY = factory;
         ROUTER = router;
@@ -83,15 +86,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
         SETTINGS = settings;
+        VXPREMIA = vxPremia;
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
     /// @return The taker fee for an option trade denormalized (18 decimals)
     function _takerFee(
         PoolStorage.Layout storage l,
+        address taker,
         UD60x18 size,
         UD60x18 premium,
         bool isPremiumNormalized
@@ -110,21 +116,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
+        UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
+        uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
 
-        return
-            Position.contractsToCollateral(
-                PRBMathExtra.max(premiumFee, notionalFee),
-                strike,
-                isCallPool
-            );
+        if (discount > 0) {
+            fee = fee - fee * UD60x18.wrap(discount);
+        }
+
+        return Position.contractsToCollateral(fee, strike, isCallPool);
     }
 
     /// @notice Gives a quote for a trade
+    /// @param taker The taker of the trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @return totalNetPremium The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
     /// @return totalTakerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function _getQuoteAMM(
+        address taker,
         UD60x18 size,
         bool isBuy
     ) internal view returns (uint256 totalNetPremium, uint256 totalTakerFee) {
@@ -141,22 +150,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isBuy
         );
 
-        UD60x18 liquidity = pricing.liquidity();
-        UD60x18 maxSize = pricing.maxTradeSize();
-
-        UD60x18 totalPremium;
-        UD60x18 _totalTakerFee;
+        QuoteAMMVarsInternal memory vars;
+        vars.liquidity = pricing.liquidity();
+        vars.maxSize = pricing.maxTradeSize();
 
         while (size > ZERO) {
-            UD60x18 tradeSize = PRBMathExtra.min(size, maxSize);
+            UD60x18 tradeSize = PRBMathExtra.min(size, vars.maxSize);
 
             UD60x18 nextPrice;
             // Compute next price
-            if (liquidity == ZERO) {
+            if (vars.liquidity == ZERO) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
                 UD60x18 priceDelta = ((pricing.upper - pricing.lower) *
-                    tradeSize) / liquidity;
+                    tradeSize) / vars.liquidity;
 
                 nextPrice = isBuy
                     ? pricing.marketPrice + priceDelta
@@ -166,7 +173,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (tradeSize > ZERO) {
                 UD60x18 premium = pricing.marketPrice.avg(nextPrice) *
                     tradeSize;
-                UD60x18 takerFee = _takerFee(l, size, premium, true);
+
+                UD60x18 takerFee = _takerFee(l, taker, size, premium, true);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(
@@ -175,17 +183,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.isCallPool
                 );
 
-                _totalTakerFee = _totalTakerFee + takerFee;
-                totalPremium = totalPremium + premium;
+                vars.totalTakerFee = vars.totalTakerFee + takerFee;
+                vars.totalPremium = vars.totalPremium + premium;
             }
 
             pricing.marketPrice = nextPrice;
 
-            if (maxSize >= size) {
+            if (vars.maxSize >= size) {
                 size = ZERO;
             } else {
                 // Cross tick
-                size = size - maxSize;
+                size = size - vars.maxSize;
 
                 // Adjust liquidity rate
                 pricing.liquidityRate = pricing.liquidityRate.add(
@@ -201,18 +209,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 if (pricing.upper == ZERO) revert Pool__InsufficientLiquidity();
 
                 // Compute new liquidity
-                liquidity = pricing.liquidity();
-                maxSize = pricing.maxTradeSize();
+                vars.liquidity = pricing.liquidity();
+                vars.maxSize = pricing.maxTradeSize();
             }
         }
 
         return (
             l.toPoolTokenDecimals(
                 isBuy
-                    ? totalPremium + _totalTakerFee
-                    : totalPremium - _totalTakerFee
+                    ? vars.totalPremium + vars.totalTakerFee
+                    : vars.totalPremium - vars.totalTakerFee
             ),
-            l.toPoolTokenDecimals(_totalTakerFee)
+            l.toPoolTokenDecimals(vars.totalTakerFee)
         );
     }
 
@@ -710,7 +718,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.strike,
             l.isCallPool
         );
-        UD60x18 protocolFee = _takerFee(l, size, ZERO, true);
+
+        UD60x18 protocolFee = _takerFee(l, underwriter, size, ZERO, true);
 
         _transferFromWithPermitOrRouter(
             permit,
@@ -778,7 +787,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                         premium = quoteAMMPrice * tradeSize;
                     }
-                    UD60x18 takerFee = _takerFee(l, tradeSize, premium, true);
+
+                    UD60x18 takerFee = _takerFee(
+                        l,
+                        args.user,
+                        tradeSize,
+                        premium,
+                        true
+                    );
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(
@@ -1040,12 +1056,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _calculateQuoteRFQPremiumAndFee(
         PoolStorage.Layout storage l,
+        address taker,
         UD60x18 size,
         UD60x18 price,
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(l, size, r.premium, true);
+        r.protocolFee = _takerFee(l, taker, size, r.premium, true);
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(
@@ -1096,6 +1113,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
+                args.user,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
@@ -2320,6 +2338,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PremiumAndFeeInternal
             memory premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
+                args.user,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy

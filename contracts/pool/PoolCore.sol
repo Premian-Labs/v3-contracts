@@ -28,7 +28,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
-        address settings
+        address settings,
+        address vxPremia
     )
         PoolInternal(
             factory,
@@ -36,7 +37,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             exchangeHelper,
             wrappedNativeToken,
             feeReceiver,
-            settings
+            settings,
+            vxPremia
         )
     {}
 
@@ -47,6 +49,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function takerFee(
+        address taker,
         UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized
@@ -57,6 +60,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             l.toPoolTokenDecimals(
                 _takerFee(
                     l,
+                    taker,
                     size,
                     l.fromPoolTokenDecimals(premium),
                     isPremiumNormalized

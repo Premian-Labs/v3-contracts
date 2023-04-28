@@ -9,6 +9,7 @@ import {PoolFlashLoanTest} from "./Pool.flashLoan.t.sol";
 import {PoolSettleTest} from "./Pool.settle.t.sol";
 import {PoolSettlePositionTest} from "./Pool.settlePosition.t.sol";
 import {PoolStrandedTest} from "./Pool.stranded.t.sol";
+import {PoolTakerFeeTest} from "./Pool.takerFee.t.sol";
 import {PoolTradeTest} from "./Pool.trade.t.sol";
 import {PoolWithdrawTest} from "./Pool.withdraw.t.sol";
 
@@ -17,9 +18,10 @@ abstract contract PoolTest is
     PoolExerciseTest,
     PoolFillQuoteRFQTest,
     PoolFlashLoanTest,
-    PoolStrandedTest,
     PoolSettleTest,
     PoolSettlePositionTest,
+    PoolStrandedTest,
+    PoolTakerFeeTest,
     PoolTradeTest,
     PoolWithdrawTest
 {}

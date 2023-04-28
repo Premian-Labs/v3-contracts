@@ -38,6 +38,10 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {IVxPremia} from "contracts/staking/IVxPremia.sol";
+import {VxPremia} from "contracts/staking/VxPremia.sol";
+import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
+
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
@@ -53,6 +57,8 @@ contract DeployTest is Test, Assertions {
 
     address base;
     address quote;
+    address premia;
+
     OracleAdapterMock oracleAdapter;
     IPoolFactory.PoolKey poolKey;
     PoolFactory factory;
@@ -60,6 +66,7 @@ contract DeployTest is Test, Assertions {
     ERC20Router router;
     ExchangeHelper exchangeHelper;
     IUserSettings userSettings;
+    IVxPremia vxPremia;
 
     IPoolMock pool;
 
@@ -113,6 +120,7 @@ contract DeployTest is Test, Assertions {
 
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
+        premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70;
 
         oracleAdapter = new OracleAdapterMock(
             address(base),
@@ -177,6 +185,17 @@ contract DeployTest is Test, Assertions {
         );
 
         userSettings = IUserSettings(address(userSettingsProxy));
+        VxPremia vxPremiaImpl = new VxPremia(
+            address(0),
+            address(0),
+            premia,
+            address(quote),
+            address(exchangeHelper)
+        );
+
+        VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
+
+        vxPremia = IVxPremia(address(vxPremiaProxy));
 
         PoolBase poolBaseImpl = new PoolBase();
 
@@ -186,7 +205,8 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettings)
+            address(userSettings),
+            address(vxPremia)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
@@ -195,7 +215,8 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettings)
+            address(userSettings),
+            address(vxPremia)
         );
 
         PoolDepositWithdraw poolDepositWithdrawImpl = new PoolDepositWithdraw(
@@ -204,7 +225,8 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettings)
+            address(userSettings),
+            address(vxPremia)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -213,7 +235,8 @@ contract DeployTest is Test, Assertions {
             address(exchangeHelper),
             address(base),
             feeReceiver,
-            address(userSettings)
+            address(userSettings),
+            address(vxPremia)
         );
 
         /////////////////////
@@ -569,6 +592,13 @@ contract DeployTest is Test, Assertions {
         bool isCall
     ) internal view returns (UD60x18) {
         return isCall ? amount : amount * poolKey.strike;
+    }
+
+    function collateralToContracts(
+        UD60x18 amount,
+        bool isCall
+    ) internal view returns (UD60x18) {
+        return isCall ? amount : amount / poolKey.strike;
     }
 
     function scaleDecimals(

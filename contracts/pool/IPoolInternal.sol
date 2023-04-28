@@ -208,4 +208,11 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
     }
+
+    struct QuoteAMMVarsInternal {
+        UD60x18 liquidity;
+        UD60x18 maxSize;
+        UD60x18 totalPremium;
+        UD60x18 totalTakerFee;
+    }
 }
