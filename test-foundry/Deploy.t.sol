@@ -93,7 +93,7 @@ contract DeployTest is Test, Assertions {
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
+        mainnetFork = vm.createFork(ETH_RPC_URL);
         vm.selectFork(mainnetFork);
 
         users = Users({lp: vm.addr(1), trader: vm.addr(2)});
