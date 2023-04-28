@@ -29,7 +29,11 @@ abstract contract PoolExerciseTest is DeployTest {
 
         trade.initialCollateral = deposit(1000 ether);
         trade.size = UD60x18.wrap(100 ether);
-        (trade.totalPremium, ) = pool.getQuoteAMM(trade.size, true);
+        (trade.totalPremium, ) = pool.getQuoteAMM(
+            users.trader,
+            trade.size,
+            true
+        );
 
         trade.poolToken = getPoolToken(isCall);
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(

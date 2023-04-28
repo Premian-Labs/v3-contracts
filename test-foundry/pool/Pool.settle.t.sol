@@ -41,7 +41,11 @@ abstract contract PoolSettleTest is DeployTest {
             isCall
         );
 
-        (trade.totalPremium, ) = pool.getQuoteAMM(trade.size, false);
+        (trade.totalPremium, ) = pool.getQuoteAMM(
+            users.trader,
+            trade.size,
+            false
+        );
 
         trade.poolToken = getPoolToken(isCall);
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(

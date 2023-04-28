@@ -110,6 +110,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
       vxPremia,
     );
     await poolDepositWithdrawImpl.deployed();
