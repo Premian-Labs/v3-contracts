@@ -200,7 +200,8 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(exchangeHelper),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(vxPremia)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
