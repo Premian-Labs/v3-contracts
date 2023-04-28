@@ -7,10 +7,10 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
 
-import {ICompositeAdapterInternal} from "./ICompositeAdapterInternal.sol";
+import {IUniswapV3ChainlinkAdapterInternal} from "./IUniswapV3ChainlinkAdapterInternal.sol";
 
-contract CompositeAdapterInternal is
-    ICompositeAdapterInternal,
+contract UniswapV3ChainlinkAdapterInternal is
+    IUniswapV3ChainlinkAdapterInternal,
     OracleAdapterInternal
 {
     IOracleAdapter internal immutable CHAINLINK_ADAPTER;
@@ -71,6 +71,6 @@ contract CompositeAdapterInternal is
 
     function _ensureTokenNotWrappedNative(address token) internal view {
         if (token == WRAPPED_NATIVE)
-            revert CompositeAdapter__TokenCannotBeWrappedNative();
+            revert UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative();
     }
 }

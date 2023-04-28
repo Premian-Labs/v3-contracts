@@ -366,7 +366,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     /// @inheritdoc IPremiaStaking
     function harvestAndStake(
-        IPremiaStaking.SwapArgs memory s,
+        IPremiaStaking.SwapArgs calldata s,
         uint64 stakePeriod
     ) external {
         uint256 amountRewardToken = _harvest(msg.sender);

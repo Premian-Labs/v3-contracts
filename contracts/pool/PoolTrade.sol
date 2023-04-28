@@ -2,6 +2,7 @@
 pragma solidity >=0.8.19;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -10,13 +11,22 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 
+import {IERC3156FlashBorrower} from "../interfaces/IERC3156FlashBorrower.sol";
+import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
-contract PoolTrade is IPoolTrade, PoolInternal {
+contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
+
+    // ToDo : Define final value
+    // ToDo : Make this part of global pool settings ?
+    UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
+
+    bytes32 constant FLASH_LOAN_CALLBACK_SUCCESS =
+        keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(
         address factory,
@@ -47,13 +57,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function fillQuoteRFQ(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (uint256 premiumTaker, Position.Delta memory delta)
     {
         return
@@ -72,14 +83,15 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function swapAndFillQuoteRFQ(
-        SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        SwapArgs calldata s,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -105,13 +117,14 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     /// @inheritdoc IPoolTrade
     function fillQuoteRFQAndSwap(
         SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -155,10 +168,11 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (uint256 totalPremium, Position.Delta memory delta)
     {
         return
@@ -177,14 +191,15 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function swapAndTrade(
-        SwapArgs memory s,
+        SwapArgs calldata s,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -213,10 +228,11 @@ contract PoolTrade is IPoolTrade, PoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -256,7 +272,7 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     }
 
     /// @inheritdoc IPoolTrade
-    function cancelQuotesRFQ(bytes32[] calldata hashes) external {
+    function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
             l.quoteRFQAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
@@ -268,9 +284,9 @@ contract PoolTrade is IPoolTrade, PoolInternal {
 
     /// @inheritdoc IPoolTrade
     function isQuoteRFQValid(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory sig
+        Signature calldata sig
     ) external view returns (bool, InvalidQuoteRFQError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         bytes32 quoteRFQHash = _quoteRFQHash(quoteRFQ);
@@ -290,5 +306,71 @@ contract PoolTrade is IPoolTrade, PoolInternal {
     ) external view returns (UD60x18) {
         return
             PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function maxFlashLoan(address token) external view returns (uint256) {
+        _ensurePoolToken(token);
+        return IERC20(token).balanceOf(address(this));
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function flashFee(
+        address token,
+        uint256 amount
+    ) external view returns (uint256) {
+        _ensurePoolToken(token);
+        return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
+    }
+
+    function _flashFee(uint256 amount) internal view returns (UD60x18) {
+        return
+            PoolStorage.layout().fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
+    }
+
+    /// @inheritdoc IERC3156FlashLender
+    function flashLoan(
+        IERC3156FlashBorrower receiver,
+        address token,
+        uint256 amount,
+        bytes calldata data
+    ) external nonReentrant returns (bool) {
+        _ensurePoolToken(token);
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        uint256 startBalance = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(address(receiver), amount);
+
+        UD60x18 fee = _flashFee(amount);
+        uint256 _fee = l.toPoolTokenDecimals(fee);
+
+        if (
+            IERC3156FlashBorrower(receiver).onFlashLoan(
+                msg.sender,
+                token,
+                amount,
+                _fee,
+                data
+            ) != FLASH_LOAN_CALLBACK_SUCCESS
+        ) revert Pool__FlashLoanCallbackFailed();
+
+        uint256 endBalance = IERC20(token).balanceOf(address(this));
+        uint256 endBalanceRequired = startBalance + _fee;
+
+        if (endBalance < endBalanceRequired) revert Pool__FlashLoanNotRepayed();
+
+        emit FlashLoan(
+            msg.sender,
+            address(receiver),
+            l.fromPoolTokenDecimals(amount),
+            fee
+        );
+
+        return true;
+    }
+
+    function _ensurePoolToken(address token) internal view {
+        if (token != PoolStorage.layout().getPoolToken())
+            revert Pool__NotPoolToken(token);
     }
 }

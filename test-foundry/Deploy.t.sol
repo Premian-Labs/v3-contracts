@@ -29,6 +29,7 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolBase} from "contracts/pool/PoolBase.sol";
 import {PoolCore} from "contracts/pool/PoolCore.sol";
 import {PoolCoreMock} from "contracts/test/pool/PoolCoreMock.sol";
+import {PoolDepositWithdraw} from "contracts/pool/PoolDepositWithdraw.sol";
 import {PoolTrade} from "contracts/pool/PoolTrade.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
@@ -41,6 +42,7 @@ import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
+import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/ExchangeHelper.sol";
@@ -75,6 +77,8 @@ contract DeployTest is Test, Assertions {
 
     Users users;
 
+    FlashLoanMock flashLoanMock;
+
     struct Users {
         address lp;
         address trader;
@@ -83,6 +87,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolBaseSelectors;
     bytes4[] internal poolCoreMockSelectors;
     bytes4[] internal poolCoreSelectors;
+    bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
     address public constant feeReceiver =
@@ -95,7 +100,7 @@ contract DeployTest is Test, Assertions {
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL);
+        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
         vm.selectFork(mainnetFork);
 
         users = Users({lp: vm.addr(1), trader: vm.addr(2)});
@@ -151,6 +156,8 @@ contract DeployTest is Test, Assertions {
             feeReceiver
         );
 
+        flashLoanMock = new FlashLoanMock();
+
         factory = PoolFactory(address(factoryProxy));
 
         router = new ERC20Router(address(factory));
@@ -186,6 +193,14 @@ contract DeployTest is Test, Assertions {
             address(base),
             feeReceiver,
             address(vxPremia)
+        );
+
+        PoolDepositWithdraw poolDepositWithdrawImpl = new PoolDepositWithdraw(
+            address(factory),
+            address(router),
+            address(exchangeHelper),
+            address(base),
+            feeReceiver
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
@@ -236,20 +251,6 @@ contract DeployTest is Test, Assertions {
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
-                )
-            )
-        );
-        poolCoreSelectors.push(
-            bytes4(
-                keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
-                )
-            )
-        );
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getNearestTicksBelow.selector);
@@ -257,17 +258,42 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
-        poolCoreSelectors.push(poolCoreImpl.swapAndDeposit.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
-        poolCoreSelectors.push(poolCoreImpl.withdraw.selector);
-        poolCoreSelectors.push(poolCoreImpl.withdrawAndSwap.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
+
+        // PoolDepositWithdraw
+        poolDepositWithdrawSelectors.push(
+            bytes4(
+                keccak256(
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes))"
+                )
+            )
+        );
+        poolDepositWithdrawSelectors.push(
+            bytes4(
+                keccak256(
+                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256,(address,uint256,uint256,uint256,bytes),bool)"
+                )
+            )
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.swapAndDeposit.selector
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.withdraw.selector
+        );
+        poolDepositWithdrawSelectors.push(
+            poolDepositWithdrawImpl.withdrawAndSwap.selector
+        );
 
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQAndSwap.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.swapAndFillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
@@ -277,7 +303,7 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.tradeAndSwap.selector);
 
         IDiamondWritableInternal.FacetCut[]
-            memory facetCuts = new IDiamondWritableInternal.FacetCut[](4);
+            memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
 
         facetCuts[0] = IDiamondWritableInternal.FacetCut(
             address(poolBaseImpl),
@@ -298,6 +324,12 @@ contract DeployTest is Test, Assertions {
         );
 
         facetCuts[3] = IDiamondWritableInternal.FacetCut(
+            address(poolDepositWithdrawImpl),
+            IDiamondWritableInternal.FacetCutAction.ADD,
+            poolDepositWithdrawSelectors
+        );
+
+        facetCuts[4] = IDiamondWritableInternal.FacetCut(
             address(poolTradeImpl),
             IDiamondWritableInternal.FacetCutAction.ADD,
             poolTradeSelectors
@@ -325,11 +357,19 @@ contract DeployTest is Test, Assertions {
     function deposit(
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, poolKey.strike, depositSize);
+    }
+
+    function deposit(
+        IPoolMock _pool,
+        UD60x18 strike,
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
         bool isCall = poolKey.isCallPool;
 
         IERC20 token = IERC20(getPoolToken(isCall));
         initialCollateral = scaleDecimals(
-            isCall ? depositSize : depositSize * poolKey.strike,
+            isCall ? depositSize : depositSize * strike,
             isCall
         );
 
@@ -338,10 +378,10 @@ contract DeployTest is Test, Assertions {
         deal(address(token), users.lp, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool
             .getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        pool.deposit(
+        _pool.deposit(
             posKey,
             nearestBelowLower,
             nearestBelowUpper,
@@ -537,6 +577,14 @@ contract DeployTest is Test, Assertions {
     ) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
+    }
+
+    function scaleDecimals(
+        uint256 amount,
+        bool isCall
+    ) internal view returns (UD60x18) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return UD60x18.wrap(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
     function tokenId() internal view returns (uint256) {
