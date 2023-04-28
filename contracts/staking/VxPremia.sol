@@ -110,7 +110,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     /// @inheritdoc IVxPremia
     function getPoolVotes(
         VxPremiaStorage.VoteVersion version,
-        bytes memory target
+        bytes calldata target
     ) external view returns (uint256) {
         return VxPremiaStorage.layout().votes[version][target];
     }
@@ -123,7 +123,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function castVotes(VxPremiaStorage.Vote[] memory votes) external {
+    function castVotes(VxPremiaStorage.Vote[] calldata votes) external {
         VxPremiaStorage.Layout storage l = VxPremiaStorage.layout();
 
         uint256 userVotingPower = _calculateUserPower(

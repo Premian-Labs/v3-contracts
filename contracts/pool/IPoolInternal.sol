@@ -17,6 +17,8 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 maximum
     );
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
+    error Pool__FlashLoanCallbackFailed();
+    error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientLiquidity();
@@ -43,6 +45,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 amountOutMin
     );
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
+    error Pool__NotPoolToken(address token);
     error Pool__NotWrappedNativeTokenPool();
     error Pool__OppositeSides();
     error Pool__OptionExpired();

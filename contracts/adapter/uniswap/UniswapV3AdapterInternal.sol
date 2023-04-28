@@ -65,6 +65,8 @@ contract UniswapV3AdapterInternal is
         if (allDeployedPools.length == 0)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
+        /// if a pool has been deployed but not added to the adapter, we may use it for the quote
+        /// only if it has sufficient cardinality.
         if (pools.length == 0 || pools.length < allDeployedPools.length) {
             _validatePoolCardinality(l, allDeployedPools);
             pools = allDeployedPools;
@@ -99,7 +101,7 @@ contract UniswapV3AdapterInternal is
                 pools.length
             );
 
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             uint32[] memory range = _calculateRange(pools[i], period, target);
             (tickData[i].tick, tickData[i].weight) = _consult(pools[i], range);
         }
@@ -117,12 +119,12 @@ contract UniswapV3AdapterInternal is
     ) internal view returns (uint32[] memory) {
         uint32[] memory range = new uint32[](2);
 
-        range[0] = period;
-        range[1] = 0;
-
         if (target > 0) {
             range[0] = (block.timestamp - (target - period)).toUint32(); // rangeStart
             range[1] = (block.timestamp - target).toUint32(); // rangeEnd
+        } else {
+            range[0] = period;
+            range[1] = 0;
         }
 
         uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(
@@ -140,7 +142,10 @@ contract UniswapV3AdapterInternal is
             //        rangeStart   rangeEnd
 
             if (oldestObservation < period)
-                revert UniswapV3Adapter__InsufficientObservationPeriod();
+                revert UniswapV3Adapter__InsufficientObservationPeriod(
+                    oldestObservation,
+                    period
+                );
 
             range[0] = oldestObservation;
             range[1] = oldestObservation - period;
@@ -153,16 +158,19 @@ contract UniswapV3AdapterInternal is
         UniswapV3AdapterStorage.Layout storage l,
         address[] memory pools
     ) internal view {
-        for (uint256 i; i < pools.length; i++) {
+        for (uint256 i = 0; i < pools.length; i++) {
             address pool = pools[i];
 
             (
                 bool currentCardinalityBelowTarget,
-
+                uint16 currentCardinality
             ) = _isCurrentCardinalityBelowTarget(pool, l.targetCardinality);
 
             if (currentCardinalityBelowTarget)
-                revert UniswapV3Adapter__ObservationCardinalityTooLow();
+                revert UniswapV3Adapter__ObservationCardinalityTooLow(
+                    currentCardinality,
+                    l.targetCardinality
+                );
         }
     }
 
@@ -178,7 +186,7 @@ contract UniswapV3AdapterInternal is
         pools = new address[](feeTiers.length);
         uint256 validPools;
 
-        for (uint256 i; i < feeTiers.length; i++) {
+        for (uint256 i = 0; i < feeTiers.length; i++) {
             address pool = _computeAddress(
                 address(UNISWAP_V3_FACTORY),
                 PoolAddress.getPoolKey(tokenA, tokenB, feeTiers[i])
@@ -214,7 +222,10 @@ contract UniswapV3AdapterInternal is
             );
         } else {
             // If the cardinality cannot be increased due to gas cost, revert
-            revert UniswapV3Adapter__ObservationCardinalityTooLow();
+            revert UniswapV3Adapter__ObservationCardinalityTooLow(
+                currentCardinality,
+                targetCardinality
+            );
         }
     }
 
@@ -256,7 +267,7 @@ contract UniswapV3AdapterInternal is
         returns (int24 arithmeticMeanTick, uint128 harmonicMeanLiquidity)
     {
         if (range.length != 2 || range[0] <= range[1])
-            revert UniswapV3Adapter__InvalidTimeRange();
+            revert UniswapV3Adapter__InvalidTimeRange(range[0], range[1]);
 
         uint32 span = range[0] - range[1];
 

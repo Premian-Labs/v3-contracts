@@ -6,6 +6,7 @@ import {
   PoolFactory__factory,
   PoolFactoryProxy__factory,
   PoolCoreMock__factory,
+  PoolDepositWithdraw__factory,
   Premia,
   Premia__factory,
   ExchangeHelper__factory,
@@ -89,6 +90,30 @@ export class PoolUtil {
       name: 'PoolCore',
       address: poolCoreImpl.address,
       interface: poolCoreImpl.interface,
+    });
+
+    // PoolDepositWithdraw
+
+    const poolDepositWithdrawFactory = new PoolDepositWithdraw__factory(
+      deployer,
+    );
+    const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
+      poolFactory,
+      router,
+      exchangeHelper,
+      wrappedNativeToken,
+      feeReceiver,
+    );
+    await poolDepositWithdrawImpl.deployed();
+
+    if (log) {
+      console.log(`PoolDepositWithdraw : ${poolDepositWithdrawImpl.address}`);
+    }
+
+    result.push({
+      name: 'PoolDepositWithdraw',
+      address: poolDepositWithdrawImpl.address,
+      interface: poolDepositWithdrawImpl.interface,
     });
 
     // PoolTrade

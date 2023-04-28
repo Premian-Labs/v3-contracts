@@ -5,7 +5,8 @@ import {
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
-import { ContractAddresses } from '../../utils/deployment/types';
+import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
 
@@ -22,15 +23,19 @@ async function main() {
   let proxy: ChainlinkAdapterProxy;
   let setImplementation: boolean;
 
-  if (chainId === 42161) {
+  if (chainId === ChainID.Arbitrum) {
     // Arbitrum
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
-  } else if (chainId === 5) {
+  } else if (chainId === ChainID.Goerli) {
     // Goerli
     addresses = goerliAddresses;
     addressesPath = 'utils/deployment/goerli.json';
+    setImplementation = true;
+  } else if (chainId === ChainID.ArbitrumGoerli) {
+    addresses = arbitrumGoerliAddresses;
+    addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');

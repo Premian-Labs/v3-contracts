@@ -1,4 +1,5 @@
 import goerli from './deployment/goerli.json';
+import arbitrumGoerli from './deployment/arbitrumGoerli.json';
 
 export type Token = { address: string; decimals: number; symbol: string };
 
@@ -75,7 +76,7 @@ export const feeds = [
 
 export const goerliFeeds = [
   {
-    token: '0xC2ECb8563800B523426c3328EeC1F7771D433C9c', // testWETH
+    token: goerli.tokens.testWETH,
     denomination: CHAINLINK_USD,
     feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
   },
@@ -98,5 +99,33 @@ export const goerliFeeds = [
     token: goerli.tokens.USDC,
     denomination: CHAINLINK_USD,
     feed: '0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7',
+  },
+];
+
+export const arbitrumGoerliFeeds = [
+  {
+    token: arbitrumGoerli.tokens.testWETH, // testWETH
+    denomination: CHAINLINK_USD,
+    feed: '0x62CAe0FA2da220f43a51F86Db2EDb36DcA9A5A08',
+  },
+  {
+    token: CHAINLINK_ETH,
+    denomination: CHAINLINK_USD,
+    feed: '0x62CAe0FA2da220f43a51F86Db2EDb36DcA9A5A08',
+  },
+  {
+    token: arbitrumGoerli.tokens.WBTC,
+    denomination: CHAINLINK_USD,
+    feed: '0x6550bc2301936011c1334555e62A87705A81C12C',
+  },
+  {
+    token: arbitrumGoerli.tokens.LINK,
+    denomination: CHAINLINK_USD,
+    feed: '0xd28Ba6CA3bB72bF371b80a2a0a33cBcf9073C954',
+  },
+  {
+    token: arbitrumGoerli.tokens.USDC,
+    denomination: CHAINLINK_USD,
+    feed: '0x1692Bdd32F31b831caAc1b0c9fAF68613682813b',
   },
 ];

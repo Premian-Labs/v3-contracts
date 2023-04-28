@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-interface ICompositeAdapterInternal {
+interface IUniswapV3ChainlinkAdapterInternal {
     /// @notice Thrown when the token is the wrapped native token
-    error CompositeAdapter__TokenCannotBeWrappedNative();
+    error UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative();
 }
