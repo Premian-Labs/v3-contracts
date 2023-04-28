@@ -1185,7 +1185,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 
-        if (size == ZERO) revert Pool__ZeroSize();
+        _ensureNonZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1310,7 +1310,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address holder
     )
         internal
-        returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateralValue)
+        returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral)
     {
         _ensureExpired(l);
         _removeFromFactory(l);
@@ -1365,21 +1365,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _settle(
         address holder,
         UD60x18 cost
-    ) internal returns (uint256 collateralValue) {
+    ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (
             UD60x18 size,
             UD60x18 exerciseValue,
-            UD60x18 _collateralValue
+            UD60x18 _collateral
         ) = _beforeExerciseOrSettle(l, false, holder);
 
         if (size == ZERO) return 0;
 
-        if (cost > _collateralValue)
-            revert Pool__CostExceedsPayout(cost, _collateralValue);
+        if (cost > _collateral)
+            revert Pool__CostExceedsPayout(cost, _collateral);
 
-        collateralValue = l.toPoolTokenDecimals(_collateralValue);
+        collateral = l.toPoolTokenDecimals(_collateral);
         emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
 
         if (cost > ZERO) {
@@ -1387,8 +1387,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             emit SettleFor(msg.sender, cost);
         }
 
-        if (_collateralValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, _collateralValue);
+        if (_collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(holder, _collateral);
         }
     }
 
@@ -1407,20 +1407,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        Tick memory lowerTick = _getTick(p.lower);
-        Tick memory upperTick = _getTick(p.upper);
-
-        SettlePositionVarsInternal memory vars;
-
-        vars.tokenId = PoolStorage.formatTokenId(
+        uint256 tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
-        if (vars.size == ZERO) return 0;
+        UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
+        if (size == ZERO) return 0;
 
         {
             // Update claimable fees
@@ -1428,11 +1423,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 p.lower,
                 p.upper,
-                lowerTick.externalFeeRate,
-                upperTick.externalFeeRate
+                _getTick(p.lower).externalFeeRate,
+                _getTick(p.upper).externalFeeRate
             );
 
-            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(vars.size));
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(size));
         }
 
         // using the market price here is okay as the market price cannot be
@@ -1442,28 +1437,28 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
 
-        vars.claimableFees;
-        vars.payoff;
-        vars.collateral;
+        UD60x18 claimableFees;
+        UD60x18 payoff;
+        UD60x18 _collateral;
 
         {
-            UD60x18 longs = p.long(vars.size, l.marketPrice);
-            UD60x18 shorts = p.short(vars.size, l.marketPrice);
+            UD60x18 longs = p.long(size, l.marketPrice);
+            UD60x18 shorts = p.short(size, l.marketPrice);
 
-            vars.claimableFees = pData.claimableFees;
-            vars.payoff = _calculateExerciseValue(l, ONE);
+            claimableFees = pData.claimableFees;
+            payoff = _calculateExerciseValue(l, ONE);
 
-            vars.collateral = p.collateral(vars.size, l.marketPrice);
-            vars.collateral = vars.collateral + longs * vars.payoff;
+            _collateral = p.collateral(size, l.marketPrice);
+            _collateral = _collateral + longs * payoff;
 
-            vars.collateral =
-                vars.collateral +
+            _collateral =
+                _collateral +
                 shorts *
-                ((l.isCallPool ? ONE : l.strike) - vars.payoff);
+                ((l.isCallPool ? ONE : l.strike) - payoff);
 
-            vars.collateral = vars.collateral + vars.claimableFees;
+            _collateral = _collateral + claimableFees;
 
-            _burn(p.owner, vars.tokenId, vars.size);
+            _burn(p.owner, tokenId, size);
 
             if (longs > ZERO) {
                 _burn(address(this), PoolStorage.LONG, longs);
@@ -1477,18 +1472,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (cost > vars.collateral)
-            revert Pool__CostExceedsPayout(cost, vars.collateral);
+        if (cost > _collateral)
+            revert Pool__CostExceedsPayout(cost, _collateral);
 
-        collateral = l.toPoolTokenDecimals(vars.collateral);
+        collateral = l.toPoolTokenDecimals(_collateral);
 
         emit SettlePosition(
             p.owner,
-            vars.tokenId,
-            vars.size,
-            vars.collateral - vars.claimableFees,
-            vars.payoff,
-            vars.claimableFees,
+            tokenId,
+            size,
+            _collateral - claimableFees,
+            payoff,
+            claimableFees,
             l.settlementPrice,
             ZERO
         );
@@ -1498,8 +1493,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             emit SettlePositionFor(msg.sender, cost);
         }
 
-        if (vars.collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
+        if (_collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, _collateral);
         }
     }
 
