@@ -181,26 +181,29 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
-    /// @notice Exercises all long options held by an `owner`, caller is not reimbursed.
+    /// @notice Exercises all long options held by caller
+    /// @return The exercise value as amount of collateral paid out (poolToken decimals)
     function exercise() external returns (uint256);
 
-    /// @notice Exercises all long options held by an `owner`, caller is reimbursed with the cost deducted from the proceeds of the
+    /// @notice Batch exercises all long options held by each `holder`, caller is reimbursed with the cost deducted from the proceeds of the
     ///         exercised options. Only authorized agents may execute this function on behalf of the option holder.
-    /// @param holder The holder of the contracts
-    /// @param cost The cost charged by the authorized agent (18 decimals)
-    /// @return The exercise value as amount of collateral paid out, ignoring automatic exercise fees (poolToken decimals)
+    /// @param holders The holders of the contracts
+    /// @param cost The cost charged by the authorized agent (poolToken decimals)
+    /// @return The exercise value as amount of collateral paid out, ignoring costs applied during automatic exercise (poolToken decimals)
     function exerciseFor(
         address[] calldata holders,
         uint256 cost
     ) external returns (uint256);
 
-    /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
-    /// @param holder The holder of the contracts
-    /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
-    function settle(address holder) external returns (uint256);
+    /// @notice Settles all short options held by caller
+    /// @return The amount of collateral left after settlement (poolToken decimals)
+    function settle() external returns (uint256);
 
-    /// @notice Settles all short options held by an `owner`, caller is reimbursed with the cost deducted from the proceeds of the
+    /// @notice Batch settles all short options held by each `holder`, caller is reimbursed with the cost deducted from the proceeds of the
     ///         settled options. Only authorized agents may execute this function on behalf of the option holder.
+    /// @param holders The holders of the contracts
+    /// @param cost The cost charged by the authorized agent (poolToken decimals)
+    /// @return The amount of collateral left after settlement, ignoring costs applied during automatic settlement (poolToken decimals)
     function settleFor(
         address[] calldata holders,
         uint256 cost
@@ -211,11 +214,11 @@ interface IPoolCore is IPoolInternal {
     /// @return The amount of collateral left after settlement (poolToken decimals)
     function settlePosition(Position.Key calldata p) external returns (uint256);
 
-    /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration. Caller is reimbursed with the cost deducted
+    /// @notice Batch reconciles each `position` to account for settlement payouts post-expiration. Caller is reimbursed with the cost deducted
     ///         from the proceeds of the settled position. Only authorized agents may execute this function on behalf of the option holder.
-    /// @param p The position key
-    /// @param cost The cost charged by the authorized agent (18 decimals)
-    /// @return The amount of collateral left after settlement, ignoring automatic settlement fees (poolToken decimals)
+    /// @param p The position keys
+    /// @param cost The cost charged by the authorized agent (poolToken decimals)
+    /// @return The amount of collateral left after settlement, ignoring costs applied during automatic settlement (poolToken decimals)
     function settlePositionFor(
         Position.Key[] calldata p,
         uint256 cost
