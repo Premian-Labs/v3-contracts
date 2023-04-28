@@ -20,7 +20,6 @@ import {
   deployAndSell_CALL,
   deployAndSell_PUT,
   depositFnSig,
-  getSettlementPrice,
   protocolFeePercentage,
   runCallAndPutTests,
   strike,
@@ -1691,6 +1690,110 @@ describe('Pool', () => {
 
   describe('#transferPosition', () => {
     runCallAndPutTests((isCallPool) => {
+      it('should update claimable fees when partially transferring position to new owner with same operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = (
+          await pool.balanceOf(pKey.operator, tokenId)
+        ).div(2);
+
+        await pool
+          .connect(lp)
+          .transferPosition(pKey, lp.address, trader.address, transferAmount);
+
+        const pKey2 = {
+          owner: lp.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(protocolFees.div(2));
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees.div(2));
+      });
+
+      it('should update claimable fees when partially transferring position to new owner with new operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = (
+          await pool.balanceOf(pKey.operator, tokenId)
+        ).div(2);
+
+        await pool
+          .connect(lp)
+          .transferPosition(
+            pKey,
+            trader.address,
+            trader.address,
+            transferAmount,
+          );
+
+        const pKey2 = {
+          owner: trader.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(protocolFees.div(2));
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees.div(2));
+      });
+
+      it('should update claimable fees when fully transferring position to new owner with same operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = await pool.balanceOf(pKey.operator, tokenId);
+
+        await pool
+          .connect(lp)
+          .transferPosition(pKey, lp.address, trader.address, transferAmount);
+
+        const pKey2 = {
+          owner: lp.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(0);
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees);
+      });
+
+      it('should update claimable fees when fully transferring position to new owner with new operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = await pool.balanceOf(pKey.operator, tokenId);
+
+        console.log(protocolFees);
+
+        await pool
+          .connect(lp)
+          .transferPosition(
+            pKey,
+            trader.address,
+            trader.address,
+            transferAmount,
+          );
+
+        const pKey2 = {
+          owner: trader.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(0);
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees);
+      });
+
       it('should successfully partially transfer position to new owner with same operator', async () => {
         const { pool, depositSize, lp, pKey, tokenId, trader } =
           await loadFixture(

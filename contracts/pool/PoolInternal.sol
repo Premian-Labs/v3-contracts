@@ -1239,7 +1239,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             UD60x18 feesTransferred = proportionTransferred *
                 srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
-            srcData.claimableFees = srcData.claimableFees + feesTransferred;
+            srcData.claimableFees = srcData.claimableFees - feesTransferred;
         }
 
         if (srcData.lastDeposit > dstData.lastDeposit) {
