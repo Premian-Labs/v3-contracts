@@ -5,7 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ONE} from "contracts/libraries/Constants.sol";
+import {ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Permit2} from "contracts/libraries/Permit2.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
@@ -75,8 +75,8 @@ abstract contract PoolSettleTest is DeployTest {
         oracleAdapter.setQuoteFrom(settlementPrice);
 
         vm.warp(poolKey.maturity);
-
-        pool.settle(users.trader);
+        vm.prank(users.trader);
+        pool.settle();
 
         uint256 exerciseValue = scaleDecimals(
             getExerciseValue(isCall, isITM, trade.size, settlementPrice),
@@ -118,18 +118,33 @@ abstract contract PoolSettleTest is DeployTest {
 
     function test_settle_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
-        pool.settle(users.trader);
+        vm.prank(users.trader);
+        pool.settle();
     }
 
     function _test_settleFor_Sell100Options(bool isCall, bool isITM) internal {
-        UD60x18 settlementPrice = handleExerciseSettleAuthorization(
-            isCall,
-            isITM,
-            users.trader,
-            0.1 ether
-        );
+        UD60x18 settlementPrice = getSettlementPrice(isCall, isITM);
+        oracleAdapter.setQuote(settlementPrice.inv());
+        oracleAdapter.setQuoteFrom(settlementPrice);
+
+        handleExerciseSettleAuthorization(users.trader, 0.1 ether);
+        handleExerciseSettleAuthorization(users.otherTrader, 0.1 ether);
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options(isCall);
+
+        vm.startPrank(users.trader);
+
+        pool.setApprovalForAll(users.otherTrader, true);
+
+        pool.safeTransferFrom(
+            users.trader,
+            users.otherTrader,
+            PoolStorage.SHORT,
+            (trade.size / TWO).unwrap(),
+            ""
+        );
+
+        vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
 
@@ -138,24 +153,36 @@ abstract contract PoolSettleTest is DeployTest {
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
 
-        pool.settleFor(users.trader, cost);
+        address[] memory holders = new address[](2);
+        holders[0] = users.trader;
+        holders[1] = users.otherTrader;
+
+        pool.settleFor(holders, cost);
 
         uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isCall, isITM, trade.size, settlementPrice),
+            getExerciseValue(isCall, isITM, trade.size / TWO, settlementPrice),
             isCall
         );
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
-            trade.traderCollateral + trade.totalPremium - exerciseValue - cost
+            (trade.traderCollateral / 2) +
+                trade.totalPremium -
+                exerciseValue -
+                cost
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost);
+        assertEq(
+            IERC20(trade.poolToken).balanceOf(users.otherTrader),
+            (trade.traderCollateral / 2) - exerciseValue - cost
+        );
+
+        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), (cost * 2));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
             trade.initialCollateral +
-                exerciseValue -
+                (exerciseValue * 2) -
                 trade.totalPremium -
                 protocolFees
         );
@@ -169,6 +196,7 @@ abstract contract PoolSettleTest is DeployTest {
         assertEq(pool.protocolFees(), 0);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
+        assertEq(pool.balanceOf(users.otherTrader, PoolStorage.SHORT), 0);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), trade.size);
     }
 
@@ -219,7 +247,6 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.stopPrank();
-
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(
@@ -231,13 +258,21 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settleFor(users.trader, cost);
+
+        address[] memory holders = new address[](1);
+        holders[0] = users.trader;
+
+        pool.settleFor(holders, cost);
     }
 
     function test_settleFor_RevertIf_UnauthorizedAgent() public {
         vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
         vm.prank(users.agent);
-        pool.settleFor(users.trader, 0);
+
+        address[] memory holders = new address[](1);
+        holders[0] = users.trader;
+
+        pool.settleFor(holders, 0);
     }
 
     function test_settleFor_RevertIf_UnauthorizedTxCostAndFee() public {
@@ -265,6 +300,10 @@ abstract contract PoolSettleTest is DeployTest {
         );
 
         vm.prank(users.agent);
-        pool.settleFor(users.trader, cost);
+
+        address[] memory holders = new address[](1);
+        holders[0] = users.trader;
+
+        pool.settleFor(holders, cost);
     }
 }

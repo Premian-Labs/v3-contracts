@@ -74,7 +74,9 @@ contract DeployTest is Test, Assertions {
 
     struct Users {
         address lp;
+        address otherLP;
         address trader;
+        address otherTrader;
         address agent;
     }
 
@@ -93,10 +95,17 @@ contract DeployTest is Test, Assertions {
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL);
+        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
         vm.selectFork(mainnetFork);
 
-        users = Users({lp: vm.addr(1), trader: vm.addr(2), agent: vm.addr(3)});
+        users = Users({
+            lp: vm.addr(1),
+            otherLP: vm.addr(2),
+            trader: vm.addr(3),
+            otherTrader: vm.addr(4),
+            agent: vm.addr(5)
+        });
+
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
 
@@ -106,6 +115,7 @@ contract DeployTest is Test, Assertions {
             UD60x18.wrap(1000 ether),
             UD60x18.wrap(1000 ether)
         );
+
         poolKey = IPoolFactory.PoolKey({
             base: base,
             quote: quote,
@@ -595,15 +605,9 @@ contract DeployTest is Test, Assertions {
     }
 
     function handleExerciseSettleAuthorization(
-        bool isCall,
-        bool isITM,
         address user,
         uint256 authorizedCost
-    ) internal returns (UD60x18 settlementPrice) {
-        settlementPrice = getSettlementPrice(isCall, isITM);
-        oracleAdapter.setQuote(settlementPrice.inv());
-        oracleAdapter.setQuoteFrom(settlementPrice);
-
+    ) internal {
         vm.startPrank(user);
 
         address[] memory agents = new address[](1);

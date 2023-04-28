@@ -285,70 +285,98 @@ contract PoolCore is IPoolCore, PoolInternal {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(address holder) external returns (uint256) {
-        return _exercise(holder, ZERO);
+    function exercise() external returns (uint256) {
+        return _exercise(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
     function exerciseFor(
-        address holder,
+        address[] calldata holders,
         uint256 cost
-    ) external returns (uint256) {
+    ) external returns (uint256 totalExerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
-        if (holder != msg.sender) {
-            _ensureAuthorizedAgent(holder, msg.sender);
-            _ensureAuthorizedCost(holder, _cost);
+        for (uint256 i = 0; i < holders.length; i++) {
+            if (holders[i] != msg.sender) {
+                _ensureAuthorizedAgent(holders[i], msg.sender);
+                _ensureAuthorizedCost(holders[i], _cost);
+            }
+
+            uint256 exerciseValue = _exercise(holders[i], _cost);
+            totalExerciseValue = totalExerciseValue + exerciseValue;
         }
 
-        return _exercise(holder, _cost);
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            holders.length * cost
+        );
     }
 
     /// @inheritdoc IPoolCore
-    function settle(address holder) external returns (uint256) {
-        return _settle(holder, ZERO);
+    function settle() external returns (uint256) {
+        return _settle(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
     function settleFor(
-        address holder,
+        address[] calldata holders,
         uint256 cost
-    ) external returns (uint256) {
+    ) external returns (uint256 totalCollateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
-        if (holder != msg.sender) {
-            _ensureAuthorizedAgent(holder, msg.sender);
-            _ensureAuthorizedCost(holder, _cost);
+        for (uint256 i = 0; i < holders.length; i++) {
+            if (holders[i] != msg.sender) {
+                _ensureAuthorizedAgent(holders[i], msg.sender);
+                _ensureAuthorizedCost(holders[i], _cost);
+            }
+
+            uint256 collateral = _settle(holders[i], _cost);
+            totalCollateral = totalCollateral + collateral;
         }
 
-        return _settle(holder, _cost);
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            holders.length * cost
+        );
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(Position.Key memory p) external returns (uint256) {
+    function settlePosition(
+        Position.Key calldata p
+    ) external returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _ensureOperator(p.operator);
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
     }
 
     /// @inheritdoc IPoolCore
     function settlePositionFor(
-        Position.Key memory p,
+        Position.Key[] calldata p,
         uint256 cost
-    ) external returns (uint256) {
+    ) external returns (uint256 totalCollateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(cost);
 
-        if (p.operator != msg.sender) {
-            _ensureAuthorizedAgent(p.operator, msg.sender);
-            _ensureAuthorizedCost(p.operator, _cost);
+        for (uint256 i = 0; i < p.length; i++) {
+            if (p[i].operator != msg.sender) {
+                _ensureAuthorizedAgent(p[i].operator, msg.sender);
+                _ensureAuthorizedCost(p[i].operator, _cost);
+            }
+
+            uint256 collateral = _settlePosition(
+                p[i].toKeyInternal(l.strike, l.isCallPool),
+                _cost
+            );
+
+            totalCollateral = totalCollateral + collateral;
         }
 
-        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), _cost);
+        IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * cost);
     }
 
     /// @inheritdoc IPoolCore
