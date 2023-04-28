@@ -33,23 +33,26 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address router,
         address exchangeHelper,
         address wrappedNativeToken,
-        address feeReceiver
+        address feeReceiver,
+        address vxPremia
     )
         PoolInternal(
             factory,
             router,
             exchangeHelper,
             wrappedNativeToken,
-            feeReceiver
+            feeReceiver,
+            vxPremia
         )
     {}
 
     /// @inheritdoc IPoolTrade
     function getQuoteAMM(
+        address taker,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee) {
-        return _getQuoteAMM(size, isBuy);
+        return _getQuoteAMM(taker, size, isBuy);
     }
 
     /// @inheritdoc IPoolTrade
