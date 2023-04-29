@@ -2420,18 +2420,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address holder,
         address agent
     ) internal view {
-        address[] memory authorizedAgents = IUserSettings(SETTINGS)
-            .getAuthorizedAgents(holder);
-
-        bool agentIsAuthorized;
-        for (uint256 i = 0; i < authorizedAgents.length; i++) {
-            if (authorizedAgents[i] == agent) {
-                agentIsAuthorized = true;
-                break;
-            }
-        }
-
-        if (!agentIsAuthorized) revert Pool__UnauthorizedAgent();
+        if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent))
+            revert Pool__UnauthorizedAgent();
     }
 
     function _ensureAuthorizedCost(address holder, UD60x18 cost) internal view {

@@ -2,12 +2,14 @@
 
 pragma solidity >=0.8.19;
 
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+
 library UserSettingsStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.UserSettings");
 
     struct Layout {
-        mapping(address => address[]) authorizedAgents;
+        mapping(address => EnumerableSet.AddressSet) authorizedAgents;
         mapping(address => uint256) authorizedCost;
     }
 
