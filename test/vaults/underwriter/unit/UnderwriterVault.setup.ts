@@ -123,7 +123,12 @@ describe('#vaultSetup', () => {
         callPool.address,
         underwriter,
       );
-      const fee = await callPool.takerFee(size, 0, true);
+      const fee = await callPool.takerFee(
+        ethers.constants.AddressZero,
+        size,
+        0,
+        true,
+      );
       const totalSize = size.add(fee);
       await base.connect(underwriter).approve(p.router.address, totalSize);
       await callPoolUnderwriter.writeFrom(
@@ -158,7 +163,12 @@ describe('#vaultSetup', () => {
         putPool.address,
         underwriter,
       );
-      const fee = await putPool.takerFee(size, 0, false);
+      const fee = await putPool.takerFee(
+        ethers.constants.AddressZero,
+        size,
+        0,
+        false,
+      );
       const collateral = parseUnits(
         (5 * strike).toString(),
         await quote.decimals(),
