@@ -16,6 +16,7 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
+import {IVxPremia} from "../staking/IVxPremia.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -51,6 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable EXCHANGE_HELPER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
+    address internal immutable VXPREMIA;
 
     // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
@@ -71,22 +73,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address router,
         address exchangeHelper,
         address wrappedNativeToken,
-        address feeReceiver
+        address feeReceiver,
+        address vxPremia
     ) {
         FACTORY = factory;
         ROUTER = router;
         EXCHANGE_HELPER = exchangeHelper;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
+        VXPREMIA = vxPremia;
     }
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
     /// @return The taker fee for an option trade denormalized (18 decimals)
     function _takerFee(
         PoolStorage.Layout storage l,
+        address taker,
         UD60x18 size,
         UD60x18 premium,
         bool isPremiumNormalized
@@ -105,21 +111,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
+        UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
+        uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
 
-        return
-            Position.contractsToCollateral(
-                PRBMathExtra.max(premiumFee, notionalFee),
-                strike,
-                isCallPool
-            );
+        if (discount > 0) {
+            fee = fee - fee * UD60x18.wrap(discount);
+        }
+
+        return Position.contractsToCollateral(fee, strike, isCallPool);
     }
 
     /// @notice Gives a quote for a trade
+    /// @param taker The taker of the trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @return totalNetPremium The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
     /// @return totalTakerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function _getQuoteAMM(
+        address taker,
         UD60x18 size,
         bool isBuy
     ) internal view returns (uint256 totalNetPremium, uint256 totalTakerFee) {
@@ -136,22 +145,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isBuy
         );
 
-        UD60x18 liquidity = pricing.liquidity();
-        UD60x18 maxSize = pricing.maxTradeSize();
-
-        UD60x18 totalPremium;
-        UD60x18 _totalTakerFee;
+        QuoteAMMVarsInternal memory vars;
+        vars.liquidity = pricing.liquidity();
+        vars.maxSize = pricing.maxTradeSize();
 
         while (size > ZERO) {
-            UD60x18 tradeSize = PRBMathExtra.min(size, maxSize);
+            UD60x18 tradeSize = PRBMathExtra.min(size, vars.maxSize);
 
             UD60x18 nextPrice;
             // Compute next price
-            if (liquidity == ZERO) {
+            if (vars.liquidity == ZERO) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
                 UD60x18 priceDelta = ((pricing.upper - pricing.lower) *
-                    tradeSize) / liquidity;
+                    tradeSize) / vars.liquidity;
 
                 nextPrice = isBuy
                     ? pricing.marketPrice + priceDelta
@@ -161,7 +168,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (tradeSize > ZERO) {
                 UD60x18 premium = pricing.marketPrice.avg(nextPrice) *
                     tradeSize;
-                UD60x18 takerFee = _takerFee(l, size, premium, true);
+
+                UD60x18 takerFee = _takerFee(l, taker, size, premium, true);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(
@@ -170,19 +178,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.isCallPool
                 );
 
-                _totalTakerFee = _totalTakerFee + takerFee;
-                totalPremium = totalPremium + premium;
+                vars.totalTakerFee = vars.totalTakerFee + takerFee;
+                vars.totalPremium = vars.totalPremium + premium;
             }
 
             pricing.marketPrice = nextPrice;
 
-            if (maxSize >= size) {
+            if (vars.maxSize >= size) {
                 size = ZERO;
             } else {
                 // Cross tick
-                size = size - maxSize;
+                size = size - vars.maxSize;
 
-                // ToDo : Make sure this cant underflow
                 // Adjust liquidity rate
                 pricing.liquidityRate = pricing.liquidityRate.add(
                     l.ticks[isBuy ? pricing.upper : pricing.lower].delta
@@ -197,18 +204,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 if (pricing.upper == ZERO) revert Pool__InsufficientLiquidity();
 
                 // Compute new liquidity
-                liquidity = pricing.liquidity();
-                maxSize = pricing.maxTradeSize();
+                vars.liquidity = pricing.liquidity();
+                vars.maxSize = pricing.maxTradeSize();
             }
         }
 
         return (
             l.toPoolTokenDecimals(
                 isBuy
-                    ? totalPremium + _totalTakerFee
-                    : totalPremium - _totalTakerFee
+                    ? vars.totalPremium + vars.totalTakerFee
+                    : vars.totalPremium - vars.totalTakerFee
             ),
-            l.toPoolTokenDecimals(_totalTakerFee)
+            l.toPoolTokenDecimals(vars.totalTakerFee)
         );
     }
 
@@ -650,22 +657,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__PositionCantHoldLongAndShort(longs, shorts);
 
         address poolToken = l.getPoolToken();
-        if (collateral > collateralCredit) {
-            if (from == address(this)) {
-                IERC20(poolToken).safeTransfer(
-                    to,
-                    collateral - collateralCredit
-                );
-            } else {
-                _transferFromWithPermitOrRouter(
-                    permit,
-                    poolToken,
-                    from,
-                    to,
-                    collateral - collateralCredit
-                );
-            }
-        } else if (collateralCredit > collateral) {
+
+        if (from == address(this)) {
+            require(collateralCredit == 0); // Just a safety check, should never fail
+            IERC20(poolToken).safeTransfer(to, collateral);
+        } else if (collateral > collateralCredit) {
+            _transferFromWithPermitOrRouter(
+                permit,
+                poolToken,
+                from,
+                to,
+                collateral - collateralCredit
+            );
+        } else if (collateral < collateralCredit) {
             // If there was too much collateral credit, we refund the excess
             IERC20(poolToken).safeTransfer(
                 refundAddress,
@@ -710,7 +714,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        UD60x18 protocolFee = _takerFee(l, size, ZERO, true);
+        UD60x18 protocolFee = _takerFee(l, underwriter, size, ZERO, true);
 
         _transferFromWithPermitOrRouter(
             permit,
@@ -778,7 +782,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                         premium = quoteAMMPrice * tradeSize;
                     }
-                    UD60x18 takerFee = _takerFee(l, tradeSize, premium, true);
+
+                    UD60x18 takerFee = _takerFee(
+                        l,
+                        args.user,
+                        tradeSize,
+                        premium,
+                        true
+                    );
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(
@@ -1040,12 +1051,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _calculateQuoteRFQPremiumAndFee(
         PoolStorage.Layout storage l,
+        address taker,
         UD60x18 size,
         UD60x18 price,
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(l, size, r.premium, true);
+        r.protocolFee = _takerFee(l, taker, size, r.premium, true);
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(
@@ -1096,6 +1108,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
+                args.user,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
@@ -1466,9 +1479,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _swap(
         IPoolInternal.SwapArgs memory s,
         Permit2.Data memory permit,
-        bool transferFromPool
+        bool transferFromPool,
+        bool creditMessageValue
     ) internal returns (uint256 amountCredited, uint256 tokenInRefunded) {
-        if (msg.value > 0) {
+        uint256 amountInMax;
+        uint256 creditedMessageValue = 0;
+
+        if (creditMessageValue && msg.value > 0) {
             if (s.tokenIn != WRAPPED_NATIVE_TOKEN)
                 revert Pool__InvalidSwapTokenIn(
                     s.tokenIn,
@@ -1476,18 +1493,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 );
             IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
             IWETH(WRAPPED_NATIVE_TOKEN).transfer(EXCHANGE_HELPER, msg.value);
+            creditedMessageValue = msg.value;
+            amountInMax = msg.value;
         }
+
         if (s.amountInMax > 0) {
             if (transferFromPool) {
                 IERC20(s.tokenIn).safeTransfer(EXCHANGE_HELPER, s.amountInMax);
-            } else {
+                amountInMax += s.amountInMax;
+            } else if (creditedMessageValue < s.amountInMax) {
                 _transferFromWithPermitOrRouter(
                     permit,
                     s.tokenIn,
                     msg.sender,
                     EXCHANGE_HELPER,
-                    s.amountInMax
+                    s.amountInMax - creditedMessageValue
                 );
+                amountInMax = s.amountInMax;
             }
         }
 
@@ -1495,7 +1517,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             .swapWithToken(
                 s.tokenIn,
                 s.tokenOut,
-                s.amountInMax + msg.value,
+                amountInMax,
                 s.callee,
                 s.allowanceTarget,
                 s.data,
@@ -1503,6 +1525,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         if (amountCredited < s.amountOutMin)
             revert Pool__NotEnoughSwapOutput(amountCredited, s.amountOutMin);
+    }
+
+    /// @notice Wraps native token if the pool is using WRAPPED_NATIVE_TOKEN
+    /// @return wrappedAmount The amount of native tokens wrapped
+    function _wrapNativeToken() internal returns (uint256 wrappedAmount) {
+        if (msg.value > 0) {
+            if (PoolStorage.layout().getPoolToken() != WRAPPED_NATIVE_TOKEN)
+                revert Pool__NotWrappedNativeTokenPool();
+
+            IWETH(WRAPPED_NATIVE_TOKEN).deposit{value: msg.value}();
+            wrappedAmount = msg.value;
+        }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -1522,8 +1556,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         view
         returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
-        if (lower >= upper)
-            revert Position__LowerGreaterOrEqualUpper(lower, upper);
+        Position.ensureLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
         nearestBelowUpper = _getNearestTickBelow(upper);
@@ -1813,7 +1846,31 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
 
             if (crossings > 2) revert Pool__InvalidReconciliation(crossings);
-        } else {
+        }
+
+        emit UpdateTick(
+            lower,
+            l.tickIndex.prev(lower),
+            l.tickIndex.next(lower),
+            lowerTick.delta,
+            lowerTick.externalFeeRate,
+            lowerTick.longDelta,
+            lowerTick.shortDelta,
+            lowerTick.counter
+        );
+
+        emit UpdateTick(
+            upper,
+            l.tickIndex.prev(upper),
+            l.tickIndex.next(upper),
+            upperTick.delta,
+            upperTick.externalFeeRate,
+            upperTick.longDelta,
+            upperTick.shortDelta,
+            upperTick.counter
+        );
+
+        if (delta <= iZERO) {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
         }
@@ -1851,6 +1908,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         currentTick.externalFeeRate =
             l.globalFeeRate -
             currentTick.externalFeeRate;
+
+        emit UpdateTick(
+            l.currentTick,
+            l.tickIndex.prev(l.currentTick),
+            l.tickIndex.next(l.currentTick),
+            currentTick.delta,
+            currentTick.externalFeeRate,
+            currentTick.longDelta,
+            currentTick.shortDelta,
+            currentTick.counter
+        );
 
         if (!isBuy) {
             if (l.currentTick <= Pricing.MIN_TICK_PRICE)
@@ -2225,6 +2293,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PremiumAndFeeInternal
             memory premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
+                args.user,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
