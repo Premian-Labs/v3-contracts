@@ -16,6 +16,7 @@ import { expect } from 'chai';
 import { getValidMaturity, ONE_HOUR } from '../../../../utils/time';
 import { UnderwriterVaultMock } from '../../../../typechain';
 import { TokenType } from '../../../../utils/sdk/types';
+import { ethers } from 'ethers';
 
 let vault: UnderwriterVaultMock;
 
@@ -494,7 +495,12 @@ describe('UnderwriterVault', () => {
           );
 
           // Get minting fee
-          const mintingFee = await pool.takerFee(tradeSize, 0, false);
+          const mintingFee = await pool.takerFee(
+            ethers.constants.AddressZero,
+            tradeSize,
+            0,
+            false,
+          );
 
           // Check that long contracts have been transferred to trader
           const longs = await pool.balanceOf(trader.address, TokenType.LONG);
