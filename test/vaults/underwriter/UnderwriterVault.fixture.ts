@@ -189,7 +189,7 @@ export async function createPool(
   quote: ERC20Mock,
   oracleAdapter: MockContract,
   p: PoolUtil,
-): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
+) {
   let pool: IPoolMock;
 
   poolKey = {
@@ -208,7 +208,7 @@ export async function createPool(
   const r = await tx.wait(1);
   const poolAddress = (r as any).events[0].args.poolAddress;
   pool = IPoolMock__factory.connect(poolAddress, deployer);
-  return [pool, poolAddress, poolKey];
+  return { pool, poolAddress, poolKey };
 }
 
 export async function vaultSetup() {
@@ -313,7 +313,11 @@ export async function vaultSetup() {
     true, // isDevMode
   );
 
-  const [callPool, callPoolAddress, callPoolKey] = await createPool(
+  const {
+    pool: callPool,
+    poolAddress: callPoolAddress,
+    poolKey: callPoolKey,
+  } = await createPool(
     strike,
     maturity,
     true,
@@ -324,7 +328,11 @@ export async function vaultSetup() {
     p,
   );
 
-  const [putPool, putPoolAddress, putPoolKey] = await createPool(
+  const {
+    pool: putPool,
+    poolAddress: putPoolAddress,
+    poolKey: putPoolKey,
+  } = await createPool(
     strike,
     maturity,
     false,

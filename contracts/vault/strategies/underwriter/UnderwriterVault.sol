@@ -875,9 +875,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
     /// @inheritdoc IVault
     function getQuote(
-        UD60x18 strike,
-        uint64 maturity,
-        bool isCall,
+        IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premium) {
@@ -886,9 +884,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
-            strike,
-            maturity,
-            isCall,
+            poolKey.strike,
+            poolKey.maturity,
+            poolKey.isCallPool,
             size,
             isBuy
         );
@@ -900,9 +898,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
     /// @inheritdoc IVault
     function trade(
-        UD60x18 strike,
-        uint64 maturity,
-        bool isCall,
+        IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit
@@ -912,9 +908,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
-            strike,
-            maturity,
-            isCall,
+            poolKey.strike,
+            poolKey.maturity,
+            poolKey.isCallPool,
             size,
             isBuy
         );
@@ -927,7 +923,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         // Add listing
-        l.addListing(strike, maturity);
+        l.addListing(poolKey.strike, poolKey.maturity);
 
         // Add everything except mintingFee
         l.totalAssets = l.totalAssets + quote.premium + quote.spread;
@@ -941,7 +937,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         // Approve transfer of base / quote token
         uint256 approveAmountScaled = l.convertAssetFromUD60x18(
-            l.collateral(size, strike) + quote.mintingFee
+            l.collateral(size, poolKey.strike) + quote.mintingFee
         );
 
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
@@ -955,7 +951,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         // Handle the premiums and spread capture generated
-        _afterBuy(l, strike, maturity, size, quote.spread);
+        _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread);
 
         // Emit trade event
         emit Trade(
