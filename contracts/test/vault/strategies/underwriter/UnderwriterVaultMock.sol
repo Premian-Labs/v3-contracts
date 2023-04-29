@@ -569,7 +569,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
 
         UD60x18 mintingFee = l.convertAssetToUD60x18(
-            IPool(pool).takerFee(size, 0, true)
+            IPool(pool).takerFee(address(0), size, 0, true)
         );
 
         IPool(pool).writeFrom(

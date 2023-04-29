@@ -109,13 +109,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] calldata rho,
         UD60x18 riskFreeRate
     ) external {
-        uint256 length = tokens.length;
-
         if (
-            length != tau.length ||
-            length != theta.length ||
-            length != psi.length ||
-            length != rho.length
+            tokens.length != tau.length ||
+            tokens.length != theta.length ||
+            tokens.length != psi.length ||
+            tokens.length != rho.length
         ) revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
@@ -126,7 +124,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
                 msg.sender
             );
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({
                 updatedAt: block.timestamp,
                 tau: tau[i],
