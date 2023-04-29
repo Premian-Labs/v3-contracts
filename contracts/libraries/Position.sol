@@ -7,6 +7,7 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
+import {iZERO, ZERO, ONE, TWO} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 
@@ -17,12 +18,6 @@ library Position {
     using Position for Position.Key;
     using Position for Position.KeyInternal;
     using Position for Position.OrderType;
-
-    UD60x18 private constant ZERO = UD60x18.wrap(0);
-    UD60x18 private constant ONE = UD60x18.wrap(1e18);
-    UD60x18 private constant TWO = UD60x18.wrap(2e18);
-
-    SD59x18 private constant iZERO = SD59x18.wrap(0);
 
     struct Key {
         // The Agent that owns the exposure change of the Position
@@ -130,12 +125,8 @@ library Position {
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        // ToDo : Move check somewhere else ?
-        if (self.lower >= self.upper)
-            revert IPosition.Position__LowerGreaterOrEqualUpper(
-                self.lower,
-                self.upper
-            );
+        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
+
         if (price <= self.lower) return ZERO;
         else if (self.lower < price && price < self.upper)
             return Pricing.proportion(self.lower, self.upper, price);
@@ -146,12 +137,7 @@ library Position {
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        // ToDo : Move check somewhere else ?
-        if (self.lower >= self.upper)
-            revert IPosition.Position__LowerGreaterOrEqualUpper(
-                self.lower,
-                self.upper
-            );
+        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
 
         UD60x18 a;
         if (price <= self.lower) {
@@ -328,5 +314,13 @@ library Position {
         delta.shorts =
             sign *
             (self.short(absChangeTokens, price)).intoSD59x18();
+    }
+
+    function ensureLowerGreaterOrEqualUpper(
+        UD60x18 lower,
+        UD60x18 upper
+    ) internal pure {
+        if (lower >= upper)
+            revert IPosition.Position__LowerGreaterOrEqualUpper(lower, upper);
     }
 }

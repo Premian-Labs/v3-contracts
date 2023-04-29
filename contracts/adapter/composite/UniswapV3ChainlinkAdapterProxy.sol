@@ -8,7 +8,10 @@ import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
-contract CompositeAdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
+contract UniswapV3ChainlinkAdapterProxy is
+    ERC165BaseInternal,
+    ProxyUpgradeableOwnable
+{
     constructor(
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {

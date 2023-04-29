@@ -114,6 +114,11 @@ export default {
       accounts: [pkeyTestnet],
       timeout: 300000,
     },
+    arbitrumGoerli: {
+      url: `https://arb-goerli.g.alchemy.com/v2/${API_KEY_ALCHEMY}`,
+      accounts: [pkeyTestnet],
+      timeout: 300000,
+    },
     arbitrumNova: {
       url: `https://nova.arbitrum.io/rpc`,
       accounts: [pkeyMainnet],

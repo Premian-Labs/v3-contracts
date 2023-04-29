@@ -22,3 +22,5 @@ SD59x18 constant iFOUR = SD59x18.wrap(4e18);
 SD59x18 constant iEIGHT = SD59x18.wrap(8e18);
 SD59x18 constant iNINE = SD59x18.wrap(9e18);
 SD59x18 constant iTEN = SD59x18.wrap(10e18);
+
+uint256 constant WAD = 1e18;

@@ -15,11 +15,11 @@ interface IVolatilityOracle {
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
-    function addWhitelistedRelayers(address[] memory accounts) external;
+    function addWhitelistedRelayers(address[] calldata accounts) external;
 
     /// @notice Remove relayers from the whitelist so that they cannot add oracle surfaces
     /// @param accounts The addresses to remove from the whitelist
-    function removeWhitelistedRelayers(address[] memory accounts) external;
+    function removeWhitelistedRelayers(address[] calldata accounts) external;
 
     /// @notice Get the list of whitelisted relayers
     /// @return The list of whitelisted relayers
@@ -30,7 +30,7 @@ interface IVolatilityOracle {
     /// @param params Parameters of IV model to pack
     /// @return result The packed parameters of IV model
     function formatParams(
-        int256[5] memory params
+        int256[5] calldata params
     ) external pure returns (bytes32 result);
 
     /// @notice Unpack IV model parameters from a bytes32
@@ -48,11 +48,11 @@ interface IVolatilityOracle {
     /// @param rho List of rho curves
     /// @param riskFreeRate The risk-free rate
     function updateParams(
-        address[] memory tokens,
-        bytes32[] memory tau,
-        bytes32[] memory theta,
-        bytes32[] memory psi,
-        bytes32[] memory rho,
+        address[] calldata tokens,
+        bytes32[] calldata tau,
+        bytes32[] calldata theta,
+        bytes32[] calldata psi,
+        bytes32[] calldata rho,
         UD60x18 riskFreeRate
     ) external;
 

@@ -4,18 +4,21 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
-interface IPoolTrade is IPoolInternal {
+interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @notice Gives a quote for an AMM trade
+    /// @param taker The taker of the trade
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @return premiumNet The premium which has to be paid to complete the trade (Net of fees) (poolToken decimals)
     /// @return takerFee The taker fees to pay (Included in `premiumNet`) (poolToken decimals)
     function getQuoteAMM(
+        address taker,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee);
@@ -31,11 +34,14 @@ interface IPoolTrade is IPoolInternal {
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
-    ) external returns (uint256 premiumTaker, Position.Delta memory delta);
+        Signature calldata signature,
+        Permit2.Data calldata permit
+    )
+        external
+        payable
+        returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Execute a swap and fill an RFQ quote
     /// @param s The swap arguments
@@ -47,13 +53,14 @@ interface IPoolTrade is IPoolInternal {
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndFillQuoteRFQ(
-        IPoolInternal.SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        IPoolInternal.SwapArgs calldata s,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -73,12 +80,13 @@ interface IPoolTrade is IPoolInternal {
     /// @return tokenOutReceived The amount of tokenOut received by the taker (tokenOut decimals)
     function fillQuoteRFQAndSwap(
         IPoolInternal.SwapArgs memory s,
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory signature,
-        Permit2.Data memory permit
+        Signature calldata signature,
+        Permit2.Data calldata permit
     )
         external
+        payable
         returns (
             uint256 premiumTaker,
             Position.Delta memory delta,
@@ -98,8 +106,11 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
-    ) external returns (uint256 totalPremium, Position.Delta memory delta);
+        Permit2.Data calldata permit
+    )
+        external
+        payable
+        returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
@@ -112,11 +123,11 @@ interface IPoolTrade is IPoolInternal {
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
     function swapAndTrade(
-        IPoolInternal.SwapArgs memory s,
+        IPoolInternal.SwapArgs calldata s,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
         payable
@@ -143,9 +154,10 @@ interface IPoolTrade is IPoolInternal {
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit,
-        Permit2.Data memory permit
+        Permit2.Data calldata permit
     )
         external
+        payable
         returns (
             uint256 totalPremium,
             Position.Delta memory delta,
@@ -164,9 +176,9 @@ interface IPoolTrade is IPoolInternal {
     /// @param size Size to fill from the RFQ quote (18 decimals)
     /// @param sig secp256k1 Signature
     function isQuoteRFQValid(
-        QuoteRFQ memory quoteRFQ,
+        QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature memory sig
+        Signature calldata sig
     ) external view returns (bool, InvalidQuoteRFQError);
 
     /// @notice Returns the size already filled for a given RFQ quote

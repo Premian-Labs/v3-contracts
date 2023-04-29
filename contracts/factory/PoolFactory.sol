@@ -43,7 +43,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     /// @inheritdoc IPoolFactory
     function getPoolAddress(
-        PoolKey memory k
+        PoolKey calldata k
     ) external view returns (address pool, bool isDeployed) {
         pool = _getPoolAddress(k.poolKey());
         isDeployed = true;
@@ -59,7 +59,9 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(PoolKey memory k) public view returns (UD60x18) {
+    function initializationFee(
+        PoolKey calldata k
+    ) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         return
@@ -87,7 +89,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
 
     /// @inheritdoc IPoolFactory
     function deployPool(
-        PoolKey memory k
+        PoolKey calldata k
     ) external payable returns (address poolAddress) {
         if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
 
@@ -176,7 +178,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @inheritdoc IPoolFactory
-    function removeDiscount(PoolKey memory k) external {
+    function removeDiscount(PoolKey calldata k) external {
         if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
 
         if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
