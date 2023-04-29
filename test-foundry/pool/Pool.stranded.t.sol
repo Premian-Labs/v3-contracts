@@ -98,7 +98,6 @@ abstract contract PoolStrandedTest is DeployTest {
     ) internal returns (uint256 initialCollateral) {
         bool isCall = poolKey.isCallPool;
 
-        IERC20 token = IERC20(getPoolToken(isCall));
         initialCollateral = scaleDecimals(
             isCall ? withdrawSize : withdrawSize * poolKey.strike,
             isCall
@@ -263,7 +262,6 @@ abstract contract PoolStrandedTest is DeployTest {
     function test_stranded_isMarketPriceStranded() public {
         depositSpecified(1 ether, 0.1 ether, 0.3 ether, Position.OrderType.LC);
         depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
-        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
 
         Position.KeyInternal memory posKeyInternal = Position.KeyInternal({
             owner: users.lp,

@@ -50,7 +50,8 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
 
     function _resizeArray(address[] memory array, uint256 size) internal pure {
         if (array.length == size) return;
-        if (array.length < size) revert OracleAdapter__ArrayCannotExpand();
+        if (array.length < size)
+            revert OracleAdapter__ArrayCannotExpand(array.length, size);
 
         assembly {
             mstore(array, size)
@@ -59,7 +60,8 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
 
     function _resizeArray(uint8[] memory array, uint256 size) internal pure {
         if (array.length == size) return;
-        if (array.length < size) revert OracleAdapter__ArrayCannotExpand();
+        if (array.length < size)
+            revert OracleAdapter__ArrayCannotExpand(array.length, size);
 
         assembly {
             mstore(array, size)
@@ -68,7 +70,7 @@ abstract contract OracleAdapterInternal is IOracleAdapterInternal {
 
     function _ensureTargetNonZero(uint256 target) internal view {
         if (target == 0 || target > block.timestamp)
-            revert OracleAdapter__InvalidTarget();
+            revert OracleAdapter__InvalidTarget(target, block.timestamp);
     }
 
     function _ensurePricePositive(int256 price) internal pure {

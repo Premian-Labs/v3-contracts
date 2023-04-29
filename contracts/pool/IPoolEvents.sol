@@ -2,6 +2,7 @@
 
 pragma solidity >=0.8.19;
 
+import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
@@ -9,6 +10,17 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolEvents {
+    event UpdateTick(
+        UD60x18 indexed tick,
+        UD60x18 indexed prev,
+        UD60x18 indexed next,
+        SD59x18 delta,
+        UD60x18 externalFeeRate,
+        SD59x18 longDelta,
+        SD59x18 shortDelta,
+        uint256 counter
+    );
+
     event Deposit(
         address indexed owner,
         uint256 indexed tokenId,
@@ -114,4 +126,11 @@ interface IPoolEvents {
     );
 
     event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
+
+    event FlashLoan(
+        address indexed initiator,
+        address indexed receiver,
+        UD60x18 amount,
+        UD60x18 fee
+    );
 }
