@@ -6,6 +6,7 @@ import {
   PoolFactory__factory,
   PoolFactoryProxy__factory,
   PoolCoreMock__factory,
+  PoolDepositWithdraw__factory,
   Premia,
   Premia__factory,
   ExchangeHelper__factory,
@@ -14,11 +15,16 @@ import {
   ERC20Router,
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
+  ERC20Mock__factory,
+  IVxPremia__factory,
+  VxPremia__factory,
+  VxPremiaProxy__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
+import { tokens } from '../utils/addresses';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -48,6 +54,7 @@ export class PoolUtil {
     poolFactory: string,
     router: string,
     exchangeHelper: string,
+    vxPremia: string,
     wrappedNativeToken: string,
     feeReceiver: string,
     log = true,
@@ -77,6 +84,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      vxPremia,
     );
     await poolCoreImpl.deployed();
 
@@ -88,6 +96,31 @@ export class PoolUtil {
       interface: poolCoreImpl.interface,
     });
 
+    // PoolDepositWithdraw
+
+    const poolDepositWithdrawFactory = new PoolDepositWithdraw__factory(
+      deployer,
+    );
+    const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
+      poolFactory,
+      router,
+      exchangeHelper,
+      wrappedNativeToken,
+      feeReceiver,
+      vxPremia,
+    );
+    await poolDepositWithdrawImpl.deployed();
+
+    if (log) {
+      console.log(`PoolDepositWithdraw : ${poolDepositWithdrawImpl.address}`);
+    }
+
+    result.push({
+      name: 'PoolDepositWithdraw',
+      address: poolDepositWithdrawImpl.address,
+      interface: poolDepositWithdrawImpl.interface,
+    });
+
     // PoolTrade
 
     const poolTradeFactory = new PoolTrade__factory(deployer);
@@ -97,6 +130,7 @@ export class PoolUtil {
       exchangeHelper,
       wrappedNativeToken,
       feeReceiver,
+      vxPremia,
     );
     await poolTradeImpl.deployed();
 
@@ -120,6 +154,7 @@ export class PoolUtil {
         exchangeHelper,
         wrappedNativeToken,
         feeReceiver,
+        vxPremia,
       );
       await poolCoreMockImpl.deployed();
 
@@ -215,11 +250,40 @@ export class PoolUtil {
 
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
+    // VxPremia
+    const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+
+    const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+      constants.AddressZero,
+      constants.AddressZero,
+      premia.address,
+      tokens.USDC.address,
+      exchangeHelper.address,
+    );
+
+    await vxPremiaImpl.deployed();
+
+    if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
+
+    const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
+      vxPremiaImpl.address,
+    );
+
+    await vxPremiaProxy.deployed();
+
+    if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
+
+    const vxPremia = IVxPremia__factory.connect(
+      vxPremiaProxy.address,
+      deployer,
+    );
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
       exchangeHelper.address,
+      vxPremia.address,
       wrappedNativeToken,
       feeReceiver,
       log,

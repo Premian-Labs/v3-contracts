@@ -364,7 +364,7 @@ export async function vaultSetup() {
   const encoding = abi.encode(
     ['uint256[]'],
     [
-      [3, 0.005, 1, 1.2, 3, 30, 0.1, 0.7].map((el) =>
+      [3, 0.005, 1, 1.2, 3, 30, 0.1, 0.7, 0.0, 0.0].map((el) =>
         parseEther(el.toString()),
       ),
     ],

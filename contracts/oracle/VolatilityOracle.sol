@@ -49,7 +49,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /// @inheritdoc IVolatilityOracle
     function addWhitelistedRelayers(
-        address[] memory accounts
+        address[] calldata accounts
     ) external onlyOwner {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
@@ -61,7 +61,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /// @inheritdoc IVolatilityOracle
     function removeWhitelistedRelayers(
-        address[] memory accounts
+        address[] calldata accounts
     ) external onlyOwner {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
@@ -88,7 +88,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /// @inheritdoc IVolatilityOracle
     function formatParams(
-        int256[5] memory params
+        int256[5] calldata params
     ) external pure returns (bytes32 result) {
         return VolatilityOracleStorage.formatParams(params);
     }
@@ -102,11 +102,11 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /// @inheritdoc IVolatilityOracle
     function updateParams(
-        address[] memory tokens,
-        bytes32[] memory tau,
-        bytes32[] memory theta,
-        bytes32[] memory psi,
-        bytes32[] memory rho,
+        address[] calldata tokens,
+        bytes32[] calldata tau,
+        bytes32[] calldata theta,
+        bytes32[] calldata psi,
+        bytes32[] calldata rho,
         UD60x18 riskFreeRate
     ) external {
         uint256 length = tokens.length;

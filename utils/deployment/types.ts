@@ -8,8 +8,15 @@ export interface ContractAddresses {
   PoolFactoryImplementation: string;
   PoolFactoryProxy: string;
   ExchangeHelper: string;
+  VxPremia: string;
   ERC20Router: string;
   PoolBase: string;
   PoolCore: string;
   PoolTrade: string;
+}
+
+export enum ChainID {
+  Goerli = 5,
+  Arbitrum = 42161,
+  ArbitrumGoerli = 421613,
 }

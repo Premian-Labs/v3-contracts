@@ -7,19 +7,22 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
 
-import {CompositeAdapterInternal} from "./CompositeAdapterInternal.sol";
+import {UniswapV3ChainlinkAdapterInternal} from "./UniswapV3ChainlinkAdapterInternal.sol";
 
 /// @title An implementation of IOracleAdapter that combines the UniswapV3 and Chainlink adapter feeds
 /// @notice This oracle adapter will fetch the price for tokenIn/ETH from UniswapV3 adapter, then
 ///         convert to tokenIn/tokenOut using ETH/tokenOut from the Chainlink adapter.
 ///         i.e. tokenIn/ETH * ETH/tokenOut -> tokenIn/tokenOut
-contract CompositeAdapter is CompositeAdapterInternal, OracleAdapter {
+contract UniswapV3ChainlinkAdapter is
+    UniswapV3ChainlinkAdapterInternal,
+    OracleAdapter
+{
     constructor(
         IOracleAdapter chainlinkAdapter,
         IOracleAdapter uniswapAdapter,
         address wrappedNative
     )
-        CompositeAdapterInternal(
+        UniswapV3ChainlinkAdapterInternal(
             chainlinkAdapter,
             uniswapAdapter,
             wrappedNative

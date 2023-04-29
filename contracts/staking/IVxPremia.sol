@@ -29,7 +29,7 @@ interface IVxPremia is IPremiaStaking {
     /// @return total votes for specific pool
     function getPoolVotes(
         VxPremiaStorage.VoteVersion version,
-        bytes memory target
+        bytes calldata target
     ) external view returns (uint256);
 
     /// @notice get votes of user
@@ -41,5 +41,5 @@ interface IVxPremia is IPremiaStaking {
 
     /// @notice add or remove votes, in the limit of the user voting power
     /// @param votes votes to cast
-    function castVotes(VxPremiaStorage.Vote[] memory votes) external;
+    function castVotes(VxPremiaStorage.Vote[] calldata votes) external;
 }
