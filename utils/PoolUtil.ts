@@ -18,6 +18,7 @@ import {
   IVxPremia__factory,
   VxPremia__factory,
   VxPremiaProxy__factory,
+  ExchangeHelper__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -276,7 +277,6 @@ export class PoolUtil {
       deployer,
       poolFactory.address,
       router.address,
-      exchangeHelper.address,
       vxPremia.address,
       wrappedNativeToken,
       feeReceiver,
