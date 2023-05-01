@@ -46,6 +46,29 @@ interface IPoolCore is IPoolInternal {
             bool isCallPool
         );
 
+    /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that index
+    /// @param index The index of the tick
+    /// @return tickWithLiquidity The tick at the index, with the liquidityNet (18 decimals) of the tick
+    function tick(
+        UD60x18 index
+    ) external view returns (IPoolInternal.TickWithLiquidity memory);
+
+    /// @notice Returns the net liquidity for a given tick, to the next tick in the range
+    /// @param index The index of the tick
+    /// @return liquidityNet The net liquidity of the tick (18 decimals)
+    function getLiquidityForTick(UD60x18 index) external view returns (UD60x18);
+
+    /// @notice
+    /// @param index The index of the tick
+    /// @param nextIndex The index of the next tick
+    /// @param liquidityRate The liquidity rate at the tick (18 decimals)
+    /// @return liquidityNet The net liquidity for the range (18 decimals)
+    function getLiquidityForRange(
+        UD60x18 index,
+        UD60x18 nextIndex,
+        UD60x18 liquidityRate
+    ) external view returns (UD60x18);
+
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to
     ///         zero.

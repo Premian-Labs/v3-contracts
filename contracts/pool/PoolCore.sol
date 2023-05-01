@@ -7,20 +7,26 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
+import {Pricing} from "../libraries/Pricing.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
+import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
 
 contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
+    using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using SafeERC20 for IERC20;
+    using PRBMathExtra for UD60x18;
 
     constructor(
         address factory,
@@ -88,6 +94,94 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             l.maturity,
             l.isCallPool
         );
+    }
+
+    /// @inheritdoc IPoolCore
+    function tick(
+        UD60x18 index
+    ) external view returns (IPoolInternal.TickWithLiquidity memory) {
+        IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[index];
+        UD60x18 liquidityNet = getLiquidityForTick(index);
+
+        return
+            IPoolInternal.TickWithLiquidity({
+                tick: _tick,
+                liquidityNet: liquidityNet
+            });
+    }
+
+    /// @inheritdoc IPoolCore
+    function getLiquidityForTick(UD60x18 index) public view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        UD60x18 liquidityRate = l.liquidityRate;
+        UD60x18 currentTick = l.currentTick;
+
+        // If the tick is found, we can calculate the liquidity
+        if (l.currentTick == index) {
+            return
+                getLiquidityForRange(
+                    currentTick,
+                    l.tickIndex.next(currentTick),
+                    liquidityRate
+                );
+        }
+
+        UD60x18 next = currentTick;
+
+        // If the current tick has a previous tick, we need to search left first for the tick
+        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+            UD60x18 prev = l.tickIndex.prev(currentTick);
+
+            while (true) {
+                if (prev == index) {
+                    return getLiquidityForRange(prev, next, liquidityRate);
+                }
+
+                // If we reached the end of the left side, the tick must be on the right side
+                if (prev == Pricing.MIN_TICK_PRICE) {
+                    // Reset the liquidity rate to the current, so we can traverse from currentTick
+                    liquidityRate = l.liquidityRate;
+                    break;
+                }
+
+                // Otherwise, add the delta to the liquidity rate, and move to the next tick
+                liquidityRate = liquidityRate.add(l.ticks[prev].delta);
+                prev = l.tickIndex.prev(prev);
+            }
+        }
+
+        next = l.tickIndex.next(currentTick);
+
+        // The tick must be to the right side, search right for the tick
+        while (true) {
+            UD60x18 nextIndex = next == Pricing.MAX_TICK_PRICE
+                ? l.tickIndex.next(next)
+                : Pricing.MAX_TICK_PRICE + Pricing.MIN_TICK_DISTANCE;
+            liquidityRate = liquidityRate.add(l.ticks[next].delta);
+
+            if (next == index) {
+                return getLiquidityForRange(next, nextIndex, liquidityRate);
+            }
+
+            // If we reached the end of the right side, the tick does not exist
+            if (next == Pricing.MAX_TICK_PRICE) {
+                revert Pool__InvalidTickIndex();
+            }
+
+            next = nextIndex;
+        }
+
+        revert Pool__InvalidTickIndex();
+    }
+
+    /// @inheritdoc IPoolCore
+    function getLiquidityForRange(
+        UD60x18 index,
+        UD60x18 nextIndex,
+        UD60x18 liquidityRate
+    ) public pure returns (UD60x18) {
+        return
+            ((nextIndex - index) * liquidityRate) / Pricing.MIN_TICK_DISTANCE;
     }
 
     /// @inheritdoc IPoolCore
