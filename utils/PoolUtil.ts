@@ -173,6 +173,7 @@ export class PoolUtil {
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     isDevMode = false,
+    vxPremiaAddress?: string,
   ) {
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
@@ -246,38 +247,42 @@ export class PoolUtil {
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
     // VxPremia
-    const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+    if (!vxPremiaAddress) {
+      const premia = await new ERC20Mock__factory(deployer).deploy(
+        'PREMIA',
+        18,
+      );
 
-    const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
-      constants.AddressZero,
-      constants.AddressZero,
-      premia.address,
-      tokens.USDC.address,
-      exchangeHelper.address,
-    );
+      if (log) console.log(`Premia : ${exchangeHelper.address}`);
 
-    await vxPremiaImpl.deployed();
+      const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+        constants.AddressZero,
+        constants.AddressZero,
+        premia.address,
+        tokens.USDC.address,
+        exchangeHelper.address,
+      );
 
-    if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
+      await vxPremiaImpl.deployed();
 
-    const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
-      vxPremiaImpl.address,
-    );
+      if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
 
-    await vxPremiaProxy.deployed();
+      const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
+        vxPremiaImpl.address,
+      );
 
-    if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
+      await vxPremiaProxy.deployed();
 
-    const vxPremia = IVxPremia__factory.connect(
-      vxPremiaProxy.address,
-      deployer,
-    );
+      if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
+
+      vxPremiaAddress = vxPremiaProxy.address;
+    }
 
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
       router.address,
-      vxPremia.address,
+      vxPremiaAddress,
       wrappedNativeToken,
       feeReceiver,
       log,
