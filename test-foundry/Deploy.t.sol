@@ -34,8 +34,14 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {IVxPremia} from "contracts/staking/IVxPremia.sol";
+import {VxPremia} from "contracts/staking/VxPremia.sol";
+import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
+
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
+
+import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 
 import {Assertions} from "./Assertions.sol";
 
@@ -44,11 +50,15 @@ contract DeployTest is Test, Assertions {
 
     address base;
     address quote;
+    address premia;
+
     OracleAdapterMock oracleAdapter;
     IPoolFactory.PoolKey poolKey;
     PoolFactory factory;
     Premia diamond;
     ERC20Router router;
+    ExchangeHelper exchangeHelper;
+    IVxPremia vxPremia;
 
     IPoolMock pool;
 
@@ -81,12 +91,13 @@ contract DeployTest is Test, Assertions {
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL);
+        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
         vm.selectFork(mainnetFork);
 
         users = Users({lp: vm.addr(1), trader: vm.addr(2)});
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
+        premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70;
 
         oracleAdapter = new OracleAdapterMock(
             address(base),
@@ -142,34 +153,50 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
+        VxPremia vxPremiaImpl = new VxPremia(
+            address(0),
+            address(0),
+            premia,
+            address(quote),
+            address(exchangeHelper)
+        );
+
+        VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
+
+        vxPremia = IVxPremia(address(vxPremiaProxy));
+
         PoolBase poolBaseImpl = new PoolBase();
 
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
             address(factory),
             address(router),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(vxPremia)
         );
 
         PoolCore poolCoreImpl = new PoolCore(
             address(factory),
             address(router),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(vxPremia)
         );
 
         PoolDepositWithdraw poolDepositWithdrawImpl = new PoolDepositWithdraw(
             address(factory),
             address(router),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(vxPremia)
         );
 
         PoolTrade poolTradeImpl = new PoolTrade(
             address(factory),
             address(router),
             address(base),
-            feeReceiver
+            feeReceiver,
+            address(vxPremia)
         );
 
         /////////////////////
@@ -247,6 +274,8 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
+        poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
         poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
@@ -352,6 +381,13 @@ contract DeployTest is Test, Assertions {
         bool isCall
     ) internal view returns (UD60x18) {
         return isCall ? amount : amount * poolKey.strike;
+    }
+
+    function collateralToContracts(
+        UD60x18 amount,
+        bool isCall
+    ) internal view returns (UD60x18) {
+        return isCall ? amount : amount / poolKey.strike;
     }
 
     function scaleDecimals(

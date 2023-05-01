@@ -2,7 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -26,6 +25,55 @@ abstract contract PoolFlashLoanTest is DeployTest {
         return scaleDecimals(fee, isCall);
     }
 
+    function test_maxFlashLoan_ReturnCorrectMax() public {
+        posKey.orderType = Position.OrderType.CS;
+
+        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        uint256 initialCollateral = deposit(depositSize);
+
+        address poolToken = getPoolToken(poolKey.isCallPool);
+        deal(poolToken, users.trader, 100 ether);
+
+        assertEq(pool.maxFlashLoan(poolToken), initialCollateral);
+    }
+
+    function test_maxFlashLoan_RevertIf_NotPoolToken() public {
+        address otherToken = address(0x111);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotPoolToken.selector,
+                otherToken
+            )
+        );
+        pool.maxFlashLoan(otherToken);
+    }
+
+    function test_flashFee_ReturnCorrectFee() public {
+        posKey.orderType = Position.OrderType.CS;
+
+        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        uint256 initialCollateral = deposit(depositSize);
+
+        address poolToken = getPoolToken(poolKey.isCallPool);
+        deal(poolToken, users.trader, 100 ether);
+
+        assertEq(
+            pool.flashFee(poolToken, initialCollateral / 2),
+            calculateFee(initialCollateral / 2, poolKey.isCallPool)
+        );
+    }
+
+    function test_flashFee_RevertIf_NotPoolToken() public {
+        address otherToken = address(0x111);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotPoolToken.selector,
+                otherToken
+            )
+        );
+        pool.flashFee(otherToken, 1);
+    }
+
     function _test_flashLoan_Single_Success(bool isCall) internal {
         posKey.orderType = Position.OrderType.CS;
 
@@ -43,6 +91,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         flashLoanMock.singleFlashLoan(
             FlashLoanMock.FlashLoan({
                 pool: address(pool),
+                token: poolToken,
                 amount: initialCollateral / 2
             }),
             true
@@ -78,6 +127,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         flashLoanMock.singleFlashLoan(
             FlashLoanMock.FlashLoan({
                 pool: address(pool),
+                token: poolToken,
                 amount: initialCollateral / 2
             }),
             false
@@ -146,16 +196,19 @@ abstract contract PoolFlashLoanTest is DeployTest {
             memory flashLoans = new FlashLoanMock.FlashLoan[](3);
         flashLoans[0] = FlashLoanMock.FlashLoan({
             pool: address(pool),
+            token: poolToken,
             amount: initialCollateral / 2
         });
 
         flashLoans[1] = FlashLoanMock.FlashLoan({
             pool: address(poolTwo),
+            token: poolToken,
             amount: initialCollateralTwo / 2
         });
 
         flashLoans[2] = FlashLoanMock.FlashLoan({
             pool: address(poolThree),
+            token: poolToken,
             amount: initialCollateralThree / 2
         });
 
@@ -185,5 +238,16 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
     function test_flashLoan_Multi_Success() public {
         _test_flashLoan_Multi_Success(poolKey.isCallPool);
+    }
+
+    function test_flashLoan_RevertIf_NotPoolToken() public {
+        address otherToken = address(0x111);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__NotPoolToken.selector,
+                otherToken
+            )
+        );
+        pool.flashLoan(flashLoanMock, otherToken, 1, "");
     }
 }

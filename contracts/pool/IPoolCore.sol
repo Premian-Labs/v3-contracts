@@ -14,11 +14,13 @@ interface IPoolCore is IPoolInternal {
     function marketPrice() external view returns (UD60x18);
 
     /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (poolToken decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
     /// @return The taker fee for an option trade denormalized (poolToken decimals)
     function takerFee(
+        address taker,
         UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized

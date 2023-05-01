@@ -28,8 +28,11 @@ contract PoolDepositWithdraw is
         address factory,
         address router,
         address wrappedNativeToken,
-        address feeReceiver
-    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver) {}
+        address feeReceiver,
+        address vxPremia
+    )
+        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+    {}
 
     /// @inheritdoc IPoolDepositWithdraw
     function deposit(

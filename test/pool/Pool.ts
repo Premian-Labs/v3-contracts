@@ -125,7 +125,7 @@ describe('Pool', () => {
   describe('#getQuoteAMM', () => {
     runCallAndPutTests((isCallPool: boolean) => {
       it('should successfully return a buy AMM quote', async () => {
-        const { pool, pKey, contractsToCollateral, scaleDecimals } =
+        const { trader, pool, pKey, contractsToCollateral, scaleDecimals } =
           await loadFixture(
             isCallPool
               ? deployAndDeposit_1000_CS_CALL
@@ -136,7 +136,9 @@ describe('Pool', () => {
         const price = pKey.lower;
         const nextPrice = parseEther('0.2');
         const avgPrice = average(price, nextPrice);
+
         const takerFee = await pool.takerFee(
+          trader.address,
           tradeSize,
           scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
           true,
@@ -146,13 +148,13 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).add(takerFee);
 
-        expect((await pool.getQuoteAMM(tradeSize, true)).premiumNet).to.eq(
-          quote,
-        );
+        expect(
+          (await pool.getQuoteAMM(trader.address, tradeSize, true)).premiumNet,
+        ).to.eq(quote);
       });
 
       it('should successfully return a sell AMM quote', async () => {
-        const { pool, pKey, contractsToCollateral, scaleDecimals } =
+        const { trader, pool, pKey, contractsToCollateral, scaleDecimals } =
           await loadFixture(
             isCallPool
               ? deployAndDeposit_1000_LC_CALL
@@ -163,7 +165,9 @@ describe('Pool', () => {
         const price = pKey.upper;
         const nextPrice = parseEther('0.2');
         const avgPrice = average(price, nextPrice);
+
         const takerFee = await pool.takerFee(
+          trader.address,
           tradeSize,
           scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
           true,
@@ -173,32 +177,32 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize).mul(avgPrice).div(ONE_ETHER),
         ).sub(takerFee);
 
-        expect((await pool.getQuoteAMM(tradeSize, false)).premiumNet).to.eq(
-          quote,
-        );
+        expect(
+          (await pool.getQuoteAMM(trader.address, tradeSize, false)).premiumNet,
+        ).to.eq(quote);
       });
 
       it('should revert if not enough liquidity to buy', async () => {
-        const { pool, depositSize } = await loadFixture(
+        const { trader, pool, depositSize } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_CS_CALL
             : deployAndDeposit_1000_CS_PUT,
         );
 
         await expect(
-          pool.getQuoteAMM(depositSize.add(1), true),
+          pool.getQuoteAMM(trader.address, depositSize.add(1), true),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientLiquidity');
       });
 
       it('should revert if not enough liquidity to sell', async () => {
-        const { pool, depositSize } = await loadFixture(
+        const { trader, pool, depositSize } = await loadFixture(
           isCallPool
             ? deployAndDeposit_1000_LC_CALL
             : deployAndDeposit_1000_LC_PUT,
         );
 
         await expect(
-          pool.getQuoteAMM(depositSize.add(1), false),
+          pool.getQuoteAMM(trader.address, depositSize.add(1), false),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientLiquidity');
       });
     });
@@ -660,7 +664,7 @@ describe('Pool', () => {
         );
 
         const size = parseEther('500');
-        const fee = await pool.takerFee(size, 0, true);
+        const fee = await pool.takerFee(trader.address, size, 0, true);
 
         await pool.connect(lp).writeFrom(lp.address, trader.address, size);
 
@@ -693,7 +697,7 @@ describe('Pool', () => {
         );
 
         const size = parseEther('500');
-        const fee = await pool.takerFee(size, 0, true);
+        const fee = await pool.takerFee(trader.address, size, 0, true);
 
         await pool.connect(lp).setApprovalForAll(deployer.address, true);
 
@@ -759,8 +763,10 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getQuoteAMM(tradeSize, true))
-          .premiumNet;
+
+        const totalPremium = (
+          await pool.getQuoteAMM(trader.address, tradeSize, true)
+        ).premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
         await poolToken.connect(trader).approve(router.address, totalPremium);
@@ -797,8 +803,9 @@ describe('Pool', () => {
           contractsToCollateral(tradeSize),
         );
 
-        const totalPremium = (await pool.getQuoteAMM(tradeSize, false))
-          .premiumNet;
+        const totalPremium = (
+          await pool.getQuoteAMM(trader.address, tradeSize, false)
+        ).premiumNet;
 
         await poolToken.mint(trader.address, collateralScaled);
         await poolToken
@@ -826,8 +833,10 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getQuoteAMM(tradeSize, true))
-          .premiumNet;
+
+        const totalPremium = (
+          await pool.getQuoteAMM(trader.address, tradeSize, true)
+        ).premiumNet;
 
         await poolToken.mint(trader.address, totalPremium);
         await poolToken.connect(trader).approve(router.address, totalPremium);
@@ -845,8 +854,10 @@ describe('Pool', () => {
         );
 
         const tradeSize = parseEther('500');
-        const totalPremium = (await pool.getQuoteAMM(tradeSize, false))
-          .premiumNet;
+
+        const totalPremium = (
+          await pool.getQuoteAMM(trader.address, tradeSize, false)
+        ).premiumNet;
 
         await poolToken.mint(trader.address, tradeSize);
         await poolToken.connect(trader).approve(router.address, tradeSize);
@@ -1250,7 +1261,12 @@ describe('Pool', () => {
 
         const collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
 
-        const protocolFee = await pool.takerFee(quoteRFQ.size, premium, false);
+        const protocolFee = await pool.takerFee(
+          trader.address,
+          quoteRFQ.size,
+          premium,
+          false,
+        );
 
         expect(await poolToken.balanceOf(lp.address)).to.eq(
           initialCollateral.sub(collateral).add(premium).sub(protocolFee),

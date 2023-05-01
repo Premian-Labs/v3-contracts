@@ -25,8 +25,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address factory,
         address router,
         address wrappedNativeToken,
-        address feeReceiver
-    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver) {}
+        address feeReceiver,
+        address vxPremia
+    )
+        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+    {}
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (UD60x18) {
@@ -35,6 +38,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function takerFee(
+        address taker,
         UD60x18 size,
         uint256 premium,
         bool isPremiumNormalized
@@ -45,6 +49,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             l.toPoolTokenDecimals(
                 _takerFee(
                     l,
+                    taker,
                     size,
                     l.fromPoolTokenDecimals(premium),
                     isPremiumNormalized

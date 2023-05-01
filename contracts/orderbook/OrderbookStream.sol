@@ -30,8 +30,11 @@ contract OrderbookStream {
         // Signature of the quote
         Signature signature;
     }
+
     event PublishQuote(
-        IPoolFactory.PoolKey indexed poolKey,
+        // When a struct is used as indexed param, it is stored as a Keccak-256 hash of the abi encoding of that struct
+        // https://docs.soliditylang.org/en/v0.8.19/abi-spec.html#indexed-event-encoding
+        IPoolFactory.PoolKey indexed poolKeyHash,
         address indexed provider,
         address taker,
         uint256 price,
@@ -39,7 +42,10 @@ contract OrderbookStream {
         bool isBuy,
         uint256 deadline,
         uint256 salt,
-        Signature signature
+        Signature signature,
+        // We still emit the poolKey as non indexed param to be able to access the elements of the poolKey in the event
+        // This is why the same variable is emitted twice
+        IPoolFactory.PoolKey poolKey
     );
 
     function add(Quote[] calldata quote) external {
@@ -53,7 +59,8 @@ contract OrderbookStream {
                 quote[i].isBuy,
                 quote[i].deadline,
                 quote[i].salt,
-                quote[i].signature
+                quote[i].signature,
+                quote[i].poolKey
             );
         }
     }

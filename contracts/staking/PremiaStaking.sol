@@ -644,6 +644,8 @@ contract PremiaStaking is IPremiaStaking, OFT {
             l.userInfo[user].stakePeriod
         );
 
+        if (userPower == 0) return 0;
+
         // If user is a contract, we use a different formula based on % of total power owned by the contract
         if (user.isContract()) {
             // Require 50% of overall staked power for contract to have max discount

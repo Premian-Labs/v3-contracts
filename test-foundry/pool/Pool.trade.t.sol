@@ -20,7 +20,12 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
-        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, true);
+
+        (uint256 totalPremium, ) = pool.getQuoteAMM(
+            users.trader,
+            tradeSize,
+            true
+        );
 
         address poolToken = getPoolToken(isCall);
 
@@ -48,7 +53,11 @@ abstract contract PoolTradeTest is DeployTest {
             isCall
         );
 
-        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(
+            users.trader,
+            tradeSize,
+            false
+        );
 
         address poolToken = getPoolToken(isCall);
 
@@ -95,7 +104,11 @@ abstract contract PoolTradeTest is DeployTest {
 
         UD60x18 tradeSize = UD60x18.wrap(1000 ether);
 
-        (uint256 totalPremium, ) = pool.getQuoteAMM(tradeSize, false);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(
+            users.trader,
+            tradeSize,
+            false
+        );
 
         pool.trade(tradeSize, false, totalPremium - totalPremium / 10);
 

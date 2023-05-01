@@ -331,12 +331,17 @@ async function _deployAndBuy(isCall: boolean) {
   const price = f.pKey.lower;
   const nextPrice = f.pKey.upper;
   const avgPrice = average(price, nextPrice);
+
   const takerFee = await f.pool.takerFee(
+    f.trader.address,
     tradeSize,
     f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
-  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, true)).premiumNet;
+
+  const totalPremium = (
+    await f.pool.getQuoteAMM(f.trader.address, tradeSize, true)
+  ).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 
@@ -379,13 +384,17 @@ async function _deployAndSell(isCall: boolean) {
   const price = f.pKey.upper;
   const nextPrice = f.pKey.lower;
   const avgPrice = average(price, nextPrice);
+
   const takerFee = await f.pool.takerFee(
+    f.trader.address,
     tradeSize,
     f.scaleDecimals(tradeSize.mul(avgPrice).div(ONE_ETHER)),
     true,
   );
 
-  const totalPremium = (await f.pool.getQuoteAMM(tradeSize, false)).premiumNet;
+  const totalPremium = (
+    await f.pool.getQuoteAMM(f.trader.address, tradeSize, false)
+  ).premiumNet;
 
   const token = isCall ? f.base : f.quote;
 

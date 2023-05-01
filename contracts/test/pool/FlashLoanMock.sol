@@ -3,17 +3,23 @@ pragma solidity ^0.8.0;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {IFlashLoanCallback} from "../../pool/IFlashLoanCallback.sol";
+import {IERC3156FlashBorrower} from "../../interfaces/IERC3156FlashBorrower.sol";
 import {IPool} from "../../pool/IPool.sol";
 
-contract FlashLoanMock is IFlashLoanCallback {
+contract FlashLoanMock is IERC3156FlashBorrower {
+    bytes32 constant FLASH_LOAN_CALLBACK_SUCCESS =
+        keccak256("ERC3156FlashBorrower.onFlashLoan");
+
     struct FlashLoan {
         address pool;
+        address token;
         uint256 amount;
     }
 
     function singleFlashLoan(FlashLoan memory loan, bool repayFull) external {
         IPool(loan.pool).flashLoan(
+            this,
+            loan.token,
             loan.amount,
             abi.encode(new FlashLoan[](0), repayFull)
         );
@@ -27,14 +33,21 @@ contract FlashLoanMock is IFlashLoanCallback {
             mstore(loans, sub(mload(loans), 1))
         }
 
-        IPool(loan.pool).flashLoan(loan.amount, abi.encode(loans, true));
+        IPool(loan.pool).flashLoan(
+            this,
+            loan.token,
+            loan.amount,
+            abi.encode(loans, true)
+        );
     }
 
-    function premiaFlashLoanCallback(
+    function onFlashLoan(
+        address,
         address token,
-        uint256 amountToRepay,
+        uint256 amount,
+        uint256 fee,
         bytes memory data
-    ) external {
+    ) external returns (bytes32) {
         (FlashLoan[] memory loans, bool repayFull) = abi.decode(
             data,
             (FlashLoan[], bool)
@@ -49,6 +62,8 @@ contract FlashLoanMock is IFlashLoanCallback {
             }
 
             IPool(nextLoan.pool).flashLoan(
+                this,
+                nextLoan.token,
                 nextLoan.amount,
                 abi.encode(loans, true)
             );
@@ -56,9 +71,12 @@ contract FlashLoanMock is IFlashLoanCallback {
             // Logic can be inserted here to do something with the funds, before repaying all flash loans
         }
 
+        uint256 amountToRepay = amount + fee;
         IERC20(token).transfer(
             msg.sender,
             repayFull ? amountToRepay : amountToRepay - 1
         );
+
+        return FLASH_LOAN_CALLBACK_SUCCESS;
     }
 }

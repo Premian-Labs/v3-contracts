@@ -16,6 +16,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 minimum,
         uint256 maximum
     );
+    error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
@@ -29,6 +30,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidTransfer();
     error Pool__NotAuthorized(address sender);
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
+    error Pool__NotPoolToken(address token);
     error Pool__NotWrappedNativeTokenPool();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
@@ -157,5 +159,12 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
+    }
+
+    struct QuoteAMMVarsInternal {
+        UD60x18 liquidity;
+        UD60x18 maxSize;
+        UD60x18 totalPremium;
+        UD60x18 totalTakerFee;
     }
 }
