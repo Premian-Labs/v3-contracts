@@ -58,6 +58,13 @@ interface IPoolCore is IPoolInternal {
     /// @return liquidityNet The net liquidity of the tick (18 decimals)
     function getLiquidityForTick(UD60x18 index) external view returns (UD60x18);
 
+    /// @notice Returns the net liquidity for all ticks in the pool
+    /// @return ticksWithLiquidity All pool ticks with the liquidityNet (18 decimals) of each tick
+    function getLiquidityForTicks()
+        external
+        view
+        returns (IPoolInternal.TickWithLiquidity[] memory);
+
     /// @notice
     /// @param index The index of the tick
     /// @param nextIndex The index of the next tick
