@@ -46,7 +46,7 @@ async function main() {
   premiaDiamond = addresses.PremiaDiamond;
   poolFactory = addresses.PoolFactoryProxy;
   router = addresses.ERC20Router;
-  vxPremia = addresses.VxPremia;
+  vxPremia = addresses.VxPremiaProxy;
   weth = addresses.tokens.WETH;
 
   //////////////////////////
