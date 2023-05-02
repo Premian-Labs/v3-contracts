@@ -1304,8 +1304,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        if (costPerHolder > _exerciseValue)
-            revert Pool__CostExceedsPayout(costPerHolder, _exerciseValue);
+        _ensureCostLessThanPayout(costPerHolder, _exerciseValue);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
@@ -1345,8 +1344,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        if (costPerHolder > _collateral)
-            revert Pool__CostExceedsPayout(costPerHolder, _collateral);
+        _ensureCostLessThanPayout(costPerHolder, _collateral);
 
         collateral = l.toPoolTokenDecimals(_collateral);
 
@@ -1447,8 +1445,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (costPerHolder > vars.collateral)
-            revert Pool__CostExceedsPayout(costPerHolder, vars.collateral);
+        _ensureCostLessThanPayout(costPerHolder, vars.collateral);
 
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
@@ -2281,5 +2278,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (costInWrappedNative > authorizedCost)
             revert Pool__UnauthorizedCost(costInWrappedNative, authorizedCost);
+    }
+
+    function _ensureCostLessThanPayout(
+        UD60x18 cost,
+        UD60x18 payout
+    ) internal pure {
+        if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
     }
 }
