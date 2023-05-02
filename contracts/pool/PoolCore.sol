@@ -101,13 +101,14 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 index
     ) external view returns (IPoolInternal.TickWithLiquidity memory) {
         IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[index];
-        UD60x18 liquidityNet = getLiquidityForTick(index);
 
         return
             IPoolInternal.TickWithLiquidity({
                 tick: _tick,
                 index: index.unwrap(),
-                liquidityNet: liquidityNet
+                liquidityNet: index == Pricing.MAX_TICK_PRICE
+                    ? UD60x18.wrap(0)
+                    : getLiquidityForTick(index)
             });
     }
 
@@ -116,6 +117,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 currentTick = l.currentTick;
+
+        if (index >= Pricing.MAX_TICK_PRICE) revert Pool__InvalidTickIndex();
 
         // If the tick is found, we can calculate the liquidity
         if (l.currentTick == index) {
@@ -156,9 +159,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         // The tick must be to the right side, search right for the tick
         while (true) {
-            UD60x18 nextIndex = next == Pricing.MAX_TICK_PRICE
-                ? l.tickIndex.next(next)
-                : Pricing.MAX_TICK_PRICE + Pricing.MIN_TICK_DISTANCE;
+            UD60x18 nextIndex = l.tickIndex.next(next);
             liquidityRate = liquidityRate.add(l.ticks[next].delta);
 
             if (next == index) {
@@ -232,9 +233,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         next = l.tickIndex.next(currentTick);
 
         while (true) {
-            UD60x18 nextIndex = next == Pricing.MAX_TICK_PRICE
-                ? l.tickIndex.next(next)
-                : Pricing.MAX_TICK_PRICE + Pricing.MIN_TICK_DISTANCE;
+            UD60x18 nextIndex = l.tickIndex.next(next);
             liquidityRate = liquidityRate.add(l.ticks[next].delta);
 
             ticks[next.unwrap()] = IPoolInternal.TickWithLiquidity({
@@ -248,7 +247,14 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             });
             count++;
 
-            if (next == Pricing.MAX_TICK_PRICE) {
+            if (nextIndex == Pricing.MAX_TICK_PRICE) {
+                ticks[nextIndex.unwrap()] = IPoolInternal.TickWithLiquidity({
+                    tick: l.ticks[nextIndex],
+                    index: nextIndex.unwrap(),
+                    liquidityNet: UD60x18.wrap(0)
+                });
+                count++;
+
                 break;
             }
 
