@@ -46,35 +46,37 @@ interface IPoolCore is IPoolInternal {
             bool isCallPool
         );
 
-    /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that index
-    /// @param index The index of the tick
-    /// @return tickWithLiquidity The tick at the index, with the liquidityNet (18 decimals) of the tick
+    /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that price
+    /// @param  price The normalized option price of the tick (18 decimals)
+    /// @return The tick at the price, with the liquidityNet (18 decimals) of the tick
     function tick(
-        UD60x18 index
+        UD60x18 price
     ) external view returns (IPoolInternal.TickWithLiquidity memory);
 
     /// @notice Returns the net liquidity for a given tick, to the next tick in the range
-    /// @param index The index of the tick
+    /// @param  price The normalized option price of the tick (18 decimals)
     /// @return liquidityNet The net liquidity of the tick (18 decimals)
-    function getLiquidityForTick(UD60x18 index) external view returns (UD60x18);
+    function liquidityForTick(
+        UD60x18 price
+    ) external view returns (UD60x18 liquidityNet);
 
     /// @notice Returns the net liquidity for all ticks in the pool
-    /// @return ticksWithLiquidity All pool ticks with the liquidityNet (18 decimals) of each tick
-    function getLiquidityForTicks()
+    /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
+    function liquidityForTicks()
         external
         view
-        returns (IPoolInternal.TickWithLiquidity[] memory);
+        returns (IPoolInternal.TickWithLiquidity[] memory ticks);
 
-    /// @notice
-    /// @param index The index of the tick
-    /// @param nextIndex The index of the next tick
-    /// @param liquidityRate The liquidity rate at the tick (18 decimals)
+    /// @notice Returns the net liquidity for a given range of ticks
+    /// @param  price The normalized option price of the tick (18 decimals)
+    /// @param  nextPrice The normalized option price of the next tick (18 decimals)
+    /// @param  liquidityRate The liquidity rate at the tick (18 decimals)
     /// @return liquidityNet The net liquidity for the range (18 decimals)
-    function getLiquidityForRange(
-        UD60x18 index,
-        UD60x18 nextIndex,
+    function liquidityForRange(
+        UD60x18 price,
+        UD60x18 nextPrice,
         UD60x18 liquidityRate
-    ) external view returns (UD60x18);
+    ) external view returns (UD60x18 liquidityNet);
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to

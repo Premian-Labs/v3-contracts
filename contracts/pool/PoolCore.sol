@@ -13,6 +13,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
+import {ONE, ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
@@ -98,32 +99,34 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function tick(
-        UD60x18 index
+        UD60x18 price
     ) external view returns (IPoolInternal.TickWithLiquidity memory) {
-        IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[index];
+        IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[price];
 
         return
             IPoolInternal.TickWithLiquidity({
                 tick: _tick,
-                index: index.unwrap(),
-                liquidityNet: index == Pricing.MAX_TICK_PRICE
-                    ? UD60x18.wrap(0)
-                    : getLiquidityForTick(index)
+                price: price,
+                liquidityNet: price == Pricing.MAX_TICK_PRICE
+                    ? ZERO
+                    : liquidityForTick(price)
             });
     }
 
     /// @inheritdoc IPoolCore
-    function getLiquidityForTick(UD60x18 index) public view returns (UD60x18) {
+    function liquidityForTick(
+        UD60x18 price
+    ) public view returns (UD60x18 liquidityNet) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 currentTick = l.currentTick;
 
-        if (index >= Pricing.MAX_TICK_PRICE) revert Pool__InvalidTickIndex();
+        if (price >= Pricing.MAX_TICK_PRICE) revert Pool__InvalidTickPrice();
 
         // If the tick is found, we can calculate the liquidity
-        if (l.currentTick == index) {
+        if (l.currentTick == price) {
             return
-                getLiquidityForRange(
+                liquidityForRange(
                     currentTick,
                     l.tickIndex.next(currentTick),
                     liquidityRate
@@ -137,8 +140,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             UD60x18 prev = l.tickIndex.prev(currentTick);
 
             while (true) {
-                if (prev == index) {
-                    return getLiquidityForRange(prev, next, liquidityRate);
+                if (prev == price) {
+                    return liquidityForRange(prev, next, liquidityRate);
                 }
 
                 // If we reached the end of the left side, the tick must be on the right side
@@ -159,35 +162,34 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         // The tick must be to the right side, search right for the tick
         while (true) {
-            UD60x18 nextIndex = l.tickIndex.next(next);
+            UD60x18 nextPrice = l.tickIndex.next(next);
             liquidityRate = liquidityRate.add(l.ticks[next].delta);
 
-            if (next == index) {
-                return getLiquidityForRange(next, nextIndex, liquidityRate);
+            if (next == price) {
+                return liquidityForRange(next, nextPrice, liquidityRate);
             }
 
             // If we reached the end of the right side, the tick does not exist
             if (next == Pricing.MAX_TICK_PRICE) {
-                revert Pool__InvalidTickIndex();
+                revert Pool__InvalidTickPrice();
             }
 
-            next = nextIndex;
+            next = nextPrice;
         }
 
-        revert Pool__InvalidTickIndex();
+        revert Pool__InvalidTickPrice();
     }
 
     /// @inheritdoc IPoolCore
-    function getLiquidityForTicks()
+    function liquidityForTicks()
         external
         view
-        returns (IPoolInternal.TickWithLiquidity[] memory)
+        returns (IPoolInternal.TickWithLiquidity[] memory ticks)
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 maxTicks = (UD60x18.wrap(1e18) / Pricing.MIN_TICK_DISTANCE)
-            .unwrap();
-        IPoolInternal.TickWithLiquidity[]
-            memory ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
+        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap();
+
+        ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
 
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 currentTick = l.currentTick;
@@ -196,8 +198,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         ticks[currentTick.unwrap()] = IPoolInternal.TickWithLiquidity({
             tick: l.ticks[currentTick],
-            index: currentTick.unwrap(),
-            liquidityNet: getLiquidityForRange(
+            price: currentTick,
+            liquidityNet: liquidityForRange(
                 currentTick,
                 l.tickIndex.next(currentTick),
                 liquidityRate
@@ -210,12 +212,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             while (true) {
                 ticks[prev.unwrap()] = IPoolInternal.TickWithLiquidity({
                     tick: l.ticks[prev],
-                    index: prev.unwrap(),
-                    liquidityNet: getLiquidityForRange(
-                        prev,
-                        next,
-                        liquidityRate
-                    )
+                    price: prev,
+                    liquidityNet: liquidityForRange(prev, next, liquidityRate)
                 });
                 count++;
 
@@ -233,32 +231,28 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         next = l.tickIndex.next(currentTick);
 
         while (true) {
-            UD60x18 nextIndex = l.tickIndex.next(next);
+            UD60x18 nextPrice = l.tickIndex.next(next);
             liquidityRate = liquidityRate.add(l.ticks[next].delta);
 
             ticks[next.unwrap()] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[next],
-                index: next.unwrap(),
-                liquidityNet: getLiquidityForRange(
-                    next,
-                    nextIndex,
-                    liquidityRate
-                )
+                price: next,
+                liquidityNet: liquidityForRange(next, nextPrice, liquidityRate)
             });
             count++;
 
-            if (nextIndex == Pricing.MAX_TICK_PRICE) {
-                ticks[nextIndex.unwrap()] = IPoolInternal.TickWithLiquidity({
-                    tick: l.ticks[nextIndex],
-                    index: nextIndex.unwrap(),
-                    liquidityNet: UD60x18.wrap(0)
+            if (nextPrice == Pricing.MAX_TICK_PRICE) {
+                ticks[nextPrice.unwrap()] = IPoolInternal.TickWithLiquidity({
+                    tick: l.ticks[nextPrice],
+                    price: nextPrice,
+                    liquidityNet: ZERO
                 });
                 count++;
 
                 break;
             }
 
-            next = nextIndex;
+            next = nextPrice;
         }
 
         // Remove empty elements from array
@@ -272,13 +266,13 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function getLiquidityForRange(
-        UD60x18 index,
-        UD60x18 nextIndex,
+    function liquidityForRange(
+        UD60x18 price,
+        UD60x18 nextPrice,
         UD60x18 liquidityRate
-    ) public pure returns (UD60x18) {
+    ) public pure returns (UD60x18 liquidityNet) {
         return
-            ((nextIndex - index) * liquidityRate) / Pricing.MIN_TICK_DISTANCE;
+            ((nextPrice - price) * liquidityRate) / Pricing.MIN_TICK_DISTANCE;
     }
 
     /// @inheritdoc IPoolCore
