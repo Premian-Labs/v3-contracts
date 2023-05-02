@@ -1384,15 +1384,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        uint256 tokenId = PoolStorage.formatTokenId(
+        SettlePositionVarsInternal memory vars;
+
+        vars.tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
-        if (size == ZERO) return 0;
+        vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
+        if (vars.size == ZERO) return 0;
 
         {
             // Update claimable fees
@@ -1404,7 +1406,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 _getTick(p.upper).externalFeeRate
             );
 
-            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(size));
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(vars.size));
         }
 
         // using the market price here is okay as the market price cannot be
@@ -1414,28 +1416,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
 
-        UD60x18 claimableFees;
-        UD60x18 payoff;
-        UD60x18 _collateral;
-
         {
-            UD60x18 longs = p.long(size, l.marketPrice);
-            UD60x18 shorts = p.short(size, l.marketPrice);
+            UD60x18 longs = p.long(vars.size, l.marketPrice);
+            UD60x18 shorts = p.short(vars.size, l.marketPrice);
 
-            claimableFees = pData.claimableFees;
-            payoff = _calculateExerciseValue(l, ONE);
+            vars.claimableFees = pData.claimableFees;
+            vars.payoff = _calculateExerciseValue(l, ONE);
 
-            _collateral = p.collateral(size, l.marketPrice);
-            _collateral = _collateral + longs * payoff;
+            vars.collateral = p.collateral(vars.size, l.marketPrice);
+            vars.collateral = vars.collateral + longs * vars.payoff;
 
-            _collateral =
-                _collateral +
+            vars.collateral =
+                vars.collateral +
                 shorts *
-                ((l.isCallPool ? ONE : l.strike) - payoff);
+                ((l.isCallPool ? ONE : l.strike) - vars.payoff);
 
-            _collateral = _collateral + claimableFees;
+            vars.collateral = vars.collateral + vars.claimableFees;
 
-            _burn(p.owner, tokenId, size);
+            _burn(p.owner, vars.tokenId, vars.size);
 
             if (longs > ZERO) {
                 _burn(address(this), PoolStorage.LONG, longs);
@@ -1449,30 +1447,30 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (cost > _collateral)
-            revert Pool__CostExceedsPayout(cost, _collateral);
+        if (cost > vars.collateral)
+            revert Pool__CostExceedsPayout(cost, vars.collateral);
 
-        collateral = l.toPoolTokenDecimals(_collateral);
+        collateral = l.toPoolTokenDecimals(vars.collateral);
 
         emit SettlePosition(
             msg.sender,
             p.owner,
-            tokenId,
-            size,
-            _collateral - claimableFees,
-            payoff,
-            claimableFees,
+            vars.tokenId,
+            vars.size,
+            vars.collateral - vars.claimableFees,
+            vars.payoff,
+            vars.claimableFees,
             l.settlementPrice,
             ZERO,
             cost
         );
 
         if (cost > ZERO) {
-            _collateral = _collateral - cost;
+            vars.collateral = vars.collateral - cost;
         }
 
-        if (_collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, _collateral);
+        if (vars.collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
         }
     }
 
