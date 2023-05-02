@@ -7,7 +7,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
@@ -30,140 +29,26 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (uint256 premiumTaker, Position.Delta memory delta);
-
-    /// @notice Execute a swap and fill an RFQ quote
-    /// @param s The swap arguments
-    /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote (18 decimals)
-    /// @param signature secp256k1 'r', 's', and 'v' value
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
-    /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
-    function swapAndFillQuoteRFQ(
-        IPoolInternal.SwapArgs calldata s,
-        QuoteRFQ calldata quoteRFQ,
-        UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (
-            uint256 premiumTaker,
-            Position.Delta memory delta,
-            uint256 swapOutAmount
-        );
-
-    /// @notice Fill an RFQ quote and then execute a swap
-    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
-    /// @param s The swap arguments
-    /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote(18 decimals)
-    /// @param signature secp256k1 'r', 's', and 'v' value
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
-    /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return collateralReceived The amount of collateral received by the taker (collateral decimals)
-    /// @return tokenOutReceived The amount of tokenOut received by the taker (tokenOut decimals)
-    function fillQuoteRFQAndSwap(
-        IPoolInternal.SwapArgs memory s,
-        QuoteRFQ calldata quoteRFQ,
-        UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (
-            uint256 premiumTaker,
-            Position.Delta memory delta,
-            uint256 collateralReceived,
-            uint256 tokenOutReceived
-        );
+        Signature calldata signature
+    ) external returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
     ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (uint256 totalPremium, Position.Delta memory delta);
-
-    /// @notice Swap tokens and completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
-    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
-    /// @param s The swap arguments
-    /// @param size The number of contracts being traded (18 decimals)
-    /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
-    /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return swapOutAmount The amount of pool tokens resulting from the swap (poolToken decimals)
-    function swapAndTrade(
-        IPoolInternal.SwapArgs calldata s,
-        UD60x18 size,
-        bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (
-            uint256 totalPremium,
-            Position.Delta memory delta,
-            uint256 swapOutAmount
-        );
-
-    /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool, and swap the resulting collateral to another token
-    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
-    ///         The swap will only be executed if delta collateral is positive (When selling longs or closing shorts)
-    /// @param s The swap arguments
-    /// @param size The number of contracts being traded (18 decimals)
-    /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
-    /// @return totalPremium The premium received by the taker of the trade (poolToken decimals)
-    /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    /// @return collateralReceived The amount of un-swapped collateral received from the trade. (s.tokenOut decimals)
-    /// @return tokenOutReceived The final amount of `s.tokenOut` received from the trade and swap. (poolToken decimals)
-    function tradeAndSwap(
-        IPoolInternal.SwapArgs memory s,
-        UD60x18 size,
-        bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        returns (
-            uint256 totalPremium,
-            Position.Delta memory delta,
-            uint256 collateralReceived,
-            uint256 tokenOutReceived
-        );
+        uint256 premiumLimit
+    ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Cancel given RFQ quotes
     /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,

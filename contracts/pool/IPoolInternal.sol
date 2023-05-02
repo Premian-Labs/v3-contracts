@@ -21,33 +21,18 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
     error Pool__InsufficientLiquidity();
-    error Pool__InsufficientPermit(
-        uint256 requestedAmount,
-        uint256 permittedAmount
-    );
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
-    error Pool__InvalidPermittedToken(
-        address permittedToken,
-        address expectedToken
-    );
     error Pool__InvalidQuoteRFQSignature();
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidTickPrice();
     error Pool__InvalidTransfer();
-    error Pool__InvalidSwapTokenIn(address tokenIn, address expectedTokenIn);
-    error Pool__InvalidSwapTokenOut(address tokenOut, address expectedTokenOut);
     error Pool__NotAuthorized(address sender);
-    error Pool__NotEnoughSwapOutput(
-        uint256 amountCredited,
-        uint256 amountOutMin
-    );
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
     error Pool__NotPoolToken(address token);
     error Pool__NotWrappedNativeTokenPool();
-    error Pool__OppositeSides();
     error Pool__OptionExpired();
     error Pool__OptionNotExpired();
     error Pool__OutOfBoundsPrice(UD60x18 price);
@@ -79,25 +64,6 @@ interface IPoolInternal is IPosition, IPricing {
         Tick tick;
         UD60x18 price;
         UD60x18 liquidityNet;
-    }
-
-    struct SwapArgs {
-        // token to pass in to swap (Must be poolToken for `tradeAndSwap`)
-        address tokenIn;
-        // Token result from the swap (Must be poolToken for `swapAndDeposit` / `swapAndTrade`)
-        address tokenOut;
-        // amount of tokenIn to trade (poolToken decimals)
-        uint256 amountInMax;
-        // min amount out to be used to purchase (poolToken decimals)
-        uint256 amountOutMin;
-        // exchange address to call to execute the trade
-        address callee;
-        // address for which to set allowance for the trade
-        address allowanceTarget;
-        // data to execute the trade
-        bytes data;
-        // address to which refund excess tokens
-        address refundAddress;
     }
 
     struct QuoteRFQ {
@@ -145,8 +111,6 @@ interface IPoolInternal is IPosition, IPricing {
         bool isBuy;
         // Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
         uint256 premiumLimit;
-        // Amount already credited before the _trade function call. In case of a `swapAndTrade` this would be the amount resulting from the swap (poolToken decimals)
-        uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;
     }
@@ -170,10 +134,6 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 minMarketPrice;
         // maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
         UD60x18 maxMarketPrice;
-        // Collateral amount already credited before the _deposit function call. In case of a `swapAndDeposit` this would be the amount resulting from the swap (poolToken decimals)
-        uint256 collateralCredit;
-        // The address to which refund excess credit
-        address refundAddress;
     }
 
     struct WithdrawVarsInternal {
@@ -197,8 +157,6 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Amount already credited before the _fillQuoteRFQ function call. In case of a `swapAndTrade` this would be the amount resulting from the swap (poolToken decimals)
-        uint256 creditAmount;
         // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
         bool transferCollateralToUser;
     }
