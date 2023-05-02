@@ -82,11 +82,11 @@ interface IPoolCore is IPoolInternal {
     ///         exercised options. Only authorized agents may execute this function on behalf of the option holder.
     /// @param holders The holders of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
-    /// @return The exercise value as amount of collateral paid out, ignoring costs applied during automatic exercise (poolToken decimals)
+    /// @return The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic exercise (poolToken decimals)
     function exerciseFor(
         address[] calldata holders,
         uint256 costPerHolder
-    ) external returns (uint256);
+    ) external returns (uint256[] memory);
 
     /// @notice Settles all short options held by caller
     /// @return The amount of collateral left after settlement (poolToken decimals)
@@ -96,11 +96,11 @@ interface IPoolCore is IPoolInternal {
     ///         settled options. Only authorized agents may execute this function on behalf of the option holder.
     /// @param holders The holders of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
-    /// @return The amount of collateral left after settlement, ignoring costs applied during automatic settlement (poolToken decimals)
+    /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic settlement (poolToken decimals)
     function settleFor(
         address[] calldata holders,
         uint256 costPerHolder
-    ) external returns (uint256);
+    ) external returns (uint256[] memory);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
@@ -111,11 +111,11 @@ interface IPoolCore is IPoolInternal {
     ///         from the proceeds of the settled position. Only authorized agents may execute this function on behalf of the option holder.
     /// @param p The position keys
     /// @param costPerHolder The cost charged by the authorized agent, per position holder (poolToken decimals)
-    /// @return The amount of collateral left after settlement, ignoring costs applied during automatic settlement (poolToken decimals)
+    /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic settlement (poolToken decimals)
     function settlePositionFor(
         Position.Key[] calldata p,
         uint256 costPerHolder
-    ) external returns (uint256);
+    ) external returns (uint256[] memory);
 
     /// @notice Transfer a LP position to a new owner/operator
     /// @param srcP The position key
