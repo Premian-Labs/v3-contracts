@@ -1289,10 +1289,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param cost The cost charged by the authorized agent (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
     function _exercise(
         address holder,
-        UD60x18 cost
+        UD60x18 costPerHolder
     ) internal returns (uint256 exerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1304,8 +1304,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        if (cost > _exerciseValue)
-            revert Pool__CostExceedsPayout(cost, _exerciseValue);
+        if (costPerHolder > _exerciseValue)
+            revert Pool__CostExceedsPayout(costPerHolder, _exerciseValue);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
@@ -1316,11 +1316,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _exerciseValue,
             l.settlementPrice,
             ZERO,
-            cost
+            costPerHolder
         );
 
-        if (cost > ZERO) {
-            _exerciseValue = _exerciseValue - cost;
+        if (costPerHolder > ZERO) {
+            _exerciseValue = _exerciseValue - costPerHolder;
         }
 
         if (_exerciseValue > ZERO) {
@@ -1330,10 +1330,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param cost The cost charged by the authorized agent (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
     function _settle(
         address holder,
-        UD60x18 cost
+        UD60x18 costPerHolder
     ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1345,8 +1345,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        if (cost > _collateral)
-            revert Pool__CostExceedsPayout(cost, _collateral);
+        if (costPerHolder > _collateral)
+            revert Pool__CostExceedsPayout(costPerHolder, _collateral);
 
         collateral = l.toPoolTokenDecimals(_collateral);
 
@@ -1357,11 +1357,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             exerciseValue,
             l.settlementPrice,
             ZERO,
-            cost
+            costPerHolder
         );
 
-        if (cost > ZERO) {
-            _collateral = _collateral - cost;
+        if (costPerHolder > ZERO) {
+            _collateral = _collateral - costPerHolder;
         }
 
         if (_collateral > ZERO) {
@@ -1371,10 +1371,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @param cost The cost charged by the authorized agent (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
     function _settlePosition(
         Position.KeyInternal memory p,
-        UD60x18 cost
+        UD60x18 costPerHolder
     ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
@@ -1447,8 +1447,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (cost > vars.collateral)
-            revert Pool__CostExceedsPayout(cost, vars.collateral);
+        if (costPerHolder > vars.collateral)
+            revert Pool__CostExceedsPayout(costPerHolder, vars.collateral);
 
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
@@ -1462,11 +1462,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             vars.claimableFees,
             l.settlementPrice,
             ZERO,
-            cost
+            costPerHolder
         );
 
-        if (cost > ZERO) {
-            vars.collateral = vars.collateral - cost;
+        if (costPerHolder > ZERO) {
+            vars.collateral = vars.collateral - costPerHolder;
         }
 
         if (vars.collateral > ZERO) {

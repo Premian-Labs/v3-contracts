@@ -139,11 +139,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function exerciseFor(
         address[] calldata holders,
-        uint256 cost
+        uint256 costPerHolder
     ) external nonReentrant returns (uint256 totalExerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
@@ -157,7 +157,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         IERC20(l.getPoolToken()).safeTransfer(
             msg.sender,
-            holders.length * cost
+            holders.length * costPerHolder
         );
     }
 
@@ -169,11 +169,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function settleFor(
         address[] calldata holders,
-        uint256 cost
+        uint256 costPerHolder
     ) external nonReentrant returns (uint256 totalCollateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
@@ -187,7 +187,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         IERC20(l.getPoolToken()).safeTransfer(
             msg.sender,
-            holders.length * cost
+            holders.length * costPerHolder
         );
     }
 
@@ -203,11 +203,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function settlePositionFor(
         Position.Key[] calldata p,
-        uint256 cost
+        uint256 costPerHolder
     ) external nonReentrant returns (uint256 totalCollateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(cost);
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
@@ -223,7 +223,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             totalCollateral = totalCollateral + collateral;
         }
 
-        IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * cost);
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            p.length * costPerHolder
+        );
     }
 
     /// @inheritdoc IPoolCore
