@@ -1308,11 +1308,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__CostExceedsPayout(cost, _exerciseValue);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
-        emit Exercise(holder, size, _exerciseValue, l.settlementPrice, ZERO);
+
+        emit Exercise(
+            msg.sender,
+            holder,
+            size,
+            _exerciseValue,
+            l.settlementPrice,
+            ZERO,
+            cost
+        );
 
         if (cost > ZERO) {
             _exerciseValue = _exerciseValue - cost;
-            emit ExerciseFor(msg.sender, cost);
         }
 
         if (_exerciseValue > ZERO) {
@@ -1341,11 +1349,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__CostExceedsPayout(cost, _collateral);
 
         collateral = l.toPoolTokenDecimals(_collateral);
-        emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
+
+        emit Settle(
+            msg.sender,
+            holder,
+            size,
+            exerciseValue,
+            l.settlementPrice,
+            ZERO,
+            cost
+        );
 
         if (cost > ZERO) {
             _collateral = _collateral - cost;
-            emit SettleFor(msg.sender, cost);
         }
 
         if (_collateral > ZERO) {
@@ -1439,6 +1455,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         collateral = l.toPoolTokenDecimals(_collateral);
 
         emit SettlePosition(
+            msg.sender,
             p.owner,
             tokenId,
             size,
@@ -1446,12 +1463,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             payoff,
             claimableFees,
             l.settlementPrice,
-            ZERO
+            ZERO,
+            cost
         );
 
         if (cost > ZERO) {
             _collateral = _collateral - cost;
-            emit SettlePositionFor(msg.sender, cost);
         }
 
         if (_collateral > ZERO) {
