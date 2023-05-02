@@ -14,7 +14,6 @@ import {IPoolTrade} from "./IPoolTrade.sol";
 import {IERC3156FlashBorrower} from "../interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {iZERO, ZERO} from "../libraries/Constants.sol";
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
@@ -31,7 +30,6 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     constructor(
         address factory,
         address router,
-        address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
         address settings,
@@ -40,7 +38,6 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         PoolInternal(
             factory,
             router,
-            exchangeHelper,
             wrappedNativeToken,
             feeReceiver,
             settings,
@@ -61,216 +58,33 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
+        Signature calldata signature
     )
         external
-        payable
         nonReentrant
         returns (uint256 premiumTaker, Position.Delta memory delta)
     {
         return
             _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(
-                    msg.sender,
-                    size,
-                    signature,
-                    _wrapNativeToken(),
-                    true
-                ),
-                quoteRFQ,
-                permit
+                FillQuoteRFQArgsInternal(msg.sender, size, signature, true),
+                quoteRFQ
             );
-    }
-
-    /// @inheritdoc IPoolTrade
-    function swapAndFillQuoteRFQ(
-        SwapArgs calldata s,
-        QuoteRFQ calldata quoteRFQ,
-        UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 premiumTaker,
-            Position.Delta memory delta,
-            uint256 swapOutAmount
-        )
-    {
-        _ensureValidSwapTokenOut(s.tokenOut);
-        (swapOutAmount, ) = _swap(s, permit, false, true);
-
-        (premiumTaker, delta) = _fillQuoteRFQ(
-            FillQuoteRFQArgsInternal(
-                msg.sender,
-                size,
-                signature,
-                swapOutAmount,
-                true
-            ),
-            quoteRFQ,
-            Permit2.emptyPermit()
-        );
-    }
-
-    /// @inheritdoc IPoolTrade
-    function fillQuoteRFQAndSwap(
-        SwapArgs memory s,
-        QuoteRFQ calldata quoteRFQ,
-        UD60x18 size,
-        Signature calldata signature,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 premiumTaker,
-            Position.Delta memory delta,
-            uint256 collateralReceived,
-            uint256 tokenOutReceived
-        )
-    {
-        (premiumTaker, delta) = _fillQuoteRFQ(
-            FillQuoteRFQArgsInternal(
-                msg.sender,
-                size,
-                signature,
-                _wrapNativeToken(),
-                false
-            ),
-            quoteRFQ,
-            permit
-        );
-
-        if (delta.collateral.unwrap() <= 0) return (premiumTaker, delta, 0, 0);
-
-        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
-            delta.collateral.intoUD60x18()
-        );
-
-        _ensureValidSwapTokenIn(s.tokenIn);
-        (tokenOutReceived, collateralReceived) = _swap(
-            s,
-            Permit2.emptyPermit(),
-            true,
-            false
-        );
-
-        if (tokenOutReceived > 0) {
-            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
-        }
     }
 
     /// @inheritdoc IPoolTrade
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
+        uint256 premiumLimit
     )
         external
-        payable
         nonReentrant
         returns (uint256 totalPremium, Position.Delta memory delta)
     {
         return
             _trade(
-                TradeArgsInternal(
-                    msg.sender,
-                    size,
-                    isBuy,
-                    premiumLimit,
-                    _wrapNativeToken(),
-                    true
-                ),
-                permit
+                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true)
             );
-    }
-
-    /// @inheritdoc IPoolTrade
-    function swapAndTrade(
-        SwapArgs calldata s,
-        UD60x18 size,
-        bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 totalPremium,
-            Position.Delta memory delta,
-            uint256 swapOutAmount
-        )
-    {
-        _ensureValidSwapTokenOut(s.tokenOut);
-        (swapOutAmount, ) = _swap(s, permit, false, true);
-
-        (totalPremium, delta) = _trade(
-            TradeArgsInternal(
-                msg.sender,
-                size,
-                isBuy,
-                premiumLimit,
-                swapOutAmount,
-                true
-            ),
-            Permit2.emptyPermit()
-        );
-    }
-
-    /// @inheritdoc IPoolTrade
-    function tradeAndSwap(
-        SwapArgs memory s,
-        UD60x18 size,
-        bool isBuy,
-        uint256 premiumLimit,
-        Permit2.Data calldata permit
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 totalPremium,
-            Position.Delta memory delta,
-            uint256 collateralReceived,
-            uint256 tokenOutReceived
-        )
-    {
-        (totalPremium, delta) = _trade(
-            TradeArgsInternal(
-                msg.sender,
-                size,
-                isBuy,
-                premiumLimit,
-                _wrapNativeToken(),
-                false
-            ),
-            permit
-        );
-
-        if (delta.collateral.unwrap() <= 0) return (totalPremium, delta, 0, 0);
-
-        s.amountInMax = PoolStorage.layout().toPoolTokenDecimals(
-            delta.collateral.intoUD60x18()
-        );
-
-        _ensureValidSwapTokenIn(s.tokenIn);
-        (tokenOutReceived, collateralReceived) = _swap(
-            s,
-            Permit2.emptyPermit(),
-            true,
-            false
-        );
-
-        if (tokenOutReceived > 0) {
-            IERC20(s.tokenOut).safeTransfer(s.refundAddress, tokenOutReceived);
-        }
     }
 
     /// @inheritdoc IPoolTrade
@@ -295,7 +109,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(msg.sender, size, sig, 0, true),
+                FillQuoteRFQArgsInternal(msg.sender, size, sig, true),
                 quoteRFQ,
                 quoteRFQHash
             );

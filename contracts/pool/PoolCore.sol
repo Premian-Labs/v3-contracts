@@ -8,7 +8,9 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
+import {PoolStorage} from "./PoolStorage.sol";
+import {PoolInternal} from "./PoolInternal.sol";
+
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
@@ -25,7 +27,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     constructor(
         address factory,
         address router,
-        address exchangeHelper,
         address wrappedNativeToken,
         address feeReceiver,
         address settings,
@@ -34,7 +35,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         PoolInternal(
             factory,
             router,
-            exchangeHelper,
             wrappedNativeToken,
             feeReceiver,
             settings,
@@ -121,10 +121,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size,
-        Permit2.Data calldata permit
+        UD60x18 size
     ) external nonReentrant {
-        return _writeFrom(underwriter, longReceiver, size, permit);
+        return _writeFrom(underwriter, longReceiver, size);
     }
 
     /// @inheritdoc IPoolCore
@@ -225,18 +224,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * cost);
-    }
-
-    /// @inheritdoc IPoolCore
-    function getNearestTicksBelow(
-        UD60x18 lower,
-        UD60x18 upper
-    )
-        external
-        view
-        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
-    {
-        return _getNearestTicksBelow(lower, upper);
     }
 
     /// @inheritdoc IPoolCore

@@ -10,7 +10,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IExchangeHelper} from "../IExchangeHelper.sol";
+import {IExchangeHelper} from "../utils/IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
 import {OFT} from "../layerZero/token/oft/OFT.sol";
@@ -643,6 +643,8 @@ contract PremiaStaking is IPremiaStaking, OFT {
             _balanceOf(user),
             l.userInfo[user].stakePeriod
         );
+
+        if (userPower == 0) return 0;
 
         // If user is a contract, we use a different formula based on % of total power owned by the contract
         if (user.isContract()) {

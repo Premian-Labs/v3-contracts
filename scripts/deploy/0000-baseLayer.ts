@@ -19,6 +19,7 @@ async function main() {
 
   let weth: string;
   let wbtc: string;
+  let vxPremia: string | undefined;
   let feeReceiver: string;
   let chainlinkAdapter: string;
 
@@ -26,6 +27,7 @@ async function main() {
     weth = arbitrumAddresses.tokens.WETH;
     wbtc = arbitrumAddresses.tokens.WBTC;
     feeReceiver = ''; // ToDo : Set fee receiver
+    vxPremia = '0x3992690E5405b69d50812470B0250c878bFA9322';
   } else if (chainId === ChainID.Goerli) {
     weth = goerliAddresses.tokens.WETH;
     wbtc = goerliAddresses.tokens.WBTC;
@@ -84,6 +86,7 @@ async function main() {
     discountPerPool,
     log,
     isDevMode,
+    vxPremia,
   );
 }
 
