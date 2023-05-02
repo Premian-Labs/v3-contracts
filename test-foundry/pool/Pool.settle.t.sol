@@ -6,7 +6,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
-import {Permit2} from "contracts/libraries/Permit2.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
@@ -63,8 +62,7 @@ abstract contract PoolSettleTest is DeployTest {
         pool.trade(
             trade.size,
             false,
-            trade.totalPremium - trade.totalPremium / 10,
-            Permit2.emptyPermit()
+            trade.totalPremium - trade.totalPremium / 10
         );
 
         vm.stopPrank();
