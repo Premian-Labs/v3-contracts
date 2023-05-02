@@ -135,8 +135,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         UD60x18 next = currentTick;
 
-        // If the current tick has a previous tick, we need to search left first for the tick
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+        // If the price is less than the current tick, we need to search left
+        if (price < l.currentTick) {
             UD60x18 prev = l.tickIndex.prev(currentTick);
 
             while (true) {
@@ -144,11 +144,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                     return liquidityForRange(prev, next, liquidityRate);
                 }
 
-                // If we reached the end of the left side, the tick must be on the right side
+                // If we reached the end of the left side, the tick does not exist
                 if (prev == Pricing.MIN_TICK_PRICE) {
-                    // Reset the liquidity rate to the current, so we can traverse from currentTick
-                    liquidityRate = l.liquidityRate;
-                    break;
+                    revert Pool__InvalidTickPrice();
                 }
 
                 // Otherwise, add the delta to the liquidity rate, and move to the next tick
