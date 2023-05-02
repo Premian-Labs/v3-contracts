@@ -106,6 +106,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         return
             IPoolInternal.TickWithLiquidity({
                 tick: _tick,
+                index: index.unwrap(),
                 liquidityNet: liquidityNet
             });
     }
@@ -190,9 +191,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 currentTick = l.currentTick;
         UD60x18 next = currentTick;
+        uint256 count = 1;
 
         ticks[currentTick.unwrap()] = IPoolInternal.TickWithLiquidity({
             tick: l.ticks[currentTick],
+            index: currentTick.unwrap(),
             liquidityNet: getLiquidityForRange(
                 currentTick,
                 l.tickIndex.next(currentTick),
@@ -206,12 +209,14 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             while (true) {
                 ticks[prev.unwrap()] = IPoolInternal.TickWithLiquidity({
                     tick: l.ticks[prev],
+                    index: prev.unwrap(),
                     liquidityNet: getLiquidityForRange(
                         prev,
                         next,
                         liquidityRate
                     )
                 });
+                count++;
 
                 if (prev == Pricing.MIN_TICK_PRICE) {
                     liquidityRate = l.liquidityRate;
@@ -234,18 +239,27 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
             ticks[next.unwrap()] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[next],
+                index: next.unwrap(),
                 liquidityNet: getLiquidityForRange(
                     next,
                     nextIndex,
                     liquidityRate
                 )
             });
+            count++;
 
             if (next == Pricing.MAX_TICK_PRICE) {
                 break;
             }
 
             next = nextIndex;
+        }
+
+        // Remove empty elements from array
+        if (count < maxTicks) {
+            assembly {
+                mstore(ticks, sub(mload(ticks), sub(maxTicks, count)))
+            }
         }
 
         return ticks;

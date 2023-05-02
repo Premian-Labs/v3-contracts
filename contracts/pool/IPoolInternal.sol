@@ -77,6 +77,7 @@ interface IPoolInternal is IPosition, IPricing {
 
     struct TickWithLiquidity {
         Tick tick;
+        uint256 index;
         UD60x18 liquidityNet;
     }
 
