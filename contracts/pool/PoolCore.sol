@@ -105,6 +105,92 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
+    function ticks()
+        external
+        view
+        returns (IPoolInternal.TickWithLiquidity[] memory)
+    {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap();
+
+        IPoolInternal.TickWithLiquidity[]
+            memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
+
+        UD60x18 liquidityRate = l.liquidityRate;
+        UD60x18 currentTick = l.currentTick;
+        UD60x18 next = currentTick;
+        uint256 count = 1;
+
+        _ticks[currentTick.unwrap()] = IPoolInternal.TickWithLiquidity({
+            tick: l.ticks[currentTick],
+            price: currentTick,
+            liquidityNet: liquidityForRange(
+                currentTick,
+                l.tickIndex.next(currentTick),
+                liquidityRate
+            )
+        });
+
+        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+            UD60x18 prev = l.tickIndex.prev(currentTick);
+
+            while (true) {
+                _ticks[prev.unwrap()] = IPoolInternal.TickWithLiquidity({
+                    tick: l.ticks[prev],
+                    price: prev,
+                    liquidityNet: liquidityForRange(prev, next, liquidityRate)
+                });
+                count++;
+
+                if (prev == Pricing.MIN_TICK_PRICE) {
+                    liquidityRate = l.liquidityRate;
+                    break;
+                }
+
+                liquidityRate = liquidityRate.add(l.ticks[prev].delta);
+                next = prev;
+                prev = l.tickIndex.prev(prev);
+            }
+        }
+
+        next = l.tickIndex.next(currentTick);
+
+        while (true) {
+            UD60x18 nextPrice = l.tickIndex.next(next);
+            liquidityRate = liquidityRate.add(l.ticks[next].delta);
+
+            _ticks[next.unwrap()] = IPoolInternal.TickWithLiquidity({
+                tick: l.ticks[next],
+                price: next,
+                liquidityNet: liquidityForRange(next, nextPrice, liquidityRate)
+            });
+            count++;
+
+            if (nextPrice == Pricing.MAX_TICK_PRICE) {
+                _ticks[nextPrice.unwrap()] = IPoolInternal.TickWithLiquidity({
+                    tick: l.ticks[nextPrice],
+                    price: nextPrice,
+                    liquidityNet: ZERO
+                });
+                count++;
+
+                break;
+            }
+
+            next = nextPrice;
+        }
+
+        // Remove empty elements from array
+        if (count < maxTicks) {
+            assembly {
+                mstore(_ticks, sub(mload(_ticks), sub(maxTicks, count)))
+            }
+        }
+
+        return _ticks;
+    }
+
+    /// @inheritdoc IPoolCore
     function liquidityForTick(
         UD60x18 price
     ) public view returns (UD60x18 liquidityNet) {
@@ -170,98 +256,21 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function liquidityForTicks()
-        external
-        view
-        returns (IPoolInternal.TickWithLiquidity[] memory ticks)
-    {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap();
-
-        ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
-
-        UD60x18 liquidityRate = l.liquidityRate;
-        UD60x18 currentTick = l.currentTick;
-        UD60x18 next = currentTick;
-        uint256 count = 1;
-
-        ticks[currentTick.unwrap()] = IPoolInternal.TickWithLiquidity({
-            tick: l.ticks[currentTick],
-            price: currentTick,
-            liquidityNet: liquidityForRange(
-                currentTick,
-                l.tickIndex.next(currentTick),
-                liquidityRate
-            )
-        });
-
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
-            UD60x18 prev = l.tickIndex.prev(currentTick);
-
-            while (true) {
-                ticks[prev.unwrap()] = IPoolInternal.TickWithLiquidity({
-                    tick: l.ticks[prev],
-                    price: prev,
-                    liquidityNet: liquidityForRange(prev, next, liquidityRate)
-                });
-                count++;
-
-                if (prev == Pricing.MIN_TICK_PRICE) {
-                    liquidityRate = l.liquidityRate;
-                    break;
-                }
-
-                liquidityRate = liquidityRate.add(l.ticks[prev].delta);
-                next = prev;
-                prev = l.tickIndex.prev(prev);
-            }
-        }
-
-        next = l.tickIndex.next(currentTick);
-
-        while (true) {
-            UD60x18 nextPrice = l.tickIndex.next(next);
-            liquidityRate = liquidityRate.add(l.ticks[next].delta);
-
-            ticks[next.unwrap()] = IPoolInternal.TickWithLiquidity({
-                tick: l.ticks[next],
-                price: next,
-                liquidityNet: liquidityForRange(next, nextPrice, liquidityRate)
-            });
-            count++;
-
-            if (nextPrice == Pricing.MAX_TICK_PRICE) {
-                ticks[nextPrice.unwrap()] = IPoolInternal.TickWithLiquidity({
-                    tick: l.ticks[nextPrice],
-                    price: nextPrice,
-                    liquidityNet: ZERO
-                });
-                count++;
-
-                break;
-            }
-
-            next = nextPrice;
-        }
-
-        // Remove empty elements from array
-        if (count < maxTicks) {
-            assembly {
-                mstore(ticks, sub(mload(ticks), sub(maxTicks, count)))
-            }
-        }
-
-        return ticks;
-    }
-
-    /// @inheritdoc IPoolCore
     function liquidityForRange(
-        UD60x18 price,
-        UD60x18 nextPrice,
+        UD60x18 lower,
+        UD60x18 upper,
         UD60x18 liquidityRate
     ) public pure returns (UD60x18 liquidityNet) {
         return
-            ((nextPrice - price) * liquidityRate) / Pricing.MIN_TICK_DISTANCE;
+            Pricing.liquidity(
+                Pricing.Args({
+                    lower: lower,
+                    upper: upper,
+                    liquidityRate: liquidityRate,
+                    marketPrice: ZERO, // Not used
+                    isBuy: false // Not used
+                })
+            );
     }
 
     /// @inheritdoc IPoolCore

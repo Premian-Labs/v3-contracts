@@ -52,6 +52,13 @@ interface IPoolCore is IPoolInternal {
         UD60x18 price
     ) external view returns (IPoolInternal.TickWithLiquidity memory);
 
+    /// @notice Returns all ticks in the pool, including net liquidity for each tick
+    /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
+    function ticks()
+        external
+        view
+        returns (IPoolInternal.TickWithLiquidity[] memory);
+
     /// @notice Returns the net liquidity for a given tick, to the next tick in the range
     /// @param  price The normalized option price of the tick (18 decimals)
     /// @return liquidityNet The net liquidity of the tick (18 decimals)
@@ -59,21 +66,14 @@ interface IPoolCore is IPoolInternal {
         UD60x18 price
     ) external view returns (UD60x18 liquidityNet);
 
-    /// @notice Returns the net liquidity for all ticks in the pool
-    /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
-    function liquidityForTicks()
-        external
-        view
-        returns (IPoolInternal.TickWithLiquidity[] memory ticks);
-
     /// @notice Returns the net liquidity for a given range of ticks
-    /// @param  price The normalized option price of the tick (18 decimals)
-    /// @param  nextPrice The normalized option price of the next tick (18 decimals)
-    /// @param  liquidityRate The liquidity rate at the tick (18 decimals)
+    /// @param  lower The normalized option price of the lower tick (18 decimals)
+    /// @param  upper The normalized option price of the upper tick (18 decimals)
+    /// @param  liquidityRate The liquidity rate at the tick range (18 decimals)
     /// @return liquidityNet The net liquidity for the range (18 decimals)
     function liquidityForRange(
-        UD60x18 price,
-        UD60x18 nextPrice,
+        UD60x18 lower,
+        UD60x18 upper,
         UD60x18 liquidityRate
     ) external view returns (UD60x18 liquidityNet);
 
