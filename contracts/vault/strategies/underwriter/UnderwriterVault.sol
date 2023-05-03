@@ -628,9 +628,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        uint256 shareBalanceBeforeDeposit = _balanceOf(receiver) - shareAmount;
-
-        _updateTimeOfDeposit(receiver, shareBalanceBeforeDeposit, shareAmount);
+        _updateTimeOfDeposit(receiver, _balanceOf(receiver) - shareAmount, shareAmount);
 
         emit UpdateQuotes();
     }
@@ -1232,8 +1230,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                uint256 balanceOfTo = _balanceOf(to);
-                _updateTimeOfDeposit(to, balanceOfTo, amount);
+                _updateTimeOfDeposit(to, _balanceOf(to), amount);
             }
 
             emit UpdateQuotes();
