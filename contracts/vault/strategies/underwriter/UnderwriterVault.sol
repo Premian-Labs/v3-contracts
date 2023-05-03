@@ -571,7 +571,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        _updateTimeOfDeposit(l, receiver, _balanceOf(receiver), shareAmount);
+        _updateTimeOfDeposit(
+            l,
+            receiver,
+            _balanceOf(receiver) - shareAmount,
+            shareAmount
+        );
 
         emit UpdateQuotes();
     }
