@@ -733,7 +733,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _beforeWithdraw(receiver, assetAmount, shareAmount);
     }
 
-    function updateTimeOfDeposit(address owner, uint256 shareAmount) external {
-        _updateTimeOfDeposit(owner, shareAmount);
+    function updateTimeOfDeposit(
+        address owner,
+        uint256 shareBalanceBefore,
+        uint256 shareAmount
+    ) external {
+        _updateTimeOfDeposit(owner, shareBalanceBefore, shareAmount);
     }
 }

@@ -589,11 +589,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
     }
 
-    function _updateTimeOfDeposit(address owner, uint256 shareAmount) internal {
+    function _updateTimeOfDeposit(
+        address owner,
+        uint256 shareBalanceBefore,
+        uint256 shareAmount
+    ) internal {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        UD60x18 balance = _balanceOfUD60x18(owner);
+        UD60x18 balance = UD60x18.wrap(shareBalanceBefore);
         UD60x18 shares = UD60x18.wrap(shareAmount);
         UD60x18 timestamp = UD60x18.wrap(_getBlockTimestamp() * WAD);
         UD60x18 depositTimestamp = UD60x18.wrap(l.timeOfDeposit[owner] * WAD);
@@ -624,7 +628,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        _updateTimeOfDeposit(receiver, shareAmount);
+        _updateTimeOfDeposit(receiver, _balanceOf(receiver) - shareAmount, shareAmount);
 
         emit UpdateQuotes();
     }
@@ -1142,7 +1146,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             (timestamp - l.timeOfDeposit[owner]) * WAD
         ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
 
-        UD60x18 managementFeeInShares = vars.balanceShares *
+        UD60x18 managementFeeInShares = shares *
             l.managementFeeRate *
             timeSinceLastDeposit;
         vars.managementFeeInAssets = _convertToAssetsUD60x18(
@@ -1175,6 +1179,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 amount
     ) internal override {
         super._beforeTokenTransfer(from, to, amount);
+
+        // mint: from = address(0), in this case no fees have to be paid
+        // burn: to = address(0),
+        //      1. fees are paid already in _beforeWithdraw, we do not want to double charge.
+        //      2. furthermore, we need to call burn inside _beforeTokenTransfer, it would result in a nested call.
+        //         we bypass this by calling _beforeWithdraw and using to = address(this).
         if (from != address(0) && to != address(0)) {
             UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
                 .layout();
@@ -1220,7 +1230,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                _updateTimeOfDeposit(to, amount);
+                _updateTimeOfDeposit(to, _balanceOf(to), amount);
             }
 
             emit UpdateQuotes();
