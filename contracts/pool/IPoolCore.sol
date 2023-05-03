@@ -6,7 +6,6 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 
-import {Permit2} from "../libraries/Permit2.sol";
 import {Position} from "../libraries/Position.sol";
 
 interface IPoolCore is IPoolInternal {
@@ -64,12 +63,10 @@ interface IPoolCore is IPoolInternal {
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
     /// @param longReceiver The address which will receive the long token
     /// @param size The number of contracts being underwritten (18 decimals)
-    /// @param permit The permit to use for the token allowance. If no signature is passed, regular transfer through approval will be used.
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size,
-        Permit2.Data calldata permit
+        UD60x18 size
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
@@ -91,20 +88,6 @@ interface IPoolCore is IPoolInternal {
     /// @param p The position key
     /// @return The amount of collateral left after settlement (poolToken decimals)
     function settlePosition(Position.Key calldata p) external returns (uint256);
-
-    /// @notice Get nearest ticks below `lower` and `upper`.
-    ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
-    /// @param lower The lower bound of the range (18 decimals)
-    /// @param upper The upper bound of the range (18 decimals)
-    /// @return nearestBelowLower The nearest tick below `lower` (18 decimals)
-    /// @return nearestBelowUpper The nearest tick below `upper` (18 decimals)
-    function getNearestTicksBelow(
-        UD60x18 lower,
-        UD60x18 upper
-    )
-        external
-        view
-        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper);
 
     /// @notice Transfer a LP position to a new owner/operator
     /// @param srcP The position key

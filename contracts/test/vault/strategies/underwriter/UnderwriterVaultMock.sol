@@ -14,7 +14,6 @@ import {ZERO} from "../../../../libraries/Constants.sol";
 import {DoublyLinkedList} from "../../../../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../../libraries/OptionMath.sol";
-import {Permit2} from "../../../../libraries/Permit2.sol";
 import {IPool} from "../../../../pool/IPool.sol";
 import {UnderwriterVault} from "../../../../vault/strategies/underwriter/UnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "../../../../vault/strategies/underwriter/UnderwriterVaultStorage.sol";
@@ -574,12 +573,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             IPool(pool).takerFee(address(0), size, 0, true)
         );
 
-        IPool(pool).writeFrom(
-            address(this),
-            msg.sender,
-            size,
-            Permit2.emptyPermit()
-        );
+        IPool(pool).writeFrom(address(this), msg.sender, size);
 
         l.totalLockedAssets = l.totalLockedAssets + locked;
         l.totalAssets = l.totalAssets - mintingFee;

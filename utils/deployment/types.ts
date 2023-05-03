@@ -8,7 +8,8 @@ export interface ContractAddresses {
   PoolFactoryImplementation: string;
   PoolFactoryProxy: string;
   ExchangeHelper: string;
-  VxPremia: string;
+  VxPremiaImplementation: string;
+  VxPremiaProxy: string;
   ERC20Router: string;
   PoolBase: string;
   PoolCore: string;
