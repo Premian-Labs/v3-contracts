@@ -17,7 +17,6 @@ import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 import {ZERO, ONE} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
-import {Permit2} from "../../../libraries/Permit2.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
@@ -541,16 +540,15 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _updateTimeOfDeposit(
         UnderwriterVaultStorage.Layout storage l,
         address owner,
+        uint256 shareBalanceBefore,
         uint256 shareAmount
     ) internal {
-        uint256 balance = _balanceOf(owner);
-
         l.timeOfDeposit[owner] =
             (l.timeOfDeposit[owner] *
-                balance +
+                shareBalanceBefore +
                 _getBlockTimestamp() *
                 shareAmount) /
-            (balance + shareAmount);
+            (shareBalanceBefore + shareAmount);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -573,7 +571,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
 
-        _updateTimeOfDeposit(l, receiver, shareAmount);
+        _updateTimeOfDeposit(l, receiver, _balanceOf(receiver), shareAmount);
 
         emit UpdateQuotes();
     }
@@ -947,12 +945,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
         // Mint option and allocate long token
-        IPool(quote.pool).writeFrom(
-            address(this),
-            msg.sender,
-            size,
-            Permit2.emptyPermit()
-        );
+        IPool(quote.pool).writeFrom(address(this), msg.sender, size);
 
         // Handle the premiums and spread capture generated
         _afterBuy(l, strike, maturity, size, quote.spread);
@@ -1069,7 +1062,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             (_getBlockTimestamp() - l.timeOfDeposit[owner]) * WAD
         ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
 
-        UD60x18 managementFeeInShares = vars.balanceShares *
+        UD60x18 managementFeeInShares = shares *
             l.managementFeeRate *
             timeSinceLastDeposit;
         vars.managementFeeInAssets = _convertToAssetsUD60x18(
@@ -1102,6 +1095,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 amount
     ) internal override {
         super._beforeTokenTransfer(from, to, amount);
+
+        // mint: from = address(0), in this case no fees have to be paid
+        // burn: to = address(0),
+        //      1. fees are paid already in _beforeWithdraw, we do not want to double charge.
+        //      2. furthermore, we need to call burn inside _beforeTokenTransfer, it would result in a nested call.
+        //         we bypass this by calling _beforeWithdraw and using to = address(this).
         if (from != address(0) && to != address(0)) {
             UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
                 .layout();
@@ -1150,7 +1149,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
             if (to != address(this)) {
                 l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                _updateTimeOfDeposit(l, to, amount);
+                _updateTimeOfDeposit(l, to, _balanceOf(to), amount);
             }
 
             emit UpdateQuotes();
