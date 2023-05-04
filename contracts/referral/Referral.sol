@@ -1,0 +1,207 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity >=0.8.19;
+
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
+
+import {ZERO} from "../libraries/OptionMath.sol";
+
+import {IReferral} from "./IReferral.sol";
+import {ReferralStorage} from "./ReferralStorage.sol";
+
+contract Referral is IReferral, OwnableInternal {
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using SafeERC20 for IERC20;
+    using ReferralStorage for address;
+
+    function getReferrer(address user) external view returns (address) {
+        return _getReferrer(user);
+    }
+
+    function _getReferrer(address user) internal view returns (address) {
+        return ReferralStorage.layout().referrals[user];
+    }
+
+    function getRebateTier(
+        address referrer
+    ) external view returns (RebateTier) {
+        return _getRebateTier(referrer);
+    }
+
+    function _getRebateTier(
+        address referrer
+    ) internal view returns (RebateTier) {
+        return ReferralStorage.layout().rebateTiers[referrer];
+    }
+
+    function getRebatePercents()
+        external
+        view
+        returns (
+            UD60x18[] memory primaryRebatePercents,
+            UD60x18 secondaryRebatePercent
+        )
+    {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        primaryRebatePercents = l.primaryRebatePercents;
+        secondaryRebatePercent = l.secondaryRebatePercent;
+    }
+
+    function getRebateTierPercent(
+        address referrer
+    ) external view returns (UD60x18) {
+        return _getRebateTierPercent(referrer);
+    }
+
+    function _getRebateTierPercent(
+        address referrer
+    ) internal view returns (UD60x18) {
+        return
+            ReferralStorage.layout().primaryRebatePercents[
+                uint8(_getRebateTier(referrer))
+            ];
+    }
+
+    function getRebates(
+        address referrer
+    ) external view returns (address[] memory, uint256[] memory) {
+        return _getRebates(referrer);
+    }
+
+    function _getRebates(
+        address referrer
+    ) internal view returns (address[] memory, uint256[] memory) {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        address[] memory tokens = l.rebateTokens[referrer].toArray();
+        uint256[] memory rebates = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            rebates[i] = l.rebates[referrer][tokens[i]];
+        }
+
+        return (tokens, rebates);
+    }
+
+    function setReferrer(address referrer) external {
+        _setReferrer(msg.sender, referrer);
+    }
+
+    function _setReferrer(
+        address user,
+        address referrer
+    ) internal returns (address) {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        if (l.referrals[user] == address(0)) {
+            if (referrer == address(0)) return address(0);
+            l.referrals[user] = referrer;
+        } else if (l.referrals[user] != referrer && referrer != address(0)) {
+            revert Referral__ReferrerAlreadySet(l.referrals[user]);
+        } else {
+            referrer = l.referrals[user];
+        }
+
+        return referrer;
+    }
+
+    function setRebateTier(
+        address referrer,
+        RebateTier tier
+    ) external onlyOwner {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        emit SetRebateTier(referrer, l.rebateTiers[referrer], tier);
+        l.rebateTiers[referrer] = tier;
+    }
+
+    function setPrimaryRebatePercent(
+        UD60x18 percent,
+        RebateTier tier
+    ) external onlyOwner {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        emit SetPrimaryRebatePercent(
+            tier,
+            l.primaryRebatePercents[uint8(tier)],
+            percent
+        );
+
+        l.primaryRebatePercents[uint8(tier)] = percent;
+    }
+
+    function setSecondaryRebatePercent(UD60x18 percent) external onlyOwner {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        emit SetSecondaryRebatePercent(l.secondaryRebatePercent, percent);
+        l.secondaryRebatePercent = percent;
+    }
+
+    function useReferral(
+        address user,
+        address primaryReferrer,
+        address token,
+        UD60x18 tradingFee
+    ) external returns (UD60x18 rebate) {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        primaryReferrer = _setReferrer(user, primaryReferrer);
+        if (primaryReferrer == address(0)) return ZERO;
+
+        UD60x18 tier = _getRebateTierPercent(primaryReferrer);
+        rebate = tradingFee * tier;
+        uint256 primaryRebate = token.toPoolTokenDecimals(rebate);
+
+        IERC20(token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            primaryRebate
+        );
+
+        address secondaryReferrer = l.referrals[primaryReferrer];
+        if (secondaryReferrer != address(0)) {
+            uint256 secondaryRebate = token.toPoolTokenDecimals(
+                rebate * l.secondaryRebatePercent
+            );
+
+            primaryRebate = primaryRebate - secondaryRebate;
+            l.rebates[secondaryReferrer][token] += secondaryRebate;
+
+            if (!l.rebateTokens[secondaryReferrer].contains(token))
+                l.rebateTokens[secondaryReferrer].add(token);
+        }
+
+        l.rebates[primaryReferrer][token] += primaryRebate;
+
+        if (!l.rebateTokens[primaryReferrer].contains(token))
+            l.rebateTokens[primaryReferrer].add(token);
+
+        emit Referral(
+            user,
+            primaryReferrer,
+            secondaryReferrer,
+            token,
+            tier,
+            rebate
+        );
+    }
+
+    function claimRebate() external {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        (address[] memory tokens, uint256[] memory rebates) = _getRebates(
+            msg.sender
+        );
+
+        if (tokens.length == 0) revert Referral__NoRebatesToClaim();
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            l.rebates[msg.sender][tokens[i]] = 0;
+            l.rebateTokens[msg.sender].remove(tokens[i]);
+
+            IERC20(tokens[i]).safeTransfer(msg.sender, rebates[i]);
+            emit ClaimRebate(msg.sender, tokens[i], rebates[i]);
+        }
+    }
+}
