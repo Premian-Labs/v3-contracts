@@ -131,7 +131,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             )
         });
 
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+        if (currentTick != Pricing.MIN_TICK_PRICE) {
             UD60x18 prev = l.tickIndex.prev(currentTick);
 
             while (true) {
@@ -201,7 +201,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         if (price >= Pricing.MAX_TICK_PRICE) revert Pool__InvalidTickPrice();
 
         // If the tick is found, we can calculate the liquidity
-        if (l.currentTick == price) {
+        if (currentTick == price) {
             return
                 liquidityForRange(
                     currentTick,
@@ -213,7 +213,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 next = currentTick;
 
         // If the price is less than the current tick, we need to search left
-        if (price < l.currentTick) {
+        if (price < currentTick) {
             UD60x18 prev = l.tickIndex.prev(currentTick);
 
             while (true) {
