@@ -116,6 +116,75 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         _test_fillQuoteRFQ_Success(poolKey.isCallPool);
     }
 
+    function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
+        mintAndApprove();
+
+        quoteRFQ.isBuy = isBuy;
+
+        bool isCall = poolKey.isCallPool;
+        address token = getPoolToken(isCall);
+
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        uint256 premium = scaleDecimals(
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
+            isCall
+        );
+
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
+
+        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
+        UD60x18 _rebate = percent * scaleDecimals(protocolFee, isCall);
+        uint256 rebate = scaleDecimals(_rebate, isCall);
+
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
+
+        uint256 collateral = scaleDecimals(
+            contractsToCollateral(quoteRFQ.size, isCall),
+            isCall
+        );
+
+        uint256 initialCollateral = getInitialCollateral();
+
+        if (isBuy) {
+            assertEq(
+                IERC20(token).balanceOf(users.lp),
+                initialCollateral - premium
+            );
+
+            assertEq(
+                IERC20(token).balanceOf(users.trader),
+                initialCollateral + premium + rebate - collateral - protocolFee
+            );
+        } else {
+            assertEq(
+                IERC20(token).balanceOf(users.lp),
+                initialCollateral + premium + rebate - collateral - protocolFee
+            );
+
+            assertEq(
+                IERC20(token).balanceOf(users.trader),
+                initialCollateral - premium
+            );
+        }
+
+        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+    }
+
+    function test_fillQuoteRFQ_Success_WithReferral_Buy() public {
+        _test_fillQuoteRFQ_Success_WithReferral(true);
+    }
+
+    function test_fillQuoteRFQ_Success_WithReferral_Sell() public {
+        _test_fillQuoteRFQ_Success_WithReferral(false);
+    }
+
     function test_fillQuoteRFQ_RevertIf_QuoteRFQExpired() public {
         quoteRFQ.deadline = block.timestamp - 1 hours;
 

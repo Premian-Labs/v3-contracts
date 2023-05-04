@@ -50,6 +50,54 @@ abstract contract PoolTradeTest is DeployTest {
         _test_trade_Buy50Options_WithApproval(poolKey.isCallPool);
     }
 
+    function _test_trade_Buy50Options_WithReferral(bool isCall) internal {
+        posKey.orderType = Position.OrderType.CS;
+        uint256 initialCollateral = deposit(1000 ether);
+
+        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+
+        (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(
+            users.trader,
+            tradeSize,
+            true
+        );
+
+        address token = getPoolToken(isCall);
+
+        vm.startPrank(users.trader);
+
+        deal(token, users.trader, totalPremium);
+        IERC20(token).approve(address(router), totalPremium);
+
+        pool.trade(
+            tradeSize,
+            true,
+            totalPremium + totalPremium / 10,
+            users.referrer
+        );
+
+        vm.stopPrank();
+
+        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
+        UD60x18 _rebate = percent * scaleDecimals(takerFee, isCall);
+        uint256 rebate = scaleDecimals(_rebate, isCall);
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
+
+        assertEq(IERC20(token).balanceOf(users.trader), 0);
+        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+
+        assertEq(
+            IERC20(token).balanceOf(address(pool)),
+            initialCollateral + totalPremium - rebate
+        );
+    }
+
+    function test_trade_Buy50Options_WithReferral() public {
+        _test_trade_Buy50Options_WithReferral(poolKey.isCallPool);
+    }
+
     function _test_trade_Sell50Options_WithApproval(bool isCall) internal {
         deposit(1000 ether);
 
@@ -85,6 +133,72 @@ abstract contract PoolTradeTest is DeployTest {
 
     function test_trade_Sell50Options_WithApproval() public {
         _test_trade_Sell50Options_WithApproval(poolKey.isCallPool);
+    }
+
+    function _test_trade_Sell50Options_WithReferral(bool isCall) internal {
+        uint256 depositSize = 1000 ether;
+        deposit(depositSize);
+
+        uint256 initialCollateral;
+        {
+            UD60x18 collateral = contractsToCollateral(
+                UD60x18.wrap(depositSize),
+                isCall
+            );
+
+            initialCollateral = scaleDecimals(
+                collateral * posKey.lower.avg(posKey.upper),
+                isCall
+            );
+        }
+
+        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+
+        uint256 collateral = scaleDecimals(
+            contractsToCollateral(tradeSize, isCall),
+            isCall
+        );
+
+        (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(
+            users.trader,
+            tradeSize,
+            false
+        );
+
+        address token = getPoolToken(isCall);
+
+        vm.startPrank(users.trader);
+
+        deal(token, users.trader, collateral);
+        IERC20(token).approve(address(router), collateral);
+
+        pool.trade(
+            tradeSize,
+            false,
+            totalPremium - totalPremium / 10,
+            users.referrer
+        );
+
+        vm.stopPrank();
+
+        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
+        UD60x18 _rebate = percent * scaleDecimals(takerFee, isCall);
+        uint256 rebate = scaleDecimals(_rebate, isCall);
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
+
+        assertEq(IERC20(token).balanceOf(users.trader), totalPremium);
+        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+
+        assertEq(
+            IERC20(token).balanceOf(address(pool)),
+            initialCollateral + collateral - totalPremium - rebate
+        );
+    }
+
+    function test_trade_Sell50Options_WithReferral() public {
+        _test_trade_Sell50Options_WithReferral(poolKey.isCallPool);
     }
 
     function _test_annihilate_Success(bool isCall) internal {
