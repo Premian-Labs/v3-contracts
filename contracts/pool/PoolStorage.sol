@@ -210,6 +210,10 @@ library PoolStorage {
         }
     }
 
+    function approve(IERC20 token, address spender, UD60x18 value) internal {
+        token.approve(spender, PoolStorage.layout().toPoolTokenDecimals(value));
+    }
+
     function safeTransfer(IERC20 token, address to, UD60x18 value) internal {
         token.safeTransfer(to, PoolStorage.layout().toPoolTokenDecimals(value));
     }

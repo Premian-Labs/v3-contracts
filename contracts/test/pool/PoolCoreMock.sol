@@ -20,9 +20,17 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address vxPremia
     )
-        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+        PoolInternal(
+            factory,
+            router,
+            wrappedNativeToken,
+            feeReceiver,
+            referral,
+            vxPremia
+        )
     {}
 
     function _getPricing(

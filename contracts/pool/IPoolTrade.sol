@@ -29,12 +29,14 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
+    /// @param referrer The referrer of the user filling the RFQ quote
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature
+        Signature calldata signature,
+        address referrer
     ) external returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
@@ -42,12 +44,14 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
     /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
+    /// @param referrer The referrer of the user doing the trade
     /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
     /// @notice Cancel given RFQ quotes

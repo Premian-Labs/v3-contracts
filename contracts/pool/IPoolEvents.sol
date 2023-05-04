@@ -65,6 +65,7 @@ interface IPoolEvents {
         Position.Delta deltaTaker,
         UD60x18 premium,
         UD60x18 protocolFee,
+        UD60x18 rebate,
         bool isBuy
     );
 
@@ -86,6 +87,7 @@ interface IPoolEvents {
         UD60x18 marketPrice,
         UD60x18 liquidityRate,
         UD60x18 currentTick,
+        UD60x18 rebate,
         bool isBuy
     );
 

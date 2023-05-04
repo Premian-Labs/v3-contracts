@@ -98,6 +98,8 @@ interface IPoolInternal is IPosition, IPricing {
     struct TradeArgsInternal {
         // The account doing the trade
         address user;
+        // The referrer of the user doing the trade
+        address referrer;
         // The number of contracts being traded (18 decimals)
         UD60x18 size;
         // Whether the taker is buying or selling
@@ -109,6 +111,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
+        UD60x18 totalRebate;
         UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
@@ -146,6 +149,8 @@ interface IPoolInternal is IPosition, IPricing {
     struct FillQuoteRFQArgsInternal {
         // The user filling the RFQ quote
         address user;
+        // The referrer of the user filling the RFQ quote
+        address referrer;
         // The size to fill from the RFQ quote (18 decimals)
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
@@ -155,6 +160,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct PremiumAndFeeInternal {
+        UD60x18 rebate;
         UD60x18 premium;
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
