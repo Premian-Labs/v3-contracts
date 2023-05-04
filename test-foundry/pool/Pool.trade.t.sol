@@ -30,10 +30,16 @@ abstract contract PoolTradeTest is DeployTest {
         address poolToken = getPoolToken(isCall);
 
         vm.startPrank(users.trader);
+
         deal(poolToken, users.trader, totalPremium);
         IERC20(poolToken).approve(address(router), totalPremium);
 
-        pool.trade(tradeSize, true, totalPremium + totalPremium / 10);
+        pool.trade(
+            tradeSize,
+            true,
+            totalPremium + totalPremium / 10,
+            address(0)
+        );
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
@@ -65,7 +71,12 @@ abstract contract PoolTradeTest is DeployTest {
         deal(poolToken, users.trader, collateralScaled);
         IERC20(poolToken).approve(address(router), collateralScaled);
 
-        pool.trade(tradeSize, false, totalPremium - totalPremium / 10);
+        pool.trade(
+            tradeSize,
+            false,
+            totalPremium - totalPremium / 10,
+            address(0)
+        );
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
@@ -110,7 +121,12 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
-        pool.trade(tradeSize, false, totalPremium - totalPremium / 10);
+        pool.trade(
+            tradeSize,
+            false,
+            totalPremium - totalPremium / 10,
+            address(0)
+        );
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),

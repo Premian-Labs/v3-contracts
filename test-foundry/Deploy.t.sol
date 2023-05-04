@@ -34,6 +34,10 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {IReferral} from "contracts/referral/IReferral.sol";
+import {Referral} from "contracts/referral/Referral.sol";
+import {ReferralProxy} from "contracts/referral/ReferralProxy.sol";
+
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
@@ -58,6 +62,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    IReferral referral;
     IVxPremia vxPremia;
 
     IPoolMock pool;
@@ -73,6 +78,7 @@ contract DeployTest is Test, Assertions {
     struct Users {
         address lp;
         address trader;
+        address referrer;
     }
 
     bytes4[] internal poolBaseSelectors;
@@ -94,7 +100,12 @@ contract DeployTest is Test, Assertions {
         mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
         vm.selectFork(mainnetFork);
 
-        users = Users({lp: vm.addr(1), trader: vm.addr(2)});
+        users = Users({
+            lp: vm.addr(1),
+            trader: vm.addr(2),
+            referrer: vm.addr(3)
+        });
+
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
         premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70;
@@ -153,6 +164,12 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
+        Referral referralImpl = new Referral();
+
+        ReferralProxy referralProxy = new ReferralProxy(address(referralImpl));
+
+        referral = IReferral(address(referralProxy));
+
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
@@ -172,6 +189,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(vxPremia)
         );
 
@@ -180,6 +198,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(vxPremia)
         );
 
@@ -188,6 +207,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(vxPremia)
         );
 
@@ -196,6 +216,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(vxPremia)
         );
 

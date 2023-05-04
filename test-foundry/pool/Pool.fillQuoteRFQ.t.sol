@@ -64,7 +64,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         uint256 collateral = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -124,7 +124,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         vm.expectRevert(IPoolInternal.Pool__QuoteRFQExpired.selector);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
@@ -139,7 +139,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.price
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         quoteRFQ.price = UD60x18.wrap(1 ether + 1);
         sig = signQuoteRFQ(quoteRFQ);
@@ -150,7 +150,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.price
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_NotSpecifiedTaker() public {
@@ -161,7 +161,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQTaker.selector);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_Overfilled() public {
@@ -171,7 +171,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig, address(0));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -181,7 +181,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.size
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_WrongSignedMessage() public {
@@ -191,6 +191,6 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         quoteRFQ.size = quoteRFQ.size * TWO;
 
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQSignature.selector);
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 }

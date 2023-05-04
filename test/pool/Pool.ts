@@ -27,7 +27,7 @@ import {
 } from './Pool.fixture';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 
 describe('Pool', () => {
@@ -773,7 +773,12 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .trade(tradeSize, true, totalPremium.add(totalPremium.div(10)));
+          .trade(
+            tradeSize,
+            true,
+            totalPremium.add(totalPremium.div(10)),
+            constants.AddressZero,
+          );
 
         expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
           tradeSize,
@@ -814,7 +819,12 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .trade(tradeSize, false, totalPremium.sub(totalPremium.div(10)));
+          .trade(
+            tradeSize,
+            false,
+            totalPremium.sub(totalPremium.div(10)),
+            constants.AddressZero,
+          );
 
         expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(
           tradeSize,
@@ -842,7 +852,9 @@ describe('Pool', () => {
         await poolToken.connect(trader).approve(router.address, totalPremium);
 
         await expect(
-          pool.connect(trader).trade(tradeSize, true, totalPremium.sub(1)),
+          pool
+            .connect(trader)
+            .trade(tradeSize, true, totalPremium.sub(1), constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__AboveMaxSlippage');
       });
 
@@ -863,7 +875,14 @@ describe('Pool', () => {
         await poolToken.connect(trader).approve(router.address, tradeSize);
 
         await expect(
-          pool.connect(trader).trade(tradeSize, false, totalPremium.add(1)),
+          pool
+            .connect(trader)
+            .trade(
+              tradeSize,
+              false,
+              totalPremium.add(1),
+              constants.AddressZero,
+            ),
         ).to.be.revertedWithCustomError(pool, 'Pool__AboveMaxSlippage');
       });
 
@@ -875,7 +894,9 @@ describe('Pool', () => {
         );
 
         await expect(
-          pool.connect(trader).trade(depositSize.add(1), true, 0),
+          pool
+            .connect(trader)
+            .trade(depositSize.add(1), true, 0, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientAskLiquidity');
       });
 
@@ -887,7 +908,9 @@ describe('Pool', () => {
         );
 
         await expect(
-          pool.connect(trader).trade(depositSize.add(1), false, 0),
+          pool
+            .connect(trader)
+            .trade(depositSize.add(1), false, 0, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__InsufficientBidLiquidity');
       });
 
@@ -897,7 +920,7 @@ describe('Pool', () => {
         );
 
         await expect(
-          pool.connect(trader).trade(0, true, 0),
+          pool.connect(trader).trade(0, true, 0, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__ZeroSize');
       });
 
@@ -908,7 +931,7 @@ describe('Pool', () => {
         await increaseTo(maturity);
 
         await expect(
-          pool.connect(trader).trade(1, true, 0),
+          pool.connect(trader).trade(1, true, 0, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__OptionExpired');
       });
     });
@@ -1251,7 +1274,9 @@ describe('Pool', () => {
 
         const sig = await signQuoteRFQ(lp.provider!, pool.address, quoteRFQ);
 
-        await pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        await pool
+          .connect(trader)
+          .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero);
 
         let premium = scaleDecimals(
           contractsToCollateral(
@@ -1297,7 +1322,9 @@ describe('Pool', () => {
         const sig = await signQuoteRFQ(lp.provider!, pool.address, quoteRFQ);
 
         await expect(
-          pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(trader)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQExpired');
       });
 
@@ -1312,14 +1339,18 @@ describe('Pool', () => {
         let sig = await signQuoteRFQ(lp.provider!, pool.address, quoteRFQ);
 
         await expect(
-          pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(trader)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__OutOfBoundsPrice');
 
         quoteRFQ.price = parseEther('1').add(1);
         sig = await signQuoteRFQ(lp.provider!, pool.address, quoteRFQ);
 
         await expect(
-          pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(trader)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__OutOfBoundsPrice');
       });
 
@@ -1334,7 +1365,9 @@ describe('Pool', () => {
         const sig = await signQuoteRFQ(lp.provider!, pool.address, quoteRFQ);
 
         await expect(
-          pool.connect(deployer).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(deployer)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteRFQTaker');
       });
 
@@ -1351,10 +1384,17 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .fillQuoteRFQ(quoteRFQ, BigNumber.from(quoteRFQ.size).div(2), sig);
+          .fillQuoteRFQ(
+            quoteRFQ,
+            BigNumber.from(quoteRFQ.size).div(2),
+            sig,
+            constants.AddressZero,
+          );
 
         await expect(
-          pool.connect(deployer).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(deployer)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQOverfilled');
       });
 
@@ -1375,6 +1415,7 @@ describe('Pool', () => {
             },
             quoteRFQ.size,
             sig,
+            constants.AddressZero,
           ),
         ).to.be.revertedWithCustomError(pool, 'Pool__InvalidQuoteRFQSignature');
       });
@@ -1399,7 +1440,9 @@ describe('Pool', () => {
           ]);
 
         await expect(
-          pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(trader)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQCancelled');
       });
     });
@@ -1420,7 +1463,12 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .fillQuoteRFQ(quoteRFQ, quoteRFQ.size.div(2), sig);
+          .fillQuoteRFQ(
+            quoteRFQ,
+            quoteRFQ.size.div(2),
+            sig,
+            constants.AddressZero,
+          );
 
         const quoteRFQHash = await calculateQuoteRFQHash(
           lp.provider!,

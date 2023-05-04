@@ -15,10 +15,10 @@ import {
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
   ERC20Mock__factory,
-  IVxPremia__factory,
   VxPremia__factory,
   VxPremiaProxy__factory,
   ExchangeHelper__factory,
+  Referral__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -56,6 +56,7 @@ export class PoolUtil {
     vxPremia: string,
     wrappedNativeToken: string,
     feeReceiver: string,
+    referralAddress: string,
     log = true,
     isDevMode = false,
   ) {
@@ -82,6 +83,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      referralAddress,
       vxPremia,
     );
     await poolCoreImpl.deployed();
@@ -104,6 +106,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      referralAddress,
       vxPremia,
     );
     await poolDepositWithdrawImpl.deployed();
@@ -126,6 +129,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      referralAddress,
       vxPremia,
     );
     await poolTradeImpl.deployed();
@@ -149,6 +153,7 @@ export class PoolUtil {
         router,
         wrappedNativeToken,
         feeReceiver,
+        referralAddress,
         vxPremia,
       );
       await poolCoreMockImpl.deployed();
@@ -278,6 +283,20 @@ export class PoolUtil {
       vxPremiaAddress = vxPremiaProxy.address;
     }
 
+    const referralImpl = await new Referral__factory(deployer).deploy();
+
+    await referralImpl.deployed();
+
+    if (log) console.log(`Referral : ${referralImpl.address}`);
+
+    const referralProxy = await new ProxyUpgradeableOwnable__factory(
+      deployer,
+    ).deploy(referralImpl.address);
+
+    await referralProxy.deployed();
+
+    if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
@@ -285,6 +304,7 @@ export class PoolUtil {
       vxPremiaAddress,
       wrappedNativeToken,
       feeReceiver,
+      referralProxy.address,
       log,
       isDevMode,
     );
