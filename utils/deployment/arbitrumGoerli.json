@@ -16,6 +16,7 @@
   "PoolFactoryImplementation": "0xe9640b7320cAbfcea04AB5AA80A2210E5B3f08a6",
   "PoolFactoryProxy": "0x496a2B7deAD5C41CE9845D0C3f560a17a323e983",
   "ExchangeHelper": "0x95b76bBDa68574c8da7860D4fDf68598dBAb9829",
+  "Referral": "",
   "VxPremiaImplementation": "0xf5196601B83AdD7D02f5511F6Ab1042B148eFfa9",
   "VxPremiaProxy": "0xe416d620436F77e4F4867b67E269A08972067808",
   "ERC20Router": "0x2C84bdf37fb8dbF8fBfE6687a4645914283CC4E8",
