@@ -623,16 +623,16 @@ contract PositionTest is Test, Assertions {
 
         // prettier-ignore
         if (orderType == Position.OrderType.CSUP) {
-            expected[0] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[1] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[2] =  [SD59x18.wrap(0.342e18),  SD59x18.wrap(0), SD59x18.wrap(0.08e18)];
-            expected[3] =  [SD59x18.wrap(0.078e18),  SD59x18.wrap(0), SD59x18.wrap(0.56e18)];
-            expected[4] =  [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
-            expected[5] =  [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
-            expected[6] =  [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[7] =  [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[8] =  [SD59x18.wrap(0.513e18),  SD59x18.wrap(0), SD59x18.wrap(0.12e18)];
-            expected[9] =  [SD59x18.wrap(0.117e18),  SD59x18.wrap(0), SD59x18.wrap(0.84e18)];
+            expected[0]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[1]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[2]  = [SD59x18.wrap(0.342e18),  SD59x18.wrap(0), SD59x18.wrap(0.08e18)];
+            expected[3]  = [SD59x18.wrap(0.078e18),  SD59x18.wrap(0), SD59x18.wrap(0.56e18)];
+            expected[4]  = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
+            expected[5]  = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
+            expected[6]  = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[7]  = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[8]  = [SD59x18.wrap(0.513e18),  SD59x18.wrap(0), SD59x18.wrap(0.12e18)];
+            expected[9]  = [SD59x18.wrap(0.117e18),  SD59x18.wrap(0), SD59x18.wrap(0.84e18)];
             expected[10] = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(1.2e18)];
             expected[11] = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(1.2e18)];
             expected[12] = [SD59x18.wrap(-0.4e18),   SD59x18.wrap(0), SD59x18.wrap(0)];
@@ -648,16 +648,16 @@ contract PositionTest is Test, Assertions {
             expected[22] = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(-1.2e18)];
             expected[23] = [SD59x18.wrap(0),         SD59x18.wrap(0), SD59x18.wrap(-1.2e18)];
         } else if (orderType == Position.OrderType.CS) {
-            expected[0] =  [SD59x18.wrap(0.8e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[1] =  [SD59x18.wrap(0.8e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[2] =  [SD59x18.wrap(0.742e18),  SD59x18.wrap(0), SD59x18.wrap(0.08e18)];
-            expected[3] =  [SD59x18.wrap(0.478e18),  SD59x18.wrap(0), SD59x18.wrap(0.56e18)];
-            expected[4] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
-            expected[5] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
-            expected[6] =  [SD59x18.wrap(1.2e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[7] =  [SD59x18.wrap(1.2e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
-            expected[8] =  [SD59x18.wrap(1.113e18),  SD59x18.wrap(0), SD59x18.wrap(0.12e18)];
-            expected[9] =  [SD59x18.wrap(0.717e18),  SD59x18.wrap(0), SD59x18.wrap(0.84e18)];
+            expected[0]  = [SD59x18.wrap(0.8e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[1]  = [SD59x18.wrap(0.8e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[2]  = [SD59x18.wrap(0.742e18),  SD59x18.wrap(0), SD59x18.wrap(0.08e18)];
+            expected[3]  = [SD59x18.wrap(0.478e18),  SD59x18.wrap(0), SD59x18.wrap(0.56e18)];
+            expected[4]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
+            expected[5]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0), SD59x18.wrap(0.8e18)];
+            expected[6]  = [SD59x18.wrap(1.2e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[7]  = [SD59x18.wrap(1.2e18),    SD59x18.wrap(0), SD59x18.wrap(0)];
+            expected[8]  = [SD59x18.wrap(1.113e18),  SD59x18.wrap(0), SD59x18.wrap(0.12e18)];
+            expected[9]  = [SD59x18.wrap(0.717e18),  SD59x18.wrap(0), SD59x18.wrap(0.84e18)];
             expected[10] = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(1.2e18)];
             expected[11] = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0), SD59x18.wrap(1.2e18)];
             expected[12] = [SD59x18.wrap(-0.8e18),   SD59x18.wrap(0), SD59x18.wrap(0)];
@@ -675,22 +675,22 @@ contract PositionTest is Test, Assertions {
         } else if (
             orderType == Position.OrderType.LC
         ) {
-            expected[0] =  [SD59x18.wrap(0),         SD59x18.wrap(0.8e18),   SD59x18.wrap(0)];
-            expected[1] =  [SD59x18.wrap(0),         SD59x18.wrap(0.8e18),   SD59x18.wrap(0)];
-            expected[2] =  [SD59x18.wrap(0.022e18),   SD59x18.wrap(0.72e18),  SD59x18.wrap(0)];
-            expected[3] =  [SD59x18.wrap(0.238e18),  SD59x18.wrap(0.24e18),  SD59x18.wrap(0)];
-            expected[4] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
-            expected[5] =  [SD59x18.wrap(0.4e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
-            expected[6] =  [SD59x18.wrap(0),         SD59x18.wrap(1.2e18),   SD59x18.wrap(0)];
-            expected[7] =  [SD59x18.wrap(0),         SD59x18.wrap(1.2e18),   SD59x18.wrap(0)];
-            expected[8] =  [SD59x18.wrap(0.033e18),  SD59x18.wrap(1.08e18),  SD59x18.wrap(0)];
-            expected[9] =  [SD59x18.wrap(0.357e18),  SD59x18.wrap(0.36e18),  SD59x18.wrap(0)];
+            expected[0]  = [SD59x18.wrap(0),         SD59x18.wrap(0.8e18),   SD59x18.wrap(0)];
+            expected[1]  = [SD59x18.wrap(0),         SD59x18.wrap(0.8e18),   SD59x18.wrap(0)];
+            expected[2]  = [SD59x18.wrap(0.022e18),  SD59x18.wrap(0.72e18),  SD59x18.wrap(0)];
+            expected[3]  = [SD59x18.wrap(0.238e18),  SD59x18.wrap(0.24e18),  SD59x18.wrap(0)];
+            expected[4]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
+            expected[5]  = [SD59x18.wrap(0.4e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
+            expected[6]  = [SD59x18.wrap(0),         SD59x18.wrap(1.2e18),   SD59x18.wrap(0)];
+            expected[7]  = [SD59x18.wrap(0),         SD59x18.wrap(1.2e18),   SD59x18.wrap(0)];
+            expected[8]  = [SD59x18.wrap(0.033e18),  SD59x18.wrap(1.08e18),  SD59x18.wrap(0)];
+            expected[9]  = [SD59x18.wrap(0.357e18),  SD59x18.wrap(0.36e18),  SD59x18.wrap(0)];
             expected[10] = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
             expected[11] = [SD59x18.wrap(0.6e18),    SD59x18.wrap(0),        SD59x18.wrap(0)];
-            expected[12] = [SD59x18.wrap(0),         SD59x18.wrap(-0.8e18),     SD59x18.wrap(0)];
-            expected[13] = [SD59x18.wrap(0),         SD59x18.wrap(-0.8e18),     SD59x18.wrap(0)];
-            expected[14] = [SD59x18.wrap(-0.022e18), SD59x18.wrap(-0.72e18),    SD59x18.wrap(0)];
-            expected[15] = [SD59x18.wrap(-0.238e18), SD59x18.wrap(-0.24e18),    SD59x18.wrap(0)];
+            expected[12] = [SD59x18.wrap(0),         SD59x18.wrap(-0.8e18),  SD59x18.wrap(0)];
+            expected[13] = [SD59x18.wrap(0),         SD59x18.wrap(-0.8e18),  SD59x18.wrap(0)];
+            expected[14] = [SD59x18.wrap(-0.022e18), SD59x18.wrap(-0.72e18), SD59x18.wrap(0)];
+            expected[15] = [SD59x18.wrap(-0.238e18), SD59x18.wrap(-0.24e18), SD59x18.wrap(0)];
             expected[16] = [SD59x18.wrap(-0.4e18),   SD59x18.wrap(0),        SD59x18.wrap(0)];
             expected[17] = [SD59x18.wrap(-0.4e18),   SD59x18.wrap(0),        SD59x18.wrap(0)];
             expected[18] = [SD59x18.wrap(0),         SD59x18.wrap(-1.2e18),  SD59x18.wrap(0)];
