@@ -5,7 +5,7 @@ pragma solidity >=0.8.19;
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {iZERO, ZERO, ONE, TWO} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
@@ -302,9 +302,7 @@ library Position {
             );
 
         UD60x18 absChangeTokens = amount.abs().intoUD60x18();
-        SD59x18 sign = amount > iZERO
-            ? SD59x18.wrap(1e18)
-            : SD59x18.wrap(-1e18);
+        SD59x18 sign = amount > iZERO ? sd(1e18) : sd(-1e18);
 
         delta.collateral =
             sign *

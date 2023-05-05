@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -28,7 +28,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
     function test_maxFlashLoan_ReturnCorrectMax() public {
         posKey.orderType = Position.OrderType.CS;
 
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         address poolToken = getPoolToken(poolKey.isCallPool);
@@ -51,7 +51,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
     function test_flashFee_ReturnCorrectFee() public {
         posKey.orderType = Position.OrderType.CS;
 
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         address poolToken = getPoolToken(poolKey.isCallPool);
@@ -77,7 +77,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
     function _test_flashLoan_Single_Success(bool isCall) internal {
         posKey.orderType = Position.OrderType.CS;
 
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         address poolToken = getPoolToken(isCall);
@@ -111,7 +111,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
     function _test_flashLoan_Single_RevertIf_NotRepayed(bool isCall) internal {
         posKey.orderType = Position.OrderType.CS;
 
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         address poolToken = getPoolToken(isCall);
@@ -145,7 +145,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
             base: base,
             quote: quote,
             oracleAdapter: address(oracleAdapter),
-            strike: UD60x18.wrap(1100 ether),
+            strike: ud(1100 ether),
             maturity: 1682668800,
             isCallPool: poolKey.isCallPool
         });
@@ -154,7 +154,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
             base: base,
             quote: quote,
             oracleAdapter: address(oracleAdapter),
-            strike: UD60x18.wrap(1200 ether),
+            strike: ud(1200 ether),
             maturity: 1682668800,
             isCallPool: poolKey.isCallPool
         });
@@ -169,7 +169,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         //
 
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(pool, poolKey.strike, depositSize);
         uint256 initialCollateralTwo = deposit(
             poolTwo,
