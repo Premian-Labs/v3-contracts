@@ -14,4 +14,4 @@
 [submodule "lib/v3-periphery"]
 	path = lib/v3-periphery
 	url = https://github.com/Uniswap/v3-periphery
-	branch = b325bb0
+	branch = b325bb0905d922ae61fcc7df85ee802e8df5e96c
