@@ -2,14 +2,12 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-
-import {UD} from "../../libraries/PRBMathExtra.sol";
 
 import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
 import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
@@ -77,7 +75,7 @@ contract UniswapV3AdapterInternal is
         int24 weightedTick = _fetchWeightedTick(pools, l.period, target);
         int8 factor = int8(ETH_DECIMALS) - int8(_decimals(tokenOut));
 
-        UD60x18 price = UD(
+        UD60x18 price = ud(
             _scale(
                 OracleLibrary.getQuoteAtTick(
                     weightedTick,

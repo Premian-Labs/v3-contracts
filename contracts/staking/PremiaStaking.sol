@@ -8,10 +8,9 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC2612} from "@solidstate/contracts/token/ERC20/permit/IERC2612.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {WAD} from "../libraries/Constants.sol";
-import {UD} from "../libraries/PRBMathExtra.sol";
 import {IExchangeHelper} from "../utils/IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -504,7 +503,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             l,
             l.userInfo[msg.sender],
             amount,
-            (UD(amount) * UD(getEarlyUnstakeFee(msg.sender))).unwrap()
+            (ud(amount) * ud(getEarlyUnstakeFee(msg.sender))).unwrap()
         );
     }
 
@@ -684,12 +683,12 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
                     uint256 remappedAmount = level.amount - amountPrevLevel;
                     uint256 remappedPower = userPower - amountPrevLevel;
-                    UD60x18 levelProgress = UD(remappedPower * WAD) /
-                        UD(remappedAmount * WAD);
+                    UD60x18 levelProgress = ud(remappedPower * WAD) /
+                        ud(remappedAmount * WAD);
 
                     return
                         discountPrevLevel +
-                        (UD(remappedDiscount) * levelProgress).unwrap();
+                        (ud(remappedDiscount) * levelProgress).unwrap();
                 }
             }
 
@@ -739,7 +738,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     ) internal pure returns (uint256) {
         return
             ((ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp) *
-                UD(pendingRewards)).unwrap();
+                ud(pendingRewards)).unwrap();
     }
 
     /// @inheritdoc IPremiaStaking
@@ -782,7 +781,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint64 stakePeriod
     ) internal pure returns (uint256) {
         return
-            (UD(balance) * UD(getStakePeriodMultiplier(stakePeriod))).unwrap();
+            (ud(balance) * ud(getStakePeriodMultiplier(stakePeriod))).unwrap();
     }
 
     function _calculateReward(

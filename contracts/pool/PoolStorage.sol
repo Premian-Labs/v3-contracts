@@ -4,15 +4,14 @@ pragma solidity >=0.8.19;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
-import {UD, SD} from "../libraries/PRBMathExtra.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
@@ -127,7 +126,7 @@ library PoolStorage {
         uint256 value
     ) internal view returns (UD60x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return UD(OptionMath.scaleDecimals(value, decimals, 18));
+        return ud(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
@@ -136,7 +135,7 @@ library PoolStorage {
         int256 value
     ) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return SD(OptionMath.scaleDecimals(value, decimals, 18));
+        return sd(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)

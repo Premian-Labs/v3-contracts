@@ -2,9 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
-import {UD} from "contracts/libraries/PRBMathExtra.sol";
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {IPool} from "contracts/pool/IPool.sol";
 
@@ -80,7 +79,7 @@ contract PoolFactoryTest is DeployTest {
     }
 
     function test_deployPool_RevertIf_StrikeIsZero() public {
-        poolKey.strike = UD(0);
+        poolKey.strike = ud(0);
 
         vm.expectRevert(
             IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector
@@ -111,7 +110,7 @@ contract PoolFactoryTest is DeployTest {
         uint256 strikeInterval = 100 ether;
 
         for (uint256 i; i < strike.length; i++) {
-            poolKey.strike = UD(strike[i]);
+            poolKey.strike = ud(strike[i]);
 
             vm.expectRevert(
                 abi.encodeWithSelector(
