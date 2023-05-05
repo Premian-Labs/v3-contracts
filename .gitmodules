@@ -4,3 +4,6 @@
 [submodule "lib/prb-math"]
 	path = lib/prb-math
 	url = https://github.com/PaulRBerg/prb-math
+[submodule "lib/BokkyPooBahsDateTimeLibrary"]
+	path = lib/BokkyPooBahsDateTimeLibrary
+	url = https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary
