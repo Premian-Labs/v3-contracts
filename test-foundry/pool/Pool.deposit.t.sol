@@ -2,12 +2,11 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
-import {UD} from "contracts/libraries/PRBMathExtra.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
@@ -21,7 +20,7 @@ abstract contract PoolDepositTest is DeployTest {
         poolKey.isCallPool = isCall;
 
         IERC20 token = IERC20(getPoolToken(isCall));
-        UD60x18 depositSize = UD(1000 ether);
+        UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
@@ -65,7 +64,7 @@ abstract contract PoolDepositTest is DeployTest {
 
         vm.startPrank(users.lp);
 
-        UD60x18 minPrice = posKey.upper + UD(1);
+        UD60x18 minPrice = posKey.upper + ud(1);
         UD60x18 maxPrice = posKey.upper;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -77,8 +76,8 @@ abstract contract PoolDepositTest is DeployTest {
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
 
-        minPrice = posKey.upper - UD(10);
-        maxPrice = posKey.upper - UD(1);
+        minPrice = posKey.upper - ud(10);
+        maxPrice = posKey.upper - ud(1);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__AboveMaxSlippage.selector,
@@ -147,7 +146,7 @@ abstract contract PoolDepositTest is DeployTest {
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
-        posKey.lower = UD(0.0001e18);
+        posKey.lower = ud(0.0001e18);
         posKey.upper = posKeySave.upper;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -159,7 +158,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
-        posKey.upper = UD(1.01e18);
+        posKey.upper = ud(1.01e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__InvalidRange.selector,
@@ -175,7 +174,7 @@ abstract contract PoolDepositTest is DeployTest {
 
         Position.Key memory posKeySave = posKey;
 
-        posKey.lower = UD(0.2501e18);
+        posKey.lower = ud(0.2501e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__TickWidthInvalid.selector,
@@ -185,7 +184,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
-        posKey.upper = UD(0.7501e18);
+        posKey.upper = ud(0.7501e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__TickWidthInvalid.selector,

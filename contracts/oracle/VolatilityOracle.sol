@@ -3,14 +3,13 @@
 pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {iZERO, iONE, iTWO} from "../libraries/Constants.sol";
-import {SD} from "../libraries/PRBMathExtra.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
@@ -200,7 +199,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18[] memory tgt = new SD59x18[](src.length);
         for (uint256 i = 0; i < src.length; i++) {
             // Convert parameters in DECIMALS to an SD59x18
-            tgt[i] = SD(src[i] * 1e6);
+            tgt[i] = sd(src[i] * 1e6);
         }
         return tgt;
     }
