@@ -3,8 +3,8 @@ pragma solidity >=0.5.0 <0.9.0;
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import {FullMath} from "./FullMath.sol";
-import {TickMath} from "./TickMath.sol";
+import {FullMath} from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 
 /// @title Oracle library
 /// @notice Provides functions to integrate with V3 pool oracle
