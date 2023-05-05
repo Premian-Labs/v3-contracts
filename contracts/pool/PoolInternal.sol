@@ -21,7 +21,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
-import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
+import {PRBMathExtra, UD} from "../libraries/PRBMathExtra.sol";
 import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
@@ -109,7 +109,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
 
         if (discount > 0) {
-            fee = fee - fee * UD60x18.wrap(discount);
+            fee = fee - fee * UD(discount);
         }
 
         return Position.contractsToCollateral(fee, strike, isCallPool);
@@ -1964,7 +1964,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         uint256 tokenId
     ) internal view returns (UD60x18) {
-        return UD60x18.wrap(_balanceOf(user, tokenId));
+        return UD(_balanceOf(user, tokenId));
     }
 
     function _mint(address account, uint256 id, UD60x18 amount) internal {

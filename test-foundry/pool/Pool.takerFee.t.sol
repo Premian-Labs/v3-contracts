@@ -5,7 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {PRBMathExtra} from "../../contracts/libraries/PRBMathExtra.sol";
+import {PRBMathExtra, UD} from "../../contracts/libraries/PRBMathExtra.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -61,7 +61,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
             fee = PRBMathExtra.max(premiumFee, notionalFee);
 
-            if (discount > UD60x18.wrap(0)) {
+            if (discount > UD(0)) {
                 fee = fee - fee * discount;
             }
         }
@@ -90,9 +90,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             true,
             false,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(1 ether),
-            UD60x18.wrap(0)
+            UD(100 ether),
+            UD(1 ether),
+            UD(0)
         );
     }
 
@@ -103,9 +103,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             true,
             true,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(1 ether),
-            UD60x18.wrap(0)
+            UD(100 ether),
+            UD(1 ether),
+            UD(0)
         );
     }
 
@@ -114,9 +114,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             false,
             false,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(0.01 ether),
-            UD60x18.wrap(0)
+            UD(100 ether),
+            UD(0.01 ether),
+            UD(0)
         );
     }
 
@@ -127,9 +127,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             false,
             true,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(0.01 ether),
-            UD60x18.wrap(0)
+            UD(100 ether),
+            UD(0.01 ether),
+            UD(0)
         );
     }
 
@@ -143,9 +143,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             true,
             false,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(1 ether),
-            UD60x18.wrap(discount)
+            UD(100 ether),
+            UD(1 ether),
+            UD(discount)
         );
 
         vm.stopPrank();
@@ -163,9 +163,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             true,
             true,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(1 ether),
-            UD60x18.wrap(discount)
+            UD(100 ether),
+            UD(1 ether),
+            UD(discount)
         );
 
         vm.stopPrank();
@@ -181,9 +181,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             false,
             false,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(0.01 ether),
-            UD60x18.wrap(discount)
+            UD(100 ether),
+            UD(0.01 ether),
+            UD(discount)
         );
 
         vm.stopPrank();
@@ -201,9 +201,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
             poolKey.isCallPool,
             false,
             true,
-            UD60x18.wrap(100 ether),
-            UD60x18.wrap(0.01 ether),
-            UD60x18.wrap(discount)
+            UD(100 ether),
+            UD(0.01 ether),
+            UD(discount)
         );
 
         vm.stopPrank();

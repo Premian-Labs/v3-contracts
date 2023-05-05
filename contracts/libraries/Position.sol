@@ -9,6 +9,7 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {iZERO, ZERO, ONE, TWO} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
+import {SD} from "./PRBMathExtra.sol";
 import {Pricing} from "./Pricing.sol";
 
 /// @notice Keeps track of LP positions
@@ -302,9 +303,7 @@ library Position {
             );
 
         UD60x18 absChangeTokens = amount.abs().intoUD60x18();
-        SD59x18 sign = amount > iZERO
-            ? SD59x18.wrap(1e18)
-            : SD59x18.wrap(-1e18);
+        SD59x18 sign = amount > iZERO ? SD(1e18) : SD(-1e18);
 
         delta.collateral =
             sign *

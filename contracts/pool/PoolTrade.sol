@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
+
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
-
-import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
@@ -14,6 +14,7 @@ import {IPoolTrade} from "./IPoolTrade.sol";
 import {IERC3156FlashBorrower} from "../interfaces/IERC3156FlashBorrower.sol";
 import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
 import {iZERO, ZERO} from "../libraries/Constants.sol";
+import {UD} from "../libraries/PRBMathExtra.sol";
 import {Position} from "../libraries/Position.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
@@ -83,7 +84,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
-            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = UD60x18.wrap(
+            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = UD(
                 type(uint256).max
             );
             emit CancelQuoteRFQ(msg.sender, hashes[i]);

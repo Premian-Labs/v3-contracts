@@ -4,9 +4,17 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-library PRBMathExtra {
-    SD59x18 private constant iZERO = SD59x18.wrap(0);
+import {iZERO} from "./Constants.sol";
 
+function UD(uint256 x) pure returns (UD60x18) {
+    return UD60x18.wrap(x);
+}
+
+function SD(int256 x) pure returns (SD59x18) {
+    return SD59x18.wrap(x);
+}
+
+library PRBMathExtra {
     /// @notice select the greater of two numbers
     /// @param a first number
     /// @param b second number

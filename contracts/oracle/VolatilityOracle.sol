@@ -2,25 +2,24 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
+
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {iZERO, iONE, iTWO} from "../libraries/Constants.sol";
+import {SD} from "../libraries/PRBMathExtra.sol";
+
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
-
-import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
-
-    SD59x18 internal constant ZERO = SD59x18.wrap(0);
-    SD59x18 internal constant ONE = SD59x18.wrap(1e18);
-    SD59x18 internal constant TWO = SD59x18.wrap(2e18);
 
     uint256 private constant DECIMALS = 12;
 
@@ -201,7 +200,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18[] memory tgt = new SD59x18[](src.length);
         for (uint256 i = 0; i < src.length; i++) {
             // Convert parameters in DECIMALS to an SD59x18
-            tgt[i] = SD59x18.wrap(src[i] * 1e6);
+            tgt[i] = SD(src[i] * 1e6);
         }
         return tgt;
     }
@@ -211,7 +210,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 value1,
         SD59x18 value2
     ) internal pure returns (SD59x18) {
-        return (ONE - lam) * value1 + (lam * value2);
+        return (iONE - lam) * value1 + (lam * value2);
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -278,7 +277,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
             info = SliceInfo({
                 theta: _weightedAvg(lam, params.theta[i], params.theta[i + 1]),
                 psi: _weightedAvg(lam, params.psi[i], params.psi[i + 1]),
-                rho: ZERO
+                rho: iZERO
             });
             info.rho =
                 _weightedAvg(
@@ -290,10 +289,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
 
         SD59x18 phi = info.psi / info.theta;
-        SD59x18 term = (phi * k + info.rho).pow(TWO) +
-            (ONE - info.rho.pow(TWO));
-        SD59x18 w = info.theta / TWO;
-        w = w * (ONE + info.rho * phi * k + term.sqrt());
+        SD59x18 term = (phi * k + info.rho).pow(iTWO) +
+            (iONE - info.rho.pow(iTWO));
+        SD59x18 w = info.theta / iTWO;
+        w = w * (iONE + info.rho * phi * k + term.sqrt());
 
         return (w / _timeToMaturity).sqrt().intoUD60x18();
     }

@@ -12,6 +12,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
+import {UD, SD} from "../libraries/PRBMathExtra.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
@@ -126,7 +127,7 @@ library PoolStorage {
         uint256 value
     ) internal view returns (UD60x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return UD60x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
+        return UD(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
@@ -135,7 +136,7 @@ library PoolStorage {
         int256 value
     ) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return SD59x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
+        return SD(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
