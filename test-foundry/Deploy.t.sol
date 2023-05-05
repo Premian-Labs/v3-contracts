@@ -13,6 +13,7 @@ import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writ
 
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {UD} from "contracts/libraries/PRBMathExtra.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
@@ -102,14 +103,14 @@ contract DeployTest is Test, Assertions {
         oracleAdapter = new OracleAdapterMock(
             address(base),
             address(quote),
-            UD60x18.wrap(1000 ether),
-            UD60x18.wrap(1000 ether)
+            UD(1000 ether),
+            UD(1000 ether)
         );
         poolKey = IPoolFactory.PoolKey({
             base: base,
             quote: quote,
             oracleAdapter: address(oracleAdapter),
-            strike: UD60x18.wrap(1000 ether),
+            strike: UD(1000 ether),
             maturity: 1682668800,
             isCallPool: true
         });
@@ -117,8 +118,8 @@ contract DeployTest is Test, Assertions {
         quoteRFQ = IPoolInternal.QuoteRFQ({
             provider: users.lp,
             taker: address(0),
-            price: UD60x18.wrap(0.1 ether),
-            size: UD60x18.wrap(10 ether),
+            price: UD(0.1 ether),
+            size: UD(10 ether),
             isBuy: false,
             deadline: block.timestamp + 1 hours,
             salt: block.timestamp
@@ -143,7 +144,7 @@ contract DeployTest is Test, Assertions {
 
         PoolFactoryProxy factoryProxy = new PoolFactoryProxy(
             address(factoryImpl),
-            UD60x18.wrap(0.1 ether),
+            UD(0.1 ether),
             feeReceiver
         );
 
@@ -321,8 +322,8 @@ contract DeployTest is Test, Assertions {
         posKey = Position.Key({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.1 ether),
-            upper: UD60x18.wrap(0.3 ether),
+            lower: UD(0.1 ether),
+            upper: UD(0.3 ether),
             orderType: Position.OrderType.LC
         });
     }
@@ -330,7 +331,7 @@ contract DeployTest is Test, Assertions {
     function deposit(
         uint256 depositSize
     ) internal returns (uint256 initialCollateral) {
-        return deposit(UD60x18.wrap(depositSize));
+        return deposit(UD(depositSize));
     }
 
     function deposit(
@@ -403,7 +404,7 @@ contract DeployTest is Test, Assertions {
         bool isCall
     ) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
-        return UD60x18.wrap(OptionMath.scaleDecimals(amount, decimals, 18));
+        return UD(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
     function tokenId() internal view returns (uint256) {

@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {UD} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -17,12 +18,12 @@ import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
     function _test_withdraw_750LC(bool isCall) internal {
-        UD60x18 depositSize = UD60x18.wrap(1000 ether);
+        UD60x18 depositSize = UD(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
         vm.warp(block.timestamp + 60);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(UD60x18.wrap(200 ether), isCall),
+            contractsToCollateral(UD(200 ether), isCall),
             isCall
         );
 
@@ -37,7 +38,7 @@ abstract contract PoolWithdrawTest is DeployTest {
             depositCollateralValue
         );
 
-        UD60x18 withdrawSize = UD60x18.wrap(750 ether);
+        UD60x18 withdrawSize = UD(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         uint256 withdrawCollateralValue = scaleDecimals(
             contractsToCollateral(withdrawSize * avgPrice, isCall),
@@ -78,7 +79,7 @@ abstract contract PoolWithdrawTest is DeployTest {
             )
         );
 
-        pool.withdraw(posKey, UD60x18.wrap(100 ether), ZERO, ONE);
+        pool.withdraw(posKey, UD(100 ether), ZERO, ONE);
     }
 
     function test_withdraw_RevertIf_NotOperator() public {
@@ -90,7 +91,7 @@ abstract contract PoolWithdrawTest is DeployTest {
                 users.lp
             )
         );
-        pool.withdraw(posKey, UD60x18.wrap(100 ether), ZERO, ONE);
+        pool.withdraw(posKey, UD(100 ether), ZERO, ONE);
     }
 
     function test_withdraw_RevertIf_MarketPriceOutOfMinMax() public {
@@ -100,7 +101,7 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         vm.startPrank(users.lp);
 
-        UD60x18 minPrice = posKey.upper + UD60x18.wrap(1);
+        UD60x18 minPrice = posKey.upper + UD(1);
         UD60x18 maxPrice = posKey.upper;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -112,8 +113,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         );
         pool.withdraw(posKey, THREE, minPrice, maxPrice);
 
-        minPrice = posKey.upper - UD60x18.wrap(10);
-        maxPrice = posKey.upper - UD60x18.wrap(1);
+        minPrice = posKey.upper - UD(10);
+        maxPrice = posKey.upper - UD(1);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__AboveMaxSlippage.selector,
@@ -190,7 +191,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         );
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
-        posKey.lower = UD60x18.wrap(0.0001e18);
+        posKey.lower = UD(0.0001e18);
         posKey.upper = posKeySave.upper;
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -202,7 +203,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
-        posKey.upper = UD60x18.wrap(1.01e18);
+        posKey.upper = UD(1.01e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__InvalidRange.selector,
@@ -218,7 +219,7 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         Position.Key memory posKeySave = posKey;
 
-        posKey.lower = UD60x18.wrap(0.2501e18);
+        posKey.lower = UD(0.2501e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__TickWidthInvalid.selector,
@@ -228,7 +229,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
-        posKey.upper = UD60x18.wrap(0.7501e18);
+        posKey.upper = UD(0.7501e18);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__TickWidthInvalid.selector,

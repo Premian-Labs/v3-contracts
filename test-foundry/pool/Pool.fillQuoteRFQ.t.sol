@@ -7,6 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, TWO, THREE, FIVE} from "contracts/libraries/Constants.sol";
+import {UD} from "contracts/libraries/PRBMathExtra.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
@@ -43,7 +44,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
     }
 
     function getInitialCollateral() internal view returns (uint256) {
-        UD60x18 initialCollateral = UD60x18.wrap(10 ether);
+        UD60x18 initialCollateral = UD(10 ether);
 
         if (!poolKey.isCallPool) {
             initialCollateral = initialCollateral * poolKey.strike;
@@ -130,7 +131,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
     function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
         vm.startPrank(users.trader);
 
-        quoteRFQ.price = UD60x18.wrap(1);
+        quoteRFQ.price = UD(1);
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         vm.expectRevert(
@@ -141,7 +142,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         );
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
 
-        quoteRFQ.price = UD60x18.wrap(1 ether + 1);
+        quoteRFQ.price = UD(1 ether + 1);
         sig = signQuoteRFQ(quoteRFQ);
 
         vm.expectRevert(

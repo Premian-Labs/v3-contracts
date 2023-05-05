@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {UD} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
@@ -19,7 +20,7 @@ abstract contract PoolTradeTest is DeployTest {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
-        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+        UD60x18 tradeSize = UD(500 ether);
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
             users.trader,
@@ -47,7 +48,7 @@ abstract contract PoolTradeTest is DeployTest {
     function _test_trade_Sell50Options_WithApproval(bool isCall) internal {
         deposit(1000 ether);
 
-        UD60x18 tradeSize = UD60x18.wrap(500 ether);
+        UD60x18 tradeSize = UD(500 ether);
         uint256 collateralScaled = scaleDecimals(
             contractsToCollateral(tradeSize, isCall),
             isCall
@@ -84,15 +85,12 @@ abstract contract PoolTradeTest is DeployTest {
         deal(
             poolToken,
             users.lp,
-            scaleDecimals(
-                contractsToCollateral(UD60x18.wrap(1000 ether), isCall),
-                isCall
-            )
+            scaleDecimals(contractsToCollateral(UD(1000 ether), isCall), isCall)
         );
         IERC20(poolToken).approve(address(router), type(uint256).max);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(UD60x18.wrap(200 ether), isCall),
+            contractsToCollateral(UD(200 ether), isCall),
             isCall
         );
 
@@ -102,7 +100,7 @@ abstract contract PoolTradeTest is DeployTest {
             "1"
         );
 
-        UD60x18 tradeSize = UD60x18.wrap(1000 ether);
+        UD60x18 tradeSize = UD(1000 ether);
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
             users.trader,
@@ -119,7 +117,7 @@ abstract contract PoolTradeTest is DeployTest {
         );
 
         vm.warp(block.timestamp + 60);
-        UD60x18 withdrawSize = UD60x18.wrap(300 ether);
+        UD60x18 withdrawSize = UD(300 ether);
 
         pool.withdraw(posKey, withdrawSize, ZERO, ONE);
 
@@ -144,7 +142,7 @@ abstract contract PoolTradeTest is DeployTest {
             "poolToken lp 1"
         );
 
-        UD60x18 annihilateSize = UD60x18.wrap(100 ether);
+        UD60x18 annihilateSize = UD(100 ether);
         pool.annihilate(annihilateSize);
 
         assertEq(

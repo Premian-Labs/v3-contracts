@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {UD} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -23,12 +24,7 @@ abstract contract PoolStrandedTest is DeployTest {
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
         return
-            depositSpecified(
-                UD60x18.wrap(depositSize),
-                UD60x18.wrap(lower),
-                UD60x18.wrap(upper),
-                orderType
-            );
+            depositSpecified(UD(depositSize), UD(lower), UD(upper), orderType);
     }
 
     function depositSpecified(
@@ -81,9 +77,9 @@ abstract contract PoolStrandedTest is DeployTest {
     ) internal returns (uint256 initialCollateral) {
         return
             withdrawSpecified(
-                UD60x18.wrap(withdrawSize),
-                UD60x18.wrap(lower),
-                UD60x18.wrap(upper),
+                UD(withdrawSize),
+                UD(lower),
+                UD(upper),
                 orderType
             );
     }
@@ -111,12 +107,7 @@ abstract contract PoolStrandedTest is DeployTest {
             orderType: orderType
         });
 
-        pool.withdraw(
-            posKey,
-            withdrawSize,
-            UD60x18.wrap(0.001 ether),
-            UD60x18.wrap(1 ether)
-        );
+        pool.withdraw(posKey, withdrawSize, UD(0.001 ether), UD(1 ether));
 
         vm.stopPrank();
     }
@@ -264,8 +255,8 @@ abstract contract PoolStrandedTest is DeployTest {
         Position.KeyInternal memory posKeyInternal = Position.KeyInternal({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.002 ether),
-            upper: UD60x18.wrap(0.32 ether),
+            lower: UD(0.002 ether),
+            upper: UD(0.32 ether),
             orderType: Position.OrderType.LC,
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
@@ -280,8 +271,8 @@ abstract contract PoolStrandedTest is DeployTest {
         posKeyInternal = Position.KeyInternal({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.002 ether),
-            upper: UD60x18.wrap(0.28 ether),
+            lower: UD(0.002 ether),
+            upper: UD(0.28 ether),
             orderType: Position.OrderType.LC,
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
@@ -293,8 +284,8 @@ abstract contract PoolStrandedTest is DeployTest {
         posKeyInternal = Position.KeyInternal({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.38 ether),
-            upper: UD60x18.wrap(0.7 ether),
+            lower: UD(0.38 ether),
+            upper: UD(0.7 ether),
             orderType: Position.OrderType.CS,
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
@@ -306,8 +297,8 @@ abstract contract PoolStrandedTest is DeployTest {
         posKeyInternal = Position.KeyInternal({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.48 ether),
-            upper: UD60x18.wrap(0.7 ether),
+            lower: UD(0.48 ether),
+            upper: UD(0.7 ether),
             orderType: Position.OrderType.CS,
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
@@ -321,8 +312,8 @@ abstract contract PoolStrandedTest is DeployTest {
         Position.KeyInternal memory posKeyInternal = Position.KeyInternal({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.48 ether),
-            upper: UD60x18.wrap(0.7 ether),
+            lower: UD(0.48 ether),
+            upper: UD(0.7 ether),
             orderType: Position.OrderType.CS,
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
