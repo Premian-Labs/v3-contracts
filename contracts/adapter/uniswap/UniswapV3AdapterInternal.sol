@@ -8,9 +8,8 @@ import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-
-import {OracleLibrary} from "../../vendor/uniswap/OracleLibrary.sol";
-import {PoolAddress} from "../../vendor/uniswap/PoolAddress.sol";
+import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import {PoolAddress} from "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
 
 import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
 import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
