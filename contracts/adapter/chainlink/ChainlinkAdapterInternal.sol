@@ -7,6 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ONE} from "../../libraries/Constants.sol";
+import {UD} from "../../libraries/PRBMathExtra.sol";
 import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
 
 import {OracleAdapterInternal} from "../OracleAdapterInternal.sol";
@@ -146,12 +147,8 @@ abstract contract ChainlinkAdapterInternal is
         uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
         uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
 
-        UD60x18 adjustedTokenInToBase = UD60x18.wrap(
-            _scale(tokenInToBase, factor)
-        );
-        UD60x18 adjustedTokenOutToBase = UD60x18.wrap(
-            _scale(tokenOutToBase, factor)
-        );
+        UD60x18 adjustedTokenInToBase = UD(_scale(tokenInToBase, factor));
+        UD60x18 adjustedTokenOutToBase = UD(_scale(tokenOutToBase, factor));
 
         return adjustedTokenInToBase / adjustedTokenOutToBase;
     }
@@ -460,7 +457,7 @@ abstract contract ChainlinkAdapterInternal is
         return
             token.isUSD()
                 ? ONE
-                : UD60x18.wrap(
+                : UD(
                     _scale(
                         _fetchQuote(token, Denominations.USD, target),
                         int8(ETH_DECIMALS - FOREX_DECIMALS)
@@ -475,12 +472,12 @@ abstract contract ChainlinkAdapterInternal is
         return
             token.isETH()
                 ? ONE
-                : UD60x18.wrap(_fetchQuote(token, Denominations.ETH, target));
+                : UD(_fetchQuote(token, Denominations.ETH, target));
     }
 
     function _getETHUSD(uint256 target) internal view returns (UD60x18) {
         return
-            UD60x18.wrap(
+            UD(
                 _scale(
                     _fetchQuote(Denominations.ETH, Denominations.USD, target),
                     int8(ETH_DECIMALS - FOREX_DECIMALS)
@@ -490,7 +487,7 @@ abstract contract ChainlinkAdapterInternal is
 
     function _getBTCUSD(uint256 target) internal view returns (UD60x18) {
         return
-            UD60x18.wrap(
+            UD(
                 _scale(
                     _fetchQuote(Denominations.BTC, Denominations.USD, target),
                     int8(ETH_DECIMALS - FOREX_DECIMALS)
@@ -500,7 +497,7 @@ abstract contract ChainlinkAdapterInternal is
 
     function _getWBTCBTC(uint256 target) internal view returns (UD60x18) {
         return
-            UD60x18.wrap(
+            UD(
                 _scale(
                     _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target),
                     int8(ETH_DECIMALS - FOREX_DECIMALS)

@@ -5,6 +5,8 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
+import {UD} from "./PRBMathExtra.sol";
+
 library DoublyLinkedListUD60x18 {
     using DoublyLinkedList for DoublyLinkedList.Bytes32List;
 
@@ -19,14 +21,14 @@ library DoublyLinkedListUD60x18 {
         DoublyLinkedList.Bytes32List storage self,
         UD60x18 value
     ) internal view returns (UD60x18) {
-        return UD60x18.wrap(uint256(self.prev(bytes32(value.unwrap()))));
+        return UD(uint256(self.prev(bytes32(value.unwrap()))));
     }
 
     function next(
         DoublyLinkedList.Bytes32List storage self,
         UD60x18 value
     ) internal view returns (UD60x18) {
-        return UD60x18.wrap(uint256(self.next(bytes32(value.unwrap()))));
+        return UD(uint256(self.next(bytes32(value.unwrap()))));
     }
 
     function insertBefore(
@@ -61,13 +63,13 @@ library DoublyLinkedListUD60x18 {
     function pop(
         DoublyLinkedList.Bytes32List storage self
     ) internal returns (UD60x18 value) {
-        value = UD60x18.wrap(uint256(self.pop()));
+        value = UD(uint256(self.pop()));
     }
 
     function shift(
         DoublyLinkedList.Bytes32List storage self
     ) internal returns (UD60x18 value) {
-        value = UD60x18.wrap(uint256(self.shift()));
+        value = UD(uint256(self.shift()));
     }
 
     function unshift(

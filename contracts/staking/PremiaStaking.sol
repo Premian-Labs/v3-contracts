@@ -10,6 +10,8 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {WAD} from "../libraries/Constants.sol";
+import {UD} from "../libraries/PRBMathExtra.sol";
 import {IExchangeHelper} from "../utils/IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -29,7 +31,6 @@ contract PremiaStaking is IPremiaStaking, OFT {
     address internal immutable REWARD_TOKEN;
     address internal immutable EXCHANGE_HELPER;
 
-    uint256 internal constant WAD = 1e18;
     UD60x18 internal constant DECAY_RATE = UD60x18.wrap(270000000000); // 2.7e-7 -> Distribute around half of the current balance over a month
     uint64 internal constant MAX_PERIOD = 4 * 365 days;
     uint256 internal constant ACC_REWARD_PRECISION = 1e30;
@@ -503,8 +504,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             l,
             l.userInfo[msg.sender],
             amount,
-            (UD60x18.wrap(amount) *
-                UD60x18.wrap(getEarlyUnstakeFee(msg.sender))).unwrap()
+            (UD(amount) * UD(getEarlyUnstakeFee(msg.sender))).unwrap()
         );
     }
 
@@ -684,13 +684,12 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
                     uint256 remappedAmount = level.amount - amountPrevLevel;
                     uint256 remappedPower = userPower - amountPrevLevel;
-                    UD60x18 levelProgress = UD60x18.wrap(remappedPower * WAD) /
-                        UD60x18.wrap(remappedAmount * WAD);
+                    UD60x18 levelProgress = UD(remappedPower * WAD) /
+                        UD(remappedAmount * WAD);
 
                     return
                         discountPrevLevel +
-                        (UD60x18.wrap(remappedDiscount) * levelProgress)
-                            .unwrap();
+                        (UD(remappedDiscount) * levelProgress).unwrap();
                 }
             }
 
@@ -740,7 +739,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     ) internal pure returns (uint256) {
         return
             ((ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp) *
-                UD60x18.wrap(pendingRewards)).unwrap();
+                UD(pendingRewards)).unwrap();
     }
 
     /// @inheritdoc IPremiaStaking
@@ -783,8 +782,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint64 stakePeriod
     ) internal pure returns (uint256) {
         return
-            (UD60x18.wrap(balance) *
-                UD60x18.wrap(getStakePeriodMultiplier(stakePeriod))).unwrap();
+            (UD(balance) * UD(getStakePeriodMultiplier(stakePeriod))).unwrap();
     }
 
     function _calculateReward(
