@@ -27,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
+    error Pool__InvalidTickPrice();
     error Pool__InvalidTransfer();
     error Pool__NotAuthorized(address sender);
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
@@ -57,6 +58,12 @@ interface IPoolInternal is IPosition, IPricing {
         SD59x18 longDelta;
         SD59x18 shortDelta;
         uint256 counter;
+    }
+
+    struct TickWithLiquidity {
+        Tick tick;
+        UD60x18 price;
+        UD60x18 liquidityNet;
     }
 
     struct QuoteRFQ {

@@ -6,7 +6,7 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IExchangeHelper} from "../utils/IExchangeHelper.sol";
 
@@ -112,8 +112,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
             );
         }
 
-        uint256 treasuryAmount = (UD60x18.wrap(outAmount) * TREASURY_SHARE)
-            .unwrap();
+        uint256 treasuryAmount = (ud(outAmount) * TREASURY_SHARE).unwrap();
 
         IERC20(USDC).safeTransfer(TREASURY, treasuryAmount);
         IERC20(USDC).approve(VXPREMIA, outAmount - treasuryAmount);
