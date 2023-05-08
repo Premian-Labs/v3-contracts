@@ -160,7 +160,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct PremiumAndFeeInternal {
-        UD60x18 rebate;
+        UD60x18 totalRebate;
         UD60x18 premium;
         UD60x18 protocolFee;
         UD60x18 premiumTaker;

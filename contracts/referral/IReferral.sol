@@ -39,7 +39,7 @@ interface IReferral {
         address indexed secondaryReferrer,
         address token,
         UD60x18 tier,
-        UD60x18 rebate
+        UD60x18 totalRebate
     );
 
     function getReferrer(address user) external view returns (address);
@@ -51,9 +51,12 @@ interface IReferral {
         view
         returns (UD60x18[] memory, UD60x18);
 
-    function getRebateTierPercent(
+    function getRebatePercents(
         address referrer
-    ) external view returns (UD60x18);
+    )
+        external
+        view
+        returns (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent);
 
     function getRebates(
         address referrer
@@ -72,7 +75,7 @@ interface IReferral {
         address primaryReferrer,
         address token,
         UD60x18 tradingFee
-    ) external returns (UD60x18 rebate);
+    ) external returns (UD60x18 totalRebate);
 
     function claimRebate() external;
 }

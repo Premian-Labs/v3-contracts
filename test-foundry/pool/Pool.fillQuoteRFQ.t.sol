@@ -138,9 +138,20 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             false
         );
 
-        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
-        UD60x18 _rebate = percent * scaleDecimals(protocolFee, isCall);
-        uint256 rebate = scaleDecimals(_rebate, isCall);
+        (
+            UD60x18 primaryRebatePercent,
+            UD60x18 secondaryRebatePercent
+        ) = referral.getRebatePercents(users.referrer);
+
+        UD60x18 _primaryRebate = primaryRebatePercent *
+            scaleDecimals(protocolFee, isCall);
+
+        UD60x18 _secondaryRebate = secondaryRebatePercent *
+            scaleDecimals(protocolFee, isCall);
+
+        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
+        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        uint256 totalRebate = primaryRebate + secondaryRebate;
 
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
@@ -160,12 +171,20 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
             assertEq(
                 IERC20(token).balanceOf(users.trader),
-                initialCollateral + premium + rebate - collateral - protocolFee
+                initialCollateral +
+                    premium +
+                    totalRebate -
+                    collateral -
+                    protocolFee
             );
         } else {
             assertEq(
                 IERC20(token).balanceOf(users.lp),
-                initialCollateral + premium + rebate - collateral - protocolFee
+                initialCollateral +
+                    premium +
+                    totalRebate -
+                    collateral -
+                    protocolFee
             );
 
             assertEq(
@@ -174,7 +193,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             );
         }
 
-        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+        assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
     }
 
     function test_fillQuoteRFQ_Success_WithReferral_Buy() public {

@@ -62,6 +62,26 @@ abstract contract PoolTradeTest is DeployTest {
             true
         );
 
+        uint256 totalRebate;
+
+        {
+            (
+                UD60x18 primaryRebatePercent,
+                UD60x18 secondaryRebatePercent
+            ) = referral.getRebatePercents(users.referrer);
+
+            UD60x18 _primaryRebate = primaryRebatePercent *
+                scaleDecimals(takerFee, isCall);
+
+            UD60x18 _secondaryRebate = secondaryRebatePercent *
+                scaleDecimals(takerFee, isCall);
+
+            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+
+            totalRebate = primaryRebate + secondaryRebate;
+        }
+
         address token = getPoolToken(isCall);
 
         vm.startPrank(users.trader);
@@ -78,19 +98,15 @@ abstract contract PoolTradeTest is DeployTest {
 
         vm.stopPrank();
 
-        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
-        UD60x18 _rebate = percent * scaleDecimals(takerFee, isCall);
-        uint256 rebate = scaleDecimals(_rebate, isCall);
-
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
 
         assertEq(IERC20(token).balanceOf(users.trader), 0);
-        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+        assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
 
         assertEq(
             IERC20(token).balanceOf(address(pool)),
-            initialCollateral + totalPremium - rebate
+            initialCollateral + totalPremium - totalRebate
         );
     }
 
@@ -140,6 +156,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(depositSize);
 
         uint256 initialCollateral;
+
         {
             UD60x18 collateral = contractsToCollateral(
                 UD60x18.wrap(depositSize),
@@ -165,6 +182,26 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
+        uint256 totalRebate;
+
+        {
+            (
+                UD60x18 primaryRebatePercent,
+                UD60x18 secondaryRebatePercent
+            ) = referral.getRebatePercents(users.referrer);
+
+            UD60x18 _primaryRebate = primaryRebatePercent *
+                scaleDecimals(takerFee, isCall);
+
+            UD60x18 _secondaryRebate = secondaryRebatePercent *
+                scaleDecimals(takerFee, isCall);
+
+            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+
+            totalRebate = primaryRebate + secondaryRebate;
+        }
+
         address token = getPoolToken(isCall);
 
         vm.startPrank(users.trader);
@@ -181,19 +218,15 @@ abstract contract PoolTradeTest is DeployTest {
 
         vm.stopPrank();
 
-        UD60x18 percent = referral.getRebateTierPercent(users.referrer);
-        UD60x18 _rebate = percent * scaleDecimals(takerFee, isCall);
-        uint256 rebate = scaleDecimals(_rebate, isCall);
-
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize);
 
         assertEq(IERC20(token).balanceOf(users.trader), totalPremium);
-        assertEq(IERC20(token).balanceOf(address(referral)), rebate);
+        assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
 
         assertEq(
             IERC20(token).balanceOf(address(pool)),
-            initialCollateral + collateral - totalPremium - rebate
+            initialCollateral + collateral - totalPremium - totalRebate
         );
     }
 

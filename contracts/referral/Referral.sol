@@ -50,19 +50,31 @@ contract Referral is IReferral, OwnableInternal {
         secondaryRebatePercent = l.secondaryRebatePercent;
     }
 
-    function getRebateTierPercent(
+    function getRebatePercents(
         address referrer
-    ) external view returns (UD60x18) {
-        return _getRebateTierPercent(referrer);
+    )
+        external
+        view
+        returns (UD60x18 primaryRebatePercents, UD60x18 secondaryRebatePercent)
+    {
+        return _getRebatePercents(referrer);
     }
 
-    function _getRebateTierPercent(
+    function _getRebatePercents(
         address referrer
-    ) internal view returns (UD60x18) {
-        return
-            ReferralStorage.layout().primaryRebatePercents[
-                uint8(_getRebateTier(referrer))
-            ];
+    )
+        internal
+        view
+        returns (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent)
+    {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        return (
+            l.primaryRebatePercents[uint8(_getRebateTier(referrer))],
+            l.referrals[referrer] != address(0)
+                ? l.secondaryRebatePercent
+                : ZERO
+        );
     }
 
     function getRebates(
@@ -143,29 +155,39 @@ contract Referral is IReferral, OwnableInternal {
         address primaryReferrer,
         address token,
         UD60x18 tradingFee
-    ) external returns (UD60x18 rebate) {
+    ) external returns (UD60x18 totalRebate) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         primaryReferrer = _setReferrer(user, primaryReferrer);
         if (primaryReferrer == address(0)) return ZERO;
 
-        UD60x18 tier = _getRebateTierPercent(primaryReferrer);
-        rebate = tradingFee * tier;
-        uint256 primaryRebate = token.toPoolTokenDecimals(rebate);
+        (
+            UD60x18 primaryRebatePercent,
+            UD60x18 secondaryRebatePercent
+        ) = _getRebatePercents(primaryReferrer);
 
-        IERC20(token).safeTransferFrom(
-            msg.sender,
-            address(this),
-            primaryRebate
-        );
+        uint256 primaryRebate;
+        uint256 secondaryRebate;
+
+        {
+            UD60x18 _primaryRebate = tradingFee * primaryRebatePercent;
+            UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
+            totalRebate = _primaryRebate + _secondaryRebate;
+
+            primaryRebate = token.toPoolTokenDecimals(_primaryRebate);
+            secondaryRebate = token.toPoolTokenDecimals(_secondaryRebate);
+            uint256 _totalRebate = primaryRebate + secondaryRebate;
+
+            IERC20(token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                _totalRebate
+            );
+        }
 
         address secondaryReferrer = l.referrals[primaryReferrer];
-        if (secondaryReferrer != address(0)) {
-            uint256 secondaryRebate = token.toPoolTokenDecimals(
-                rebate * l.secondaryRebatePercent
-            );
 
-            primaryRebate = primaryRebate - secondaryRebate;
+        if (secondaryRebate > 0) {
             l.rebates[secondaryReferrer][token] += secondaryRebate;
 
             if (!l.rebateTokens[secondaryReferrer].contains(token))
@@ -182,8 +204,8 @@ contract Referral is IReferral, OwnableInternal {
             primaryReferrer,
             secondaryReferrer,
             token,
-            tier,
-            rebate
+            primaryRebatePercent,
+            totalRebate
         );
     }
 
