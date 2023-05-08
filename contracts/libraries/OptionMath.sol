@@ -2,10 +2,9 @@
 
 pragma solidity >=0.8.19;
 
+import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
-
-import {DateTime} from "../vendor/DateTime.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iTEN} from "./Constants.sol";
 
