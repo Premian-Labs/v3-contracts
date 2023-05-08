@@ -158,13 +158,13 @@ abstract contract PoolTradeTest is DeployTest {
         uint256 initialCollateral;
 
         {
-            UD60x18 collateral = contractsToCollateral(
+            UD60x18 _collateral = contractsToCollateral(
                 UD60x18.wrap(depositSize),
                 isCall
             );
 
             initialCollateral = scaleDecimals(
-                collateral * posKey.lower.avg(posKey.upper),
+                _collateral * posKey.lower.avg(posKey.upper),
                 isCall
             );
         }

@@ -115,10 +115,8 @@ contract ReferralTest is DeployTest {
             IReferral.RebateTier.PRIMARY_REBATE_1
         );
 
-        (
-            UD60x18[] memory primaryRebatePercents,
-            UD60x18 secondaryRebatePercent
-        ) = referral.getRebatePercents();
+        (UD60x18[] memory primaryRebatePercents, ) = referral
+            .getRebatePercents();
 
         assertEq(primaryRebatePercents[0], percent);
     }
@@ -137,10 +135,7 @@ contract ReferralTest is DeployTest {
         UD60x18 percent = UD60x18.wrap(100e18);
         referral.setSecondaryRebatePercent(percent);
 
-        (
-            UD60x18[] memory primaryRebatePercents,
-            UD60x18 secondaryRebatePercent
-        ) = referral.getRebatePercents();
+        (, UD60x18 secondaryRebatePercent) = referral.getRebatePercents();
 
         assertEq(secondaryRebatePercent, percent);
     }
