@@ -1207,10 +1207,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidstate/contracts@npm:^0.0.55":
-  version: 0.0.55
-  resolution: "@solidstate/contracts@npm:0.0.55"
-  checksum: 9911c2306ce07131f10593143b248c0341f1864b27db5c5790325279f85639b65872f0738fe436494cfa3d6c89a9cafe151eecfcc6841c83e9647d1d52e7ef3a
+"@solidstate/contracts@npm:^0.0.56":
+  version: 0.0.56
+  resolution: "@solidstate/contracts@npm:0.0.56"
+  checksum: 63454923a638f4c7abdf3aedea9556d782e45f0a0612031be5f264cad8b798a20a674f5aee99d45e42a92ebd9d95c61c4ba1c287f2ae810c712c8bf0ef4a5917
   languageName: node
   linkType: hard
 
@@ -1234,22 +1234,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidstate/library@npm:^0.0.55":
-  version: 0.0.55
-  resolution: "@solidstate/library@npm:0.0.55"
+"@solidstate/library@npm:^0.0.56":
+  version: 0.0.56
+  resolution: "@solidstate/library@npm:0.0.56"
   dependencies:
     eth-permit: ^0.1.10
-  checksum: b5c8fcc2619bf85eec6cc77ea4ec1bdf1754af210bdc7e5ee6b703a81c89e76ebed1ddb057e95b819c57692fcac436eb368e557592859148b256942ecbf41b6a
+  checksum: 2bd3fa503c1f18197599d8c6aad2e2082c3f9215aed2042e02fd2d3838ab33a9fc8aa33cda7f75988daba94bef37dd5082769fc21a4c65d7347530ae80916425
   languageName: node
   linkType: hard
 
-"@solidstate/spec@npm:^0.0.55":
-  version: 0.0.55
-  resolution: "@solidstate/spec@npm:0.0.55"
+"@solidstate/spec@npm:^0.0.56":
+  version: 0.0.56
+  resolution: "@solidstate/spec@npm:0.0.56"
   dependencies:
     "@ethereum-waffle/mock-contract": ^3.4.4
-    "@solidstate/library": ^0.0.55
-  checksum: fb70371fac8c88323d01d4dd4cb8e3c5500c517be047c3338cacfa24aec7e8b65acf79b0f4e706e8adbce789227f23440b566cbbfa7acb68dc784fca1568b94b
+    "@solidstate/library": ^0.0.56
+  checksum: 03719b72e7acc46a6edbecedfa14be12082366596dee91d859a412f08df4410b236c988b7a4a3ff39339eec52ad5094b1cc1246e5cb6c6756552fc9616693880
   languageName: node
   linkType: hard
 
@@ -6923,11 +6923,11 @@ __metadata:
     "@nomicfoundation/hardhat-network-helpers": ^1.0.8
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@nomiclabs/hardhat-etherscan": ^3.1.7
-    "@solidstate/contracts": ^0.0.55
+    "@solidstate/contracts": ^0.0.56
     "@solidstate/hardhat-4byte-uploader": ^1.1.0
     "@solidstate/hardhat-test-short-circuit": ^1.0.2
-    "@solidstate/library": ^0.0.55
-    "@solidstate/spec": ^0.0.55
+    "@solidstate/library": ^0.0.56
+    "@solidstate/spec": ^0.0.56
     "@typechain/ethers-v5": ^10.2.0
     "@typechain/hardhat": ^6.1.5
     "@types/chai": ^4.3.4

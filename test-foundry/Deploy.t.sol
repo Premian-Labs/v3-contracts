@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -102,14 +102,14 @@ contract DeployTest is Test, Assertions {
         oracleAdapter = new OracleAdapterMock(
             address(base),
             address(quote),
-            UD60x18.wrap(1000 ether),
-            UD60x18.wrap(1000 ether)
+            ud(1000 ether),
+            ud(1000 ether)
         );
         poolKey = IPoolFactory.PoolKey({
             base: base,
             quote: quote,
             oracleAdapter: address(oracleAdapter),
-            strike: UD60x18.wrap(1000 ether),
+            strike: ud(1000 ether),
             maturity: 1682668800,
             isCallPool: true
         });
@@ -117,8 +117,8 @@ contract DeployTest is Test, Assertions {
         quoteRFQ = IPoolInternal.QuoteRFQ({
             provider: users.lp,
             taker: address(0),
-            price: UD60x18.wrap(0.1 ether),
-            size: UD60x18.wrap(10 ether),
+            price: ud(0.1 ether),
+            size: ud(10 ether),
             isBuy: false,
             deadline: block.timestamp + 1 hours,
             salt: block.timestamp
@@ -143,7 +143,7 @@ contract DeployTest is Test, Assertions {
 
         PoolFactoryProxy factoryProxy = new PoolFactoryProxy(
             address(factoryImpl),
-            UD60x18.wrap(0.1 ether),
+            ud(0.1 ether),
             feeReceiver
         );
 
@@ -321,8 +321,8 @@ contract DeployTest is Test, Assertions {
         posKey = Position.Key({
             owner: users.lp,
             operator: users.lp,
-            lower: UD60x18.wrap(0.1 ether),
-            upper: UD60x18.wrap(0.3 ether),
+            lower: ud(0.1 ether),
+            upper: ud(0.3 ether),
             orderType: Position.OrderType.LC
         });
     }
@@ -330,7 +330,7 @@ contract DeployTest is Test, Assertions {
     function deposit(
         uint256 depositSize
     ) internal returns (uint256 initialCollateral) {
-        return deposit(UD60x18.wrap(depositSize));
+        return deposit(ud(depositSize));
     }
 
     function deposit(
@@ -403,7 +403,7 @@ contract DeployTest is Test, Assertions {
         bool isCall
     ) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
-        return UD60x18.wrap(OptionMath.scaleDecimals(amount, decimals, 18));
+        return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
     function tokenId() internal view returns (uint256) {

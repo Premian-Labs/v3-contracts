@@ -10,7 +10,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
@@ -109,7 +109,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
 
         if (discount > 0) {
-            fee = fee - fee * UD60x18.wrap(discount);
+            fee = fee - fee * ud(discount);
         }
 
         return Position.contractsToCollateral(fee, strike, isCallPool);
@@ -1964,7 +1964,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address user,
         uint256 tokenId
     ) internal view returns (UD60x18) {
-        return UD60x18.wrap(_balanceOf(user, tokenId));
+        return ud(_balanceOf(user, tokenId));
     }
 
     function _mint(address account, uint256 id, UD60x18 amount) internal {

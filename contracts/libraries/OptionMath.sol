@@ -3,7 +3,7 @@
 pragma solidity >=0.8.19;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iTEN} from "./Constants.sol";
@@ -229,8 +229,7 @@ library OptionMath {
         uint256 tBase = timeToMaturity < NEAR_TERM_TTM
             ? 3 * (NEAR_TERM_TTM - timeToMaturity) + NEAR_TERM_TTM
             : timeToMaturity;
-        UD60x18 scaledT = (UD60x18.wrap(tBase * 1e18) /
-            UD60x18.wrap(ONE_YEAR_TTM * 1e18)).sqrt();
+        UD60x18 scaledT = (ud(tBase * 1e18) / ud(ONE_YEAR_TTM * 1e18)).sqrt();
 
         return INITIALIZATION_ALPHA * (kBase + scaledT) * scaledT * FEE_SCALAR;
     }
