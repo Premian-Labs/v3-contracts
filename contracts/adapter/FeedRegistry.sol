@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {IFeedRegistry} from "./IFeedRegistry.sol";
 import {FeedRegistryInternal} from "./FeedRegistryInternal.sol";
@@ -10,7 +10,7 @@ import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
 /// @title Adapter feed registry implementation
-contract FeedRegistry is IFeedRegistry, FeedRegistryInternal, SafeOwnable {
+contract FeedRegistry is IFeedRegistry, FeedRegistryInternal, OwnableInternal {
     using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
