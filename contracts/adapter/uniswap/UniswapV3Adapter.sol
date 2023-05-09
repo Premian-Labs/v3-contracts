@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
@@ -20,7 +20,7 @@ import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 contract UniswapV3Adapter is
     IUniswapV3Adapter,
     OracleAdapter,
-    SafeOwnable,
+    OwnableInternal,
     UniswapV3AdapterInternal
 {
     using Tokens for address;
