@@ -18,22 +18,10 @@ contract Referral is IReferral, OwnableInternal {
     using ReferralStorage for address;
 
     function getReferrer(address user) external view returns (address) {
-        return _getReferrer(user);
-    }
-
-    function _getReferrer(address user) internal view returns (address) {
         return ReferralStorage.layout().referrals[user];
     }
 
-    function getRebateTier(
-        address referrer
-    ) external view returns (RebateTier) {
-        return _getRebateTier(referrer);
-    }
-
-    function _getRebateTier(
-        address referrer
-    ) internal view returns (RebateTier) {
+    function getRebateTier(address referrer) public view returns (RebateTier) {
         return ReferralStorage.layout().rebateTiers[referrer];
     }
 
@@ -53,24 +41,14 @@ contract Referral is IReferral, OwnableInternal {
     function getRebatePercents(
         address referrer
     )
-        external
+        public
         view
         returns (UD60x18 primaryRebatePercents, UD60x18 secondaryRebatePercent)
-    {
-        return _getRebatePercents(referrer);
-    }
-
-    function _getRebatePercents(
-        address referrer
-    )
-        internal
-        view
-        returns (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent)
     {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         return (
-            l.primaryRebatePercents[uint8(_getRebateTier(referrer))],
+            l.primaryRebatePercents[uint8(getRebateTier(referrer))],
             l.referrals[referrer] != address(0)
                 ? l.secondaryRebatePercent
                 : ZERO
@@ -79,13 +57,7 @@ contract Referral is IReferral, OwnableInternal {
 
     function getRebates(
         address referrer
-    ) external view returns (address[] memory, uint256[] memory) {
-        return _getRebates(referrer);
-    }
-
-    function _getRebates(
-        address referrer
-    ) internal view returns (address[] memory, uint256[] memory) {
+    ) public view returns (address[] memory, uint256[] memory) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         address[] memory tokens = l.rebateTokens[referrer].toArray();
@@ -164,7 +136,7 @@ contract Referral is IReferral, OwnableInternal {
         (
             UD60x18 primaryRebatePercent,
             UD60x18 secondaryRebatePercent
-        ) = _getRebatePercents(primaryReferrer);
+        ) = getRebatePercents(primaryReferrer);
 
         uint256 primaryRebate;
         uint256 secondaryRebate;
@@ -212,7 +184,7 @@ contract Referral is IReferral, OwnableInternal {
     function claimRebate() external {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
-        (address[] memory tokens, uint256[] memory rebates) = _getRebates(
+        (address[] memory tokens, uint256[] memory rebates) = getRebates(
             msg.sender
         );
 
