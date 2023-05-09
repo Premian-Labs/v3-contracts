@@ -43,6 +43,9 @@ import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+import {UserSettings} from "contracts/settings/UserSettings.sol";
+
 import {Assertions} from "./Assertions.sol";
 
 contract DeployTest is Test, Assertions {
@@ -58,6 +61,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    IUserSettings userSettings;
     IVxPremia vxPremia;
 
     IPoolMock pool;
@@ -72,7 +76,10 @@ contract DeployTest is Test, Assertions {
 
     struct Users {
         address lp;
+        address otherLP;
         address trader;
+        address otherTrader;
+        address agent;
     }
 
     bytes4[] internal poolBaseSelectors;
@@ -94,7 +101,14 @@ contract DeployTest is Test, Assertions {
         mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
         vm.selectFork(mainnetFork);
 
-        users = Users({lp: vm.addr(1), trader: vm.addr(2)});
+        users = Users({
+            lp: vm.addr(1),
+            otherLP: vm.addr(2),
+            trader: vm.addr(3),
+            otherTrader: vm.addr(4),
+            agent: vm.addr(5)
+        });
+
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
         premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70;
@@ -105,6 +119,7 @@ contract DeployTest is Test, Assertions {
             ud(1000 ether),
             ud(1000 ether)
         );
+
         poolKey = IPoolFactory.PoolKey({
             base: base,
             quote: quote,
@@ -153,6 +168,13 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
+        UserSettings userSettingsImpl = new UserSettings();
+
+        ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(
+            address(userSettingsImpl)
+        );
+
+        userSettings = IUserSettings(address(userSettingsProxy));
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
@@ -172,6 +194,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(userSettings),
             address(vxPremia)
         );
 
@@ -180,6 +203,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(userSettings),
             address(vxPremia)
         );
 
@@ -188,6 +212,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(userSettings),
             address(vxPremia)
         );
 
@@ -196,6 +221,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(userSettings),
             address(vxPremia)
         );
 
@@ -239,11 +265,14 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
+        poolCoreSelectors.push(poolCoreImpl.exerciseFor.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
+        poolCoreSelectors.push(poolCoreImpl.settleFor.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
+        poolCoreSelectors.push(poolCoreImpl.settlePositionFor.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
@@ -406,6 +435,22 @@ contract DeployTest is Test, Assertions {
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
+    function scaleDecimalsTo(
+        uint256 amount,
+        bool isCall
+    ) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return OptionMath.scaleDecimals(amount, decimals, 18);
+    }
+
+    function scaleDecimalsTo(
+        UD60x18 amount,
+        bool isCall
+    ) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+        return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
+    }
+
     function tokenId() internal view returns (uint256) {
         return
             PoolStorage.formatTokenId(
@@ -414,5 +459,60 @@ contract DeployTest is Test, Assertions {
                 posKey.upper,
                 posKey.orderType
             );
+    }
+
+    function getSettlementPrice(
+        bool isCall,
+        bool isITM
+    ) internal pure returns (UD60x18) {
+        if (isCall) {
+            return isITM ? UD60x18.wrap(1200 ether) : UD60x18.wrap(800 ether);
+        } else {
+            return isITM ? UD60x18.wrap(800 ether) : UD60x18.wrap(1200 ether);
+        }
+    }
+
+    function getExerciseValue(
+        bool isCall,
+        bool isITM,
+        UD60x18 tradeSize,
+        UD60x18 settlementPrice
+    ) internal view returns (UD60x18 exerciseValue) {
+        if (isITM) {
+            if (isCall) {
+                exerciseValue = tradeSize * (settlementPrice - poolKey.strike);
+                exerciseValue = exerciseValue / settlementPrice;
+            } else {
+                exerciseValue = tradeSize * (poolKey.strike - settlementPrice);
+            }
+        }
+
+        return exerciseValue;
+    }
+
+    function getCollateralValue(
+        bool isCall,
+        UD60x18 tradeSize,
+        UD60x18 exerciseValue
+    ) internal view returns (UD60x18) {
+        return
+            isCall
+                ? tradeSize - exerciseValue
+                : tradeSize * poolKey.strike - exerciseValue;
+    }
+
+    function handleExerciseSettleAuthorization(
+        address user,
+        uint256 authorizedCost
+    ) internal {
+        vm.startPrank(user);
+
+        address[] memory agents = new address[](1);
+        agents[0] = users.agent;
+
+        userSettings.setAuthorizedAgents(agents);
+        userSettings.setAuthorizedCost(authorizedCost);
+
+        vm.stopPrank();
     }
 }

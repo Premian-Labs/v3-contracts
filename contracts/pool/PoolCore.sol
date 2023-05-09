@@ -20,6 +20,8 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
+import {PoolStorage} from "./PoolStorage.sol";
+import {PoolInternal} from "./PoolInternal.sol";
 
 contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
@@ -33,9 +35,17 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address settings,
         address vxPremia
     )
-        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+        PoolInternal(
+            factory,
+            router,
+            wrappedNativeToken,
+            feeReceiver,
+            settings,
+            vxPremia
+        )
     {}
 
     /// @inheritdoc IPoolCore
@@ -313,13 +323,67 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise(address holder) external nonReentrant returns (uint256) {
-        return _exercise(holder);
+    function exercise() external nonReentrant returns (uint256) {
+        return _exercise(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
-    function settle(address holder) external nonReentrant returns (uint256) {
-        return _settle(holder);
+    function exerciseFor(
+        address[] calldata holders,
+        uint256 costPerHolder
+    ) external nonReentrant returns (uint256[] memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        uint256[] memory exerciseValues = new uint256[](holders.length);
+
+        for (uint256 i = 0; i < holders.length; i++) {
+            if (holders[i] != msg.sender) {
+                _ensureAuthorizedAgent(holders[i], msg.sender);
+                _ensureAuthorizedCost(holders[i], _cost);
+            }
+
+            exerciseValues[i] = _exercise(holders[i], _cost);
+        }
+
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            holders.length * costPerHolder
+        );
+
+        return exerciseValues;
+    }
+
+    /// @inheritdoc IPoolCore
+    function settle() external nonReentrant returns (uint256) {
+        return _settle(msg.sender, ZERO);
+    }
+
+    /// @inheritdoc IPoolCore
+    function settleFor(
+        address[] calldata holders,
+        uint256 costPerHolder
+    ) external nonReentrant returns (uint256[] memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        uint256[] memory collateral = new uint256[](holders.length);
+
+        for (uint256 i = 0; i < holders.length; i++) {
+            if (holders[i] != msg.sender) {
+                _ensureAuthorizedAgent(holders[i], msg.sender);
+                _ensureAuthorizedCost(holders[i], _cost);
+            }
+
+            collateral[i] = _settle(holders[i], _cost);
+        }
+
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            holders.length * costPerHolder
+        );
+
+        return collateral;
     }
 
     /// @inheritdoc IPoolCore
@@ -327,7 +391,38 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         Position.Key calldata p
     ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool));
+        _ensureOperator(p.operator);
+        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
+    }
+
+    /// @inheritdoc IPoolCore
+    function settlePositionFor(
+        Position.Key[] calldata p,
+        uint256 costPerHolder
+    ) external nonReentrant returns (uint256[] memory) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        uint256[] memory collateral = new uint256[](p.length);
+
+        for (uint256 i = 0; i < p.length; i++) {
+            if (p[i].operator != msg.sender) {
+                _ensureAuthorizedAgent(p[i].operator, msg.sender);
+                _ensureAuthorizedCost(p[i].operator, _cost);
+            }
+
+            collateral[i] = _settlePosition(
+                p[i].toKeyInternal(l.strike, l.isCallPool),
+                _cost
+            );
+        }
+
+        IERC20(l.getPoolToken()).safeTransfer(
+            msg.sender,
+            p.length * costPerHolder
+        );
+
+        return collateral;
     }
 
     /// @inheritdoc IPoolCore

@@ -2,14 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
-
-import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
-import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
-import {DeployTest} from "../Deploy.t.sol";
 import {PoolTest} from "./_Pool.t.sol";
 
 contract PoolCallTest is PoolTest {

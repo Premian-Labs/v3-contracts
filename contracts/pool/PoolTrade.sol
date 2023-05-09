@@ -32,9 +32,17 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address settings,
         address vxPremia
     )
-        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+        PoolInternal(
+            factory,
+            router,
+            wrappedNativeToken,
+            feeReceiver,
+            settings,
+            vxPremia
+        )
     {}
 
     /// @inheritdoc IPoolTrade
