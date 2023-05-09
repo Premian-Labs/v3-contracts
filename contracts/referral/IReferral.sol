@@ -84,7 +84,8 @@ interface IReferral {
         address referrer
     ) external view returns (address[] memory tokens, uint256[] memory rebates);
 
-    /// @notice Sets the referrer for the msg.sender
+    /// @notice Sets the referrer for the msg.sender if a referrer has not already been set. This function
+    ///         does not override the existing referrer, attempts to do so will revert.
     /// @param referrer The address of the referrer
     function setReferrer(address referrer) external;
 
