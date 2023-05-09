@@ -65,7 +65,7 @@ interface IPoolEvents {
         Position.Delta deltaTaker,
         UD60x18 premium,
         UD60x18 protocolFee,
-        UD60x18 totalRebate,
+        UD60x18 totalReferralRebate,
         bool isBuy
     );
 
