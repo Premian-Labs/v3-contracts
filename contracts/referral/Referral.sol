@@ -70,11 +70,11 @@ contract Referral is IReferral, OwnableInternal {
         return (tokens, rebates);
     }
 
-    function setReferrer(address referrer) external {
-        _setReferrer(msg.sender, referrer);
+    function trySetReferrer(address referrer) external returns (address) {
+        return _trySetReferrer(msg.sender, referrer);
     }
 
-    function _setReferrer(
+    function _trySetReferrer(
         address user,
         address referrer
     ) internal returns (address) {
@@ -83,8 +83,6 @@ contract Referral is IReferral, OwnableInternal {
         if (l.referrals[user] == address(0)) {
             if (referrer == address(0)) return address(0);
             l.referrals[user] = referrer;
-        } else if (l.referrals[user] != referrer && referrer != address(0)) {
-            revert Referral__ReferrerAlreadySet(l.referrals[user]);
         } else {
             referrer = l.referrals[user];
         }
@@ -130,7 +128,7 @@ contract Referral is IReferral, OwnableInternal {
     ) external returns (UD60x18 totalRebate) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
-        primaryReferrer = _setReferrer(user, primaryReferrer);
+        primaryReferrer = _trySetReferrer(user, primaryReferrer);
         if (primaryReferrer == address(0)) return ZERO;
 
         (

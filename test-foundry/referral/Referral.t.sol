@@ -45,39 +45,48 @@ contract ReferralTest is DeployTest {
         assertEq(rebates[1], secondaryRebate1);
     }
 
-    function test_setReferrer_No_Referrer_Provided_Referrer_Not_Set() public {
+    function test_trySetReferrer_No_Referrer_Provided_Referrer_Not_Set()
+        public
+    {
         vm.prank(users.trader);
-        referral.setReferrer(address(0));
+        address referrer = referral.trySetReferrer(address(0));
+        assertEq(referrer, address(0));
         assertEq(referral.getReferrer(users.trader), address(0));
     }
 
-    function test_setReferrer_Referrer_Provided_Referrer_Not_Set() public {
+    function test_trySetReferrer_Referrer_Provided_Referrer_Not_Set() public {
         vm.prank(users.trader);
-        referral.setReferrer(users.referrer);
+        address referrer = referral.trySetReferrer(users.referrer);
+        assertEq(referrer, users.referrer);
         assertEq(referral.getReferrer(users.trader), users.referrer);
     }
 
-    function test_setReferrer_No_Referrer_Provided_Referrer_Set() public {
-        vm.prank(users.trader);
-        referral.setReferrer(users.referrer);
-        vm.prank(users.trader);
-        referral.setReferrer(address(0));
+    function test_trySetReferrer_No_Referrer_Provided_Referrer_Set() public {
+        vm.startPrank(users.trader);
+
+        address referrer = referral.trySetReferrer(users.referrer);
+        assertEq(referrer, users.referrer);
+
+        referrer = referral.trySetReferrer(address(0));
+        assertEq(referrer, users.referrer);
+
+        vm.stopPrank();
+
         assertEq(referral.getReferrer(users.trader), users.referrer);
     }
 
-    function test_setReferrer_RevertIf_Referrer_Provided_Referrer_Set() public {
-        vm.prank(users.trader);
-        referral.setReferrer(users.referrer);
+    function test_trySetReferrer_Referrer_Provided_Referrer_Set() public {
+        vm.startPrank(users.trader);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IReferral.Referral__ReferrerAlreadySet.selector,
-                users.referrer
-            )
-        );
+        address referrer = referral.trySetReferrer(users.referrer);
+        assertEq(referrer, users.referrer);
 
-        vm.prank(users.trader);
-        referral.setReferrer(secondaryReferrer);
+        referrer = referral.trySetReferrer(secondaryReferrer);
+        assertEq(referrer, users.referrer);
+
+        vm.stopPrank();
+
+        assertEq(referral.getReferrer(users.trader), users.referrer);
     }
 
     function test_setRebateTier_Success() public {
@@ -235,7 +244,7 @@ contract ReferralTest is DeployTest {
 
         vm.prank(users.referrer);
 
-        referral.setReferrer(secondaryReferrer);
+        referral.trySetReferrer(secondaryReferrer);
 
         vm.startPrank(users.trader);
 
