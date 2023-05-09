@@ -124,7 +124,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct TradeVarsInternal {
-        UD60x18 totalRebate;
+        UD60x18 totalReferralRebate;
         UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
@@ -173,7 +173,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct PremiumAndFeeInternal {
-        UD60x18 totalRebate;
+        UD60x18 totalReferralRebate;
         UD60x18 premium;
         UD60x18 protocolFee;
         UD60x18 premiumTaker;

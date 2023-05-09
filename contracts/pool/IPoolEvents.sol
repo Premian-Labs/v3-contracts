@@ -87,7 +87,7 @@ interface IPoolEvents {
         UD60x18 marketPrice,
         UD60x18 liquidityRate,
         UD60x18 currentTick,
-        UD60x18 totalRebate,
+        UD60x18 totalReferralRebate,
         bool isBuy
     );
 

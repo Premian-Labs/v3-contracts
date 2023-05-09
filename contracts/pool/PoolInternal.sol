@@ -778,14 +778,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     // Update price and liquidity variables
                     {
-                        UD60x18 totalRebate = _calculateTotalRebate(
-                            args.user,
-                            args.referrer,
-                            takerFee
-                        );
+                        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(
+                                args.user,
+                                args.referrer,
+                                takerFee
+                            );
 
-                        vars.totalRebate = vars.totalRebate + totalRebate;
-                        UD60x18 takerFeeSansRebate = takerFee - totalRebate;
+                        vars.totalReferralRebate =
+                            vars.totalReferralRebate +
+                            totalReferralRebate;
+
+                        UD60x18 takerFeeSansRebate = takerFee -
+                            totalReferralRebate;
 
                         UD60x18 protocolFee = takerFeeSansRebate *
                             PROTOCOL_FEE_PERCENTAGE;
@@ -862,7 +866,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l,
             args.user,
             args.referrer,
-            vars.totalRebate,
+            vars.totalReferralRebate,
             vars.totalTakerFees
         );
 
@@ -892,7 +896,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.marketPrice,
             l.liquidityRate,
             l.currentTick,
-            vars.totalRebate,
+            vars.totalReferralRebate,
             args.isBuy
         );
     }
@@ -1037,8 +1041,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         r.premium = price * size;
         r.protocolFee = _takerFee(l, taker, size, r.premium, true);
 
-        r.totalRebate = _calculateTotalRebate(taker, referrer, r.protocolFee);
-        r.protocolFee = r.protocolFee - r.totalRebate;
+        r.totalReferralRebate = _calculateTotalReferralRebate(
+            taker,
+            referrer,
+            r.protocolFee
+        );
+
+        r.protocolFee = r.protocolFee - r.totalReferralRebate;
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(
@@ -1116,8 +1125,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 args.user,
                 args.referrer,
-                premiumAndFee.totalRebate,
-                premiumAndFee.protocolFee + premiumAndFee.totalRebate
+                premiumAndFee.totalReferralRebate,
+                premiumAndFee.protocolFee + premiumAndFee.totalReferralRebate
             );
 
             // Process trade maker
@@ -1140,7 +1149,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaTaker,
             premiumAndFee.premium,
             premiumAndFee.protocolFee,
-            premiumAndFee.totalRebate,
+            premiumAndFee.totalReferralRebate,
             !quoteRFQ.isBuy
         );
 
@@ -2069,11 +2078,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(account, id, amount.unwrap());
     }
 
-    function _calculateTotalRebate(
+    function _calculateTotalReferralRebate(
         address user,
         address referrer,
         UD60x18 tradingFee
-    ) internal view returns (UD60x18 totalRebate) {
+    ) internal view returns (UD60x18 totalReferralRebate) {
         if (referrer == address(0))
             referrer = IReferral(REFERRAL).getReferrer(user);
 
@@ -2084,7 +2093,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             UD60x18 secondaryRebatePercent
         ) = IReferral(REFERRAL).getRebatePercents(referrer);
 
-        totalRebate =
+        totalReferralRebate =
             (tradingFee * primaryRebatePercent) +
             (tradingFee * secondaryRebatePercent);
     }
@@ -2093,13 +2102,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         address user,
         address referrer,
-        UD60x18 totalRebate,
+        UD60x18 totalReferralRebate,
         UD60x18 tradingFee
     ) internal {
         if (tradingFee == ZERO) return;
 
         address token = l.getPoolToken();
-        IERC20(token).approve(REFERRAL, totalRebate);
+        IERC20(token).approve(REFERRAL, totalReferralRebate);
 
         IReferral(REFERRAL).useReferral(user, referrer, token, tradingFee);
         IERC20(token).approve(REFERRAL, 0);
