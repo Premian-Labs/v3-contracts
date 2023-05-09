@@ -30,6 +30,7 @@ contract PoolDepositWithdraw is
         address wrappedNativeToken,
         address feeReceiver,
         address referral,
+        address settings,
         address vxPremia
     )
         PoolInternal(
@@ -38,6 +39,7 @@ contract PoolDepositWithdraw is
             wrappedNativeToken,
             feeReceiver,
             referral,
+            settings,
             vxPremia
         )
     {}

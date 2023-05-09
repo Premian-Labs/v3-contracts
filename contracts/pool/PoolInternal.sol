@@ -13,8 +13,10 @@ import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {IPoolFactory} from "../factory/IPoolFactory.sol";
+import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {IERC20Router} from "../router/IERC20Router.sol";
+import {IPoolFactory} from "../factory/IPoolFactory.sol";
+import {IUserSettings} from "../settings/IUserSettings.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
@@ -51,6 +53,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
     address internal immutable REFERRAL;
+    address internal immutable SETTINGS;
     address internal immutable VXPREMIA;
 
     // ToDo : Define final values
@@ -73,6 +76,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address wrappedNativeToken,
         address feeReceiver,
         address referral,
+        address settings,
         address vxPremia
     ) {
         FACTORY = factory;
@@ -80,6 +84,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
         REFERRAL = referral;
+        SETTINGS = settings;
         VXPREMIA = vxPremia;
     }
 
@@ -1178,7 +1183,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 
-        if (size == ZERO) revert Pool__ZeroSize();
+        _ensureNonZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1232,7 +1237,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             UD60x18 feesTransferred = proportionTransferred *
                 srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
-            srcData.claimableFees = srcData.claimableFees + feesTransferred;
+            srcData.claimableFees = srcData.claimableFees - feesTransferred;
         }
 
         if (srcData.lastDeposit > dstData.lastDeposit) {
@@ -1280,7 +1285,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 exerciseValue = size * intrinsicValue;
 
         if (isCall) {
-            exerciseValue = exerciseValue.div(settlementPrice);
+            exerciseValue = exerciseValue / settlementPrice;
         }
 
         return exerciseValue;
@@ -1297,68 +1302,115 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 : size * l.strike - exerciseValue;
     }
 
-    /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
-    /// @param holder The holder of the contracts
-    function _exercise(address holder) internal returns (uint256) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
+    function _beforeExerciseOrSettle(
+        PoolStorage.Layout storage l,
+        bool isLong,
+        address holder
+    )
+        internal
+        returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral)
+    {
         _ensureExpired(l);
-
+        _removeFromFactory(l);
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
-        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.LONG);
-        if (size == ZERO) return 0;
+        uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
+        size = _balanceOfUD60x18(holder, tokenId);
+        exerciseValue = _calculateExerciseValue(l, size);
 
-        UD60x18 exerciseValue = _calculateExerciseValue(l, size);
-
-        _removeFromFactory(l);
-
-        _burn(holder, PoolStorage.LONG, size);
-
-        if (exerciseValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, exerciseValue);
+        if (size > ZERO) {
+            collateral = _calculateCollateralValue(l, size, exerciseValue);
+            _burn(holder, tokenId, size);
         }
-
-        emit Exercise(holder, size, exerciseValue, l.settlementPrice, ZERO);
-
-        return l.toPoolTokenDecimals(exerciseValue);
     }
 
-    /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
+    /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    function _settle(address holder) internal returns (uint256) {
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    function _exercise(
+        address holder,
+        UD60x18 costPerHolder
+    ) internal returns (uint256 exerciseValue) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
 
-        if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        UD60x18 size = _balanceOfUD60x18(holder, PoolStorage.SHORT);
-        if (size == ZERO) return 0;
-
-        UD60x18 exerciseValue = _calculateExerciseValue(l, size);
-        UD60x18 collateralValue = _calculateCollateralValue(
+        (UD60x18 size, UD60x18 _exerciseValue, ) = _beforeExerciseOrSettle(
             l,
-            size,
-            exerciseValue
+            true,
+            holder
         );
 
-        _removeFromFactory(l);
+        if (size == ZERO) return 0;
 
-        // Burn short and transfer collateral to operator
-        _burn(holder, PoolStorage.SHORT, size);
-        if (collateralValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, collateralValue);
+        _ensureCostLessThanPayout(costPerHolder, _exerciseValue);
+
+        exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
+
+        emit Exercise(
+            msg.sender,
+            holder,
+            size,
+            _exerciseValue,
+            l.settlementPrice,
+            ZERO,
+            costPerHolder
+        );
+
+        if (costPerHolder > ZERO) {
+            _exerciseValue = _exerciseValue - costPerHolder;
         }
 
-        emit Settle(holder, size, exerciseValue, l.settlementPrice, ZERO);
+        if (_exerciseValue > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(holder, _exerciseValue);
+        }
+    }
 
-        return l.toPoolTokenDecimals(collateralValue);
+    /// @notice Settles all short options held by an `owner`
+    /// @param holder The holder of the contracts
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    function _settle(
+        address holder,
+        UD60x18 costPerHolder
+    ) internal returns (uint256 collateral) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        (
+            UD60x18 size,
+            UD60x18 exerciseValue,
+            UD60x18 _collateral
+        ) = _beforeExerciseOrSettle(l, false, holder);
+
+        if (size == ZERO) return 0;
+
+        _ensureCostLessThanPayout(costPerHolder, _collateral);
+
+        collateral = l.toPoolTokenDecimals(_collateral);
+
+        emit Settle(
+            msg.sender,
+            holder,
+            size,
+            exerciseValue,
+            l.settlementPrice,
+            ZERO,
+            costPerHolder
+        );
+
+        if (costPerHolder > ZERO) {
+            _collateral = _collateral - costPerHolder;
+        }
+
+        if (_collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(holder, _collateral);
+        }
     }
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
+    /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
     function _settlePosition(
-        Position.KeyInternal memory p
-    ) internal returns (uint256) {
+        Position.KeyInternal memory p,
+        UD60x18 costPerHolder
+    ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
         _removeFromFactory(l);
@@ -1367,18 +1419,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        Tick memory lowerTick = _getTick(p.lower);
-        Tick memory upperTick = _getTick(p.upper);
+        SettlePositionVarsInternal memory vars;
 
-        uint256 tokenId = PoolStorage.formatTokenId(
+        vars.tokenId = PoolStorage.formatTokenId(
             p.operator,
             p.lower,
             p.upper,
             p.orderType
         );
 
-        UD60x18 size = _balanceOfUD60x18(p.owner, tokenId);
-        if (size == ZERO) return 0;
+        vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
+        if (vars.size == ZERO) return 0;
 
         {
             // Update claimable fees
@@ -1386,11 +1437,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 p.lower,
                 p.upper,
-                lowerTick.externalFeeRate,
-                upperTick.externalFeeRate
+                _getTick(p.lower).externalFeeRate,
+                _getTick(p.upper).externalFeeRate
             );
 
-            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(size));
+            _updateClaimableFees(pData, feeRate, p.liquidityPerTick(vars.size));
         }
 
         // using the market price here is okay as the market price cannot be
@@ -1400,26 +1451,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         // obviously, if the market was still liquid, the market price at
         // maturity should be close to the intrinsic value.
 
-        UD60x18 claimableFees;
-        UD60x18 payoff;
-        UD60x18 collateral;
-
         {
-            UD60x18 longs = p.long(size, l.marketPrice);
-            UD60x18 shorts = p.short(size, l.marketPrice);
+            UD60x18 longs = p.long(vars.size, l.marketPrice);
+            UD60x18 shorts = p.short(vars.size, l.marketPrice);
 
-            claimableFees = pData.claimableFees;
-            payoff = _calculateExerciseValue(l, ONE);
-            collateral = p.collateral(size, l.marketPrice);
-            collateral = collateral + longs * payoff;
-            collateral =
-                collateral +
+            vars.claimableFees = pData.claimableFees;
+            vars.payoff = _calculateExerciseValue(l, ONE);
+
+            vars.collateral = p.collateral(vars.size, l.marketPrice);
+            vars.collateral = vars.collateral + longs * vars.payoff;
+
+            vars.collateral =
+                vars.collateral +
                 shorts *
-                ((l.isCallPool ? ONE : l.strike) - payoff);
+                ((l.isCallPool ? ONE : l.strike) - vars.payoff);
 
-            collateral = collateral + claimableFees;
+            vars.collateral = vars.collateral + vars.claimableFees;
 
-            _burn(p.owner, tokenId, size);
+            _burn(p.owner, vars.tokenId, vars.size);
 
             if (longs > ZERO) {
                 _burn(address(this), PoolStorage.LONG, longs);
@@ -1433,22 +1482,30 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        if (collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, collateral);
-        }
+        _ensureCostLessThanPayout(costPerHolder, vars.collateral);
+
+        collateral = l.toPoolTokenDecimals(vars.collateral);
 
         emit SettlePosition(
+            msg.sender,
             p.owner,
-            tokenId,
-            size,
-            collateral - claimableFees,
-            payoff,
-            claimableFees,
+            vars.tokenId,
+            vars.size,
+            vars.collateral - vars.claimableFees,
+            vars.payoff,
+            vars.claimableFees,
             l.settlementPrice,
-            ZERO
+            ZERO,
+            costPerHolder
         );
 
-        return l.toPoolTokenDecimals(collateral);
+        if (costPerHolder > ZERO) {
+            vars.collateral = vars.collateral - costPerHolder;
+        }
+
+        if (vars.collateral > ZERO) {
+            IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
+        }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -2265,5 +2322,42 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _ensureOperator(address operator) internal view {
         if (operator != msg.sender) revert Pool__NotAuthorized(msg.sender);
+    }
+
+    function _ensureAuthorizedAgent(
+        address holder,
+        address agent
+    ) internal view {
+        if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent))
+            revert Pool__UnauthorizedAgent();
+    }
+
+    function _ensureAuthorizedCost(address holder, UD60x18 cost) internal view {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        address poolToken = l.getPoolToken();
+
+        UD60x18 wrappedNativeQuote = poolToken == WRAPPED_NATIVE_TOKEN
+            ? ONE
+            : IOracleAdapter(l.oracleAdapter).quote(
+                WRAPPED_NATIVE_TOKEN,
+                poolToken
+            );
+
+        UD60x18 costInWrappedNative = (cost * wrappedNativeQuote);
+
+        UD60x18 authorizedCost = UD60x18.wrap(
+            IUserSettings(SETTINGS).getAuthorizedCost(holder)
+        );
+
+        if (costInWrappedNative > authorizedCost)
+            revert Pool__UnauthorizedCost(costInWrappedNative, authorizedCost);
+    }
+
+    function _ensureCostLessThanPayout(
+        UD60x18 cost,
+        UD60x18 payout
+    ) internal pure {
+        if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
     }
 }

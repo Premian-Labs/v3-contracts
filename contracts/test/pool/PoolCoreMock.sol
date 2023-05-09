@@ -21,6 +21,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         address wrappedNativeToken,
         address feeReceiver,
         address referral,
+        address settings,
         address vxPremia
     )
         PoolInternal(
@@ -29,6 +30,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
             wrappedNativeToken,
             feeReceiver,
             referral,
+            settings,
             vxPremia
         )
     {}

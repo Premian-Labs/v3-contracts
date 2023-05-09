@@ -92,24 +92,29 @@ interface IPoolEvents {
     );
 
     event Exercise(
+        address indexed agent,
         address indexed holder,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 settlementPrice,
-        UD60x18 fee
+        UD60x18 fee,
+        UD60x18 agentCost
     );
 
     event Settle(
-        address indexed user,
+        address indexed agent,
+        address indexed holder,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 settlementPrice,
-        UD60x18 fee
+        UD60x18 fee,
+        UD60x18 agentCost
     );
 
     event Annihilate(address indexed owner, UD60x18 contractSize, uint256 fee);
 
     event SettlePosition(
+        address indexed agent,
         address indexed owner,
         uint256 indexed tokenId,
         UD60x18 contractSize,
@@ -117,7 +122,8 @@ interface IPoolEvents {
         UD60x18 exerciseValue,
         UD60x18 feesClaimed,
         UD60x18 settlementPrice,
-        UD60x18 fee
+        UD60x18 fee,
+        UD60x18 agentCost
     );
 
     event TransferPosition(
