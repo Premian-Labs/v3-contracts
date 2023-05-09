@@ -62,7 +62,8 @@ abstract contract PoolSettleTest is DeployTest {
         pool.trade(
             trade.size,
             false,
-            trade.totalPremium - trade.totalPremium / 10
+            trade.totalPremium - trade.totalPremium / 10,
+            address(0)
         );
 
         vm.stopPrank();
