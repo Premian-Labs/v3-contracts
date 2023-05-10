@@ -1,9 +1,17 @@
 import {
   ChainlinkAdapter__factory,
   ChainlinkAdapterProxy__factory,
+  UniswapV3Adapter__factory,
+  UniswapV3AdapterProxy__factory,
+  UniswapV3ChainlinkAdapter__factory,
+  UniswapV3ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { goerliFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
+import {
+  goerliFeeds,
+  arbitrumGoerliFeeds,
+  UNISWAP_V3_FACTORY,
+} from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -41,7 +49,6 @@ async function main() {
   }
   //////////////////////////
   // Deploy ChainlinkAdapter
-
   const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
     deployer,
   ).deploy(weth, wbtc);
@@ -71,6 +78,51 @@ async function main() {
   } else {
     throw new Error('ChainId not implemented');
   }
+
+  // Deploy UniswapV3Adapter
+  const gasPerCardinality = 22250;
+  const gasPerPool = 30000;
+  const period = 600;
+  const cardinalityPerMinute = 200;
+
+  const uniswapV3AdapterImpl = await new UniswapV3Adapter__factory(
+    deployer,
+  ).deploy(UNISWAP_V3_FACTORY, weth, gasPerCardinality, gasPerPool);
+  await uniswapV3AdapterImpl.deployed();
+  console.log(
+    `UniswapV3ChainlinkAdapter impl : ${uniswapV3AdapterImpl.address}`,
+  );
+
+  const uniswapV3AdapterProxy = await new UniswapV3AdapterProxy__factory(
+    deployer,
+  ).deploy(period, cardinalityPerMinute, uniswapV3AdapterImpl.address);
+  await uniswapV3AdapterProxy.deployed();
+
+  console.log(
+    `UniswapV3ChainlinkAdapter proxy : ${uniswapV3AdapterProxy.address}`,
+  );
+
+  // Deploy UniswapV3ChainlinkAdapter
+  const uniswapV3ChainlinkAdapterImpl =
+    await new UniswapV3ChainlinkAdapter__factory(deployer).deploy(
+      chainlinkAdapterProxy.address,
+      uniswapV3AdapterProxy.address,
+      weth,
+    );
+  await uniswapV3ChainlinkAdapterImpl.deployed();
+  console.log(
+    `UniswapV3ChainlinkAdapter impl : ${uniswapV3ChainlinkAdapterImpl.address}`,
+  );
+
+  const uniswapV3ChainlinkAdapterProxy =
+    await new UniswapV3ChainlinkAdapterProxy__factory(deployer).deploy(
+      uniswapV3ChainlinkAdapterImpl.address,
+    );
+  await uniswapV3ChainlinkAdapterProxy.deployed();
+
+  console.log(
+    `UniswapV3ChainlinkAdapter proxy : ${uniswapV3ChainlinkAdapterProxy.address}`,
+  );
 
   //////////////////////////
 

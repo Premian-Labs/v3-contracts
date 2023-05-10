@@ -2,6 +2,10 @@ export interface ContractAddresses {
   tokens: { [symbol: string]: string };
   ChainlinkAdapterImplementation: string;
   ChainlinkAdapterProxy: string;
+  UniswapV3AdapterImplementation: string;
+  UniswapV3AdapterProxy: string;
+  UniswapV3ChainlinkAdapterImplementation: string;
+  UniswapV3ChainlinkAdapterProxy: string;
   InitFeeCalculatorImplementation: string;
   InitFeeCalculatorProxy: string;
   PremiaDiamond: string;
