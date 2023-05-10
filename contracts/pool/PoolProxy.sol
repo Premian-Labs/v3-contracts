@@ -30,7 +30,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         address quote,
         address oracleAdapter,
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCallPool
     ) {
         DIAMOND = diamond;

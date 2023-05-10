@@ -249,7 +249,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @notice Ensure that the maturity is a valid option maturity, revert otherwise
-    function _ensureOptionMaturityIsValid(uint64 maturity) internal view {
+    function _ensureOptionMaturityIsValid(uint256 maturity) internal view {
         if (maturity <= block.timestamp)
             revert PoolFactory__OptionExpired(maturity);
 

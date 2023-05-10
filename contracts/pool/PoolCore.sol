@@ -83,7 +83,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             address quote,
             address oracleAdapter,
             UD60x18 strike,
-            uint64 maturity,
+            uint256 maturity,
             bool isCallPool
         )
     {
