@@ -38,8 +38,8 @@ import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
+import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
-import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 
