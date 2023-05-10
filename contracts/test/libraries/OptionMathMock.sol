@@ -59,16 +59,16 @@ contract OptionMathMock {
         );
     }
 
-    function isFriday(uint64 maturity) external pure returns (bool) {
+    function isFriday(uint256 maturity) external pure returns (bool) {
         return OptionMath.isFriday(maturity);
     }
 
-    function isLastFriday(uint64 maturity) external pure returns (bool) {
+    function isLastFriday(uint256 maturity) external pure returns (bool) {
         return OptionMath.isLastFriday(maturity);
     }
 
     function calculateTimeToMaturity(
-        uint64 maturity
+        uint256 maturity
     ) external view returns (uint256) {
         return OptionMath.calculateTimeToMaturity(maturity);
     }
@@ -89,7 +89,7 @@ contract OptionMathMock {
     function initializationFee(
         UD60x18 spot,
         UD60x18 strike,
-        uint64 maturity
+        uint256 maturity
     ) external view returns (UD60x18) {
         return OptionMath.initializationFee(spot, strike, maturity);
     }
