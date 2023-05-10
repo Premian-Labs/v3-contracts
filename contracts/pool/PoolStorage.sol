@@ -67,8 +67,8 @@ library PoolStorage {
         mapping(bytes32 => Position.Data) positions;
         // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
         mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
-        // Set to true after maturity, to handle factory initialization discount
-        bool hasRemoved;
+        // Set to true after maturity, to remove factory initialization discount
+        bool initFeeDiscountRemoved;
     }
 
     function layout() internal pure returns (Layout storage l) {
