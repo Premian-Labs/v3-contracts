@@ -127,17 +127,17 @@ describe('UniswapV3Adapter', () => {
     it('should set state variables', async () => {
       const { instance } = await loadFixture(deploy);
 
-      expect(await instance.targetCardinality()).to.equal(
+      expect(await instance.getTargetCardinality()).to.equal(
         (period * cardinalityPerMinute) / 60 + 1,
       );
 
-      expect(await instance.period()).to.equal(period);
+      expect(await instance.getPeriod()).to.equal(period);
 
-      expect(await instance.cardinalityPerMinute()).to.equal(
+      expect(await instance.getCardinalityPerMinute()).to.equal(
         cardinalityPerMinute,
       );
 
-      expect(await instance.supportedFeeTiers()).to.be.deep.eq([
+      expect(await instance.getSupportedFeeTiers()).to.be.deep.eq([
         100, 500, 3000, 10000,
       ]);
     });
@@ -393,46 +393,46 @@ describe('UniswapV3Adapter', () => {
     });
   });
 
-  describe('#factory', () => {
+  describe('#getFactory', () => {
     it('should return correct UniswapV3 factory address', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.factory()).to.be.eq(UNISWAP_V3_FACTORY);
+      expect(await instance.getFactory()).to.be.eq(UNISWAP_V3_FACTORY);
     });
   });
 
-  describe('#period', () =>
+  describe('#getPeriod', () =>
     it('should return correct period', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.period()).to.be.eq(period);
+      expect(await instance.getPeriod()).to.be.eq(period);
     }));
 
-  describe('#cardinalityPerMinute', () => {
+  describe('#getCardinalityPerMinute', () => {
     it('should return correct cardinality per minute', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.cardinalityPerMinute()).to.be.eq(
+      expect(await instance.getCardinalityPerMinute()).to.be.eq(
         cardinalityPerMinute,
       );
     });
   });
 
-  describe('#gasPerCardinality', () => {
+  describe('#getGasPerCardinality', () => {
     it('should return correct gas per cardinality', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.gasPerCardinality()).to.be.eq(22250);
+      expect(await instance.getGasPerCardinality()).to.be.eq(22250);
     });
   });
 
-  describe('#gasToSupportPool', () => {
+  describe('#getGasToSupportPool', () => {
     it('should return correct gas cost to add support for a new pool', async () => {
       const { instance } = await loadFixture(deploy);
-      expect(await instance.gasToSupportPool()).to.be.eq(30000);
+      expect(await instance.getGasToSupportPool()).to.be.eq(30000);
     });
   });
 
-  describe('#supportedFeeTiers', () => {
+  describe('#getSupportedFeeTiers', () => {
     it('should return supported fee tiers', async () => {
       const { instance } = await loadFixture(deploy);
-      const feeTiers = await instance.supportedFeeTiers();
+      const feeTiers = await instance.getSupportedFeeTiers();
       expect(feeTiers).to.be.deep.eq([100, 500, 3000, 10000]);
     });
   });
@@ -459,7 +459,7 @@ describe('UniswapV3Adapter', () => {
     it('should set period to new value', async () => {
       const { instance } = await loadFixture(deploy);
       await instance.setPeriod(newPeriod);
-      expect(await instance.period()).to.be.eq(newPeriod);
+      expect(await instance.getPeriod()).to.be.eq(newPeriod);
     });
   });
 
@@ -490,7 +490,7 @@ describe('UniswapV3Adapter', () => {
     it('should set cardinality per minute to new value', async () => {
       const { instance } = await loadFixture(deploy);
       await instance.setCardinalityPerMinute(newCardinalityPerMinute);
-      expect(await instance.cardinalityPerMinute()).to.be.eq(
+      expect(await instance.getCardinalityPerMinute()).to.be.eq(
         newCardinalityPerMinute,
       );
     });

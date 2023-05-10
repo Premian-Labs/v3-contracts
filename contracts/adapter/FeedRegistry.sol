@@ -67,10 +67,10 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
     }
 
     function _feedExists(
-        address base,
-        address quote
+        address tokenA,
+        address tokenB
     ) internal view returns (bool) {
-        return _feed(base, quote) != address(0);
+        return _feed(tokenA, tokenB) != address(0);
     }
 
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio

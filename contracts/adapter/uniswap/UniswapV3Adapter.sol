@@ -204,37 +204,37 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function factory() external view returns (IUniswapV3Factory) {
+    function getFactory() external view returns (IUniswapV3Factory) {
         return UNISWAP_V3_FACTORY;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function period() external view returns (uint32) {
+    function getPeriod() external view returns (uint32) {
         return UniswapV3AdapterStorage.layout().period;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function cardinalityPerMinute() external view returns (uint256) {
+    function getCardinalityPerMinute() external view returns (uint256) {
         return UniswapV3AdapterStorage.layout().cardinalityPerMinute;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function targetCardinality() external view returns (uint16) {
+    function getTargetCardinality() external view returns (uint16) {
         return UniswapV3AdapterStorage.layout().targetCardinality;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function gasPerCardinality() external view returns (uint256) {
+    function getGasPerCardinality() external view returns (uint256) {
         return GAS_PER_CARDINALITY;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function gasToSupportPool() external view returns (uint256) {
+    function getGasToSupportPool() external view returns (uint256) {
         return GAS_TO_SUPPORT_POOL;
     }
 
     /// @inheritdoc IUniswapV3Adapter
-    function supportedFeeTiers() external view returns (uint24[] memory) {
+    function getSupportedFeeTiers() external view returns (uint24[] memory) {
         return UniswapV3AdapterStorage.layout().feeTiers;
     }
 

@@ -454,32 +454,32 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     function _fetchQuote(
-        address base,
-        address quote,
+        address tokenIn,
+        address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
         return
             target == 0
-                ? _fetchLatestQuote(base, quote)
-                : _fetchQuoteFrom(base, quote, target);
+                ? _fetchLatestQuote(tokenIn, tokenOut)
+                : _fetchQuoteFrom(tokenIn, tokenOut, target);
     }
 
     function _fetchLatestQuote(
-        address base,
-        address quote
+        address tokenIn,
+        address tokenOut
     ) internal view returns (uint256) {
-        address feed = _feed(base, quote);
+        address feed = _feed(tokenIn, tokenOut);
         (, int256 price, , , ) = _latestRoundData(feed);
         _ensurePricePositive(price);
         return price.toUint256();
     }
 
     function _fetchQuoteFrom(
-        address base,
-        address quote,
+        address tokenIn,
+        address tokenOut,
         uint256 target
     ) internal view returns (uint256) {
-        address feed = _feed(base, quote);
+        address feed = _feed(tokenIn, tokenOut);
 
         (
             uint80 roundId,
