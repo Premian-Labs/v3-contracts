@@ -2,15 +2,11 @@
 
 pragma solidity >=0.8.19;
 
-import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/base/ERC165BaseInternal.sol";
-import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
-import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
-
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
 
-contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
+contract UniswapV3AdapterProxy is ProxyUpgradeableOwnable {
     using UniswapV3AdapterStorage for UniswapV3AdapterStorage.Layout;
 
     /// @notice Thrown when cardinality per minute has not been set
@@ -40,8 +36,5 @@ contract UniswapV3AdapterProxy is ERC165BaseInternal, ProxyUpgradeableOwnable {
         l.feeTiers.push(500);
         l.feeTiers.push(3_000);
         l.feeTiers.push(10_000);
-
-        _setSupportsInterface(type(IERC165).interfaceId, true);
-        _setSupportsInterface(type(Multicall).interfaceId, true);
     }
 }

@@ -1,6 +1,6 @@
 import {
   ChainlinkAdapter__factory,
-  ChainlinkAdapterProxy__factory,
+  ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { goerliFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
@@ -48,7 +48,7 @@ async function main() {
   await chainlinkAdapterImpl.deployed();
   console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
 
-  const chainlinkAdapterProxy = await new ChainlinkAdapterProxy__factory(
+  const chainlinkAdapterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(chainlinkAdapterImpl.address);
   await chainlinkAdapterProxy.deployed();
