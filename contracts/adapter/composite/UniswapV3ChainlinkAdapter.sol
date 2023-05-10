@@ -7,27 +7,29 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
 
-import {UniswapV3ChainlinkAdapterInternal} from "./UniswapV3ChainlinkAdapterInternal.sol";
+import {IUniswapV3ChainlinkAdapter} from "./IUniswapV3ChainlinkAdapter.sol";
 
 /// @title An implementation of IOracleAdapter that combines the UniswapV3 and Chainlink adapter feeds
 /// @notice This oracle adapter will fetch the price for tokenIn/ETH from UniswapV3 adapter, then
 ///         convert to tokenIn/tokenOut using ETH/tokenOut from the Chainlink adapter.
 ///         i.e. tokenIn/ETH * ETH/tokenOut -> tokenIn/tokenOut
 contract UniswapV3ChainlinkAdapter is
-    UniswapV3ChainlinkAdapterInternal,
+    IUniswapV3ChainlinkAdapter,
     OracleAdapter
 {
+    IOracleAdapter internal immutable CHAINLINK_ADAPTER;
+    IOracleAdapter internal immutable UNISWAP_ADAPTER;
+    address internal immutable WRAPPED_NATIVE;
+
     constructor(
         IOracleAdapter chainlinkAdapter,
         IOracleAdapter uniswapAdapter,
         address wrappedNative
-    )
-        UniswapV3ChainlinkAdapterInternal(
-            chainlinkAdapter,
-            uniswapAdapter,
-            wrappedNative
-        )
-    {}
+    ) {
+        CHAINLINK_ADAPTER = chainlinkAdapter;
+        UNISWAP_ADAPTER = uniswapAdapter;
+        WRAPPED_NATIVE = wrappedNative;
+    }
 
     /// @inheritdoc IOracleAdapter
     function isPairSupported(
@@ -111,6 +113,48 @@ contract UniswapV3ChainlinkAdapter is
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
+    function _quoteFrom(
+        address tokenIn,
+        address tokenOut,
+        uint256 target
+    ) internal view returns (UD60x18) {
+        {
+            (, bool hasPath) = UNISWAP_ADAPTER.isPairSupported(
+                tokenIn,
+                WRAPPED_NATIVE
+            );
+
+            if (!hasPath)
+                revert OracleAdapter__PairCannotBeSupported(
+                    tokenIn,
+                    WRAPPED_NATIVE
+                );
+        }
+
+        {
+            (, bool hasPath) = CHAINLINK_ADAPTER.isPairSupported(
+                WRAPPED_NATIVE,
+                tokenOut
+            );
+
+            if (!hasPath)
+                revert OracleAdapter__PairCannotBeSupported(
+                    WRAPPED_NATIVE,
+                    tokenOut
+                );
+        }
+
+        if (target == 0) {
+            return
+                UNISWAP_ADAPTER.quote(tokenIn, WRAPPED_NATIVE) *
+                CHAINLINK_ADAPTER.quote(WRAPPED_NATIVE, tokenOut);
+        } else {
+            return
+                UNISWAP_ADAPTER.quoteFrom(tokenIn, WRAPPED_NATIVE, target) *
+                CHAINLINK_ADAPTER.quoteFrom(WRAPPED_NATIVE, tokenOut, target);
+        }
+    }
+
     /// @inheritdoc IOracleAdapter
     function describePricingPath(
         address token
@@ -131,5 +175,10 @@ contract UniswapV3ChainlinkAdapter is
             (adapterType, path, decimals) = UNISWAP_ADAPTER.describePricingPath(
                 token
             );
+    }
+
+    function _ensureTokenNotWrappedNative(address token) internal view {
+        if (token == WRAPPED_NATIVE)
+            revert UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative();
     }
 }
