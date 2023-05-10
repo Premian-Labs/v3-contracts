@@ -83,13 +83,6 @@ interface IReferral {
         address referrer
     ) external view returns (address[] memory tokens, uint256[] memory rebates);
 
-    /// @notice Sets the referrer for msg.sender, if a referrer has already been set it returns the existing referrer
-    /// @param referrer The address of the referrer
-    /// @return cachedReferrer The cached referrer address
-    function trySetReferrer(
-        address referrer
-    ) external returns (address cachedReferrer);
-
     /// @notice Sets the rebate tier for a given referrer
     /// @param referrer The address of the referrer
     /// @param tier The rebate tier

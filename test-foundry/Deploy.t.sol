@@ -34,8 +34,6 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
-import {IReferral} from "contracts/referral/IReferral.sol";
-import {Referral} from "contracts/referral/Referral.sol";
 import {ReferralProxy} from "contracts/referral/ReferralProxy.sol";
 
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
@@ -44,6 +42,8 @@ import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
 import {OracleAdapterMock} from "contracts/test/oracle/OracleAdapterMock.sol";
+import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
+import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 
@@ -65,7 +65,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
-    IReferral referral;
+    IReferralMock referral;
     IUserSettings userSettings;
     IVxPremia vxPremia;
 
@@ -175,11 +175,11 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
-        Referral referralImpl = new Referral();
+        ReferralMock referralImpl = new ReferralMock();
 
         ReferralProxy referralProxy = new ReferralProxy(address(referralImpl));
 
-        referral = IReferral(address(referralProxy));
+        referral = IReferralMock(address(referralProxy));
 
         UserSettings userSettingsImpl = new UserSettings();
 

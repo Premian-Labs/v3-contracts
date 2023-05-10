@@ -70,26 +70,6 @@ contract Referral is IReferral, OwnableInternal {
         return (tokens, rebates);
     }
 
-    function trySetReferrer(address referrer) external returns (address) {
-        return _trySetReferrer(msg.sender, referrer);
-    }
-
-    function _trySetReferrer(
-        address user,
-        address referrer
-    ) internal returns (address) {
-        ReferralStorage.Layout storage l = ReferralStorage.layout();
-
-        if (l.referrals[user] == address(0)) {
-            if (referrer == address(0)) return address(0);
-            l.referrals[user] = referrer;
-        } else {
-            referrer = l.referrals[user];
-        }
-
-        return referrer;
-    }
-
     function setRebateTier(
         address referrer,
         RebateTier tier
@@ -195,5 +175,21 @@ contract Referral is IReferral, OwnableInternal {
             IERC20(tokens[i]).safeTransfer(msg.sender, rebates[i]);
             emit ClaimRebate(msg.sender, tokens[i], rebates[i]);
         }
+    }
+
+    function _trySetReferrer(
+        address user,
+        address referrer
+    ) internal returns (address) {
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+
+        if (l.referrals[user] == address(0)) {
+            if (referrer == address(0)) return address(0);
+            l.referrals[user] = referrer;
+        } else {
+            referrer = l.referrals[user];
+        }
+
+        return referrer;
     }
 }
