@@ -688,7 +688,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         _poolKey.quote = l.quote;
         _poolKey.oracleAdapter = l.oracleAdapter;
         _poolKey.strike = strike;
-        _poolKey.maturity = uint64(maturity);
+        _poolKey.maturity = maturity;
         _poolKey.isCallPool = l.isCall;
 
         (address pool, bool isDeployed) = IPoolFactory(FACTORY).getPoolAddress(
@@ -919,7 +919,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @inheritdoc IVault
     function getQuote(
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         UD60x18 size,
         bool isBuy
@@ -943,7 +943,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @inheritdoc IVault
     function trade(
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         UD60x18 size,
         bool isBuy,
@@ -1027,7 +1027,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
             address pool = _getPoolAddress(strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(
-                IPool(pool).settle(address(this))
+                IPool(pool).settle()
             );
             l.totalAssets =
                 l.totalAssets -
