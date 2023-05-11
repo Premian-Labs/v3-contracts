@@ -20,6 +20,7 @@ export interface ContractAddresses {
   PoolBase: string;
   PoolCore: string;
   PoolTrade: string;
+  OrderbookStream: string;
 }
 
 export enum ChainID {

@@ -27,5 +27,6 @@
   "ERC20Router": "",
   "PoolBase": "",
   "PoolCore": "",
-  "PoolTrade": ""
+  "PoolTrade": "",
+  "OrderbookStream": ""
 }

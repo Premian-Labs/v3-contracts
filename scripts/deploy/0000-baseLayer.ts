@@ -34,15 +34,17 @@ async function main() {
     weth = arbitrumAddresses.tokens.WETH;
     wbtc = arbitrumAddresses.tokens.WBTC;
     feeReceiver = ''; // ToDo : Set fee receiver
-    vxPremia = '0x3992690E5405b69d50812470B0250c878bFA9322';
+    vxPremia = arbitrumAddresses.VxPremiaProxy;
   } else if (chainId === ChainID.Goerli) {
     weth = goerliAddresses.tokens.WETH;
     wbtc = goerliAddresses.tokens.WBTC;
     feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+    vxPremia = goerliAddresses.VxPremiaProxy;
   } else if (chainId == ChainID.ArbitrumGoerli) {
     weth = arbitrumGoerliAddresses.tokens.WETH;
     wbtc = arbitrumGoerliAddresses.tokens.WBTC;
     feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+    vxPremia = arbitrumGoerliAddresses.VxPremiaProxy;
   } else {
     throw new Error('ChainId not implemented');
   }
