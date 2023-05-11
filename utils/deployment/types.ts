@@ -11,6 +11,8 @@ export interface ContractAddresses {
   PremiaDiamond: string;
   PoolFactoryImplementation: string;
   PoolFactoryProxy: string;
+  UserSettingsImplementation: string;
+  UserSettingsProxy: string;
   ExchangeHelper: string;
   VxPremiaImplementation: string;
   VxPremiaProxy: string;
