@@ -175,10 +175,8 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
-        ReferralMock referralImpl = new ReferralMock();
-
+        ReferralMock referralImpl = new ReferralMock(address(factory));
         ReferralProxy referralProxy = new ReferralProxy(address(referralImpl));
-
         referral = IReferralMock(address(referralProxy));
 
         UserSettings userSettingsImpl = new UserSettings();
@@ -188,6 +186,7 @@ contract DeployTest is Test, Assertions {
         );
 
         userSettings = IUserSettings(address(userSettingsProxy));
+
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),

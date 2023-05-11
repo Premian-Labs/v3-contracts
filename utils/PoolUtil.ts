@@ -302,10 +302,10 @@ export class PoolUtil {
       vxPremiaAddress = vxPremiaProxy.address;
     }
 
-    const referralImpl = await new Referral__factory(deployer).deploy();
-
+    const referralImpl = await new Referral__factory(deployer).deploy(
+      poolFactory.address,
+    );
     await referralImpl.deployed();
-
     if (log) console.log(`Referral : ${referralImpl.address}`);
 
     const referralProxy = await new ProxyUpgradeableOwnable__factory(
@@ -313,7 +313,6 @@ export class PoolUtil {
     ).deploy(referralImpl.address);
 
     await referralProxy.deployed();
-
     if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
 
     const deployedFacets = await PoolUtil.deployPoolImplementations(

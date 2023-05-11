@@ -9,6 +9,8 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {ZERO} from "../libraries/OptionMath.sol";
 
+import {IPoolFactory} from "../factory/PoolFactory.sol";
+
 import {IReferral} from "./IReferral.sol";
 import {ReferralStorage} from "./ReferralStorage.sol";
 
@@ -16,6 +18,12 @@ contract Referral is IReferral, OwnableInternal {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using ReferralStorage for address;
+
+    address internal immutable FACTORY;
+
+    constructor(address factory) {
+        FACTORY = factory;
+    }
 
     function getReferrer(address user) external view returns (address) {
         return ReferralStorage.layout().referrals[user];
@@ -108,6 +116,8 @@ contract Referral is IReferral, OwnableInternal {
     ) external returns (UD60x18 totalRebate) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
+        _ensureCallerIsPool();
+
         primaryReferrer = _trySetReferrer(user, primaryReferrer);
         if (primaryReferrer == address(0)) return ZERO;
 
@@ -149,7 +159,7 @@ contract Referral is IReferral, OwnableInternal {
         if (!l.rebateTokens[primaryReferrer].contains(token))
             l.rebateTokens[primaryReferrer].add(token);
 
-        emit Referral(
+        emit Refer(
             user,
             primaryReferrer,
             secondaryReferrer,
@@ -191,5 +201,10 @@ contract Referral is IReferral, OwnableInternal {
         }
 
         return referrer;
+    }
+
+    function _ensureCallerIsPool() internal view {
+        if (!IPoolFactory(FACTORY).isPool(msg.sender))
+            revert Referral__NotPool();
     }
 }

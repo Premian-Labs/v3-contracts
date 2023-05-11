@@ -11,6 +11,7 @@ interface IReferral {
     }
 
     error Referral__NoRebatesToClaim();
+    error Referral__NotPool();
 
     event ClaimRebate(
         address indexed referrer,
@@ -32,7 +33,7 @@ interface IReferral {
 
     event SetSecondaryRebatePercent(UD60x18 oldPercent, UD60x18 newPercent);
 
-    event Referral(
+    event Refer(
         address indexed user,
         address indexed primaryReferrer,
         address indexed secondaryReferrer,

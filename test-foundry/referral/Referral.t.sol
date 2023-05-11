@@ -3,7 +3,9 @@ pragma solidity >=0.8.19;
 
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+
+import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 
 import {ZERO} from "contracts/libraries/OptionMath.sol";
 
@@ -13,6 +15,13 @@ import {DeployTest} from "../Deploy.t.sol";
 
 contract ReferralTest is DeployTest {
     address internal constant secondaryReferrer = address(0x999);
+
+    function setUp() public override {
+        super.setUp();
+
+        poolKey.isCallPool = true;
+        pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+    }
 
     function test_getRebates_Success() public {
         (
@@ -123,7 +132,7 @@ contract ReferralTest is DeployTest {
     }
 
     function test_setPrimaryRebatePercent_Success() public {
-        UD60x18 percent = UD60x18.wrap(100e18);
+        UD60x18 percent = ud(100e18);
 
         referral.setPrimaryRebatePercent(
             percent,
@@ -141,13 +150,13 @@ contract ReferralTest is DeployTest {
         vm.prank(users.trader);
 
         referral.setPrimaryRebatePercent(
-            UD60x18.wrap(100e18),
+            ud(100e18),
             IReferral.RebateTier.PRIMARY_REBATE_1
         );
     }
 
     function test_setSecondaryRebatePercent_Success() public {
-        UD60x18 percent = UD60x18.wrap(100e18);
+        UD60x18 percent = ud(100e18);
         referral.setSecondaryRebatePercent(percent);
 
         (, UD60x18 secondaryRebatePercent) = referral.getRebatePercents();
@@ -158,16 +167,15 @@ contract ReferralTest is DeployTest {
     function test_setSecondaryRebatePercent_RevertIf_Not_Owner() public {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(users.trader);
-        referral.setSecondaryRebatePercent(UD60x18.wrap(100e18));
+        referral.setSecondaryRebatePercent(ud(100e18));
     }
 
     function _test_useReferral_No_Rebate(bool isCall) internal {
         uint256 tradingFee = 1 ether;
         address token = getPoolToken(isCall);
 
-        vm.startPrank(users.trader);
-
-        deal(token, users.trader, tradingFee);
+        vm.startPrank(address(pool));
+        deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
         UD60x18 __rebate = referral.useReferral(
@@ -182,21 +190,20 @@ contract ReferralTest is DeployTest {
         assertEq(__rebate, ZERO);
         assertEq(referral.getReferrer(users.trader), address(0));
 
-        assertEq(IERC20(token).balanceOf(users.trader), tradingFee);
+        assertEq(IERC20(token).balanceOf(address(pool)), tradingFee);
         assertEq(IERC20(token).balanceOf(address(referral)), 0);
     }
 
     function test_useReferral_No_Rebate() public {
-        _test_useReferral_No_Rebate(true);
+        _test_useReferral_No_Rebate(poolKey.isCallPool);
     }
 
     function _test_useReferral_Rebate_Primary_Only(bool isCall) internal {
         uint256 tradingFee = 1 ether;
         address token = getPoolToken(isCall);
 
-        vm.startPrank(users.trader);
-
-        deal(token, users.trader, tradingFee);
+        vm.startPrank(address(pool));
+        deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
         UD60x18 __rebate = referral.useReferral(
@@ -228,7 +235,7 @@ contract ReferralTest is DeployTest {
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
         assertEq(
-            IERC20(token).balanceOf(users.trader),
+            IERC20(token).balanceOf(address(pool)),
             tradingFee - totalRebate
         );
 
@@ -236,7 +243,7 @@ contract ReferralTest is DeployTest {
     }
 
     function test_useReferral_Rebate_Primary_Only() public {
-        _test_useReferral_Rebate_Primary_Only(true);
+        _test_useReferral_Rebate_Primary_Only(poolKey.isCallPool);
     }
 
     function _test_useReferral_Rebate_Primary_And_Secondary(
@@ -249,12 +256,10 @@ contract ReferralTest is DeployTest {
         token = getPoolToken(isCall);
 
         vm.prank(users.referrer);
-
         referral.__trySetReferrer(secondaryReferrer);
 
-        vm.startPrank(users.trader);
-
-        deal(token, users.trader, tradingFee);
+        vm.startPrank(address(pool));
+        deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
         UD60x18 __rebate = referral.useReferral(
@@ -286,7 +291,7 @@ contract ReferralTest is DeployTest {
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
         assertEq(
-            IERC20(token).balanceOf(users.trader),
+            IERC20(token).balanceOf(address(pool)),
             tradingFee - totalRebate
         );
 
@@ -294,7 +299,19 @@ contract ReferralTest is DeployTest {
     }
 
     function test_useReferral_Rebate_Primary_And_Secondary() public {
-        _test_useReferral_Rebate_Primary_And_Secondary(true);
+        _test_useReferral_Rebate_Primary_And_Secondary(poolKey.isCallPool);
+    }
+
+    function test_useReferral_RevertIf_Caller_Is_Not_Pool() public {
+        vm.prank(users.trader);
+        vm.expectRevert(IReferral.Referral__NotPool.selector);
+
+        referral.useReferral(
+            users.trader,
+            users.referrer,
+            address(0),
+            ud(100e18)
+        );
     }
 
     function test_claimRebate_Success() public {
