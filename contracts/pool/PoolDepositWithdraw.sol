@@ -53,7 +53,7 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfNotAuthorized(p.operator);
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
@@ -79,7 +79,7 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfNotAuthorized(p.operator);
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
@@ -103,7 +103,7 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfNotAuthorized(p.operator);
         return
             _withdraw(
                 p.toKeyInternal(l.strike, l.isCallPool),

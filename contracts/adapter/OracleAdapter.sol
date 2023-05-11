@@ -68,12 +68,12 @@ abstract contract OracleAdapter is IOracleAdapter {
         }
     }
 
-    function _ensureTargetNonZero(uint256 target) internal view {
+    function _revertIfTargetInvalid(uint256 target) internal view {
         if (target == 0 || target > block.timestamp)
             revert OracleAdapter__InvalidTarget(target, block.timestamp);
     }
 
-    function _ensurePricePositive(int256 price) internal pure {
+    function _revertIfPriceInvalid(int256 price) internal pure {
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
     }
 }

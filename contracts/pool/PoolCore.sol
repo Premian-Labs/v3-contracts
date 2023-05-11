@@ -339,8 +339,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _ensureAuthorizedAgent(holders[i], msg.sender);
-                _ensureAuthorizedCost(holders[i], _cost);
+                _revertIfUnauthorizedAgent(holders[i], msg.sender);
+                _revertIfUnauthorizedCost(holders[i], _cost);
             }
 
             exerciseValues[i] = _exercise(holders[i], _cost);
@@ -371,8 +371,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _ensureAuthorizedAgent(holders[i], msg.sender);
-                _ensureAuthorizedCost(holders[i], _cost);
+                _revertIfUnauthorizedAgent(holders[i], msg.sender);
+                _revertIfUnauthorizedCost(holders[i], _cost);
             }
 
             collateral[i] = _settle(holders[i], _cost);
@@ -391,7 +391,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         Position.Key calldata p
     ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureOperator(p.operator);
+        _revertIfNotAuthorized(p.operator);
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
     }
 
@@ -407,8 +407,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
-                _ensureAuthorizedAgent(p[i].operator, msg.sender);
-                _ensureAuthorizedCost(p[i].operator, _cost);
+                _revertIfUnauthorizedAgent(p[i].operator, msg.sender);
+                _revertIfUnauthorizedCost(p[i].operator, _cost);
             }
 
             collateral[i] = _settlePosition(
@@ -434,7 +434,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(srcP.operator);
+        _revertIfNotAuthorized(srcP.operator);
         _transferPosition(
             srcP.toKeyInternal(l.strike, l.isCallPool),
             newOwner,
