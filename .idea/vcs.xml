@@ -2,11 +2,14 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/BokkyPooBahsDateTimeLibrary" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/forge-std" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/forge-std/lib/ds-test" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/prb-math" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/forge-std" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/forge-std/lib/ds-test" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/prb-math/lib/prb-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/v3-core" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/v3-periphery" vcs="Git" />
   </component>
 </project>

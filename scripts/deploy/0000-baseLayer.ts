@@ -1,10 +1,9 @@
 import {
+  ProxyUpgradeableOwnable__factory,
   ChainlinkAdapter__factory,
-  ChainlinkAdapterProxy__factory,
   UniswapV3Adapter__factory,
   UniswapV3AdapterProxy__factory,
   UniswapV3ChainlinkAdapter__factory,
-  UniswapV3ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
@@ -55,7 +54,7 @@ async function main() {
   await chainlinkAdapterImpl.deployed();
   console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
 
-  const chainlinkAdapterProxy = await new ChainlinkAdapterProxy__factory(
+  const chainlinkAdapterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(chainlinkAdapterImpl.address);
   await chainlinkAdapterProxy.deployed();
@@ -115,7 +114,7 @@ async function main() {
   );
 
   const uniswapV3ChainlinkAdapterProxy =
-    await new UniswapV3ChainlinkAdapterProxy__factory(deployer).deploy(
+    await new ProxyUpgradeableOwnable__factory(deployer).deploy(
       uniswapV3ChainlinkAdapterImpl.address,
     );
   await uniswapV3ChainlinkAdapterProxy.deployed();

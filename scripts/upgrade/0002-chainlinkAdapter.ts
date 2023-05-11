@@ -1,7 +1,7 @@
 import {
   ChainlinkAdapter__factory,
-  ChainlinkAdapterProxy,
-  ChainlinkAdapterProxy__factory,
+  ProxyUpgradeableOwnable,
+  ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -20,7 +20,7 @@ async function main() {
   let addressesPath: string;
   let weth: string;
   let wbtc: string;
-  let proxy: ChainlinkAdapterProxy;
+  let proxy: ProxyUpgradeableOwnable;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
@@ -43,7 +43,7 @@ async function main() {
 
   weth = addresses.tokens.WETH;
   wbtc = addresses.tokens.WBTC;
-  proxy = ChainlinkAdapterProxy__factory.connect(
+  proxy = ProxyUpgradeableOwnable__factory.connect(
     addresses.ChainlinkAdapterProxy,
     deployer,
   );

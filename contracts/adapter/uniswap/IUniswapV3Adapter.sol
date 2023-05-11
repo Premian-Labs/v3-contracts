@@ -7,34 +7,46 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
 interface IUniswapV3Adapter is IOracleAdapter {
-    /// @notice Returns the address of the Uniswap V3 factory
-    /// @dev This value is assigned during deployment and cannot be changed
-    /// @return The address of the Uniswap V3 factory
-    function factory() external view returns (IUniswapV3Factory);
+    /// @notice Thrown when cardinality per minute has not been set
+    error UniswapV3Adapter__CardinalityPerMinuteNotSet();
 
-    /// @notice Returns the period used for the TWAP calculation
-    /// @return The period used for the TWAP
-    function period() external view returns (uint32);
+    /// @notice Thrown when trying to add an existing fee tier
+    error UniswapV3Adapter__FeeTierExists(uint24 feeTier);
 
-    /// @notice Returns the cardinality per minute used for adding support to pairs
-    /// @return The cardinality per minute used for increase cardinality calculations
-    function cardinalityPerMinute() external view returns (uint256);
+    /// @notice Thrown if the oldest observation is less than the TWAP period
+    error UniswapV3Adapter__InsufficientObservationPeriod(
+        uint32 oldestObservation,
+        uint32 period
+    );
 
-    /// @notice Returns the target observation cardinality for pools
-    /// @return The target observation cardinality for pools
-    function targetCardinality() external view returns (uint16);
+    /// @notice Thrown when trying to add an invalid fee tier
+    error UniswapV3Adapter__InvalidFeeTier(uint24 feeTier);
 
-    /// @notice Returns the approximate gas cost per each increased cardinality
-    /// @return The gas cost per cardinality increase
-    function gasPerCardinality() external view returns (uint256);
+    /// @notice Thrown when the time ranges are not valid
+    error UniswapV3Adapter__InvalidTimeRange(uint256 start, uint256 end);
 
-    /// @notice Returns the approximate gas cost to add support for a new pool internally
-    /// @return The gas cost to support a new pool
-    function gasToSupportPool() external view returns (uint256);
+    /// @notice Thrown when current observation cardinality is below target cardinality
+    error UniswapV3Adapter__ObservationCardinalityTooLow(
+        uint16 currentCardinality,
+        uint16 targetCardinality
+    );
 
-    /// @notice Returns all supported fee tiers
-    /// @return The supported fee tiers
-    function supportedFeeTiers() external view returns (uint24[] memory);
+    /// @notice Thrown when period has not been set
+    error UniswapV3Adapter__PeriodNotSet();
+
+    /// @notice Emitted when a new period is set
+    /// @param period The new period
+    event UpdatedPeriod(uint256 period);
+
+    /// @notice Emitted when a new cardinality per minute is set
+    /// @param cardinalityPerMinute The new cardinality per minute
+    event UpdatedCardinalityPerMinute(uint256 cardinalityPerMinute);
+
+    /// @notice Emitted when support is updated (added or modified) for a new pair
+    /// @param tokenA One of the pair's tokens
+    /// @param tokenB The other of the pair's tokens
+    /// @param pools The pools that were prepared to support the pair
+    event UpdatedPoolsForPair(address tokenA, address tokenB, address[] pools);
 
     /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could happen that
     ///         pools are added for the pair at a later stage, and we can't be sure if those pools will be configured correctly.
@@ -47,6 +59,35 @@ interface IUniswapV3Adapter is IOracleAdapter {
         address tokenA,
         address tokenB
     ) external view returns (address[] memory);
+
+    /// @notice Returns the address of the Uniswap V3 factory
+    /// @dev This value is assigned during deployment and cannot be changed
+    /// @return The address of the Uniswap V3 factory
+    function getFactory() external view returns (IUniswapV3Factory);
+
+    /// @notice Returns the period used for the TWAP calculation
+    /// @return The period used for the TWAP
+    function getPeriod() external view returns (uint32);
+
+    /// @notice Returns the cardinality per minute used for adding support to pairs
+    /// @return The cardinality per minute used for increase cardinality calculations
+    function getCardinalityPerMinute() external view returns (uint256);
+
+    /// @notice Returns the target observation cardinality for pools
+    /// @return The target observation cardinality for pools
+    function getTargetCardinality() external view returns (uint16);
+
+    /// @notice Returns the approximate gas cost per each increased cardinality
+    /// @return The gas cost per cardinality increase
+    function getGasPerCardinality() external view returns (uint256);
+
+    /// @notice Returns the approximate gas cost to add support for a new pool internally
+    /// @return The gas cost to support a new pool
+    function getGasToSupportPool() external view returns (uint256);
+
+    /// @notice Returns all supported fee tiers
+    /// @return The supported fee tiers
+    function getSupportedFeeTiers() external view returns (uint24[] memory);
 
     /// @notice Sets the period to be used for the TWAP calculation
     /// @param newPeriod The new period
