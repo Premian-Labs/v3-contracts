@@ -51,7 +51,7 @@ library PoolStorage {
         bool isCallPool;
         // Index of all existing ticks sorted
         DoublyLinkedList.Bytes32List tickIndex;
-        mapping(UD60x18 => IPoolInternal.Tick) ticks;
+        mapping(UD60x18 normalizedPrice => IPoolInternal.Tick) ticks;
         UD60x18 marketPrice;
         UD60x18 globalFeeRate;
         UD60x18 protocolFees;
@@ -63,10 +63,9 @@ library PoolStorage {
         UD60x18 currentTick;
         // Settlement price of option
         UD60x18 settlementPrice;
-        // key -> positionData
-        mapping(bytes32 => Position.Data) positions;
-        // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
-        mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
+        mapping(bytes32 key => Position.Data) positions;
+        // Size of RFQ quotes already filled
+        mapping(address provider => mapping(bytes32 hash => UD60x18 amountFilled)) quoteRFQAmountFilled;
         // Set to true after maturity, to remove factory initialization discount
         bool initFeeDiscountRemoved;
     }
