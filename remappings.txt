@@ -1,4 +1,6 @@
 @chainlink=node_modules/@chainlink
 @prb/math/=lib/prb-math/src/
 @solidstate=node_modules/@solidstate
-@uniswap=node_modules/@uniswap
+@uniswap/v3-core/=lib/v3-core/
+@uniswap/v3-periphery/=lib/v3-periphery/
+@bokkypoobah/=lib/BokkyPooBahsDateTimeLibrary/contracts/

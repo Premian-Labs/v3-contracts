@@ -13,7 +13,7 @@ interface IPoolFactoryEvents {
         address indexed quote,
         address oracleAdapter,
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCallPool,
         address poolAddress
     );

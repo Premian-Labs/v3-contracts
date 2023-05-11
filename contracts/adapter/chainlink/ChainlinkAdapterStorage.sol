@@ -4,16 +4,14 @@ pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
-import {FOREX_DECIMALS, ETH_DECIMALS} from "../Tokens.sol";
-
-import {IChainlinkAdapterInternal} from "./IChainlinkAdapterInternal.sol";
+import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
 library ChainlinkAdapterStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.ChainlinkAdapter");
 
     struct Layout {
-        mapping(bytes32 => IChainlinkAdapterInternal.PricingPath) pricingPath;
+        mapping(bytes32 => IChainlinkAdapter.PricingPath) pricingPath;
     }
 
     function layout() internal pure returns (Layout storage l) {

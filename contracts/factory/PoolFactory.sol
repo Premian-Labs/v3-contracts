@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -15,7 +15,7 @@ import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO, ONE} from "../libraries/Constants.sol";
 
-contract PoolFactory is IPoolFactory, SafeOwnable {
+contract PoolFactory is IPoolFactory, OwnableInternal {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
@@ -249,7 +249,7 @@ contract PoolFactory is IPoolFactory, SafeOwnable {
     }
 
     /// @notice Ensure that the maturity is a valid option maturity, revert otherwise
-    function _ensureOptionMaturityIsValid(uint64 maturity) internal view {
+    function _ensureOptionMaturityIsValid(uint256 maturity) internal view {
         if (maturity <= block.timestamp)
             revert PoolFactory__OptionExpired(maturity);
 

@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
-
 library UniswapV3AdapterStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.UniswapV3Adapter");
