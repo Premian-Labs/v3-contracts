@@ -29,9 +29,17 @@ contract PoolDepositWithdraw is
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address settings,
         address vxPremia
     )
-        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+        PoolInternal(
+            factory,
+            router,
+            wrappedNativeToken,
+            feeReceiver,
+            settings,
+            vxPremia
+        )
     {}
 
     /// @inheritdoc IPoolDepositWithdraw

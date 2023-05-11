@@ -2,22 +2,25 @@
 
 pragma solidity >=0.8.19;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {IFeedRegistry} from "./IFeedRegistry.sol";
-import {FeedRegistryInternal} from "./FeedRegistryInternal.sol";
 import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
 /// @title Adapter feed registry implementation
-contract FeedRegistry is IFeedRegistry, FeedRegistryInternal, SafeOwnable {
+contract FeedRegistry is IFeedRegistry, OwnableInternal {
     using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
-    constructor(
-        address _wrappedNativeToken,
-        address _wrappedBTCToken
-    ) FeedRegistryInternal(_wrappedNativeToken, _wrappedBTCToken) {}
+    address internal immutable WRAPPED_NATIVE_TOKEN;
+    address internal immutable WRAPPED_BTC_TOKEN;
+
+    constructor(address _wrappedNativeToken, address _wrappedBTCToken) {
+        WRAPPED_NATIVE_TOKEN = _wrappedNativeToken;
+        WRAPPED_BTC_TOKEN = _wrappedBTCToken;
+    }
 
     /// @inheritdoc IFeedRegistry
     function batchRegisterFeedMappings(
@@ -51,5 +54,49 @@ contract FeedRegistry is IFeedRegistry, FeedRegistryInternal, SafeOwnable {
         );
 
         return _feed(mappedTokenA, mappedTokenB);
+    }
+
+    function _feed(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address) {
+        return
+            FeedRegistryStorage.layout().feeds[
+                tokenA.keyForUnsortedPair(tokenB)
+            ];
+    }
+
+    function _feedExists(
+        address tokenA,
+        address tokenB
+    ) internal view returns (bool) {
+        return _feed(tokenA, tokenB) != address(0);
+    }
+
+    /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
+    function _tokenToDenomination(
+        address token
+    ) internal view returns (address) {
+        return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
+    }
+
+    function _mapToDenominationAndSort(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address, address) {
+        (address mappedTokenA, address mappedTokenB) = _mapToDenomination(
+            tokenA,
+            tokenB
+        );
+
+        return mappedTokenA.sortTokens(mappedTokenB);
+    }
+
+    function _mapToDenomination(
+        address tokenA,
+        address tokenB
+    ) internal view returns (address mappedTokenA, address mappedTokenB) {
+        mappedTokenA = _tokenToDenomination(tokenA);
+        mappedTokenB = _tokenToDenomination(tokenB);
     }
 }

@@ -20,7 +20,6 @@ import {
   deployAndSell_CALL,
   deployAndSell_PUT,
   depositFnSig,
-  getSettlementPrice,
   protocolFeePercentage,
   runCallAndPutTests,
   strike,
@@ -914,321 +913,6 @@ describe('Pool', () => {
     });
   });
 
-  describe('#exercise', () => {
-    runCallAndPutTests((isCallPool) => {
-      it('should successfully exercise an ITM option', async () => {
-        const {
-          pool,
-          trader,
-          poolToken,
-          scaleDecimals,
-          oracleAdapter,
-          maturity,
-          feeReceiver,
-          totalPremium,
-          protocolFees,
-          collateral,
-        } = await loadFixture(
-          isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.exercise(trader.address);
-
-        let exerciseValue;
-
-        if (isCallPool) {
-          exerciseValue = settlementPrice
-            .sub(strike)
-            .mul(ONE_ETHER)
-            .div(settlementPrice);
-        } else {
-          exerciseValue = strike.sub(settlementPrice);
-        }
-
-        exerciseValue = scaleDecimals(exerciseValue);
-
-        expect(await poolToken.balanceOf(trader.address)).to.eq(exerciseValue);
-        expect(await poolToken.balanceOf(pool.address)).to.eq(
-          collateral.add(totalPremium).sub(exerciseValue).sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
-        expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
-          ONE_ETHER,
-        );
-      });
-
-      it('should not pay any token when exercising an OTM option', async () => {
-        const {
-          pool,
-          trader,
-          poolToken,
-          scaleDecimals,
-          oracleAdapter,
-          maturity,
-          feeReceiver,
-          totalPremium,
-          protocolFees,
-          collateral,
-        } = await loadFixture(
-          isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.exercise(trader.address);
-
-        const exerciseValue = BigNumber.from(0);
-
-        expect(await poolToken.balanceOf(trader.address)).to.eq(exerciseValue);
-        expect(await poolToken.balanceOf(pool.address)).to.eq(
-          collateral.add(totalPremium).sub(exerciseValue).sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(0);
-        expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(
-          ONE_ETHER,
-        );
-      });
-
-      it('should revert if options is not expired', async () => {
-        const { pool, trader } = await loadFixture(
-          isCallPool ? deploy_CALL : deploy_PUT,
-        );
-
-        await expect(
-          pool.exercise(trader.address),
-        ).to.be.revertedWithCustomError(pool, 'Pool__OptionNotExpired');
-      });
-    });
-  });
-
-  describe('#settle', () => {
-    runCallAndPutTests((isCallPool) => {
-      it('should successfully settle an ITM option', async () => {
-        const {
-          pool,
-          trader,
-          poolToken,
-          scaleDecimals,
-          oracleAdapter,
-          maturity,
-          feeReceiver,
-          totalPremium,
-          takerFee,
-          protocolFees,
-          collateral,
-        } = await loadFixture(
-          isCallPool ? deployAndSell_CALL : deployAndSell_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.settle(trader.address);
-
-        let exerciseValue;
-
-        if (isCallPool) {
-          exerciseValue = settlementPrice
-            .sub(strike)
-            .mul(ONE_ETHER)
-            .div(settlementPrice);
-        } else {
-          exerciseValue = strike.sub(settlementPrice);
-        }
-
-        exerciseValue = scaleDecimals(exerciseValue);
-
-        expect(await poolToken.balanceOf(trader.address)).to.eq(
-          collateral.add(totalPremium).sub(exerciseValue),
-        );
-        expect(await poolToken.balanceOf(pool.address)).to.eq(
-          exerciseValue.add(takerFee).sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-        expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
-        expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
-          ONE_ETHER,
-        );
-      });
-
-      it('should successfully settle an OTM option', async () => {
-        const {
-          pool,
-          trader,
-          poolToken,
-          oracleAdapter,
-          maturity,
-          feeReceiver,
-          totalPremium,
-          takerFee,
-          protocolFees,
-          collateral,
-        } = await loadFixture(
-          isCallPool ? deployAndSell_CALL : deployAndSell_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.settle(trader.address);
-
-        const exerciseValue = BigNumber.from(0);
-        expect(await poolToken.balanceOf(trader.address)).to.eq(
-          collateral.add(totalPremium).sub(exerciseValue),
-        );
-        expect(await poolToken.balanceOf(pool.address)).to.eq(
-          exerciseValue.add(takerFee).sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-        expect(await pool.balanceOf(trader.address, TokenType.SHORT)).to.eq(0);
-        expect(await pool.balanceOf(pool.address, TokenType.LONG)).to.eq(
-          ONE_ETHER,
-        );
-      });
-
-      it('should revert if not expired', async () => {
-        const { pool, trader } = await loadFixture(
-          isCallPool ? deploy_CALL : deploy_PUT,
-        );
-
-        await expect(pool.settle(trader.address)).to.be.revertedWithCustomError(
-          pool,
-          'Pool__OptionNotExpired',
-        );
-      });
-    });
-  });
-
-  describe('#settlePosition', () => {
-    runCallAndPutTests((isCallPool) => {
-      it('should successfully settle an ITM option position', async () => {
-        const {
-          poolToken,
-          scaleDecimals,
-          pool,
-          feeReceiver,
-          initialCollateral,
-          maturity,
-          oracleAdapter,
-          pKey,
-          trader,
-          totalPremium,
-          protocolFees,
-        } = await loadFixture(
-          isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, true);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.settlePosition(pKey);
-
-        let exerciseValue;
-
-        if (isCallPool) {
-          exerciseValue = settlementPrice
-            .sub(strike)
-            .mul(ONE_ETHER)
-            .div(settlementPrice);
-        } else {
-          exerciseValue = strike.sub(settlementPrice);
-        }
-
-        exerciseValue = scaleDecimals(exerciseValue);
-
-        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
-        expect(await poolToken.balanceOf(pool.address)).to.eq(exerciseValue);
-        expect(await poolToken.balanceOf(pKey.operator)).to.eq(
-          initialCollateral
-            .add(totalPremium)
-            .sub(exerciseValue)
-            .sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-
-        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-          ONE_ETHER,
-        );
-        expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(0);
-      });
-
-      it('should successfully settle an OTM option position', async () => {
-        const {
-          poolToken,
-          scaleDecimals,
-          pool,
-          feeReceiver,
-          maturity,
-          oracleAdapter,
-          pKey,
-          trader,
-          initialCollateral,
-          totalPremium,
-          protocolFees,
-        } = await loadFixture(
-          isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT,
-        );
-
-        const settlementPrice = getSettlementPrice(isCallPool, false);
-        await oracleAdapter.setQuoteFrom(settlementPrice);
-
-        await increaseTo(maturity);
-        await pool.settlePosition(pKey);
-
-        const exerciseValue = BigNumber.from(0);
-
-        expect(await poolToken.balanceOf(trader.address)).to.eq(0);
-        expect(await poolToken.balanceOf(pool.address)).to.eq(exerciseValue);
-        expect(await poolToken.balanceOf(pKey.operator)).to.eq(
-          initialCollateral
-            .add(totalPremium)
-            .sub(exerciseValue)
-            .sub(protocolFees),
-        );
-        expect(await poolToken.balanceOf(feeReceiver.address)).to.eq(
-          protocolFees,
-        );
-
-        expect(await pool.balanceOf(trader.address, TokenType.LONG)).to.eq(
-          ONE_ETHER,
-        );
-        expect(await pool.balanceOf(pool.address, TokenType.SHORT)).to.eq(0);
-      });
-
-      it('should revert if not expired', async () => {
-        const { pool, pKey } = await loadFixture(
-          isCallPool ? deploy_CALL : deploy_PUT,
-        );
-
-        await expect(pool.settlePosition(pKey)).to.be.revertedWithCustomError(
-          pool,
-          'Pool__OptionNotExpired',
-        );
-      });
-    });
-  });
-
   describe('#fillQuoteRFQ', () => {
     runCallAndPutTests((isCallPool) => {
       it('should successfully fill a valid RFQ quote with approval', async () => {
@@ -1564,6 +1248,110 @@ describe('Pool', () => {
 
   describe('#transferPosition', () => {
     runCallAndPutTests((isCallPool) => {
+      it('should update claimable fees when partially transferring position to new owner with same operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = (
+          await pool.balanceOf(pKey.operator, tokenId)
+        ).div(2);
+
+        await pool
+          .connect(lp)
+          .transferPosition(pKey, lp.address, trader.address, transferAmount);
+
+        const pKey2 = {
+          owner: lp.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(protocolFees.div(2));
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees.div(2));
+      });
+
+      it('should update claimable fees when partially transferring position to new owner with new operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = (
+          await pool.balanceOf(pKey.operator, tokenId)
+        ).div(2);
+
+        await pool
+          .connect(lp)
+          .transferPosition(
+            pKey,
+            trader.address,
+            trader.address,
+            transferAmount,
+          );
+
+        const pKey2 = {
+          owner: trader.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(protocolFees.div(2));
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees.div(2));
+      });
+
+      it('should update claimable fees when fully transferring position to new owner with same operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = await pool.balanceOf(pKey.operator, tokenId);
+
+        await pool
+          .connect(lp)
+          .transferPosition(pKey, lp.address, trader.address, transferAmount);
+
+        const pKey2 = {
+          owner: lp.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(0);
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees);
+      });
+
+      it('should update claimable fees when fully transferring position to new owner with new operator', async () => {
+        const { pool, lp, pKey, tokenId, trader, protocolFees } =
+          await loadFixture(isCallPool ? deployAndBuy_CALL : deployAndBuy_PUT);
+
+        const transferAmount = await pool.balanceOf(pKey.operator, tokenId);
+
+        console.log(protocolFees);
+
+        await pool
+          .connect(lp)
+          .transferPosition(
+            pKey,
+            trader.address,
+            trader.address,
+            transferAmount,
+          );
+
+        const pKey2 = {
+          owner: trader.address,
+          operator: trader.address,
+          lower: pKey.lower,
+          upper: pKey.upper,
+          orderType: pKey.orderType,
+        };
+
+        expect(await pool.getClaimableFees(pKey)).to.eq(0);
+        expect(await pool.getClaimableFees(pKey2)).to.eq(protocolFees);
+      });
+
       it('should successfully partially transfer position to new owner with same operator', async () => {
         const { pool, depositSize, lp, pKey, tokenId, trader } =
           await loadFixture(

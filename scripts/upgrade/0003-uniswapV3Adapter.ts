@@ -1,7 +1,7 @@
 import {
-  ChainlinkAdapter__factory,
-  ProxyUpgradeableOwnable,
-  ProxyUpgradeableOwnable__factory,
+  ChainlinkAdapterProxy,
+  UniswapV3Adapter__factory,
+  UniswapV3AdapterProxy__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -9,6 +9,7 @@ import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json'
 import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
+import { UNISWAP_V3_FACTORY } from '../../utils/addresses';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -19,8 +20,7 @@ async function main() {
   let addresses: ContractAddresses;
   let addressesPath: string;
   let weth: string;
-  let wbtc: string;
-  let proxy: ProxyUpgradeableOwnable;
+  let proxy: ChainlinkAdapterProxy;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
@@ -42,26 +42,28 @@ async function main() {
   }
 
   weth = addresses.tokens.WETH;
-  wbtc = addresses.tokens.WBTC;
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.ChainlinkAdapterProxy,
+  proxy = UniswapV3AdapterProxy__factory.connect(
+    addresses.UniswapV3AdapterProxy,
     deployer,
   );
 
   //////////////////////////
 
-  const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
+  const gasPerCardinality = 22250;
+  const gasPerPool = 30000;
+
+  const uniswapV3AdapterImpl = await new UniswapV3Adapter__factory(
     deployer,
-  ).deploy(weth, wbtc);
-  await chainlinkAdapterImpl.deployed();
-  console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
+  ).deploy(UNISWAP_V3_FACTORY, weth, gasPerCardinality, gasPerPool);
+  await uniswapV3AdapterImpl.deployed();
+  console.log(`UniswapV3Adapter impl : ${uniswapV3AdapterImpl.address}`);
 
   // Save new addresses
-  addresses.ChainlinkAdapterImplementation = chainlinkAdapterImpl.address;
+  addresses.UniswapV3AdapterImplementation = uniswapV3AdapterImpl.address;
   fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
 
   if (setImplementation) {
-    await proxy.setImplementation(chainlinkAdapterImpl.address);
+    await proxy.setImplementation(uniswapV3AdapterImpl.address);
   }
 }
 

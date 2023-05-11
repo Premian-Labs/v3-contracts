@@ -10,16 +10,23 @@
 
   "ChainlinkAdapterImplementation": "",
   "ChainlinkAdapterProxy": "",
+  "UniswapV3AdapterImplementation": "",
+  "UniswapV3AdapterProxy": "",
+  "UniswapV3ChainlinkAdapterImplementation": "",
+  "UniswapV3ChainlinkAdapterProxy": "",
   "InitFeeCalculatorImplementation": "",
   "InitFeeCalculatorProxy": "",
   "PremiaDiamond": "",
   "PoolFactoryImplementation": "",
   "PoolFactoryProxy": "",
+  "UserSettingsImplementation": "",
+  "UserSettingsProxy": "",
   "ExchangeHelper": "",
   "VxPremiaImplementation": "0xB3057694B2BC29F77A40955bD74B7485BFD2Cbf4",
   "VxPremiaProxy": "0x3992690E5405b69d50812470B0250c878bFA9322",
   "ERC20Router": "",
   "PoolBase": "",
   "PoolCore": "",
-  "PoolTrade": ""
+  "PoolTrade": "",
+  "OrderbookStream": ""
 }

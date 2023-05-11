@@ -1,7 +1,7 @@
 import {
-  ChainlinkAdapter__factory,
-  ProxyUpgradeableOwnable,
-  ProxyUpgradeableOwnable__factory,
+  ChainlinkAdapterProxy,
+  UniswapV3ChainlinkAdapter__factory,
+  UniswapV3ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -19,8 +19,7 @@ async function main() {
   let addresses: ContractAddresses;
   let addressesPath: string;
   let weth: string;
-  let wbtc: string;
-  let proxy: ProxyUpgradeableOwnable;
+  let proxy: ChainlinkAdapterProxy;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
@@ -42,26 +41,31 @@ async function main() {
   }
 
   weth = addresses.tokens.WETH;
-  wbtc = addresses.tokens.WBTC;
-  proxy = ProxyUpgradeableOwnable__factory.connect(
+  proxy = UniswapV3ChainlinkAdapterProxy__factory.connect(
     addresses.ChainlinkAdapterProxy,
     deployer,
   );
 
   //////////////////////////
 
-  const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
-    deployer,
-  ).deploy(weth, wbtc);
-  await chainlinkAdapterImpl.deployed();
-  console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
+  const uniswapV3ChainlinkAdapterImpl =
+    await new UniswapV3ChainlinkAdapter__factory(deployer).deploy(
+      addresses.ChainlinkAdapterProxy,
+      addresses.UniswapV3AdapterProxy,
+      weth,
+    );
+  await uniswapV3ChainlinkAdapterImpl.deployed();
+  console.log(
+    `uniswapV3ChainlinkAdapter impl : ${uniswapV3ChainlinkAdapterImpl.address}`,
+  );
 
   // Save new addresses
-  addresses.ChainlinkAdapterImplementation = chainlinkAdapterImpl.address;
+  addresses.UniswapV3ChainlinkAdapterImplementation =
+    uniswapV3ChainlinkAdapterImpl.address;
   fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
 
   if (setImplementation) {
-    await proxy.setImplementation(chainlinkAdapterImpl.address);
+    await proxy.setImplementation(uniswapV3ChainlinkAdapterImpl.address);
   }
 }
 

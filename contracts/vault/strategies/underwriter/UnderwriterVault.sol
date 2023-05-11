@@ -649,7 +649,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             quote: l.quote,
             oracleAdapter: l.oracleAdapter,
             strike: strike,
-            maturity: uint64(maturity),
+            maturity: maturity,
             isCallPool: l.isCall
         });
 
@@ -982,7 +982,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             l.totalLockedAssets = l.totalLockedAssets - unlockedCollateral;
             address pool = _getPoolAddress(l, strike, maturity);
             UD60x18 collateralValue = l.convertAssetToUD60x18(
-                IPool(pool).settle(address(this))
+                IPool(pool).settle()
             );
             l.totalAssets =
                 l.totalAssets -

@@ -2,12 +2,12 @@
 
 pragma solidity >=0.8.19;
 
+import {IERC3156FlashLender} from "@solidstate/contracts/interfaces/IERC3156FlashLender.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
-import {IPoolInternal} from "./IPoolInternal.sol";
-
 import {Position} from "../libraries/Position.sol";
+
+import {IPoolInternal} from "./IPoolInternal.sol";
 
 interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @notice Gives a quote for an AMM trade
