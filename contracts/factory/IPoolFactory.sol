@@ -34,7 +34,7 @@ interface IPoolFactory is IPoolFactoryEvents {
         // The strike of the option (18 decimals)
         UD60x18 strike;
         // The maturity timestamp of the option
-        uint64 maturity;
+        uint256 maturity;
         // Whether the pool is for call or put options
         bool isCallPool;
     }

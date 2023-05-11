@@ -1,11 +1,10 @@
 import {
   ChainlinkAdapter__factory,
-  ChainlinkAdapterProxy__factory,
+  ProxyUpgradeableOwnable__factory,
   UniswapV3Adapter__factory,
   UniswapV3AdapterProxy__factory,
   UniswapV3ChainlinkAdapter,
   UniswapV3ChainlinkAdapter__factory,
-  UniswapV3ChainlinkAdapterProxy__factory,
 } from '../../typechain';
 import {
   UNISWAP_V3_FACTORY,
@@ -64,7 +63,7 @@ describe('UniswapV3ChainlinkAdapter', () => {
 
     await chainlinkImplementation.deployed();
 
-    const chainlinkProxy = await new ChainlinkAdapterProxy__factory(
+    const chainlinkProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(chainlinkImplementation.address);
 
@@ -103,9 +102,9 @@ describe('UniswapV3ChainlinkAdapter', () => {
 
     await implementation.deployed();
 
-    const proxy = await new UniswapV3ChainlinkAdapterProxy__factory(
-      deployer,
-    ).deploy(implementation.address);
+    const proxy = await new ProxyUpgradeableOwnable__factory(deployer).deploy(
+      implementation.address,
+    );
 
     await proxy.deployed();
 

@@ -4,11 +4,10 @@ pragma solidity >=0.8.19;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
@@ -23,7 +22,6 @@ import {IERC20Router} from "../router/IERC20Router.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 
 library PoolStorage {
-    using SafeCast for uint64;
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
@@ -48,7 +46,7 @@ library PoolStorage {
         // token metadata
         uint8 baseDecimals;
         uint8 quoteDecimals;
-        uint64 maturity;
+        uint256 maturity;
         // Whether its a call or put pool
         bool isCallPool;
         // Index of all existing ticks sorted
@@ -69,8 +67,8 @@ library PoolStorage {
         mapping(bytes32 => Position.Data) positions;
         // Size of RFQ quotes already filled (provider -> quoteRFQHash -> amountFilled)
         mapping(address => mapping(bytes32 => UD60x18)) quoteRFQAmountFilled;
-        // Set to true after maturity, to handle factory initialization discount
-        bool hasRemoved;
+        // Set to true after maturity, to remove factory initialization discount
+        bool initFeeDiscountRemoved;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -126,7 +124,7 @@ library PoolStorage {
         uint256 value
     ) internal view returns (UD60x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return UD60x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
+        return ud(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
@@ -135,7 +133,7 @@ library PoolStorage {
         int256 value
     ) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
-        return SD59x18.wrap(OptionMath.scaleDecimals(value, decimals, 18));
+        return sd(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
@@ -148,7 +146,7 @@ library PoolStorage {
             l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(
                 l.base,
                 l.quote,
-                l.maturity.toUint32()
+                l.maturity
             );
         }
 

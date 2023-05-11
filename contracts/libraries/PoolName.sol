@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.8.19;
 
+import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
-import {DateTime} from "../vendor/DateTime.sol";
 import {WAD} from "./Constants.sol";
 
 library PoolName {

@@ -16,6 +16,7 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 minimum,
         uint256 maximum
     );
+    error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
     error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
@@ -27,6 +28,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
+    error Pool__InvalidTickPrice();
     error Pool__InvalidTransfer();
     error Pool__NotAuthorized(address sender);
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
@@ -44,6 +46,11 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size,
         UD60x18 quoteRFQSize
     );
+    error Pool__UnauthorizedAgent();
+    error Pool__UnauthorizedCost(
+        UD60x18 costInWrappedNative,
+        UD60x18 authorizedCost
+    );
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
@@ -57,6 +64,12 @@ interface IPoolInternal is IPosition, IPricing {
         SD59x18 longDelta;
         SD59x18 shortDelta;
         uint256 counter;
+    }
+
+    struct TickWithLiquidity {
+        Tick tick;
+        UD60x18 price;
+        UD60x18 liquidityNet;
     }
 
     struct QuoteRFQ {
@@ -166,5 +179,13 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 maxSize;
         UD60x18 totalPremium;
         UD60x18 totalTakerFee;
+    }
+
+    struct SettlePositionVarsInternal {
+        uint256 tokenId;
+        UD60x18 size;
+        UD60x18 claimableFees;
+        UD60x18 payoff;
+        UD60x18 collateral;
     }
 }

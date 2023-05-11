@@ -87,7 +87,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     function getQuote(
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         UD60x18 size,
         bool isBuy
@@ -95,7 +95,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     function trade(
         UD60x18 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         UD60x18 size,
         bool isBuy,
