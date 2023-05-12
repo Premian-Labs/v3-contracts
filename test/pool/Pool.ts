@@ -262,7 +262,7 @@ describe('Pool', () => {
             pool
               .connect(deployer)
               [fnSig](pKey, 0, 0, THREE_ETHER, 0, parseEther('1')),
-          ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
+          ).to.be.revertedWithCustomError(pool, 'Pool__OperatorNotAuthorized');
         });
 
         it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
@@ -510,7 +510,7 @@ describe('Pool', () => {
           pool
             .connect(deployer)
             .withdraw(pKey, THREE_ETHER, 0, parseEther('1')),
-        ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
+        ).to.be.revertedWithCustomError(pool, 'Pool__OperatorNotAuthorized');
       });
 
       it('should revert if marketPrice is below minMarketPrice or above maxMarketPrice', async () => {
@@ -726,7 +726,7 @@ describe('Pool', () => {
           pool
             .connect(deployer)
             .writeFrom(lp.address, trader.address, parseEther('500')),
-        ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
+        ).to.be.revertedWithCustomError(pool, 'Pool__OperatorNotAuthorized');
       });
 
       it('should revert if size is zero', async () => {
@@ -1486,7 +1486,7 @@ describe('Pool', () => {
           pool
             .connect(trader)
             .transferPosition(pKey, lp.address, pKey.operator, transferAmount),
-        ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
+        ).to.be.revertedWithCustomError(pool, 'Pool__OperatorNotAuthorized');
       });
 
       it('should revert if transferring to same owner and operator', async () => {

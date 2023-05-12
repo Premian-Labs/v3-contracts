@@ -107,6 +107,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
             k.base,
             k.quote
         );
+
         _revertIfOptionMaturityInvalid(k.maturity);
 
         bytes32 poolKey = k.poolKey();

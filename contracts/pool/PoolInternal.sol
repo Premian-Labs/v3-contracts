@@ -677,7 +677,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 msg.sender
             ] ==
             false
-        ) revert Pool__NotAuthorized(msg.sender);
+        ) revert Pool__OperatorNotAuthorized(msg.sender);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -2250,19 +2250,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (true, InvalidQuoteRFQError.None);
     }
 
-    function _revertIfNotAuthorized(address operator) internal view {
-        if (operator != msg.sender) revert Pool__NotAuthorized(msg.sender);
+    function _revertIfOperatorNotAuthorized(address operator) internal view {
+        if (operator != msg.sender)
+            revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    function _revertIfUnauthorizedAgent(
+    function _revertIfAgentNotAuthorized(
         address holder,
         address agent
     ) internal view {
         if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent))
-            revert Pool__UnauthorizedAgent();
+            revert Pool__AgentNotAuthorized();
     }
 
-    function _revertIfUnauthorizedCost(
+    function _revertIfCostNotAuthorized(
         address holder,
         UD60x18 cost
     ) internal view {
@@ -2284,7 +2285,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         if (costInWrappedNative > authorizedCost)
-            revert Pool__UnauthorizedCost(costInWrappedNative, authorizedCost);
+            revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
     }
 
     function _revertIfCostExceedsPayout(

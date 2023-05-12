@@ -215,8 +215,8 @@ abstract contract PoolExerciseTest is DeployTest {
         pool.exerciseFor(holders, cost);
     }
 
-    function test_exerciseFor_RevertIf_UnauthorizedAgent() public {
-        vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
+    function test_exerciseFor_RevertIf_AgentNotAuthorized() public {
+        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
         vm.prank(users.agent);
 
         address[] memory holders = new address[](1);
@@ -225,7 +225,7 @@ abstract contract PoolExerciseTest is DeployTest {
         pool.exerciseFor(holders, 0);
     }
 
-    function test_exerciseFor_RevertIf_UnauthorizedTxCostAndFee() public {
+    function test_exerciseFor_RevertIf_CostNotAuthorized() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -243,7 +243,7 @@ abstract contract PoolExerciseTest is DeployTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__UnauthorizedCost.selector,
+                IPoolInternal.Pool__CostNotAuthorized.selector,
                 (_cost * quote).unwrap(),
                 0
             )

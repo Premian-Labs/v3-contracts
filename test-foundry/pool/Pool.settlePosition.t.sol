@@ -114,10 +114,10 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
     }
 
-    function test_settlePosition_RevertIf_NotOperator() public {
+    function test_settlePosition_RevertIf_OperatorNotAuthorized() public {
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__NotAuthorized.selector,
+                IPoolInternal.Pool__OperatorNotAuthorized.selector,
                 users.trader
             )
         );
@@ -290,15 +290,15 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePositionFor(p, cost);
     }
 
-    function test_settlePositionFor_RevertIf_UnauthorizedAgent() public {
-        vm.expectRevert(IPoolInternal.Pool__UnauthorizedAgent.selector);
+    function test_settlePositionFor_RevertIf_AgentNotAuthorized() public {
+        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
         vm.prank(users.agent);
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
         pool.settlePositionFor(p, 0);
     }
 
-    function test_settlePositionFor_RevertIf_UnauthorizedTxCostAndFee() public {
+    function test_settlePositionFor_RevertIf_CostNotAuthorized() public {
         bool isCall = poolKey.isCallPool;
 
         UD60x18 settlementPrice = getSettlementPrice(isCall, false);
@@ -316,7 +316,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__UnauthorizedCost.selector,
+                IPoolInternal.Pool__CostNotAuthorized.selector,
                 (_cost * quote).unwrap(),
                 0
             )
