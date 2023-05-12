@@ -4,17 +4,17 @@ pragma solidity >=0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IERC3156FlashBorrower} from "@solidstate/contracts/interfaces/IERC3156FlashBorrower.sol";
+import {IERC3156FlashLender} from "@solidstate/contracts/interfaces/IERC3156FlashLender.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+
+import {iZERO, ZERO} from "../libraries/Constants.sol";
+import {Position} from "../libraries/Position.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
-
-import {IERC3156FlashBorrower} from "../interfaces/IERC3156FlashBorrower.sol";
-import {IERC3156FlashLender} from "../interfaces/IERC3156FlashLender.sol";
-import {iZERO, ZERO} from "../libraries/Constants.sol";
-import {Position} from "../libraries/Position.sol";
 
 contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -32,9 +32,17 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address settings,
         address vxPremia
     )
-        PoolInternal(factory, router, wrappedNativeToken, feeReceiver, vxPremia)
+        PoolInternal(
+            factory,
+            router,
+            wrappedNativeToken,
+            feeReceiver,
+            settings,
+            vxPremia
+        )
     {}
 
     /// @inheritdoc IPoolTrade

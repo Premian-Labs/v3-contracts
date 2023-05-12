@@ -41,7 +41,7 @@ interface IPoolCore is IPoolInternal {
             address quote,
             address oracleAdapter,
             UD60x18 strike,
-            uint64 maturity,
+            uint256 maturity,
             bool isCallPool
         );
 
@@ -106,20 +106,48 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
-    /// @notice Exercises all long options held by an `owner`, ignoring automatic settlement fees.
-    /// @param holder The holder of the contracts
+    /// @notice Exercises all long options held by caller
     /// @return The exercise value as amount of collateral paid out (poolToken decimals)
-    function exercise(address holder) external returns (uint256);
+    function exercise() external returns (uint256);
 
-    /// @notice Settles all short options held by an `owner`, ignoring automatic settlement fees.
-    /// @param holder The holder of the contracts
+    /// @notice Batch exercises all long options held by each `holder`, caller is reimbursed with the cost deducted from the proceeds of the
+    ///         exercised options. Only authorized agents may execute this function on behalf of the option holder.
+    /// @param holders The holders of the contracts
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
+    /// @return The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic exercise (poolToken decimals)
+    function exerciseFor(
+        address[] calldata holders,
+        uint256 costPerHolder
+    ) external returns (uint256[] memory);
+
+    /// @notice Settles all short options held by caller
     /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settle(address holder) external returns (uint256);
+    function settle() external returns (uint256);
+
+    /// @notice Batch settles all short options held by each `holder`, caller is reimbursed with the cost deducted from the proceeds of the
+    ///         settled options. Only authorized agents may execute this function on behalf of the option holder.
+    /// @param holders The holders of the contracts
+    /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
+    /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic settlement (poolToken decimals)
+    function settleFor(
+        address[] calldata holders,
+        uint256 costPerHolder
+    ) external returns (uint256[] memory);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @return The amount of collateral left after settlement (poolToken decimals)
     function settlePosition(Position.Key calldata p) external returns (uint256);
+
+    /// @notice Batch reconciles each `position` to account for settlement payouts post-expiration. Caller is reimbursed with the cost deducted
+    ///         from the proceeds of the settled position. Only authorized agents may execute this function on behalf of the option holder.
+    /// @param p The position keys
+    /// @param costPerHolder The cost charged by the authorized agent, per position holder (poolToken decimals)
+    /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic settlement (poolToken decimals)
+    function settlePositionFor(
+        Position.Key[] calldata p,
+        uint256 costPerHolder
+    ) external returns (uint256[] memory);
 
     /// @notice Transfer a LP position to a new owner/operator
     /// @param srcP The position key

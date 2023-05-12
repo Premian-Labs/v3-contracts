@@ -14,6 +14,7 @@ import {
   ERC20Router,
   InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
+  UserSettings__factory,
   ERC20Mock__factory,
   IVxPremia__factory,
   VxPremia__factory,
@@ -53,6 +54,7 @@ export class PoolUtil {
     deployer: SignerWithAddress,
     poolFactory: string,
     router: string,
+    userSettings: string,
     vxPremia: string,
     wrappedNativeToken: string,
     feeReceiver: string,
@@ -82,6 +84,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
       vxPremia,
     );
     await poolCoreImpl.deployed();
@@ -104,6 +107,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
       vxPremia,
     );
     await poolDepositWithdrawImpl.deployed();
@@ -126,6 +130,7 @@ export class PoolUtil {
       router,
       wrappedNativeToken,
       feeReceiver,
+      userSettings,
       vxPremia,
     );
     await poolTradeImpl.deployed();
@@ -149,6 +154,7 @@ export class PoolUtil {
         router,
         wrappedNativeToken,
         feeReceiver,
+        userSettings,
         vxPremia,
       );
       await poolCoreMockImpl.deployed();
@@ -246,6 +252,19 @@ export class PoolUtil {
 
     if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
 
+    // UserSettings
+    const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
+    await userSettingsImpl.deployed();
+
+    if (log) console.log(`UserSettings : ${userSettingsImpl.address}`);
+
+    const userSettingsProxy = await new ProxyUpgradeableOwnable__factory(
+      deployer,
+    ).deploy(userSettingsImpl.address);
+
+    await userSettingsProxy.deployed();
+
+    if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
     // VxPremia
     if (!vxPremiaAddress) {
       const premia = await new ERC20Mock__factory(deployer).deploy(
@@ -282,6 +301,7 @@ export class PoolUtil {
       deployer,
       poolFactory.address,
       router.address,
+      userSettingsProxy.address,
       vxPremiaAddress,
       wrappedNativeToken,
       feeReceiver,

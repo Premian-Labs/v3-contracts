@@ -7,7 +7,7 @@ interface IVault {
 
     function getTradeQuote(
         uint256 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         uint256 size,
         bool isBuy
@@ -15,7 +15,7 @@ interface IVault {
 
     function trade(
         uint256 strike,
-        uint64 maturity,
+        uint256 maturity,
         bool isCall,
         uint256 size,
         bool isBuy
