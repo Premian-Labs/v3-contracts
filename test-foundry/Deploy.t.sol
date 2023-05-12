@@ -34,12 +34,16 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 
 import {ERC20Router} from "contracts/router/ERC20Router.sol";
 
+import {ReferralProxy} from "contracts/referral/ReferralProxy.sol";
+
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
 import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
 import {FlashLoanMock} from "contracts/test/pool/FlashLoanMock.sol";
+import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
+import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 
@@ -61,6 +65,7 @@ contract DeployTest is Test, Assertions {
     Premia diamond;
     ERC20Router router;
     ExchangeHelper exchangeHelper;
+    IReferralMock referral;
     IUserSettings userSettings;
     IVxPremia vxPremia;
 
@@ -79,6 +84,7 @@ contract DeployTest is Test, Assertions {
         address otherLP;
         address trader;
         address otherTrader;
+        address referrer;
         address agent;
     }
 
@@ -106,7 +112,8 @@ contract DeployTest is Test, Assertions {
             otherLP: vm.addr(2),
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
-            agent: vm.addr(5)
+            referrer: vm.addr(5),
+            agent: vm.addr(6)
         });
 
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
@@ -168,6 +175,10 @@ contract DeployTest is Test, Assertions {
 
         router = new ERC20Router(address(factory));
 
+        ReferralMock referralImpl = new ReferralMock(address(factory));
+        ReferralProxy referralProxy = new ReferralProxy(address(referralImpl));
+        referral = IReferralMock(address(referralProxy));
+
         UserSettings userSettingsImpl = new UserSettings();
 
         ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(
@@ -175,6 +186,7 @@ contract DeployTest is Test, Assertions {
         );
 
         userSettings = IUserSettings(address(userSettingsProxy));
+
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
@@ -194,6 +206,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(userSettings),
             address(vxPremia)
         );
@@ -203,6 +216,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(userSettings),
             address(vxPremia)
         );
@@ -212,6 +226,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(userSettings),
             address(vxPremia)
         );
@@ -221,6 +236,7 @@ contract DeployTest is Test, Assertions {
             address(router),
             address(base),
             feeReceiver,
+            address(referral),
             address(userSettings),
             address(vxPremia)
         );

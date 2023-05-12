@@ -35,6 +35,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -43,6 +44,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )

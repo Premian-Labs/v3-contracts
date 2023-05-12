@@ -9,8 +9,8 @@ library UserSettingsStorage {
         keccak256("premia.contracts.storage.UserSettings");
 
     struct Layout {
-        mapping(address => EnumerableSet.AddressSet) authorizedAgents;
-        mapping(address => uint256) authorizedCost;
+        mapping(address user => EnumerableSet.AddressSet agents) authorizedAgents;
+        mapping(address user => uint256 cost) authorizedCost;
     }
 
     function layout() internal pure returns (Layout storage l) {

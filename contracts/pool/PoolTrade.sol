@@ -32,6 +32,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -40,6 +41,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )
@@ -58,7 +60,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature
+        Signature calldata signature,
+        address referrer
     )
         external
         nonReentrant
@@ -66,7 +69,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     {
         return
             _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(msg.sender, size, signature, true),
+                FillQuoteRFQArgsInternal(
+                    msg.sender,
+                    referrer,
+                    size,
+                    signature,
+                    true
+                ),
                 quoteRFQ
             );
     }
@@ -75,7 +84,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     )
         external
         nonReentrant
@@ -83,7 +93,14 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     {
         return
             _trade(
-                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true)
+                TradeArgsInternal(
+                    msg.sender,
+                    referrer,
+                    size,
+                    isBuy,
+                    premiumLimit,
+                    true
+                )
             );
     }
 
@@ -109,7 +126,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(msg.sender, size, sig, true),
+                FillQuoteRFQArgsInternal(
+                    msg.sender,
+                    address(0),
+                    size,
+                    sig,
+                    true
+                ),
                 quoteRFQ,
                 quoteRFQHash
             );

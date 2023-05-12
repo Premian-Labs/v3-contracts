@@ -19,6 +19,8 @@ async function main() {
   let premiaDiamond: string;
   let poolFactory: string;
   let router: string;
+  let referral: string;
+  let userSettings: string;
   let vxPremia: string;
   let weth: string;
   let feeReceiver: string;
@@ -46,6 +48,8 @@ async function main() {
   premiaDiamond = addresses.PremiaDiamond;
   poolFactory = addresses.PoolFactoryProxy;
   router = addresses.ERC20Router;
+  referral = addresses.Referral;
+  userSettings = addresses.UserSettingsProxy;
   vxPremia = addresses.VxPremiaProxy;
   weth = addresses.tokens.WETH;
 
@@ -58,9 +62,11 @@ async function main() {
     deployer,
     poolFactory,
     router,
+    userSettings,
     vxPremia,
     weth,
     feeReceiver,
+    referral,
     log,
     isDevMode,
   );

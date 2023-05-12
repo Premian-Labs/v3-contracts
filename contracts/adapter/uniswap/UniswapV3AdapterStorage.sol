@@ -11,7 +11,7 @@ library UniswapV3AdapterStorage {
         uint32 period;
         uint256 cardinalityPerMinute;
         uint24[] feeTiers;
-        mapping(bytes32 => address[]) poolsForPair;
+        mapping(bytes32 key => address[] pools) poolsForPair;
     }
 
     function layout() internal pure returns (Layout storage l) {
