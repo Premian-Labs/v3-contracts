@@ -164,14 +164,14 @@ library OptionMath {
     /// @notice Returns true if the maturity day is Friday
     /// @param maturity The maturity timestamp of the option
     /// @return True if the maturity day is Friday, false otherwise
-    function isFriday(uint64 maturity) internal pure returns (bool) {
+    function isFriday(uint256 maturity) internal pure returns (bool) {
         return DateTime.getDayOfWeek(maturity) == DateTime.DOW_FRI;
     }
 
     /// @notice Returns true if the maturity day is the last Friday of the month
     /// @param maturity The maturity timestamp of the option
     /// @return True if the maturity day is the last Friday of the month, false otherwise
-    function isLastFriday(uint64 maturity) internal pure returns (bool) {
+    function isLastFriday(uint256 maturity) internal pure returns (bool) {
         uint256 dayOfMonth = DateTime.getDay(maturity);
         uint256 lastDayOfMonth = DateTime.getDaysInMonth(maturity);
         if (lastDayOfMonth - dayOfMonth > 7) return false;
@@ -182,7 +182,7 @@ library OptionMath {
     /// @param maturity The maturity timestamp of the option
     /// @return Time to maturity in seconds
     function calculateTimeToMaturity(
-        uint64 maturity
+        uint256 maturity
     ) internal view returns (uint256) {
         return maturity - block.timestamp;
     }
@@ -219,7 +219,7 @@ library OptionMath {
     function initializationFee(
         UD60x18 spot,
         UD60x18 strike,
-        uint64 maturity
+        uint256 maturity
     ) internal view returns (UD60x18) {
         UD60x18 moneyness = logMoneyness(spot, strike);
         uint256 timeToMaturity = calculateTimeToMaturity(maturity);

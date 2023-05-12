@@ -2,7 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {IVaultRegistry} from "./IVaultRegistry.sol";
@@ -15,9 +14,9 @@ library VaultRegistryStorage {
 
     struct Layout {
         EnumerableSet.AddressSet vaultAddresses;
-        mapping(address => IVaultRegistry.Vault) vaults;
-        mapping(IVaultRegistry.TradeSide => EnumerableSet.AddressSet) vaultsPerTradeSide;
-        mapping(IVaultRegistry.OptionType => EnumerableSet.AddressSet) vaultsPerOptionType;
+        mapping(address vault => IVaultRegistry.Vault) vaults;
+        mapping(IVaultRegistry.TradeSide tradeSide => EnumerableSet.AddressSet vaults) vaultsPerTradeSide;
+        mapping(IVaultRegistry.OptionType optionType => EnumerableSet.AddressSet vaults) vaultsPerOptionType;
     }
 
     function layout() internal pure returns (Layout storage l) {

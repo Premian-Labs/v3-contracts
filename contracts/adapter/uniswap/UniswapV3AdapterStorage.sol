@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {IUniswapV3AdapterInternal} from "./IUniswapV3AdapterInternal.sol";
-
 library UniswapV3AdapterStorage {
     bytes32 internal constant STORAGE_SLOT =
         keccak256("premia.contracts.storage.UniswapV3Adapter");
@@ -13,7 +11,7 @@ library UniswapV3AdapterStorage {
         uint32 period;
         uint256 cardinalityPerMinute;
         uint24[] feeTiers;
-        mapping(bytes32 => address[]) poolsForPair;
+        mapping(bytes32 key => address[] pools) poolsForPair;
     }
 
     function layout() internal pure returns (Layout storage l) {

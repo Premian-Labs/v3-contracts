@@ -32,8 +32,7 @@ library VolatilityOracleStorage {
     }
 
     struct Layout {
-        // token -> Update
-        mapping(address => Update) parameters;
+        mapping(address token => Update) parameters;
         // Relayer addresses which can be trusted to provide accurate option trades
         EnumerableSet.AddressSet whitelistedRelayers;
     }

@@ -1,7 +1,7 @@
 import {
   ChainlinkAdapter,
   ChainlinkAdapter__factory,
-  ChainlinkAdapterProxy__factory,
+  ProxyUpgradeableOwnable__factory,
   ChainlinkOraclePriceStub__factory,
 } from '../../typechain';
 import { feeds, Token, tokens } from '../../utils/addresses';
@@ -139,7 +139,7 @@ describe('ChainlinkAdapter', () => {
 
     await implementation.deployed();
 
-    const proxy = await new ChainlinkAdapterProxy__factory(deployer).deploy(
+    const proxy = await new ProxyUpgradeableOwnable__factory(deployer).deploy(
       implementation.address,
     );
 

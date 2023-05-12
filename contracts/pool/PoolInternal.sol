@@ -1320,7 +1320,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral)
     {
         _ensureExpired(l);
-        _removeFromFactory(l);
+        _removeInitFeeDiscount(l);
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
         uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
@@ -1422,7 +1422,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _ensureExpired(l);
-        _removeFromFactory(l);
+        _removeInitFeeDiscount(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
@@ -1905,10 +1905,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    function _removeFromFactory(PoolStorage.Layout storage l) internal {
-        if (l.hasRemoved) return;
+    function _removeInitFeeDiscount(PoolStorage.Layout storage l) internal {
+        if (l.initFeeDiscountRemoved) return;
 
-        l.hasRemoved = true;
+        l.initFeeDiscountRemoved = true;
 
         IPoolFactory(FACTORY).removeDiscount(
             IPoolFactory.PoolKey(
