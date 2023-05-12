@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
@@ -27,7 +27,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         posKey.orderType = Position.OrderType.CS;
 
         trade.initialCollateral = deposit(1000 ether);
-        trade.size = UD60x18.wrap(100 ether);
+        trade.size = ud(100 ether);
         (trade.totalPremium, ) = pool.getQuoteAMM(
             users.trader,
             trade.size,
@@ -154,14 +154,14 @@ abstract contract PoolSettlePositionTest is DeployTest {
             posKey,
             users.otherLP,
             users.otherLP,
-            UD60x18.wrap(pool.balanceOf(posKey.operator, tokenId()) / 2)
+            ud(pool.balanceOf(posKey.operator, tokenId()) / 2)
         );
 
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
 
-        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
+        uint256 cost = scaleDecimals(ud(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
@@ -266,9 +266,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         // if !isCall, convert collateral to WETH
         userSettings.setAuthorizedCost(
-            isCall
-                ? cost
-                : (UD60x18.wrap(scaleDecimalsTo(cost, isCall)) * quote).unwrap()
+            isCall ? cost : (ud(scaleDecimalsTo(cost, isCall)) * quote).unwrap()
         );
 
         vm.stopPrank();
@@ -311,7 +309,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.prank(posKey.operator);
         userSettings.setAuthorizedAgents(agents);
 
-        UD60x18 _cost = UD60x18.wrap(0.1 ether);
+        UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost, isCall);
 
         vm.expectRevert(

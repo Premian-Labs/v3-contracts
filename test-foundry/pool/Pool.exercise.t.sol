@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
@@ -27,7 +27,7 @@ abstract contract PoolExerciseTest is DeployTest {
         posKey.orderType = Position.OrderType.CS;
 
         trade.initialCollateral = deposit(1000 ether);
-        trade.size = UD60x18.wrap(100 ether);
+        trade.size = ud(100 ether);
         (trade.totalPremium, ) = pool.getQuoteAMM(
             users.trader,
             trade.size,
@@ -135,7 +135,7 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
-        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
+        uint256 cost = scaleDecimals(ud(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
@@ -195,7 +195,7 @@ abstract contract PoolExerciseTest is DeployTest {
 
         _test_exercise_trade_Buy100Options(isCall);
 
-        uint256 cost = scaleDecimals(UD60x18.wrap(0.1 ether), isCall);
+        uint256 cost = scaleDecimals(ud(0.1 ether), isCall);
 
         vm.warp(poolKey.maturity);
 
@@ -238,7 +238,7 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.prank(users.trader);
         userSettings.setAuthorizedAgents(agents);
 
-        UD60x18 _cost = UD60x18.wrap(0.1 ether);
+        UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost, isCall);
 
         vm.expectRevert(
