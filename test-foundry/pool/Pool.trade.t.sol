@@ -156,9 +156,9 @@ abstract contract PoolTradeTest is DeployTest {
         );
     }
 
-    function _test_trade_RevertIf_BuyOptions_WithInsufficientAskLiquidity(
-        bool isCall
-    ) internal {
+    function test_trade_RevertIf_BuyOptions_WithInsufficientAskLiquidity()
+        public
+    {
         posKey.orderType = Position.OrderType.CS;
         uint256 depositSize = 1000 ether;
         deposit(depositSize);
@@ -167,17 +167,9 @@ abstract contract PoolTradeTest is DeployTest {
         pool.trade(ud(depositSize + 1), true, 0);
     }
 
-    function test_trade_RevertIf_BuyOptions_WithInsufficientAskLiquidity()
+    function test_trade_RevertIf_SellOptions_WithInsufficientBidLiquidity()
         public
     {
-        _test_trade_RevertIf_BuyOptions_WithInsufficientAskLiquidity(
-            poolKey.isCallPool
-        );
-    }
-
-    function _test_trade_RevertIf_SellOptions_WithInsufficientBidLiquidity(
-        bool isCall
-    ) internal {
         uint256 depositSize = 1000 ether;
         deposit(depositSize);
 
@@ -185,32 +177,16 @@ abstract contract PoolTradeTest is DeployTest {
         pool.trade(ud(depositSize + 1), false, 0);
     }
 
-    function test_trade_RevertIf_SellOptions_WithInsufficientBidLiquidity()
-        public
-    {
-        _test_trade_RevertIf_SellOptions_WithInsufficientBidLiquidity(
-            poolKey.isCallPool
-        );
-    }
-
-    function _test_trade_RevertIf_TradeSizeIsZero(bool isCall) internal {
+    function test_trade_RevertIf_TradeSizeIsZero() public {
         vm.expectRevert(IPoolInternal.Pool__ZeroSize.selector);
         pool.trade(ud(0), true, 0);
     }
 
-    function test_trade_RevertIf_TradeSizeIsZero() public {
-        _test_trade_RevertIf_TradeSizeIsZero(poolKey.isCallPool);
-    }
-
-    function _test_trade_RevertIf_Expired(bool isCall) internal {
+    function test_trade_RevertIf_Expired() public {
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
         pool.trade(ud(1), true, 0);
-    }
-
-    function test_trade_RevertIf_Expired() public {
-        _test_trade_RevertIf_Expired(poolKey.isCallPool);
     }
 
     function _test_annihilate_Success(bool isCall) internal {

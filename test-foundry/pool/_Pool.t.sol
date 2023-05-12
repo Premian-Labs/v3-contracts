@@ -11,6 +11,7 @@ import {PoolSettlePositionTest} from "./Pool.settlePosition.t.sol";
 import {PoolStrandedTest} from "./Pool.stranded.t.sol";
 import {PoolTakerFeeTest} from "./Pool.takerFee.t.sol";
 import {PoolTradeTest} from "./Pool.trade.t.sol";
+import {PoolTransferPositionTest} from "./Pool.transferPosition.t.sol";
 import {PoolWithdrawTest} from "./Pool.withdraw.t.sol";
 
 abstract contract PoolTest is
@@ -23,5 +24,6 @@ abstract contract PoolTest is
     PoolStrandedTest,
     PoolTakerFeeTest,
     PoolTradeTest,
+    PoolTransferPositionTest,
     PoolWithdrawTest
 {}
