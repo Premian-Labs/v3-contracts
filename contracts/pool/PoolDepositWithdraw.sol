@@ -29,6 +29,7 @@ contract PoolDepositWithdraw is
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -37,6 +38,7 @@ contract PoolDepositWithdraw is
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )
