@@ -101,7 +101,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address tokenOut,
         uint256 target
     ) external view returns (UD60x18) {
-        _ensureTargetNonZero(target);
+        _revertIfTargetInvalid(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
@@ -470,7 +470,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     ) internal view returns (uint256) {
         address feed = _feed(tokenIn, tokenOut);
         (, int256 price, , , ) = _latestRoundData(feed);
-        _ensurePricePositive(price);
+        _revertIfPriceInvalid(price);
         return price.toUint256();
     }
 
@@ -522,8 +522,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             previousUpdatedAt = updatedAt;
         }
 
-        _ensurePriceAfterTargetIsFresh(target, updatedAt);
-        _ensurePricePositive(price);
+        _revertIfPriceAfterTargetStale(target, updatedAt);
+        _revertIfPriceInvalid(price);
         return price.toUint256();
     }
 
@@ -634,7 +634,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             );
     }
 
-    function _ensurePriceAfterTargetIsFresh(
+    function _revertIfPriceAfterTargetStale(
         uint256 target,
         uint256 updatedAt
     ) internal view {

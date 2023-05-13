@@ -149,7 +149,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IERC3156FlashLender
     function maxFlashLoan(address token) external view returns (uint256) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         return IERC20(token).balanceOf(address(this));
     }
 
@@ -158,7 +158,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address token,
         uint256 amount
     ) external view returns (uint256) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
     }
 
@@ -174,7 +174,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         uint256 amount,
         bytes calldata data
     ) external nonReentrant returns (bool) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 startBalance = IERC20(token).balanceOf(address(this));
@@ -208,7 +208,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return true;
     }
 
-    function _ensurePoolToken(address token) internal view {
+    function _revertIfNotPoolToken(address token) internal view {
         if (token != PoolStorage.layout().getPoolToken())
             revert Pool__NotPoolToken(token);
     }
