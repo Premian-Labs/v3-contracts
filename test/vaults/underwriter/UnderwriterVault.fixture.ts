@@ -35,7 +35,6 @@ import {
   toUtf8Bytes,
 } from 'ethers/lib/utils';
 
-import { parseEther, parseUnits } from 'ethers/lib/utils';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 

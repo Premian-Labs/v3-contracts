@@ -692,7 +692,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
     /// @notice Ensures that an option is tradeable with the vault.
     /// @param size The amount of contracts.
-    function _ensureNonZeroSize(UD60x18 size) internal pure {
+    function _revertIfZeroSize(UD60x18 size) internal pure {
         if (size == ZERO) revert Vault__ZeroSize();
     }
 
@@ -700,7 +700,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param isCallVault Whether the vault is a call or put vault.
     /// @param isCallOption Whether the option is a call or put.
     /// @param isBuy Whether the trade is a buy or a sell.
-    function _ensureTradeableWithVault(
+    function _revertIfNotTradeableWithVault(
         bool isCallVault,
         bool isCallOption,
         bool isBuy
@@ -713,7 +713,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @notice Ensures that an option is valid for trading.
     /// @param strike The strike price of the option.
     /// @param maturity The maturity of the option.
-    function _ensureValidOption(
+    function _revertIfOptionInvalid(
         UD60x18 strike,
         uint256 maturity
     ) internal view {
@@ -728,7 +728,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param strike The strike price.
     /// @param size The amount of contracts.
     /// @param availableAssets The amount of available assets currently in the vault.
-    function _ensureSufficientFunds(
+    function _revertIfInsufficientFunds(
         UD60x18 strike,
         UD60x18 size,
         UD60x18 availableAssets
@@ -744,7 +744,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param value The observed value of the variable.
     /// @param minimum The minimum value the variable can be.
     /// @param maximum The maximum value the variable can be.
-    function _ensureWithinDTEBounds(
+    function _revertIfOutOfDTEBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
@@ -756,7 +756,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param value The observed value of the variable.
     /// @param minimum The minimum value the variable can be.
     /// @param maximum The maximum value the variable can be.
-    function _ensureWithinDeltaBounds(
+    function _revertIfOutOfDeltaBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
@@ -769,7 +769,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     /// @param totalPremium The total premium of the trade
     /// @param premiumLimit The premium limit of the trade
     /// @param isBuy Whether the trade is a buy or a sell.
-    function _ensureBelowTradeMaxSlippage(
+    function _revertIfAboveTradeMaxSlippage(
         UD60x18 totalPremium,
         UD60x18 premiumLimit,
         bool isBuy
@@ -794,10 +794,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UD60x18 size,
         bool isBuy
     ) internal view returns (QuoteInternal memory quote) {
-        _ensureNonZeroSize(size);
-        _ensureTradeableWithVault(l.isCall, isCall, isBuy);
-        _ensureValidOption(strike, maturity);
-        _ensureSufficientFunds(strike, size, _availableAssetsUD60x18(l));
+        _revertIfZeroSize(size);
+        _revertIfNotTradeableWithVault(l.isCall, isCall, isBuy);
+        _revertIfOptionInvalid(strike, maturity);
+        _revertIfInsufficientFunds(strike, size, _availableAssetsUD60x18(l));
 
         quote.pool = _getPoolAddress(l, strike, maturity);
 
@@ -809,7 +809,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         vars.tau =
             UD60x18.wrap((maturity - _getBlockTimestamp()) * WAD) /
             UD60x18.wrap(ONE_YEAR * WAD);
-        _ensureWithinDTEBounds(
+        _revertIfOutOfDTEBounds(
             vars.tau * UD60x18.wrap(365e18),
             l.minDTE,
             l.maxDTE
@@ -835,7 +835,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             )
             .abs();
 
-        _ensureWithinDeltaBounds(
+        _revertIfOutOfDeltaBounds(
             vars.delta.intoUD60x18(),
             l.minDelta,
             l.maxDelta
@@ -919,7 +919,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
         UD60x18 totalPremium = quote.premium + quote.spread + quote.mintingFee;
 
-        _ensureBelowTradeMaxSlippage(
+        _revertIfAboveTradeMaxSlippage(
             totalPremium,
             l.convertAssetToUD60x18(premiumLimit),
             isBuy
