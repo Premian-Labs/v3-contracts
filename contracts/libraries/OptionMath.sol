@@ -6,7 +6,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iTEN} from "./Constants.sol";
+import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iNINE, iTEN} from "./Constants.sol";
 
 library OptionMath {
     // To prevent stack too deep
@@ -30,6 +30,7 @@ library OptionMath {
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
     error OptionMath__NonPositiveVol();
+    error OptionMath__Underflow();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
     /// @param x The input to the normal CDF (18 decimals)
@@ -47,16 +48,16 @@ library OptionMath {
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) (18 decimals)
     /// @return result The normal CDF evaluated at x (18 decimals)
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
-        if (x <= -iEIGHT) {
+        if (x <= -iNINE) {
             result = iZERO;
-        } else if (x >= iEIGHT) {
+        } else if (x >= iNINE) {
             result = iONE;
         } else {
             result = ((iONE + helperNormal(-x)) - helperNormal(x)) / iTWO;
         }
     }
 
-    /// @notice Approximation of the Probability Density Function.
+    /// @notice Normal Distribution Probability Density Function.
     /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
     ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
@@ -109,6 +110,36 @@ library OptionMath {
         d2 = d1 - timeScaledStd.intoSD59x18();
     }
 
+    /// @notice Calculate option delta
+    /// @param spot Spot price
+    /// @param strike Strike price
+    /// @param timeToMaturity Duration of option contract (in years)
+    /// @param volAnnualized Annualized volatility
+    /// @param isCall whether to price "call" or "put" option
+    /// @return price Option delta
+    function optionDelta(
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
+        bool isCall
+    ) internal pure returns (SD59x18) {
+        (SD59x18 d1, ) = d1d2(
+            spot,
+            strike,
+            timeToMaturity,
+            volAnnualized,
+            riskFreeRate
+        );
+
+        if (isCall) {
+            return normalCdf(d1);
+        } else {
+            return -normalCdf(-d1);
+        }
+    }
+
     /// @notice Calculate the price of an option using the Black-Scholes model
     /// @dev this implementation assumes zero interest
     /// @param spot Spot price (18 decimals)
@@ -128,7 +159,6 @@ library OptionMath {
     ) internal pure returns (UD60x18) {
         SD59x18 _spot = spot.intoSD59x18();
         SD59x18 _strike = strike.intoSD59x18();
-
         if (volAnnualized == ZERO) revert OptionMath__NonPositiveVol();
 
         if (timeToMaturity == ZERO) {
@@ -155,10 +185,15 @@ library OptionMath {
             riskFreeRate
         );
         SD59x18 sign = isCall ? iONE : -iONE;
-        SD59x18 a = _spot * normalCdf(d1 * sign);
-        SD59x18 b = (_strike / discountFactor) * normalCdf(d2 * sign);
+        SD59x18 a = (_spot / _strike) * normalCdf(d1 * sign);
+        SD59x18 b = normalCdf(d2 * sign) / discountFactor;
+        SD59x18 scaledPrice = (a - b) * sign;
 
-        return ((a - b) * sign).intoUD60x18();
+        if (scaledPrice < SD59x18.wrap(-1e12)) revert OptionMath__Underflow();
+        if (scaledPrice >= SD59x18.wrap(-1e12) && scaledPrice <= iZERO)
+            scaledPrice = iZERO;
+
+        return (scaledPrice * _strike).intoUD60x18();
     }
 
     /// @notice Returns true if the maturity day is Friday
