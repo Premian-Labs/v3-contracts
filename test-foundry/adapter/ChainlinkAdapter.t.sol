@@ -6,6 +6,7 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {Test} from "forge-std/Test.sol";
 
+import "forge-std/console2.sol";
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";
@@ -25,7 +26,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     uint256 mainnetFork;
 
-    Path[][] paths;
+    Path[] paths;
     ChainlinkAdapter adapter;
     uint256 target;
 
@@ -38,74 +39,71 @@ contract ChainlinkAdapterTest is Test, Assertions {
         vm.selectFork(mainnetFork);
 
         target = 1676016000;
-        for (uint256 i = 0; i < 8; i++) {
-            paths.push();
-        }
 
         // prettier-ignore
         {
             // ETH_USD
-            paths[0].push(Path(IChainlinkAdapter.PricingPath.ETH_USD, WETH, CHAINLINK_USD));  // IN is ETH, OUT is USD
-            paths[0].push(Path(IChainlinkAdapter.PricingPath.ETH_USD, CHAINLINK_USD, WETH)); // IN is USD, OUT is ETH
-            paths[0].push(Path(IChainlinkAdapter.PricingPath.ETH_USD, CHAINLINK_ETH, CHAINLINK_USD)); // IN is ETH, OUT is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.ETH_USD, WETH, CHAINLINK_USD));  // IN is ETH, OUT is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.ETH_USD, CHAINLINK_USD, WETH)); // IN is USD, OUT is ETH
+            paths.push(Path(IChainlinkAdapter.PricingPath.ETH_USD, CHAINLINK_ETH, CHAINLINK_USD)); // IN is ETH, OUT is USD
 
             // TOKEN_USD
-            paths[1].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, DAI, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
-            paths[1].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, AAVE, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, DAI, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, AAVE, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
             // Note: Assumes WBTC/USD feed exists
-            paths[1].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, CHAINLINK_USD, WBTC)); // IN (tokenB) is USD => OUT (tokenA)
-            paths[1].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, WBTC, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, CHAINLINK_USD, WBTC)); // IN (tokenB) is USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD, WBTC, CHAINLINK_USD)); // IN (tokenA) => OUT (tokenB) is USD
 
             // TOKEN_ETH
-            paths[2].push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, BNT, WETH)); // IN (tokenA) => OUT (tokenB) is ETH
-            paths[2].push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, AXS, WETH)); // IN (tokenB) => OUT (tokenA) is ETH
-            paths[2].push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, WETH, CRV)); // IN (tokenA) is ETH => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, BNT, WETH)); // IN (tokenA) => OUT (tokenB) is ETH
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, AXS, WETH)); // IN (tokenB) => OUT (tokenA) is ETH
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH, WETH, CRV)); // IN (tokenA) is ETH => OUT (tokenB)
 
             // TOKEN_USD_TOKEN
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, CRV, AAVE)); // IN (tokenB) => USD => OUT (tokenA)
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, DAI, AAVE)); // IN (tokenA) => USD => OUT (tokenB)
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, AAVE, DAI)); // IN (tokenB) => USD => OUT (tokenA)
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, CRV, USDC)); // IN (tokenB) => USD => OUT (tokenA)
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, USDC, COMP)); // IN (tokenA) => USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, CRV, AAVE)); // IN (tokenB) => USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, DAI, AAVE)); // IN (tokenA) => USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, AAVE, DAI)); // IN (tokenB) => USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, CRV, USDC)); // IN (tokenB) => USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, USDC, COMP)); // IN (tokenA) => USD => OUT (tokenB)
             // Note: Assumes WBTC/USD feed exists
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, DAI, WBTC)); // IN (tokenB) => USD => OUT (tokenA)
-            paths[3].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, WBTC, USDC)); // IN (tokenA) => USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, DAI, WBTC)); // IN (tokenB) => USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN, WBTC, USDC)); // IN (tokenA) => USD => OUT (tokenB)
 
             // TOKEN_ETH_TOKEN
-            paths[4].push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH_TOKEN, BOND, AXS)); // IN (tokenA) => ETH => OUT (tokenB)
-            paths[4].push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH_TOKEN, ALPHA, BOND)); // IN (tokenB) => ETH => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH_TOKEN, BOND, AXS)); // IN (tokenA) => ETH => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_ETH_TOKEN, ALPHA, BOND)); // IN (tokenB) => ETH => OUT (tokenA)
 
             // A_USD_ETH_B
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, FXS, WETH)); // IN (tokenA) => USD, OUT (tokenB) is ETH
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, WETH, MATIC)); // IN (tokenB) is ETH, USD => OUT (tokenA)
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, USDC, AXS)); // IN (tokenA) is USD, ETH => OUT (tokenB)
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, ALPHA, DAI)); // IN (tokenB) => ETH, OUT is USD (tokenA)
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, DAI, ALPHA));
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, FXS, AXS)); // IN (tokenA) => USD, ETH => OUT (tokenB)
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, ALPHA, MATIC)); // IN (tokenB) => ETH, USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, FXS, WETH)); // IN (tokenA) => USD, OUT (tokenB) is ETH
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, WETH, MATIC)); // IN (tokenB) is ETH, USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, USDC, AXS)); // IN (tokenA) is USD, ETH => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, ALPHA, DAI)); // IN (tokenB) => ETH, OUT is USD (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, DAI, ALPHA));
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, FXS, AXS)); // IN (tokenA) => USD, ETH => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, ALPHA, MATIC)); // IN (tokenB) => ETH, USD => OUT (tokenA)
             // Note: Assumes WBTC/USD feed exists
-            paths[5].push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, WETH, WBTC)); // IN (tokenB) => ETH, USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_USD_ETH_B, WETH, WBTC)); // IN (tokenB) => ETH, USD => OUT (tokenA)
 
             // A_ETH_USD_B
             // We can't test the following two cases, because we would need a token that is
             // supported by chainlink and lower than USD (address(840))
             // - IN (tokenA) => ETH, OUT (tokenB) is USD
             // - IN (tokenB) is USD, ETH => OUT (tokenA)
-            paths[6].push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, WETH, IMX)); // IN (tokenA) is ETH, USD => OUT (tokenB)
-            paths[6].push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, IMX, WETH)); // IN (tokenB) => USD, OUT is ETH (tokenA)
-            paths[6].push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, AXS, IMX)); // IN (tokenA) => ETH, USD => OUT (tokenB)
-            paths[6].push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, FXS, BOND)); // IN (tokenB) => ETH, USD => OUT (tokenA)
-            paths[6].push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, BOND, FXS)); // IN (tokenA) => USD, ETH => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, WETH, IMX)); // IN (tokenA) is ETH, USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, IMX, WETH)); // IN (tokenB) => USD, OUT is ETH (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, AXS, IMX)); // IN (tokenA) => ETH, USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, FXS, BOND)); // IN (tokenB) => ETH, USD => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.A_ETH_USD_B, BOND, FXS)); // IN (tokenA) => USD, ETH => OUT (tokenB)
 
             // TOKEN_USD_BTC_WBTC
             // Note: Assumes WBTC/USD feed does not exist
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, CHAINLINK_USD)); // IN (tokenA) => BTC, OUT is USD
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, CHAINLINK_BTC)); // IN (tokenA) => BTC, OUT is BTC
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, WETH)); // IN (tokenA) => BTC, OUT is ETH (tokenB)
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WETH, WBTC)); // IN (tokenB) is ETH, BTC => OUT (tokenA)
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, DAI, WBTC)); // IN (tokenB) => USD, BTC => OUT (tokenA)
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, USDC)); // IN (tokenA) => BTC, USD => OUT (tokenB)
-            paths[7].push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, BNT)); // IN (tokenA) => USD,  BTC => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, CHAINLINK_USD)); // IN (tokenA) => BTC, OUT is USD
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, CHAINLINK_BTC)); // IN (tokenA) => BTC, OUT is BTC
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, WETH)); // IN (tokenA) => BTC, OUT is ETH (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WETH, WBTC)); // IN (tokenB) is ETH, BTC => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, DAI, WBTC)); // IN (tokenB) => USD, BTC => OUT (tokenA)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, USDC)); // IN (tokenA) => BTC, USD => OUT (tokenB)
+            paths.push(Path(IChainlinkAdapter.PricingPath.TOKEN_USD_BTC_WBTC, WBTC, BNT)); // IN (tokenA) => USD,  BTC => OUT (tokenB)
         }
 
         address implementation = address(new ChainlinkAdapter(WETH, WBTC));
@@ -135,6 +133,49 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
         return (stub, stubCoin);
+    }
+
+    function _addWBTCUSD(IChainlinkAdapter.PricingPath path) internal {
+        if (
+            path != IChainlinkAdapter.PricingPath.TOKEN_USD &&
+            path != IChainlinkAdapter.PricingPath.TOKEN_USD_TOKEN &&
+            path != IChainlinkAdapter.PricingPath.A_USD_ETH_B
+        ) return;
+
+        IFeedRegistry.FeedMappingArgs[]
+            memory data = new IFeedRegistry.FeedMappingArgs[](1);
+
+        data[0] = IFeedRegistry.FeedMappingArgs(
+            WBTC,
+            CHAINLINK_USD,
+            0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c
+        );
+
+        adapter.batchRegisterFeedMappings(data);
+    }
+
+    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists()
+        public
+    {
+        uint256 snapshot = vm.snapshot();
+
+        for (uint256 i = 0; i < paths.length; i++) {
+            Path memory p = paths[i];
+
+            _addWBTCUSD(p.path);
+
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            (bool isCached, bool hasPath) = adapter.isPairSupported(
+                p.tokenIn,
+                p.tokenOut
+            );
+            assertTrue(isCached);
+            assertTrue(hasPath);
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
     }
 
     function test_isPairSupported_ReturnFalse_IfPairNotSupported() public {
@@ -224,6 +265,70 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.feed(EUL, DAI), address(0));
     }
 
+    function test_quote_ReturnQuoteForPair() public {
+        // Expected values exported from Defilama
+        UD60x18[39] memory expected = [
+            ud(1551253958184865268777), // WETH CHAINLINK_USD
+            ud(644639773341889), // CHAINLINK_USD WETH
+            ud(1552089999999999918145), // CHAINLINK_ETH CHAINLINK_USD
+            ud(999758000000000036), // DAI CHAINLINK_USD
+            ud(79200000000000002842), // AAVE CHAINLINK_USD
+            ud(45722646426775), // CHAINLINK_USD WBTC
+            ud(21871000000000000000000), // WBTC CHAINLINK_USD
+            ud(282273493583309), // BNT WETH
+            ud(6617057201666803), // AXS WETH
+            ud(1570958490531603047202), // WETH CRV
+            ud(12467891414141414), // CRV AAVE
+            ud(12623207070707071), // DAI AAVE
+            ud(79219171039391525824), // AAVE DAI
+            ud(987652555205930871), // CRV USDC
+            ud(20230716309186565), // USDC COMP
+            ud(45711581546340), // DAI WBTC
+            ud(21875331315600487869233), // WBTC USDC
+            ud(410573778449028981), // BOND AXS
+            ud(28582048972903472), // ALPHA BOND
+            ud(7725626669884812), // FXS WETH
+            ud(1202522448205321779824), // WETH MATIC
+            ud(97446588693957115), // USDC AXS
+            ud(120430653003309712), // ALPHA DAI
+            ud(8303533818524737597), // DAI ALPHA
+            ud(1168071047867190515), // FXS AXS
+            ud(93334502934327837), // ALPHA MATIC
+            ud(70927436248222092), // WETH WBTC
+            ud(1701565115821158997278), // WETH IMX
+            ud(587694229684187), // IMX WETH
+            ud(11254158609047422601), // AXS IMX
+            ud(2844972351326624072), // FXS BOND
+            ud(351497264827088818), // BOND FXS
+            ud(21871000000000000000000), // WBTC CHAINLINK_USD
+            ud(999177669148887615), // WBTC CHAINLINK_BTC
+            ud(14098916482760458280), // WBTC WETH
+            ud(70927436248222092), // WETH WBTC
+            ud(45711581546340), // DAI WBTC
+            ud(21875331315600487869233), // WBTC USDC
+            ud(49947716676413132518064) // WBTC BNT
+        ];
+
+        uint256 snapshot = vm.snapshot();
+
+        for (uint256 i = 0; i < paths.length; i++) {
+            Path memory p = paths[i];
+            _addWBTCUSD(p.path);
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 3) / 100 // 3% tolerance
+            );
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
+    }
+
     function test_quote_ReturnQuoteUsingCorrectDenomination() public {
         address tokenIn = WETH;
         address tokenOut = DAI;
@@ -305,6 +410,70 @@ contract ChainlinkAdapterTest is Test, Assertions {
             )
         );
         adapter.quote(stubCoin, CHAINLINK_USD);
+    }
+
+    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+        // Expected values exported from Defilama
+        UD60x18[39] memory expected = [
+            ud(1552329999999999927240), // WETH CHAINLINK_USD
+            ud(644192922896549), // CHAINLINK_USD WETH
+            ud(1553210000000000036380), // CHAINLINK_ETH CHAINLINK_USD
+            ud(1000999999999999890), // DAI CHAINLINK_USD
+            ud(79620000000000004547), // AAVE CHAINLINK_USD
+            ud(45583006655119), // CHAINLINK_USD WBTC
+            ud(21938000000000000000000), // WBTC CHAINLINK_USD
+            ud(282841277305728), // BNT WETH
+            ud(6609419388918594), // AXS WETH
+            ud(1560637272199920062121), // WETH CRV
+            ud(12492803315749812), // CRV AAVE
+            ud(12572218035669427), // DAI AAVE
+            ud(79540459540459551135), // AAVE DAI
+            ud(992691616766467111), // CRV USDC
+            ud(20242424242424242), // USDC COMP
+            ud(45628589661774), // DAI WBTC
+            ud(21894211576846308162203), // WBTC USDC
+            ud(413255360623781709), // BOND AXS
+            ud(28558726415094340), // ALPHA BOND
+            ud(7930014880856519), // FXS WETH
+            ud(1232007936507936392445), // WETH MATIC
+            ud(97660818713450295), // USDC AXS
+            ud(120968031968031978), // ALPHA DAI
+            ud(8266646846534365878), // DAI ALPHA
+            ud(1199805068226120985), // FXS AXS
+            ud(96102380952380953), // ALPHA MATIC
+            ud(70759868720940824), // WETH WBTC
+            ud(1732435753354485541422), // WETH IMX
+            ud(577221982439301), // IMX WETH
+            ud(11450394458276926812), // AXS IMX
+            ud(2903301886792452713), // FXS BOND
+            ud(344435418359057666), // BOND FXS
+            ud(21938000000000000000000), // WBTC CHAINLINK_USD
+            ud(999225688909132326), // WBTC CHAINLINK_BTC
+            ud(14132304342504493633), // WBTC WETH
+            ud(70759868720940824), // WETH WBTC
+            ud(45628589661774), // DAI WBTC
+            ud(21894211576846308162203), // WBTC USDC
+            ud(49965494701215997338295) // WBTC BNT
+        ];
+
+        uint256 snapshot = vm.snapshot();
+
+        for (uint256 i = 0; i < paths.length; i++) {
+            Path memory p = paths[i];
+            _addWBTCUSD(p.path);
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 3) / 100 // 3% tolerance
+            );
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
     }
 
     function test_quoteFrom_CatchRevert() public {
@@ -623,5 +792,32 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(decimals.length, 2);
         assertEq(decimals[0], 8);
         assertEq(decimals[0], 8);
+    }
+
+    function test_pricingPath_ReturnPathForPair() public {
+        uint256 snapshot = vm.snapshot();
+
+        for (uint256 i = 0; i < paths.length; i++) {
+            Path memory p = paths[i];
+
+            _addWBTCUSD(p.path);
+
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            IChainlinkAdapter.PricingPath path1 = adapter.pricingPath(
+                p.tokenIn,
+                p.tokenOut
+            );
+            IChainlinkAdapter.PricingPath path2 = adapter.pricingPath(
+                p.tokenOut,
+                p.tokenIn
+            );
+
+            assertEq(uint256(path1), uint256(p.path));
+            assertEq(uint256(path2), uint256(p.path));
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
     }
 }
