@@ -9,16 +9,23 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {iZERO, iONE, iTWO} from "../libraries/Constants.sol";
-
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
+
+import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
+
+import {ZERO, iZERO, iONE, iTWO} from "../libraries/Constants.sol";
+import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
 contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
+    using SafeCast for int256;
+    using PRBMathExtra for UD60x18;
+    using PRBMathExtra for SD59x18;
 
     uint256 private constant DECIMALS = 12;
 
@@ -102,15 +109,14 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] calldata tau,
         bytes32[] calldata theta,
         bytes32[] calldata psi,
-        bytes32[] calldata rho
+        bytes32[] calldata rho,
+        UD60x18 riskFreeRate
     ) external {
-        uint256 length = tokens.length;
-
         if (
-            length != tau.length ||
-            length != theta.length ||
-            length != psi.length ||
-            length != rho.length
+            tokens.length != tau.length ||
+            tokens.length != theta.length ||
+            tokens.length != psi.length ||
+            tokens.length != rho.length
         ) revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
@@ -121,7 +127,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
                 msg.sender
             );
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({
                 updatedAt: block.timestamp,
                 tau: tau[i],
@@ -132,6 +138,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
             emit UpdateParameters(tokens[i], tau[i], theta[i], psi[i], rho[i]);
         }
+
+        l.riskFreeRate = riskFreeRate;
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -217,7 +225,12 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 spot,
         UD60x18 strike,
         UD60x18 timeToMaturity
-    ) external view returns (UD60x18) {
+    ) public view returns (UD60x18) {
+        if (spot == ZERO) revert VolatilityOracle__SpotIsZero();
+        if (strike == ZERO) revert VolatilityOracle__StrikeIsZero();
+        if (timeToMaturity == ZERO)
+            revert VolatilityOracle__TimeToMaturityIsZero();
+
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
         VolatilityOracleStorage.Update memory packed = l.getParams(token);
@@ -235,7 +248,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         uint256 n = params.tau.length;
 
         // Log Moneyness
-        SD59x18 k = (strike.intoSD59x18() / spot.intoSD59x18()).ln();
+        SD59x18 k = (strike / spot).intoSD59x18().ln();
 
         // Compute total implied variance
         SliceInfo memory info;
@@ -287,11 +300,38 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         }
 
         SD59x18 phi = info.psi / info.theta;
-        SD59x18 term = (phi * k + info.rho).pow(iTWO) +
-            (iONE - info.rho.pow(iTWO));
+
+        // Use powu(2) instead of pow(TWO) here (o.w. LogInputTooSmall Error)
+        SD59x18 term = (phi * k + info.rho).powu(2) + (iONE - info.rho.powu(2));
+
         SD59x18 w = info.theta / iTWO;
         w = w * (iONE + info.rho * phi * k + term.sqrt());
 
         return (w / _timeToMaturity).sqrt().intoUD60x18();
+    }
+
+    // @inheritdoc IVolatilityOracle
+    function getVolatility(
+        address token,
+        UD60x18 spot,
+        UD60x18[] memory strike,
+        UD60x18[] memory timeToMaturity
+    ) external view returns (UD60x18[] memory) {
+        if (strike.length != timeToMaturity.length)
+            revert VolatilityOracle__ArrayLengthMismatch();
+
+        UD60x18[] memory sigma = new UD60x18[](strike.length);
+
+        for (uint256 i = 0; i < sigma.length; i++) {
+            sigma[i] = getVolatility(token, spot, strike[i], timeToMaturity[i]);
+        }
+
+        return sigma;
+    }
+
+    function getRiskFreeRate() external view returns (UD60x18) {
+        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
+            .layout();
+        return l.riskFreeRate;
     }
 }

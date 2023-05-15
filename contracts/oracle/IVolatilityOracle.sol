@@ -10,6 +10,9 @@ interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
     error VolatilityOracle__OutOfBounds(int256 value);
     error VolatilityOracle__RelayerNotWhitelisted(address sender);
+    error VolatilityOracle__SpotIsZero();
+    error VolatilityOracle__StrikeIsZero();
+    error VolatilityOracle__TimeToMaturityIsZero();
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist
@@ -44,12 +47,14 @@ interface IVolatilityOracle {
     /// @param theta List of ATM total implied variance curves
     /// @param psi List of ATM skew curves
     /// @param rho List of rho curves
+    /// @param riskFreeRate The risk-free rate
     function updateParams(
         address[] calldata tokens,
         bytes32[] calldata tau,
         bytes32[] calldata theta,
         bytes32[] calldata psi,
-        bytes32[] calldata rho
+        bytes32[] calldata rho,
+        UD60x18 riskFreeRate
     ) external;
 
     /// @notice Get the IV model parameters of a token pair
@@ -78,4 +83,19 @@ interface IVolatilityOracle {
         UD60x18 strike,
         UD60x18 timeToMaturity
     ) external view returns (UD60x18);
+
+    /// @notice Calculate the annualized volatility for given set of parameters
+    /// @param token The token address
+    /// @param spot The spot price of the token
+    /// @param strike The strike price of the option
+    /// @param timeToMaturity The time until maturity (denominated in years)
+    /// @return The annualized implied volatility, where 1 is defined as 100%
+    function getVolatility(
+        address token,
+        UD60x18 spot,
+        UD60x18[] memory strike,
+        UD60x18[] memory timeToMaturity
+    ) external view returns (UD60x18[] memory);
+
+    function getRiskFreeRate() external view returns (UD60x18);
 }

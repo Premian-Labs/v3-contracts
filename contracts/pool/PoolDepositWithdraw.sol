@@ -29,6 +29,7 @@ contract PoolDepositWithdraw is
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -37,6 +38,7 @@ contract PoolDepositWithdraw is
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )
@@ -53,7 +55,8 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfOperatorNotAuthorized(p.operator);
+
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
@@ -79,7 +82,8 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfOperatorNotAuthorized(p.operator);
+
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
@@ -103,7 +107,8 @@ contract PoolDepositWithdraw is
     ) external nonReentrant returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(p.operator);
+        _revertIfOperatorNotAuthorized(p.operator);
+
         return
             _withdraw(
                 p.toKeyInternal(l.strike, l.isCallPool),

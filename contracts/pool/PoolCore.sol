@@ -35,6 +35,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -43,6 +44,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )
@@ -339,8 +341,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _ensureAuthorizedAgent(holders[i], msg.sender);
-                _ensureAuthorizedCost(holders[i], _cost);
+                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
             exerciseValues[i] = _exercise(holders[i], _cost);
@@ -371,8 +373,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _ensureAuthorizedAgent(holders[i], msg.sender);
-                _ensureAuthorizedCost(holders[i], _cost);
+                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
             collateral[i] = _settle(holders[i], _cost);
@@ -391,7 +393,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         Position.Key calldata p
     ) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureOperator(p.operator);
+        _revertIfOperatorNotAuthorized(p.operator);
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
     }
 
@@ -407,8 +409,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
-                _ensureAuthorizedAgent(p[i].operator, msg.sender);
-                _ensureAuthorizedCost(p[i].operator, _cost);
+                _revertIfAgentNotAuthorized(p[i].operator, msg.sender);
+                _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
             collateral[i] = _settlePosition(
@@ -434,7 +436,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureOperator(srcP.operator);
+        _revertIfOperatorNotAuthorized(srcP.operator);
+
         _transferPosition(
             srcP.toKeyInternal(l.strike, l.isCallPool),
             newOwner,

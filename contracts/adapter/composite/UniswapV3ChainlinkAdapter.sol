@@ -36,8 +36,8 @@ contract UniswapV3ChainlinkAdapter is
         address tokenA,
         address tokenB
     ) external view returns (bool isCached, bool hasPath) {
-        _ensureTokenNotWrappedNative(tokenA);
-        _ensureTokenNotWrappedNative(tokenB);
+        _revertIfWrappedNative(tokenA);
+        _revertIfWrappedNative(tokenB);
 
         (isCached, hasPath) = UNISWAP_ADAPTER.isPairSupported(
             tokenA,
@@ -55,8 +55,8 @@ contract UniswapV3ChainlinkAdapter is
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
-        _ensureTokenNotWrappedNative(tokenA);
-        _ensureTokenNotWrappedNative(tokenB);
+        _revertIfWrappedNative(tokenA);
+        _revertIfWrappedNative(tokenB);
 
         {
             (bool isCached, bool hasPath) = UNISWAP_ADAPTER.isPairSupported(
@@ -96,8 +96,8 @@ contract UniswapV3ChainlinkAdapter is
         address tokenIn,
         address tokenOut
     ) external view returns (UD60x18) {
-        _ensureTokenNotWrappedNative(tokenIn);
-        _ensureTokenNotWrappedNative(tokenOut);
+        _revertIfWrappedNative(tokenIn);
+        _revertIfWrappedNative(tokenOut);
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
@@ -107,9 +107,9 @@ contract UniswapV3ChainlinkAdapter is
         address tokenOut,
         uint256 target
     ) external view returns (UD60x18) {
-        _ensureTokenNotWrappedNative(tokenIn);
-        _ensureTokenNotWrappedNative(tokenOut);
-        _ensureTargetNonZero(target);
+        _revertIfWrappedNative(tokenIn);
+        _revertIfWrappedNative(tokenOut);
+        _revertIfTargetInvalid(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
@@ -177,7 +177,7 @@ contract UniswapV3ChainlinkAdapter is
             );
     }
 
-    function _ensureTokenNotWrappedNative(address token) internal view {
+    function _revertIfWrappedNative(address token) internal view {
         if (token == WRAPPED_NATIVE)
             revert UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative();
     }

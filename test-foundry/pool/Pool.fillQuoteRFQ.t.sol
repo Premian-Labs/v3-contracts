@@ -64,7 +64,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             isCall
         );
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         uint256 collateral = scaleDecimals(
             contractsToCollateral(quoteRFQ.size, isCall),
@@ -116,6 +116,94 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         _test_fillQuoteRFQ_Success(poolKey.isCallPool);
     }
 
+    function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
+        mintAndApprove();
+
+        quoteRFQ.isBuy = isBuy;
+
+        bool isCall = poolKey.isCallPool;
+        address token = getPoolToken(isCall);
+
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        uint256 premium = scaleDecimals(
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
+            isCall
+        );
+
+        uint256 protocolFee = pool.takerFee(
+            users.trader,
+            quoteRFQ.size,
+            premium,
+            false
+        );
+
+        (
+            UD60x18 primaryRebatePercent,
+            UD60x18 secondaryRebatePercent
+        ) = referral.getRebatePercents(users.referrer);
+
+        UD60x18 _primaryRebate = primaryRebatePercent *
+            scaleDecimals(protocolFee, isCall);
+
+        UD60x18 _secondaryRebate = secondaryRebatePercent *
+            scaleDecimals(protocolFee, isCall);
+
+        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
+        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        uint256 totalRebate = primaryRebate + secondaryRebate;
+
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
+
+        uint256 collateral = scaleDecimals(
+            contractsToCollateral(quoteRFQ.size, isCall),
+            isCall
+        );
+
+        uint256 initialCollateral = getInitialCollateral();
+
+        if (isBuy) {
+            assertEq(
+                IERC20(token).balanceOf(users.lp),
+                initialCollateral - premium
+            );
+
+            assertEq(
+                IERC20(token).balanceOf(users.trader),
+                initialCollateral +
+                    premium +
+                    totalRebate -
+                    collateral -
+                    protocolFee
+            );
+        } else {
+            assertEq(
+                IERC20(token).balanceOf(users.lp),
+                initialCollateral +
+                    premium +
+                    totalRebate -
+                    collateral -
+                    protocolFee
+            );
+
+            assertEq(
+                IERC20(token).balanceOf(users.trader),
+                initialCollateral - premium
+            );
+        }
+
+        assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
+    }
+
+    function test_fillQuoteRFQ_Success_WithReferral_Buy() public {
+        _test_fillQuoteRFQ_Success_WithReferral(true);
+    }
+
+    function test_fillQuoteRFQ_Success_WithReferral_Sell() public {
+        _test_fillQuoteRFQ_Success_WithReferral(false);
+    }
+
     function test_fillQuoteRFQ_RevertIf_QuoteRFQExpired() public {
         quoteRFQ.deadline = block.timestamp - 1 hours;
 
@@ -124,7 +212,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         vm.expectRevert(IPoolInternal.Pool__QuoteRFQExpired.selector);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuote_RevertIf_QuotePriceOutOfBounds() public {
@@ -139,7 +227,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.price
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         quoteRFQ.price = ud(1 ether + 1);
         sig = signQuoteRFQ(quoteRFQ);
@@ -150,7 +238,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.price
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_NotSpecifiedTaker() public {
@@ -161,7 +249,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQTaker.selector);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_Overfilled() public {
@@ -171,7 +259,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig, address(0));
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -181,7 +269,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
                 quoteRFQ.size
             )
         );
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
     function test_fillQuoteRFQ_RevertIf_WrongSignedMessage() public {
@@ -191,6 +279,6 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         quoteRFQ.size = quoteRFQ.size * TWO;
 
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQSignature.selector);
-        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 }

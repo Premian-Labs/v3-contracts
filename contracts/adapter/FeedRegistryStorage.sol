@@ -7,7 +7,7 @@ library FeedRegistryStorage {
         keccak256("premia.contracts.storage.FeedRegistry");
 
     struct Layout {
-        mapping(bytes32 => address) feeds;
+        mapping(bytes32 key => address feed) feeds;
     }
 
     function layout() internal pure returns (Layout storage l) {

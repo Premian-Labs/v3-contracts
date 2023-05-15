@@ -47,7 +47,7 @@ abstract contract PoolDepositTest is DeployTest {
         vm.prank(users.lp);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__NotAuthorized.selector,
+                IPoolInternal.Pool__OperatorNotAuthorized.selector,
                 users.lp
             )
         );

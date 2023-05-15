@@ -26,7 +26,7 @@ import {
 } from './Pool.fixture';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
-import { BigNumber } from 'ethers';
+import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 
 describe('Pool', () => {
@@ -286,7 +286,7 @@ describe('Pool', () => {
           pool
             .connect(deployer)
             .writeFrom(lp.address, trader.address, parseEther('500')),
-        ).to.be.revertedWithCustomError(pool, 'Pool__NotAuthorized');
+        ).to.be.revertedWithCustomError(pool, 'Pool__OperatorNotAuthorized');
       });
 
       it('should revert if size is zero', async () => {
@@ -330,7 +330,9 @@ describe('Pool', () => {
           ]);
 
         await expect(
-          pool.connect(trader).fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig),
+          pool
+            .connect(trader)
+            .fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, constants.AddressZero),
         ).to.be.revertedWithCustomError(pool, 'Pool__QuoteRFQCancelled');
       });
     });
@@ -351,7 +353,12 @@ describe('Pool', () => {
 
         await pool
           .connect(trader)
-          .fillQuoteRFQ(quoteRFQ, quoteRFQ.size.div(2), sig);
+          .fillQuoteRFQ(
+            quoteRFQ,
+            quoteRFQ.size.div(2),
+            sig,
+            constants.AddressZero,
+          );
 
         const quoteRFQHash = await calculateQuoteRFQHash(
           lp.provider!,

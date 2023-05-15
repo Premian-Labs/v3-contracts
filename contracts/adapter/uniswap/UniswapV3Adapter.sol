@@ -96,7 +96,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         address tokenOut,
         uint256 target
     ) external view returns (UD60x18) {
-        _ensureTargetNonZero(target);
+        _revertIfTargetInvalid(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
@@ -139,7 +139,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
             )
         );
 
-        _ensurePricePositive(price.intoSD59x18().unwrap());
+        _revertIfPriceInvalid(price.intoSD59x18().unwrap());
         return price;
     }
 

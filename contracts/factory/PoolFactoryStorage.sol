@@ -13,14 +13,10 @@ library PoolFactoryStorage {
         keccak256("premia.contracts.storage.PoolFactory");
 
     struct Layout {
-        // Pool Key -> Address
-        mapping(bytes32 => address) pools;
-        // Pool Address -> Whether this is a pool or not
-        mapping(address => bool) isPool;
-        // Pool Key -> Count (Discount lattice for strike)
-        mapping(bytes32 => uint256) strikeCount;
-        // Pool Key -> Count (Discount lattice for maturity)
-        mapping(bytes32 => uint256) maturityCount;
+        mapping(bytes32 key => address pool) pools;
+        mapping(address pool => bool) isPool;
+        mapping(bytes32 key => uint256 count) strikeCount;
+        mapping(bytes32 key => uint256 count) maturityCount;
         // Discount % per neighboring strike/maturity (18 decimals)
         UD60x18 discountPerPool;
         // Initialization fee receiver

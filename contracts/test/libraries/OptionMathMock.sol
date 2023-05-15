@@ -24,6 +24,25 @@ contract OptionMathMock {
         return OptionMath.relu(x);
     }
 
+    function optionDelta(
+        UD60x18 spot,
+        UD60x18 strike,
+        UD60x18 timeToMaturity,
+        UD60x18 volAnnualized,
+        UD60x18 riskFreeRate,
+        bool isCall
+    ) external pure returns (SD59x18) {
+        return
+            OptionMath.optionDelta(
+                spot,
+                strike,
+                timeToMaturity,
+                volAnnualized,
+                riskFreeRate,
+                isCall
+            );
+    }
+
     function blackScholesPrice(
         UD60x18 spot,
         UD60x18 strike,
