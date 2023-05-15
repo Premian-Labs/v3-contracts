@@ -34,7 +34,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
+        mainnetFork = vm.createFork(ETH_RPC_URL, 16597500);
         vm.selectFork(mainnetFork);
 
         target = 1676016000;
@@ -177,17 +177,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.upsertPair(WBTC, address(0));
     }
 
-    // ToDo : See why this doesnt compile
-    //    function test_upsertPair_EmitUpdatePathForPair_WhenPathIsUpdated() public {
-    //        vm.expectEmit(false, false, false, true);
-    //        emit ChainlinkAdapter.UpdatedPathForPair(
-    //            WETH,
-    //            DAI,
-    //            IChainlinkAdapter.PricingPath.ETH_TOKEN
-    //        );
-    //        adapter.upsertPair(WETH, DAI);
-    //    }
-
     function test_batchRegisterFeedMappings_RevertIf_TokenEqualDenomination()
         public
     {
@@ -316,5 +305,323 @@ contract ChainlinkAdapterTest is Test, Assertions {
             )
         );
         adapter.quote(stubCoin, CHAINLINK_USD);
+    }
+
+    function test_quoteFrom_CatchRevert() public {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+        adapter.upsertPair(stubCoin, CHAINLINK_USD);
+
+        int256[] memory prices = new int256[](3);
+        uint256[] memory timestamps = new uint256[](3);
+
+        prices[0] = 100000000000;
+        prices[1] = 100000000000;
+        prices[2] = 100000000000;
+
+        timestamps[0] = target + 3;
+        timestamps[1] = target + 2;
+        timestamps[2] = target + 1;
+
+        stub.setup(
+            ChainlinkOraclePriceStub
+                .FailureMode
+                .GET_ROUND_DATA_REVERT_WITH_REASON,
+            prices,
+            timestamps
+        );
+
+        vm.expectRevert("reverted with reason");
+        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+
+        //
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.GET_ROUND_DATA_REVERT,
+            prices,
+            timestamps
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter
+                    .ChainlinkAdapter__GetRoundDataCallReverted
+                    .selector,
+                ""
+            )
+        );
+        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+    }
+
+    function test_quoteFrom_RevertIf_TargetIsZero() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleAdapter.OracleAdapter__InvalidTarget.selector,
+                0,
+                block.timestamp
+            )
+        );
+        adapter.quoteFrom(WETH, DAI, 0);
+    }
+
+    function test_quoteFrom_RevertIf_TargetGtBlockTimestamp() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleAdapter.OracleAdapter__InvalidTarget.selector,
+                block.timestamp + 1,
+                block.timestamp
+            )
+        );
+        adapter.quoteFrom(WETH, DAI, block.timestamp + 1);
+    }
+
+    function test_quoteFrom_WhenStalePrice_ReturnStalePrice_IfCall12HoursAfterTarget()
+        public
+    {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 100000000000;
+        timestamps[0] = target - 90000;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        vm.warp(target + 43200);
+        int256 stalePrice = stub.price(0);
+
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(stalePrice) * 1e10)
+        );
+    }
+
+    function test_quoteFrom_WhenStalePrice_RevertIf_CallWithin12HoursOfTarget()
+        public
+    {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 100000000000;
+        timestamps[0] = target - 90000;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter
+                    .ChainlinkAdapter__PriceAfterTargetIsStale
+                    .selector,
+                target,
+                timestamps[0],
+                block.timestamp
+            )
+        );
+        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+    }
+
+    function _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget()
+        public
+    {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 1000000000000;
+        timestamps[0] = target + 100;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        int256 freshPrice = stub.price(0);
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(freshPrice) * 1e10)
+        );
+
+        //
+
+        prices = new int256[](3);
+        timestamps = new uint256[](3);
+
+        prices[0] = 100000000000;
+        prices[1] = 200000000000;
+        prices[2] = 300000000000;
+
+        timestamps[0] = target + 100;
+        timestamps[1] = target + 200;
+        timestamps[2] = target + 300;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        freshPrice = stub.price(0);
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(freshPrice) * 1e10)
+        );
+
+        //
+
+        prices = new int256[](4);
+        timestamps = new uint256[](4);
+
+        prices[0] = 50000000000;
+        prices[1] = 100000000000;
+        prices[2] = 200000000000;
+        prices[3] = 300000000000;
+
+        timestamps[0] = target - 50;
+        timestamps[1] = target + 100;
+        timestamps[2] = target + 200;
+        timestamps[3] = target + 300;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        freshPrice = stub.price(0);
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(freshPrice) * 1e10)
+        );
+
+        //
+
+        prices = new int256[](4);
+        timestamps = new uint256[](4);
+
+        prices[0] = 50000000000;
+        prices[1] = 100000000000;
+        prices[2] = 200000000000;
+        prices[3] = 300000000000;
+
+        timestamps[0] = target - 100;
+        timestamps[1] = target + 50;
+        timestamps[2] = target + 300;
+        timestamps[3] = target + 500;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        freshPrice = stub.price(1);
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(freshPrice) * 1e10)
+        );
+
+        //
+
+        prices = new int256[](2);
+        timestamps = new uint256[](2);
+
+        prices[0] = 50000000000;
+        prices[1] = 100000000000;
+
+        timestamps[0] = target - 100;
+        timestamps[1] = target - 50;
+
+        stub.setup(
+            ChainlinkOraclePriceStub.FailureMode.NONE,
+            prices,
+            timestamps
+        );
+
+        freshPrice = stub.price(1);
+        assertEq(
+            adapter.quoteFrom(stubCoin, CHAINLINK_USD, target),
+            ud(uint256(freshPrice) * 1e10)
+        );
+    }
+
+    function test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget_IfCallWithin12HoursOfTarget()
+        public
+    {
+        _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget();
+    }
+
+    function test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget_IfCall12HoursAfterTarget()
+        public
+    {
+        vm.warp(target + 43200);
+        _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget();
+    }
+
+    function test_describePricingPath_Success() public {
+        (
+            IOracleAdapter.AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
+        ) = adapter.describePricingPath(address(1));
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.CHAINLINK)
+        );
+        assertEq(path.length, 0);
+        assertEq(decimals.length, 0);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(WETH);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.CHAINLINK)
+        );
+        assertEq(path.length, 1);
+        assertEq(path[0][0], 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        assertEq(decimals.length, 1);
+        assertEq(decimals[0], 18);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(DAI);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.CHAINLINK)
+        );
+        assertEq(path.length, 1);
+        assertEq(path[0][0], 0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC);
+        assertEq(decimals.length, 1);
+        assertEq(decimals[0], 18);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(ENS);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.CHAINLINK)
+        );
+        assertEq(path.length, 2);
+        assertEq(path[0][0], 0x780f1bD91a5a22Ede36d4B2b2c0EcCB9b1726a28);
+        assertEq(path[1][0], 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6);
+        assertEq(decimals.length, 2);
+        assertEq(decimals[0], 8);
+        assertEq(decimals[0], 8);
     }
 }
