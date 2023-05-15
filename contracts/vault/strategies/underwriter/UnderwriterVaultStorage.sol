@@ -5,14 +5,13 @@ pragma solidity >=0.8.19;
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {IVault} from "../../IVault.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 
 library UnderwriterVaultStorage {
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
-    using SafeCast for int256;
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
 
@@ -50,9 +49,9 @@ library UnderwriterVaultStorage {
         // Maximum days until maturity which can be underwritten by the vault, default 30
         UD60x18 maxDTE;
         // Minimum option delta which can be underwritten by the vault, default 0.1
-        SD59x18 minDelta;
+        UD60x18 minDelta;
         // Maximum option delta which can be underwritten by the vault, default 0.7
-        SD59x18 maxDelta;
+        UD60x18 maxDelta;
         // ====================================================================
         // C-Level Parameters
         // ====================================================================
@@ -103,8 +102,34 @@ library UnderwriterVaultStorage {
         }
     }
 
+    function updateSettings(Layout storage l, bytes memory settings) internal {
+        // Handle decoding of settings and updating storage
+        if (settings.length == 0) revert IVault.Vault__SettingsUpdateIsEmpty();
+
+        UD60x18[] memory arr = abi.decode(settings, (UD60x18[]));
+
+        l.alphaCLevel = arr[0];
+        l.hourlyDecayDiscount = arr[1];
+        l.minCLevel = arr[2];
+        l.maxCLevel = arr[3];
+        l.minDTE = arr[4];
+        l.maxDTE = arr[5];
+        l.minDelta = arr[6];
+        l.maxDelta = arr[7];
+        l.performanceFeeRate = arr[8];
+        l.managementFeeRate = arr[9];
+    }
+
     function assetDecimals(Layout storage l) internal view returns (uint8) {
         return l.isCall ? l.baseDecimals : l.quoteDecimals;
+    }
+
+    function collateral(
+        Layout storage l,
+        UD60x18 size,
+        UD60x18 strike
+    ) internal view returns (UD60x18) {
+        return l.isCall ? size : size * strike;
     }
 
     function convertAssetToUD60x18(
@@ -117,27 +142,10 @@ library UnderwriterVaultStorage {
             );
     }
 
-    function convertAssetToSD59x18(
-        Layout storage l,
-        int256 value
-    ) internal view returns (SD59x18) {
-        return
-            SD59x18.wrap(
-                OptionMath.scaleDecimals(value, l.assetDecimals(), 18)
-            );
-    }
-
     function convertAssetFromUD60x18(
         Layout storage l,
         UD60x18 value
     ) internal view returns (uint256) {
-        return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
-    }
-
-    function convertAssetFromSD59x18(
-        Layout storage l,
-        SD59x18 value
-    ) internal view returns (int256) {
         return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
     }
 

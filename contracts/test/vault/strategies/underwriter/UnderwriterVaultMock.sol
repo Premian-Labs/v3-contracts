@@ -38,12 +38,14 @@ contract UnderwriterVaultMock is UnderwriterVault {
     UD60x18 mockSpot;
 
     constructor(
+        address vaultRegistry,
         address feeReceiver,
         address oracleAddress,
         address factoryAddress,
         address routerAddress
     )
         UnderwriterVault(
+            vaultRegistry,
             feeReceiver,
             oracleAddress,
             factoryAddress,
@@ -81,28 +83,12 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return l.convertAssetToUD60x18(value);
     }
 
-    function convertAssetToSD59x18(
-        int256 value
-    ) external view returns (SD59x18) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        return l.convertAssetToSD59x18(value);
-    }
-
     function convertAssetFromUD60x18(
         UD60x18 value
     ) external view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         return l.convertAssetFromUD60x18(value);
-    }
-
-    function convertAssetFromSD59x18(
-        SD59x18 value
-    ) external view returns (int256) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
-        return l.convertAssetFromSD59x18(value);
     }
 
     function getMaturityAfterTimestamp(
@@ -122,19 +108,19 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function getTotalLiabilitiesExpired() external view returns (UD60x18) {
-        return _getTotalLiabilitiesExpired();
+        return _getTotalLiabilitiesExpired(UnderwriterVaultStorage.layout());
     }
 
     function getTotalLiabilitiesUnexpired() external view returns (UD60x18) {
-        return _getTotalLiabilitiesUnexpired();
+        return _getTotalLiabilitiesUnexpired(UnderwriterVaultStorage.layout());
     }
 
     function getTotalLiabilities() external view returns (UD60x18) {
-        return _getTotalLiabilities();
+        return _getTotalLiabilities(UnderwriterVaultStorage.layout());
     }
 
     function getTotalFairValue() external view returns (UD60x18) {
-        return _getTotalFairValue();
+        return _getTotalFairValue(UnderwriterVaultStorage.layout());
     }
 
     function getNumberOfListings() external view returns (uint256) {
@@ -166,7 +152,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function updateState() external {
-        return _updateState();
+        return _updateState(UnderwriterVaultStorage.layout());
     }
 
     function getLockedSpreadInternal()
@@ -174,7 +160,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         view
         returns (LockedSpreadInternal memory)
     {
-        return _getLockedSpreadInternal();
+        return _getLockedSpreadInternal(UnderwriterVaultStorage.layout());
     }
 
     function increasePositionSize(
@@ -372,7 +358,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function getAvailableAssets() external view returns (UD60x18) {
-        return _availableAssetsUD60x18();
+        return _availableAssetsUD60x18(UnderwriterVaultStorage.layout());
     }
 
     function getPricePerShare() external view returns (UD60x18) {
@@ -409,7 +395,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function settleMaturity(uint256 maturity) external {
-        _settleMaturity(maturity);
+        _settleMaturity(UnderwriterVaultStorage.layout(), maturity);
     }
 
     function contains(
@@ -437,7 +423,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 strike,
         uint256 maturity
     ) external view returns (address) {
-        return _getPoolAddress(strike, maturity);
+        return
+            _getPoolAddress(UnderwriterVaultStorage.layout(), strike, maturity);
     }
 
     function afterBuy(
@@ -446,7 +433,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 size,
         UD60x18 spread
     ) external {
-        _afterBuy(strike, maturity, size, spread);
+        _afterBuy(
+            UnderwriterVaultStorage.layout(),
+            strike,
+            maturity,
+            size,
+            spread
+        );
     }
 
     function getSpotPrice() public view returns (UD60x18) {
@@ -456,13 +449,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
     function getSettlementPrice(
         uint256 timestamp
     ) public view returns (UD60x18) {
-        return _getSettlementPrice(timestamp);
+        return _getSettlementPrice(UnderwriterVaultStorage.layout(), timestamp);
     }
 
     function getTradeBounds()
         public
         view
-        returns (UD60x18, UD60x18, SD59x18, SD59x18)
+        returns (UD60x18, UD60x18, UD60x18, UD60x18)
     {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -556,7 +549,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     ) public {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
-        address pool = _getPoolAddress(strike, maturity);
+        address pool = _getPoolAddress(l, strike, maturity);
         UD60x18 allowance = UD60x18.wrap(2e18) * size;
         UD60x18 locked;
         if (!l.isCall) {
@@ -590,12 +583,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function ensureSufficientFunds(
-        bool isCallVault,
         UD60x18 strike,
         UD60x18 size,
         UD60x18 availableAssets
-    ) external pure {
-        _ensureSufficientFunds(isCallVault, strike, size, availableAssets);
+    ) external view {
+        _ensureSufficientFunds(strike, size, availableAssets);
     }
 
     function ensureWithinDTEBounds(
@@ -607,9 +599,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function ensureWithinDeltaBounds(
-        SD59x18 value,
-        SD59x18 minimum,
-        SD59x18 maximum
+        UD60x18 value,
+        UD60x18 minimum,
+        UD60x18 maximum
     ) external pure {
         _ensureWithinDeltaBounds(value, minimum, maximum);
     }
@@ -637,10 +629,6 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
         l.protocolFees = value;
-    }
-
-    function balanceOfAsset(address owner) external view returns (uint256) {
-        return _balanceOfAsset(owner);
     }
 
     function setManagementFeeRate(UD60x18 value) external {
@@ -698,7 +686,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     function claimFees() external {
-        _claimFees();
+        _claimFees(UnderwriterVaultStorage.layout());
     }
 
     function getFeeInternal(
@@ -706,7 +694,13 @@ contract UnderwriterVaultMock is UnderwriterVault {
         UD60x18 shares,
         UD60x18 pps
     ) external view returns (FeeInternal memory) {
-        return _getFeeInternal(from, shares, pps);
+        return
+            _getFeeInternal(
+                UnderwriterVaultStorage.layout(),
+                from,
+                shares,
+                pps
+            );
     }
 
     function afterDeposit(
@@ -725,7 +719,16 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _beforeWithdraw(receiver, assetAmount, shareAmount);
     }
 
-    function updateTimeOfDeposit(address owner, uint256 shareAmount) external {
-        _updateTimeOfDeposit(owner, shareAmount);
+    function updateTimeOfDeposit(
+        address owner,
+        uint256 shareBalanceBefore,
+        uint256 shareAmount
+    ) external {
+        _updateTimeOfDeposit(
+            UnderwriterVaultStorage.layout(),
+            owner,
+            shareBalanceBefore,
+            shareAmount
+        );
     }
 }

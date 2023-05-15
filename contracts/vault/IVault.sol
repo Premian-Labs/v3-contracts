@@ -6,6 +6,8 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
 import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.sol";
 
+import {IPoolFactory} from "../factory/IPoolFactory.sol";
+
 interface IVault is IERC4626Internal, IERC20Internal {
     // Errors
     error Vault__AboveMaxSlippage(UD60x18 totalPremium, UD60x18 premiumLimit);
@@ -17,6 +19,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     error Vault__OptionTypeMismatchWithVault();
     error Vault__OutOfDeltaBounds();
     error Vault__OutOfDTEBounds();
+    error Vault__SettingsNotFromRegistry();
+    error Vault__SettingsUpdateIsEmpty();
     error Vault__StrikeZero();
     error Vault__TradeMustBeBuy();
     error Vault__TransferExceedsBalance(UD60x18 balance, UD60x18 amount);
@@ -81,18 +85,16 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
+    function updateSettings(bytes memory settings) external;
+
     function getQuote(
-        UD60x18 strike,
-        uint256 maturity,
-        bool isCall,
+        IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy
     ) external view returns (uint256 premium);
 
     function trade(
-        UD60x18 strike,
-        uint256 maturity,
-        bool isCall,
+        IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
         uint256 premiumLimit

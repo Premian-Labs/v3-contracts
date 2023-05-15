@@ -727,48 +727,4 @@ describe('UnderwriterVault.internal', () => {
       });
     }
   });
-
-  describe('#balanceOfAsset', () => {
-    for (const isCall of [true, false]) {
-      let vault: UnderwriterVaultMock;
-      let token: ERC20Mock;
-      describe(isCall ? 'call' : 'put', () => {
-        const tests = [{ mintAmount: 1 }, { mintAmount: 2 }];
-
-        tests.forEach(async (test) => {
-          async function setup() {
-            let { callVault, putVault, base, quote, caller, receiver } =
-              await loadFixture(vaultSetup);
-            vault = isCall ? callVault : putVault;
-            token = isCall ? base : quote;
-            await token
-              .connect(caller)
-              .transfer(
-                receiver.address,
-                await token.balanceOf(caller.address),
-              );
-            expect(await token.balanceOf(caller.address)).to.eq(
-              parseEther('0'),
-            );
-            const mintAmount = parseUnits(
-              test.mintAmount.toString(),
-              await token.decimals(),
-            );
-            await token.mint(caller.address, mintAmount);
-            return { vault, caller, token };
-          }
-          it(`caller should hold ${test.mintAmount} tokens`, async () => {
-            let { vault, caller, token } = await loadFixture(setup);
-            const mintAmount = parseUnits(
-              test.mintAmount.toString(),
-              await token.decimals(),
-            );
-            expect(await vault.balanceOfAsset(caller.address)).to.eq(
-              mintAmount,
-            );
-          });
-        });
-      });
-    }
-  });
 });

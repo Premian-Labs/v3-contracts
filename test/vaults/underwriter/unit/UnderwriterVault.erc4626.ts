@@ -1,11 +1,23 @@
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { addDeposit, callVault, vaultSetup } from '../UnderwriterVault.fixture';
+import {
+  addDeposit,
+  callVault,
+  vaultSetup,
+  setMaturities,
+  setupBeforeTokenTransfer,
+  setup,
+} from '../UnderwriterVault.fixture';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { setMaturities } from '../UnderwriterVault.fixture';
-import { ERC20Mock, UnderwriterVaultMock } from '../../../../typechain';
+import {
+  ERC20Mock,
+  IERC20__factory,
+  UnderwriterVaultMock,
+} from '../../../../typechain';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { latest, ONE_DAY, ONE_YEAR } from '../../../../utils/time';
 
 describe('#ERC4626 overridden functions', () => {
   for (const isCall of [true, false]) {
@@ -15,12 +27,8 @@ describe('#ERC4626 overridden functions', () => {
         let token: ERC20Mock;
         const tests = [
           { totalAssets: 1 },
-          {
-            totalAssets: 1.1,
-          },
-          {
-            totalAssets: 590.7,
-          },
+          { totalAssets: 1.1 },
+          { totalAssets: 590.7 },
         ];
 
         tests.forEach(async (test) => {
@@ -110,31 +118,56 @@ describe('#ERC4626 overridden functions', () => {
           ).to.be.revertedWithCustomError(callVault, 'Vault__AddressZero');
         });
 
-        it('maxWithdraw should return the available assets for a non-zero address', async () => {
+        it('maxWithdraw should return the available assets since the available assets are less than the max transferable', async () => {
           const { callVault, receiver, base, quote } = await loadFixture(
             vaultSetup,
           );
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
           await setMaturities(callVault);
           await addDeposit(callVault, receiver, 3, base, quote);
 
           await callVault.increaseTotalLockedSpread(parseEther('0.1'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
 
+          // incrementing time by a day does not have an effect on the max withdrawable assets
+          await callVault.setTimestamp(timestamp + ONE_DAY);
           const assetAmount = await callVault.maxWithdraw(receiver.address);
 
           expect(assetAmount).to.eq(parseEther('2.4'));
         });
 
-        it('maxWithdraw should return the assets the receiver owns', async () => {
+        it('maxWithdraw should return the max transferable assets (test 1)', async () => {
           const { callVault, caller, receiver, base, quote } =
             await loadFixture(vaultSetup);
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
+
+          await setMaturities(callVault);
+          await addDeposit(callVault, receiver, 2, base, quote);
+
+          await callVault.setTimestamp(timestamp + ONE_DAY);
+
+          const assetAmount = await callVault.maxWithdraw(receiver.address);
+          expect(assetAmount).to.eq(parseEther('1.999890410958904110'));
+        });
+
+        it('maxWithdraw should return the max transferable assets (test 2)', async () => {
+          const { callVault, caller, receiver, base, quote } =
+            await loadFixture(vaultSetup);
+          const timestamp = await latest();
+          await callVault.setTimestamp(timestamp);
+
           await setMaturities(callVault);
           await addDeposit(callVault, caller, 8, base, quote);
           await addDeposit(callVault, receiver, 2, base, quote);
           await callVault.increaseTotalLockedSpread(parseEther('0.0'));
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
+
+          await callVault.setTimestamp(timestamp + ONE_DAY);
+
           const assetAmount = await callVault.maxWithdraw(receiver.address);
-          expect(assetAmount).to.eq(parseEther('2'));
+          expect(assetAmount).to.eq(parseEther('1.999890410958904110'));
         });
 
         it('maxWithdraw should return the assets the receiver owns since there are sufficient funds', async () => {
@@ -174,6 +207,33 @@ describe('#ERC4626 overridden functions', () => {
           await callVault.increaseTotalLockedAssets(parseEther('0.5'));
           const assetAmount = await callVault.maxRedeem(receiver.address);
           expect(assetAmount).to.eq('2482758620689655174');
+        });
+
+        it('should return max transferable shares of the caller', async () => {
+          // assets caller: 2.3 * 1.5
+          // tax caller: 2.3 * 1.5 * 0.05 * 0.25 = 0.43125
+          // maxWithdrawable = assets - tax = 3.406875
+
+          let test = {
+            shares: 2.3,
+            pps: 1.5,
+            ppsUser: 1.2,
+            totalSupply: 2.5,
+            managementFeeRate: 0.0,
+            performanceFeeRate: 0.05,
+          };
+
+          let { vault, caller } = await setup(isCall, test);
+
+          await vault.setPerformanceFeeRate(
+            parseEther(test.performanceFeeRate.toString()),
+          );
+          await vault.setManagementFeeRate(
+            parseEther(test.managementFeeRate.toString()),
+          );
+
+          const assetAmount = await vault.maxRedeem(caller.address);
+          expect(assetAmount).to.eq(parseEther('2.27125'));
         });
       });
 
@@ -312,6 +372,132 @@ describe('#ERC4626 overridden functions', () => {
           token = isCall ? base : quote;
           const assetAddress = await vault.asset();
           expect(assetAddress).to.eq(token.address);
+        });
+      });
+
+      const test = {
+        shares: 1.1,
+        pps: 1.0,
+        ppsUser: 1.0,
+        assets: 0.1,
+        balanceShares: 1.1,
+        totalSupply: 2.2,
+        performanceFeeRate: 0.01,
+        managementFeeRate: 0.02,
+        transferAmount: 0.1,
+        performance: 1.0,
+        performanceFeeInShares: 0,
+        performanceFeeInAssets: 0,
+        managementFeeInShares: 0.000005479452054794,
+        managementFeeInAssets: 0.000005479452054794,
+        totalFeeInShares: 0.000005479452054794,
+        totalFeeInAssets: 0.000005479452054794,
+        timeOfDeposit: 3000000000,
+        timestamp: 3000000000 + ONE_DAY,
+        maxTransferableShares: 1.0999397260273973,
+        // beforeTokenTransfer
+        protocolFeesInitial: 0.1,
+        protocolFees: 0.1 + 0.000005479452054794,
+        sharesAfter: 1.0999945204845256,
+        netUserDepositReceiver: 1.2,
+        netUserDepositReceiverAfter: 1.3,
+        netUserDepositCallerAfter: 0.9999945205, // 1,1 * 1,0 * ((1,1 - 0,1 - 0,000005479452054794) / 1,1)
+        timeOfDepositReceiverAfter: 3000000000 + ONE_DAY,
+      };
+
+      describe('#transfer', () => {
+        it('transfer should update the netUserDeposit of the receiver and timeOfDeposit', async () => {
+          const { vault, caller, receiver } = await setupBeforeTokenTransfer(
+            true,
+            test,
+          );
+          const vaultToken = IERC20__factory.connect(vault.address, caller);
+
+          await vault.setTimestamp(test.timestamp);
+          await vaultToken
+            .connect(caller)
+            .transfer(
+              receiver.address,
+              parseEther(test.transferAmount.toString()),
+            );
+
+          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
+            test.timestamp,
+          );
+          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+            parseEther(test.netUserDepositReceiverAfter.toString()),
+          );
+          expect(await vault.balanceOf(receiver.address)).to.eq(
+            parseEther('0.1'),
+          );
+
+          await vault.setTimestamp(test.timestamp + ONE_YEAR);
+
+          await vaultToken
+            .connect(caller)
+            .transfer(
+              receiver.address,
+              parseEther(test.transferAmount.toString()),
+            );
+
+          expect(await vault.getTimeOfDeposit(receiver.address)).to.eq(
+            test.timestamp + 0.5 * ONE_YEAR,
+          );
+          expect(await vault.getNetUserDeposit(receiver.address)).to.eq(
+            parseEther('1.4'),
+          );
+          expect(await vault.balanceOf(receiver.address)).to.eq(
+            parseEther('0.2'),
+          );
+        });
+      });
+
+      describe('#deposit', () => {
+        it('should update fee-related numbers', async () => {
+          const { vault, caller, token } = await setupBeforeTokenTransfer(
+            true,
+            test,
+          );
+          const assetAmount = parseUnits('1.4', await token.decimals());
+          await token.mint(caller.address, assetAmount);
+          await token.connect(caller).approve(vault.address, assetAmount);
+          await vault.setTimestamp(test.timestamp);
+          await vault.connect(caller).deposit(assetAmount, caller.address);
+          // 1.1 + 1.4 = 2.5
+          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
+            parseEther('2.5'),
+          );
+          // (1.1 * 3000000000 + 1.4 * 3000086400) / 2.5
+          expect(await vault.getTimeOfDeposit(caller.address)).to.eq(
+            3000048384,
+          );
+          expect(await vault.balanceOf(caller.address)).to.eq(
+            parseEther('2.5'),
+          );
+        });
+      });
+
+      describe('#withdraw', () => {
+        it('should update all fee-related numbers', async () => {
+          const { vault, caller, token } = await setupBeforeTokenTransfer(
+            true,
+            test,
+          );
+
+          const assetAmount = parseUnits('0.4', await token.decimals());
+          await vault.setTimestamp(test.timestamp);
+          await vault
+            .connect(caller)
+            .withdraw(assetAmount, caller.address, caller.address);
+          expect(await vault.getNetUserDeposit(caller.address)).to.eq(
+            '699978082191780821',
+          );
+          expect(await vault.getTimeOfDeposit(caller.address)).to.eq(
+            3000000000,
+          );
+          expect(await vault.balanceOf(caller.address)).to.eq(
+            '699978082191780822',
+          );
         });
       });
     });

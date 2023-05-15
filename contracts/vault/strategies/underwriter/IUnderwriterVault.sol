@@ -13,6 +13,25 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
     error Vault__UtilisationOutOfBounds();
 
     // Structs
+    struct UnderwriterVaultSettings {
+        // The curvature parameter
+        UD60x18 alpha;
+        // The decay rate of the C-level back down to ordinary level
+        UD60x18 hourlyDecayDiscount;
+        // The minimum C-level allowed by the C-level mechanism
+        UD60x18 minCLevel;
+        // The maximum C-level allowed by the C-level mechanism
+        UD60x18 maxCLevel;
+        // The maximum time until maturity the vault will underwrite
+        UD60x18 maxDTE;
+        // The minimum time until maturity the vault will underwrite
+        UD60x18 minDTE;
+        // The maximum delta the vault will underwrite
+        UD60x18 minDelta;
+        // The minimum delta the vault will underwrite
+        UD60x18 maxDelta;
+    }
+
     // The structs below are used as a way to reduce stack depth and avoid "stack too deep" errors
     struct UnexpiredListingVars {
         UD60x18 spot;

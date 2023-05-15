@@ -61,6 +61,17 @@ export default {
       },
     ],
     overrides: {
+      // Uncomment the following lines if we need to reduce UnderwriterVault bytecode size further
+      // 'contracts/vault/strategies/underwriter/UnderwriterVault.sol': {
+      //   version: '0.8.19',
+      //   settings: {
+      //     viaIR: false,
+      //     optimizer: {
+      //       enabled: true,
+      //       runs: 20,
+      //     },
+      //   },
+      // },
       'contracts/staking/VxPremia.sol': {
         version: '0.8.19',
         settings: {

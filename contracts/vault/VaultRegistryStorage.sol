@@ -14,9 +14,12 @@ library VaultRegistryStorage {
 
     struct Layout {
         EnumerableSet.AddressSet vaultAddresses;
+        mapping(bytes32 vaultType => bytes) settings;
+        mapping(bytes32 vaultType => address) implementations;
         mapping(address vault => IVaultRegistry.Vault) vaults;
-        mapping(IVaultRegistry.TradeSide tradeSide => EnumerableSet.AddressSet vaults) vaultsPerTradeSide;
-        mapping(IVaultRegistry.OptionType optionType => EnumerableSet.AddressSet vaults) vaultsPerOptionType;
+        mapping(bytes32 vaultType => EnumerableSet.AddressSet vaults) vaultsByType;
+        mapping(IVaultRegistry.TradeSide tradeSide => EnumerableSet.AddressSet vaults) vaultsByTradeSide;
+        mapping(IVaultRegistry.OptionType optionType => EnumerableSet.AddressSet vaults) vaultsByOptionType;
     }
 
     function layout() internal pure returns (Layout storage l) {

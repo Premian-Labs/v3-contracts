@@ -7,11 +7,14 @@ import {
   OptionMathMock,
   OptionMathMock__factory,
   ProxyUpgradeableOwnable,
+  ProxyUpgradeableOwnable__factory,
   UnderwriterVaultMock,
   UnderwriterVaultMock__factory,
   UnderwriterVaultProxy,
   UnderwriterVaultProxy__factory,
   VolatilityOracleMock,
+  VaultRegistry,
+  VaultRegistry__factory,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
@@ -23,7 +26,18 @@ import {
   MockContract,
 } from '@ethereum-waffle/mock-contract';
 import { ethers } from 'hardhat';
+
+import {
+  AbiCoder,
+  keccak256,
+  parseEther,
+  parseUnits,
+  toUtf8Bytes,
+} from 'ethers/lib/utils';
+
 import { parseEther, parseUnits } from 'ethers/lib/utils';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { expect } from 'chai';
 
 export let deployer: SignerWithAddress;
 export let caller: SignerWithAddress;
@@ -35,11 +49,16 @@ export let feeReceiver: SignerWithAddress;
 
 export let optionMath: OptionMathMock;
 
+export let vaultRegistryImpl: VaultRegistry;
+export let vaultRegistryProxy: ProxyUpgradeableOwnable;
+export let vaultRegistry: VaultRegistry;
+
 export let vaultImpl: UnderwriterVaultMock;
 export let callVaultProxy: UnderwriterVaultProxy;
 export let putVaultProxy: UnderwriterVaultProxy;
 export let callVault: UnderwriterVaultMock;
 export let putVault: UnderwriterVaultMock;
+export let vault: UnderwriterVaultMock;
 
 // Pool Specs
 export let p: PoolUtil;
@@ -65,7 +84,7 @@ export let base: ERC20Mock;
 export let quote: ERC20Mock;
 export let longCall: ERC20Mock;
 export let shortCall: ERC20Mock;
-
+export let token: ERC20Mock;
 export let oracleAdapter: MockContract;
 export let volOracle: VolatilityOracleMock;
 export let volOracleProxy: ProxyUpgradeableOwnable;
@@ -171,7 +190,7 @@ export async function createPool(
   quote: ERC20Mock,
   oracleAdapter: MockContract,
   p: PoolUtil,
-): Promise<[pool: IPoolMock, poolAddress: string, poolKey: PoolKey]> {
+) {
   let pool: IPoolMock;
 
   poolKey = {
@@ -190,7 +209,7 @@ export async function createPool(
   const r = await tx.wait(1);
   const poolAddress = (r as any).events[0].args.poolAddress;
   pool = IPoolMock__factory.connect(poolAddress, deployer);
-  return [pool, poolAddress, poolKey];
+  return { pool, poolAddress, poolKey };
 }
 
 export async function vaultSetup() {
@@ -282,7 +301,6 @@ export async function vaultSetup() {
 
   //=====================================================================================
   // Mock Factory/Pool setup
-
   strike = parseEther('1500'); // ATM
   maturity = await getValidMaturity(2, 'weeks');
 
@@ -296,7 +314,11 @@ export async function vaultSetup() {
     true, // isDevMode
   );
 
-  const [callPool, callPoolAddress, callPoolKey] = await createPool(
+  const {
+    pool: callPool,
+    poolAddress: callPoolAddress,
+    poolKey: callPoolKey,
+  } = await createPool(
     strike,
     maturity,
     true,
@@ -307,7 +329,11 @@ export async function vaultSetup() {
     p,
   );
 
-  const [putPool, putPoolAddress, putPoolKey] = await createPool(
+  const {
+    pool: putPool,
+    poolAddress: putPoolAddress,
+    poolKey: putPoolKey,
+  } = await createPool(
     strike,
     maturity,
     false,
@@ -320,10 +346,43 @@ export async function vaultSetup() {
 
   const factoryAddress = p.poolFactory.address;
 
+  // ====================================================================================
+
   //=====================================================================================
   // Mock Vault setup
 
+  // 1. Deploy vault registry implementation
+  vaultRegistryImpl = await new VaultRegistry__factory(deployer).deploy();
+  await vaultRegistryImpl.deployed();
+
+  // 2. Deploy registry proxy
+  vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
+    deployer,
+  ).deploy(vaultRegistryImpl.address);
+  await vaultRegistryProxy.deployed();
+
+  vaultRegistry = VaultRegistry__factory.connect(
+    vaultRegistryProxy.address,
+    deployer,
+  );
+
+  // 3. Update settings on the registry for the vault type
+  const vaultType = keccak256(toUtf8Bytes('UnderwriterVault'));
+
+  const abi = new AbiCoder();
+  const encoding = abi.encode(
+    ['uint256[]'],
+    [
+      [3, 0.005, 1, 1.2, 3, 30, 0.1, 0.7, 0.05, 0.02].map((el) =>
+        parseEther(el.toString()),
+      ),
+    ],
+  );
+  await vaultRegistry.connect(deployer).updateSettings(vaultType, encoding);
+
+  // 4. Deploy the vault implementation
   vaultImpl = await new UnderwriterVaultMock__factory(deployer).deploy(
+    vaultRegistry.address,
     feeReceiver.address,
     volOracle.address,
     p.poolFactory.address,
@@ -331,51 +390,43 @@ export async function vaultSetup() {
   );
   await vaultImpl.deployed();
 
-  const _cLevelParams: CLevel = {
-    minCLevel: parseEther('1.0'),
-    maxCLevel: parseEther('1.2'),
-    alphaCLevel: parseEther('3.0'),
-    hourlyDecayDiscount: parseEther('0.005'),
-  };
+  // 5. Set the vault implementation in for the vault type in the registry
+  await vaultRegistry
+    .connect(deployer)
+    .setImplementation(vaultType, vaultImpl.address);
 
-  const _tradeBounds: TradeBounds = {
-    maxDTE: parseEther('30'),
-    minDTE: parseEther('3'),
-    minDelta: parseEther('0.1'),
-    maxDelta: parseEther('0.7'),
-  };
-
+  // 6. Deploy vault proxy
   const lastTimeStamp = Math.floor(new Date().getTime() / 1000);
-  // Vault Proxy setup
+
+  // Deploy call vault proxy
   callVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
-    vaultImpl.address,
+    vaultRegistry.address,
     base.address,
     quote.address,
     oracleAdapter.address,
     'WETH Vault',
     'WETH',
     true,
-    _cLevelParams,
-    _tradeBounds,
   );
   await callVaultProxy.deployed();
+
   callVault = UnderwriterVaultMock__factory.connect(
     callVaultProxy.address,
     deployer,
   );
 
+  // Deploy put vault proxy
   putVaultProxy = await new UnderwriterVaultProxy__factory(deployer).deploy(
-    vaultImpl.address,
+    vaultRegistry.address,
     base.address,
     quote.address,
     oracleAdapter.address,
     'WETH Vault',
     'WETH',
     false,
-    _cLevelParams,
-    _tradeBounds,
   );
   await putVaultProxy.deployed();
+
   putVault = UnderwriterVaultMock__factory.connect(
     putVaultProxy.address,
     deployer,
@@ -391,6 +442,7 @@ export async function vaultSetup() {
     base,
     quote,
     optionMath,
+    vaultRegistry,
     callVault,
     putVault,
     volOracle,
@@ -408,4 +460,119 @@ export async function vaultSetup() {
     putPoolAddress,
     feeReceiver,
   };
+}
+
+export async function setup(isCall: boolean, test: any) {
+  let { callVault, putVault, base, quote, caller } = await loadFixture(
+    vaultSetup,
+  );
+
+  vault = isCall ? callVault : putVault;
+  token = isCall ? base : quote;
+  const decimals = await token.decimals();
+
+  // set pps and totalSupply vault
+  const totalSupply = parseEther(test.totalSupply.toString());
+  await increaseTotalShares(
+    vault,
+    parseFloat((test.totalSupply - test.shares).toFixed(12)),
+  );
+  const pps = parseEther(test.pps.toString());
+  const vaultDeposit = parseUnits(
+    (test.pps * test.totalSupply).toFixed(12),
+    decimals,
+  );
+  await token.mint(vault.address, vaultDeposit);
+  await vault.increaseTotalAssets(
+    parseEther((test.pps * test.totalSupply).toFixed(12)),
+  );
+
+  // set pps and shares user
+  const userShares = parseEther(test.shares.toString());
+  await vault.mintMock(caller.address, userShares);
+  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+  await vault.setNetUserDeposit(caller.address, userDeposit);
+  const ppsUser = parseEther(test.ppsUser.toString());
+  const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+
+  expect(ppsAvg).to.eq(ppsUser);
+
+  expect(await vault.totalSupply()).to.eq(totalSupply);
+  expect(await vault.getPricePerShare()).to.eq(pps);
+
+  return { vault, caller, token };
+}
+
+export async function setupGetFeeVars(isCall: boolean, test: any) {
+  let {
+    callVault,
+    putVault,
+    base,
+    quote,
+    caller: _caller,
+    receiver: _receiver,
+  } = await loadFixture(vaultSetup);
+
+  vault = isCall ? callVault : putVault;
+  token = isCall ? base : quote;
+  caller = _caller;
+  receiver = _receiver;
+
+  // set pps and totalSupply vault
+  const totalSupply = parseEther(test.totalSupply.toString());
+  await increaseTotalShares(
+    vault,
+    parseFloat((test.totalSupply - test.shares).toFixed(12)),
+  );
+  const pps = parseEther(test.pps.toString());
+  const vaultDeposit = parseUnits(
+    (test.pps * test.totalSupply).toFixed(12),
+    await token.decimals(),
+  );
+  await token.mint(vault.address, vaultDeposit);
+
+  await vault.increaseTotalAssets(
+    parseEther((test.pps * test.totalSupply).toFixed(12)),
+  );
+
+  // set pps and shares user caller
+  const userShares = parseEther(test.shares.toString());
+  await vault.mintMock(caller.address, userShares);
+  const userDeposit = parseEther((test.shares * test.ppsUser).toFixed(12));
+  await vault.setNetUserDeposit(caller.address, userDeposit);
+  await vault.setTimeOfDeposit(caller.address, test.timeOfDeposit);
+
+  // check pps is as expected
+  const ppsUser = parseEther(test.ppsUser.toString());
+  if (test.shares > 0) {
+    const ppsAvg = await vault.getAveragePricePerShare(caller.address);
+    expect(ppsAvg).to.eq(ppsUser);
+  }
+
+  expect(await vault.totalSupply()).to.eq(totalSupply);
+  expect(await vault.getPricePerShare()).to.eq(pps);
+
+  await vault.setPerformanceFeeRate(
+    parseEther(test.performanceFeeRate.toString()),
+  );
+  await vault.setManagementFeeRate(
+    parseEther(test.managementFeeRate.toString()),
+  );
+  return { vault, caller, receiver, token };
+}
+
+export async function setupBeforeTokenTransfer(isCall: boolean, test: any) {
+  let { vault, caller, receiver, token } = await setupGetFeeVars(isCall, test);
+
+  await token.mint(
+    vault.address,
+    parseUnits(test.protocolFeesInitial.toString(), await token.decimals()),
+  );
+  await vault.setProtocolFees(parseEther(test.protocolFeesInitial.toString()));
+  await vault.setNetUserDeposit(
+    receiver.address,
+    parseEther(test.netUserDepositReceiver.toString()),
+  );
+
+  return { vault, caller, receiver, token };
 }

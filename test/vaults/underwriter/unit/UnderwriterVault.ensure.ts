@@ -3,6 +3,7 @@ import { vaultSetup } from '../UnderwriterVault.fixture';
 import { parseEther } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { UnderwriterVaultMock } from '../../../../typechain';
+import { put } from 'axios';
 
 let vault: UnderwriterVaultMock;
 
@@ -215,12 +216,11 @@ describe('test ensure functions', () => {
     tests.forEach(async (test) => {
       if (test.error != null) {
         it(`should raise ${test.error} error when ${test.message}`, async () => {
-          const { callVault } = await loadFixture(vaultSetup);
-          vault = callVault;
+          const { callVault, putVault } = await loadFixture(vaultSetup);
+          vault = test.isCallVault ? callVault : putVault;
 
           await expect(
             vault.ensureSufficientFunds(
-              test.isCallVault,
               test.strike,
               test.size,
               test.availableAssets,
@@ -229,12 +229,11 @@ describe('test ensure functions', () => {
         });
       } else {
         it(`should not raise an error when ${test.message}`, async () => {
-          const { callVault } = await loadFixture(vaultSetup);
-          vault = callVault;
+          const { callVault, putVault } = await loadFixture(vaultSetup);
+          vault = test.isCallVault ? callVault : putVault;
 
           await expect(
             vault.ensureSufficientFunds(
-              test.isCallVault,
               test.strike,
               test.size,
               test.availableAssets,
@@ -310,37 +309,37 @@ describe('test ensure functions', () => {
   describe('#_ensureWithinDeltaBounds', () => {
     let tests = [
       {
-        value: parseEther('-7'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
+        value: parseEther('3'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
         error: 'Vault__OutOfDeltaBounds',
         message: 'below the lower bound',
       },
       {
-        value: parseEther('-5'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
+        value: parseEther('5'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
         error: null,
         message: 'equal to the lower bound',
       },
       {
-        value: parseEther('0'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
+        value: parseEther('7'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
         error: null,
         message: 'within the bounds',
       },
       {
-        value: parseEther('5'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
+        value: parseEther('10'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
         error: null,
         message: 'equal to the upper bound',
       },
       {
-        value: parseEther('7'),
-        minimum: parseEther('-5'),
-        maximum: parseEther('5'),
+        value: parseEther('12'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
         error: 'Vault__OutOfDeltaBounds',
         message: 'above the upper bound',
       },
