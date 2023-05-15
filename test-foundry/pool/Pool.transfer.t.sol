@@ -45,7 +45,8 @@ abstract contract PoolTransferTest is DeployTest {
             isBuy,
             isBuy
                 ? totalPremium + totalPremium / 10
-                : totalPremium - totalPremium / 10
+                : totalPremium - totalPremium / 10,
+            address(0)
         );
         vm.stopPrank();
     }
@@ -295,7 +296,7 @@ abstract contract PoolTransferTest is DeployTest {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__NotAuthorized.selector,
+                IPoolInternal.Pool__OperatorNotAuthorized.selector,
                 users.trader
             )
         );

@@ -261,7 +261,7 @@ abstract contract PoolTradeTest is DeployTest {
                 totalPremium
             )
         );
-        pool.trade(tradeSize, true, totalPremium - 1);
+        pool.trade(tradeSize, true, totalPremium - 1, address(0));
     }
 
     function test_trade_RevertIf_BuyOptions_WithTotalPremiumAboveLimit()
@@ -303,7 +303,7 @@ abstract contract PoolTradeTest is DeployTest {
                 type(uint256).max
             )
         );
-        pool.trade(tradeSize, false, totalPremium + 1);
+        pool.trade(tradeSize, false, totalPremium + 1, address(0));
     }
 
     function test_trade_RevertIf_SellOptions_WithTotalPremiumBelowLimit()
@@ -322,7 +322,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(depositSize);
 
         vm.expectRevert(IPoolInternal.Pool__InsufficientAskLiquidity.selector);
-        pool.trade(ud(depositSize + 1), true, 0);
+        pool.trade(ud(depositSize + 1), true, 0, address(0));
     }
 
     function test_trade_RevertIf_SellOptions_WithInsufficientBidLiquidity()
@@ -332,19 +332,19 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(depositSize);
 
         vm.expectRevert(IPoolInternal.Pool__InsufficientBidLiquidity.selector);
-        pool.trade(ud(depositSize + 1), false, 0);
+        pool.trade(ud(depositSize + 1), false, 0, address(0));
     }
 
     function test_trade_RevertIf_TradeSizeIsZero() public {
         vm.expectRevert(IPoolInternal.Pool__ZeroSize.selector);
-        pool.trade(ud(0), true, 0);
+        pool.trade(ud(0), true, 0, address(0));
     }
 
     function test_trade_RevertIf_Expired() public {
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(IPoolInternal.Pool__OptionExpired.selector);
-        pool.trade(ud(1), true, 0);
+        pool.trade(ud(1), true, 0, address(0));
     }
 
     function _test_annihilate_Success(bool isCall) internal {

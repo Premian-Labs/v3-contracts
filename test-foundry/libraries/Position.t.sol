@@ -562,8 +562,6 @@ contract PositionTest is Test, Assertions {
     ) internal {
         key.orderType = orderType;
 
-        UD60x18 size = ud(2e18);
-
         UD60x18[6] memory prices = [
             ud(0.2e18),
             ud(0.25e18),

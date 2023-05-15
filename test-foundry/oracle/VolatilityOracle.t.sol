@@ -75,7 +75,7 @@ contract VolatilityOracleTest is Test, Assertions {
         rhoHex[0] = oracle.formatParams(rho);
 
         vm.prank(relayer);
-        oracle.updateParams(tokens, tauHex, thetaHex, psiHex, rhoHex);
+        oracle.updateParams(tokens, tauHex, thetaHex, psiHex, rhoHex, ud(0.01e18));
     }
 
     function test_formatParams_CorrectlyFormatParameters() public {
