@@ -270,6 +270,63 @@ contract OptionMathTest is Test, Assertions {
         }
     }
 
+    function _test_optionDelta_ReturnExpectedValue(bool isCall) internal {
+        UD60x18 strike = ud(1e18);
+        UD60x18 timeToMaturity = ud(0.246575e18); // 90 days
+        UD60x18 varAnnualized = ud(1e18);
+        UD60x18 riskFreeRate = ud(0e18);
+
+        SD59x18[2][7] memory cases;
+
+        // prettier-ignore
+        if (isCall) {
+            cases = [
+                [sd(0.3e18), sd(0.01476537073867126e18)],
+                [sd(0.5e18), sd(0.12556553467572473e18)],
+                [sd(0.7e18), sd(0.31917577351746684e18)],
+                [sd(0.9e18), sd(0.5143996619519293e18)],
+                [sd(1.0e18), sd(0.5980417972127483e18)],
+                [sd(1.5e18), sd(0.85652221419085e18)],
+                [sd(2.0e18), sd(0.9499294514418426e18)]
+            ];
+        } else {
+            cases = [
+                [sd(0.3e18), sd(0.01476537073867126e18 - 1e18)],
+                [sd(0.5e18), sd(0.12556553467572473e18 - 1e18)],
+                [sd(0.7e18), sd(0.31917577351746684e18 - 1e18)],
+                [sd(0.9e18), sd(0.5143996619519293e18 - 1e18)],
+                [sd(1.0e18), sd(0.5980417972127483e18 - 1e18)],
+                [sd(1.5e18), sd(0.85652221419085e18 - 1e18)],
+                [sd(2.0e18), sd(0.9499294514418426e18 - 1e18)]
+            ];
+        }
+
+        for (uint256 i = 0; i < cases.length; i++) {
+            assertApproxEqAbs(
+                OptionMath
+                    .optionDelta(
+                        cases[i][0].intoUD60x18(),
+                        strike,
+                        timeToMaturity,
+                        varAnnualized,
+                        riskFreeRate,
+                        isCall
+                    )
+                    .unwrap(),
+                cases[i][1].unwrap(),
+                0.00001e18
+            );
+        }
+    }
+
+    function test_optionDelta_ReturnExpectedValue_Call() internal {
+        _test_optionDelta_ReturnExpectedValue(true);
+    }
+
+    function test_optionDdelta_ReturnExpectedValue_Put() internal {
+        _test_optionDelta_ReturnExpectedValue(false);
+    }
+
     function test_isFriday_ReturnFalse_IfNotFriday() public {
         uint32[8] memory timestamps = [
             1674460800,
