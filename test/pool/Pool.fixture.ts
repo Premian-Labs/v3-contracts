@@ -350,7 +350,9 @@ async function _deployAndBuy(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool.connect(f.trader).trade(tradeSize, true, totalPremium);
+  await f.pool
+    .connect(f.trader)
+    .trade(tradeSize, true, totalPremium, ethers.constants.AddressZero);
 
   const protocolFees = await f.pool.protocolFees();
 
@@ -408,7 +410,9 @@ async function _deployAndSell(isCall: boolean) {
 
   const collateral = f.scaleDecimals(isCall ? ONE_ETHER : strike);
 
-  await f.pool.connect(f.trader).trade(tradeSize, false, totalPremium);
+  await f.pool
+    .connect(f.trader)
+    .trade(tradeSize, false, totalPremium, ethers.constants.AddressZero);
 
   const protocolFees = await f.pool.protocolFees();
 

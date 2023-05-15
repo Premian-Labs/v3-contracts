@@ -32,6 +32,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     )
@@ -40,6 +41,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
             router,
             wrappedNativeToken,
             feeReceiver,
+            referral,
             settings,
             vxPremia
         )
@@ -58,7 +60,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function fillQuoteRFQ(
         QuoteRFQ calldata quoteRFQ,
         UD60x18 size,
-        Signature calldata signature
+        Signature calldata signature,
+        address referrer
     )
         external
         nonReentrant
@@ -66,7 +69,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     {
         return
             _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(msg.sender, size, signature, true),
+                FillQuoteRFQArgsInternal(
+                    msg.sender,
+                    referrer,
+                    size,
+                    signature,
+                    true
+                ),
                 quoteRFQ
             );
     }
@@ -75,7 +84,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     function trade(
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     )
         external
         nonReentrant
@@ -83,7 +93,14 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     {
         return
             _trade(
-                TradeArgsInternal(msg.sender, size, isBuy, premiumLimit, true)
+                TradeArgsInternal(
+                    msg.sender,
+                    referrer,
+                    size,
+                    isBuy,
+                    premiumLimit,
+                    true
+                )
             );
     }
 
@@ -109,7 +126,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(msg.sender, size, sig, true),
+                FillQuoteRFQArgsInternal(
+                    msg.sender,
+                    address(0),
+                    size,
+                    sig,
+                    true
+                ),
                 quoteRFQ,
                 quoteRFQHash
             );
@@ -126,7 +149,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IERC3156FlashLender
     function maxFlashLoan(address token) external view returns (uint256) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         return IERC20(token).balanceOf(address(this));
     }
 
@@ -135,7 +158,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address token,
         uint256 amount
     ) external view returns (uint256) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
     }
 
@@ -151,7 +174,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         uint256 amount,
         bytes calldata data
     ) external nonReentrant returns (bool) {
-        _ensurePoolToken(token);
+        _revertIfNotPoolToken(token);
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         uint256 startBalance = IERC20(token).balanceOf(address(this));
@@ -185,7 +208,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return true;
     }
 
-    function _ensurePoolToken(address token) internal view {
+    function _revertIfNotPoolToken(address token) internal view {
         if (token != PoolStorage.layout().getPoolToken())
             revert Pool__NotPoolToken(token);
     }

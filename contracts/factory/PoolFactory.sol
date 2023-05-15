@@ -101,8 +101,14 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
 
-        _ensureOptionStrikeIsValid(k.strike, k.oracleAdapter, k.base, k.quote);
-        _ensureOptionMaturityIsValid(k.maturity);
+        _revertIfOptionStrikeInvalid(
+            k.strike,
+            k.oracleAdapter,
+            k.base,
+            k.quote
+        );
+
+        _revertIfOptionMaturityInvalid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k).unwrap();
@@ -233,7 +239,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @notice Ensure that the strike price is a multiple of the strike interval, revert otherwise
-    function _ensureOptionStrikeIsValid(
+    function _revertIfOptionStrikeInvalid(
         UD60x18 strike,
         address oracleAdapter,
         address base,
@@ -249,7 +255,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @notice Ensure that the maturity is a valid option maturity, revert otherwise
-    function _ensureOptionMaturityIsValid(uint256 maturity) internal view {
+    function _revertIfOptionMaturityInvalid(uint256 maturity) internal view {
         if (maturity <= block.timestamp)
             revert PoolFactory__OptionExpired(maturity);
 

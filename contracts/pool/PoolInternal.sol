@@ -26,6 +26,8 @@ import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
 
+import {IReferral} from "../referral/IReferral.sol";
+
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
@@ -50,6 +52,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable ROUTER;
     address internal immutable WRAPPED_NATIVE_TOKEN;
     address internal immutable FEE_RECEIVER;
+    address internal immutable REFERRAL;
     address internal immutable SETTINGS;
     address internal immutable VXPREMIA;
 
@@ -72,6 +75,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address router,
         address wrappedNativeToken,
         address feeReceiver,
+        address referral,
         address settings,
         address vxPremia
     ) {
@@ -79,6 +83,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         ROUTER = router;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
         FEE_RECEIVER = feeReceiver;
+        REFERRAL = referral;
         SETTINGS = settings;
         VXPREMIA = vxPremia;
     }
@@ -133,8 +138,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal view returns (uint256 totalNetPremium, uint256 totalTakerFee) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureNonZeroSize(size);
-        _ensureNotExpired(l);
+        _revertIfZeroSize(size);
+        _revertIfOptionExpired(l);
 
         Pricing.Args memory pricing = Pricing.Args(
             l.liquidityRate,
@@ -374,15 +379,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
         }
 
-        _ensureBelowDepositWithdrawMaxSlippage(
+        _revertIfDepositWithdrawalAboveMaxSlippage(
             l.marketPrice,
             args.minMarketPrice,
             args.maxMarketPrice
         );
-        _ensureNonZeroSize(args.size);
-        _ensureNotExpired(l);
+        _revertIfZeroSize(args.size);
+        _revertIfOptionExpired(l);
 
-        _ensureValidRange(p.lower, p.upper);
+        _revertIfRangeInvalid(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
 
@@ -504,21 +509,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool transferCollateralToUser
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureNotExpired(l);
+        _revertIfOptionExpired(l);
 
-        _ensureBelowDepositWithdrawMaxSlippage(
+        _revertIfDepositWithdrawalAboveMaxSlippage(
             l.marketPrice,
             minMarketPrice,
             maxMarketPrice
         );
-        _ensureNonZeroSize(size);
-        _ensureValidRange(p.lower, p.upper);
+        _revertIfZeroSize(size);
+        _revertIfRangeInvalid(p.lower, p.upper);
         _verifyTickWidth(p.lower);
         _verifyTickWidth(p.upper);
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        _ensureWithdrawalDelayElapsed(pData);
+        _revertIfWithdrawalDelayNotElapsed(pData);
 
         WithdrawVarsInternal memory vars;
 
@@ -677,12 +682,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 msg.sender
             ] ==
             false
-        ) revert Pool__NotAuthorized(msg.sender);
+        ) revert Pool__OperatorNotAuthorized(msg.sender);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureNonZeroSize(size);
-        _ensureNotExpired(l);
+        _revertIfZeroSize(size);
+        _revertIfOptionExpired(l);
 
         UD60x18 collateral = Position.contractsToCollateral(
             size,
@@ -722,8 +727,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (uint256 totalPremium, Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        _ensureNonZeroSize(args.size);
-        _ensureNotExpired(l);
+        _revertIfZeroSize(args.size);
+        _revertIfOptionExpired(l);
 
         TradeVarsInternal memory vars;
 
@@ -773,10 +778,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     // Update price and liquidity variables
                     {
-                        UD60x18 protocolFee = takerFee *
+                        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(
+                                args.user,
+                                args.referrer,
+                                takerFee
+                            );
+
+                        vars.totalReferralRebate =
+                            vars.totalReferralRebate +
+                            totalReferralRebate;
+
+                        UD60x18 takerFeeSansRebate = takerFee -
+                            totalReferralRebate;
+
+                        UD60x18 protocolFee = takerFeeSansRebate *
                             PROTOCOL_FEE_PERCENTAGE;
 
-                        UD60x18 makerRebate = takerFee - protocolFee;
+                        UD60x18 makerRebate = takerFeeSansRebate - protocolFee;
                         _updateGlobalFeeRate(l, makerRebate);
 
                         vars.totalProtocolFees =
@@ -790,6 +808,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     vars.totalPremium =
                         vars.totalPremium +
                         (args.isBuy ? premium + takerFee : premium - takerFee);
+
                     vars.totalTakerFees = vars.totalTakerFees + takerFee;
 
                     l.marketPrice = nextMarketPrice;
@@ -828,7 +847,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         totalPremium = l.toPoolTokenDecimals(vars.totalPremium);
 
-        _ensureBelowTradeMaxSlippage(
+        _revertIfTradeAboveMaxSlippage(
             totalPremium,
             args.premiumLimit,
             args.isBuy
@@ -841,6 +860,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.size,
             args.isBuy,
             args.transferCollateralToUser
+        );
+
+        _useReferral(
+            l,
+            args.user,
+            args.referrer,
+            vars.totalReferralRebate,
+            vars.totalTakerFees
         );
 
         if (args.isBuy) {
@@ -869,6 +896,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.marketPrice,
             l.liquidityRate,
             l.currentTick,
+            vars.totalReferralRebate,
             args.isBuy
         );
     }
@@ -918,7 +946,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool transferCollateralToUser
     ) internal returns (Position.Delta memory delta) {
         delta = _calculateAssetsUpdate(l, user, totalPremium, size, isBuy);
-
         _updateUserAssets(l, user, delta, transferCollateralToUser);
     }
 
@@ -1006,12 +1033,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _calculateQuoteRFQPremiumAndFee(
         PoolStorage.Layout storage l,
         address taker,
+        address referrer,
         UD60x18 size,
         UD60x18 price,
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
         r.protocolFee = _takerFee(l, taker, size, r.premium, true);
+
+        r.totalReferralRebate = _calculateTotalReferralRebate(
+            taker,
+            referrer,
+            r.protocolFee
+        );
+
+        r.protocolFee = r.protocolFee - r.totalReferralRebate;
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(
@@ -1025,7 +1061,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             : r.premium - r.protocolFee; // Maker selling
 
         r.premiumTaker = !isBuy
-            ? r.premium // Taker Buying
+            ? r.premium // Taker buying
             : r.premium - r.protocolFee; // Taker selling
 
         return r;
@@ -1056,11 +1092,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         {
             PoolStorage.Layout storage l = PoolStorage.layout();
             quoteRFQHash = _quoteRFQHash(quoteRFQ);
-            _ensureQuoteRFQIsValid(l, args, quoteRFQ, quoteRFQHash);
+            _revertIfQuoteRFQInvalid(l, args, quoteRFQ, quoteRFQHash);
 
             premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
                 args.user,
+                args.referrer,
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
@@ -1084,6 +1121,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 args.transferCollateralToUser
             );
 
+            _useReferral(
+                l,
+                args.user,
+                args.referrer,
+                premiumAndFee.totalReferralRebate,
+                premiumAndFee.protocolFee + premiumAndFee.totalReferralRebate
+            );
+
             // Process trade maker
             deltaMaker = _calculateAndUpdateUserAssets(
                 l,
@@ -1104,6 +1149,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaTaker,
             premiumAndFee.premium,
             premiumAndFee.protocolFee,
+            premiumAndFee.totalReferralRebate,
             !quoteRFQ.isBuy
         );
 
@@ -1118,7 +1164,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.
     function _annihilate(address owner, UD60x18 size) internal {
-        _ensureNonZeroSize(size);
+        _revertIfZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1146,7 +1192,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator)
             revert Pool__InvalidTransfer();
 
-        _ensureNonZeroSize(size);
+        _revertIfZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1273,7 +1319,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         internal
         returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral)
     {
-        _ensureExpired(l);
+        _revertIfOptionNotExpired(l);
         _removeInitFeeDiscount(l);
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
@@ -1304,7 +1350,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        _ensureCostLessThanPayout(costPerHolder, _exerciseValue);
+        _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
@@ -1344,7 +1390,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (size == ZERO) return 0;
 
-        _ensureCostLessThanPayout(costPerHolder, _collateral);
+        _revertIfCostExceedsPayout(costPerHolder, _collateral);
 
         collateral = l.toPoolTokenDecimals(_collateral);
 
@@ -1375,7 +1421,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 costPerHolder
     ) internal returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        _ensureExpired(l);
+        _revertIfOptionNotExpired(l);
         _removeInitFeeDiscount(l);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
@@ -1445,7 +1491,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.claimableFees = ZERO;
         pData.lastFeeRate = ZERO;
 
-        _ensureCostLessThanPayout(costPerHolder, vars.collateral);
+        _revertIfCostExceedsPayout(costPerHolder, vars.collateral);
 
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
@@ -2032,7 +2078,43 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(account, id, amount.unwrap());
     }
 
-    function _ensureValidRange(UD60x18 lower, UD60x18 upper) internal pure {
+    function _calculateTotalReferralRebate(
+        address user,
+        address referrer,
+        UD60x18 tradingFee
+    ) internal view returns (UD60x18 totalReferralRebate) {
+        if (referrer == address(0))
+            referrer = IReferral(REFERRAL).getReferrer(user);
+
+        if (referrer == address(0)) return ZERO;
+
+        (
+            UD60x18 primaryRebatePercent,
+            UD60x18 secondaryRebatePercent
+        ) = IReferral(REFERRAL).getRebatePercents(referrer);
+
+        totalReferralRebate =
+            (tradingFee * primaryRebatePercent) +
+            (tradingFee * secondaryRebatePercent);
+    }
+
+    function _useReferral(
+        PoolStorage.Layout storage l,
+        address user,
+        address referrer,
+        UD60x18 totalReferralRebate,
+        UD60x18 tradingFee
+    ) internal {
+        if (tradingFee == ZERO) return;
+
+        address token = l.getPoolToken();
+        IERC20(token).approve(REFERRAL, totalReferralRebate);
+
+        IReferral(REFERRAL).useReferral(user, referrer, token, tradingFee);
+        IERC20(token).approve(REFERRAL, 0);
+    }
+
+    function _revertIfRangeInvalid(UD60x18 lower, UD60x18 upper) internal pure {
         if (
             lower == ZERO ||
             upper == ZERO ||
@@ -2042,19 +2124,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         ) revert Pool__InvalidRange(lower, upper);
     }
 
-    function _ensureNonZeroSize(UD60x18 size) internal pure {
+    function _revertIfZeroSize(UD60x18 size) internal pure {
         if (size == ZERO) revert Pool__ZeroSize();
     }
 
-    function _ensureExpired(PoolStorage.Layout storage l) internal view {
+    function _revertIfOptionNotExpired(
+        PoolStorage.Layout storage l
+    ) internal view {
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
     }
 
-    function _ensureNotExpired(PoolStorage.Layout storage l) internal view {
+    function _revertIfOptionExpired(
+        PoolStorage.Layout storage l
+    ) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
     }
 
-    function _ensureWithdrawalDelayElapsed(
+    function _revertIfWithdrawalDelayNotElapsed(
         Position.Data storage position
     ) internal view {
         uint256 unlockTime = position.lastDeposit + WITHDRAWAL_DELAY;
@@ -2062,7 +2148,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__WithdrawalDelayNotElapsed(unlockTime);
     }
 
-    function _ensureBelowTradeMaxSlippage(
+    function _revertIfTradeAboveMaxSlippage(
         uint256 totalPremium,
         uint256 premiumLimit,
         bool isBuy
@@ -2077,7 +2163,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
-    function _ensureBelowDepositWithdrawMaxSlippage(
+    function _revertIfDepositWithdrawalAboveMaxSlippage(
         UD60x18 marketPrice,
         UD60x18 minMarketPrice,
         UD60x18 maxMarketPrice
@@ -2109,7 +2195,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return _isQuoteRFQBalanceValid(l, args, quoteRFQ);
     }
 
-    function _ensureQuoteRFQIsValid(
+    function _revertIfQuoteRFQInvalid(
         PoolStorage.Layout storage l,
         FillQuoteRFQArgsInternal memory args,
         QuoteRFQ memory quoteRFQ,
@@ -2185,6 +2271,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             memory premiumAndFee = _calculateQuoteRFQPremiumAndFee(
                 l,
                 args.user,
+                address(0),
                 args.size,
                 quoteRFQ.price,
                 quoteRFQ.isBuy
@@ -2246,19 +2333,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (true, InvalidQuoteRFQError.None);
     }
 
-    function _ensureOperator(address operator) internal view {
-        if (operator != msg.sender) revert Pool__NotAuthorized(msg.sender);
+    function _revertIfOperatorNotAuthorized(address operator) internal view {
+        if (operator != msg.sender)
+            revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    function _ensureAuthorizedAgent(
+    function _revertIfAgentNotAuthorized(
         address holder,
         address agent
     ) internal view {
         if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent))
-            revert Pool__UnauthorizedAgent();
+            revert Pool__AgentNotAuthorized();
     }
 
-    function _ensureAuthorizedCost(address holder, UD60x18 cost) internal view {
+    function _revertIfCostNotAuthorized(
+        address holder,
+        UD60x18 cost
+    ) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         address poolToken = l.getPoolToken();
@@ -2277,10 +2368,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         if (costInWrappedNative > authorizedCost)
-            revert Pool__UnauthorizedCost(costInWrappedNative, authorizedCost);
+            revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
     }
 
-    function _ensureCostLessThanPayout(
+    function _revertIfCostExceedsPayout(
         UD60x18 cost,
         UD60x18 payout
     ) internal pure {

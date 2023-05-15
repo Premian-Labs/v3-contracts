@@ -81,12 +81,12 @@ abstract contract PoolWithdrawTest is DeployTest {
         pool.withdraw(posKey, ud(100 ether), ZERO, ONE);
     }
 
-    function test_withdraw_RevertIf_NotOperator() public {
+    function test_withdraw_RevertIf_OperatorNotAuthorized() public {
         posKey.operator = users.trader;
         vm.prank(users.lp);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__NotAuthorized.selector,
+                IPoolInternal.Pool__OperatorNotAuthorized.selector,
                 users.lp
             )
         );
