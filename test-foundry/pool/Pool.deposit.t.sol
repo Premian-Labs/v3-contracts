@@ -36,6 +36,7 @@ abstract contract PoolDepositTest is DeployTest {
         );
         assertEq(pool.marketPrice(), posKey.upper);
 
+        pool.tickPrices();
         pool.ticks();
     }
 

@@ -186,6 +186,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
             while (true) {
                 if (prev == Pricing.MIN_TICK_PRICE) {
+                    liquidityRate = l.liquidityRate;
                     break;
                 }
 
@@ -205,13 +206,14 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         while (true) {
             next = l.tickIndex.next(prev);
-            liquidityRate = liquidityRate.add(l.ticks[prev].delta);
 
             _ticks[count++] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[prev],
                 price: prev,
                 liquidityNet: liquidityForRange(prev, next, liquidityRate)
             });
+
+            liquidityRate = liquidityRate.add(l.ticks[next].delta);
 
             if (next == Pricing.MAX_TICK_PRICE) {
                 _ticks[count++] = IPoolInternal.TickWithLiquidity({
