@@ -101,54 +101,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function tickPrices() external view returns (UD60x18[] memory) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 prev = l.tickIndex.prev(l.currentTick);
-        UD60x18 next = l.currentTick;
-
-        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
-        uint256 count;
-
-        UD60x18[] memory prices = new UD60x18[](maxTicks);
-
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
-            while (true) {
-                if (prev == Pricing.MIN_TICK_PRICE) {
-                    break;
-                }
-
-                next = prev;
-                prev = l.tickIndex.prev(prev);
-            }
-
-            prices[count++] = prev;
-        }
-
-        prev = next;
-
-        while (true) {
-            next = l.tickIndex.next(prev);
-            prices[count++] = prev;
-
-            if (next == Pricing.MAX_TICK_PRICE) {
-                prices[count++] = next;
-                break;
-            }
-
-            prev = next;
-        }
-
-        // Remove empty elements from array
-        if (count < maxTicks) {
-            assembly {
-                mstore(prices, sub(mload(prices), sub(maxTicks, count)))
-            }
-        }
-
-        return prices;
-    }
-
-    /// @inheritdoc IPoolCore
     function tick(
         UD60x18 price
     ) external view returns (IPoolInternal.TickWithLiquidity memory) {
