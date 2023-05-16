@@ -109,6 +109,23 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         adapter = UniswapV3ChainlinkAdapter(uniswapV3ChainlinkAdapterProxy);
     }
 
+    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists()
+        public
+    {
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            (bool isCached, bool hasPath) = adapter.isPairSupported(
+                p.tokenIn,
+                p.tokenOut
+            );
+            assertTrue(isCached);
+            assertTrue(hasPath);
+        }
+    }
+
     function test_isPairSupported_ReturnFalse_IfPairNotSupported() public {
         (bool isCached, ) = adapter.isPairSupported(address(1), DAI);
         assertFalse(isCached);
@@ -194,6 +211,41 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         adapter.upsertPair(DAI, address(1));
     }
 
+    function test_quote_ReturnQuoteForPair() public {
+        // Expected values exported from Defilama
+        UD60x18[16] memory expected = [
+            ud(21875331315600487869233), // WETH USDC
+            ud(21861693299762195238145), // WBTC USDT
+            ud(21876294063163284590701), // WBTC DAI
+            ud(718722307016789386580), // MKR USDC
+            ud(51192174753495699235), // MKR ENS
+            ud(1000667869739131577), // USDT DAI
+            ud(1000623831633318250), // USDT USDC
+            ud(999955991286274770), // DAI USDC
+            ud(142822571428571438), // DAI LINK
+            ud(6442928385508826850), // UNI USDT
+            ud(1086000168337553529), // LINK UNI
+            ud(1290255470583175468), // MATIC USDC
+            ud(573413535880104352), // BIT USDC
+            ud(15928571428571428825), // GNO LINK
+            ud(247837071740204584), // LOOKS USDC
+            ud(11329523112798) // LOOKS WBTC
+        ];
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 2) / 100 // 2% tolerance
+            );
+        }
+    }
+
     function test_quote_RevertIf_TokenIsWrappedNativeToken() public {
         vm.expectRevert(
             IUniswapV3ChainlinkAdapter
@@ -228,6 +280,41 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
             )
         );
         adapter.quote(DAI, address(1));
+    }
+
+    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+        // Expected values exported from Defilama
+        UD60x18[16] memory expected = [
+            ud(21894211576846308162203), // WETH USDC
+            ud(21916083916083916847128), // WBTC USDT
+            ud(21916083916083916847128), // WBTC DAI
+            ud(719770459081836406767), // MKR USDC
+            ud(51113394755492564059), // MKR ENS
+            ud(1000000000000000000), // USDT DAI
+            ud(999001996007983895), // USDT USDC
+            ud(999001996007983895), // DAI USDC
+            ud(143409742120343825), // DAI LINK
+            ud(6453546453546453954), // UNI USDT
+            ud(1080495356037151744), // LINK UNI
+            ud(1257485029940119681), // MATIC USDC
+            ud(569097804391217488), // BIT USDC
+            ud(16044412607449853425), // GNO LINK
+            ud(255168662674650715), // LOOKS USDC
+            ud(11654617558574) // LOOKS WBTC
+        ];
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 2) / 100 // 2% tolerance
+            );
+        }
     }
 
     function test_quoteFrom_RevertIf_TokenIsWrappedNativeToken() public {

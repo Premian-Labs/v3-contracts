@@ -214,7 +214,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
             assertApproxEqAbs(
                 quote.unwrap(),
                 expected[i].unwrap(),
-                (expected[i].unwrap() * 2) / 100 // 3% tolerance
+                (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
@@ -392,7 +392,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
             assertApproxEqAbs(
                 quote.unwrap(),
                 expected[i].unwrap(),
-                (expected[i].unwrap() * 2) / 100 // 3% tolerance
+                (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
