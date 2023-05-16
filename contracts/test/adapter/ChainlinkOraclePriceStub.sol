@@ -5,13 +5,13 @@ pragma solidity >=0.8.19;
 import {ChainlinkAdapterStorage} from "../../adapter/chainlink/ChainlinkAdapterStorage.sol";
 
 contract ChainlinkOraclePriceStub {
-    uint16 PHASE_ID = 1;
-    uint64 AGGREGATOR_ROUND_ID;
+    uint16 internal PHASE_ID = 1;
+    uint64 internal AGGREGATOR_ROUND_ID;
 
-    uint256[] updatedAtTimestamps;
-    int256[] prices;
+    uint256[] internal updatedAtTimestamps;
+    int256[] internal prices;
 
-    FailureMode failureMode;
+    FailureMode internal failureMode;
 
     enum FailureMode {
         NONE,
@@ -20,8 +20,6 @@ contract ChainlinkOraclePriceStub {
         LAST_ROUND_DATA_REVERT_WITH_REASON,
         LAST_ROUND_DATA_REVERT
     }
-
-    error ChainlinkOraclePriceStub__CallFailed();
 
     function setup(
         FailureMode _failureMode,

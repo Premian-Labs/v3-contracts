@@ -9,11 +9,11 @@ import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
 contract OracleAdapterMock {
-    address immutable BASE;
-    address immutable QUOTE;
+    address internal immutable BASE;
+    address internal immutable QUOTE;
 
-    UD60x18 quoteAmount;
-    UD60x18 quoteFromAmount;
+    UD60x18 internal quoteAmount;
+    UD60x18 internal quoteFromAmount;
 
     constructor(
         address _base,

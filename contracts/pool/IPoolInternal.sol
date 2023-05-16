@@ -29,6 +29,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InsufficientLiquidity();
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
+    error Pool__InvalidMonth(uint256 month);
     error Pool__InvalidQuoteRFQSignature();
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
