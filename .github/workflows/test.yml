@@ -24,7 +24,7 @@ jobs:
           cache: 'yarn'
 
       - name: Install packages
-      - run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
