@@ -14,7 +14,8 @@ export interface ContractAddresses {
   UserSettingsImplementation: string;
   UserSettingsProxy: string;
   ExchangeHelper: string;
-  Referral: string;
+  ReferralImplementation: string;
+  ReferralProxy: string;
   VxPremiaImplementation: string;
   VxPremiaProxy: string;
   ERC20Router: string;

@@ -7,6 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
+import {Pricing} from "contracts/libraries/Pricing.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
@@ -192,5 +193,26 @@ abstract contract PoolDepositTest is DeployTest {
             )
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
+    }
+
+    // ToDo : Move somewhere else
+    function _test_ticks_ReturnExpectedValues(bool isCall) internal {
+        deposit(1000 ether);
+
+        IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
+
+        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[1].price, posKey.lower);
+        assertEq(ticks[2].price, posKey.upper);
+        assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
+
+        assertEq(ticks[0].liquidityNet, ZERO);
+        assertEq(ticks[1].liquidityNet, ud(1000 ether));
+        assertEq(ticks[2].liquidityNet, ZERO);
+        assertEq(ticks[3].liquidityNet, ZERO);
+    }
+
+    function test_ticks_ReturnExpectedValues() public {
+        _test_ticks_ReturnExpectedValues(poolKey.isCallPool);
     }
 }

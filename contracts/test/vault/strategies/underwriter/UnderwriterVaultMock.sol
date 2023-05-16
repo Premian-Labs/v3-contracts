@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.19;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -570,40 +569,43 @@ contract UnderwriterVaultMock is UnderwriterVault {
         l.totalAssets = l.totalAssets - mintingFee;
     }
 
-    function ensureTradeableWithVault(
+    function revertIfNotTradeableWithVault(
         bool isCallVault,
         bool isCallOption,
         bool isBuy
     ) external pure {
-        _ensureTradeableWithVault(isCallVault, isCallOption, isBuy);
+        _revertIfNotTradeableWithVault(isCallVault, isCallOption, isBuy);
     }
 
-    function ensureValidOption(UD60x18 strike, uint256 maturity) external view {
-        _ensureValidOption(strike, maturity);
+    function revertIfOptionInvalid(
+        UD60x18 strike,
+        uint256 maturity
+    ) external view {
+        _revertIfOptionInvalid(strike, maturity);
     }
 
-    function ensureSufficientFunds(
+    function revertIfInsufficientFunds(
         UD60x18 strike,
         UD60x18 size,
         UD60x18 availableAssets
     ) external view {
-        _ensureSufficientFunds(strike, size, availableAssets);
+        _revertIfInsufficientFunds(strike, size, availableAssets);
     }
 
-    function ensureWithinDTEBounds(
+    function revertIfOutOfDTEBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
     ) external pure {
-        _ensureWithinDTEBounds(value, minimum, maximum);
+        _revertIfOutOfDTEBounds(value, minimum, maximum);
     }
 
-    function ensureWithinDeltaBounds(
+    function revertIfOutOfDeltaBounds(
         UD60x18 value,
         UD60x18 minimum,
         UD60x18 maximum
     ) external pure {
-        _ensureWithinDeltaBounds(value, minimum, maximum);
+        _revertIfOutOfDeltaBounds(value, minimum, maximum);
     }
 
     function computeCLevel(
