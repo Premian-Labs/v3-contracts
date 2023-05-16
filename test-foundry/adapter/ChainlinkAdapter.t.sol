@@ -6,7 +6,6 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {Test} from "forge-std/Test.sol";
 
-import "forge-std/console2.sol";
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";

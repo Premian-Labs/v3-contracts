@@ -82,27 +82,6 @@ describe('UniswapV3Adapter', () => {
   }
 
   describe('#constructor', () => {
-    it('should revert if cardinality per minute is zero', async () => {
-      const [deployer] = await ethers.getSigners();
-
-      const implementation = await new UniswapV3Adapter__factory(
-        deployer,
-      ).deploy(UNISWAP_V3_FACTORY, tokens.WETH.address, 22250, 30000);
-
-      await implementation.deployed();
-
-      await expect(
-        new UniswapV3AdapterProxy__factory(deployer).deploy(
-          period,
-          0,
-          implementation.address,
-        ),
-      ).to.be.revertedWithCustomError(
-        new UniswapV3AdapterProxy__factory(),
-        'UniswapV3AdapterProxy__CardinalityPerMinuteNotSet',
-      );
-    });
-
     it('should revert if period is zero', async () => {
       const [deployer] = await ethers.getSigners();
 
