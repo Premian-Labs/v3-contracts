@@ -20,6 +20,7 @@ import {
   VxPremiaProxy__factory,
   ExchangeHelper__factory,
   Referral__factory,
+  ReferralProxy__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -308,9 +309,9 @@ export class PoolUtil {
     await referralImpl.deployed();
     if (log) console.log(`Referral : ${referralImpl.address}`);
 
-    const referralProxy = await new ProxyUpgradeableOwnable__factory(
-      deployer,
-    ).deploy(referralImpl.address);
+    const referralProxy = await new ReferralProxy__factory(deployer).deploy(
+      referralImpl.address,
+    );
 
     await referralProxy.deployed();
     if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
