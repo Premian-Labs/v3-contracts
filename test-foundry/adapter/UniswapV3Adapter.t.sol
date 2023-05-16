@@ -36,13 +36,14 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
     uint256 mainnetFork;
     uint256 target;
+    string rpcUrl;
 
     function setUp() public {
-        string memory ETH_RPC_URL = string.concat(
+        rpcUrl = string.concat(
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL, 16597500);
+        mainnetFork = vm.createFork(rpcUrl, 16597500);
         vm.selectFork(mainnetFork);
 
         target = 1676016000;
@@ -67,6 +68,10 @@ contract UniswapV3AdapterTest is Test, Assertions {
         pools.push(Pool(MATIC, USDC));
         pools.push(Pool(DAI, USDT));
 
+        _deployAdapter();
+    }
+
+    function _deployAdapter() internal {
         address implementation = address(
             new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000)
         );
@@ -120,6 +125,23 @@ contract UniswapV3AdapterTest is Test, Assertions {
         new UniswapV3AdapterProxy(0, CARDINALITY_PER_MINUTE, implementation);
     }
 
+    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists()
+        public
+    {
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            (bool isCached, bool hasPath) = adapter.isPairSupported(
+                p.tokenIn,
+                p.tokenOut
+            );
+            assertTrue(isCached);
+            assertTrue(hasPath);
+        }
+    }
+
     function test_isPairSupported_ReturnFalse_IfPairIsNotSupported() public {
         (bool isCached, ) = adapter.isPairSupported(WETH, DAI);
         assertFalse(isCached);
@@ -150,23 +172,6 @@ contract UniswapV3AdapterTest is Test, Assertions {
         adapter.upsertPair(WBTC, address(0));
     }
 
-    //    function test_upsertPair_RevertIf_NotEnoughGasToIncreaseCardinality()
-    //        public
-    //    {
-    //        adapter.setCardinalityPerMinute(200);
-    //
-    //        vm.expectRevert(
-    //            abi.encodeWithSelector(
-    //                IUniswapV3Adapter
-    //                    .UniswapV3Adapter__ObservationCardinalityTooLow
-    //                    .selector,
-    //                0,
-    //                1
-    //            )
-    //        );
-    //        adapter.upsertPair(WETH, USDC);
-    //    }
-
     function test_upsertPair_NotRevert_IfCalledMultipleTimes_ForSamePair()
         public
     {
@@ -174,6 +179,44 @@ contract UniswapV3AdapterTest is Test, Assertions {
         (bool isCached, ) = adapter.isPairSupported(WETH, WBTC);
         assertTrue(isCached);
         adapter.upsertPair(WETH, WBTC);
+    }
+
+    function test_quote_ReturnQuoteForPair() public {
+        // Expected values exported from Defilama
+        UD60x18[19] memory expected = [
+            ud(70927436248222092), // WETH BTC
+            ud(14098916482760458280), // WBTC WETH
+            ud(21875331315600487869233), // WBTC USDC
+            ud(21861693299762195238145), // WBTC USDT
+            ud(1550593857797067130377), // WETH USDT
+            ud(644914201724430), // USDT WETH
+            ud(1551629452512373291029), // WETH DAI
+            ud(718722307016789386580), // MKR USDC
+            ud(2715536643539722), // BOND WETH
+            ud(1000623831633318250), // USDT USDC
+            ud(999955991286274770), // DAI USDC
+            ud(11974365585459636918), // FXS FRAX
+            ud(83511731194702371), // FRAX FXS
+            ud(1000412854982727806), // FRAX USDT
+            ud(6442928385508826850), // UNI USDT
+            ud(1086000168337553529), // LINK UNI
+            ud(831585307611037), // MATIC WETH
+            ud(1290255470583175468), // MATIC USDC
+            ud(999332576013152396) // DAI USDT
+        ];
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 2) / 100 // 3% tolerance
+            );
+        }
     }
 
     function test_quote_RevertIf_PairNotSupported() public {
@@ -316,17 +359,76 @@ contract UniswapV3AdapterTest is Test, Assertions {
         );
     }
 
+    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+        // Expected values exported from Defilama
+        UD60x18[19] memory expected = [
+            ud(70759868720940824), // WETH BTC
+            ud(14132304342504493633), // WBTC WETH
+            ud(21894211576846308162203), // WBTC USDC
+            ud(21916083916083916847128), // WBTC USDT
+            ud(1550779220779220850090), // WETH USDT
+            ud(644837115819446), // USDT WETH
+            ud(1550779220779220850090), // WETH DAI
+            ud(719770459081836406767), // MKR USDC
+            ud(2731377993081368), // BOND WETH
+            ud(999001996007983895), // USDT USDC
+            ud(999001996007983895), // DAI USDC
+            ud(12280075126207080416), // FXS FRAX
+            ud(81432726569065195), // FRAX FXS
+            ud(1001435428636556102), // FRAX USDT
+            ud(6453546453546453954), // UNI USDT
+            ud(1080495356037151744), // LINK UNI
+            ud(811683082849652), // MATIC WETH
+            ud(1257485029940119681), // MATIC USDC
+            ud(1000000000000000000) // DAI USDT
+        ];
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            Pool memory p = pools[i];
+            adapter.upsertPair(p.tokenIn, p.tokenOut);
+
+            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+
+            assertApproxEqAbs(
+                quote.unwrap(),
+                expected[i].unwrap(),
+                (expected[i].unwrap() * 2) / 100 // 3% tolerance
+            );
+        }
+    }
+
+    function test_quoteFrom_RevertIf_OldestObservationLessThanTwapPeriod()
+        public
+    {
+        mainnetFork = vm.createFork(rpcUrl, 16597040);
+        vm.selectFork(mainnetFork);
+        _deployAdapter();
+
+        adapter.upsertPair(UNI, AAVE);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniswapV3Adapter
+                    .UniswapV3Adapter__InsufficientObservationPeriod
+                    .selector,
+                480,
+                600
+            )
+        );
+        adapter.quoteFrom(UNI, AAVE, target);
+    }
+
     function test_poolsForPair_ReturnPoolsForPair() public {
-        address[] memory pools = adapter.poolsForPair(WETH, DAI);
-        assertEq(pools.length, 0);
+        address[] memory _pools = adapter.poolsForPair(WETH, DAI);
+        assertEq(_pools.length, 0);
 
         adapter.upsertPair(WETH, DAI);
-        pools = adapter.poolsForPair(WETH, DAI);
-        assertEq(pools.length, 4);
-        assertEq(pools[0], 0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19);
-        assertEq(pools[1], 0x60594a405d53811d3BC4766596EFD80fd545A270);
-        assertEq(pools[2], 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8);
-        assertEq(pools[3], 0xa80964C5bBd1A0E95777094420555fead1A26c1e);
+        _pools = adapter.poolsForPair(WETH, DAI);
+        assertEq(_pools.length, 4);
+        assertEq(_pools[0], 0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19);
+        assertEq(_pools[1], 0x60594a405d53811d3BC4766596EFD80fd545A270);
+        assertEq(_pools[2], 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8);
+        assertEq(_pools[3], 0xa80964C5bBd1A0E95777094420555fead1A26c1e);
     }
 
     function test_getFactory_ReturnExpectedValue() public {
