@@ -116,8 +116,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             });
     }
 
-    IPoolInternal.TickWithLiquidity[] private _tempTicks;
-
     /// @inheritdoc IPoolCore
     function ticks()
         external
