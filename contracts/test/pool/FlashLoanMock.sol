@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
+
 pragma solidity >=0.8.19;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
