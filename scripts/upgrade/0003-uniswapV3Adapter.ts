@@ -1,6 +1,6 @@
 import {
-  ChainlinkAdapterProxy,
   UniswapV3Adapter__factory,
+  UniswapV3AdapterProxy,
   UniswapV3AdapterProxy__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
@@ -20,7 +20,7 @@ async function main() {
   let addresses: ContractAddresses;
   let addressesPath: string;
   let weth: string;
-  let proxy: ChainlinkAdapterProxy;
+  let proxy: UniswapV3AdapterProxy;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
