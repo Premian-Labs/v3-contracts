@@ -35,6 +35,8 @@ abstract contract PoolDepositTest is DeployTest {
             initialCollateral - collateralValue
         );
         assertEq(pool.marketPrice(), posKey.upper);
+
+        pool.ticks();
     }
 
     function test_deposit_1000_LC_WithToken() public {
