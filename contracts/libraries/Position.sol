@@ -125,7 +125,7 @@ library Position {
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
+        revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
         if (price <= self.lower) return ZERO;
         else if (self.lower < price && price < self.upper)
@@ -137,7 +137,7 @@ library Position {
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
+        revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
         UD60x18 a;
         if (price <= self.lower) {
@@ -314,7 +314,7 @@ library Position {
             (self.short(absChangeTokens, price)).intoSD59x18();
     }
 
-    function ensureLowerGreaterOrEqualUpper(
+    function revertIfLowerGreaterOrEqualUpper(
         UD60x18 lower,
         UD60x18 upper
     ) internal pure {
