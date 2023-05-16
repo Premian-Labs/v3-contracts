@@ -7,6 +7,8 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 import "forge-std/console2.sol";
@@ -354,5 +356,131 @@ contract UniswapV3AdapterTest is Test, Assertions {
         assertEq(feeTiers[1], 500);
         assertEq(feeTiers[2], 3000);
         assertEq(feeTiers[3], 10000);
+    }
+
+    function test_setPeriod_SetNewPeriod() public {
+        adapter.setPeriod(800);
+        assertEq(adapter.getPeriod(), 800);
+    }
+
+    function test_setPeriod_RevertIf_NotCalledByOwner() public {
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vm.prank(vm.addr(111));
+        adapter.setPeriod(800);
+    }
+
+    function test_setPeriod_RevertIf_NewValueIsZero() public {
+        vm.expectRevert(
+            IUniswapV3Adapter.UniswapV3Adapter__PeriodNotSet.selector
+        );
+        adapter.setPeriod(0);
+    }
+
+    function test_setPeriod_SetCardinalityPerMinute() public {
+        adapter.setCardinalityPerMinute(8);
+        assertEq(adapter.getCardinalityPerMinute(), 8);
+    }
+
+    function test_setCardinalityPerMinute_RevertIf_NotCalledByOwner() public {
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vm.prank(vm.addr(111));
+        adapter.setCardinalityPerMinute(8);
+    }
+
+    function test_setCardinalityPerMinute_RevertIf_NewValueIsZero() public {
+        vm.expectRevert(
+            IUniswapV3Adapter
+                .UniswapV3Adapter__CardinalityPerMinuteNotSet
+                .selector
+        );
+        adapter.setCardinalityPerMinute(0);
+    }
+
+    function test_insertFeeTier_RevertIf_NotCalledByOwner() public {
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vm.prank(vm.addr(111));
+        adapter.insertFeeTier(200);
+    }
+
+    function test_insertFeeTier_RevertIf_FeeTierInvalid() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniswapV3Adapter.UniswapV3Adapter__InvalidFeeTier.selector,
+                200
+            )
+        );
+        adapter.insertFeeTier(200);
+    }
+
+    function test_insertFeeTier_RevertIf_FeeTierAlreadyExists() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IUniswapV3Adapter.UniswapV3Adapter__FeeTierExists.selector,
+                10000
+            )
+        );
+        adapter.insertFeeTier(10000);
+    }
+
+    function test_describePricingPath_DescribePricingPath() public {
+        (
+            IOracleAdapter.AdapterType adapterType,
+            address[][] memory path,
+            uint8[] memory decimals
+        ) = adapter.describePricingPath(address(1));
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
+        );
+        assertEq(path.length, 0);
+        assertEq(decimals.length, 0);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(WETH);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
+        );
+        assertEq(path[0].length, 1);
+        assertEq(path[0][0], 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        assertEq(decimals.length, 1);
+        assertEq(decimals[0], 18);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(DAI);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
+        );
+        assertEq(path[0].length, 4);
+        assertEq(path[0][0], 0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19);
+        assertEq(path[0][1], 0x60594a405d53811d3BC4766596EFD80fd545A270);
+        assertEq(path[0][2], 0xC2e9F25Be6257c210d7Adf0D4Cd6E3E881ba25f8);
+        assertEq(path[0][3], 0xa80964C5bBd1A0E95777094420555fead1A26c1e);
+        assertEq(decimals.length, 2);
+        assertEq(decimals[0], 18);
+        assertEq(decimals[1], 18);
+
+        //
+
+        (adapterType, path, decimals) = adapter.describePricingPath(USDC);
+
+        assertEq(
+            uint256(adapterType),
+            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
+        );
+        assertEq(path[0].length, 4);
+        assertEq(path[0][0], 0xE0554a476A092703abdB3Ef35c80e0D76d32939F);
+        assertEq(path[0][1], 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);
+        assertEq(path[0][2], 0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8);
+        assertEq(path[0][3], 0x7BeA39867e4169DBe237d55C8242a8f2fcDcc387);
+        assertEq(decimals.length, 2);
+        assertEq(decimals[0], 6);
+        assertEq(decimals[1], 18);
     }
 }
