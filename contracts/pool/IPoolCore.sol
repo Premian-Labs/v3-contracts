@@ -45,6 +45,10 @@ interface IPoolCore is IPoolInternal {
             bool isCallPool
         );
 
+    /// @notice Returns a list of all tick prices in the pool
+    /// @return The in order list of each price tick in the pool
+    function tickPrices() external view returns (UD60x18[] memory);
+
     /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that price
     /// @param  price The normalized option price of the tick (18 decimals)
     /// @return The tick at the price, with the liquidityNet (18 decimals) of the tick
