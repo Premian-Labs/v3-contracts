@@ -116,7 +116,7 @@ contract Referral is IReferral, OwnableInternal {
     ) external returns (UD60x18 totalRebate) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
-        _ensureCallerIsPool();
+        _revertIfPoolNotAuthorized();
 
         primaryReferrer = _trySetReferrer(user, primaryReferrer);
         if (primaryReferrer == address(0)) return ZERO;
@@ -203,8 +203,8 @@ contract Referral is IReferral, OwnableInternal {
         return referrer;
     }
 
-    function _ensureCallerIsPool() internal view {
+    function _revertIfPoolNotAuthorized() internal view {
         if (!IPoolFactory(FACTORY).isPool(msg.sender))
-            revert Referral__NotPool();
+            revert Referral__PoolNotAuthorized();
     }
 }

@@ -3,12 +3,11 @@ import { vaultSetup } from '../UnderwriterVault.fixture';
 import { parseEther } from 'ethers/lib/utils';
 import { expect } from 'chai';
 import { UnderwriterVaultMock } from '../../../../typechain';
-import { put } from 'axios';
 
 let vault: UnderwriterVaultMock;
 
-describe('test ensure functions', () => {
-  describe('#_ensureTradeableWithVault', () => {
+describe('test revertIf functions', () => {
+  describe('#_revertIfNotTradeableWithVault', () => {
     let tests = [
       {
         isCallVault: true,
@@ -75,7 +74,7 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault.ensureTradeableWithVault(
+            vault.revertIfNotTradeableWithVault(
               test.isCallVault,
               test.isCallOption,
               test.isBuy,
@@ -88,7 +87,7 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault.ensureTradeableWithVault(
+            vault.revertIfNotTradeableWithVault(
               test.isCallVault,
               test.isCallOption,
               test.isBuy,
@@ -99,7 +98,7 @@ describe('test ensure functions', () => {
     });
   });
 
-  describe('#_ensureValidOption', () => {
+  describe('#_revertIfOptionInvalid', () => {
     let tests = [
       {
         timestamp: 1000,
@@ -139,7 +138,7 @@ describe('test ensure functions', () => {
           await vault.setTimestamp(test.timestamp);
 
           await expect(
-            vault.ensureValidOption(test.strike, test.maturity),
+            vault.revertIfOptionInvalid(test.strike, test.maturity),
           ).to.be.revertedWithCustomError(vault, test.error);
         });
       } else {
@@ -148,14 +147,14 @@ describe('test ensure functions', () => {
           vault = callVault;
           await vault.setTimestamp(test.timestamp);
 
-          await expect(vault.ensureValidOption(test.strike, test.maturity)).to
-            .not.be.rejected;
+          await expect(vault.revertIfOptionInvalid(test.strike, test.maturity))
+            .to.not.be.rejected;
         });
       }
     });
   });
 
-  describe('#_ensureSufficientFunds', () => {
+  describe('#_revertIfInsufficientFunds', () => {
     let tests = [
       {
         isCallVault: true,
@@ -220,7 +219,7 @@ describe('test ensure functions', () => {
           vault = test.isCallVault ? callVault : putVault;
 
           await expect(
-            vault.ensureSufficientFunds(
+            vault.revertIfInsufficientFunds(
               test.strike,
               test.size,
               test.availableAssets,
@@ -233,7 +232,7 @@ describe('test ensure functions', () => {
           vault = test.isCallVault ? callVault : putVault;
 
           await expect(
-            vault.ensureSufficientFunds(
+            vault.revertIfInsufficientFunds(
               test.strike,
               test.size,
               test.availableAssets,
@@ -244,7 +243,7 @@ describe('test ensure functions', () => {
     });
   });
 
-  describe('#_ensureWithinDTEBounds', () => {
+  describe('#_revertIfOutOfDTEBounds', () => {
     let tests = [
       {
         value: parseEther('3'),
@@ -290,69 +289,7 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault.ensureWithinDTEBounds(test.value, test.minimum, test.maximum),
-          ).to.be.revertedWithCustomError(vault, test.error);
-        });
-      } else {
-        it(`should not raise an error when ${test.message}`, async () => {
-          const { callVault } = await loadFixture(vaultSetup);
-          vault = callVault;
-
-          await expect(
-            vault.ensureWithinDTEBounds(test.value, test.minimum, test.maximum),
-          ).to.not.be.rejected;
-        });
-      }
-    });
-  });
-
-  describe('#_ensureWithinDeltaBounds', () => {
-    let tests = [
-      {
-        value: parseEther('3'),
-        minimum: parseEther('5'),
-        maximum: parseEther('10'),
-        error: 'Vault__OutOfDeltaBounds',
-        message: 'below the lower bound',
-      },
-      {
-        value: parseEther('5'),
-        minimum: parseEther('5'),
-        maximum: parseEther('10'),
-        error: null,
-        message: 'equal to the lower bound',
-      },
-      {
-        value: parseEther('7'),
-        minimum: parseEther('5'),
-        maximum: parseEther('10'),
-        error: null,
-        message: 'within the bounds',
-      },
-      {
-        value: parseEther('10'),
-        minimum: parseEther('5'),
-        maximum: parseEther('10'),
-        error: null,
-        message: 'equal to the upper bound',
-      },
-      {
-        value: parseEther('12'),
-        minimum: parseEther('5'),
-        maximum: parseEther('10'),
-        error: 'Vault__OutOfDeltaBounds',
-        message: 'above the upper bound',
-      },
-    ];
-
-    tests.forEach(async (test) => {
-      if (test.error != null) {
-        it(`should raise ${test.error} error when ${test.message}`, async () => {
-          const { callVault } = await loadFixture(vaultSetup);
-          vault = callVault;
-
-          await expect(
-            vault.ensureWithinDeltaBounds(
+            vault.revertIfOutOfDTEBounds(
               test.value,
               test.minimum,
               test.maximum,
@@ -365,7 +302,77 @@ describe('test ensure functions', () => {
           vault = callVault;
 
           await expect(
-            vault.ensureWithinDeltaBounds(
+            vault.revertIfOutOfDTEBounds(
+              test.value,
+              test.minimum,
+              test.maximum,
+            ),
+          ).to.not.be.rejected;
+        });
+      }
+    });
+  });
+
+  describe('#_revertIfOutOfDeltaBounds', () => {
+    let tests = [
+      {
+        value: parseEther('3'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
+        error: 'Vault__OutOfDeltaBounds',
+        message: 'below the lower bound',
+      },
+      {
+        value: parseEther('5'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
+        error: null,
+        message: 'equal to the lower bound',
+      },
+      {
+        value: parseEther('7'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
+        error: null,
+        message: 'within the bounds',
+      },
+      {
+        value: parseEther('10'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
+        error: null,
+        message: 'equal to the upper bound',
+      },
+      {
+        value: parseEther('12'),
+        minimum: parseEther('5'),
+        maximum: parseEther('10'),
+        error: 'Vault__OutOfDeltaBounds',
+        message: 'above the upper bound',
+      },
+    ];
+
+    tests.forEach(async (test) => {
+      if (test.error != null) {
+        it(`should raise ${test.error} error when ${test.message}`, async () => {
+          const { callVault } = await loadFixture(vaultSetup);
+          vault = callVault;
+
+          await expect(
+            vault.revertIfOutOfDeltaBounds(
+              test.value,
+              test.minimum,
+              test.maximum,
+            ),
+          ).to.be.revertedWithCustomError(vault, test.error);
+        });
+      } else {
+        it(`should not raise an error when ${test.message}`, async () => {
+          const { callVault } = await loadFixture(vaultSetup);
+          vault = callVault;
+
+          await expect(
+            vault.revertIfOutOfDeltaBounds(
               test.value,
               test.minimum,
               test.maximum,

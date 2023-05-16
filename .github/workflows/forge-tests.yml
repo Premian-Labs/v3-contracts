@@ -1,4 +1,4 @@
-name: test
+name: Forge Tests
 
 on:
   workflow_dispatch:
@@ -10,24 +10,21 @@ env:
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
-  check:
-    strategy:
-      fail-fast: true
-      matrix:
-        node-version: [18.x]
-
-    name: Foundry project
+  forge-tests:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+
+      - uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '18'
           cache: 'yarn'
-      - run: yarn install
+
+      - name: Install packages
+        run: yarn install --frozen-lockfile
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1

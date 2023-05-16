@@ -11,7 +11,7 @@ interface IReferral {
     }
 
     error Referral__NoRebatesToClaim();
-    error Referral__NotPool();
+    error Referral__PoolNotAuthorized();
 
     event ClaimRebate(
         address indexed referrer,

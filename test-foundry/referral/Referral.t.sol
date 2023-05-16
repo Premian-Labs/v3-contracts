@@ -302,9 +302,9 @@ contract ReferralTest is DeployTest {
         _test_useReferral_Rebate_Primary_And_Secondary(poolKey.isCallPool);
     }
 
-    function test_useReferral_RevertIf_Caller_Is_Not_Pool() public {
+    function test_useReferral_RevertIf_Pool_Not_Authorized() public {
         vm.prank(users.trader);
-        vm.expectRevert(IReferral.Referral__NotPool.selector);
+        vm.expectRevert(IReferral.Referral__PoolNotAuthorized.selector);
 
         referral.useReferral(
             users.trader,
