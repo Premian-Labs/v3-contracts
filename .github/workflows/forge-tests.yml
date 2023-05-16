@@ -1,4 +1,4 @@
-name: test
+name: Forge Tests
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ env:
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
-  test:
+  forge-tests:
     runs-on: ubuntu-latest
 
     steps:
