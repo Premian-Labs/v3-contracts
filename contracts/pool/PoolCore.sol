@@ -101,54 +101,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function tickPrices() external view returns (UD60x18[] memory) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 prev = l.tickIndex.prev(l.currentTick);
-        UD60x18 next = l.currentTick;
-
-        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
-        uint256 count;
-
-        UD60x18[] memory prices = new UD60x18[](maxTicks);
-
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
-            while (true) {
-                if (prev == Pricing.MIN_TICK_PRICE) {
-                    break;
-                }
-
-                next = prev;
-                prev = l.tickIndex.prev(prev);
-            }
-
-            prices[count++] = prev;
-        }
-
-        prev = next;
-
-        while (true) {
-            next = l.tickIndex.next(prev);
-            prices[count++] = prev;
-
-            if (next == Pricing.MAX_TICK_PRICE) {
-                prices[count++] = next;
-                break;
-            }
-
-            prev = next;
-        }
-
-        // Remove empty elements from array
-        if (count < maxTicks) {
-            assembly {
-                mstore(prices, sub(mload(prices), sub(maxTicks, count)))
-            }
-        }
-
-        return prices;
-    }
-
-    /// @inheritdoc IPoolCore
     function tick(
         UD60x18 price
     ) external view returns (IPoolInternal.TickWithLiquidity memory) {
@@ -175,7 +127,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
-        UD60x18 next = l.currentTick;
+        UD60x18 curr = l.currentTick;
 
         uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
         uint256 count;
@@ -185,46 +137,50 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
             while (true) {
+                liquidityRate = liquidityRate.add(l.ticks[curr].delta);
+
                 if (prev == Pricing.MIN_TICK_PRICE) {
-                    liquidityRate = l.liquidityRate;
                     break;
                 }
 
-                liquidityRate = liquidityRate.add(l.ticks[prev].delta);
-                next = prev;
+                curr = prev;
                 prev = l.tickIndex.prev(prev);
             }
 
             _ticks[count++] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[prev],
                 price: prev,
-                liquidityNet: liquidityForRange(prev, next, liquidityRate)
+                liquidityNet: liquidityForRange(prev, curr, liquidityRate)
             });
         }
 
-        prev = next;
+        prev = curr;
 
         while (true) {
-            next = l.tickIndex.next(prev);
+            if (curr <= l.currentTick) {
+                liquidityRate = liquidityRate.sub(l.ticks[curr].delta);
+            } else {
+                liquidityRate = liquidityRate.add(l.ticks[curr].delta);
+            }
+
+            curr = l.tickIndex.next(curr);
 
             _ticks[count++] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[prev],
                 price: prev,
-                liquidityNet: liquidityForRange(prev, next, liquidityRate)
+                liquidityNet: liquidityForRange(prev, curr, liquidityRate)
             });
 
-            liquidityRate = liquidityRate.add(l.ticks[next].delta);
-
-            if (next == Pricing.MAX_TICK_PRICE) {
+            if (curr == Pricing.MAX_TICK_PRICE) {
                 _ticks[count++] = IPoolInternal.TickWithLiquidity({
-                    tick: l.ticks[next],
-                    price: next,
+                    tick: l.ticks[curr],
+                    price: curr,
                     liquidityNet: ZERO
                 });
                 break;
             }
 
-            prev = next;
+            prev = curr;
         }
 
         // Remove empty elements from array
