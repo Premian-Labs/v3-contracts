@@ -94,8 +94,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
-    address public constant feeReceiver =
-        address(0x000000000000000000000000000000000000dEaD);
+    address public constant feeReceiver = address(123456789);
 
     receive() external payable {}
 
@@ -418,6 +417,40 @@ contract DeployTest is Test, Assertions {
             ONE
         );
 
+        vm.stopPrank();
+    }
+
+    function trade(
+        uint256 tradeSize,
+        bool isCall,
+        bool isBuy
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        if (isBuy) posKey.orderType = Position.OrderType.CS;
+
+        initialCollateral = deposit(tradeSize);
+
+        UD60x18 _tradeSize = ud(tradeSize);
+
+        (totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, isBuy);
+
+        address poolToken = getPoolToken(isCall);
+
+        uint256 mintAmount = isBuy
+            ? totalPremium
+            : scaleDecimals(poolKey.strike, isCall);
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, mintAmount);
+        IERC20(poolToken).approve(address(router), mintAmount);
+
+        pool.trade(
+            _tradeSize,
+            isBuy,
+            isBuy
+                ? totalPremium + totalPremium / 10
+                : totalPremium - totalPremium / 10,
+            address(0)
+        );
         vm.stopPrank();
     }
 

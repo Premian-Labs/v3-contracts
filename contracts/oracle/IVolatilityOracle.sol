@@ -8,6 +8,7 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
+    error VolatilityOracle__OutOfBounds(int256 value);
     error VolatilityOracle__RelayerNotWhitelisted(address sender);
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
@@ -38,7 +39,7 @@ interface IVolatilityOracle {
     /// @return params The unpacked parameters of the IV model
     function parseParams(
         bytes32 input
-    ) external pure returns (int256[] memory params);
+    ) external pure returns (int256[5] memory params);
 
     /// @notice Update a list of Anchored eSSVI model parameters
     /// @param tokens List of the base tokens
