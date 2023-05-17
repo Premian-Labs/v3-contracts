@@ -68,6 +68,13 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
         l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
 
+        for (uint256 i = 0; i < l.supportedTokenPairs[vault].length; i++) {
+            TokenPair memory pair = l.supportedTokenPairs[vault][i];
+            l
+            .vaultsByTokenPair[pair.base][pair.quote][pair.oracleAdapter]
+                .remove(vault);
+        }
+
         if (l.vaults[vault].side == TradeSide.Both) {
             l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
             l.vaultsByTradeSide[TradeSide.Sell].remove(vault);
@@ -79,14 +86,155 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         }
 
         delete l.vaults[vault];
+        delete l.supportedTokenPairs[vault];
 
         emit VaultRemoved(vault);
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function updateVault(
+        address vault,
+        address asset,
+        bytes32 vaultType,
+        TradeSide side,
+        OptionType optionType,
+        string memory name
+    ) external onlyOwner {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        if (l.vaults[vault].asset != asset) {
+            l.vaultsByAsset[l.vaults[vault].asset].remove(vault);
+            l.vaultsByAsset[asset].add(vault);
+        }
+
+        if (l.vaults[vault].vaultType != vaultType) {
+            l.vaultsByType[l.vaults[vault].vaultType].remove(vault);
+            l.vaultsByType[vaultType].add(vault);
+        }
+
+        if (l.vaults[vault].side != side) {
+            l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
+            l.vaultsByTradeSide[side].add(vault);
+
+            if (l.vaults[vault].side == TradeSide.Both) {
+                l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
+                l.vaultsByTradeSide[TradeSide.Sell].remove(vault);
+            }
+
+            if (side == TradeSide.Both) {
+                l.vaultsByTradeSide[TradeSide.Buy].add(vault);
+                l.vaultsByTradeSide[TradeSide.Sell].add(vault);
+            }
+        }
+
+        if (l.vaults[vault].optionType != optionType) {
+            l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
+            l.vaultsByOptionType[optionType].add(vault);
+
+            if (l.vaults[vault].optionType == OptionType.Both) {
+                l.vaultsByOptionType[OptionType.Call].remove(vault);
+                l.vaultsByOptionType[OptionType.Put].remove(vault);
+            }
+
+            if (optionType == OptionType.Both) {
+                l.vaultsByOptionType[OptionType.Call].add(vault);
+                l.vaultsByOptionType[OptionType.Put].add(vault);
+            }
+        }
+
+        l.vaults[vault] = Vault(
+            vault,
+            asset,
+            vaultType,
+            side,
+            optionType,
+            name
+        );
+
+        emit VaultUpdated(vault, asset, vaultType, side, optionType, name);
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function addSupportedTokenPairs(
+        address vault,
+        TokenPair[] memory tokenPairs
+    ) external {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        for (uint256 i = 0; i < tokenPairs.length; i++) {
+            l.supportedTokenPairs[vault].push(tokenPairs[i]);
+            l
+            .vaultsByTokenPair[tokenPairs[i].base][tokenPairs[i].quote][
+                tokenPairs[i].oracleAdapter
+            ].add(vault);
+        }
+    }
+
+    function _containsTokenPair(
+        TokenPair[] memory tokenPairs,
+        TokenPair memory tokenPair
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < tokenPairs.length; i++) {
+            if (
+                tokenPairs[i].base == tokenPair.base &&
+                tokenPairs[i].quote == tokenPair.quote &&
+                tokenPairs[i].oracleAdapter == tokenPair.oracleAdapter
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function removeSupportedTokenPairs(
+        address vault,
+        TokenPair[] memory tokenPairs
+    ) external {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+
+        for (uint256 i = 0; i < tokenPairs.length; i++) {
+            l
+            .vaultsByTokenPair[tokenPairs[i].base][tokenPairs[i].quote][
+                tokenPairs[i].oracleAdapter
+            ].remove(vault);
+        }
+
+        uint256 length = l.supportedTokenPairs[vault].length;
+        TokenPair[] memory newTokenPairs = new TokenPair[](
+            length - tokenPairs.length
+        );
+
+        uint256 count = 0;
+        for (uint256 i = 0; i < length; i++) {
+            if (
+                !_containsTokenPair(tokenPairs, l.supportedTokenPairs[vault][i])
+            ) {
+                newTokenPairs[j] = l.supportedTokenPairs[vault][i];
+                count++;
+            }
+        }
+
+        delete l.supportedTokenPairs[vault];
+
+        for (uint256 i = 0; i < newTokenPairs.length; i++) {
+            l.supportedTokenPairs[vault].push(newTokenPairs[i]);
+        }
     }
 
     /// @inheritdoc IVaultRegistry
     function getVault(address vault) external view returns (Vault memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return l.vaults[vault];
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function supportedTokenPairs(
+        address vault
+    ) external view returns (TokenPair[] memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return l.supportedTokenPairs[vault];
     }
 
     function _getVaultsFromAddressSet(
@@ -164,6 +312,19 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     ) external view returns (Vault[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
         return _getVaultsFromAddressSet(l.vaultsByAsset[asset]);
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function getVaultsByTokenPair(
+        TokenPair memory tokenPair
+    ) external view returns (Vault[] memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return
+            _getVaultsFromAddressSet(
+                l.vaultsByTokenPair[tokenPair.base][tokenPair.quote][
+                    tokenPair.oracleAdapter
+                ]
+            );
     }
 
     /// @inheritdoc IVaultRegistry
