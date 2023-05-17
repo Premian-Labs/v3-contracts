@@ -23,9 +23,9 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
     // ToDo : Define final value
     // ToDo : Make this part of global pool settings ?
-    UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
+    UD60x18 internal constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
-    bytes32 constant FLASH_LOAN_CALLBACK_SUCCESS =
+    bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS =
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(

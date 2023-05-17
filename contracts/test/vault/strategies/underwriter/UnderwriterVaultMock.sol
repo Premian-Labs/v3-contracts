@@ -34,8 +34,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
     }
 
     // Mock variables
-    uint256 mockTimestamp;
-    UD60x18 mockSpot;
+    uint256 internal mockTimestamp;
+    UD60x18 internal mockSpot;
 
     constructor(
         address vaultRegistry,

@@ -31,6 +31,9 @@ interface IUniswapV3Adapter is IOracleAdapter {
         uint16 targetCardinality
     );
 
+    /// @notice Thrown when tokens are unsorted
+    error UniswapV3Adapter__TokensUnsorted(address token0, address token1);
+
     /// @notice Thrown when period has not been set
     error UniswapV3Adapter__PeriodNotSet();
 
