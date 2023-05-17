@@ -196,7 +196,7 @@ abstract contract PoolDepositTest is DeployTest {
     }
 
     // ToDo : Move somewhere else
-    function _test_ticks_ReturnExpectedValues(bool isCall) internal {
+    function test_ticks_ReturnExpectedValues() internal {
         deposit(1000 ether);
 
         IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
@@ -210,9 +210,5 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[1].liquidityNet, ud(1000 ether));
         assertEq(ticks[2].liquidityNet, ZERO);
         assertEq(ticks[3].liquidityNet, ZERO);
-    }
-
-    function test_ticks_ReturnExpectedValues() public {
-        _test_ticks_ReturnExpectedValues(poolKey.isCallPool);
     }
 }

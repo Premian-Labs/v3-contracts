@@ -281,4 +281,18 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQSignature.selector);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
+
+    function test_cancelQuotesRFQ_Success() public {
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        bytes32[] memory quoteRFQHashes = new bytes32[](1);
+        quoteRFQHashes[0] = pool.quoteRFQHash(quoteRFQ);
+
+        vm.prank(users.lp);
+        pool.cancelQuotesRFQ(quoteRFQHashes);
+
+        vm.expectRevert(IPoolInternal.Pool__QuoteRFQCancelled.selector);
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
+    }
 }
