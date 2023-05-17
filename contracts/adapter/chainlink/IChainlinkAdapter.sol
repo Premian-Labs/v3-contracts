@@ -27,6 +27,7 @@ interface IChainlinkAdapter is IOracleAdapter {
         TOKEN_USD_BTC_WBTC
     }
 
+    /// @notice The conversion type used when determining the token pair pricing path
     enum ConversionType {
         TO_BTC, // Token -> BTC
         TO_USD, // Token -> USD

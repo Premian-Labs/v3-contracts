@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IOracleAdapter {
+    /// @notice The type of adapter
     enum AdapterType {
         NONE,
         CHAINLINK,
@@ -32,8 +33,7 @@ interface IOracleAdapter {
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
 
-    /// @notice Returns whether the pair has already been added to the adapter and if it
-    ///         supports the path required for the pair
+    /// @notice Returns whether the pair has already been added to the adapter and if it supports the path required for the pair
     ///         (true, true): Pair is fully supported
     ///         (false, true): Pair is not supported, but can be added
     ///         (false, false): Pair cannot be supported
@@ -47,9 +47,9 @@ interface IOracleAdapter {
         address tokenB
     ) external view returns (bool isCached, bool hasPath);
 
-    /// @notice Stores or updates the given token pair data provider configuration. This function will
-    ///         let the adapter take some actions to configure the pair, in preparation for future quotes.
-    ///         Can be called many times in order to let the adapter re-configure for a new context
+    /// @notice Stores or updates the given token pair data provider configuration. This function will let the adapter take some
+    ///         actions to configure the pair, in preparation for future quotes. Can be called many times in order to let the adapter
+    ///         re-configure for a new context
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     function upsertPair(address tokenA, address tokenB) external;

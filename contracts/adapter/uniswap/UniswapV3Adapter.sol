@@ -30,7 +30,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
     IUniswapV3Factory internal immutable UNISWAP_V3_FACTORY;
     address internal immutable WRAPPED_NATIVE_TOKEN;
 
-    /// @dev init bytecode from the deployed version of Uniswap V3 Pool contract
+    /// @dev init bytecode from the deployed version of UniswapV3 Pool contract
     bytes32 internal constant POOL_INIT_CODE_HASH =
         0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
 
@@ -100,6 +100,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
+    /// @notice Returns a time-weighted average price quote based on the weighted arithmetic mean tick of the `tokenIn`, `tokenOut` UniswapV3 pools.
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
@@ -117,10 +118,10 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         if (allDeployedPools.length == 0)
             revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
 
-        /// if a pool has been deployed but not added to the adapter, we may use it for the quote
-        /// only if it has sufficient cardinality.
+        // if a pool has been deployed but not added to the adapter, we may use it for the quote
+        // only if it has sufficient cardinality.
         if (pools.length == 0 || pools.length < allDeployedPools.length) {
-            _validatePoolCardinality(l, allDeployedPools);
+            _revertIfCardinalityTooLow(l, allDeployedPools);
             pools = allDeployedPools;
         }
 
@@ -289,6 +290,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         feeTiers.push(feeTier);
     }
 
+    /// @notice Returns the weighted arithmetic mean tick aggregated across the different `pools`
     function _fetchWeightedTick(
         address[] memory pools,
         uint32 period,
@@ -310,6 +312,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
                 : OracleLibrary.getWeightedArithmeticMeanTick(tickData);
     }
 
+    /// @notice Returns the time range based on the TWAP `period` and `target`
     function _calculateRange(
         address pool,
         uint32 period,
@@ -330,6 +333,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         );
 
         if (range[0] > oldestObservation) {
+            // ===========================================================
             // When the oldest observation is before the range start, restart range
             // from oldest observation
             //
@@ -338,6 +342,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
             //   |--|--|--|--|--|--|--o--|--|--|///////////|--|
             //            ^           ^
             //        rangeStart   rangeEnd
+            // ===========================================================
 
             if (oldestObservation < period)
                 revert UniswapV3Adapter__InsufficientObservationPeriod(
@@ -352,7 +357,8 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         return range;
     }
 
-    function _validatePoolCardinality(
+    /// @notice Revert if the observation cardinality is too low
+    function _revertIfCardinalityTooLow(
         UniswapV3AdapterStorage.Layout storage l,
         address[] memory pools
     ) internal view {
@@ -372,6 +378,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         }
     }
 
+    /// @notice Returns the initialized UniswapV3 pools for `tokenA` and `tokenB`
     function _getAllPoolsForPair(
         address tokenA,
         address tokenB
@@ -398,6 +405,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         _resizeArray(pools, validPools);
     }
 
+    /// @notice Attempts to increase the UniswapV3 pool observation cardinality if it is below the target cardinality
     function _tryIncreaseCardinality(
         address pool,
         uint16 targetCardinality
@@ -427,6 +435,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         }
     }
 
+    /// @notice Returns true if the UniswapV3 pool observation cardinality is below the target cardinality
     function _isCurrentCardinalityBelowTarget(
         address pool,
         uint16 targetCardinality
@@ -435,6 +444,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         return (currentCardinality < targetCardinality, currentCardinality);
     }
 
+    /// @notice Returns the UniswapV3 pools for `tokenA` and `tokenB`
     function _poolsForPair(
         address tokenA,
         address tokenB
@@ -445,15 +455,18 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
             ];
     }
 
+    /// @notice Returns the ERC20 `token` decimals
     function _decimals(address token) internal view returns (uint8) {
         return IERC20Metadata(token).decimals();
     }
 
+    /// @notice Returns true if the UniswapV3 pool is initialized
     function _isInitialized(address pool) internal view returns (bool) {
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
         return sqrtPriceX96 != 0;
     }
 
+    /// @notice Calculates time-weighted means of tick and liquidity for a given UniswapV3 pool
     /// @dev https://github.com/Uniswap/v3-periphery/blob/0.8/contracts/libraries/OracleLibrary.sol#L16-L41
     ///      This function has been modified to query any range of times
     function _consult(
@@ -495,8 +508,9 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         );
     }
 
+    /// @notice Deterministically computes the pool address given the factory and PoolKey
     /// @dev https://github.com/Uniswap/v3-periphery/blob/main/contracts/libraries/PoolAddress.sol#L33-L47
-    ///      This function uses the POOL_INIT_CODE_HASH from the deployed version of Uniswap V3 Pool contract
+    ///      This function uses the POOL_INIT_CODE_HASH from the deployed version of UniswapV3
     function _computeAddress(
         address factory,
         PoolAddress.PoolKey memory key

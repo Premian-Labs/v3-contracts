@@ -105,6 +105,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
+    /// @notice Returns a quote price based on the pricing path between `tokenIn` and `tokenOut`
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
@@ -204,6 +205,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return path;
     }
 
+    /// @notice Returns the pricing path between `tokenA` and `tokenB` and the mapped tokens (sorted or unsorted)
     function _pricingPath(
         address tokenA,
         address tokenB,
@@ -229,7 +231,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
-    /// @dev Handles prices when the pair is either ETH/USD, token/ETH or token/USD
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is either ETH/USD, token/ETH or token/USD
     function _getDirectPrice(
         PricingPath path,
         address tokenIn,
@@ -258,7 +260,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return invert ? price.inv() : price;
     }
 
-    /// @dev Handles prices when both tokens share the same base (either ETH or USD)
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when both tokens share the same base (either ETH or USD)
     function _getPriceSameBase(
         PricingPath path,
         address tokenIn,
@@ -282,7 +284,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return adjustedTokenInToBase / adjustedTokenOutToBase;
     }
 
-    /// @dev Handles prices when one of the tokens uses ETH as the base, and the other USD
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when one of the tokens uses ETH as the base, and the other USD
     function _getPriceDifferentBases(
         PricingPath path,
         address tokenIn,
@@ -312,7 +314,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
-    /// @dev Handles prices when the pair is token/WBTC
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is token/WBTC
     function _getPriceWBTCPrice(
         address tokenIn,
         address tokenOut,
@@ -332,6 +334,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return !isTokenInWBTC ? price.inv() : price;
     }
 
+    /// @notice Returns the pricing path between `tokenA` and `tokenB`
     /// @dev Expects `tokenA` and `tokenB` to be sorted
     function _determinePricingPath(
         address tokenA,
@@ -418,6 +421,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             );
     }
 
+    /// @notice Attempts to find the best pricing path for `token` based on the `conversionType`, if a feed exists
     function _tryToFindPath(
         address token,
         ConversionType conversionType,
@@ -453,6 +457,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` at `target`
     function _fetchQuote(
         address tokenIn,
         address tokenOut,
@@ -464,6 +469,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
                 : _fetchQuoteFrom(tokenIn, tokenOut, target);
     }
 
+    /// @notice Returns the latest price of `tokenIn` denominated in `tokenOut`
     function _fetchLatestQuote(
         address tokenIn,
         address tokenOut
@@ -474,6 +480,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return price.toUint256();
     }
 
+    /// @notice Returns the historical price of `tokenIn` denominated in `tokenOut` at `target`.
     function _fetchQuoteFrom(
         address tokenIn,
         address tokenOut,
@@ -497,6 +504,13 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
         // if the last observation is after the target skip loop
         if (target >= updatedAt) aggregatorRoundId = 0;
+
+        // ===========================================================
+        // This loop will attempt to find the price closest to the target time. If  target - updatedAt >= PRICE_STALE_THRESHOLD
+        // the price is considered stale. If the price is stale, there are two possible outcomes:
+        //  - If price is stale and block.timestamp - target < MAX_DELAY, the call will revert.
+        //  - If price is stale and block.timestamp - target >= MAX_DELAY, the price closest to the target time will be returned.
+        // ===========================================================
 
         while (aggregatorRoundId > 0) {
             roundId = ChainlinkAdapterStorage.formatRoundId(
@@ -527,6 +541,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return price.toUint256();
     }
 
+    /// @notice Try/Catch wrapper for Chainlink aggregator's latestRoundData() function
     function _latestRoundData(
         address feed
     ) internal view returns (uint80, int256, uint256, uint256, uint80) {
@@ -545,6 +560,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
+    /// @notice Try/Catch wrapper for Chainlink aggregator's getRoundData() function
     function _getRoundData(
         address feed,
         uint80 roundId
@@ -564,6 +580,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
+    /// @notice Returns the Chainlink aggregator for pair `tokenA` and `tokenB`
     function _aggregator(
         address tokenA,
         address tokenB
@@ -573,12 +590,14 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         aggregator[0] = AggregatorProxyInterface(feed).aggregator();
     }
 
+    /// @notice Returns decimals for `aggregator`
     function _aggregatorDecimals(
         address aggregator
     ) internal view returns (uint8) {
         return AggregatorProxyInterface(aggregator).decimals();
     }
 
+    /// @notice Returns the scaled price of `token` denominated in USD at `target`
     function _getPriceAgainstUSD(
         address token,
         uint256 target
@@ -594,6 +613,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
                 );
     }
 
+    /// @notice Returns the scaled price of `token` denominated in ETH at `target`
     function _getPriceAgainstETH(
         address token,
         uint256 target
@@ -604,6 +624,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
                 : ud(_fetchQuote(token, Denominations.ETH, target));
     }
 
+    /// @notice Returns the scaled price of ETH denominated in USD at `target`
     function _getETHUSD(uint256 target) internal view returns (UD60x18) {
         return
             ud(
@@ -614,6 +635,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             );
     }
 
+    /// @notice Returns the scaled price of BTC denominated in USD at `target`
     function _getBTCUSD(uint256 target) internal view returns (UD60x18) {
         return
             ud(
@@ -624,6 +646,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             );
     }
 
+    /// @notice Returns the scaled price of WBTC denominated in BTC at `target`
     function _getWBTCBTC(uint256 target) internal view returns (UD60x18) {
         return
             ud(
@@ -634,6 +657,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             );
     }
 
+    /// @notice Revert if price is stale and MAX_DELAY has not passed
     function _revertIfPriceAfterTargetStale(
         uint256 target,
         uint256 updatedAt
@@ -643,7 +667,6 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             block.timestamp - target < MAX_DELAY &&
             target - updatedAt >= PRICE_STALE_THRESHOLD
         ) {
-            // revert if 12 hours has not passed and price is stale
             revert ChainlinkAdapter__PriceAfterTargetIsStale(
                 target,
                 updatedAt,
