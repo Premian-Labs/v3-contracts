@@ -4,6 +4,7 @@ pragma solidity >=0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {PoolName} from "contracts/libraries/PoolName.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 contract PoolNameTest is Test {
     address weth;
@@ -79,10 +80,19 @@ contract PoolNameTest is Test {
         assertEq(PoolName.monthToString(11), "NOV");
         assertEq(PoolName.monthToString(12), "DEC");
 
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__InvalidMonth.selector,
+                13
+            )
+        );
+
         PoolName.monthToString(13);
 
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 0)
+        );
+
         PoolName.monthToString(0);
     }
 }

@@ -5,6 +5,8 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
+import {IPoolInternal} from "../pool/IPoolInternal.sol";
+
 import {WAD} from "./Constants.sol";
 
 library PoolName {
@@ -117,6 +119,6 @@ library PoolName {
         if (month == 11) return "NOV";
         if (month == 12) return "DEC";
 
-        revert();
+        revert IPoolInternal.Pool__InvalidMonth(month);
     }
 }

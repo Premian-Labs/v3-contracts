@@ -501,7 +501,9 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         address factory,
         PoolAddress.PoolKey memory key
     ) internal pure returns (address pool) {
-        require(key.token0 < key.token1);
+        if (key.token0 > key.token1)
+            revert UniswapV3Adapter__TokensUnsorted(key.token0, key.token1);
+
         pool = address(
             uint160(
                 uint256(
