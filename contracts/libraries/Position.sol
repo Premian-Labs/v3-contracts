@@ -340,6 +340,7 @@ library Position {
             (self.short(absChangeTokens, price)).intoSD59x18();
     }
 
+    /// @notice Revert if `lower` is greater or equal to `upper`
     function revertIfLowerGreaterOrEqualUpper(
         UD60x18 lower,
         UD60x18 upper
