@@ -30,6 +30,7 @@ library PoolFactoryStorage {
         }
     }
 
+    /// @notice Returns the encoded pool key using the pool key `k`
     function poolKey(
         IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {
@@ -46,6 +47,7 @@ library PoolFactoryStorage {
             );
     }
 
+    /// @notice Returns the encoded strike key using the pool key `k`
     function strikeKey(
         IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {
@@ -61,6 +63,7 @@ library PoolFactoryStorage {
             );
     }
 
+    /// @notice Returns the encoded maturity key using the pool key `k`
     function maturityKey(
         IPoolFactory.PoolKey memory k
     ) internal pure returns (bytes32) {

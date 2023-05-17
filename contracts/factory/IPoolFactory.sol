@@ -74,8 +74,7 @@ interface IPoolFactory is IPoolFactoryEvents {
         PoolKey calldata k
     ) external payable returns (address poolAddress);
 
-    /// @notice Removes the discount caused by an existing pool,
-    ///         can only be called by the pool after maturity
+    /// @notice Removes the discount caused by an existing pool, can only be called by the pool after maturity
     /// @param k The pool key
     function removeDiscount(PoolKey calldata k) external;
 }
