@@ -20,17 +20,21 @@ interface IVaultRegistry {
     // Structs
     struct Vault {
         address vault;
+        address[] assets;
         bytes32 vaultType;
         TradeSide side;
         OptionType optionType;
+        string name;
     }
 
     // Events
     event VaultAdded(
         address indexed vault,
+        address[] assets,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType
+        OptionType optionType,
+        string name
     );
 
     event VaultRemoved(address indexed vault);
@@ -41,14 +45,18 @@ interface IVaultRegistry {
 
     /// @notice Adds a vault to the registry.
     /// @param vault The proxy address of the vault.
+    /// @param assets The address list of assets deposited in the vault.
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
+    /// @param name The official name of the vault.
     function addVault(
         address vault,
+        address[] memory assets,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType
+        OptionType optionType,
+        string memory name
     ) external;
 
     /// @notice Removes a vault from the registry.
@@ -65,12 +73,21 @@ interface IVaultRegistry {
     function getVaults() external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with trade side `side` and option type `optionType`.
+    /// @param assets The accepted assets (empty list for all assets).
     /// @param side The trade side.
     /// @param optionType The option type.
-    /// @return All vaults with trade side `side` and option type `optionType`.
+    /// @return All vaults with `asset` in assets, trade side `side`, and option type `optionType`.
     function getVaultsByFilter(
+        address[] memory assets,
         TradeSide side,
         OptionType optionType
+    ) external view returns (Vault[] memory);
+
+    /// @notice Gets all vaults with `asset` in assets.
+    /// @param asset The desired asset.
+    /// @return All vaults with `asset` in assets.
+    function getVaultsByAsset(
+        address asset
     ) external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with trade side `side`.

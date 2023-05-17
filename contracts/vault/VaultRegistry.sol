@@ -22,18 +22,31 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     /// @inheritdoc IVaultRegistry
     function addVault(
         address vault,
+        address[] memory assets,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType
+        OptionType optionType,
+        string memory name
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        l.vaults[vault] = Vault(vault, vaultType, side, optionType);
+        l.vaults[vault] = Vault(
+            vault,
+            assets,
+            vaultType,
+            side,
+            optionType,
+            name
+        );
 
         l.vaultAddresses.add(vault);
         l.vaultsByType[vaultType].add(vault);
         l.vaultsByTradeSide[side].add(vault);
         l.vaultsByOptionType[optionType].add(vault);
+
+        for (uint256 i = 0; i < assets.length; i++) {
+            l.vaultsByAsset[assets[i]].add(vault);
+        }
 
         if (side == TradeSide.Both) {
             l.vaultsByTradeSide[TradeSide.Buy].add(vault);
@@ -45,7 +58,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             l.vaultsByOptionType[OptionType.Put].add(vault);
         }
 
-        emit VaultAdded(vault, vaultType, side, optionType);
+        emit VaultAdded(vault, assets, vaultType, side, optionType, name);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -56,6 +69,10 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         l.vaultsByType[l.vaults[vault].vaultType].remove(vault);
         l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
         l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
+
+        for (uint i = 0; i < l.vaults[vault].assets.length; i++) {
+            l.vaultsByAsset[l.vaults[vault].assets[i]].remove(vault);
+        }
 
         if (l.vaults[vault].side == TradeSide.Both) {
             l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
@@ -100,6 +117,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
 
     /// @inheritdoc IVaultRegistry
     function getVaultsByFilter(
+        address[] memory assets,
         TradeSide side,
         OptionType optionType
     ) external view returns (Vault[] memory) {
@@ -115,8 +133,28 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             ];
 
             if (vault.side == side || vault.side == TradeSide.Both) {
-                vaults[count] = vault;
-                count++;
+                bool assetFound = false;
+
+                if (assets.length == 0) {
+                    assetFound = true;
+                } else {
+                    for (uint256 j = 0; j < assets.length; j++) {
+                        if (assetFound) break;
+
+                        for (uint k = 0; k < vault.assets.length; k++) {
+                            if (vault.assets[k] == assets[j]) {
+                                assetFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (assetFound) {
+                    vaults[count] = vault;
+                    count++;
+                    break;
+                }
             }
         }
 
@@ -128,6 +166,14 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         }
 
         return vaults;
+    }
+
+    /// @inheritdoc IVaultRegistry
+    function getVaultsByAsset(
+        address asset
+    ) external view returns (Vault[] memory) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return _getVaultsFromAddressSet(l.vaultsByAsset[asset]);
     }
 
     /// @inheritdoc IVaultRegistry

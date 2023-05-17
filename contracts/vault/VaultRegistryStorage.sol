@@ -18,6 +18,7 @@ library VaultRegistryStorage {
         mapping(bytes32 vaultType => address) implementations;
         mapping(address vault => IVaultRegistry.Vault) vaults;
         mapping(bytes32 vaultType => EnumerableSet.AddressSet vaults) vaultsByType;
+        mapping(address asset => EnumerableSet.AddressSet vaults) vaultsByAsset;
         mapping(IVaultRegistry.TradeSide tradeSide => EnumerableSet.AddressSet vaults) vaultsByTradeSide;
         mapping(IVaultRegistry.OptionType optionType => EnumerableSet.AddressSet vaults) vaultsByOptionType;
     }
