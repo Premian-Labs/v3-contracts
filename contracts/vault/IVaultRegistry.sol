@@ -37,7 +37,7 @@ interface IVaultRegistry {
     // Events
     event VaultAdded(
         address indexed vault,
-        address asset,
+        address indexed asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType,
@@ -46,7 +46,7 @@ interface IVaultRegistry {
     event VaultRemoved(address indexed vault);
     event VaultUpdated(
         address indexed vault,
-        address asset,
+        address indexed asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType,
