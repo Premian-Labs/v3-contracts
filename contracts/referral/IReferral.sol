@@ -85,21 +85,21 @@ interface IReferral {
         address referrer
     ) external view returns (address[] memory tokens, uint256[] memory rebates);
 
-    /// @notice Sets the rebate tier for a given referrer
+    /// @notice Sets the rebate tier for a given referrer - caller must be owner
     /// @param referrer The address of the referrer
     /// @param tier The rebate tier
     function setRebateTier(address referrer, RebateTier tier) external;
 
-    /// @notice Sets the primary rebate percents
+    /// @notice Sets the primary rebate percents - caller must be owner
     /// @param percent The primary rebate percent (18 decimals)
     /// @param tier The rebate tier
     function setPrimaryRebatePercent(UD60x18 percent, RebateTier tier) external;
 
-    /// @notice Sets the secondary rebate percent
+    /// @notice Sets the secondary rebate percent - caller must be owner
     /// @param percent The secondary rebate percent (18 decimals)
     function setSecondaryRebatePercent(UD60x18 percent) external;
 
-    /// @notice Calculate the primary and secondary rebate and pulls the tokens from msg.sender
+    /// @notice Calculate the primary and secondary rebate and pulls the tokens from msg.sender  - caller must be an authorized pool
     /// @dev The tokens must be approved for transfer
     /// @param user The address of the user
     /// @param primaryReferrer The address of the primary referrer
