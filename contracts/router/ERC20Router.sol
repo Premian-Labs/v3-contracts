@@ -18,6 +18,7 @@ contract ERC20Router is IERC20Router {
         POOL_FACTORY = poolFactory;
     }
 
+    /// @inheritdoc IERC20Router
     function safeTransferFrom(
         address token,
         address from,
