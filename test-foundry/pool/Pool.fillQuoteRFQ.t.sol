@@ -295,4 +295,19 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
+
+    function test_getQuoteRFQFilledAmount_ReturnExpectedValue() public {
+        mintAndApprove();
+
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig, address(0));
+
+        bytes32 quoteRFQHash = pool.quoteRFQHash(quoteRFQ);
+        assertEq(
+            pool.getQuoteRFQFilledAmount(quoteRFQ.provider, quoteRFQHash),
+            quoteRFQ.size / TWO
+        );
+    }
 }
