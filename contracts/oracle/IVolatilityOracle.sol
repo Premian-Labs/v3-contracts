@@ -96,5 +96,7 @@ interface IVolatilityOracle {
         UD60x18[] memory timeToMaturity
     ) external view returns (UD60x18[] memory);
 
+    /// @notice Returns the current risk-free rate
+    /// @return The current risk-free rate
     function getRiskFreeRate() external view returns (UD60x18);
 }

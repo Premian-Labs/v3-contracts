@@ -330,6 +330,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return sigma;
     }
 
+    // @inheritdoc IVolatilityOracle
     function getRiskFreeRate() external view returns (UD60x18) {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();

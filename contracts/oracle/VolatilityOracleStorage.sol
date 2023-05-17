@@ -47,6 +47,7 @@ library VolatilityOracleStorage {
         }
     }
 
+    /// @notice Returns the current parameters for `token`
     function getParams(
         Layout storage l,
         address token
@@ -54,6 +55,7 @@ library VolatilityOracleStorage {
         return l.parameters[token];
     }
 
+    /// @notice Returns the parsed parameters for the encoded `input`
     function parseParams(
         bytes32 input
     ) internal pure returns (int256[] memory params) {
@@ -98,6 +100,7 @@ library VolatilityOracleStorage {
         }
     }
 
+    /// @notice Returns the encoded parameters for `params`
     function formatParams(
         int256[5] memory params
     ) internal pure returns (bytes32 result) {
