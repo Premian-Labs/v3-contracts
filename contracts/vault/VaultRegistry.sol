@@ -211,7 +211,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             if (
                 !_containsTokenPair(tokenPairs, l.supportedTokenPairs[vault][i])
             ) {
-                newTokenPairs[j] = l.supportedTokenPairs[vault][i];
+                newTokenPairs[count] = l.supportedTokenPairs[vault][i];
                 count++;
             }
         }
