@@ -26,14 +26,17 @@ contract Referral is IReferral, OwnableInternal {
         FACTORY = factory;
     }
 
+    /// @inheritdoc IReferral
     function getReferrer(address user) external view returns (address) {
         return ReferralStorage.layout().referrals[user];
     }
 
+    /// @inheritdoc IReferral
     function getRebateTier(address referrer) public view returns (RebateTier) {
         return ReferralStorage.layout().rebateTiers[referrer];
     }
 
+    /// @inheritdoc IReferral
     function getRebatePercents()
         external
         view
@@ -47,6 +50,7 @@ contract Referral is IReferral, OwnableInternal {
         secondaryRebatePercent = l.secondaryRebatePercent;
     }
 
+    /// @inheritdoc IReferral
     function getRebatePercents(
         address referrer
     )
@@ -64,6 +68,7 @@ contract Referral is IReferral, OwnableInternal {
         );
     }
 
+    /// @inheritdoc IReferral
     function getRebates(
         address referrer
     ) public view returns (address[] memory, uint256[] memory) {
@@ -79,6 +84,7 @@ contract Referral is IReferral, OwnableInternal {
         return (tokens, rebates);
     }
 
+    /// @inheritdoc IReferral
     function setRebateTier(
         address referrer,
         RebateTier tier
@@ -88,6 +94,7 @@ contract Referral is IReferral, OwnableInternal {
         l.rebateTiers[referrer] = tier;
     }
 
+    /// @inheritdoc IReferral
     function setPrimaryRebatePercent(
         UD60x18 percent,
         RebateTier tier
@@ -103,12 +110,14 @@ contract Referral is IReferral, OwnableInternal {
         l.primaryRebatePercents[uint8(tier)] = percent;
     }
 
+    /// @inheritdoc IReferral
     function setSecondaryRebatePercent(UD60x18 percent) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
         emit SetSecondaryRebatePercent(l.secondaryRebatePercent, percent);
         l.secondaryRebatePercent = percent;
     }
 
+    /// @inheritdoc IReferral
     function useReferral(
         address user,
         address primaryReferrer,
@@ -135,8 +144,8 @@ contract Referral is IReferral, OwnableInternal {
             UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
             totalRebate = _primaryRebate + _secondaryRebate;
 
-            primaryRebate = token.toPoolTokenDecimals(_primaryRebate);
-            secondaryRebate = token.toPoolTokenDecimals(_secondaryRebate);
+            primaryRebate = token.toTokenDecimals(_primaryRebate);
+            secondaryRebate = token.toTokenDecimals(_secondaryRebate);
             uint256 _totalRebate = primaryRebate + secondaryRebate;
 
             IERC20(token).safeTransferFrom(
@@ -170,6 +179,7 @@ contract Referral is IReferral, OwnableInternal {
         );
     }
 
+    /// @inheritdoc IReferral
     function claimRebate() external {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
@@ -188,6 +198,7 @@ contract Referral is IReferral, OwnableInternal {
         }
     }
 
+    /// @notice Sets the `referrer` for a `user` if they don't already have one. If a referrer has already been set, return the existing referrer.
     function _trySetReferrer(
         address user,
         address referrer
@@ -204,6 +215,7 @@ contract Referral is IReferral, OwnableInternal {
         return referrer;
     }
 
+    /// @notice Reverts if the caller is not an authorized pool
     function _revertIfPoolNotAuthorized() internal view {
         if (!IPoolFactory(FACTORY).isPool(msg.sender))
             revert Referral__PoolNotAuthorized();

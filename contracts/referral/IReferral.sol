@@ -105,7 +105,7 @@ interface IReferral {
     /// @param primaryReferrer The address of the primary referrer
     /// @param token The address of the token
     /// @param tradingFee The trading fee (18 decimals)
-    /// @return totalRebate The total rebate, sum of the primary and seconary rebates (18 decimals)
+    /// @return totalRebate The total rebate, sum of the primary and secondary rebates (18 decimals)
     function useReferral(
         address user,
         address primaryReferrer,

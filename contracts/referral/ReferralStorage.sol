@@ -30,7 +30,8 @@ library ReferralStorage {
         }
     }
 
-    function toPoolTokenDecimals(
+    /// @notice Adjust decimals of `value` with 18 decimals to match the `token` decimals
+    function toTokenDecimals(
         address token,
         UD60x18 value
     ) internal view returns (uint256) {
