@@ -1534,7 +1534,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         view
         returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
     {
-        Position.ensureLowerGreaterOrEqualUpper(lower, upper);
+        Position.revertIfLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
         nearestBelowUpper = _getNearestTickBelow(upper);
@@ -1687,6 +1687,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upperTick.counter -= 1;
         }
 
+        // ===========================================================
         // Update the deltas, i.e. the net change in per tick liquidity, of the
         // referenced lower and upper tick, dependent on the current tick.
         //
@@ -1722,6 +1723,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //     |          [---------------------]   |
         //                [---------------------)
         //                         current
+        // ===========================================================
 
         if (upper <= l.currentTick) {
             lowerTick.delta = lowerTick.delta - delta;
@@ -1761,6 +1763,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
+        // ===========================================================
         // After deposit / full withdrawal the current tick needs be reconciled. We
         // need cover two cases.
         //
@@ -1810,6 +1813,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //     |   [R1]             [R3]           |
         //                   ^
         //              market price
+        // ===========================================================
+
         if (delta > iZERO) {
             uint256 crossings;
 
@@ -1924,7 +1929,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Calculates the growth and exposure change between the lower
     ///    and upper Ticks of a Position.
-    ///
+    /// ===========================================================
     ///                     l         ▼         u
     ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
     ///    => (global - external(l) - external(u))
@@ -1936,6 +1941,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///                     l                   u    ▼
     ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
     ///    => (global - external(l) - (global - external(u)))
+    /// ===========================================================
     function _rangeFeeRate(
         PoolStorage.Layout storage l,
         UD60x18 lower,
@@ -1982,6 +1988,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             right == l.marketPrice &&
             l.tickIndex.next(right) != ZERO
         ) {
+            // ===========================================================
             // bid-bound market price check
             // liquidity_rate > 0
             //        market price
@@ -1989,6 +1996,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // |------[----]------|
             //        ^
             //     current
+            // ===========================================================
+
             lower = right;
             upper = l.tickIndex.next(right);
         } else if (
@@ -1997,6 +2006,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             current == l.marketPrice &&
             l.tickIndex.prev(current) != ZERO
         ) {
+            // ===========================================================
             //  ask-bound market price check
             //  liquidity_rate > 0
             //  market price
@@ -2004,6 +2014,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // |------[----]------|
             //        ^
             //     current
+            // ===========================================================
+
             lower = l.tickIndex.prev(current);
             upper = current;
         }
