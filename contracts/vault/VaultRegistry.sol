@@ -22,7 +22,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     /// @inheritdoc IVaultRegistry
     function addVault(
         address vault,
-        address[] memory assets,
+        address asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType,
@@ -32,7 +32,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
 
         l.vaults[vault] = Vault(
             vault,
-            assets,
+            asset,
             vaultType,
             side,
             optionType,
@@ -41,12 +41,9 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
 
         l.vaultAddresses.add(vault);
         l.vaultsByType[vaultType].add(vault);
+        l.vaultsByAsset[asset].add(vault);
         l.vaultsByTradeSide[side].add(vault);
         l.vaultsByOptionType[optionType].add(vault);
-
-        for (uint256 i = 0; i < assets.length; i++) {
-            l.vaultsByAsset[assets[i]].add(vault);
-        }
 
         if (side == TradeSide.Both) {
             l.vaultsByTradeSide[TradeSide.Buy].add(vault);
@@ -58,7 +55,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             l.vaultsByOptionType[OptionType.Put].add(vault);
         }
 
-        emit VaultAdded(vault, assets, vaultType, side, optionType, name);
+        emit VaultAdded(vault, asset, vaultType, side, optionType, name);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -67,12 +64,9 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
 
         l.vaultAddresses.remove(vault);
         l.vaultsByType[l.vaults[vault].vaultType].remove(vault);
+        l.vaultsByAsset[l.vaults[vault].asset].remove(vault);
         l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
         l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
-
-        for (uint i = 0; i < l.vaults[vault].assets.length; i++) {
-            l.vaultsByAsset[l.vaults[vault].assets[i]].remove(vault);
-        }
 
         if (l.vaults[vault].side == TradeSide.Both) {
             l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
@@ -139,13 +133,9 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
                     assetFound = true;
                 } else {
                     for (uint256 j = 0; j < assets.length; j++) {
-                        if (assetFound) break;
-
-                        for (uint k = 0; k < vault.assets.length; k++) {
-                            if (vault.assets[k] == assets[j]) {
-                                assetFound = true;
-                                break;
-                            }
+                        if (vault.asset == assets[j]) {
+                            assetFound = true;
+                            break;
                         }
                     }
                 }

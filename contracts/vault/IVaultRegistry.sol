@@ -20,7 +20,7 @@ interface IVaultRegistry {
     // Structs
     struct Vault {
         address vault;
-        address[] assets;
+        address asset;
         bytes32 vaultType;
         TradeSide side;
         OptionType optionType;
@@ -30,7 +30,7 @@ interface IVaultRegistry {
     // Events
     event VaultAdded(
         address indexed vault,
-        address[] assets,
+        address asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType,
@@ -45,14 +45,14 @@ interface IVaultRegistry {
 
     /// @notice Adds a vault to the registry.
     /// @param vault The proxy address of the vault.
-    /// @param assets The address list of assets deposited in the vault.
+    /// @param asset The address for the token deposited in the vault.
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
     /// @param name The official name of the vault.
     function addVault(
         address vault,
-        address[] memory assets,
+        address asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType,
@@ -83,9 +83,9 @@ interface IVaultRegistry {
         OptionType optionType
     ) external view returns (Vault[] memory);
 
-    /// @notice Gets all vaults with `asset` in assets.
+    /// @notice Gets all vaults with `asset` as their deposit token.
     /// @param asset The desired asset.
-    /// @return All vaults with `asset` in assets.
+    /// @return All vaults with `asset` as their deposit token.
     function getVaultsByAsset(
         address asset
     ) external view returns (Vault[] memory);
