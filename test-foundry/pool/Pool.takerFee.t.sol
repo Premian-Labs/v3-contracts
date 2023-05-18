@@ -31,19 +31,12 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 price,
         UD60x18 discount
     ) internal {
-        UD60x18 deNormalizedPremium = contractsToCollateral(
-            price * size,
-            isCallTest
-        );
+        UD60x18 deNormalizedPremium = contractsToCollateral(price * size);
 
-        UD60x18 normalizedPremium = collateralToContracts(
-            deNormalizedPremium,
-            isCallTest
-        );
+        UD60x18 normalizedPremium = collateralToContracts(deNormalizedPremium);
 
         uint256 premium = scaleDecimals(
-            isPremiumNormalized ? normalizedPremium : deNormalizedPremium,
-            isCallTest
+            isPremiumNormalized ? normalizedPremium : deNormalizedPremium
         );
 
         UD60x18 fee;
@@ -72,10 +65,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
             isPremiumNormalized
         );
 
-        uint256 expectedFee = scaleDecimals(
-            contractsToCollateral(fee, isCallTest),
-            isCallTest
-        );
+        uint256 expectedFee = scaleDecimals(contractsToCollateral(fee));
 
         assertEq(
             protocolFee,

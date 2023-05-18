@@ -19,20 +19,16 @@ abstract contract PoolAnnihilateTest is DeployTest {
         deposit(1000 ether);
         vm.startPrank(users.lp);
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
         deal(
             poolToken,
             users.lp,
-            scaleDecimals(
-                contractsToCollateral(ud(1000 ether), isCallTest),
-                isCallTest
-            )
+            scaleDecimals(contractsToCollateral(ud(1000 ether)))
         );
         IERC20(poolToken).approve(address(router), type(uint256).max);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(ud(200 ether), isCallTest),
-            isCallTest
+            contractsToCollateral(ud(200 ether))
         );
 
         assertEq(
@@ -103,11 +99,7 @@ abstract contract PoolAnnihilateTest is DeployTest {
         );
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
-            totalPremium +
-                scaleDecimals(
-                    contractsToCollateral(annihilateSize, isCallTest),
-                    isCallTest
-                ),
+            totalPremium + scaleDecimals(contractsToCollateral(annihilateSize)),
             "poolToken lp 2"
         );
     }

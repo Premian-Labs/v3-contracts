@@ -14,7 +14,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
         for (uint256 i; i < cases.length; i++) {
             vault.setTotalAssets(cases[i]);
-            assertEq(vault.totalAssets(), scaleDecimals(cases[i], isCallTest));
+            assertEq(vault.totalAssets(), scaleDecimals(cases[i]));
         }
     }
 }

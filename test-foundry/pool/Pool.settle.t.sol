@@ -29,16 +29,13 @@ abstract contract PoolSettleTest is DeployTest {
         deposit(depositSize);
 
         trade.initialCollateral = scaleDecimals(
-            contractsToCollateral(depositSize, isCallTest) *
-                posKey.lower.avg(posKey.upper),
-            isCallTest
+            contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper)
         );
 
         trade.size = ud(100 ether);
 
         trade.traderCollateral = scaleDecimals(
-            contractsToCollateral(trade.size, isCallTest),
-            isCallTest
+            contractsToCollateral(trade.size)
         );
 
         (trade.totalPremium, ) = pool.getQuoteAMM(
@@ -47,7 +44,7 @@ abstract contract PoolSettleTest is DeployTest {
             false
         );
 
-        trade.poolToken = getPoolToken(isCallTest);
+        trade.poolToken = getPoolToken();
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
             feeReceiver
         );
@@ -75,7 +72,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         uint256 protocolFees = pool.protocolFees();
 
-        UD60x18 settlementPrice = getSettlementPrice(isCallTest, isITM);
+        UD60x18 settlementPrice = getSettlementPrice(isITM);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
         vm.warp(poolKey.maturity);
@@ -83,8 +80,7 @@ abstract contract PoolSettleTest is DeployTest {
         pool.settle();
 
         uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isCallTest, isITM, trade.size, settlementPrice),
-            isCallTest
+            getExerciseValue(isITM, trade.size, settlementPrice)
         );
 
         assertEq(
@@ -127,7 +123,7 @@ abstract contract PoolSettleTest is DeployTest {
     }
 
     function _test_settleFor_Sell100Options(bool isITM) internal {
-        UD60x18 settlementPrice = getSettlementPrice(isCallTest, isITM);
+        UD60x18 settlementPrice = getSettlementPrice(isITM);
         oracleAdapter.setQuote(settlementPrice.inv());
         oracleAdapter.setQuoteFrom(settlementPrice);
 
@@ -152,7 +148,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         uint256 protocolFees = pool.protocolFees();
 
-        uint256 cost = scaleDecimals(ud(0.1 ether), isCallTest);
+        uint256 cost = scaleDecimals(ud(0.1 ether));
 
         vm.warp(poolKey.maturity);
         vm.prank(users.agent);
@@ -164,13 +160,7 @@ abstract contract PoolSettleTest is DeployTest {
         pool.settleFor(holders, cost);
 
         uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(
-                isCallTest,
-                isITM,
-                trade.size / TWO,
-                settlementPrice
-            ),
-            isCallTest
+            getExerciseValue(isITM, trade.size / TWO, settlementPrice)
         );
 
         assertEq(
@@ -218,7 +208,7 @@ abstract contract PoolSettleTest is DeployTest {
     }
 
     function test_settleFor_RevertIf_TotalCostExceedsCollateralValue() public {
-        UD60x18 settlementPrice = getSettlementPrice(isCallTest, false);
+        UD60x18 settlementPrice = getSettlementPrice(false);
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
         oracleAdapter.setQuoteFrom(settlementPrice);
@@ -226,17 +216,12 @@ abstract contract PoolSettleTest is DeployTest {
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
         UD60x18 exerciseValue = getExerciseValue(
-            isCallTest,
             false,
             trade.size,
             settlementPrice
         );
 
-        UD60x18 collateral = getCollateralValue(
-            isCallTest,
-            trade.size,
-            exerciseValue
-        );
+        UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
 
         uint256 cost = collateral.unwrap() + 1 wei;
 
@@ -248,9 +233,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         // if !isCall, convert collateral to WETH
         userSettings.setAuthorizedCost(
-            isCallTest
-                ? cost
-                : (ud(scaleDecimalsTo(cost, isCallTest)) * quote).unwrap()
+            isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap()
         );
 
         vm.stopPrank();
@@ -259,7 +242,7 @@ abstract contract PoolSettleTest is DeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__CostExceedsPayout.selector,
-                scaleDecimalsTo(cost, isCallTest),
+                scaleDecimalsTo(cost),
                 collateral.unwrap()
             )
         );
@@ -283,7 +266,7 @@ abstract contract PoolSettleTest is DeployTest {
     }
 
     function test_settleFor_RevertIf_CostNotAuthorized() public {
-        UD60x18 settlementPrice = getSettlementPrice(isCallTest, false);
+        UD60x18 settlementPrice = getSettlementPrice(false);
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
@@ -294,7 +277,7 @@ abstract contract PoolSettleTest is DeployTest {
         userSettings.setAuthorizedAgents(agents);
 
         UD60x18 _cost = ud(0.1 ether);
-        uint256 cost = scaleDecimals(_cost, isCallTest);
+        uint256 cost = scaleDecimals(_cost);
 
         vm.expectRevert(
             abi.encodeWithSelector(

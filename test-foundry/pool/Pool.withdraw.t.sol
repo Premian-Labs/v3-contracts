@@ -22,11 +22,10 @@ abstract contract PoolWithdrawTest is DeployTest {
         vm.warp(block.timestamp + 60);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(ud(200 ether), isCallTest),
-            isCallTest
+            contractsToCollateral(ud(200 ether))
         );
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
@@ -40,8 +39,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         UD60x18 withdrawSize = ud(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         uint256 withdrawCollateralValue = scaleDecimals(
-            contractsToCollateral(withdrawSize * avgPrice, isCallTest),
-            isCallTest
+            contractsToCollateral(withdrawSize * avgPrice)
         );
 
         vm.prank(users.lp);

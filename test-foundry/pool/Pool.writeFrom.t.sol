@@ -14,14 +14,12 @@ import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolWriteFromTest is DeployTest {
     function _mintForLP() internal returns (uint256) {
-        IERC20 poolToken = IERC20(getPoolToken(isCallTest));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         uint256 initialCollateral = scaleDecimals(
             contractsToCollateral(
-                isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike,
-                isCallTest
-            ),
-            isCallTest
+                isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike
+            )
         );
 
         deal(address(poolToken), users.lp, initialCollateral);
@@ -40,12 +38,9 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(size, isCallTest),
-            isCallTest
-        ) + fee;
+        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
 
-        IERC20 poolToken = IERC20(getPoolToken(isCallTest));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         assertEq(poolToken.balanceOf(address(pool)), collateral);
         assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
@@ -70,12 +65,9 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.otherTrader);
         pool.writeFrom(users.lp, users.trader, size);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(size, isCallTest),
-            isCallTest
-        ) + fee;
+        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
 
-        IERC20 poolToken = IERC20(getPoolToken(isCallTest));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         assertEq(poolToken.balanceOf(address(pool)), collateral);
         assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);

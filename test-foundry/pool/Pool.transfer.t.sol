@@ -20,7 +20,7 @@ abstract contract PoolTransferTest is DeployTest {
     function test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_SameOperator()
         public
     {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
 
         vm.startPrank(users.lp);
@@ -47,7 +47,7 @@ abstract contract PoolTransferTest is DeployTest {
     function test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_NewOperator()
         public
     {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
 
         vm.startPrank(users.lp);
@@ -74,7 +74,7 @@ abstract contract PoolTransferTest is DeployTest {
     function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_SameOperator()
         public
     {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId());
 
         vm.startPrank(users.lp);
@@ -101,7 +101,7 @@ abstract contract PoolTransferTest is DeployTest {
     function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_NewOperator()
         public
     {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId());
 
         vm.startPrank(users.lp);
@@ -281,7 +281,7 @@ abstract contract PoolTransferTest is DeployTest {
     }
 
     function test_safeTransferFrom_TransferLongToken() public {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.LONG), 0);
@@ -308,7 +308,7 @@ abstract contract PoolTransferTest is DeployTest {
     }
 
     function test_safeTransferFrom_TransferShortToken() public {
-        trade(1 ether, isCallTest, false);
+        trade(1 ether, false);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.SHORT), 0);
@@ -337,7 +337,7 @@ abstract contract PoolTransferTest is DeployTest {
     function test_safeTransferFrom_TransferNonPositionToken_FromApprovedAddress()
         public
     {
-        trade(1 ether, isCallTest, true);
+        trade(1 ether, true);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.LONG), 0);
@@ -378,7 +378,7 @@ abstract contract PoolTransferTest is DeployTest {
     }
 
     function test_safeTransferFrom_RevertIf_NotApproved() public {
-        trade(1 ether, isCallTest, false);
+        trade(1 ether, false);
 
         uint256 transferAmount = 0.3e18;
 

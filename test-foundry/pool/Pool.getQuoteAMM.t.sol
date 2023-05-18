@@ -24,13 +24,12 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             tradeSize,
-            scaleDecimals(tradeSize * avgPrice, isCallTest),
+            scaleDecimals(tradeSize * avgPrice),
             true
         );
 
         uint256 quote = scaleDecimals(
-            contractsToCollateral(tradeSize * avgPrice, isCallTest),
-            isCallTest
+            contractsToCollateral(tradeSize * avgPrice)
         ) + takerFee;
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -52,13 +51,12 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             tradeSize,
-            scaleDecimals(tradeSize * avgPrice, isCallTest),
+            scaleDecimals(tradeSize * avgPrice),
             true
         );
 
         uint256 quote = scaleDecimals(
-            contractsToCollateral(tradeSize * avgPrice, isCallTest),
-            isCallTest
+            contractsToCollateral(tradeSize * avgPrice)
         ) - takerFee;
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(

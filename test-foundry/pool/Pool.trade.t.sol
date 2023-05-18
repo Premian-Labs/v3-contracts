@@ -27,7 +27,7 @@ abstract contract PoolTradeTest is DeployTest {
             true
         );
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -67,21 +67,18 @@ abstract contract PoolTradeTest is DeployTest {
             ) = referral.getRebatePercents(users.referrer);
 
             UD60x18 _primaryRebate = primaryRebatePercent *
-                scaleDecimals(takerFee, isCallTest);
+                scaleDecimals(takerFee);
 
             UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(takerFee, isCallTest);
+                scaleDecimals(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCallTest);
-            uint256 secondaryRebate = scaleDecimals(
-                _secondaryRebate,
-                isCallTest
-            );
+            uint256 primaryRebate = scaleDecimals(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        address token = getPoolToken(isCallTest);
+        address token = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -114,8 +111,7 @@ abstract contract PoolTradeTest is DeployTest {
 
         UD60x18 tradeSize = ud(500 ether);
         uint256 collateralScaled = scaleDecimals(
-            contractsToCollateral(tradeSize, isCallTest),
-            isCallTest
+            contractsToCollateral(tradeSize)
         );
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -124,7 +120,7 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, collateralScaled);
@@ -150,22 +146,17 @@ abstract contract PoolTradeTest is DeployTest {
 
         {
             UD60x18 _collateral = contractsToCollateral(
-                UD60x18.wrap(depositSize),
-                isCallTest
+                UD60x18.wrap(depositSize)
             );
 
             initialCollateral = scaleDecimals(
-                _collateral * posKey.lower.avg(posKey.upper),
-                isCallTest
+                _collateral * posKey.lower.avg(posKey.upper)
             );
         }
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeSize, isCallTest),
-            isCallTest
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(
             users.trader,
@@ -182,21 +173,18 @@ abstract contract PoolTradeTest is DeployTest {
             ) = referral.getRebatePercents(users.referrer);
 
             UD60x18 _primaryRebate = primaryRebatePercent *
-                scaleDecimals(takerFee, isCallTest);
+                scaleDecimals(takerFee);
 
             UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(takerFee, isCallTest);
+                scaleDecimals(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCallTest);
-            uint256 secondaryRebate = scaleDecimals(
-                _secondaryRebate,
-                isCallTest
-            );
+            uint256 primaryRebate = scaleDecimals(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        address token = getPoolToken(isCallTest);
+        address token = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -237,7 +225,7 @@ abstract contract PoolTradeTest is DeployTest {
             true
         );
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, totalPremium);
@@ -261,8 +249,7 @@ abstract contract PoolTradeTest is DeployTest {
 
         UD60x18 tradeSize = ud(500 ether);
         uint256 collateralScaled = scaleDecimals(
-            contractsToCollateral(tradeSize, isCallTest),
-            isCallTest
+            contractsToCollateral(tradeSize)
         );
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -271,7 +258,7 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, collateralScaled);

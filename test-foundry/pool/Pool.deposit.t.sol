@@ -20,16 +20,13 @@ abstract contract PoolDepositTest is DeployTest {
     function test_deposit_1000_LC_WithToken() public {
         poolKey.isCallPool = isCallTest;
 
-        IERC20 token = IERC20(getPoolToken(isCallTest));
+        IERC20 token = IERC20(getPoolToken());
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
-        UD60x18 collateral = contractsToCollateral(depositSize, isCallTest);
-        uint256 collateralValue = scaleDecimals(
-            collateral * avgPrice,
-            isCallTest
-        );
+        UD60x18 collateral = contractsToCollateral(depositSize);
+        uint256 collateralValue = scaleDecimals(collateral * avgPrice);
 
         assertEq(pool.balanceOf(users.lp, tokenId()), depositSize);
         assertEq(pool.totalSupply(tokenId()), depositSize);

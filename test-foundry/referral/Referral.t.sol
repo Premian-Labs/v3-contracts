@@ -19,6 +19,7 @@ contract ReferralTest is DeployTest {
     function setUp() public override {
         super.setUp();
 
+        isCallTest = true;
         poolKey.isCallPool = true;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
     }
@@ -28,13 +29,14 @@ contract ReferralTest is DeployTest {
             address token0,
             uint256 primaryRebate0,
             uint256 secondaryRebate0
-        ) = _test_useReferral_Rebate_Primary_And_Secondary(true);
+        ) = _test_useReferral_Rebate_Primary_And_Secondary();
 
+        isCallTest = false;
         (
             address token1,
             uint256 primaryRebate1,
             uint256 secondaryRebate1
-        ) = _test_useReferral_Rebate_Primary_And_Secondary(false);
+        ) = _test_useReferral_Rebate_Primary_And_Secondary();
 
         (address[] memory tokens, uint256[] memory rebates) = referral
             .getRebates(users.referrer);
@@ -170,9 +172,9 @@ contract ReferralTest is DeployTest {
         referral.setSecondaryRebatePercent(ud(100e18));
     }
 
-    function _test_useReferral_No_Rebate(bool isCall) internal {
+    function _test_useReferral_No_Rebate() internal {
         uint256 tradingFee = 1 ether;
-        address token = getPoolToken(isCall);
+        address token = getPoolToken();
 
         vm.startPrank(address(pool));
         deal(token, address(pool), tradingFee);
@@ -182,7 +184,7 @@ contract ReferralTest is DeployTest {
             users.trader,
             address(0),
             token,
-            scaleDecimals(tradingFee, isCall)
+            scaleDecimals(tradingFee)
         );
 
         vm.stopPrank();
@@ -195,12 +197,12 @@ contract ReferralTest is DeployTest {
     }
 
     function test_useReferral_No_Rebate() public {
-        _test_useReferral_No_Rebate(poolKey.isCallPool);
+        _test_useReferral_No_Rebate();
     }
 
-    function _test_useReferral_Rebate_Primary_Only(bool isCall) internal {
+    function _test_useReferral_Rebate_Primary_Only() internal {
         uint256 tradingFee = 1 ether;
-        address token = getPoolToken(isCall);
+        address token = getPoolToken();
 
         vm.startPrank(address(pool));
         deal(token, address(pool), tradingFee);
@@ -210,7 +212,7 @@ contract ReferralTest is DeployTest {
             users.trader,
             users.referrer,
             token,
-            scaleDecimals(tradingFee, isCall)
+            scaleDecimals(tradingFee)
         );
 
         vm.stopPrank();
@@ -221,13 +223,13 @@ contract ReferralTest is DeployTest {
         ) = referral.getRebatePercents(users.referrer);
 
         UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(tradingFee, isCall);
+            scaleDecimals(tradingFee);
 
         UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(tradingFee, isCall);
+            scaleDecimals(tradingFee);
 
-        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        uint256 primaryRebate = scaleDecimals(_primaryRebate);
+        uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
@@ -243,17 +245,15 @@ contract ReferralTest is DeployTest {
     }
 
     function test_useReferral_Rebate_Primary_Only() public {
-        _test_useReferral_Rebate_Primary_Only(poolKey.isCallPool);
+        _test_useReferral_Rebate_Primary_Only();
     }
 
-    function _test_useReferral_Rebate_Primary_And_Secondary(
-        bool isCall
-    )
+    function _test_useReferral_Rebate_Primary_And_Secondary()
         internal
         returns (address token, uint256 primaryRebate, uint256 secondaryRebate)
     {
         uint256 tradingFee = 1 ether;
-        token = getPoolToken(isCall);
+        token = getPoolToken();
 
         vm.prank(users.referrer);
         referral.__trySetReferrer(secondaryReferrer);
@@ -266,7 +266,7 @@ contract ReferralTest is DeployTest {
             users.trader,
             users.referrer,
             token,
-            scaleDecimals(tradingFee, isCall)
+            scaleDecimals(tradingFee)
         );
 
         vm.stopPrank();
@@ -277,13 +277,13 @@ contract ReferralTest is DeployTest {
         ) = referral.getRebatePercents(users.referrer);
 
         UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(tradingFee, isCall);
+            scaleDecimals(tradingFee);
 
         UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(tradingFee, isCall);
+            scaleDecimals(tradingFee);
 
-        primaryRebate = scaleDecimals(_primaryRebate, isCall);
-        secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        primaryRebate = scaleDecimals(_primaryRebate);
+        secondaryRebate = scaleDecimals(_secondaryRebate);
 
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
@@ -299,7 +299,7 @@ contract ReferralTest is DeployTest {
     }
 
     function test_useReferral_Rebate_Primary_And_Secondary() public {
-        _test_useReferral_Rebate_Primary_And_Secondary(poolKey.isCallPool);
+        _test_useReferral_Rebate_Primary_And_Secondary();
     }
 
     function test_useReferral_RevertIf_Pool_Not_Authorized() public {
@@ -319,13 +319,14 @@ contract ReferralTest is DeployTest {
             address token0,
             uint256 primaryRebate0,
             uint256 secondaryRebate0
-        ) = _test_useReferral_Rebate_Primary_And_Secondary(true);
+        ) = _test_useReferral_Rebate_Primary_And_Secondary();
 
+        isCallTest = false;
         (
             address token1,
             uint256 primaryRebate1,
             uint256 secondaryRebate1
-        ) = _test_useReferral_Rebate_Primary_And_Secondary(false);
+        ) = _test_useReferral_Rebate_Primary_And_Secondary();
 
         vm.prank(users.referrer);
         referral.claimRebate();

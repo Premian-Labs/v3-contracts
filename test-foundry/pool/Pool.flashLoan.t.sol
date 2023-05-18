@@ -18,8 +18,8 @@ abstract contract PoolFlashLoanTest is DeployTest {
     UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
     function calculateFee(uint256 amount) internal view returns (uint256) {
-        UD60x18 fee = scaleDecimals(amount, isCallTest) * FLASH_LOAN_FEE;
-        return scaleDecimals(fee, isCallTest);
+        UD60x18 fee = scaleDecimals(amount) * FLASH_LOAN_FEE;
+        return scaleDecimals(fee);
     }
 
     function test_maxFlashLoan_ReturnCorrectMax() public {
@@ -28,7 +28,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(poolKey.isCallPool);
+        address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
 
         assertEq(pool.maxFlashLoan(poolToken), initialCollateral);
@@ -51,7 +51,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(poolKey.isCallPool);
+        address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
 
         assertEq(
@@ -77,7 +77,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 
@@ -107,7 +107,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 
@@ -173,7 +173,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         //
 
-        address poolToken = getPoolToken(isCallTest);
+        address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 

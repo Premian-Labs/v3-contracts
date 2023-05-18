@@ -16,20 +16,18 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 tradeSize = 1 ether;
         (uint256 initialCollateral, uint256 totalPremium) = trade(
             tradeSize,
-            isCallTest,
             true
         );
 
         uint256 claimableFees = pool.getClaimableFees(posKey);
         uint256 protocolFees = pool.protocolFees();
-        IERC20 poolToken = IERC20(getPoolToken(isCallTest));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         vm.prank(users.lp);
         pool.claim(posKey);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(ud(tradeSize), isCallTest),
-            isCallTest
+            contractsToCollateral(ud(tradeSize))
         );
 
         assertEq(
@@ -48,7 +46,7 @@ abstract contract PoolClaimTest is DeployTest {
 
     function test_getClaimableFees_ReturnExpectedValue() public {
         uint256 tradeSize = 1 ether;
-        trade(tradeSize, isCallTest, true);
+        trade(tradeSize, true);
 
         UD60x18 price = posKey.lower;
         UD60x18 nextPrice = posKey.upper;
@@ -57,7 +55,7 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             ud(tradeSize),
-            scaleDecimals(ud(tradeSize) * avgPrice, isCallTest),
+            scaleDecimals(ud(tradeSize) * avgPrice),
             true
         );
 
