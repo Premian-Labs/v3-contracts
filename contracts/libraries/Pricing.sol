@@ -76,24 +76,24 @@ library Pricing {
         return (upper - lower) / MIN_TICK_DISTANCE;
     }
 
-    /// @notice TODO:
+    /// @notice Returns the number of ticks between `args.lower` and `args.upper`
     function amountOfTicksBetween(
         Args memory args
     ) internal pure returns (UD60x18) {
         return amountOfTicksBetween(args.lower, args.upper);
     }
 
-    /// @notice TODO:
+    /// @notice Returns the liquidity between `args.lower` and `args.upper`
     function liquidity(Args memory args) internal pure returns (UD60x18) {
         return args.liquidityRate * amountOfTicksBetween(args);
     }
 
-    /// @notice TODO:
+    /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`
     function bidLiquidity(Args memory args) internal pure returns (UD60x18) {
         return proportion(args) * liquidity(args);
     }
 
-    /// @notice TODO:
+    /// @notice Returns the ask-side liquidity between `args.lower` and `args.upper`
     function askLiquidity(Args memory args) internal pure returns (UD60x18) {
         return (ONE - proportion(args)) * liquidity(args);
     }
