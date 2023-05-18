@@ -209,6 +209,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return true;
     }
 
+    /// @notice Revert if `token` is not the pool token
     function _revertIfNotPoolToken(address token) internal view {
         if (token != PoolStorage.layout().getPoolToken())
             revert Pool__NotPoolToken(token);

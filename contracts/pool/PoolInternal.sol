@@ -257,6 +257,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
+    /// @notice Returns the amount of fees an LP can claim for a position (without claiming)
     function _calculateClaimableFees(
         UD60x18 feeRate,
         UD60x18 lastFeeRate,
@@ -265,7 +266,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (feeRate - lastFeeRate) * liquidityPerTick;
     }
 
-    /// @notice Updates the amount of fees an LP can claim for a position (without claiming).
+    /// @notice Updates the amount of fees an LP can claim for a position (without claiming)
     function _updateClaimableFees(
         Position.Data storage pData,
         UD60x18 feeRate,
@@ -283,6 +284,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = feeRate;
     }
 
+    /// @notice Updates the amount of fees an LP can claim for a position
     function _updateClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
@@ -298,9 +300,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = feeRate;
     }
 
-    /// @notice Updates the claimable fees of a position and transfers the claimed
-    ///         fees to the operator of the position. Then resets the claimable fees to
-    ///         zero.
+    /// @notice Updates the claimable fees of a position and transfers the claimed fees to the operator of the position. Then resets
+    ///         the claimable fees to zero.
     /// @param p The position to claim fees for
     /// @return claimedFees The amount of fees claimed (poolToken decimals)
     function _claim(
@@ -332,6 +333,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.toPoolTokenDecimals(_claimedFees);
     }
 
+    /// @notice Claims the protocol fees and transfers them to the fee receiver
     function _claimProtocolFees() internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 claimedFees = l.protocolFees;
@@ -388,8 +390,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfOptionExpired(l);
 
         _revertIfRangeInvalid(p.lower, p.upper);
-        _verifyTickWidth(p.lower);
-        _verifyTickWidth(p.upper);
+        _revertIfTickWidthInvalid(p.lower);
+        _revertIfTickWidthInvalid(p.upper);
 
         uint256 tokenId = PoolStorage.formatTokenId(
             p.operator,
@@ -414,6 +416,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         Position.Data storage pData = l.positions[p.keyHash()];
+
         _depositFeeAndTicksUpdate(
             l,
             pData,
@@ -440,6 +443,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
+    /// @notice Handles fee/tick updates and mints LP token on deposit
     function _depositFeeAndTicksUpdate(
         PoolStorage.Layout storage l,
         Position.Data storage pData,
@@ -518,8 +522,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
         _revertIfZeroSize(size);
         _revertIfRangeInvalid(p.lower, p.upper);
-        _verifyTickWidth(p.lower);
-        _verifyTickWidth(p.upper);
+        _revertIfTickWidthInvalid(p.lower);
+        _revertIfTickWidthInvalid(p.upper);
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -633,7 +637,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Handle transfer of collateral / longs / shorts on deposit or withdrawal
-    ///         WARNING : `collateral` must be scaled to the collateral token decimals
+    ///         ===========================================================
+    ///         WARNING:
+    ///         `collateral` must be scaled to the collateral token decimals
+    ///         ===========================================================
     function _transferTokens(
         PoolStorage.Layout storage l,
         address from,
@@ -671,6 +678,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Transfers collateral + fees from `underwriter` and sends long/short tokens to both parties
     function _writeFrom(
         address underwriter,
         address longReceiver,
@@ -901,6 +909,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
+    /// @notice Returns the pricing arguments at the current tick
     function _getPricing(
         PoolStorage.Layout storage l,
         bool isBuy
@@ -917,8 +926,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
-    /// @notice Compute the change in short / long option contracts of an agent in order to
-    ///         transfer the contracts and execute a trade.=
+    /// @notice Compute the change in short / long option contracts of an agent in order to transfer the contracts and execute a trade
     function _getTradeDelta(
         address user,
         UD60x18 size,
@@ -936,7 +944,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    // @notice Calculate the asset update for a user and update the user's assets
+    // @notice Calculate the asset update for `user` and update the user's assets
     function _calculateAndUpdateUserAssets(
         PoolStorage.Layout storage l,
         address user,
@@ -949,6 +957,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _updateUserAssets(l, user, delta, transferCollateralToUser);
     }
 
+    /// @notice Calculate the asset update for `user`
     function _calculateAssetsUpdate(
         PoolStorage.Layout storage l,
         address user,
@@ -984,8 +993,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return delta;
     }
 
-    /// @notice Execute a trade by transferring the net change in short and long option
-    ///         contracts and collateral to / from an agent.
+    /// @notice Execute a trade by transferring the net change in short and long option contracts and collateral to / from an agent.
     function _updateUserAssets(
         PoolStorage.Layout storage l,
         address user,
@@ -1030,6 +1038,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Calculates the RFQ quote premium and fee
     function _calculateQuoteRFQPremiumAndFee(
         PoolStorage.Layout storage l,
         address taker,
@@ -1067,10 +1076,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return r;
     }
 
-    /// @notice Functionality to support the RFQ / OTC system.
-    ///         An LP can create a RFQ quote for which he will do an OTC trade through
-    ///         the exchange. Takers can buy from / sell to the LP then partially or
-    ///         fully while having the price guaranteed.
+    /// @notice Functionality to support the RFQ / OTC system. An LP can create a RFQ quote for which he will do an OTC trade through
+    ///         the exchange. Takers can buy from / sell to the LP then partially or fully while having the price guaranteed.
     /// @param args The fillQuoteRFQ parameters
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @return premiumTaker The premium paid by the taker (poolToken decimals)
@@ -1162,7 +1169,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
-    ///         NOTE: This function can be called post or prior to expiration.
+    ///         ===========================================================
+    ///         NOTE:
+    ///         This function can be called post or prior to expiration.
+    ///         ===========================================================
     function _annihilate(address owner, UD60x18 size) internal {
         _revertIfZeroSize(size);
 
@@ -1179,7 +1189,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Transfer an LP position to another owner.
-    ///         NOTE: This function can be called post or prior to expiration.
+    ///         ===========================================================
+    ///         NOTE:
+    ///         This function can be called post or prior to expiration.
+    ///         ===========================================================
     /// @param srcP The position key
     /// @param newOwner The new owner of the transferred liquidity
     /// @param newOperator The new operator of the transferred liquidity
@@ -1272,6 +1285,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
 
+    /// @notice Calculates the exercise value of a position
     function _calculateExerciseValue(
         PoolStorage.Layout storage l,
         UD60x18 size
@@ -1300,6 +1314,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return exerciseValue;
     }
 
+    /// @notice Calculates the collateral value of a position
     function _calculateCollateralValue(
         PoolStorage.Layout storage l,
         UD60x18 size,
@@ -1311,6 +1326,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 : size * l.strike - exerciseValue;
     }
 
+    /// @notice Handle operations that need to be done before exercising or settling
     function _beforeExerciseOrSettle(
         PoolStorage.Layout storage l,
         bool isLong,
@@ -1526,6 +1542,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ////////////////
     // ToDo : Reorganize those functions ?
 
+    /// @notice Returns the nearest tick below `lower` and the nearest tick below `upper`
     function _getNearestTicksBelow(
         UD60x18 lower,
         UD60x18 upper
@@ -1545,7 +1562,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    /// @notice Gets the nearest tick that is less than or equal to `price`.
+    /// @notice Gets the nearest tick that is less than or equal to `price`
     function _getNearestTickBelow(
         UD60x18 price
     ) internal view returns (UD60x18) {
@@ -1580,7 +1597,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _tryGetTick(
         UD60x18 price
     ) internal view returns (Tick memory tick, bool tickFound) {
-        _verifyTickWidth(price);
+        _revertIfTickWidthInvalid(price);
 
         if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE)
             revert Pool__TickOutOfRange(price);
@@ -1663,6 +1680,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Updates the tick deltas following a deposit or withdrawal
     function _updateTicks(
         UD60x18 lower,
         UD60x18 upper,
@@ -1859,6 +1877,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Updates the global fee rate
     function _updateGlobalFeeRate(
         PoolStorage.Layout storage l,
         UD60x18 makerRebate
@@ -1867,6 +1886,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.globalFeeRate = l.globalFeeRate + (makerRebate / l.liquidityRate);
     }
 
+    /// @notice TODO:
     function _cross(bool isBuy) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1910,6 +1930,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Removes the initialization fee discount for the pool
     function _removeInitFeeDiscount(PoolStorage.Layout storage l) internal {
         if (l.initFeeDiscountRemoved) return;
 
@@ -1927,8 +1948,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
-    /// @notice Calculates the growth and exposure change between the lower
-    ///    and upper Ticks of a Position.
+    /// @notice Calculates the growth and exposure change between the lower and upper Ticks of a Position.
     /// ===========================================================
     ///                     l         ▼         u
     ///    ----|----|-------|xxxxxxxxxxxxxxxxxxx|--------|---------
@@ -1960,11 +1980,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    /// @notice Gets the lower and upper bound of the stranded market area when it
-    ///         exists. In case the stranded market area does not exist it will return
-    ///         s the stranded market area the maximum tick price for both the lower
-    ///         and the upper, in which case the market price is not stranded given
-    ///         any range order info order.
+    /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market area does
+    ///         not exist it will return the stranded market area the maximum tick price for both the lower and the upper, in
+    ///         which case the market price is not stranded given any range order info order.
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(
@@ -2021,6 +2039,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
+    /// @notice Returns true if the market price is stranded
     function _isMarketPriceStranded(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
@@ -2031,9 +2050,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return lower <= tick && tick <= upper;
     }
 
-    /// @notice In case the market price is stranded the market price needs to be
-    ///         set to the upper (lower) tick of the bid (ask) order. See docstring of
-    ///         isMarketPriceStranded.
+    /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the bid (ask) order.
     function _getStrandedMarketPriceUpdate(
         Position.KeyInternal memory p,
         bool isBid
@@ -2041,11 +2058,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return isBid ? p.upper : p.lower;
     }
 
-    function _verifyTickWidth(UD60x18 price) internal pure {
+    /// @notice Revert if the tick width is invalid
+    function _revertIfTickWidthInvalid(UD60x18 price) internal pure {
         if (price % Pricing.MIN_TICK_DISTANCE != ZERO)
             revert Pool__TickWidthInvalid(price);
     }
 
+    /// @notice Returns the encoded RFQ quote hash
     function _quoteRFQHash(
         IPoolInternal.QuoteRFQ memory quoteRFQ
     ) internal view returns (bytes32) {
@@ -2075,6 +2094,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
+    /// @notice Returns the balance of `user` for `tokenId` as UD60x18
     function _balanceOfUD60x18(
         address user,
         uint256 tokenId
@@ -2082,14 +2102,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return ud(_balanceOf(user, tokenId));
     }
 
+    /// @notice Mints `amount` of `id` and assigns it to `account`
     function _mint(address account, uint256 id, UD60x18 amount) internal {
         _mint(account, id, amount.unwrap(), "");
     }
 
+    /// @notice Burns `amount` of `id` assigned to `account`
     function _burn(address account, uint256 id, UD60x18 amount) internal {
         _burn(account, id, amount.unwrap());
     }
 
+    /// @notice Calculates the total referral rebate amount (primary + secondary)
     function _calculateTotalReferralRebate(
         address user,
         address referrer,
@@ -2110,6 +2133,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             (tradingFee * secondaryRebatePercent);
     }
 
+    /// @notice Applies the referral rebate to `tradingFee` paid by `user`
     function _useReferral(
         PoolStorage.Layout storage l,
         address user,
@@ -2126,6 +2150,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         IERC20(token).approve(REFERRAL, 0);
     }
 
+    /// @notice Revert if the `lower` and `upper` tick range is invalid
     function _revertIfRangeInvalid(UD60x18 lower, UD60x18 upper) internal pure {
         if (
             lower == ZERO ||
@@ -2136,22 +2161,26 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         ) revert Pool__InvalidRange(lower, upper);
     }
 
+    /// @notice Revert if `size` is zero
     function _revertIfZeroSize(UD60x18 size) internal pure {
         if (size == ZERO) revert Pool__ZeroSize();
     }
 
+    /// @notice Revert if option is not expired
     function _revertIfOptionNotExpired(
         PoolStorage.Layout storage l
     ) internal view {
         if (block.timestamp < l.maturity) revert Pool__OptionNotExpired();
     }
 
+    /// @notice Revert if option is expired
     function _revertIfOptionExpired(
         PoolStorage.Layout storage l
     ) internal view {
         if (block.timestamp >= l.maturity) revert Pool__OptionExpired();
     }
 
+    /// @notice Revert if withdrawal delay has not elapsed
     function _revertIfWithdrawalDelayNotElapsed(
         Position.Data storage position
     ) internal view {
@@ -2160,6 +2189,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__WithdrawalDelayNotElapsed(unlockTime);
     }
 
+    /// @notice Revert if `totalPremium` is exceeds max slippage
     function _revertIfTradeAboveMaxSlippage(
         uint256 totalPremium,
         uint256 premiumLimit,
@@ -2175,6 +2205,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
+    /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`
     function _revertIfDepositWithdrawalAboveMaxSlippage(
         UD60x18 marketPrice,
         UD60x18 minMarketPrice,
@@ -2188,6 +2219,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
+    /// @notice Returns true if RFQ quote and RFQ quote balance are valid
     function _areQuoteRFQAndBalanceValid(
         PoolStorage.Layout storage l,
         FillQuoteRFQArgsInternal memory args,
@@ -2207,6 +2239,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return _isQuoteRFQBalanceValid(l, args, quoteRFQ);
     }
 
+    /// @notice Revert if RFQ quote is invalid
     function _revertIfQuoteRFQInvalid(
         PoolStorage.Layout storage l,
         FillQuoteRFQArgsInternal memory args,
@@ -2216,6 +2249,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _isQuoteRFQValid(l, args, quoteRFQ, quoteRFQHash, true);
     }
 
+    /// @notice Returns true if RFQ quote is valid
     function _isQuoteRFQValid(
         PoolStorage.Layout storage l,
         FillQuoteRFQArgsInternal memory args,
@@ -2274,6 +2308,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (true, InvalidQuoteRFQError.None);
     }
 
+    /// @notice Returns true if RFQ quote balance is valid
     function _isQuoteRFQBalanceValid(
         PoolStorage.Layout storage l,
         FillQuoteRFQArgsInternal memory args,
@@ -2345,11 +2380,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (true, InvalidQuoteRFQError.None);
     }
 
+    /// @notice Revert if `operator` is not msg.sender
     function _revertIfOperatorNotAuthorized(address operator) internal view {
         if (operator != msg.sender)
             revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
+    /// @notice Revert if `agent` is not authorized by `holder`
     function _revertIfAgentNotAuthorized(
         address holder,
         address agent
@@ -2358,6 +2395,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__AgentNotAuthorized();
     }
 
+    /// @notice Revert if `cost` is not authorized by `holder`
     function _revertIfCostNotAuthorized(
         address holder,
         UD60x18 cost
@@ -2383,6 +2421,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
     }
 
+    /// @notice Revert if `cost` exceeds `payout`
     function _revertIfCostExceedsPayout(
         UD60x18 cost,
         UD60x18 payout
