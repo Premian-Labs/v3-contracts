@@ -291,7 +291,6 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
                 if (assetFound) {
                     vaults[count] = vault;
                     count++;
-                    break;
                 }
             }
         }

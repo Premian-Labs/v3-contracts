@@ -27,9 +27,11 @@ contract VaultRegistryTest is Test, Assertions {
     // Events
     event VaultAdded(
         address indexed vault,
+        address indexed asset,
         bytes32 vaultType,
         IVaultRegistry.TradeSide side,
-        IVaultRegistry.OptionType optionType
+        IVaultRegistry.OptionType optionType,
+        string name
     );
 
     event VaultRemoved(address indexed vault);
@@ -184,7 +186,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 1. [buy] [call]
         IVaultRegistry.Vault[] memory vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Call
         );
@@ -194,7 +196,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         //2. [buy] [put]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Put
         );
@@ -204,7 +206,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 3. [buy] [both]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Buy,
             IVaultRegistry.OptionType.Both
         );
@@ -214,7 +216,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 4. [sell] [call]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Sell,
             IVaultRegistry.OptionType.Call
         );
@@ -224,7 +226,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 5. [sell] [put]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Sell,
             IVaultRegistry.OptionType.Put
         );
@@ -234,7 +236,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 6. [sell] [both]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Sell,
             IVaultRegistry.OptionType.Both
         );
@@ -244,7 +246,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 7. [both] [call]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Both,
             IVaultRegistry.OptionType.Call
         );
@@ -254,7 +256,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 8. [both] [put]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Both,
             IVaultRegistry.OptionType.Put
         );
@@ -264,7 +266,7 @@ contract VaultRegistryTest is Test, Assertions {
 
         // 9. [both] [both]
         vaults = registry.getVaultsByFilter(
-            [],
+            new address[](0),
             IVaultRegistry.TradeSide.Both,
             IVaultRegistry.OptionType.Both
         );

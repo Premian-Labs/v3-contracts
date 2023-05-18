@@ -75,9 +75,11 @@ contract VaultRegistryTest is Test, Assertions {
     // Events
     event VaultAdded(
         address indexed vault,
+        address indexed asset,
         bytes32 vaultType,
         IVaultRegistry.TradeSide side,
-        IVaultRegistry.OptionType optionType
+        IVaultRegistry.OptionType optionType,
+        string name
     );
 
     event VaultRemoved(address indexed vault);
@@ -185,9 +187,11 @@ contract VaultRegistryTest is Test, Assertions {
         vm.expectEmit(true, true, true, true, address(registry));
         emit VaultAdded(
             address(123),
+            address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call
+            IVaultRegistry.OptionType.Call,
+            "default"
         );
 
         registry.addVault(
