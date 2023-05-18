@@ -86,6 +86,9 @@ contract DeployTest is Test, Assertions {
         address otherTrader;
         address referrer;
         address agent;
+        address caller;
+        address receiver;
+        address underwriter;
     }
 
     bytes4[] internal poolBaseSelectors;
@@ -112,7 +115,10 @@ contract DeployTest is Test, Assertions {
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
             referrer: vm.addr(5),
-            agent: vm.addr(6)
+            agent: vm.addr(6),
+            caller: vm.addr(7),
+            receiver: vm.addr(8),
+            underwriter: vm.addr(9)
         });
 
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
