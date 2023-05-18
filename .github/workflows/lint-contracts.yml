@@ -3,7 +3,6 @@ name: Lint Contracts
 on:
   workflow_dispatch:
   pull_request:
-    types: [review_requested]
 
 jobs:
   lint-contracts:

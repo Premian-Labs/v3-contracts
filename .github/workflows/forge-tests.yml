@@ -3,7 +3,6 @@ name: Forge Tests
 on:
   workflow_dispatch:
   pull_request:
-    types: [review_requested]
 
 env:
   FOUNDRY_PROFILE: ci
