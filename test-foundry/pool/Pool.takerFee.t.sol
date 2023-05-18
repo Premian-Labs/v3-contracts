@@ -25,7 +25,6 @@ abstract contract PoolTakerFeeTest is DeployTest {
     }
 
     function _test_takerFee(
-        bool isCall,
         bool premiumIsFee,
         bool isPremiumNormalized,
         UD60x18 size,
@@ -34,17 +33,17 @@ abstract contract PoolTakerFeeTest is DeployTest {
     ) internal {
         UD60x18 deNormalizedPremium = contractsToCollateral(
             price * size,
-            isCall
+            isCallTest
         );
 
         UD60x18 normalizedPremium = collateralToContracts(
             deNormalizedPremium,
-            isCall
+            isCallTest
         );
 
         uint256 premium = scaleDecimals(
             isPremiumNormalized ? normalizedPremium : deNormalizedPremium,
-            isCall
+            isCallTest
         );
 
         UD60x18 fee;
@@ -74,8 +73,8 @@ abstract contract PoolTakerFeeTest is DeployTest {
         );
 
         uint256 expectedFee = scaleDecimals(
-            contractsToCollateral(fee, isCall),
-            isCall
+            contractsToCollateral(fee, isCallTest),
+            isCallTest
         );
 
         assertEq(
@@ -86,51 +85,23 @@ abstract contract PoolTakerFeeTest is DeployTest {
     }
 
     function test_takerFee_premium_fee_without_discount() public {
-        _test_takerFee(
-            poolKey.isCallPool,
-            true,
-            false,
-            ud(100 ether),
-            ud(1 ether),
-            ud(0)
-        );
+        _test_takerFee(true, false, ud(100 ether), ud(1 ether), ud(0));
     }
 
     function test_takerFee_premium_fee_without_discount_premium_normalized()
         public
     {
-        _test_takerFee(
-            poolKey.isCallPool,
-            true,
-            true,
-            ud(100 ether),
-            ud(1 ether),
-            ud(0)
-        );
+        _test_takerFee(true, true, ud(100 ether), ud(1 ether), ud(0));
     }
 
     function test_takerFee_collateral_fee_without_discount() public {
-        _test_takerFee(
-            poolKey.isCallPool,
-            false,
-            false,
-            ud(100 ether),
-            ud(0.01 ether),
-            ud(0)
-        );
+        _test_takerFee(false, false, ud(100 ether), ud(0.01 ether), ud(0));
     }
 
     function test_takerFee_collateral_fee_without_discount_premium_normalized()
         public
     {
-        _test_takerFee(
-            poolKey.isCallPool,
-            false,
-            true,
-            ud(100 ether),
-            ud(0.01 ether),
-            ud(0)
-        );
+        _test_takerFee(false, true, ud(100 ether), ud(0.01 ether), ud(0));
     }
 
     function test_takerFee_premium_fee_with_discount() public {
@@ -139,14 +110,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        _test_takerFee(
-            poolKey.isCallPool,
-            true,
-            false,
-            ud(100 ether),
-            ud(1 ether),
-            ud(discount)
-        );
+        _test_takerFee(true, false, ud(100 ether), ud(1 ether), ud(discount));
 
         vm.stopPrank();
     }
@@ -159,14 +123,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        _test_takerFee(
-            poolKey.isCallPool,
-            true,
-            true,
-            ud(100 ether),
-            ud(1 ether),
-            ud(discount)
-        );
+        _test_takerFee(true, true, ud(100 ether), ud(1 ether), ud(discount));
 
         vm.stopPrank();
     }
@@ -178,7 +135,6 @@ abstract contract PoolTakerFeeTest is DeployTest {
         vm.startPrank(users.trader);
 
         _test_takerFee(
-            poolKey.isCallPool,
             false,
             false,
             ud(100 ether),
@@ -198,7 +154,6 @@ abstract contract PoolTakerFeeTest is DeployTest {
         vm.startPrank(users.trader);
 
         _test_takerFee(
-            poolKey.isCallPool,
             false,
             true,
             ud(100 ether),

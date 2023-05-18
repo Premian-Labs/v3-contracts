@@ -17,12 +17,9 @@ import {DeployTest} from "../Deploy.t.sol";
 abstract contract PoolFlashLoanTest is DeployTest {
     UD60x18 constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
-    function calculateFee(
-        uint256 amount,
-        bool isCall
-    ) internal view returns (uint256) {
-        UD60x18 fee = scaleDecimals(amount, isCall) * FLASH_LOAN_FEE;
-        return scaleDecimals(fee, isCall);
+    function calculateFee(uint256 amount) internal view returns (uint256) {
+        UD60x18 fee = scaleDecimals(amount, isCallTest) * FLASH_LOAN_FEE;
+        return scaleDecimals(fee, isCallTest);
     }
 
     function test_maxFlashLoan_ReturnCorrectMax() public {
@@ -59,7 +56,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         assertEq(
             pool.flashFee(poolToken, initialCollateral / 2),
-            calculateFee(initialCollateral / 2, poolKey.isCallPool)
+            calculateFee(initialCollateral / 2)
         );
     }
 
@@ -74,17 +71,17 @@ abstract contract PoolFlashLoanTest is DeployTest {
         pool.flashFee(otherToken, 1);
     }
 
-    function _test_flashLoan_Single_Success(bool isCall) internal {
+    function test_flashLoan_Single_Success() public {
         posKey.orderType = Position.OrderType.CS;
 
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken(isCallTest);
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 
-        uint256 fee = calculateFee(initialCollateral / 2, isCall);
+        uint256 fee = calculateFee(initialCollateral / 2);
 
         IERC20(poolToken).transfer(address(flashLoanMock), fee);
 
@@ -104,21 +101,17 @@ abstract contract PoolFlashLoanTest is DeployTest {
         );
     }
 
-    function test_flashLoan_Single_Success() public {
-        _test_flashLoan_Single_Success(poolKey.isCallPool);
-    }
-
-    function _test_flashLoan_Single_RevertIf_NotRepayed(bool isCall) internal {
+    function test_flashLoan_Single_RevertIf_NotRepayed() public {
         posKey.orderType = Position.OrderType.CS;
 
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken(isCallTest);
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 
-        uint256 fee = calculateFee(initialCollateral / 2, isCall);
+        uint256 fee = calculateFee(initialCollateral / 2);
 
         IERC20(poolToken).transfer(address(flashLoanMock), fee);
 
@@ -134,11 +127,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         );
     }
 
-    function test_flashLoan_Single_RevertIf_NotRepayed() public {
-        _test_flashLoan_Single_RevertIf_NotRepayed(poolKey.isCallPool);
-    }
-
-    function _test_flashLoan_Multi_Success(bool isCall) internal {
+    function test_flashLoan_Multi_Success() public {
         posKey.orderType = Position.OrderType.CS;
 
         IPoolFactory.PoolKey memory poolKeyTwo = IPoolFactory.PoolKey({
@@ -184,13 +173,13 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         //
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken(isCallTest);
         deal(poolToken, users.trader, 100 ether);
         vm.startPrank(users.trader);
 
-        uint256 fee = calculateFee(initialCollateral / 2, isCall);
-        uint256 feeTwo = calculateFee(initialCollateralTwo / 2, isCall);
-        uint256 feeThree = calculateFee(initialCollateralThree / 2, isCall);
+        uint256 fee = calculateFee(initialCollateral / 2);
+        uint256 feeTwo = calculateFee(initialCollateralTwo / 2);
+        uint256 feeThree = calculateFee(initialCollateralThree / 2);
 
         FlashLoanMock.FlashLoan[]
             memory flashLoans = new FlashLoanMock.FlashLoan[](3);
@@ -234,10 +223,6 @@ abstract contract PoolFlashLoanTest is DeployTest {
             IERC20(poolToken).balanceOf(address(poolThree)),
             initialCollateralThree + feeThree
         );
-    }
-
-    function test_flashLoan_Multi_Success() public {
-        _test_flashLoan_Multi_Success(poolKey.isCallPool);
     }
 
     function test_flashLoan_RevertIf_NotPoolToken() public {

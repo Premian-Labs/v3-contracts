@@ -16,17 +16,17 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
-    function _test_withdraw_750LC(bool isCall) internal {
+    function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
         vm.warp(block.timestamp + 60);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(ud(200 ether), isCall),
-            isCall
+            contractsToCollateral(ud(200 ether), isCallTest),
+            isCallTest
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken(isCallTest);
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
@@ -40,8 +40,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         UD60x18 withdrawSize = ud(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         uint256 withdrawCollateralValue = scaleDecimals(
-            contractsToCollateral(withdrawSize * avgPrice, isCall),
-            isCall
+            contractsToCollateral(withdrawSize * avgPrice, isCallTest),
+            isCallTest
         );
 
         vm.prank(users.lp);
@@ -60,10 +60,6 @@ abstract contract PoolWithdrawTest is DeployTest {
             IERC20(poolToken).balanceOf(users.lp),
             initialCollateral - depositCollateralValue + withdrawCollateralValue
         );
-    }
-
-    function test_withdraw_750LC() public {
-        _test_withdraw_750LC(poolKey.isCallPool);
     }
 
     function test_withdraw_RevertIf_BeforeEndOfWithdrawalDelay() public {

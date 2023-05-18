@@ -12,7 +12,7 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolGetQuoteAMMTest is DeployTest {
-    function _test_getQuoteAMM_ReturnBuyQuote(bool isCall) internal {
+    function test_getQuoteAMM_ReturnBuyQuote() public {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -24,13 +24,13 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             tradeSize,
-            scaleDecimals(tradeSize * avgPrice, isCall),
+            scaleDecimals(tradeSize * avgPrice, isCallTest),
             true
         );
 
         uint256 quote = scaleDecimals(
-            contractsToCollateral(tradeSize * avgPrice, isCall),
-            isCall
+            contractsToCollateral(tradeSize * avgPrice, isCallTest),
+            isCallTest
         ) + takerFee;
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -41,11 +41,7 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         assertEq(totalPremium, quote);
     }
 
-    function test_getQuoteAMM_ReturnBuyQuote() public {
-        _test_getQuoteAMM_ReturnBuyQuote(poolKey.isCallPool);
-    }
-
-    function _test_getQuoteAMM_ReturnSellQuote(bool isCall) internal {
+    function test_getQuoteAMM_ReturnSellQuote() public {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
@@ -56,13 +52,13 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             tradeSize,
-            scaleDecimals(tradeSize * avgPrice, isCall),
+            scaleDecimals(tradeSize * avgPrice, isCallTest),
             true
         );
 
         uint256 quote = scaleDecimals(
-            contractsToCollateral(tradeSize * avgPrice, isCall),
-            isCall
+            contractsToCollateral(tradeSize * avgPrice, isCallTest),
+            isCallTest
         ) - takerFee;
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -71,10 +67,6 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
             false
         );
         assertEq(totalPremium, quote);
-    }
-
-    function test_getQuoteAMM_ReturnSellQuote() public {
-        _test_getQuoteAMM_ReturnSellQuote(poolKey.isCallPool);
     }
 
     function test_getQuoteAMM_RevertIf_NotEnoughLiquidityToBuy() public {

@@ -52,23 +52,25 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         return scaleDecimals(initialCollateral, poolKey.isCallPool);
     }
 
-    function _test_fillQuoteRFQ_Success(bool isCall) internal {
-        address poolToken = getPoolToken(isCall);
+    function test_fillQuoteRFQ_Success_WithApproval() public {
+        mintAndApprove();
+
+        address poolToken = getPoolToken(isCallTest);
 
         vm.startPrank(users.trader);
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCallTest),
+            isCallTest
         );
 
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.size, isCallTest),
+            isCallTest
         );
 
         uint256 protocolFee = pool.takerFee(
@@ -111,24 +113,18 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
     }
 
-    function test_fillQuoteRFQ_Success_WithApproval() public {
-        mintAndApprove();
-        _test_fillQuoteRFQ_Success(poolKey.isCallPool);
-    }
-
     function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
         mintAndApprove();
 
         quoteRFQ.isBuy = isBuy;
 
-        bool isCall = poolKey.isCallPool;
-        address token = getPoolToken(isCall);
+        address token = getPoolToken(isCallTest);
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCallTest),
+            isCallTest
         );
 
         uint256 protocolFee = pool.takerFee(
@@ -144,21 +140,21 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         ) = referral.getRebatePercents(users.referrer);
 
         UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(protocolFee, isCall);
+            scaleDecimals(protocolFee, isCallTest);
 
         UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(protocolFee, isCall);
+            scaleDecimals(protocolFee, isCallTest);
 
-        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCallTest);
+        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCallTest);
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.size, isCallTest),
+            isCallTest
         );
 
         uint256 initialCollateral = getInitialCollateral();

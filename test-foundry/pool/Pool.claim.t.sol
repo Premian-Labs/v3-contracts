@@ -12,24 +12,24 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolClaimTest is DeployTest {
-    function _test_claim_ClaimFees(bool isCall) public {
+    function test_claim_ClaimFees() public {
         uint256 tradeSize = 1 ether;
         (uint256 initialCollateral, uint256 totalPremium) = trade(
             tradeSize,
-            isCall,
+            isCallTest,
             true
         );
 
         uint256 claimableFees = pool.getClaimableFees(posKey);
         uint256 protocolFees = pool.protocolFees();
-        IERC20 poolToken = IERC20(getPoolToken(isCall));
+        IERC20 poolToken = IERC20(getPoolToken(isCallTest));
 
         vm.prank(users.lp);
         pool.claim(posKey);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(ud(tradeSize), isCall),
-            isCall
+            contractsToCollateral(ud(tradeSize), isCallTest),
+            isCallTest
         );
 
         assertEq(
@@ -46,13 +46,9 @@ abstract contract PoolClaimTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
     }
 
-    function test_claim_ClaimFees() public {
-        _test_claim_ClaimFees(poolKey.isCallPool);
-    }
-
-    function _test_getClaimableFees_ReturnExpectedValue(bool isCall) internal {
+    function test_getClaimableFees_ReturnExpectedValue() public {
         uint256 tradeSize = 1 ether;
-        trade(tradeSize, isCall, true);
+        trade(tradeSize, isCallTest, true);
 
         UD60x18 price = posKey.lower;
         UD60x18 nextPrice = posKey.upper;
@@ -61,14 +57,10 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 takerFee = pool.takerFee(
             users.trader,
             ud(tradeSize),
-            scaleDecimals(ud(tradeSize) * avgPrice, isCall),
+            scaleDecimals(ud(tradeSize) * avgPrice, isCallTest),
             true
         );
 
         assertEq(pool.getClaimableFees(posKey), takerFee / 2); // 50% protocol fee percentage
-    }
-
-    function test_getClaimableFees_ReturnExpectedValue() public {
-        _test_getClaimableFees_ReturnExpectedValue(poolKey.isCallPool);
     }
 }

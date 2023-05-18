@@ -17,16 +17,19 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolDepositTest is DeployTest {
-    function _test_deposit_1000_LC_WithToken(bool isCall) internal {
-        poolKey.isCallPool = isCall;
+    function test_deposit_1000_LC_WithToken() public {
+        poolKey.isCallPool = isCallTest;
 
-        IERC20 token = IERC20(getPoolToken(isCall));
+        IERC20 token = IERC20(getPoolToken(isCallTest));
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
 
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
-        UD60x18 collateral = contractsToCollateral(depositSize, isCall);
-        uint256 collateralValue = scaleDecimals(collateral * avgPrice, isCall);
+        UD60x18 collateral = contractsToCollateral(depositSize, isCallTest);
+        uint256 collateralValue = scaleDecimals(
+            collateral * avgPrice,
+            isCallTest
+        );
 
         assertEq(pool.balanceOf(users.lp, tokenId()), depositSize);
         assertEq(pool.totalSupply(tokenId()), depositSize);
@@ -36,10 +39,6 @@ abstract contract PoolDepositTest is DeployTest {
             initialCollateral - collateralValue
         );
         assertEq(pool.marketPrice(), posKey.upper);
-    }
-
-    function test_deposit_1000_LC_WithToken() public {
-        _test_deposit_1000_LC_WithToken(poolKey.isCallPool);
     }
 
     function test_deposit_RevertIf_SenderNotOperator() public {
@@ -56,10 +55,8 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
-    function _test_deposit_RevertIf_MarketPriceOutOfMinMax(
-        bool isCall
-    ) internal {
-        poolKey.isCallPool = isCall;
+    function test_deposit_RevertIf_MarketPriceOutOfMinMax() public {
+        poolKey.isCallPool = isCallTest;
         deposit(1000 ether);
         assertEq(pool.marketPrice(), posKey.upper);
 
@@ -88,10 +85,6 @@ abstract contract PoolDepositTest is DeployTest {
             )
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
-    }
-
-    function test_deposit_RevertIf_MarketPriceOutOfMinMax() public {
-        _test_deposit_RevertIf_MarketPriceOutOfMinMax(poolKey.isCallPool);
     }
 
     function test_deposit_RevertIf_ZeroSize() public {
