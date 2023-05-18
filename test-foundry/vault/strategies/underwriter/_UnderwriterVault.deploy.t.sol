@@ -25,11 +25,12 @@ contract UnderwriterVaultDeployTest is DeployTest {
     VolatilityOracleMock volOracle;
     VaultRegistry vaultRegistry;
 
+    UnderwriterVaultMock vault;
     UnderwriterVaultMock callVault;
     UnderwriterVaultMock putVault;
 
     function setUp() public virtual override {
-        super.setUp();
+        _setUp(16597500, 1677225600);
 
         longCall = address(new ERC20Mock("LONG_CALL", 18));
         shortCall = address(new ERC20Mock("SHORT_CALL", 18));
@@ -52,7 +53,6 @@ contract UnderwriterVaultDeployTest is DeployTest {
         volOracle = new VolatilityOracleMock();
 
         poolKey.strike = ud(1500e18);
-        poolKey.maturity = 1677225600;
 
         // Vault vaultRegistry
         address vaultRegistryImpl = address(new VaultRegistry());
@@ -99,8 +99,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 base,
                 quote,
                 address(oracleAdapter),
-                "WETH Vault",
-                "WETHVault",
+                "WETH Call Vault",
+                "WETH Call Vault",
                 true
             )
         );
@@ -113,12 +113,12 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 base,
                 quote,
                 address(oracleAdapter),
-                "WETH Vault",
-                "WETHVault",
+                "WETH Put Vault",
+                "WETH Put Vault",
                 false
             )
         );
 
-        callVault = UnderwriterVaultMock(putVaultProxy);
+        putVault = UnderwriterVaultMock(putVaultProxy);
     }
 }

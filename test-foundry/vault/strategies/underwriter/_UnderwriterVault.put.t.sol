@@ -10,7 +10,9 @@ contract UnderwriterVaultPutTest is UnderwriterVaultTest {
     function setUp() public override {
         super.setUp();
 
+        isCallTest = false;
         poolKey.isCallPool = false;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        vault = putVault;
     }
 }

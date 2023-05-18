@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -59,6 +61,8 @@ contract DeployTest is Test, Assertions {
     address quote;
     address premia;
 
+    bool isCallTest;
+
     OracleAdapterMock oracleAdapter;
     IPoolFactory.PoolKey poolKey;
     PoolFactory factory;
@@ -102,11 +106,15 @@ contract DeployTest is Test, Assertions {
     receive() external payable {}
 
     function setUp() public virtual {
+        _setUp(17100000, 1682668800);
+    }
+
+    function _setUp(uint256 forkBlock, uint256 maturity) internal {
         string memory ETH_RPC_URL = string.concat(
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
+        mainnetFork = vm.createFork(ETH_RPC_URL, forkBlock);
         vm.selectFork(mainnetFork);
 
         users = Users({
@@ -137,7 +145,7 @@ contract DeployTest is Test, Assertions {
             quote: quote,
             oracleAdapter: address(oracleAdapter),
             strike: ud(1000 ether),
-            maturity: 1682668800,
+            maturity: maturity,
             isCallPool: true
         });
 

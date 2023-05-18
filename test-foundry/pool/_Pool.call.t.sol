@@ -10,6 +10,7 @@ contract PoolCallTest is PoolTest {
     function setUp() public override {
         super.setUp();
 
+        isCallTest = true;
         poolKey.isCallPool = true;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
     }
