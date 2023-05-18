@@ -247,9 +247,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
 
         l.period = newPeriod;
 
-        l.targetCardinality =
-            uint16((newPeriod * l.cardinalityPerMinute) / 60) +
-            1;
+        l.targetCardinality = uint16((newPeriod * l.cardinalityPerMinute) / 60);
 
         emit UpdatedPeriod(newPeriod);
     }
@@ -266,9 +264,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
 
         l.cardinalityPerMinute = newCardinalityPerMinute;
 
-        l.targetCardinality =
-            uint16((l.period * newCardinalityPerMinute) / 60) +
-            1;
+        l.targetCardinality = uint16((l.period * newCardinalityPerMinute) / 60);
 
         emit UpdatedCardinalityPerMinute(newCardinalityPerMinute);
     }
