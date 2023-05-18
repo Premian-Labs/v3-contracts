@@ -674,7 +674,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        address referrer
     ) internal {
         if (
             msg.sender != underwriter &&
@@ -704,7 +705,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             collateral + protocolFee
         );
 
-        l.protocolFees = l.protocolFees + protocolFee;
+        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(
+            longReceiver,
+            referrer,
+            protocolFee
+        );
+
+        _useReferral(
+            l,
+            longReceiver,
+            referrer,
+            totalReferralRebate,
+            protocolFee
+        );
+
+        l.protocolFees = l.protocolFees + protocolFee - totalReferralRebate;
 
         _mint(underwriter, PoolStorage.SHORT, size);
         _mint(longReceiver, PoolStorage.LONG, size);

@@ -301,9 +301,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        address referrer
     ) external nonReentrant {
-        return _writeFrom(underwriter, longReceiver, size);
+        return _writeFrom(underwriter, longReceiver, size, referrer);
     }
 
     /// @inheritdoc IPoolCore
