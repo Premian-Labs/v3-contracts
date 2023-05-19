@@ -10,8 +10,6 @@ import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateE
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
-import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 import {ZERO, ONE} from "../../../libraries/Constants.sol";
@@ -20,9 +18,12 @@ import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
+import {IVxPremia} from "../../../staking/IVxPremia.sol";
 
-/// @title An ERC-4626 implementation for underwriting call/put option
-///        contracts by using collateral deposited by users
+import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
+import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
+
+/// @title An ERC-4626 implementation for underwriting call/put option contracts by using collateral deposited by users
 contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
@@ -38,22 +39,22 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
     address internal immutable ROUTER;
+    address internal immutable VXPREMIA;
 
-    /// @notice The constructor for this vault
-    /// @param oracleAddress The address for the volatility oracle
-    /// @param factoryAddress The pool factory address
     constructor(
         address vaultRegistry,
         address feeReceiver,
-        address oracleAddress,
-        address factoryAddress,
-        address router
+        address oracle,
+        address factory,
+        address router,
+        address vxPremia
     ) {
         VAULT_REGISTRY = vaultRegistry;
         FEE_RECEIVER = feeReceiver;
-        IV_ORACLE = oracleAddress;
-        FACTORY = factoryAddress;
+        IV_ORACLE = oracle;
+        FACTORY = factory;
         ROUTER = router;
+        VXPREMIA = vxPremia;
     }
 
     function updateSettings(bytes memory settings) external {
@@ -1045,31 +1046,44 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             vars.assets = shares * pps;
         }
 
-        UD60x18 performanceFeeInShares;
+        UD60x18 discount = ud(IVxPremia(VXPREMIA).getDiscount(owner));
 
+        UD60x18 performanceFeeInShares;
         if (performance > ONE) {
             performanceFeeInShares =
                 shares *
                 (performance - ONE) *
                 l.performanceFeeRate;
 
+            if (discount > ZERO) {
+                performanceFeeInShares =
+                    (ONE - discount) *
+                    performanceFeeInShares;
+            }
+
             vars.performanceFeeInAssets = performanceFeeInShares * pps;
         }
 
         // Time since last deposit in years
-        UD60x18 timeSinceLastDeposit = UD60x18.wrap(
+        UD60x18 timeSinceLastDeposit = ud(
             (_getBlockTimestamp() - l.timeOfDeposit[owner]) * WAD
-        ) / UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
+        ) / ud(OptionMath.ONE_YEAR_TTM * WAD);
 
         UD60x18 managementFeeInShares = shares *
             l.managementFeeRate *
             timeSinceLastDeposit;
+
+        if (discount > ZERO) {
+            managementFeeInShares = (ONE - discount) * managementFeeInShares;
+        }
+
         vars.managementFeeInAssets = _convertToAssetsUD60x18(
             managementFeeInShares,
             pps
         );
 
         vars.totalFeeInShares = managementFeeInShares + performanceFeeInShares;
+
         vars.totalFeeInAssets =
             vars.managementFeeInAssets +
             vars.performanceFeeInAssets;

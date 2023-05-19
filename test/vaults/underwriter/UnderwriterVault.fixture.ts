@@ -4,6 +4,7 @@ import {
   ERC20Mock__factory,
   IPoolMock,
   IPoolMock__factory,
+  IVxPremia__factory,
   OptionMathMock,
   OptionMathMock__factory,
   ProxyUpgradeableOwnable,
@@ -15,12 +16,14 @@ import {
   VolatilityOracleMock,
   VaultRegistry,
   VaultRegistry__factory,
+  VxPremia__factory,
+  VxPremiaProxy__factory,
 } from '../../../typechain';
 import { PoolUtil } from '../../../utils/PoolUtil';
 import { getValidMaturity, latest, ONE_DAY } from '../../../utils/time';
 import { AdapterType, PoolKey } from '../../../utils/sdk/types';
 import { tokens } from '../../../utils/addresses';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber, BigNumberish, constants } from 'ethers';
 import {
   deployMockContract,
   MockContract,
@@ -303,6 +306,32 @@ export async function vaultSetup() {
   strike = parseEther('1500'); // ATM
   maturity = await getValidMaturity(2, 'weeks');
 
+  //=====================================================================================
+  // vxPREMIA setup
+  const premia = await new ERC20Mock__factory(deployer).deploy('PREMIA', 18);
+
+  await premia.mint(caller.address, parseEther('100000'));
+
+  const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+    constants.AddressZero,
+    constants.AddressZero,
+    premia.address,
+    constants.AddressZero,
+    constants.AddressZero,
+  );
+
+  await vxPremiaImpl.deployed();
+
+  const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
+    vxPremiaImpl.address,
+  );
+
+  await vxPremiaProxy.deployed();
+
+  const vxPremia = IVxPremia__factory.connect(vxPremiaProxy.address, deployer);
+
+  //=====================================================================================
+
   p = await PoolUtil.deploy(
     deployer, // signer
     tokens.WETH.address, // wrappedNativeToken
@@ -386,6 +415,7 @@ export async function vaultSetup() {
     volOracle.address,
     p.poolFactory.address,
     p.router.address,
+    vxPremia.address,
   );
   await vaultImpl.deployed();
 
@@ -458,6 +488,8 @@ export async function vaultSetup() {
     callPoolAddress,
     putPoolAddress,
     feeReceiver,
+    vxPremia,
+    premia,
   };
 }
 
@@ -510,6 +542,8 @@ export async function setupGetFeeVars(isCall: boolean, test: any) {
     quote,
     caller: _caller,
     receiver: _receiver,
+    vxPremia,
+    premia,
   } = await loadFixture(vaultSetup);
 
   vault = isCall ? callVault : putVault;
@@ -557,7 +591,8 @@ export async function setupGetFeeVars(isCall: boolean, test: any) {
   await vault.setManagementFeeRate(
     parseEther(test.managementFeeRate.toString()),
   );
-  return { vault, caller, receiver, token };
+
+  return { vault, caller, receiver, token, vxPremia, premia };
 }
 
 export async function setupBeforeTokenTransfer(isCall: boolean, test: any) {

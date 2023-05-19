@@ -8,7 +8,6 @@ import {
   setup,
   setupBeforeTokenTransfer,
   setupGetFeeVars,
-  token,
 } from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
@@ -87,7 +86,7 @@ describe('UnderwriterVault.fees', () => {
       let { callVault, putVault, feeReceiver, base, quote } = await loadFixture(
         vaultSetup,
       );
-      vault = isCall ? callVault : putVault;
+      const vault = isCall ? callVault : putVault;
       const token = isCall ? base : quote;
       await vault.setProtocolFees(parseEther(test.protocolFees.toString()));
       await increaseTotalAssets(vault, test.protocolFees, base, quote);
@@ -206,7 +205,7 @@ describe('UnderwriterVault.fees', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
         testsFeeVars.forEach(async (test) => {
-          it('should compute the correct internal fee variables for the user with shares=${test.sharesInitial}', async () => {
+          it(`should compute the correct internal fee variables for the user with shares=${test.shares}`, async () => {
             let { vault, caller } = await setupGetFeeVars(isCall, test);
 
             await vault.setTimestamp(test.timestamp);
@@ -242,6 +241,61 @@ describe('UnderwriterVault.fees', () => {
               parseEther(test.totalFeeInAssets.toString()),
             );
           });
+
+          it(`should compute the correct internal fee variables for the user with shares=${test.shares} with vxPremia discount`, async () => {
+            let { vault, caller, vxPremia, premia } = await setupGetFeeVars(
+              isCall,
+              test,
+            );
+
+            // stake PREMIA in vxPREMIA
+            const balance = await premia.balanceOf(caller.address);
+            await premia.connect(caller).approve(vxPremia.address, balance);
+            await vxPremia.connect(caller).stake(balance, 2.5 * ONE_YEAR);
+
+            await vault.setTimestamp(test.timestamp);
+
+            const pricePerShare = await vault.getPricePerShare();
+
+            const {
+              assets,
+              balanceShares,
+              performanceFeeInAssets,
+              managementFeeInAssets,
+              totalFeeInShares,
+              totalFeeInAssets,
+            } = await vault.getFeeInternal(
+              caller.address,
+              parseEther(test.transferAmount.toString()),
+              pricePerShare,
+            );
+
+            await expect(assets).to.eq(parseEther(test.assets.toString()));
+
+            await expect(balanceShares).to.eq(
+              parseEther(test.balanceShares.toString()),
+            );
+
+            await expect(performanceFeeInAssets).to.eq(
+              parseEther(test.performanceFeeInAssets.toString())
+                .mul(70)
+                .div(100),
+            );
+
+            await expect(managementFeeInAssets).to.eq(
+              parseEther(test.managementFeeInAssets.toString())
+                .mul(70)
+                .div(100),
+            );
+
+            await expect(totalFeeInShares).to.eq(
+              parseEther(test.totalFeeInShares.toString()).mul(70).div(100),
+            );
+
+            await expect(totalFeeInAssets).to.eq(
+              parseEther(test.totalFeeInAssets.toString()).mul(70).div(100),
+            );
+          });
         });
       });
     }
@@ -275,7 +329,7 @@ describe('UnderwriterVault.fees', () => {
     myClonedArray.push(test);
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {
-        myClonedArray.forEach(async (test) => {
+        myClonedArray.forEach(async (test: any) => {
           it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferableShares}`, async () => {
             const { vault, caller } = await setupGetFeeVars(isCall, test);
             await vault.setTimestamp(test.timestamp);
@@ -503,8 +557,8 @@ describe('UnderwriterVault.fees', () => {
         it('_afterDeposit should increment netUserDeposits by the scaled asset amount', async () => {
           const { callVault, putVault, caller, base, quote } =
             await loadFixture(vaultSetup);
-          vault = isCall ? callVault : putVault;
-          token = isCall ? base : quote;
+          const vault = isCall ? callVault : putVault;
+          const token = isCall ? base : quote;
           // mock the current user deposits
           const timestamp = 1000000;
           await vault.setTimestamp(timestamp);
@@ -581,8 +635,8 @@ describe('UnderwriterVault.fees', () => {
           const { callVault, putVault, caller, base, quote } =
             await loadFixture(vaultSetup);
 
-          vault = isCall ? callVault : putVault;
-          token = isCall ? base : quote;
+          const vault = isCall ? callVault : putVault;
+          const token = isCall ? base : quote;
 
           // setup
           const timeOfDeposit = 3000000000;
