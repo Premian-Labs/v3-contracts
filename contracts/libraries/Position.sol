@@ -128,7 +128,17 @@ library Position {
         return orderType == OrderType.LC;
     }
 
-    /// @notice TODO:
+    /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
+    ///         from left to right.
+    ///
+    ///         Usage:
+    ///         CS order: f(x) defines the amount of shorts of a CS order holding one unit of liquidity.
+    ///         LC order: (1 - f(x)) defines the amount of longs of a LC order holding one unit of liquidity.
+    ///
+    ///         Function definition:
+    ///         case 1. f(x) = 0                                for x < lower
+    ///         case 2. f(x) = (x - lower) / (upper - lower)    for lower <= x <= upper
+    ///         case 3. f(x) = 1                                for x > upper
     function pieceWiseLinear(
         KeyInternal memory self,
         UD60x18 price
@@ -141,7 +151,16 @@ library Position {
         else return ONE;
     }
 
-    /// @notice TODO:
+    /// @notice Returns the amount of 'bid-side' collateral associated to a range order with one unit of liquidity.
+    ///
+    ///         Usage:
+    ///         CS order: bid-side collateral defines the premiums generated from selling options.
+    ///         LC order: bid-side collateral defines the collateral used to pay for buying long options.
+    ///
+    ///         Function definition:
+    ///         case 1. f(x) = 0                                            for x < lower
+    ///         case 2. f(x) = (price**2 - lower) / [2 * (upper - lower)]   for lower <= x <= upper
+    ///         case 3. f(x) = (upper + lower) / 2                          for x > upper
     function pieceWiseQuadratic(
         KeyInternal memory self,
         UD60x18 price

@@ -34,7 +34,8 @@ library Pricing {
         bool isBuy; // The direction of the trade
     }
 
-    /// @notice TODO:
+    /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
+    ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
     function proportion(
         UD60x18 lower,
         UD60x18 upper,
@@ -48,7 +49,8 @@ library Pricing {
         return (marketPrice - lower) / (upper - lower);
     }
 
-    /// @notice TODO:
+    /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
+    ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
     function proportion(Args memory args) internal pure returns (UD60x18) {
         return proportion(args.lower, args.upper, args.marketPrice);
     }
