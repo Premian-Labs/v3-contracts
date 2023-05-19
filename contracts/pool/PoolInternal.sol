@@ -1886,7 +1886,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         l.globalFeeRate = l.globalFeeRate + (makerRebate / l.liquidityRate);
     }
 
-    /// @notice TODO:
+    /// @notice Crosses the active tick either to the left if the LT is selling
+    ///         to the pool. A cross is only executed if no bid or ask liquidity is
+    ///         remaining within the active tick range.
+    /// @param isBuy Whether the trade is a buy or a sell.
     function _cross(bool isBuy) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
