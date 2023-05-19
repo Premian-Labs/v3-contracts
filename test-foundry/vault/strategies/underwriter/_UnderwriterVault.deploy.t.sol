@@ -30,6 +30,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         uint256 timestamp;
         UD60x18 protocolFeesInitial;
         UD60x18 netUserDepositReceiver;
+        UD60x18 transferAmount;
     }
 
     bytes32 vaultType;
