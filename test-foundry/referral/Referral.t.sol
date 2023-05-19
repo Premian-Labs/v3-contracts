@@ -178,7 +178,7 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        UD60x18 __rebate = referral.useReferral(
+        referral.useReferral(
             users.trader,
             address(0),
             token,
@@ -187,7 +187,6 @@ contract ReferralTest is DeployTest {
 
         vm.stopPrank();
 
-        assertEq(__rebate, ZERO);
         assertEq(referral.getReferrer(users.trader), address(0));
 
         assertEq(IERC20(token).balanceOf(address(pool)), tradingFee);
@@ -206,7 +205,7 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        UD60x18 __rebate = referral.useReferral(
+        referral.useReferral(
             users.trader,
             users.referrer,
             token,
@@ -231,7 +230,6 @@ contract ReferralTest is DeployTest {
 
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
-        assertEq(__rebate, _primaryRebate + _secondaryRebate);
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
         assertEq(
@@ -262,7 +260,7 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        UD60x18 __rebate = referral.useReferral(
+        referral.useReferral(
             users.trader,
             users.referrer,
             token,
@@ -287,7 +285,6 @@ contract ReferralTest is DeployTest {
 
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
-        assertEq(__rebate, _primaryRebate + _secondaryRebate);
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
         assertEq(
