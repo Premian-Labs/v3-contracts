@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
@@ -173,8 +173,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             ) {
                 vars.strikes[i] = l.maturityToStrikes[current].at(j);
                 vars.timeToMaturities[i] =
-                    UD60x18.wrap((current - timestamp) * WAD) /
-                    UD60x18.wrap(OptionMath.ONE_YEAR_TTM * WAD);
+                    ud((current - timestamp) * WAD) /
+                    ud(OptionMath.ONE_YEAR_TTM * WAD);
                 vars.maturities[i] = current;
                 i++;
             }
@@ -241,7 +241,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         while (current <= timestamp && current != 0) {
             vars.totalLockedSpread =
                 vars.totalLockedSpread -
-                UD60x18.wrap((current - vars.lastSpreadUnlockUpdate) * WAD) *
+                ud((current - vars.lastSpreadUnlockUpdate) * WAD) *
                 vars.spreadUnlockingRate;
 
             vars.spreadUnlockingRate =
@@ -253,7 +253,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         vars.totalLockedSpread =
             vars.totalLockedSpread -
-            UD60x18.wrap((timestamp - vars.lastSpreadUnlockUpdate) * WAD) *
+            ud((timestamp - vars.lastSpreadUnlockUpdate) * WAD) *
             vars.spreadUnlockingRate;
         vars.lastSpreadUnlockUpdate = timestamp;
     }
@@ -261,11 +261,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
         // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
         // therefore no further scaling has to be applied
-        return UD60x18.wrap(_balanceOf(owner));
+        return ud(_balanceOf(owner));
     }
 
     function _totalSupplyUD60x18() internal view returns (UD60x18) {
-        return UD60x18.wrap(_totalSupply());
+        return ud(_totalSupply());
     }
 
     /// @notice Gets the current amount of available assets
@@ -354,7 +354,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _convertToAssetsUD60x18(
-            UD60x18.wrap(shareAmount),
+            ud(shareAmount),
             _getPricePerShareUD60x18()
         );
         assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(
@@ -393,7 +393,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _previewMint(
         uint256 shareAmount
     ) internal view virtual override returns (uint256 assetAmount) {
-        UD60x18 assets = _previewMintUD60x18(UD60x18.wrap(shareAmount));
+        UD60x18 assets = _previewMintUD60x18(ud(shareAmount));
         assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(
             assets
         );
@@ -406,8 +406,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     ) internal virtual override returns (uint256 assetAmount) {
         if (shareAmount > _maxMint(receiver))
             revert Vault__MaximumAmountExceeded(
-                UD60x18.wrap(_maxMint(receiver)),
-                UD60x18.wrap(shareAmount)
+                ud(_maxMint(receiver)),
+                ud(shareAmount)
             );
 
         assetAmount = _previewMint(shareAmount);
@@ -446,7 +446,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
 
-        UD60x18 shares = UD60x18.wrap(shareAmount);
+        UD60x18 shares = ud(shareAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxRedeem = _maxRedeemUD60x18(l, owner, pps);
 
@@ -620,7 +620,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         // compute the updated state, then increment values, then write to storage
         _updateState(l);
         UD60x18 spreadRate = spread /
-            UD60x18.wrap((maturity - _getBlockTimestamp()) * WAD);
+            ud((maturity - _getBlockTimestamp()) * WAD);
 
         l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRate;
         l.spreadUnlockingTicks[maturity] =
@@ -807,13 +807,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         // Compute time until maturity and check bounds
         vars.tau =
-            UD60x18.wrap((maturity - _getBlockTimestamp()) * WAD) /
-            UD60x18.wrap(ONE_YEAR * WAD);
-        _revertIfOutOfDTEBounds(
-            vars.tau * UD60x18.wrap(365e18),
-            l.minDTE,
-            l.maxDTE
-        );
+            ud((maturity - _getBlockTimestamp()) * WAD) /
+            ud(ONE_YEAR * WAD);
+        _revertIfOutOfDTEBounds(vars.tau * ud(365e18), l.minDTE, l.maxDTE);
 
         vars.sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
             l.base,
@@ -854,9 +850,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         // Compute C-level
         UD60x18 utilisation = (l.totalLockedAssets +
             l.collateral(size, strike)) / l.totalAssets;
-        UD60x18 hoursSinceLastTx = UD60x18.wrap(
+        UD60x18 hoursSinceLastTx = ud(
             (_getBlockTimestamp() - l.lastTradeTimestamp) * WAD
-        ) / UD60x18.wrap(ONE_HOUR * WAD);
+        ) / ud(ONE_HOUR * WAD);
 
         vars.cLevel = _computeCLevel(
             utilisation,
@@ -1106,7 +1102,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
                 .layout();
 
-            UD60x18 shares = UD60x18.wrap(amount);
+            UD60x18 shares = ud(amount);
 
             FeeInternal memory vars = _getFeeInternal(
                 l,
