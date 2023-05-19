@@ -92,7 +92,8 @@ library OptionMath {
     /// @param timeToMaturity The time until the option expires. (18 decimals)
     /// @param volAnnualized The percentage volatility of the geometric Brownian motion. (18 decimals)
     /// @param riskFreeRate The rate of the risk-less asset, i.e. the risk-free interest rate. (18 decimals)
-    /// @return d1, d2 The terms d1 and d2 from the Black-Scholes formula. (18 decimals, 18 decimals)
+    /// @return d1 The term d1 from the Black-Scholes formula. (18 decimals)
+    /// @return d2 The term d2 from the Black-Scholes formula. (18 decimals)
     function d1d2(
         UD60x18 spot,
         UD60x18 strike,
