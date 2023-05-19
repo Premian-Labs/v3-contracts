@@ -19,6 +19,8 @@ import {
   VxPremia__factory,
   VxPremiaProxy__factory,
   ExchangeHelper__factory,
+  IReferral,
+  IReferral__factory,
   Referral__factory,
   ReferralProxy__factory,
 } from '../typechain';
@@ -32,6 +34,7 @@ interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
   router: ERC20Router;
+  referral: IReferral;
 }
 
 interface DeployedFacets {
@@ -44,11 +47,13 @@ export class PoolUtil {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
   router: ERC20Router;
+  referral: IReferral;
 
   constructor(args: PoolUtilArgs) {
     this.premiaDiamond = args.premiaDiamond;
     this.poolFactory = args.poolFactory;
     this.router = args.router;
+    this.referral = args.referral;
   }
 
   static async deployPoolImplementations(
@@ -316,6 +321,11 @@ export class PoolUtil {
     await referralProxy.deployed();
     if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
 
+    const referral = IReferral__factory.connect(
+      referralProxy.address,
+      deployer,
+    );
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
@@ -324,7 +334,7 @@ export class PoolUtil {
       vxPremiaAddress,
       wrappedNativeToken,
       feeReceiver,
-      referralProxy.address,
+      referral.address,
       log,
       isDevMode,
     );
@@ -344,6 +354,6 @@ export class PoolUtil {
       );
     }
 
-    return new PoolUtil({ premiaDiamond, poolFactory, router });
+    return new PoolUtil({ premiaDiamond, poolFactory, router, referral });
   }
 }

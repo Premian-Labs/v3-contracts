@@ -10,7 +10,6 @@ import {
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
-import { setMaturities } from '../UnderwriterVault.fixture';
 import {
   ERC20Mock,
   IERC20__factory,

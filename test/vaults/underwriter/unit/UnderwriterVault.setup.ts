@@ -134,6 +134,7 @@ describe('#vaultSetup', () => {
         underwriter.address,
         trader.address,
         size,
+        ethers.constants.AddressZero,
       );
       expect(await base.balanceOf(callPool.address)).to.eq(totalSize);
       expect(await callPool.balanceOf(trader.address, TokenType.LONG)).to.eq(
@@ -177,6 +178,7 @@ describe('#vaultSetup', () => {
         underwriter.address,
         trader.address,
         size,
+        ethers.constants.AddressZero,
       );
       expect(await quote.balanceOf(putPool.address)).to.eq(totalSize);
       expect(await putPool.balanceOf(trader.address, TokenType.LONG)).to.eq(

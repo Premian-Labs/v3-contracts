@@ -565,7 +565,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             IPool(pool).takerFee(address(0), size, 0, true)
         );
 
-        IPool(pool).writeFrom(address(this), msg.sender, size);
+        IPool(pool).writeFrom(address(this), msg.sender, size, address(0));
 
         l.totalLockedAssets = l.totalLockedAssets + locked;
         l.totalAssets = l.totalAssets - mintingFee;
