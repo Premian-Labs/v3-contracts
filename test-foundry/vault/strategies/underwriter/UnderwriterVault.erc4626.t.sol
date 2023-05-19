@@ -13,88 +13,6 @@ import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/
 import {IVault} from "contracts/vault/IVault.sol";
 
 abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
-    struct TestVars {
-        UD60x18 totalSupply;
-        UD60x18 shares;
-        UD60x18 pps;
-        UD60x18 ppsUser;
-        UD60x18 performanceFeeRate;
-        UD60x18 managementFeeRate;
-        uint256 timeOfDeposit;
-        UD60x18 protocolFeesInitial;
-        UD60x18 netUserDepositReceiver;
-    }
-
-    function _setMaturities() internal {
-        uint256 minMaturity = block.timestamp + 10 * 1 days;
-        uint256 maxMaturity = block.timestamp + 20 * 1 days;
-
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
-        infos[0].maturity = minMaturity;
-        infos[1].maturity = maxMaturity;
-
-        vault.setListingsAndSizes(infos);
-    }
-
-    function _addDeposit(address user, UD60x18 amount) internal {
-        IERC20 token = IERC20(getPoolToken());
-        uint256 assetAmount = scaleDecimals(amount);
-
-        vm.startPrank(user);
-
-        token.approve(address(vault), assetAmount);
-        vault.deposit(assetAmount, user);
-
-        vm.stopPrank();
-    }
-
-    function _setup(TestVars memory vars) internal {
-        // set pps and totalSupply vault
-        vault.increaseTotalShares((vars.totalSupply - vars.shares).unwrap());
-        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
-
-        deal(getPoolToken(), address(vault), vaultDeposit);
-        vault.increaseTotalAssets(vars.pps * vars.totalSupply);
-
-        // set pps and shares user
-        vault.mintMock(users.caller, vars.shares.unwrap());
-        UD60x18 userDeposit = vars.shares * vars.ppsUser;
-        vault.setNetUserDeposit(users.caller, userDeposit.unwrap());
-        vault.setTimeOfDeposit(users.caller, vars.timeOfDeposit);
-        uint256 ppsAvg = vault.getAveragePricePerShare(users.caller);
-
-        if (vars.shares > ud(0)) {
-            assertEq(ppsAvg, vars.ppsUser.unwrap());
-        }
-
-        assertEq(vault.totalSupply(), vars.totalSupply);
-        assertEq(vault.getPricePerShare(), vars.pps);
-    }
-
-    function _setupGetFeeVars(TestVars memory vars) internal {
-        _setup(vars);
-
-        vault.setPerformanceFeeRate(vars.performanceFeeRate);
-        vault.setManagementFeeRate(vars.managementFeeRate);
-    }
-
-    function _setupBeforeTokenTransfer(TestVars memory vars) internal {
-        _setupGetFeeVars(vars);
-
-        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
-        deal(
-            getPoolToken(),
-            address(vault),
-            vaultDeposit + scaleDecimals(vars.protocolFeesInitial)
-        );
-        vault.setProtocolFees(vars.protocolFeesInitial);
-        vault.setNetUserDeposit(
-            users.receiver,
-            vars.netUserDepositReceiver.unwrap()
-        );
-    }
-
     function test_totalAssets_ReturnExpectedValue() public {
         UD60x18[3] memory cases = [ud(1e18), ud(1.1e18), ud(590.7e18)];
 
@@ -141,8 +59,8 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
     function test_maxWithdraw_ReturnAvailableAssets() public {
         // should return the available assets since the available assets are less than the max transferable
-        _setMaturities();
-        _addDeposit(users.receiver, ud(3e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(3e18));
 
         vault.increaseTotalLockedSpread(ud(0.1e18));
         vault.increaseTotalLockedAssets(ud(0.5e18));
@@ -155,11 +73,11 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     }
 
     function test_maxWithdraw_ReturnMaxTransferableAssets() public {
-        _setMaturities();
+        setMaturities();
 
         uint256 snapshot = vm.snapshot();
 
-        _addDeposit(users.receiver, ud(2e18));
+        addDeposit(users.receiver, ud(2e18));
 
         vault.setTimestamp(block.timestamp + 1 days);
 
@@ -170,8 +88,8 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
         vm.revertTo(snapshot);
 
-        _addDeposit(users.caller, ud(8e18));
-        _addDeposit(users.receiver, ud(2e18));
+        addDeposit(users.caller, ud(8e18));
+        addDeposit(users.receiver, ud(2e18));
 
         vault.increaseTotalLockedSpread(ud(0));
         vault.increaseTotalLockedAssets(ud(0.5e18));
@@ -184,9 +102,9 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
     function test_maxWithdraw_ReturnAssetsReceiverOwns() public {
         // should return the assets the receiver owns since there are sufficient funds
-        _setMaturities();
-        _addDeposit(users.caller, ud(7e18));
-        _addDeposit(users.receiver, ud(2e18));
+        setMaturities();
+        addDeposit(users.caller, ud(7e18));
+        addDeposit(users.receiver, ud(2e18));
         vault.increaseTotalLockedSpread(ud(0.1e18));
         vault.increaseTotalLockedAssets(ud(0.5e18));
         uint256 assetAmount = vault.maxWithdraw(users.receiver);
@@ -199,8 +117,8 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     }
 
     function test_maxRedeem_ReturnAmountOfRedeemableShares() public {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(3e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(3e18));
         vault.increaseTotalLockedSpread(ud(0.1e18));
         vault.increaseTotalLockedAssets(ud(0.5e18));
         uint256 assetAmount = vault.maxRedeem(users.receiver);
@@ -219,7 +137,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vars.ppsUser = ud(1.2e18);
         vars.totalSupply = ud(2.5e18);
 
-        _setup(vars);
+        setup(vars);
 
         vault.setPerformanceFeeRate(ud(0.05e18));
         vault.setManagementFeeRate(ud(0));
@@ -229,20 +147,20 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     }
 
     function test_maxRedeem_RevertIf_ZeroAddress() public {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(2e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(2e18));
         vm.expectRevert(IVault.Vault__AddressZero.selector);
         vault.maxRedeem(address(0));
     }
 
     function test_previewMint_ReturnExpectedValue() public {
         // previewMint should return amount of assets required to mint the amount of shares
-        _setMaturities();
+        setMaturities();
         assertEq(vault.previewMint(2.1e18), scaleDecimals(ud(2.1e18)));
 
         //
 
-        _addDeposit(users.receiver, ud(2e18));
+        addDeposit(users.receiver, ud(2e18));
         vault.increaseTotalLockedSpread(ud(0.2e18));
         assertEq(vault.previewMint(4e18), scaleDecimals(ud(3.6e18)));
     }
@@ -256,16 +174,16 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     function test_convertToShares_MintedSharesEqualsDepositedAssets_IfSupplyNonZero_AndPricePerShareIsOne()
         public
     {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(8e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(8e18));
         assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 2e18);
     }
 
     function test_convertToShares_MintedSharesEqualsDepositedAssets_AdjustedByPricePerShare_IfSupplyNonZero()
         public
     {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(2e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(2e18));
 
         vault.increaseTotalLockedSpread(ud(1e18));
 
@@ -275,16 +193,16 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     function test_convertToAssets_WithdrawnAssetsEqualsShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOne()
         public
     {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(2e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(2e18));
         assertEq(vault.convertToAssets(2e18), scaleDecimals(ud(2e18)));
     }
 
     function test_convertToAssets_WithdrawnAssetsEqualsHalfOfShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOneHalf()
         public
     {
-        _setMaturities();
-        _addDeposit(users.receiver, ud(2e18));
+        setMaturities();
+        addDeposit(users.receiver, ud(2e18));
         vault.increaseTotalLockedSpread(ud(1e18));
         assertEq(vault.convertToAssets(2e18), scaleDecimals(ud(1e18)));
     }
@@ -312,7 +230,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vars.protocolFeesInitial = ud(0.1e18);
         vars.netUserDepositReceiver = ud(1.2e18);
 
-        _setupBeforeTokenTransfer(vars);
+        setupBeforeTokenTransfer(vars);
 
         vault.setTimestamp(3000000000 + 1 days);
         vm.prank(users.caller);
@@ -347,7 +265,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vars.protocolFeesInitial = ud(0.1e18);
         vars.netUserDepositReceiver = ud(1.2e18);
 
-        _setupBeforeTokenTransfer(vars);
+        setupBeforeTokenTransfer(vars);
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -379,7 +297,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vars.protocolFeesInitial = ud(0.1e18);
         vars.netUserDepositReceiver = ud(1.2e18);
 
-        _setupBeforeTokenTransfer(vars);
+        setupBeforeTokenTransfer(vars);
 
         uint256 assetAmount = scaleDecimals(ud(0.4e18));
         vault.setTimestamp(3000000000 + 1 days);

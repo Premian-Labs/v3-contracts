@@ -4,6 +4,8 @@ pragma solidity >=0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
 import {VolatilityOracleMock} from "contracts/test/oracle/VolatilityOracleMock.sol";
@@ -17,6 +19,18 @@ import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/UnderwriterVaultProxy.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
+    struct TestVars {
+        UD60x18 totalSupply;
+        UD60x18 shares;
+        UD60x18 pps;
+        UD60x18 ppsUser;
+        UD60x18 performanceFeeRate;
+        UD60x18 managementFeeRate;
+        uint256 timeOfDeposit;
+        UD60x18 protocolFeesInitial;
+        UD60x18 netUserDepositReceiver;
+    }
+
     bytes32 vaultType;
 
     address longCall;
@@ -120,5 +134,75 @@ contract UnderwriterVaultDeployTest is DeployTest {
         );
 
         putVault = UnderwriterVaultMock(putVaultProxy);
+    }
+
+    function setMaturities() internal {
+        uint256 minMaturity = block.timestamp + 10 * 1 days;
+        uint256 maxMaturity = block.timestamp + 20 * 1 days;
+
+        UnderwriterVaultMock.MaturityInfo[]
+            memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
+        infos[0].maturity = minMaturity;
+        infos[1].maturity = maxMaturity;
+
+        vault.setListingsAndSizes(infos);
+    }
+
+    function addDeposit(address user, UD60x18 amount) internal {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = scaleDecimals(amount);
+
+        vm.startPrank(user);
+
+        token.approve(address(vault), assetAmount);
+        vault.deposit(assetAmount, user);
+
+        vm.stopPrank();
+    }
+
+    function setup(TestVars memory vars) internal {
+        // set pps and totalSupply vault
+        vault.increaseTotalShares((vars.totalSupply - vars.shares).unwrap());
+        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
+
+        deal(getPoolToken(), address(vault), vaultDeposit);
+        vault.increaseTotalAssets(vars.pps * vars.totalSupply);
+
+        // set pps and shares user
+        vault.mintMock(users.caller, vars.shares.unwrap());
+        UD60x18 userDeposit = vars.shares * vars.ppsUser;
+        vault.setNetUserDeposit(users.caller, userDeposit.unwrap());
+        vault.setTimeOfDeposit(users.caller, vars.timeOfDeposit);
+        uint256 ppsAvg = vault.getAveragePricePerShare(users.caller);
+
+        if (vars.shares > ud(0)) {
+            assertEq(ppsAvg, vars.ppsUser.unwrap());
+        }
+
+        assertEq(vault.totalSupply(), vars.totalSupply);
+        assertEq(vault.getPricePerShare(), vars.pps);
+    }
+
+    function setupGetFeeVars(TestVars memory vars) internal {
+        setup(vars);
+
+        vault.setPerformanceFeeRate(vars.performanceFeeRate);
+        vault.setManagementFeeRate(vars.managementFeeRate);
+    }
+
+    function setupBeforeTokenTransfer(TestVars memory vars) internal {
+        setupGetFeeVars(vars);
+
+        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
+        deal(
+            getPoolToken(),
+            address(vault),
+            vaultDeposit + scaleDecimals(vars.protocolFeesInitial)
+        );
+        vault.setProtocolFees(vars.protocolFeesInitial);
+        vault.setNetUserDeposit(
+            users.receiver,
+            vars.netUserDepositReceiver.unwrap()
+        );
     }
 }
