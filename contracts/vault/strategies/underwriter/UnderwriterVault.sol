@@ -869,7 +869,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
 
         quote.mintingFee = l.convertAssetToUD60x18(
-            IPool(quote.pool).takerFee(address(this), size, 0, true)
+            IPool(quote.pool).takerFee(address(this), size, quote.premium, true)
         );
 
         return quote;
