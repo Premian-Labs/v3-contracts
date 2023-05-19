@@ -846,6 +846,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             vars.riskFreeRate,
             l.isCall
         );
+
         vars.price = l.isCall ? vars.price / vars.spot : vars.price;
 
         // Compute C-level
@@ -869,7 +870,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
 
         quote.mintingFee = l.convertAssetToUD60x18(
-            IPool(quote.pool).takerFee(address(this), size, quote.premium, true)
+            IPool(quote.pool).takerFee(address(this), size, 0, true)
         );
 
         return quote;
