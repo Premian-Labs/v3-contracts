@@ -23,6 +23,9 @@ import {UniswapV3AdapterProxy} from "contracts/adapter/uniswap/UniswapV3AdapterP
 contract UniswapV3AdapterTest is Test, Assertions {
     uint32 constant PERIOD = 600;
     uint256 constant CARDINALITY_PER_MINUTE = 4;
+    uint16 constant TARGET_CARDINALITY =
+        uint16((PERIOD * CARDINALITY_PER_MINUTE) / 60);
+
     IUniswapV3Factory constant UNISWAP_V3_FACTORY =
         IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
@@ -86,10 +89,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function test_constructor_ShouldSetStateVariables() public {
-        assertEq(
-            adapter.getTargetCardinality(),
-            (PERIOD * CARDINALITY_PER_MINUTE) / 60 + 1
-        );
+        assertEq(adapter.getTargetCardinality(), uint256(TARGET_CARDINALITY));
         assertEq(adapter.getPeriod(), PERIOD);
         assertEq(adapter.getCardinalityPerMinute(), CARDINALITY_PER_MINUTE);
 
@@ -240,16 +240,16 @@ contract UniswapV3AdapterTest is Test, Assertions {
                     .UniswapV3Adapter__ObservationCardinalityTooLow
                     .selector,
                 1,
-                2001
+                2000
             )
         );
         adapter.quote(WETH, DAI);
     }
 
     function test_quote_FindPath_IfPairNotAdded() public {
-        // must increase cardinality to 41 for pool
+        // must increase cardinality to 40 for pool
         IUniswapV3Pool(0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19)
-            .increaseObservationCardinalityNext(41);
+            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
 
         assertGt(adapter.quote(WETH, DAI).unwrap(), 0);
     }
@@ -261,10 +261,10 @@ contract UniswapV3AdapterTest is Test, Assertions {
         address tokenOut = MKR;
 
         IUniswapV3Pool(0x886072A44BDd944495eFF38AcE8cE75C1EacDAF6)
-            .increaseObservationCardinalityNext(41);
+            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
 
         IUniswapV3Pool(0x3aFdC5e6DfC0B0a507A8e023c9Dce2CAfC310316)
-            .increaseObservationCardinalityNext(41);
+            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
 
         IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(
             tokenIn,
@@ -300,13 +300,13 @@ contract UniswapV3AdapterTest is Test, Assertions {
                     .UniswapV3Adapter__ObservationCardinalityTooLow
                     .selector,
                 1,
-                41
+                TARGET_CARDINALITY
             )
         );
         adapter.quote(tokenIn, tokenOut);
 
         IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db)
-            .increaseObservationCardinalityNext(41);
+            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
 
         vm.warp(block.timestamp + 600);
         assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
