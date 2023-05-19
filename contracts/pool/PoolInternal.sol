@@ -116,11 +116,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
-        uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
+        UD60x18 discount = ud(IVxPremia(VXPREMIA).getDiscount(taker));
 
-        if (discount > 0) {
-            fee = fee - fee * ud(discount);
-        }
+        if (discount > ZERO) fee = (ONE - discount) * fee;
 
         return Position.contractsToCollateral(fee, strike, isCallPool);
     }
