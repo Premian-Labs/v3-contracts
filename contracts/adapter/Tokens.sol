@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 uint8 constant FOREX_DECIMALS = 8;
 uint8 constant ETH_DECIMALS = 18;

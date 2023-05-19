@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 interface IUserSettings {
     /// @notice Returns true if the agent is authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor` on behalf of the user
