@@ -436,6 +436,7 @@ describe('UnderwriterVault', () => {
             quote,
             optionMath,
             poolKey,
+            p,
           };
         }
 
@@ -470,7 +471,13 @@ describe('UnderwriterVault', () => {
           expect(
             await vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           )
             .to.emit(vault, 'UpdateQuotes')
             .to.emit(vault, 'Trade');
@@ -517,6 +524,95 @@ describe('UnderwriterVault', () => {
           expect(poolBalance).to.be.eq(collateral.add(mintingFee));
         });
 
+        it('should process valid trade with referral correctly', async () => {
+          const {
+            poolKey,
+            pool,
+            trader,
+            vault,
+            maturity,
+            spot,
+            strike,
+            timestamp,
+            base,
+            quote,
+            p,
+          } = await loadFixture(setup);
+
+          const tradeSize = parseEther('3');
+
+          // Check that the premium has been transferred
+          await vault.setTimestamp(timestamp);
+          await vault.setSpotPrice(spot);
+
+          const totalPremium = await vault.getQuote(poolKey, tradeSize, true);
+
+          // Approve amount for trader to trade with
+          const token = isCall ? base : quote;
+          await token
+            .connect(trader)
+            .approve(vault.address, parseEther('1000'));
+
+          const referrer = '0x0000000000000000000000000000000000000001';
+
+          await vault
+            .connect(trader)
+            .trade(poolKey, tradeSize, true, parseEther('1000'), referrer);
+
+          // Get deposit size and collateral in right format
+          const _strike = 1100;
+          const depositSize = parseUnits(
+            (isCall ? 5 : 5 * _strike).toString(),
+            await token.decimals(),
+          );
+          const collateral = parseUnits(
+            (isCall ? 3 : 3 * _strike).toString(),
+            await token.decimals(),
+          );
+
+          // Get minting fee
+          const mintingFee = await pool.takerFee(
+            ethers.constants.AddressZero,
+            tradeSize,
+            0,
+            false,
+          );
+
+          const [primaryRebatePercent] = await p.referral[
+            'getRebatePercents(address)'
+          ](referrer);
+
+          // primary rebate = 5% = 1/20
+          const totalRebate = mintingFee.div(20);
+
+          const referralBalance = await token.balanceOf(p.referral.address);
+          expect(referralBalance).to.be.eq(totalRebate);
+
+          // Check that long contracts have been transferred to trader
+          const longs = await pool.balanceOf(trader.address, TokenType.LONG);
+          expect(longs).to.eq(tradeSize);
+
+          // Check that short contracts have been transferred to vault
+          const shorts = await pool.balanceOf(vault.address, TokenType.SHORT);
+          expect(shorts).to.eq(tradeSize);
+
+          // Check that premium has been transferred to vault
+          const vaultBalance = await token.balanceOf(vault.address);
+          expect(vaultBalance).to.be.eq(
+            depositSize.add(totalPremium).sub(collateral).sub(mintingFee),
+          );
+
+          // Check that listing has been successfully added to vault
+          const positionSize = await vault.getPositionSize(strike, maturity);
+          expect(positionSize).to.be.eq(tradeSize);
+
+          // Check that collateral and minting fee have been transferred to pool
+          const poolBalance = await token.balanceOf(pool.address);
+          expect(poolBalance).to.be.eq(
+            collateral.add(mintingFee).sub(totalRebate),
+          );
+        });
+
         it('should revert on not having enough available capital', async () => {
           const { poolKey, vault, trader, spot, timestamp } = await loadFixture(
             setup,
@@ -536,7 +632,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__InsufficientFunds');
         });
 
@@ -563,7 +665,13 @@ describe('UnderwriterVault', () => {
           expect(
             await vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, totalPremium.mul(multiplier)),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                totalPremium.mul(multiplier),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__AboveMaxSlippage');
         });
 
@@ -591,6 +699,7 @@ describe('UnderwriterVault', () => {
                 tradeSize,
                 true,
                 parseEther('1000'),
+                ethers.constants.AddressZero,
               ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
         });
@@ -607,7 +716,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__ZeroSize');
         });
 
@@ -629,6 +744,7 @@ describe('UnderwriterVault', () => {
                 tradeSize,
                 true,
                 parseEther('1000'),
+                ethers.constants.AddressZero,
               ),
           ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
         });
@@ -651,6 +767,7 @@ describe('UnderwriterVault', () => {
                 tradeSize,
                 true,
                 parseEther('1000'),
+                ethers.constants.AddressZero,
               ),
           ).to.be.revertedWithCustomError(
             vault,
@@ -671,7 +788,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, false, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                false,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__TradeMustBeBuy');
         });
 
@@ -688,7 +811,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
         });
 
@@ -746,7 +875,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDTEBounds');
         });
 
@@ -801,7 +936,13 @@ describe('UnderwriterVault', () => {
           await expect(
             vault
               .connect(trader)
-              .trade(poolKey, tradeSize, true, parseEther('1000')),
+              .trade(
+                poolKey,
+                tradeSize,
+                true,
+                parseEther('1000'),
+                ethers.constants.AddressZero,
+              ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDeltaBounds');
         });
       });

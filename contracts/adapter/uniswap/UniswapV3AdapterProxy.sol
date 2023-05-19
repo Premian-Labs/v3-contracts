@@ -28,7 +28,7 @@ contract UniswapV3AdapterProxy is ProxyUpgradeableOwnable {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
             .layout();
 
-        l.targetCardinality = uint16((period * cardinalityPerMinute) / 60) + 1;
+        l.targetCardinality = uint16((period * cardinalityPerMinute) / 60);
         l.cardinalityPerMinute = cardinalityPerMinute;
         l.period = period;
 

@@ -95,10 +95,12 @@ interface IPoolCore is IPoolInternal {
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
     /// @param longReceiver The address which will receive the long token
     /// @param size The number of contracts being underwritten (18 decimals)
+    /// @param referrer The referrer of the user doing the trade
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        address referrer
     ) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.

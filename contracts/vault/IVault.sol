@@ -97,6 +97,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     ) external;
 }

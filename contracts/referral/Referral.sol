@@ -123,13 +123,13 @@ contract Referral is IReferral, OwnableInternal {
         address primaryReferrer,
         address token,
         UD60x18 tradingFee
-    ) external returns (UD60x18 totalRebate) {
+    ) external {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         _revertIfPoolNotAuthorized();
 
         primaryReferrer = _trySetReferrer(user, primaryReferrer);
-        if (primaryReferrer == address(0)) return ZERO;
+        if (primaryReferrer == address(0)) return;
 
         (
             UD60x18 primaryRebatePercent,
@@ -139,6 +139,7 @@ contract Referral is IReferral, OwnableInternal {
         uint256 primaryRebate;
         uint256 secondaryRebate;
 
+        UD60x18 totalRebate;
         {
             UD60x18 _primaryRebate = tradingFee * primaryRebatePercent;
             UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
