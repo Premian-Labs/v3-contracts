@@ -2,13 +2,10 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import {
   caller,
   receiver,
-  vault,
-  increaseTotalAssets,
-  vaultSetup,
-  setup,
   setupBeforeTokenTransfer,
-  setupGetFeeVars,
   token,
+  vault,
+  vaultSetup,
 } from '../UnderwriterVault.fixture';
 import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 import { expect } from 'chai';
@@ -82,58 +79,6 @@ export const testsFeeVars = [
 ];
 
 describe('UnderwriterVault.fees', () => {
-  describe('#_maxTransferableShares', () => {
-    let test: any = {
-      shares: 0.0,
-      pps: 1.0,
-      ppsUser: 1.0,
-      assets: 0.1,
-      balanceShares: 1.1,
-      totalSupply: 2.2,
-      performanceFeeRate: 0.01,
-      managementFeeRate: 0.02,
-      transferAmount: 0.1,
-      performance: 1.0,
-      performanceFeeInShares: 0.0,
-      performanceFeeInAssets: 0.0,
-      managementFeeInShares: 0.0,
-      managementFeeInAssets: 0.0,
-      totalFeeInShares: 0.0,
-      totalFeeInAssets: 0.0,
-      timeOfDeposit: 3000000000,
-      timestamp: 3000000000 + ONE_DAY,
-      maxTransferableShares: 0.0,
-    };
-
-    const myClonedArray: any = [];
-    testsFeeVars.forEach((val) => myClonedArray.push(Object.assign({}, val)));
-    myClonedArray.push(test);
-    for (const isCall of [true, false]) {
-      describe(isCall ? 'call' : 'put', () => {
-        myClonedArray.forEach(async (test) => {
-          it(`userShares ${test.shares}, ppsUser ${test.ppsUser}, ppsVault ${test.pps}, then maxTransferableShares equals ${test.maxTransferableShares}`, async () => {
-            const { vault, caller } = await setupGetFeeVars(isCall, test);
-            await vault.setTimestamp(test.timestamp);
-
-            const feeVars = await vault.getFeeInternal(
-              caller.address,
-              parseEther(test.shares.toString()),
-              parseEther(test.pps.toString()),
-            );
-
-            const maxTransferableShares = await vault.maxTransferableShares(
-              feeVars,
-            );
-
-            expect(parseFloat(formatEther(maxTransferableShares))).to.eq(
-              test.maxTransferableShares,
-            );
-          });
-        });
-      });
-    }
-  });
-
   describe('#_beforeTokenTransfer', () => {
     for (const isCall of [true, false]) {
       describe(isCall ? 'call' : 'put', () => {

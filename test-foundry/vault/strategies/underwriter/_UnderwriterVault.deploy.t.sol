@@ -27,6 +27,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         UD60x18 performanceFeeRate;
         UD60x18 managementFeeRate;
         uint256 timeOfDeposit;
+        uint256 timestamp;
         UD60x18 protocolFeesInitial;
         UD60x18 netUserDepositReceiver;
     }
@@ -173,9 +174,9 @@ contract UnderwriterVaultDeployTest is DeployTest {
         UD60x18 userDeposit = vars.shares * vars.ppsUser;
         vault.setNetUserDeposit(users.caller, userDeposit.unwrap());
         vault.setTimeOfDeposit(users.caller, vars.timeOfDeposit);
-        uint256 ppsAvg = vault.getAveragePricePerShare(users.caller);
 
         if (vars.shares > ud(0)) {
+            uint256 ppsAvg = vault.getAveragePricePerShare(users.caller);
             assertEq(ppsAvg, vars.ppsUser.unwrap());
         }
 

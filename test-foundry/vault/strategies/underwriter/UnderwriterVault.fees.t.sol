@@ -14,6 +14,58 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
+    struct TestResult {
+        UD60x18 assets;
+        UD60x18 balanceShares;
+        UD60x18 performanceFeeInAssets;
+        UD60x18 managementFeeInAssets;
+        UD60x18 totalFeeInShares;
+        UD60x18 totalFeeInAssets;
+    }
+
+    function _testCases()
+        internal
+        returns (TestVars[2] memory vars, TestResult[2] memory results)
+    {
+        vars[0].totalSupply = ud(2.2e18);
+        vars[0].shares = ud(1.1e18);
+        vars[0].pps = ud(1.0e18);
+        vars[0].ppsUser = ud(1.0e18);
+        vars[0].performanceFeeRate = ud(0.01e18);
+        vars[0].managementFeeRate = ud(0.02e18);
+        vars[0].timeOfDeposit = 3000000000;
+        vars[0].timestamp = 3000000000 + 1 days;
+        vars[0].protocolFeesInitial = ud(0.1e18);
+        vars[0].netUserDepositReceiver = ud(1.2e18);
+
+        vars[1].totalSupply = ud(2.5e18);
+        vars[1].shares = ud(2.3e18);
+        vars[1].pps = ud(1.5e18);
+        vars[1].ppsUser = ud(1.2e18);
+        vars[1].performanceFeeRate = ud(0.05e18);
+        vars[1].managementFeeRate = ud(0.02e18);
+        vars[1].timeOfDeposit = 3000000000;
+        vars[1].timestamp = 3000000000 + 365 days;
+        vars[1].protocolFeesInitial = ud(0.1e18);
+        vars[1].netUserDepositReceiver = ud(1.2e18);
+
+        results[0].assets = ud(0.1e18);
+        results[0].balanceShares = ud(1.1e18);
+        results[0].performanceFeeInAssets = ud(0);
+        results[0].managementFeeInAssets = ud(0.000005479452054794e18);
+        results[0].totalFeeInShares = ud(0.000005479452054794e18);
+        results[0].totalFeeInAssets = ud(0.000005479452054794e18);
+
+        results[1].assets = ud(1.845e18);
+        results[1].balanceShares = ud(2.3e18);
+        results[1].performanceFeeInAssets = ud(0.0230625e18);
+        results[1].managementFeeInAssets = ud(0.0369e18);
+        results[1].totalFeeInShares = ud(0.039975e18);
+        results[1].totalFeeInAssets = ud(0.0599625e18);
+
+        return (vars, results);
+    }
+
     function test_claimFees_TransferProtocolFeesToFeeReceiver() public {
         UD60x18 protocolFees = ud(0.123e18);
         UD60x18 balanceOfFeeReceiver = ud(10.1e18);
@@ -34,28 +86,20 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
     }
 
     function test_getAveragePricePerShare_ReturnExpectedValue() public {
-        TestVars memory vars;
-
-        vars.shares = ud(1.1e18);
-        vars.totalSupply = ud(2.2e18);
-        vars.pps = ud(1.0e18);
-        vars.ppsUser = ud(1.0e18);
+        (TestVars[2] memory cases, ) = _testCases();
 
         uint256 snapshot = vm.snapshot();
 
-        setup(vars);
-        assertEq(vault.getAveragePricePerShare(users.caller), vars.ppsUser);
+        for (uint256 i; i < cases.length; i++) {
+            setup(cases[i]);
+            assertEq(
+                vault.getAveragePricePerShare(users.caller),
+                cases[i].ppsUser
+            );
 
-        //
-
-        vars.shares = ud(2.3e18);
-        vars.totalSupply = ud(2.5e18);
-        vars.pps = ud(1.5e18);
-        vars.ppsUser = ud(1.2e18);
-
-        vm.revertTo(snapshot);
-        setup(vars);
-        assertEq(vault.getAveragePricePerShare(users.caller), vars.ppsUser);
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
     }
 
     function test_updateTimeOfDeposit_UpdateTimeOfDeposit_ToTimestampOfFirstDeposit()
@@ -89,64 +133,79 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
     }
 
     function test_getFeeInternal_ReturnExpectedValue() public {
-        TestVars memory vars;
-
-        vars.totalSupply = ud(2.2e18);
-        vars.shares = ud(1.1e18);
-        vars.pps = ud(1.0e18);
-        vars.ppsUser = ud(1.0e18);
-        vars.performanceFeeRate = ud(0.01e18);
-        vars.managementFeeRate = ud(0.02e18);
-        vars.timeOfDeposit = 3000000000;
-        vars.protocolFeesInitial = ud(0.1e18);
-        vars.netUserDepositReceiver = ud(1.2e18);
+        (TestVars[2] memory cases, TestResult[2] memory results) = _testCases();
 
         uint256 snapshot = vm.snapshot();
 
-        setupGetFeeVars(vars);
+        UD60x18[2] memory transferAmount = [ud(0.1e18), ud(1.23e18)];
 
-        vault.setTimestamp(3000000000 + 1 days);
-        IUnderwriterVault.FeeInternal memory feeVars = vault.getFeeInternal(
-            users.caller,
-            ud(0.1e18),
-            vault.getPricePerShare()
-        );
+        for (uint256 i = 0; i < cases.length; i++) {
+            setupGetFeeVars(cases[i]);
 
-        assertEq(feeVars.assets, 0.1e18);
-        assertEq(feeVars.balanceShares, 1.1e18);
-        assertEq(feeVars.performanceFeeInAssets, 0);
-        assertEq(feeVars.managementFeeInAssets, 0.000005479452054794e18);
-        assertEq(feeVars.totalFeeInShares, 0.000005479452054794e18);
-        assertEq(feeVars.totalFeeInAssets, 0.000005479452054794e18);
+            vault.setTimestamp(cases[i].timestamp);
+            IUnderwriterVault.FeeInternal memory feeVars = vault.getFeeInternal(
+                users.caller,
+                transferAmount[i],
+                vault.getPricePerShare()
+            );
 
-        //
+            assertEq(feeVars.assets, results[i].assets);
+            assertEq(feeVars.balanceShares, results[i].balanceShares);
+            assertEq(
+                feeVars.performanceFeeInAssets,
+                results[i].performanceFeeInAssets
+            );
+            assertEq(
+                feeVars.managementFeeInAssets,
+                results[i].managementFeeInAssets
+            );
+            assertEq(feeVars.totalFeeInShares, results[i].totalFeeInShares);
+            assertEq(feeVars.totalFeeInAssets, results[i].totalFeeInAssets);
 
-        vm.revertTo(snapshot);
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
+    }
 
-        vars.totalSupply = ud(2.5e18);
-        vars.shares = ud(2.3e18);
-        vars.pps = ud(1.5e18);
-        vars.ppsUser = ud(1.2e18);
-        vars.performanceFeeRate = ud(0.05e18);
-        vars.managementFeeRate = ud(0.02e18);
-        vars.timeOfDeposit = 3000000000;
-        vars.protocolFeesInitial = ud(0.1e18);
-        vars.netUserDepositReceiver = ud(1.2e18);
+    function test_maxTransferableShares_ReturnExpectedValue() public {
+        (TestVars[2] memory _cases, ) = _testCases();
 
-        setupGetFeeVars(vars);
+        TestVars[3] memory cases;
 
-        vault.setTimestamp(3000000000 + 365 days);
-        feeVars = vault.getFeeInternal(
-            users.caller,
-            ud(1.23e18),
-            vault.getPricePerShare()
-        );
+        cases[0] = _cases[0];
+        cases[1] = _cases[1];
 
-        assertEq(feeVars.assets, 1.845e18);
-        assertEq(feeVars.balanceShares, 2.3e18);
-        assertEq(feeVars.performanceFeeInAssets, 0.0230625e18);
-        assertEq(feeVars.managementFeeInAssets, 0.0369e18);
-        assertEq(feeVars.totalFeeInShares, 0.039975e18);
-        assertEq(feeVars.totalFeeInAssets, 0.0599625e18);
+        cases[2].totalSupply = ud(2.2e18);
+        cases[2].shares = ud(0);
+        cases[2].pps = ud(1.0e18);
+        cases[2].ppsUser = ud(1.0e18);
+        cases[2].performanceFeeRate = ud(0.01e18);
+        cases[2].managementFeeRate = ud(0.02e18);
+        cases[2].timeOfDeposit = 3000000000;
+        cases[2].timestamp = 3000000000 + 1 days;
+
+        uint256[3] memory results = [
+            uint256(1.099939726027397261e18),
+            uint256(2.22525e18),
+            uint256(0)
+        ];
+
+        uint256 snapshot = vm.snapshot();
+
+        for (uint256 i = 0; i < cases.length; i++) {
+            setupGetFeeVars(cases[i]);
+
+            vault.setTimestamp(cases[i].timestamp);
+            IUnderwriterVault.FeeInternal memory feeVars = vault.getFeeInternal(
+                users.caller,
+                cases[i].shares,
+                cases[i].pps
+            );
+
+            assertEq(vault.maxTransferableShares(feeVars), results[i]);
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
     }
 }
