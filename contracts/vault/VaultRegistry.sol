@@ -142,7 +142,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     function addSupportedTokenPairs(
         address vault,
         TokenPair[] memory tokenPairs
-    ) external {
+    ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
         for (uint256 i = 0; i < tokenPairs.length; i++) {
@@ -175,7 +175,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     function removeSupportedTokenPairs(
         address vault,
         TokenPair[] memory tokenPairs
-    ) external {
+    ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
         for (uint256 i = 0; i < tokenPairs.length; i++) {
