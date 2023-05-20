@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 /// @title EIP-712 typed structured data hashing and signing
 /// @dev see https://eips.ethereum.org/EIPS/eip-712

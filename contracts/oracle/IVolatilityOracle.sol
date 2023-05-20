@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -8,6 +8,7 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
+    error VolatilityOracle__OutOfBounds(int256 value);
     error VolatilityOracle__RelayerNotWhitelisted(address sender);
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
@@ -38,7 +39,7 @@ interface IVolatilityOracle {
     /// @return params The unpacked parameters of the IV model
     function parseParams(
         bytes32 input
-    ) external pure returns (int256[] memory params);
+    ) external pure returns (int256[5] memory params);
 
     /// @notice Update a list of Anchored eSSVI model parameters
     /// @param tokens List of the base tokens
@@ -96,5 +97,7 @@ interface IVolatilityOracle {
         UD60x18[] memory timeToMaturity
     ) external view returns (UD60x18[] memory);
 
+    /// @notice Returns the current risk-free rate
+    /// @return The current risk-free rate
     function getRiskFreeRate() external view returns (UD60x18);
 }

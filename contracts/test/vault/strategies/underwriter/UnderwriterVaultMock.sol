@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -563,7 +564,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
             IPool(pool).takerFee(address(0), size, 0, true)
         );
 
-        IPool(pool).writeFrom(address(this), msg.sender, size);
+        IPool(pool).writeFrom(address(this), msg.sender, size, address(0));
 
         l.totalLockedAssets = l.totalLockedAssets + locked;
         l.totalAssets = l.totalAssets - mintingFee;

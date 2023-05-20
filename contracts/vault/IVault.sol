@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
@@ -97,6 +97,7 @@ interface IVault is IERC4626Internal, IERC20Internal {
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     ) external;
 }

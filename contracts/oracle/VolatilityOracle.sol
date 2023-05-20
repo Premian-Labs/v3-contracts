@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
@@ -38,10 +38,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     );
 
     struct Params {
-        SD59x18[] tau;
-        SD59x18[] theta;
-        SD59x18[] psi;
-        SD59x18[] rho;
+        SD59x18[5] tau;
+        SD59x18[5] theta;
+        SD59x18[5] psi;
+        SD59x18[5] rho;
     }
 
     struct SliceInfo {
@@ -99,7 +99,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /// @inheritdoc IVolatilityOracle
     function parseParams(
         bytes32 input
-    ) external pure returns (int256[] memory params) {
+    ) external pure returns (int256[5] memory params) {
         return VolatilityOracleStorage.parseParams(input);
     }
 
@@ -173,7 +173,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     /// @param value The value to find the interval for
     /// @return The interval index that corresponds the value
     function _findInterval(
-        SD59x18[] memory arr,
+        SD59x18[5] memory arr,
         SD59x18 value
     ) internal pure returns (uint256) {
         uint256 low = 0;
@@ -200,11 +200,10 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
     /// @notice Convert an int256[] array to a SD59x18[] array
     /// @param src The array to be converted
-    /// @return The input array converted to a SD59x18[] array
+    /// @return tgt The input array converted to a SD59x18[] array
     function _toArray59x18(
-        int256[] memory src
-    ) internal pure returns (SD59x18[] memory) {
-        SD59x18[] memory tgt = new SD59x18[](src.length);
+        int256[5] memory src
+    ) internal pure returns (SD59x18[5] memory tgt) {
         for (uint256 i = 0; i < src.length; i++) {
             // Convert parameters in DECIMALS to an SD59x18
             tgt[i] = sd(src[i] * 1e6);
@@ -226,7 +225,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 spot,
         UD60x18 strike,
         UD60x18 timeToMaturity
-    ) public view returns (UD60x18) {
+    ) public view virtual returns (UD60x18) {
         if (spot == ZERO) revert VolatilityOracle__SpotIsZero();
         if (strike == ZERO) revert VolatilityOracle__StrikeIsZero();
         if (timeToMaturity == ZERO)
@@ -317,7 +316,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 spot,
         UD60x18[] memory strike,
         UD60x18[] memory timeToMaturity
-    ) external view returns (UD60x18[] memory) {
+    ) external view virtual returns (UD60x18[] memory) {
         if (strike.length != timeToMaturity.length)
             revert VolatilityOracle__ArrayLengthMismatch();
 
@@ -330,7 +329,8 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return sigma;
     }
 
-    function getRiskFreeRate() external view returns (UD60x18) {
+    // @inheritdoc IVolatilityOracle
+    function getRiskFreeRate() external view virtual returns (UD60x18) {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
         return l.riskFreeRate;

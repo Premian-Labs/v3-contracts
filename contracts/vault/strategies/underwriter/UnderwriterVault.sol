@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
@@ -904,7 +904,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     ) external override {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();
@@ -946,7 +947,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         IERC20(_asset()).approve(ROUTER, approveAmountScaled);
 
         // Mint option and allocate long token
-        IPool(quote.pool).writeFrom(address(this), msg.sender, size);
+        IPool(quote.pool).writeFrom(address(this), msg.sender, size, referrer);
 
         // Handle the premiums and spread capture generated
         _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -17,7 +17,7 @@ import {DeployTest} from "../Deploy.t.sol";
 abstract contract PoolFillQuoteRFQTest is DeployTest {
     function mintAndApprove() internal {
         uint256 initialCollateral = getInitialCollateral();
-        address poolToken = getPoolToken(poolKey.isCallPool);
+        address poolToken = getPoolToken();
 
         deal(poolToken, users.lp, initialCollateral);
         deal(poolToken, users.trader, initialCollateral);
@@ -49,26 +49,26 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             initialCollateral = initialCollateral * poolKey.strike;
         }
 
-        return scaleDecimals(initialCollateral, poolKey.isCallPool);
+        return scaleDecimals(initialCollateral);
     }
 
-    function _test_fillQuoteRFQ_Success(bool isCall) internal {
-        address poolToken = getPoolToken(isCall);
+    function test_fillQuoteRFQ_Success_WithApproval() public {
+        mintAndApprove();
+
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size)
         );
 
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.size)
         );
 
         uint256 protocolFee = pool.takerFee(
@@ -111,24 +111,17 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
     }
 
-    function test_fillQuoteRFQ_Success_WithApproval() public {
-        mintAndApprove();
-        _test_fillQuoteRFQ_Success(poolKey.isCallPool);
-    }
-
     function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
         mintAndApprove();
 
         quoteRFQ.isBuy = isBuy;
 
-        bool isCall = poolKey.isCallPool;
-        address token = getPoolToken(isCall);
+        address token = getPoolToken();
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.price * quoteRFQ.size)
         );
 
         uint256 protocolFee = pool.takerFee(
@@ -144,21 +137,20 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         ) = referral.getRebatePercents(users.referrer);
 
         UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(protocolFee, isCall);
+            scaleDecimals(protocolFee);
 
         UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(protocolFee, isCall);
+            scaleDecimals(protocolFee);
 
-        uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-        uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+        uint256 primaryRebate = scaleDecimals(_primaryRebate);
+        uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
 
         uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size, isCall),
-            isCall
+            contractsToCollateral(quoteRFQ.size)
         );
 
         uint256 initialCollateral = getInitialCollateral();
@@ -280,5 +272,34 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         vm.expectRevert(IPoolInternal.Pool__InvalidQuoteRFQSignature.selector);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
+    }
+
+    function test_cancelQuotesRFQ_Success() public {
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        bytes32[] memory quoteRFQHashes = new bytes32[](1);
+        quoteRFQHashes[0] = pool.quoteRFQHash(quoteRFQ);
+
+        vm.prank(users.lp);
+        pool.cancelQuotesRFQ(quoteRFQHashes);
+
+        vm.expectRevert(IPoolInternal.Pool__QuoteRFQCancelled.selector);
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
+    }
+
+    function test_getQuoteRFQFilledAmount_ReturnExpectedValue() public {
+        mintAndApprove();
+
+        IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
+
+        vm.prank(users.trader);
+        pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig, address(0));
+
+        bytes32 quoteRFQHash = pool.quoteRFQHash(quoteRFQ);
+        assertEq(
+            pool.getQuoteRFQFilledAmount(quoteRFQ.provider, quoteRFQHash),
+            quoteRFQ.size / TWO
+        );
     }
 }

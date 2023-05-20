@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -16,17 +16,16 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
-    function _test_withdraw_750LC(bool isCall) internal {
+    function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
         vm.warp(block.timestamp + 60);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(ud(200 ether), isCall),
-            isCall
+            contractsToCollateral(ud(200 ether))
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
@@ -40,8 +39,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         UD60x18 withdrawSize = ud(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         uint256 withdrawCollateralValue = scaleDecimals(
-            contractsToCollateral(withdrawSize * avgPrice, isCall),
-            isCall
+            contractsToCollateral(withdrawSize * avgPrice)
         );
 
         vm.prank(users.lp);
@@ -60,10 +58,6 @@ abstract contract PoolWithdrawTest is DeployTest {
             IERC20(poolToken).balanceOf(users.lp),
             initialCollateral - depositCollateralValue + withdrawCollateralValue
         );
-    }
-
-    function test_withdraw_750LC() public {
-        _test_withdraw_750LC(poolKey.isCallPool);
     }
 
     function test_withdraw_RevertIf_BeforeEndOfWithdrawalDelay() public {

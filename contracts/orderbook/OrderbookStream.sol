@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -48,6 +49,7 @@ contract OrderbookStream {
         IPoolFactory.PoolKey poolKey
     );
 
+    /// @notice Emits PublishQuote event for `quote`
     function add(Quote[] calldata quote) external {
         for (uint256 i = 0; i < quote.length; i++) {
             emit PublishQuote(

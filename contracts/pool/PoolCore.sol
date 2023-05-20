@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -301,9 +301,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function writeFrom(
         address underwriter,
         address longReceiver,
-        UD60x18 size
+        UD60x18 size,
+        address referrer
     ) external nonReentrant {
-        return _writeFrom(underwriter, longReceiver, size);
+        return _writeFrom(underwriter, longReceiver, size, referrer);
     }
 
     /// @inheritdoc IPoolCore
