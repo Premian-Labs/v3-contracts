@@ -59,7 +59,7 @@ contract DeployTest is Test, Assertions {
 
     address base;
     address quote;
-    address premia;
+    IERC20 premia;
 
     bool isCallTest;
 
@@ -131,7 +131,7 @@ contract DeployTest is Test, Assertions {
 
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
-        premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70;
+        premia = IERC20(0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70);
 
         oracleAdapter = new OracleAdapterMock(
             address(base),
@@ -203,7 +203,7 @@ contract DeployTest is Test, Assertions {
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
-            premia,
+            address(premia),
             address(quote),
             address(exchangeHelper)
         );
