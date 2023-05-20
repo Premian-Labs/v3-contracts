@@ -18,6 +18,7 @@ import {IERC20Router} from "../router/IERC20Router.sol";
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IUserSettings} from "../settings/IUserSettings.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
+import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -54,6 +55,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable FEE_RECEIVER;
     address internal immutable REFERRAL;
     address internal immutable SETTINGS;
+    address internal immutable VAULT_REGISTRY;
     address internal immutable VXPREMIA;
 
     // ToDo : Define final values
@@ -77,6 +79,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     ) {
         FACTORY = factory;
@@ -85,6 +88,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FEE_RECEIVER = feeReceiver;
         REFERRAL = referral;
         SETTINGS = settings;
+        VAULT_REGISTRY = vaultRegistry;
         VXPREMIA = vxPremia;
     }
 
@@ -694,7 +698,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        UD60x18 protocolFee = _takerFee(l, longReceiver, size, ZERO, true);
+        address taker = underwriter;
+        if (IVaultRegistry(VAULT_REGISTRY).isVault(msg.sender)) {
+            taker = longReceiver;
+        }
+
+        UD60x18 protocolFee = _takerFee(l, taker, size, ZERO, true);
 
         IERC20Router(ROUTER).safeTransferFrom(
             l.getPoolToken(),
@@ -704,19 +713,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         UD60x18 totalReferralRebate = _calculateTotalReferralRebate(
-            longReceiver,
+            taker,
             referrer,
             protocolFee
         );
 
-        _useReferral(
-            l,
-            longReceiver,
-            referrer,
-            totalReferralRebate,
-            protocolFee
-        );
-
+        _useReferral(l, taker, referrer, totalReferralRebate, protocolFee);
         l.protocolFees = l.protocolFees + protocolFee - totalReferralRebate;
 
         _mint(underwriter, PoolStorage.SHORT, size);
@@ -725,6 +727,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit WriteFrom(
             underwriter,
             longReceiver,
+            taker,
             size,
             collateral,
             protocolFee

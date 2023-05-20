@@ -22,6 +22,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     )
         PoolInternal(
@@ -31,6 +32,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
             feeReceiver,
             referral,
             settings,
+            vaultRegistry,
             vxPremia
         )
     {}

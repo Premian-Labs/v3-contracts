@@ -352,6 +352,53 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         );
     }
 
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        address taker,
+        UD60x18 contractSize,
+        UD60x18 collateral,
+        UD60x18 protocolFee
+    );
+
+    function test_trade_UseLongReceiverAsTaker() public {
+        setup();
+
+        UD60x18 tradeSize = ud(3e18);
+        uint256 fee = pool.takerFee(users.trader, tradeSize, 0, true);
+
+        uint256 totalPremium = vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            address(0)
+        );
+
+        IERC20 token = IERC20(getPoolToken());
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+
+        emit WriteFrom(
+            address(vault),
+            users.trader,
+            users.trader,
+            tradeSize,
+            contractsToCollateral(tradeSize),
+            ud(scaleDecimalsTo(fee))
+        );
+
+        vault.trade(
+            poolKey,
+            tradeSize,
+            true,
+            totalPremium + totalPremium / 10,
+            address(0)
+        );
+
+        vm.stopPrank();
+    }
+
     function test_trade_RevertIf_NotEnoughAvailableCapital() public {
         setup();
 

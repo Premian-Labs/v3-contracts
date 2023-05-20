@@ -91,7 +91,8 @@ interface IPoolCore is IPoolInternal {
         Position.Key calldata p
     ) external view returns (uint256);
 
-    /// @notice Underwrite an option by depositing collateral
+    /// @notice Underwrite an option by depositing collateral. By default the taker fee and referral are applied to the
+    ///         underwriter, if the caller is a registered vault the longReceiver is used instead.
     /// @param underwriter The underwriter of the option (Collateral will be taken from this address, and it will receive the short token)
     /// @param longReceiver The address which will receive the long token
     /// @param size The number of contracts being underwritten (18 decimals)
