@@ -869,17 +869,16 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
         quote.mintingFee = l.convertAssetToUD60x18(
-            IPool(quote.pool).takerFee(address(this), size, 0, true)
+            IPool(quote.pool).takerFee(args.taker, args.size, 0, true)
         );
-
-        return quote;
     }
 
     /// @inheritdoc IVault
     function getQuote(
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        address taker
     ) external view returns (uint256 premium) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
             .layout();

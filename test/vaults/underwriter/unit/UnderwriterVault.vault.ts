@@ -17,7 +17,7 @@ import { expect } from 'chai';
 import { getValidMaturity, ONE_HOUR } from '../../../../utils/time';
 import { UnderwriterVaultMock } from '../../../../typechain';
 import { TokenType } from '../../../../utils/sdk/types';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 
 let vault: UnderwriterVaultMock;
 
@@ -116,9 +116,10 @@ describe('UnderwriterVault', () => {
           await vault.setLastTradeTimestamp(lastTradeTimestamp);
 
           await oracleAdapter.mock.quote.returns(spot);
-          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
-            .withArgs(base.address, spot, strike, '19178082191780821')
-            .returns(parseEther('1.54'));
+
+          await volOracle.mock[
+            'getVolatility(address,uint256,uint256,uint256)'
+          ].returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
           await addDeposit(vault, lp, depositSize, base, quote);
@@ -144,7 +145,13 @@ describe('UnderwriterVault', () => {
 
           const quoteSize = parseEther('3');
 
-          const premium = await vault.getQuote(poolKey, quoteSize, true);
+          const premium = await vault.getQuote(
+            poolKey,
+            quoteSize,
+            true,
+            await vault.signer.getAddress(),
+          );
+
           const token = isCall ? base : quote;
           const totalPremium = parseFloat(
             formatUnits(premium, await token.decimals()),
@@ -163,7 +170,12 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getQuote(poolKey, parseEther('6'), true),
+            vault.getQuote(
+              poolKey,
+              parseEther('6'),
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__InsufficientFunds');
         });
 
@@ -176,7 +188,12 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getQuote({ ...poolKey, maturity }, parseEther('3'), true),
+            vault.getQuote(
+              { ...poolKey, maturity },
+              parseEther('3'),
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionPoolNotListed');
         });
 
@@ -190,7 +207,12 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('0');
 
           await expect(
-            vault.getQuote(poolKey, quoteSize, true),
+            vault.getQuote(
+              poolKey,
+              quoteSize,
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__ZeroSize');
         });
 
@@ -204,7 +226,12 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getQuote({ ...poolKey, strike: 0 }, quoteSize, true),
+            vault.getQuote(
+              { ...poolKey, strike: 0 },
+              quoteSize,
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__StrikeZero');
         });
 
@@ -221,6 +248,7 @@ describe('UnderwriterVault', () => {
               { ...poolKey, isCallPool: !poolKey.isCallPool },
               quoteSize,
               true,
+              await vault.signer.getAddress(),
             ),
           ).to.be.revertedWithCustomError(
             vault,
@@ -237,7 +265,12 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getQuote(poolKey, quoteSize, false),
+            vault.getQuote(
+              poolKey,
+              quoteSize,
+              false,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__TradeMustBeBuy');
         });
 
@@ -250,7 +283,12 @@ describe('UnderwriterVault', () => {
           const quoteSize = parseEther('3');
 
           await expect(
-            vault.getQuote(poolKey, quoteSize, true),
+            vault.getQuote(
+              poolKey,
+              quoteSize,
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OptionExpired');
         });
 
@@ -314,7 +352,12 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getQuote(poolKey, quoteSize, true),
+            vault.getQuote(
+              poolKey,
+              quoteSize,
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDTEBounds');
         });
 
@@ -366,7 +409,12 @@ describe('UnderwriterVault', () => {
           await vault.setSpotPrice(spot);
 
           await expect(
-            vault.getQuote(poolKey, quoteSize, true),
+            vault.getQuote(
+              poolKey,
+              quoteSize,
+              true,
+              await vault.signer.getAddress(),
+            ),
           ).to.be.revertedWithCustomError(vault, 'Vault__OutOfDeltaBounds');
         });
       });
@@ -414,12 +462,14 @@ describe('UnderwriterVault', () => {
           await vault.setLastTradeTimestamp(lastTradeTimestamp);
 
           await oracleAdapter.mock.quote.returns(spot);
-          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
-            .withArgs(base.address, spot, strike, '19178082191780821')
-            .returns(parseEther('1.54'));
-          await volOracle.mock['getVolatility(address,uint256,uint256,uint256)']
-            .withArgs(base.address, spot, strike, '134246575342465753')
-            .returns(parseEther('1.54'));
+
+          await volOracle.mock[
+            'getVolatility(address,uint256,uint256,uint256)'
+          ].returns(parseEther('1.54'));
+
+          await volOracle.mock[
+            'getVolatility(address,uint256,uint256,uint256)'
+          ].returns(parseEther('1.54'));
 
           const depositSize = isCall ? 5 : 5 * xstrike;
           await addDeposit(vault, lp, depositSize, base, quote);
@@ -460,7 +510,12 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const totalPremium = await vault.getQuote(poolKey, tradeSize, true);
+          const totalPremium = await vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            await vault.signer.getAddress(),
+          );
 
           // Approve amount for trader to trade with
           const token = isCall ? base : quote;
@@ -545,7 +600,12 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const totalPremium = await vault.getQuote(poolKey, tradeSize, true);
+          const totalPremium = await vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            await vault.signer.getAddress(),
+          );
 
           // Approve amount for trader to trade with
           const token = isCall ? base : quote;
@@ -652,7 +712,12 @@ describe('UnderwriterVault', () => {
           await vault.setTimestamp(timestamp);
           await vault.setSpotPrice(spot);
 
-          const totalPremium = await vault.getQuote(poolKey, tradeSize, true);
+          const totalPremium = await vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            await vault.signer.getAddress(),
+          );
 
           // Approve amount for trader to trade with
           const token = isCall ? base : quote;

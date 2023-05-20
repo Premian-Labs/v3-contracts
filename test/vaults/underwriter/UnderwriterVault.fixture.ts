@@ -297,9 +297,7 @@ export async function vaultSetup() {
   ]);
 
   await volOracle.mock.getRiskFreeRate.returns(parseEther('0.01'));
-  await volOracle.mock.getVolatility
-    .withArgs(base.address, parseEther('1500'), [], [])
-    .returns([]);
+  await volOracle.mock.getVolatility.returns([]);
 
   //=====================================================================================
   // Mock Factory/Pool setup
