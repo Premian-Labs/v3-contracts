@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
@@ -30,7 +30,8 @@ library ReferralStorage {
         }
     }
 
-    function toPoolTokenDecimals(
+    /// @notice Adjust decimals of `value` with 18 decimals to match the `token` decimals
+    function toTokenDecimals(
         address token,
         UD60x18 value
     ) internal view returns (uint256) {

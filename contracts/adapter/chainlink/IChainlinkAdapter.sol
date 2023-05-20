@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
@@ -27,6 +27,7 @@ interface IChainlinkAdapter is IOracleAdapter {
         TOKEN_USD_BTC_WBTC
     }
 
+    /// @notice The conversion type used when determining the token pair pricing path
     enum ConversionType {
         TO_BTC, // Token -> BTC
         TO_USD, // Token -> USD

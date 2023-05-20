@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
@@ -12,6 +13,7 @@ import {WAD} from "./Constants.sol";
 library PoolName {
     using UintUtils for uint256;
 
+    /// @notice Returns pool parameters as human-readable text
     function name(
         address base,
         address quote,
@@ -35,6 +37,7 @@ library PoolName {
             );
     }
 
+    /// @notice Converts the `strike` into a string
     function strikeToString(
         uint256 strike
     ) internal pure returns (string memory) {
@@ -85,6 +88,7 @@ library PoolName {
         return string(strikeBytes);
     }
 
+    /// @notice Converts the `maturity` into a string
     function maturityToString(
         uint256 maturity
     ) internal pure returns (string memory) {
@@ -103,6 +107,7 @@ library PoolName {
             );
     }
 
+    /// @notice Converts the `month` into a string
     function monthToString(
         uint256 month
     ) internal pure returns (string memory) {

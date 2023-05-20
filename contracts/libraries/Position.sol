@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 
@@ -11,7 +11,7 @@ import {iZERO, ZERO, ONE, TWO} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 
-/// @notice Keeps track of LP positions
+/// @notice Keeps track of LP positions.
 ///         Stores the lower and upper Ticks of a user's range order, and tracks the pro-rata exposure of the order.
 library Position {
     using Math for int256;
@@ -31,7 +31,7 @@ library Position {
         OrderType orderType;
     }
 
-    // All the data used to calculate the key of the position
+    /// @notice All the data used to calculate the key of the position
     struct KeyInternal {
         // The Agent that owns the exposure change of the Position
         address owner;
@@ -48,7 +48,14 @@ library Position {
         UD60x18 strike;
     }
 
-    // All the data required to be saved in storage
+    /// @notice The order type of a position
+    enum OrderType {
+        CSUP, // Collateral <-> Short - Use Premiums
+        CS, // Collateral <-> Short
+        LC // Long <-> Collateral
+    }
+
+    /// @notice All the data required to be saved in storage
     struct Data {
         // Used to track claimable fees over time (18 decimals)
         UD60x18 lastFeeRate;
@@ -58,18 +65,13 @@ library Position {
         uint256 lastDeposit;
     }
 
-    enum OrderType {
-        CSUP, // Collateral <-> Short - Use Premiums
-        CS, // Collateral <-> Short
-        LC // Long <-> Collateral
-    }
-
     struct Delta {
         SD59x18 collateral;
         SD59x18 longs;
         SD59x18 shorts;
     }
 
+    /// @notice Returns the position key hash for `self`
     function keyHash(Key memory self) internal pure returns (bytes32) {
         return
             keccak256(
@@ -83,6 +85,7 @@ library Position {
             );
     }
 
+    /// @notice Returns the position key hash for `self`
     function keyHash(KeyInternal memory self) internal pure returns (bytes32) {
         return
             keyHash(
@@ -96,6 +99,8 @@ library Position {
             );
     }
 
+    /// @notice Returns the internal position key for `self`
+    /// @param strike The strike of the option (18 decimals)
     function toKeyInternal(
         Key memory self,
         UD60x18 strike,
@@ -113,19 +118,32 @@ library Position {
             });
     }
 
+    /// @notice Returns true if the position `orderType` is short
     function isShort(OrderType orderType) internal pure returns (bool) {
         return orderType == OrderType.CS || orderType == OrderType.CSUP;
     }
 
+    /// @notice Returns true if the position `orderType` is long
     function isLong(OrderType orderType) internal pure returns (bool) {
         return orderType == OrderType.LC;
     }
 
+    /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
+    ///         from left to right.
+    ///
+    ///         Usage:
+    ///         CS order: f(x) defines the amount of shorts of a CS order holding one unit of liquidity.
+    ///         LC order: (1 - f(x)) defines the amount of longs of a LC order holding one unit of liquidity.
+    ///
+    ///         Function definition:
+    ///         case 1. f(x) = 0                                for x < lower
+    ///         case 2. f(x) = (x - lower) / (upper - lower)    for lower <= x <= upper
+    ///         case 3. f(x) = 1                                for x > upper
     function pieceWiseLinear(
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
+        revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
         if (price <= self.lower) return ZERO;
         else if (self.lower < price && price < self.upper)
@@ -133,11 +151,21 @@ library Position {
         else return ONE;
     }
 
+    /// @notice Returns the amount of 'bid-side' collateral associated to a range order with one unit of liquidity.
+    ///
+    ///         Usage:
+    ///         CS order: bid-side collateral defines the premiums generated from selling options.
+    ///         LC order: bid-side collateral defines the collateral used to pay for buying long options.
+    ///
+    ///         Function definition:
+    ///         case 1. f(x) = 0                                            for x < lower
+    ///         case 2. f(x) = (price**2 - lower) / [2 * (upper - lower)]   for lower <= x <= upper
+    ///         case 3. f(x) = (upper + lower) / 2                          for x > upper
     function pieceWiseQuadratic(
         KeyInternal memory self,
         UD60x18 price
     ) internal pure returns (UD60x18) {
-        ensureLowerGreaterOrEqualUpper(self.lower, self.upper);
+        revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
         UD60x18 a;
         if (price <= self.lower) {
@@ -154,6 +182,8 @@ library Position {
         return numerator / denominator;
     }
 
+    /// @notice Converts `_collateral` to the amount of contracts normalized to 18 decimals
+    /// @param strike The strike price (18 decimals)
     function collateralToContracts(
         UD60x18 _collateral,
         UD60x18 strike,
@@ -162,8 +192,12 @@ library Position {
         return isCall ? _collateral : _collateral / strike;
     }
 
-    /// @notice Converts the amount of contracts to the amount of collateral normalized to 18 decimals.
-    ///         WARNING : Decimals needs to be scaled before using this amount for collateral transfers
+    /// @notice Converts `_contracts` to the amount of collateral normalized to 18 decimals
+    ///         ===========================================================
+    ///         WARNING:
+    ///         Decimals needs to be scaled before using this amount for collateral transfers
+    ///         ===========================================================
+    /// @param strike The strike price (18 decimals)
     function contractsToCollateral(
         UD60x18 _contracts,
         UD60x18 strike,
@@ -172,7 +206,8 @@ library Position {
         return isCall ? _contracts : _contracts * strike;
     }
 
-    /// @notice Returns the per-tick liquidity phi (delta) for a specific position.
+    /// @notice Returns the per-tick liquidity phi (delta) for a specific position key `self`
+    /// @param size The contract amount (18 decimals)
     function liquidityPerTick(
         KeyInternal memory self,
         UD60x18 size
@@ -185,12 +220,17 @@ library Position {
         return size / amountOfTicks;
     }
 
-    /// @notice Bid collateral either used to buy back options or revenue /
-    ///         income generated from underwriting / selling options.
+    /// @notice Returns the bid collateral (18 decimals) either used to buy back options or revenue/ income generated from
+    ///         underwriting / selling options.
+    ///         ===========================================================
     ///         For a <= p <= b we have:
     ///
     ///         bid(p; a, b) = [ (p - a) / (b - a) ] * [ (a + p)  / 2 ]
     ///                      = (p^2 - a^2) / [2 * (b - a)]
+    ///         ===========================================================
+    /// @param self The internal position key
+    /// @param size The contract amount (18 decimals)
+    /// @param price The current market price (18 decimals)
     function bid(
         KeyInternal memory self,
         UD60x18 size,
@@ -204,9 +244,10 @@ library Position {
             );
     }
 
-    /// @notice Total collateral held by the position. Note that here we do not
-    ///         distinguish between ask- and bid-side collateral. This increases the
-    ///         capital efficiency of the range order.
+    /// @notice Returns the total collateral (18 decimals) held by the position key `self`. Note that here we do not distinguish
+    ///         between ask- and bid-side collateral. This increases the capital efficiency of the range order.
+    /// @param size The contract amount (18 decimals)
+    /// @param price The current market price (18 decimals)
     function collateral(
         KeyInternal memory self,
         UD60x18 size,
@@ -235,6 +276,9 @@ library Position {
         }
     }
 
+    /// @notice Returns the total contracts (18 decimals) held by the position key `self`
+    /// @param size The contract amount (18 decimals)
+    /// @param price The current market price (18 decimals)
     function contracts(
         KeyInternal memory self,
         UD60x18 size,
@@ -249,7 +293,9 @@ library Position {
         return nu * size;
     }
 
-    /// @notice Number of long contracts held in position at current price
+    /// @notice Returns the number of long contracts (18 decimals) held in position `self` at current price
+    /// @param size The contract amount (18 decimals)
+    /// @param price The current market price (18 decimals)
     function long(
         KeyInternal memory self,
         UD60x18 size,
@@ -264,7 +310,9 @@ library Position {
         }
     }
 
-    /// @notice Number of short contracts held in position at current price
+    /// @notice Returns the number of short contracts (18 decimals) held in position `self` at current price
+    /// @param size The contract amount (18 decimals)
+    /// @param price The current market price (18 decimals)
     function short(
         KeyInternal memory self,
         UD60x18 size,
@@ -279,15 +327,12 @@ library Position {
         }
     }
 
-    /// @notice Calculate the update for the Position. Either increments them in case
-    ///         withdraw is False (i.e. in case there is a deposit) and otherwise
-    ///         decreases them. Returns the change in collateral, longs, shorts.
-    ///         These are transferred to (withdrawal) or transferred from (deposit)
-    ///         the Agent (Position.operator).
+    /// @notice Calculate the update for the Position. Either increments them in case withdraw is False (i.e. in case there is a deposit)
+    ///         and otherwise decreases them. Returns the change in collateral, longs, shorts. These are transferred to (withdrawal)or
+    ///         transferred from (deposit) the Agent (Position.operator).
     /// @param currentBalance The current balance of tokens (18 decimals)
     /// @param amount The number of tokens deposited or withdrawn (18 decimals)
-    /// @param price The current market price, used to compute the change in
-    ///              collateral, long and shorts due to the change in tokens (18 decimals)
+    /// @param price The current market price, used to compute the change in collateral, long and shorts due to the change in tokens (18 decimals)
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         KeyInternal memory self,
@@ -314,7 +359,8 @@ library Position {
             (self.short(absChangeTokens, price)).intoSD59x18();
     }
 
-    function ensureLowerGreaterOrEqualUpper(
+    /// @notice Revert if `lower` is greater or equal to `upper`
+    function revertIfLowerGreaterOrEqualUpper(
         UD60x18 lower,
         UD60x18 upper
     ) internal pure {

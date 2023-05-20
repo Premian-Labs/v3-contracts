@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
@@ -47,6 +47,7 @@ library VolatilityOracleStorage {
         }
     }
 
+    /// @notice Returns the current parameters for `token`
     function getParams(
         Layout storage l,
         address token
@@ -54,6 +55,7 @@ library VolatilityOracleStorage {
         return l.parameters[token];
     }
 
+    /// @notice Returns the parsed parameters for the encoded `input`
     function parseParams(
         bytes32 input
     ) internal pure returns (int256[5] memory params) {
@@ -96,6 +98,7 @@ library VolatilityOracleStorage {
         }
     }
 
+    /// @notice Returns the encoded parameters for `params`
     function formatParams(
         int256[5] memory params
     ) internal pure returns (bytes32 result) {
