@@ -78,8 +78,7 @@ contract VaultRegistryTest is Test, Assertions {
         address indexed asset,
         bytes32 vaultType,
         IVaultRegistry.TradeSide side,
-        IVaultRegistry.OptionType optionType,
-        string name
+        IVaultRegistry.OptionType optionType
     );
 
     event VaultRemoved(address indexed vault);
@@ -124,8 +123,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         n = registry.getNumberOfVaults();
@@ -138,8 +136,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         n = registry.getNumberOfVaults();
@@ -160,8 +157,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         assertEq(registry.getNumberOfVaults(), 1);
@@ -175,8 +171,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
     }
 
@@ -190,8 +185,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         registry.addVault(
@@ -199,8 +193,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         assertEq(registry.getNumberOfVaults(), 1);
@@ -216,8 +209,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Both,
-            "default"
+            IVaultRegistry.OptionType.Both
         );
 
         registry.removeVault(address(123));
@@ -230,8 +222,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Both,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         registry.removeVault(address(123));
@@ -244,8 +235,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Both,
-            IVaultRegistry.OptionType.Both,
-            "default"
+            IVaultRegistry.OptionType.Both
         );
 
         registry.removeVault(address(123));
@@ -260,8 +250,7 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             vaultType,
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
 
         assertEq(registry.getNumberOfVaults(), 1);

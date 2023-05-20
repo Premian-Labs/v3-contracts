@@ -25,19 +25,11 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         address asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string memory name
+        OptionType optionType
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        l.vaults[vault] = Vault(
-            vault,
-            asset,
-            vaultType,
-            side,
-            optionType,
-            name
-        );
+        l.vaults[vault] = Vault(vault, asset, vaultType, side, optionType);
 
         l.vaultAddresses.add(vault);
         l.vaultsByType[vaultType].add(vault);
@@ -55,7 +47,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             l.vaultsByOptionType[OptionType.Put].add(vault);
         }
 
-        emit VaultAdded(vault, asset, vaultType, side, optionType, name);
+        emit VaultAdded(vault, asset, vaultType, side, optionType);
     }
 
     /// @inheritdoc IVaultRegistry
@@ -97,8 +89,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         address asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string memory name
+        OptionType optionType
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
@@ -142,16 +133,9 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
             }
         }
 
-        l.vaults[vault] = Vault(
-            vault,
-            asset,
-            vaultType,
-            side,
-            optionType,
-            name
-        );
+        l.vaults[vault] = Vault(vault, asset, vaultType, side, optionType);
 
-        emit VaultUpdated(vault, asset, vaultType, side, optionType, name);
+        emit VaultUpdated(vault, asset, vaultType, side, optionType);
     }
 
     /// @inheritdoc IVaultRegistry

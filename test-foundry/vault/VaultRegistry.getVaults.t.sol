@@ -31,8 +31,7 @@ contract VaultRegistryTest is Test, Assertions {
         address indexed asset,
         bytes32 vaultType,
         IVaultRegistry.TradeSide side,
-        IVaultRegistry.OptionType optionType,
-        string name
+        IVaultRegistry.OptionType optionType
     );
 
     event VaultRemoved(address indexed vault);
@@ -62,88 +61,77 @@ contract VaultRegistryTest is Test, Assertions {
             address(2),
             keccak256("Vault1"),
             IVaultRegistry.TradeSide.Sell,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
         registry.addVault(
             address(11),
             address(2),
             keccak256("Vault1"),
             IVaultRegistry.TradeSide.Sell,
-            IVaultRegistry.OptionType.Put,
-            "default"
+            IVaultRegistry.OptionType.Put
         );
         registry.addVault(
             address(12),
             address(2),
             keccak256("Vault2"),
             IVaultRegistry.TradeSide.Both,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
         registry.addVault(
             address(13),
             address(2),
             keccak256("Vault2"),
             IVaultRegistry.TradeSide.Both,
-            IVaultRegistry.OptionType.Put,
-            "default"
+            IVaultRegistry.OptionType.Put
         );
         registry.addVault(
             address(14),
             address(2),
             keccak256("Vault3"),
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
         registry.addVault(
             address(15),
             address(2),
             keccak256("Vault3"),
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Put,
-            "default"
+            IVaultRegistry.OptionType.Put
         );
         registry.addVault(
             address(16),
             address(2),
             keccak256("Vault3"),
             IVaultRegistry.TradeSide.Sell,
-            IVaultRegistry.OptionType.Call,
-            "default"
+            IVaultRegistry.OptionType.Call
         );
         registry.addVault(
             address(17),
             address(2),
             keccak256("Vault3"),
             IVaultRegistry.TradeSide.Sell,
-            IVaultRegistry.OptionType.Put,
-            "default"
+            IVaultRegistry.OptionType.Put
         );
         registry.addVault(
             address(18),
             address(2),
             keccak256("Vault4"),
             IVaultRegistry.TradeSide.Buy,
-            IVaultRegistry.OptionType.Both,
-            "default"
+            IVaultRegistry.OptionType.Both
         );
         registry.addVault(
             address(19),
             address(2),
             keccak256("Vault4"),
             IVaultRegistry.TradeSide.Sell,
-            IVaultRegistry.OptionType.Both,
-            "default"
+            IVaultRegistry.OptionType.Both
         );
         registry.addVault(
             address(20),
             address(2),
             keccak256("Vault4"),
             IVaultRegistry.TradeSide.Both,
-            IVaultRegistry.OptionType.Both,
-            "default"
+            IVaultRegistry.OptionType.Both
         );
 
         vm.stopPrank();

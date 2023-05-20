@@ -25,7 +25,6 @@ interface IVaultRegistry {
         bytes32 vaultType;
         TradeSide side;
         OptionType optionType;
-        string name;
     }
 
     struct TokenPair {
@@ -40,8 +39,7 @@ interface IVaultRegistry {
         address indexed asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string name
+        OptionType optionType
     );
     event VaultRemoved(address indexed vault);
     event VaultUpdated(
@@ -49,8 +47,7 @@ interface IVaultRegistry {
         address indexed asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string name
+        OptionType optionType
     );
     event SupportedTokenPairAdded(
         address indexed vault,
@@ -75,14 +72,12 @@ interface IVaultRegistry {
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
-    /// @param name The official name of the vault.
     function addVault(
         address vault,
         address asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string memory name
+        OptionType optionType
     ) external;
 
     /// @notice Removes a vault from the registry.
@@ -95,14 +90,12 @@ interface IVaultRegistry {
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
-    /// @param name The official name of the vault.
     function updateVault(
         address vault,
         address asset,
         bytes32 vaultType,
         TradeSide side,
-        OptionType optionType,
-        string memory name
+        OptionType optionType
     ) external;
 
     /// @notice Adds a set of supported token pairs to the vault.
