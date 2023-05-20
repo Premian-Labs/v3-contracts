@@ -51,7 +51,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
     }
 
-    function test_writeFrom_Write_500_Options_WithReferral() public {
+    function test_writeFrom_Write_500_Options_WithReferral() internal {
         uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
