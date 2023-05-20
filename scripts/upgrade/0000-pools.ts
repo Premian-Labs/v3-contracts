@@ -20,6 +20,7 @@ async function main() {
   let poolFactory: string;
   let router: string;
   let referral: string;
+  let vaultRegistry: string;
   let userSettings: string;
   let vxPremia: string;
   let weth: string;
@@ -52,6 +53,7 @@ async function main() {
   userSettings = addresses.UserSettingsProxy;
   vxPremia = addresses.VxPremiaProxy;
   weth = addresses.tokens.WETH;
+  vaultRegistry = addresses.VaultRegistryProxy;
 
   //////////////////////////
 
@@ -67,6 +69,7 @@ async function main() {
     weth,
     feeReceiver,
     referral,
+    vaultRegistry,
     log,
     isDevMode,
   );
