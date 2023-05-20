@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -185,7 +185,6 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
-    // ToDo : Move somewhere else
     function test_ticks_ReturnExpectedValues() internal {
         deposit(1000 ether);
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -97,5 +97,7 @@ interface IVolatilityOracle {
         UD60x18[] memory timeToMaturity
     ) external view returns (UD60x18[] memory);
 
+    /// @notice Returns the current risk-free rate
+    /// @return The current risk-free rate
     function getRiskFreeRate() external view returns (UD60x18);
 }

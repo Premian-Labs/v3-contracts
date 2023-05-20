@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -20,8 +21,6 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
-    // ToDo : Define final value
-    // ToDo : Make this part of global pool settings ?
     UD60x18 internal constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
     bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS =
@@ -210,6 +209,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return true;
     }
 
+    /// @notice Revert if `token` is not the pool token
     function _revertIfNotPoolToken(address token) internal view {
         if (token != PoolStorage.layout().getPoolToken())
             revert Pool__NotPoolToken(token);
