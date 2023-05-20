@@ -185,7 +185,6 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
-    // ToDo : Move somewhere else
     function test_ticks_ReturnExpectedValues() internal {
         deposit(1000 ether);
 

@@ -21,8 +21,6 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
-    // ToDo : Define final value
-    // ToDo : Make this part of global pool settings ?
     UD60x18 internal constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
     bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS =

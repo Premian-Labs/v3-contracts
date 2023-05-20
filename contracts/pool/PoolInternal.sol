@@ -56,7 +56,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable SETTINGS;
     address internal immutable VXPREMIA;
 
-    // ToDo : Define final values
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE =
@@ -1555,8 +1554,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ////////////////
     // TickSystem //
     ////////////////
-    // ToDo : Reorganize those functions ?
-
     /// @notice Returns the nearest tick below `lower` and the nearest tick below `upper`
     function _getNearestTicksBelow(
         UD60x18 lower,
