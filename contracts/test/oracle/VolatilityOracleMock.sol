@@ -11,8 +11,8 @@ import {VolatilityOracleStorage} from "../../oracle/VolatilityOracleStorage.sol"
 contract VolatilityOracleMock is VolatilityOracle {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
 
-    mapping(bytes32 => UD60x18) volatilityMap;
-    UD60x18 riskFreeRate;
+    mapping(bytes32 => UD60x18) internal volatilityMap;
+    UD60x18 internal riskFreeRate;
 
     function findInterval(
         SD59x18[5] memory arr,
