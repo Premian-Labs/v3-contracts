@@ -225,7 +225,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 spot,
         UD60x18 strike,
         UD60x18 timeToMaturity
-    ) public view returns (UD60x18) {
+    ) public view virtual returns (UD60x18) {
         if (spot == ZERO) revert VolatilityOracle__SpotIsZero();
         if (strike == ZERO) revert VolatilityOracle__StrikeIsZero();
         if (timeToMaturity == ZERO)
@@ -316,7 +316,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         UD60x18 spot,
         UD60x18[] memory strike,
         UD60x18[] memory timeToMaturity
-    ) external view returns (UD60x18[] memory) {
+    ) external view virtual returns (UD60x18[] memory) {
         if (strike.length != timeToMaturity.length)
             revert VolatilityOracle__ArrayLengthMismatch();
 
@@ -329,7 +329,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         return sigma;
     }
 
-    function getRiskFreeRate() external view returns (UD60x18) {
+    function getRiskFreeRate() external view virtual returns (UD60x18) {
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage
             .layout();
         return l.riskFreeRate;

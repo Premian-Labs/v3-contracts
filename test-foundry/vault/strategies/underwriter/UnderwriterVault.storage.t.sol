@@ -14,13 +14,6 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
-    uint256 startTime = 100000;
-
-    uint256 t0 = startTime + 7 days;
-    uint256 t1 = startTime + 10 days;
-    uint256 t2 = startTime + 14 days;
-    uint256 t3 = startTime + 30 days;
-
     function test_convertAssetToUD60x18_ReturnExpectedValue() public {
         UD60x18 value = ud(11.2334e18);
         uint256 valueScaled = scaleDecimals(value);

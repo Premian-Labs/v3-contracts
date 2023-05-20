@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
@@ -14,6 +14,8 @@ contract OracleAdapterMock {
 
     UD60x18 internal quoteAmount;
     UD60x18 internal quoteFromAmount;
+
+    mapping(uint256 => UD60x18) quoteFromAmountMap;
 
     constructor(
         address _base,
@@ -33,6 +35,10 @@ contract OracleAdapterMock {
         quoteAmount = _quoteAmount;
     }
 
+    function setQuoteFrom(uint256 maturity, UD60x18 _quoteFromAmount) external {
+        quoteFromAmountMap[maturity] = _quoteFromAmount;
+    }
+
     function setQuoteFrom(UD60x18 _quoteFromAmount) external {
         quoteFromAmount = _quoteFromAmount;
     }
@@ -44,8 +50,12 @@ contract OracleAdapterMock {
     function quoteFrom(
         address,
         address,
-        uint256
+        uint256 maturity
     ) external view returns (UD60x18) {
+        if (quoteFromAmountMap[maturity] != ud(0)) {
+            return quoteFromAmountMap[maturity];
+        }
+
         return quoteFromAmount;
     }
 
