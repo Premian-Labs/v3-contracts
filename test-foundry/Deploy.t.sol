@@ -52,6 +52,8 @@ import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
 
+import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
+
 import {Assertions} from "./Assertions.sol";
 
 contract DeployTest is Test, Assertions {
@@ -72,6 +74,7 @@ contract DeployTest is Test, Assertions {
     IReferralMock referral;
     IUserSettings userSettings;
     IVxPremia vxPremia;
+    VaultRegistry vaultRegistry;
 
     IPoolMock pool;
 
@@ -214,6 +217,14 @@ contract DeployTest is Test, Assertions {
 
         PoolBase poolBaseImpl = new PoolBase();
 
+        address vaultRegistryImpl = address(new VaultRegistry());
+
+        address vaultRegistryProxy = address(
+            new ProxyUpgradeableOwnable(vaultRegistryImpl)
+        );
+
+        vaultRegistry = VaultRegistry(vaultRegistryProxy);
+
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
             address(factory),
             address(router),
@@ -221,6 +232,7 @@ contract DeployTest is Test, Assertions {
             feeReceiver,
             address(referral),
             address(userSettings),
+            address(vaultRegistry),
             address(vxPremia)
         );
 
@@ -231,6 +243,7 @@ contract DeployTest is Test, Assertions {
             feeReceiver,
             address(referral),
             address(userSettings),
+            address(vaultRegistry),
             address(vxPremia)
         );
 
@@ -241,6 +254,7 @@ contract DeployTest is Test, Assertions {
             feeReceiver,
             address(referral),
             address(userSettings),
+            address(vaultRegistry),
             address(vxPremia)
         );
 
@@ -251,6 +265,7 @@ contract DeployTest is Test, Assertions {
             feeReceiver,
             address(referral),
             address(userSettings),
+            address(vaultRegistry),
             address(vxPremia)
         );
 
