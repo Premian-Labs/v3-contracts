@@ -694,7 +694,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        UD60x18 protocolFee = _takerFee(l, underwriter, size, ZERO, true);
+        UD60x18 protocolFee = _takerFee(l, longReceiver, size, ZERO, true);
 
         IERC20Router(ROUTER).safeTransferFrom(
             l.getPoolToken(),
