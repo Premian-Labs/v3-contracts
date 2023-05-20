@@ -51,14 +51,8 @@ abstract contract PoolWriteFromTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
     }
 
-    function test_writeFrom_Write_500_Options() public {
-        _test_writeFrom_Write_500_Options(poolKey.isCallPool);
-    }
-
-    function _test_writeFrom_Write_500_Options_WithReferral(
-        bool isCall
-    ) internal {
-        uint256 initialCollateral = _mintForLP(isCall);
+    function test_writeFrom_Write_500_Options_WithReferral() public {
+        uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
@@ -74,24 +68,20 @@ abstract contract PoolWriteFromTest is DeployTest {
                 UD60x18 secondaryRebatePercent
             ) = referral.getRebatePercents(users.referrer);
 
-            UD60x18 _primaryRebate = primaryRebatePercent *
-                scaleDecimals(fee, isCall);
+            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(fee);
 
             UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(fee, isCall);
+                scaleDecimals(fee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+            uint256 primaryRebate = scaleDecimals(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(size, isCall),
-            isCall
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(size));
 
-        IERC20 poolToken = IERC20(getPoolToken(isCall));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         assertEq(poolToken.balanceOf(address(referral)), totalRebate);
 
@@ -109,10 +99,6 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
-    }
-
-    function test_writeFrom_Write_500_Options_WithReferral() public {
-        _test_writeFrom_Write_500_Options_WithReferral(poolKey.isCallPool);
     }
 
     function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress()

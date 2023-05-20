@@ -86,7 +86,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 feeReceiver,
                 address(volOracle),
                 address(factory),
-                address(router)
+                address(router),
+                address(vxPremia)
             )
         );
 
