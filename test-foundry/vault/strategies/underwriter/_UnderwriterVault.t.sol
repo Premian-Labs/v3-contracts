@@ -6,7 +6,6 @@ import {UnderwriterVaultErc4626Test} from "./UnderwriterVault.erc4626.t.sol";
 import {UnderwriterVaultFeesTest} from "./UnderwriterVault.fees.t.sol";
 import {UnderwriterVaultInternalTest} from "./UnderwriterVault.internal.t.sol";
 import {UnderwriterVaultPpsTest} from "./UnderwriterVault.pps.t.sol";
-import {UnderwriterVaultRevertIfTest} from "./UnderwriterVault.revertIf.t.sol";
 import {UnderwriterVaultStorageTest} from "./UnderwriterVault.storage.t.sol";
 import {UnderwriterVaultVaultTest} from "./UnderwriterVault.vault.t.sol";
 
@@ -15,7 +14,6 @@ abstract contract UnderwriterVaultTest is
     UnderwriterVaultFeesTest,
     UnderwriterVaultInternalTest,
     UnderwriterVaultPpsTest,
-    UnderwriterVaultRevertIfTest,
     UnderwriterVaultStorageTest,
     UnderwriterVaultVaultTest
 {}

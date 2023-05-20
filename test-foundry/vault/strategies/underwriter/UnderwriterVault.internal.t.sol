@@ -504,4 +504,122 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             address(pool)
         );
     }
+
+    function test__revertIfNotTradeableWithVault__Success() public {
+        // Does not revert when trying to buy a call option from the call vault
+        vault.revertIfNotTradeableWithVault(true, true, true);
+        // Does not revert when trying to buy a put option from the put vault
+        vault.revertIfNotTradeableWithVault(false, false, true);
+
+        // trying to sell a call option to the call vault
+        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
+        vault.revertIfNotTradeableWithVault(true, true, false);
+
+        // trying to buy a put option from the call vault
+        vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
+        vault.revertIfNotTradeableWithVault(true, false, true);
+
+        // trying to sell a put option to the call vault
+        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
+        vault.revertIfNotTradeableWithVault(true, false, false);
+
+        // trying to buy a call option from the put vault
+        vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
+        vault.revertIfNotTradeableWithVault(false, true, true);
+
+        // trying to sell a call option to the put vault
+        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
+        vault.revertIfNotTradeableWithVault(false, true, false);
+
+        // trying to sell a put option to the put vault
+        vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
+        vault.revertIfNotTradeableWithVault(false, true, false);
+    }
+
+    function test_revertIfOptionInvalid_Success() public {
+        vault.setTimestamp(1000);
+
+        // Does not revert when trading a valid option
+        vault.revertIfOptionInvalid(ud(1500e18), 1200);
+
+        // trading an expired option
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IVault.Vault__OptionExpired.selector,
+                1000,
+                800
+            )
+        );
+        vault.revertIfOptionInvalid(ud(1500e18), 800);
+
+        // trading an option with a strike equal to zero
+        vm.expectRevert(IVault.Vault__StrikeZero.selector);
+        vault.revertIfOptionInvalid(ud(0), 800);
+
+        // trading an option with a strike equal to zero
+        vm.expectRevert(IVault.Vault__StrikeZero.selector);
+        vault.revertIfOptionInvalid(ud(0), 1200);
+    }
+
+    function test_revertIfInsufficientFunds_Success() public {
+        // Does not revert when trying to buy 5 call contracts when there is 10 units of collateral available
+        callVault.revertIfInsufficientFunds(ud(1500e18), ud(5e18), ud(10e18));
+
+        // Does not revert when trying to buy 5 put contracts when there is 5 units of collateral available
+        putVault.revertIfInsufficientFunds(ud(1500e18), ud(5e18), ud(10000e18));
+
+        // trying to buy 10 call contracts when there is 10 units of collateral available
+        vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
+        callVault.revertIfInsufficientFunds(ud(1500e18), ud(10e18), ud(10e18));
+
+        // trying to buy 12 call contracts when there is 10 units of collateral available
+        vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
+        callVault.revertIfInsufficientFunds(ud(1500e18), ud(12e18), ud(10e18));
+
+        // trying to buy 5 put contracts when there is 5 units of collateral available
+        vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
+        putVault.revertIfInsufficientFunds(ud(1500e18), ud(5e18), ud(7500e18));
+
+        // trying to buy 5 put contracts when there is 5 units of collateral available
+        vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
+        putVault.revertIfInsufficientFunds(ud(1500e18), ud(5e18), ud(5000e18));
+    }
+
+    function test_revertIfOutOfDTEBounds_Success() public {
+        // Does not revert when equal to the lower bound
+        vault.revertIfOutOfDTEBounds(ud(5e18), ud(5e18), ud(10e18));
+
+        // Does not revert when within the bounds
+        vault.revertIfOutOfDTEBounds(ud(7e18), ud(5e18), ud(10e18));
+
+        // Does not revert when equal to the upper bound
+        vault.revertIfOutOfDTEBounds(ud(10e18), ud(5e18), ud(10e18));
+
+        // below the lower bound
+        vm.expectRevert(IVault.Vault__OutOfDTEBounds.selector);
+        vault.revertIfOutOfDTEBounds(ud(3e18), ud(5e18), ud(10e18));
+
+        // above the upper bound
+        vm.expectRevert(IVault.Vault__OutOfDTEBounds.selector);
+        vault.revertIfOutOfDTEBounds(ud(12e18), ud(5e18), ud(10e18));
+    }
+
+    function test_revertIfOutOfDeltaBounds_Success() public {
+        // Does not revert when equal to the lower bound
+        vault.revertIfOutOfDeltaBounds(ud(5e18), ud(5e18), ud(10e18));
+
+        // Does not revert when within the bounds
+        vault.revertIfOutOfDeltaBounds(ud(7e18), ud(5e18), ud(10e18));
+
+        // Does not revert when equal to the upper bound
+        vault.revertIfOutOfDeltaBounds(ud(10e18), ud(5e18), ud(10e18));
+
+        // below the lower bound
+        vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
+        vault.revertIfOutOfDeltaBounds(ud(3e18), ud(5e18), ud(10e18));
+
+        // above the upper bound
+        vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
+        vault.revertIfOutOfDeltaBounds(ud(12e18), ud(5e18), ud(10e18));
+    }
 }
