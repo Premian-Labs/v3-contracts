@@ -305,6 +305,7 @@ export async function vaultSetup() {
   // Mock Factory/Pool setup
   strike = parseEther('1500'); // ATM
   maturity = await getValidMaturity(2, 'weeks');
+  console.log('maturity', maturity);
 
   //=====================================================================================
   // vxPREMIA setup

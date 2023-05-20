@@ -4,14 +4,15 @@ pragma solidity >=0.8.19;
 
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 
-import {PoolTest} from "./_Pool.t.sol";
+import {UnderwriterVaultTest} from "./_UnderwriterVault.t.sol";
 
-contract PoolCallTest is PoolTest {
+contract UnderwriterVaultPutTest is UnderwriterVaultTest {
     function setUp() public override {
         super.setUp();
 
-        isCallTest = true;
-        poolKey.isCallPool = true;
+        isCallTest = false;
+        poolKey.isCallPool = false;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
+        vault = putVault;
     }
 }

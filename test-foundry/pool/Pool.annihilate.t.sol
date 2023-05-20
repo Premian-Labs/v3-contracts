@@ -15,21 +15,20 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolAnnihilateTest is DeployTest {
-    function _test_annihilate_Success(bool isCall) internal {
+    function test_annihilate_Success() public {
         deposit(1000 ether);
         vm.startPrank(users.lp);
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
         deal(
             poolToken,
             users.lp,
-            scaleDecimals(contractsToCollateral(ud(1000 ether), isCall), isCall)
+            scaleDecimals(contractsToCollateral(ud(1000 ether)))
         );
         IERC20(poolToken).approve(address(router), type(uint256).max);
 
         uint256 depositCollateralValue = scaleDecimals(
-            contractsToCollateral(ud(200 ether), isCall),
-            isCall
+            contractsToCollateral(ud(200 ether))
         );
 
         assertEq(
@@ -100,16 +99,8 @@ abstract contract PoolAnnihilateTest is DeployTest {
         );
         assertEq(
             IERC20(poolToken).balanceOf(users.lp),
-            totalPremium +
-                scaleDecimals(
-                    contractsToCollateral(annihilateSize, isCall),
-                    isCall
-                ),
+            totalPremium + scaleDecimals(contractsToCollateral(annihilateSize)),
             "poolToken lp 2"
         );
-    }
-
-    function test_annihilate_Success() public {
-        _test_annihilate_Success(poolKey.isCallPool);
     }
 }

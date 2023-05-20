@@ -17,10 +17,10 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTransferTest is DeployTest {
-    function _test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_SameOperator(
-        bool isCall
-    ) internal {
-        trade(1 ether, isCall, true);
+    function test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_SameOperator()
+        public
+    {
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
 
         vm.startPrank(users.lp);
@@ -33,41 +33,6 @@ abstract contract PoolTransferTest is DeployTest {
 
         Position.Key memory newKey = Position.Key({
             owner: users.lp,
-            operator: users.trader,
-            lower: posKey.lower,
-            upper: posKey.upper,
-            orderType: posKey.orderType
-        });
-
-        uint256 protocolFees = pool.protocolFees();
-        assertEq(pool.getClaimableFees(posKey), (protocolFees / 4) * 3);
-        assertEq(pool.getClaimableFees(newKey), protocolFees / 4);
-    }
-
-    function test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_SameOperator()
-        public
-    {
-        _test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_SameOperator(
-            poolKey.isCallPool
-        );
-    }
-
-    function _test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_NewOperator(
-        bool isCall
-    ) internal {
-        trade(1 ether, isCall, true);
-        uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
-
-        vm.startPrank(users.lp);
-        pool.transferPosition(
-            posKey,
-            users.trader,
-            users.trader,
-            ud(transferAmount)
-        );
-
-        Position.Key memory newKey = Position.Key({
-            owner: users.trader,
             operator: users.trader,
             lower: posKey.lower,
             upper: posKey.upper,
@@ -82,15 +47,34 @@ abstract contract PoolTransferTest is DeployTest {
     function test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_NewOperator()
         public
     {
-        _test_transferPosition_UpdateClaimableFees_OnPartialTransfer_NewOwner_NewOperator(
-            poolKey.isCallPool
+        trade(1 ether, true);
+        uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
+
+        vm.startPrank(users.lp);
+        pool.transferPosition(
+            posKey,
+            users.trader,
+            users.trader,
+            ud(transferAmount)
         );
+
+        Position.Key memory newKey = Position.Key({
+            owner: users.trader,
+            operator: users.trader,
+            lower: posKey.lower,
+            upper: posKey.upper,
+            orderType: posKey.orderType
+        });
+
+        uint256 protocolFees = pool.protocolFees();
+        assertEq(pool.getClaimableFees(posKey), (protocolFees / 4) * 3);
+        assertEq(pool.getClaimableFees(newKey), protocolFees / 4);
     }
 
-    function _test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_SameOperator(
-        bool isCall
-    ) internal {
-        trade(1 ether, isCall, true);
+    function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_SameOperator()
+        public
+    {
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId());
 
         vm.startPrank(users.lp);
@@ -114,18 +98,10 @@ abstract contract PoolTransferTest is DeployTest {
         assertEq(pool.getClaimableFees(newKey), protocolFees);
     }
 
-    function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_SameOperator()
+    function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_NewOperator()
         public
     {
-        _test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_SameOperator(
-            poolKey.isCallPool
-        );
-    }
-
-    function _test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_NewOperator(
-        bool isCall
-    ) internal {
-        trade(1 ether, isCall, true);
+        trade(1 ether, true);
         uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId());
 
         vm.startPrank(users.lp);
@@ -147,14 +123,6 @@ abstract contract PoolTransferTest is DeployTest {
         uint256 protocolFees = pool.protocolFees();
         assertEq(pool.getClaimableFees(posKey), 0);
         assertEq(pool.getClaimableFees(newKey), protocolFees);
-    }
-
-    function test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_NewOperator()
-        public
-    {
-        _test_transferPosition_UpdateClaimableFees_OnFullTransfer_NewOwner_NewOperator(
-            poolKey.isCallPool
-        );
     }
 
     function test_transferPosition_Success_OnPartialTransfer_NewOwner_SameOperator()
@@ -312,8 +280,8 @@ abstract contract PoolTransferTest is DeployTest {
         );
     }
 
-    function _test_safeTransferFrom_TransferLongToken(bool isCall) internal {
-        trade(1 ether, isCall, true);
+    function test_safeTransferFrom_TransferLongToken() public {
+        trade(1 ether, true);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.LONG), 0);
@@ -339,12 +307,8 @@ abstract contract PoolTransferTest is DeployTest {
         );
     }
 
-    function test_safeTransferFrom_TransferLongToken() public {
-        _test_safeTransferFrom_TransferLongToken(poolKey.isCallPool);
-    }
-
-    function _test_safeTransferFrom_TransferShortToken(bool isCall) internal {
-        trade(1 ether, isCall, false);
+    function test_safeTransferFrom_TransferShortToken() public {
+        trade(1 ether, false);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.SHORT), 0);
@@ -370,14 +334,10 @@ abstract contract PoolTransferTest is DeployTest {
         );
     }
 
-    function test_safeTransferFrom_TransferShortToken() public {
-        _test_safeTransferFrom_TransferShortToken(poolKey.isCallPool);
-    }
-
-    function _test_safeTransferFrom_TransferNonPositionToken_FromApprovedAddress(
-        bool isCall
-    ) internal {
-        trade(1 ether, isCall, true);
+    function test_safeTransferFrom_TransferNonPositionToken_FromApprovedAddress()
+        public
+    {
+        trade(1 ether, true);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), 1e18);
         assertEq(pool.balanceOf(users.otherTrader, PoolStorage.LONG), 0);
@@ -406,14 +366,6 @@ abstract contract PoolTransferTest is DeployTest {
         );
     }
 
-    function test_safeTransferFrom_TransferNonPositionToken_FromApprovedAddress()
-        public
-    {
-        _test_safeTransferFrom_TransferNonPositionToken_FromApprovedAddress(
-            poolKey.isCallPool
-        );
-    }
-
     function test_safeTransferFrom_RevertIf_TransferLpPosition() public {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
@@ -425,8 +377,8 @@ abstract contract PoolTransferTest is DeployTest {
         pool.safeTransferFrom(users.lp, users.trader, tokenId(), 200e18, "");
     }
 
-    function _test_safeTransferFrom_RevertIf_NotApproved(bool isCall) internal {
-        trade(1 ether, isCall, false);
+    function test_safeTransferFrom_RevertIf_NotApproved() public {
+        trade(1 ether, false);
 
         uint256 transferAmount = 0.3e18;
 
@@ -441,9 +393,5 @@ abstract contract PoolTransferTest is DeployTest {
             transferAmount,
             ""
         );
-    }
-
-    function test_safeTransferFrom_RevertIf_NotApproved() public {
-        _test_safeTransferFrom_RevertIf_NotApproved(poolKey.isCallPool);
     }
 }

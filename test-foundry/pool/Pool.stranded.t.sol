@@ -32,12 +32,9 @@ abstract contract PoolStrandedTest is DeployTest {
         UD60x18 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
-        bool isCall = poolKey.isCallPool;
-
-        IERC20 token = IERC20(getPoolToken(isCall));
+        IERC20 token = IERC20(getPoolToken());
         initialCollateral = scaleDecimals(
-            isCall ? depositSize : depositSize * poolKey.strike,
-            isCall
+            isCallTest ? depositSize : depositSize * poolKey.strike
         );
 
         vm.startPrank(users.lp);
@@ -89,11 +86,8 @@ abstract contract PoolStrandedTest is DeployTest {
         UD60x18 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
-        bool isCall = poolKey.isCallPool;
-
         initialCollateral = scaleDecimals(
-            isCall ? withdrawSize : withdrawSize * poolKey.strike,
-            isCall
+            isCallTest ? withdrawSize : withdrawSize * poolKey.strike
         );
 
         vm.startPrank(users.lp);

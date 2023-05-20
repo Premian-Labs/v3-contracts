@@ -13,15 +13,13 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolWriteFromTest is DeployTest {
-    function _mintForLP(bool isCall) internal returns (uint256) {
-        IERC20 poolToken = IERC20(getPoolToken(isCall));
+    function _mintForLP() internal returns (uint256) {
+        IERC20 poolToken = IERC20(getPoolToken());
 
         uint256 initialCollateral = scaleDecimals(
             contractsToCollateral(
-                isCall ? ud(1000 ether) : ud(1000 ether) * poolKey.strike,
-                isCall
-            ),
-            isCall
+                isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike
+            )
         );
 
         deal(address(poolToken), users.lp, initialCollateral);
@@ -31,8 +29,8 @@ abstract contract PoolWriteFromTest is DeployTest {
         return initialCollateral;
     }
 
-    function _test_writeFrom_Write_500_Options(bool isCall) internal {
-        uint256 initialCollateral = _mintForLP(isCall);
+    function test_writeFrom_Write_500_Options() public {
+        uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
@@ -40,12 +38,9 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(size, isCall),
-            isCall
-        ) + fee;
+        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
 
-        IERC20 poolToken = IERC20(getPoolToken(isCall));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         assertEq(poolToken.balanceOf(address(pool)), collateral);
         assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
@@ -120,10 +115,10 @@ abstract contract PoolWriteFromTest is DeployTest {
         _test_writeFrom_Write_500_Options_WithReferral(poolKey.isCallPool);
     }
 
-    function _test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress(
-        bool isCall
-    ) internal {
-        uint256 initialCollateral = _mintForLP(isCall);
+    function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress()
+        public
+    {
+        uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
@@ -134,12 +129,9 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.otherTrader);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(size, isCall),
-            isCall
-        ) + fee;
+        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
 
-        IERC20 poolToken = IERC20(getPoolToken(isCall));
+        IERC20 poolToken = IERC20(getPoolToken());
 
         assertEq(poolToken.balanceOf(address(pool)), collateral);
         assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
@@ -148,14 +140,6 @@ abstract contract PoolWriteFromTest is DeployTest {
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
-    }
-
-    function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress()
-        public
-    {
-        _test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress(
-            poolKey.isCallPool
-        );
     }
 
     function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval()
