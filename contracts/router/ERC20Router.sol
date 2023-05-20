@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
@@ -17,6 +18,7 @@ contract ERC20Router is IERC20Router {
         POOL_FACTORY = poolFactory;
     }
 
+    /// @inheritdoc IERC20Router
     function safeTransferFrom(
         address token,
         address from,

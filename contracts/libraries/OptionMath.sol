@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -9,7 +9,6 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iNINE, iTEN} from "./Constants.sol";
 
 library OptionMath {
-    // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
         int256 discountFactor;
         int256 timeScaledVol;
@@ -42,9 +41,8 @@ library OptionMath {
     }
 
     /// @notice Approximation of the normal CDF
-    /// @dev The approximation implemented is based on the paper
-    /// 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
-    /// by Haim Shore
+    /// @dev The approximation implemented is based on the paper 'Accurate RMM-Based Approximations for the CDF of the Normal
+    ///      Distribution' by Haim Shore
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) (18 decimals)
     /// @return result The normal CDF evaluated at x (18 decimals)
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
@@ -58,8 +56,7 @@ library OptionMath {
     }
 
     /// @notice Normal Distribution Probability Density Function.
-    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
-    ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
+    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with µ = 0 and σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
     /// @param x Number to get PDF for (18 decimals)
@@ -88,6 +85,15 @@ library OptionMath {
         return ZERO;
     }
 
+    /// @notice Returns the terms d1 and d2 from the Black-Scholes formula that are used
+    ///         to compute the price of a call / put option.
+    /// @param spot The spot price. (18 decimals)
+    /// @param strike The strike price of the option. (18 decimals)
+    /// @param timeToMaturity The time until the option expires. (18 decimals)
+    /// @param volAnnualized The percentage volatility of the geometric Brownian motion. (18 decimals)
+    /// @param riskFreeRate The rate of the risk-less asset, i.e. the risk-free interest rate. (18 decimals)
+    /// @return d1 The term d1 from the Black-Scholes formula. (18 decimals)
+    /// @return d2 The term d2 from the Black-Scholes formula. (18 decimals)
     function d1d2(
         UD60x18 spot,
         UD60x18 strike,

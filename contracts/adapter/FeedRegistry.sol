@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
@@ -56,6 +56,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
         return _feed(mappedTokenA, mappedTokenB);
     }
 
+    /// @notice Returns the feed for `tokenA` and `tokenB`
     function _feed(
         address tokenA,
         address tokenB
@@ -66,6 +67,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
             ];
     }
 
+    /// @notice Returns true if a feed exists for `tokenA` and `tokenB`
     function _feedExists(
         address tokenA,
         address tokenB
@@ -73,6 +75,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
         return _feed(tokenA, tokenB) != address(0);
     }
 
+    /// @notice Returns the denomination mapped to `token`, if it has one
     /// @dev Should only map wrapped tokens which are guaranteed to have a 1:1 ratio
     function _tokenToDenomination(
         address token
@@ -80,6 +83,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
         return token == WRAPPED_NATIVE_TOKEN ? Denominations.ETH : token;
     }
 
+    /// @notice Returns the sorted and mapped tokens for `tokenA` and `tokenB`
     function _mapToDenominationAndSort(
         address tokenA,
         address tokenB
@@ -92,6 +96,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
         return mappedTokenA.sortTokens(mappedTokenB);
     }
 
+    /// @notice Returns the mapped token denominations for `tokenA` and `tokenB`
     function _mapToDenomination(
         address tokenA,
         address tokenB

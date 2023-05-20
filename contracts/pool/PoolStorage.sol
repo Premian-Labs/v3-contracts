@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {AggregatorInterface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorInterface.sol";
 
@@ -207,14 +207,17 @@ library PoolStorage {
         }
     }
 
+    /// @notice Converts `value` to pool token decimals and approves `spender`
     function approve(IERC20 token, address spender, UD60x18 value) internal {
         token.approve(spender, PoolStorage.layout().toPoolTokenDecimals(value));
     }
 
+    /// @notice Converts `value` to pool token decimals and transfers `token`
     function safeTransfer(IERC20 token, address to, UD60x18 value) internal {
         token.safeTransfer(to, PoolStorage.layout().toPoolTokenDecimals(value));
     }
 
+    /// @notice Converts `value` to pool token decimals and transfers `token`
     function safeTransferFrom(
         IERC20Router router,
         address token,

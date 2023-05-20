@@ -1,8 +1,10 @@
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity >=0.8.20;
 
 import {AggregatorV2V3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV2V3Interface.sol";
 
+/// @notice Wrapper interface for the AggregatorProxy contracts
 interface AggregatorProxyInterface is AggregatorV2V3Interface {
     function phaseAggregators(uint16 phaseId) external view returns (address);
 

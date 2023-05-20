@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -113,6 +113,7 @@ contract UniswapV3ChainlinkAdapter is
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
+    /// @notice Returns a composite quote price by combining the `tokenIn`/ETH and ETH/`tokenOut` prices
     function _quoteFrom(
         address tokenIn,
         address tokenOut,
@@ -177,6 +178,7 @@ contract UniswapV3ChainlinkAdapter is
             );
     }
 
+    /// @notice Revert if `token` is the wrapped native token
     function _revertIfWrappedNative(address token) internal view {
         if (token == WRAPPED_NATIVE)
             revert UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative();
