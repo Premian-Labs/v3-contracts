@@ -15,7 +15,7 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTradeTest is DeployTest {
-    function _test_trade_Buy50Options_WithApproval(bool isCall) internal {
+    function test_trade_Buy50Options_WithApproval() public {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -27,7 +27,7 @@ abstract contract PoolTradeTest is DeployTest {
             true
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -46,11 +46,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), 0);
     }
 
-    function test_trade_Buy50Options_WithApproval() public {
-        _test_trade_Buy50Options_WithApproval(poolKey.isCallPool);
-    }
-
-    function _test_trade_Buy50Options_WithReferral(bool isCall) internal {
+    function test_trade_Buy50Options_WithReferral() public {
         posKey.orderType = Position.OrderType.CS;
         uint256 initialCollateral = deposit(1000 ether);
 
@@ -71,18 +67,18 @@ abstract contract PoolTradeTest is DeployTest {
             ) = referral.getRebatePercents(users.referrer);
 
             UD60x18 _primaryRebate = primaryRebatePercent *
-                scaleDecimals(takerFee, isCall);
+                scaleDecimals(takerFee);
 
             UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(takerFee, isCall);
+                scaleDecimals(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+            uint256 primaryRebate = scaleDecimals(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        address token = getPoolToken(isCall);
+        address token = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -110,17 +106,12 @@ abstract contract PoolTradeTest is DeployTest {
         );
     }
 
-    function test_trade_Buy50Options_WithReferral() public {
-        _test_trade_Buy50Options_WithReferral(poolKey.isCallPool);
-    }
-
-    function _test_trade_Sell50Options_WithApproval(bool isCall) internal {
+    function test_trade_Sell50Options_WithApproval() public {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
         uint256 collateralScaled = scaleDecimals(
-            contractsToCollateral(tradeSize, isCall),
-            isCall
+            contractsToCollateral(tradeSize)
         );
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -129,7 +120,7 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, collateralScaled);
@@ -147,11 +138,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), totalPremium);
     }
 
-    function test_trade_Sell50Options_WithApproval() public {
-        _test_trade_Sell50Options_WithApproval(poolKey.isCallPool);
-    }
-
-    function _test_trade_Sell50Options_WithReferral(bool isCall) internal {
+    function test_trade_Sell50Options_WithReferral() public {
         uint256 depositSize = 1000 ether;
         deposit(depositSize);
 
@@ -159,22 +146,17 @@ abstract contract PoolTradeTest is DeployTest {
 
         {
             UD60x18 _collateral = contractsToCollateral(
-                UD60x18.wrap(depositSize),
-                isCall
+                UD60x18.wrap(depositSize)
             );
 
             initialCollateral = scaleDecimals(
-                _collateral * posKey.lower.avg(posKey.upper),
-                isCall
+                _collateral * posKey.lower.avg(posKey.upper)
             );
         }
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(tradeSize, isCall),
-            isCall
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(
             users.trader,
@@ -191,18 +173,18 @@ abstract contract PoolTradeTest is DeployTest {
             ) = referral.getRebatePercents(users.referrer);
 
             UD60x18 _primaryRebate = primaryRebatePercent *
-                scaleDecimals(takerFee, isCall);
+                scaleDecimals(takerFee);
 
             UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(takerFee, isCall);
+                scaleDecimals(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate, isCall);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate, isCall);
+            uint256 primaryRebate = scaleDecimals(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        address token = getPoolToken(isCall);
+        address token = getPoolToken();
 
         vm.startPrank(users.trader);
 
@@ -230,13 +212,9 @@ abstract contract PoolTradeTest is DeployTest {
         );
     }
 
-    function test_trade_Sell50Options_WithReferral() public {
-        _test_trade_Sell50Options_WithReferral(poolKey.isCallPool);
-    }
-
-    function _test_trade_RevertIf_BuyOptions_WithTotalPremiumAboveLimit(
-        bool isCall
-    ) internal {
+    function test_trade_RevertIf_BuyOptions_WithTotalPremiumAboveLimit()
+        public
+    {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -247,7 +225,7 @@ abstract contract PoolTradeTest is DeployTest {
             true
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, totalPremium);
@@ -264,23 +242,14 @@ abstract contract PoolTradeTest is DeployTest {
         pool.trade(tradeSize, true, totalPremium - 1, address(0));
     }
 
-    function test_trade_RevertIf_BuyOptions_WithTotalPremiumAboveLimit()
+    function test_trade_RevertIf_SellOptions_WithTotalPremiumBelowLimit()
         public
     {
-        _test_trade_RevertIf_BuyOptions_WithTotalPremiumAboveLimit(
-            poolKey.isCallPool
-        );
-    }
-
-    function _test_trade_RevertIf_SellOptions_WithTotalPremiumBelowLimit(
-        bool isCall
-    ) internal {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
         uint256 collateralScaled = scaleDecimals(
-            contractsToCollateral(tradeSize, isCall),
-            isCall
+            contractsToCollateral(tradeSize)
         );
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(
@@ -289,7 +258,7 @@ abstract contract PoolTradeTest is DeployTest {
             false
         );
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, collateralScaled);
@@ -304,14 +273,6 @@ abstract contract PoolTradeTest is DeployTest {
             )
         );
         pool.trade(tradeSize, false, totalPremium + 1, address(0));
-    }
-
-    function test_trade_RevertIf_SellOptions_WithTotalPremiumBelowLimit()
-        public
-    {
-        _test_trade_RevertIf_SellOptions_WithTotalPremiumBelowLimit(
-            poolKey.isCallPool
-        );
     }
 
     function test_trade_RevertIf_BuyOptions_WithInsufficientAskLiquidity()

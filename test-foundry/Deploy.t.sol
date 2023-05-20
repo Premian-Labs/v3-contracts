@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.20;
 
+import "forge-std/console2.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -59,6 +61,8 @@ contract DeployTest is Test, Assertions {
     address quote;
     address premia;
 
+    bool isCallTest;
+
     OracleAdapterMock oracleAdapter;
     IPoolFactory.PoolKey poolKey;
     PoolFactory factory;
@@ -86,6 +90,9 @@ contract DeployTest is Test, Assertions {
         address otherTrader;
         address referrer;
         address agent;
+        address caller;
+        address receiver;
+        address underwriter;
     }
 
     bytes4[] internal poolBaseSelectors;
@@ -99,11 +106,15 @@ contract DeployTest is Test, Assertions {
     receive() external payable {}
 
     function setUp() public virtual {
+        _setUp(17100000, 1682668800);
+    }
+
+    function _setUp(uint256 forkBlock, uint256 maturity) internal {
         string memory ETH_RPC_URL = string.concat(
             "https://eth-mainnet.alchemyapi.io/v2/",
             vm.envString("API_KEY_ALCHEMY")
         );
-        mainnetFork = vm.createFork(ETH_RPC_URL, 17100000);
+        mainnetFork = vm.createFork(ETH_RPC_URL, forkBlock);
         vm.selectFork(mainnetFork);
 
         users = Users({
@@ -112,7 +123,10 @@ contract DeployTest is Test, Assertions {
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
             referrer: vm.addr(5),
-            agent: vm.addr(6)
+            agent: vm.addr(6),
+            caller: vm.addr(7),
+            receiver: vm.addr(8),
+            underwriter: vm.addr(9)
         });
 
         base = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
@@ -131,7 +145,7 @@ contract DeployTest is Test, Assertions {
             quote: quote,
             oracleAdapter: address(oracleAdapter),
             strike: ud(1000 ether),
-            maturity: 1682668800,
+            maturity: maturity,
             isCallPool: true
         });
 
@@ -392,12 +406,9 @@ contract DeployTest is Test, Assertions {
         UD60x18 strike,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
-        bool isCall = poolKey.isCallPool;
-
-        IERC20 token = IERC20(getPoolToken(isCall));
+        IERC20 token = IERC20(getPoolToken());
         initialCollateral = scaleDecimals(
-            isCall ? depositSize : depositSize * strike,
-            isCall
+            isCallTest ? depositSize : depositSize * strike
         );
 
         vm.startPrank(users.lp);
@@ -422,7 +433,6 @@ contract DeployTest is Test, Assertions {
 
     function trade(
         uint256 tradeSize,
-        bool isCall,
         bool isBuy
     ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
         if (isBuy) posKey.orderType = Position.OrderType.CS;
@@ -433,11 +443,11 @@ contract DeployTest is Test, Assertions {
 
         (totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, isBuy);
 
-        address poolToken = getPoolToken(isCall);
+        address poolToken = getPoolToken();
 
         uint256 mintAmount = isBuy
             ? totalPremium
-            : scaleDecimals(poolKey.strike, isCall);
+            : scaleDecimals(poolKey.strike);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, mintAmount);
@@ -454,53 +464,39 @@ contract DeployTest is Test, Assertions {
         vm.stopPrank();
     }
 
-    function getPoolToken(bool isCall) internal view returns (address) {
-        return isCall ? base : quote;
+    function getPoolToken() internal view returns (address) {
+        return isCallTest ? base : quote;
     }
 
     function contractsToCollateral(
-        UD60x18 amount,
-        bool isCall
+        UD60x18 amount
     ) internal view returns (UD60x18) {
-        return isCall ? amount : amount * poolKey.strike;
+        return isCallTest ? amount : amount * poolKey.strike;
     }
 
     function collateralToContracts(
-        UD60x18 amount,
-        bool isCall
+        UD60x18 amount
     ) internal view returns (UD60x18) {
-        return isCall ? amount : amount / poolKey.strike;
+        return isCallTest ? amount : amount / poolKey.strike;
     }
 
-    function scaleDecimals(
-        UD60x18 amount,
-        bool isCall
-    ) internal view returns (uint256) {
-        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+    function scaleDecimals(UD60x18 amount) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
 
-    function scaleDecimals(
-        uint256 amount,
-        bool isCall
-    ) internal view returns (UD60x18) {
-        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+    function scaleDecimals(uint256 amount) internal view returns (UD60x18) {
+        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
-    function scaleDecimalsTo(
-        uint256 amount,
-        bool isCall
-    ) internal view returns (uint256) {
-        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+    function scaleDecimalsTo(uint256 amount) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount, decimals, 18);
     }
 
-    function scaleDecimalsTo(
-        UD60x18 amount,
-        bool isCall
-    ) internal view returns (uint256) {
-        uint8 decimals = ISolidStateERC20(getPoolToken(isCall)).decimals();
+    function scaleDecimalsTo(UD60x18 amount) internal view returns (uint256) {
+        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
     }
 
@@ -514,11 +510,8 @@ contract DeployTest is Test, Assertions {
             );
     }
 
-    function getSettlementPrice(
-        bool isCall,
-        bool isITM
-    ) internal pure returns (UD60x18) {
-        if (isCall) {
+    function getSettlementPrice(bool isITM) internal view returns (UD60x18) {
+        if (isCallTest) {
             return isITM ? UD60x18.wrap(1200 ether) : UD60x18.wrap(800 ether);
         } else {
             return isITM ? UD60x18.wrap(800 ether) : UD60x18.wrap(1200 ether);
@@ -526,13 +519,12 @@ contract DeployTest is Test, Assertions {
     }
 
     function getExerciseValue(
-        bool isCall,
         bool isITM,
         UD60x18 tradeSize,
         UD60x18 settlementPrice
     ) internal view returns (UD60x18 exerciseValue) {
         if (isITM) {
-            if (isCall) {
+            if (isCallTest) {
                 exerciseValue = tradeSize * (settlementPrice - poolKey.strike);
                 exerciseValue = exerciseValue / settlementPrice;
             } else {
@@ -544,12 +536,11 @@ contract DeployTest is Test, Assertions {
     }
 
     function getCollateralValue(
-        bool isCall,
         UD60x18 tradeSize,
         UD60x18 exerciseValue
     ) internal view returns (UD60x18) {
         return
-            isCall
+            isCallTest
                 ? tradeSize - exerciseValue
                 : tradeSize * poolKey.strike - exerciseValue;
     }
