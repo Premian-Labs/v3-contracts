@@ -15,8 +15,8 @@ import {ZERO, ONE} from "./Constants.sol";
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
 ///         ===========================================================
 ///         WARNING:
-///         This library should not be used for computations that span multiple ticks. Instead, the user should use the functions
-///         of this library to simplify computations for more complex price calculations.
+///         This library should not be used for computations that span multiple ticks. Instead, the user should use the
+///         functions of this library to simplify computations for more complex price calculations.
 ///         ===========================================================
 library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
@@ -55,8 +55,8 @@ library Pricing {
         return proportion(args.lower, args.upper, args.marketPrice);
     }
 
-    /// @notice Find the number of ticks of an active tick range. Used to compute the aggregate, bid or ask liquidity either
-    ///         of the pool or the range order.
+    /// @notice Find the number of ticks of an active tick range. Used to compute the aggregate, bid or ask liquidity
+    ///         either of the pool or the range order.
     ///         ===========================================================
     ///         min_tick_distance = 0.01
     ///         lower = 0.01
@@ -105,7 +105,8 @@ library Pricing {
         return args.isBuy ? askLiquidity(args) : bidLiquidity(args);
     }
 
-    /// @notice Computes price reached from the current lower/upper tick after buying/selling `trade_size` amount of contracts
+    /// @notice Computes price reached from the current lower/upper tick after buying/selling `trade_size` amount of
+    ///         contracts
     function price(
         Args memory args,
         UD60x18 tradeSize

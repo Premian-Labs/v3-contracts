@@ -100,7 +100,8 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
-    /// @notice Returns a time-weighted average price quote based on the weighted arithmetic mean tick of the `tokenIn`, `tokenOut` UniswapV3 pools.
+    /// @notice Returns a time-weighted average price quote based on the weighted arithmetic mean tick of the `tokenIn`,
+    ///         `tokenOut` UniswapV3 pools.
     function _quoteFrom(
         address tokenIn,
         address tokenOut,

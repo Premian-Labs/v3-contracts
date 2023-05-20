@@ -199,7 +199,8 @@ contract Referral is IReferral, OwnableInternal {
         }
     }
 
-    /// @notice Sets the `referrer` for a `user` if they don't already have one. If a referrer has already been set, return the existing referrer.
+    /// @notice Sets the `referrer` for a `user` if they don't already have one. If a referrer has already been set,
+    ///         return the existing referrer.
     function _trySetReferrer(
         address user,
         address referrer

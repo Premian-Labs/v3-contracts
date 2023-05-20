@@ -231,7 +231,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is either ETH/USD, token/ETH or token/USD
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is either ETH/USD, token/ETH or
+    ///         token/USD
     function _getDirectPrice(
         PricingPath path,
         address tokenIn,
@@ -260,7 +261,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return invert ? price.inv() : price;
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when both tokens share the same base (either ETH or USD)
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when both tokens share the same base (either
+    ///         ETH or USD)
     function _getPriceSameBase(
         PricingPath path,
         address tokenIn,
@@ -284,7 +286,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         return adjustedTokenInToBase / adjustedTokenOutToBase;
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when one of the tokens uses ETH as the base, and the other USD
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when one of the tokens uses ETH as the base,
+    ///         and the other USD
     function _getPriceDifferentBases(
         PricingPath path,
         address tokenIn,
@@ -369,7 +372,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             // Note: If there is a WBTC/USD feed the preferred path is TOKEN_USD, TOKEN_USD_TOKEN, or A_USD_ETH_B
             srcToken = isTokenAWBTC ? tokenB : tokenA;
             conversionType = ConversionType.TO_BTC;
-            // PricingPath used are same, but effective path slightly differs because of the 2 attempts in `_tryToFindPath`
+            // PricingPath used are same, but effective path slightly differs because of the 2 attempts in
+            // `_tryToFindPath`
             preferredPath = PricingPath.TOKEN_USD_BTC_WBTC; // Token -> USD -> BTC -> WBTC
             fallbackPath = PricingPath.TOKEN_USD_BTC_WBTC; // Token -> BTC -> WBTC
         } else if (isTokenBUSD) {
@@ -397,13 +401,15 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             preferredPath = PricingPath.TOKEN_ETH;
             fallbackPath = PricingPath.A_ETH_USD_B; // A -> ETH is skipped, if A == ETH
         } else if (_feedExists(tokenA, Denominations.USD)) {
-            // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively convert tokenB -> tokenA
+            // If tokenA has a USD feed, we want to convert tokenB to USD, and then use tokenA USD feed to effectively
+            // convert tokenB -> tokenA
             srcToken = tokenB;
             conversionType = ConversionType.TO_USD_TO_TOKEN;
             preferredPath = PricingPath.TOKEN_USD_TOKEN;
             fallbackPath = PricingPath.A_USD_ETH_B;
         } else if (_feedExists(tokenA, Denominations.ETH)) {
-            // If tokenA has an ETH feed, we want to convert tokenB to ETH, and then use tokenA ETH feed to effectively convert tokenB -> tokenA
+            // If tokenA has an ETH feed, we want to convert tokenB to ETH, and then use tokenA ETH feed to effectively
+            // convert tokenB -> tokenA
             srcToken = tokenB;
             conversionType = ConversionType.TO_ETH_TO_TOKEN;
             preferredPath = PricingPath.TOKEN_ETH_TOKEN;
@@ -506,10 +512,11 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         if (target >= updatedAt) aggregatorRoundId = 0;
 
         // ===========================================================
-        // This loop will attempt to find the price closest to the target time. If  target - updatedAt >= PRICE_STALE_THRESHOLD
-        // the price is considered stale. If the price is stale, there are two possible outcomes:
+        // This loop will attempt to find the price closest to the target time, however, if
+        // target - updatedAt >= PRICE_STALE_THRESHOLD the price is considered stale.
+        // If the price is stale, there are two possible outcomes:
         //  - If price is stale and block.timestamp - target < MAX_DELAY, the call will revert.
-        //  - If price is stale and block.timestamp - target >= MAX_DELAY, the price closest to the target time will be returned.
+        //  - If price is stale and block.timestamp - target >= MAX_DELAY, price closest to target time is returned.
         // ===========================================================
 
         while (aggregatorRoundId > 0) {
