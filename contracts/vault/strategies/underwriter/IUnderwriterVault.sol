@@ -79,6 +79,21 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 mintingFee;
     }
 
+    struct QuoteArgsInternal {
+        // the strike price of the option
+        UD60x18 strike;
+        // the maturity of the option
+        uint256 maturity;
+        // whether the option is a call or a put
+        bool isCall;
+        // the amount of contracts
+        UD60x18 size;
+        // whether the trade is a buy or a sell
+        bool isBuy;
+        // the address of the taker
+        address taker;
+    }
+
     struct FeeInternal {
         // amount of assets that the user's shares are worth currently
         UD60x18 assets;

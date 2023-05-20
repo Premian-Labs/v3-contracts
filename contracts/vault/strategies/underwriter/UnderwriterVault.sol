@@ -781,50 +781,64 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             revert Vault__AboveMaxSlippage(totalPremium, premiumLimit);
     }
 
-    /// @notice Get the variables needed in order to compute the quote for a trade.
-    /// @param strike The strike price of the option.
-    /// @param maturity The maturity of the option.
-    /// @param size The amount of contracts.
-    /// @param isBuy Whether the trade is a buy or a sell.
-    /// @return quote The variables needed in order to compute the quote for a trade.
+    /// @notice Get the variables needed in order to compute the quote for a trade
     function _getQuoteInternal(
         UnderwriterVaultStorage.Layout storage l,
-        UD60x18 strike,
-        uint256 maturity,
-        bool isCall,
-        UD60x18 size,
-        bool isBuy
+        QuoteArgsInternal memory args
     ) internal view returns (QuoteInternal memory quote) {
-        _revertIfZeroSize(size);
-        _revertIfNotTradeableWithVault(l.isCall, isCall, isBuy);
-        _revertIfOptionInvalid(strike, maturity);
-        _revertIfInsufficientFunds(strike, size, _availableAssetsUD60x18(l));
+        _revertIfZeroSize(args.size);
+        _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
+        _revertIfOptionInvalid(args.strike, args.maturity);
 
-        quote.pool = _getPoolAddress(l, strike, maturity);
+        _revertIfInsufficientFunds(
+            args.strike,
+            args.size,
+            _availableAssetsUD60x18(l)
+        );
 
         QuoteVars memory vars;
+
+        {
+            // Compute C-level
+            UD60x18 utilisation = (l.totalLockedAssets +
+                l.collateral(args.size, args.strike)) / l.totalAssets;
+
+            UD60x18 hoursSinceLastTx = ud(
+                (_getBlockTimestamp() - l.lastTradeTimestamp) * WAD
+            ) / ud(ONE_HOUR * WAD);
+
+            vars.cLevel = _computeCLevel(
+                utilisation,
+                hoursSinceLastTx,
+                l.alphaCLevel,
+                l.minCLevel,
+                l.maxCLevel,
+                l.hourlyDecayDiscount
+            );
+        }
 
         vars.spot = _getSpotPrice();
 
         // Compute time until maturity and check bounds
         vars.tau =
-            ud((maturity - _getBlockTimestamp()) * WAD) /
+            ud((args.maturity - _getBlockTimestamp()) * WAD) /
             ud(ONE_YEAR * WAD);
         _revertIfOutOfDTEBounds(vars.tau * ud(365e18), l.minDTE, l.maxDTE);
 
         vars.sigma = IVolatilityOracle(IV_ORACLE).getVolatility(
             l.base,
             vars.spot,
-            strike,
+            args.strike,
             vars.tau
         );
+
         vars.riskFreeRate = IVolatilityOracle(IV_ORACLE).getRiskFreeRate();
 
         // Compute delta and check bounds
         vars.delta = OptionMath
             .optionDelta(
                 vars.spot,
-                strike,
+                args.strike,
                 vars.tau,
                 vars.sigma,
                 vars.riskFreeRate,
@@ -840,7 +854,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         vars.price = OptionMath.blackScholesPrice(
             vars.spot,
-            strike,
+            args.strike,
             vars.tau,
             vars.sigma,
             vars.riskFreeRate,
@@ -849,25 +863,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         vars.price = l.isCall ? vars.price / vars.spot : vars.price;
 
-        // Compute C-level
-        UD60x18 utilisation = (l.totalLockedAssets +
-            l.collateral(size, strike)) / l.totalAssets;
-        UD60x18 hoursSinceLastTx = ud(
-            (_getBlockTimestamp() - l.lastTradeTimestamp) * WAD
-        ) / ud(ONE_HOUR * WAD);
-
-        vars.cLevel = _computeCLevel(
-            utilisation,
-            hoursSinceLastTx,
-            l.alphaCLevel,
-            l.minCLevel,
-            l.maxCLevel,
-            l.hourlyDecayDiscount
-        );
-
         // Compute output variables
-        quote.premium = vars.price * size;
+        quote.premium = vars.price * args.size;
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
+        quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
         quote.mintingFee = l.convertAssetToUD60x18(
             IPool(quote.pool).takerFee(address(this), size, 0, true)
@@ -887,11 +886,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
-            poolKey.strike,
-            poolKey.maturity,
-            poolKey.isCallPool,
-            size,
-            isBuy
+            QuoteArgsInternal({
+                strike: poolKey.strike,
+                maturity: poolKey.maturity,
+                isCall: poolKey.isCallPool,
+                size: size,
+                isBuy: isBuy,
+                taker: taker
+            })
         );
 
         premium = l.convertAssetFromUD60x18(
@@ -912,12 +914,16 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
 
         QuoteInternal memory quote = _getQuoteInternal(
             l,
-            poolKey.strike,
-            poolKey.maturity,
-            poolKey.isCallPool,
-            size,
-            isBuy
+            QuoteArgsInternal({
+                strike: poolKey.strike,
+                maturity: poolKey.maturity,
+                isCall: poolKey.isCallPool,
+                size: size,
+                isBuy: isBuy,
+                taker: msg.sender
+            })
         );
+
         UD60x18 totalPremium = quote.premium + quote.spread + quote.mintingFee;
 
         _revertIfAboveTradeMaxSlippage(
