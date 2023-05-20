@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UnderwriterVaultErc4626Test} from "./UnderwriterVault.erc4626.t.sol";
 import {UnderwriterVaultFeesTest} from "./UnderwriterVault.fees.t.sol";
