@@ -15,7 +15,7 @@ contract OracleAdapterMock {
     UD60x18 internal quoteAmount;
     UD60x18 internal quoteFromAmount;
 
-    mapping(uint256 => UD60x18) quoteFromAmountMap;
+    mapping(uint256 => UD60x18) internal quoteFromAmountMap;
 
     constructor(
         address _base,
