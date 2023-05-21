@@ -8,10 +8,4 @@ import {IPoolDepositWithdraw} from "./IPoolDepositWithdraw.sol";
 import {IPoolTrade} from "./IPoolTrade.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 
-interface IPool is
-    IPoolBase,
-    IPoolCore,
-    IPoolDepositWithdraw,
-    IPoolEvents,
-    IPoolTrade
-{}
+interface IPool is IPoolBase, IPoolCore, IPoolDepositWithdraw, IPoolEvents, IPoolTrade {}

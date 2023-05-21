@@ -26,46 +26,19 @@ contract VaultRegistryHarness is VaultRegistry {
         return l.implementations[vaultType] != address(0);
     }
 
-    function hasPurgedVaultFromStorage(
-        address vaultAddress,
-        bytes32 vaultType
-    ) external view returns (bool) {
+    function hasPurgedVaultFromStorage(address vaultAddress, bytes32 vaultType) external view returns (bool) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
         IVaultRegistry.Vault memory vault = l.vaults[vaultAddress];
 
         if (vault.vault != address(0)) return false;
         if (l.vaultsByType[vaultType].contains(vaultAddress)) return false;
-        if (
-            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Buy].contains(
-                vaultAddress
-            )
-        ) return false;
-        if (
-            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Sell].contains(
-                vaultAddress
-            )
-        ) return false;
-        if (
-            l.vaultsByTradeSide[IVaultRegistry.TradeSide.Both].contains(
-                vaultAddress
-            )
-        ) return false;
-        if (
-            l.vaultsByOptionType[IVaultRegistry.OptionType.Call].contains(
-                vaultAddress
-            )
-        ) return false;
-        if (
-            l.vaultsByOptionType[IVaultRegistry.OptionType.Put].contains(
-                vaultAddress
-            )
-        ) return false;
-        if (
-            l.vaultsByOptionType[IVaultRegistry.OptionType.Both].contains(
-                vaultAddress
-            )
-        ) return false;
+        if (l.vaultsByTradeSide[IVaultRegistry.TradeSide.Buy].contains(vaultAddress)) return false;
+        if (l.vaultsByTradeSide[IVaultRegistry.TradeSide.Sell].contains(vaultAddress)) return false;
+        if (l.vaultsByTradeSide[IVaultRegistry.TradeSide.Both].contains(vaultAddress)) return false;
+        if (l.vaultsByOptionType[IVaultRegistry.OptionType.Call].contains(vaultAddress)) return false;
+        if (l.vaultsByOptionType[IVaultRegistry.OptionType.Put].contains(vaultAddress)) return false;
+        if (l.vaultsByOptionType[IVaultRegistry.OptionType.Both].contains(vaultAddress)) return false;
 
         return true;
     }
@@ -97,9 +70,7 @@ contract VaultRegistryTest is Test, Assertions {
         VaultRegistryHarness impl = new VaultRegistryHarness();
 
         // 2. Create registry proxy
-        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(
-            address(impl)
-        );
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
 
         registry = VaultRegistryHarness(address(proxy));
 
@@ -288,12 +259,10 @@ contract VaultRegistryTest is Test, Assertions {
         vm.prank(user);
         settings = registry.getSettings(vaultType);
 
-        (
-            string memory word1,
-            string memory word2,
-            uint256 num1,
-            uint256 num2
-        ) = abi.decode(settings, (string, string, uint256, uint256));
+        (string memory word1, string memory word2, uint256 num1, uint256 num2) = abi.decode(
+            settings,
+            (string, string, uint256, uint256)
+        );
 
         assertEq(word1, "1) What");
         assertEq(word2, "2) H");
@@ -329,28 +298,11 @@ contract VaultRegistryTest is Test, Assertions {
     function test_addSupportedTokenPairs() public {
         vm.startPrank(deployer);
 
-        IVaultRegistry.TokenPair[]
-            memory tokenPairs = new IVaultRegistry.TokenPair[](4);
-        tokenPairs[0] = IVaultRegistry.TokenPair(
-            address(1),
-            address(2),
-            address(3)
-        );
-        tokenPairs[1] = IVaultRegistry.TokenPair(
-            address(4),
-            address(5),
-            address(6)
-        );
-        tokenPairs[2] = IVaultRegistry.TokenPair(
-            address(7),
-            address(8),
-            address(9)
-        );
-        tokenPairs[3] = IVaultRegistry.TokenPair(
-            address(10),
-            address(11),
-            address(12)
-        );
+        IVaultRegistry.TokenPair[] memory tokenPairs = new IVaultRegistry.TokenPair[](4);
+        tokenPairs[0] = IVaultRegistry.TokenPair(address(1), address(2), address(3));
+        tokenPairs[1] = IVaultRegistry.TokenPair(address(4), address(5), address(6));
+        tokenPairs[2] = IVaultRegistry.TokenPair(address(7), address(8), address(9));
+        tokenPairs[3] = IVaultRegistry.TokenPair(address(10), address(11), address(12));
 
         registry.addSupportedTokenPairs(address(123), tokenPairs);
 
@@ -374,50 +326,21 @@ contract VaultRegistryTest is Test, Assertions {
     function test_removeSupportedTokenPairs() public {
         vm.startPrank(deployer);
 
-        IVaultRegistry.TokenPair[]
-            memory tokenPairs = new IVaultRegistry.TokenPair[](4);
-        tokenPairs[0] = IVaultRegistry.TokenPair(
-            address(1),
-            address(2),
-            address(3)
-        );
-        tokenPairs[1] = IVaultRegistry.TokenPair(
-            address(4),
-            address(5),
-            address(6)
-        );
-        tokenPairs[2] = IVaultRegistry.TokenPair(
-            address(7),
-            address(8),
-            address(9)
-        );
-        tokenPairs[3] = IVaultRegistry.TokenPair(
-            address(10),
-            address(11),
-            address(12)
-        );
+        IVaultRegistry.TokenPair[] memory tokenPairs = new IVaultRegistry.TokenPair[](4);
+        tokenPairs[0] = IVaultRegistry.TokenPair(address(1), address(2), address(3));
+        tokenPairs[1] = IVaultRegistry.TokenPair(address(4), address(5), address(6));
+        tokenPairs[2] = IVaultRegistry.TokenPair(address(7), address(8), address(9));
+        tokenPairs[3] = IVaultRegistry.TokenPair(address(10), address(11), address(12));
 
         registry.addSupportedTokenPairs(address(123), tokenPairs);
 
         tokenPairs = new IVaultRegistry.TokenPair[](3);
         // Non supported token pairs
-        tokenPairs[0] = IVaultRegistry.TokenPair(
-            address(1),
-            address(2),
-            address(2)
-        );
+        tokenPairs[0] = IVaultRegistry.TokenPair(address(1), address(2), address(2));
         // Supported token pairs
-        tokenPairs[1] = IVaultRegistry.TokenPair(
-            address(7),
-            address(8),
-            address(9)
-        );
+        tokenPairs[1] = IVaultRegistry.TokenPair(address(7), address(8), address(9));
         // Non supported token pairs
-        tokenPairs[2] = IVaultRegistry.TokenPair(
-            address(1),
-            address(1),
-            address(3)
-        );
+        tokenPairs[2] = IVaultRegistry.TokenPair(address(1), address(1), address(3));
 
         registry.removeSupportedTokenPairs(address(123), tokenPairs);
 

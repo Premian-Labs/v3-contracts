@@ -8,18 +8,13 @@ interface IUserSettings {
     /// @param user The user who has authorized the agent
     /// @param agent The agent who is authorized by the user
     /// @return True if the agent is authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor`
-    function isAuthorizedAgent(
-        address user,
-        address agent
-    ) external view returns (bool);
+    function isAuthorizedAgent(address user, address agent) external view returns (bool);
 
     /// @notice Returns the addresses of agents authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor`
     ///         on behalf of the user
     /// @param user The user who has authorized agents
     /// @return The addresses of authorized agents
-    function getAuthorizedAgents(
-        address user
-    ) external view returns (address[] memory);
+    function getAuthorizedAgents(address user) external view returns (address[] memory);
 
     /// @notice Sets the addresses authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor` on behalf of
     ///         the user

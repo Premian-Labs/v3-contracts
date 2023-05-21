@@ -26,8 +26,7 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     uint32 constant PERIOD = 600;
     uint256 constant CARDINALITY_PER_MINUTE = 4;
-    IUniswapV3Factory constant UNISWAP_V3_FACTORY =
-        IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    IUniswapV3Factory constant UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     struct Pool {
         address tokenIn;
@@ -42,10 +41,7 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     string rpcUrl;
 
     function setUp() public {
-        rpcUrl = string.concat(
-            "https://eth-mainnet.alchemyapi.io/v2/",
-            vm.envString("API_KEY_ALCHEMY")
-        );
+        rpcUrl = string.concat("https://eth-mainnet.alchemyapi.io/v2/", vm.envString("API_KEY_ALCHEMY"));
         mainnetFork = vm.createFork(rpcUrl, 16597500);
         vm.selectFork(mainnetFork);
 
@@ -69,28 +65,16 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         pools.push(Pool(LOOKS, WBTC));
 
         // Deploy ChainlinkAdapter
-        address chainlinkAdapterImplementation = address(
-            new ChainlinkAdapter(WETH, WBTC)
-        );
-        address chainlinkAdapterProxy = address(
-            new ProxyUpgradeableOwnable(chainlinkAdapterImplementation)
-        );
+        address chainlinkAdapterImplementation = address(new ChainlinkAdapter(WETH, WBTC));
+        address chainlinkAdapterProxy = address(new ProxyUpgradeableOwnable(chainlinkAdapterImplementation));
 
-        ChainlinkAdapter(chainlinkAdapterProxy).batchRegisterFeedMappings(
-            feeds()
-        );
+        ChainlinkAdapter(chainlinkAdapterProxy).batchRegisterFeedMappings(feeds());
 
         // Deploy UniswapV3Adapter
-        address uniswapV3AdapterImplementation = address(
-            new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000)
-        );
+        address uniswapV3AdapterImplementation = address(new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000));
 
         address uniswapV3AdapterProxy = address(
-            new UniswapV3AdapterProxy(
-                PERIOD,
-                CARDINALITY_PER_MINUTE,
-                uniswapV3AdapterImplementation
-            )
+            new UniswapV3AdapterProxy(PERIOD, CARDINALITY_PER_MINUTE, uniswapV3AdapterImplementation)
         );
 
         // Deploy UniswapV3ChainlinkAdapter
@@ -109,18 +93,13 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         adapter = UniswapV3ChainlinkAdapter(uniswapV3ChainlinkAdapterProxy);
     }
 
-    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists()
-        public
-    {
+    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists() public {
         for (uint256 i = 0; i < pools.length; i++) {
             Pool memory p = pools[i];
 
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            (bool isCached, bool hasPath) = adapter.isPairSupported(
-                p.tokenIn,
-                p.tokenOut
-            );
+            (bool isCached, bool hasPath) = adapter.isPairSupported(p.tokenIn, p.tokenOut);
             assertTrue(isCached);
             assertTrue(hasPath);
         }
@@ -134,9 +113,7 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         assertFalse(isCached);
     }
 
-    function test_isPairSupported_ReturnFalse_IfPathForPairDoesNotExist()
-        public
-    {
+    function test_isPairSupported_ReturnFalse_IfPathForPairDoesNotExist() public {
         (, bool hasPath) = adapter.isPairSupported(address(1), DAI);
         assertFalse(hasPath);
 
@@ -145,24 +122,14 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_isPairSupported_RevertIf_TokenIsWrappedNativeToken() public {
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.isPairSupported(WETH, DAI);
 
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.isPairSupported(DAI, WETH);
     }
 
-    function test_upsertPair_UpsertPair_IfNotAlreadyCachedInUpstreamAdapters()
-        public
-    {
+    function test_upsertPair_UpsertPair_IfNotAlreadyCachedInUpstreamAdapters() public {
         address tokenA = EUL;
         address tokenB = DAI;
 
@@ -176,37 +143,21 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_upsertPair_RevertIf_TokenIsWrappedNativeToken() public {
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.upsertPair(WETH, DAI);
 
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.upsertPair(DAI, WETH);
     }
 
     function test_upsertPair_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                address(1),
-                WETH
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
         adapter.upsertPair(address(1), DAI);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                WETH,
-                address(1)
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WETH, address(1))
         );
         adapter.upsertPair(DAI, address(1));
     }
@@ -247,37 +198,21 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_quote_RevertIf_TokenIsWrappedNativeToken() public {
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.quote(WETH, DAI);
 
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.quote(DAI, WETH);
     }
 
     function test_quote_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                address(1),
-                WETH
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
         adapter.quote(address(1), DAI);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                WETH,
-                address(1)
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WETH, address(1))
         );
         adapter.quote(DAI, address(1));
     }
@@ -318,48 +253,28 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_quoteFrom_RevertIf_TokenIsWrappedNativeToken() public {
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.quoteFrom(WETH, DAI, target);
 
-        vm.expectRevert(
-            IUniswapV3ChainlinkAdapter
-                .UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative
-                .selector
-        );
+        vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
         adapter.quoteFrom(DAI, WETH, target);
     }
 
     function test_quoteFrom_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                address(1),
-                WETH
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
         adapter.quoteFrom(address(1), DAI, target);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                WETH,
-                address(1)
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WETH, address(1))
         );
         adapter.quoteFrom(DAI, address(1), target);
     }
 
     function test_quoteFrom_RevertIf_TargetIsZero() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__InvalidTarget.selector,
-                0,
-                block.timestamp
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__InvalidTarget.selector, 0, block.timestamp)
         );
         adapter.quoteFrom(EUL, DAI, 0);
     }

@@ -3,8 +3,7 @@
 pragma solidity >=0.8.20;
 
 library UniswapV3AdapterStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.UniswapV3Adapter");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.UniswapV3Adapter");
 
     struct Layout {
         // Assumes that the UniswapV3 pool will have at least one observation per block (but no more than one

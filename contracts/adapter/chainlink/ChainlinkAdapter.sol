@@ -41,37 +41,23 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     ) FeedRegistry(_wrappedNativeToken, _wrappedBTCToken) {}
 
     /// @inheritdoc IOracleAdapter
-    function isPairSupported(
-        address tokenA,
-        address tokenB
-    ) external view returns (bool isCached, bool hasPath) {
-        (
-            PricingPath path,
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _pricingPath(tokenA, tokenB, true);
+    function isPairSupported(address tokenA, address tokenB) external view returns (bool isCached, bool hasPath) {
+        (PricingPath path, address mappedTokenA, address mappedTokenB) = _pricingPath(tokenA, tokenB, true);
 
         isCached = path != PricingPath.NONE;
-
         if (isCached) return (isCached, true);
 
-        hasPath =
-            _determinePricingPath(mappedTokenA, mappedTokenB) !=
-            PricingPath.NONE;
+        hasPath = _determinePricingPath(mappedTokenA, mappedTokenB) != PricingPath.NONE;
     }
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external {
-        (
-            address mappedTokenA,
-            address mappedTokenB
-        ) = _mapToDenominationAndSort(tokenA, tokenB);
+        (address mappedTokenA, address mappedTokenB) = _mapToDenominationAndSort(tokenA, tokenB);
 
         PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
         bytes32 keyForPair = mappedTokenA.keyForSortedPair(mappedTokenB);
 
-        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage
-            .layout();
+        ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage.layout();
 
         if (path == PricingPath.NONE) {
             // Check if there is a current path. If there is, it means that the pair was supported and it
@@ -79,8 +65,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             // If there was no supported path, and there still isn't, then we will fail
             PricingPath _currentPath = l.pricingPath[keyForPair];
 
-            if (_currentPath == PricingPath.NONE)
-                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
+            if (_currentPath == PricingPath.NONE) revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
         }
 
         if (l.pricingPath[keyForPair] == path) return;
@@ -89,54 +74,31 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @inheritdoc IOracleAdapter
-    function quote(
-        address tokenIn,
-        address tokenOut
-    ) external view returns (UD60x18) {
+    function quote(address tokenIn, address tokenOut) external view returns (UD60x18) {
         return _quoteFrom(tokenIn, tokenOut, 0);
     }
 
     /// @inheritdoc IOracleAdapter
-    function quoteFrom(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) external view returns (UD60x18) {
+    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18) {
         _revertIfTargetInvalid(target);
         return _quoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @notice Returns a quote price based on the pricing path between `tokenIn` and `tokenOut`
-    function _quoteFrom(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) internal view returns (UD60x18) {
-        (
-            PricingPath path,
-            address mappedTokenIn,
-            address mappedTokenOut
-        ) = _pricingPath(tokenIn, tokenOut, false);
+    function _quoteFrom(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
+        (PricingPath path, address mappedTokenIn, address mappedTokenOut) = _pricingPath(tokenIn, tokenOut, false);
 
         if (path == PricingPath.NONE) {
             path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
 
-            if (path == PricingPath.NONE)
-                revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
+            if (path == PricingPath.NONE) revert OracleAdapter__PairNotSupported(tokenIn, tokenOut);
         }
         if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
-            return
-                _getPriceSameBase(path, mappedTokenIn, mappedTokenOut, target);
+            return _getPriceSameBase(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.A_ETH_USD_B) {
-            return
-                _getPriceDifferentBases(
-                    path,
-                    mappedTokenIn,
-                    mappedTokenOut,
-                    target
-                );
+            return _getPriceDifferentBases(path, mappedTokenIn, mappedTokenOut, target);
         } else {
             return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
         }
@@ -145,15 +107,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     /// @inheritdoc IOracleAdapter
     function describePricingPath(
         address token
-    )
-        external
-        view
-        returns (
-            AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        )
-    {
+    ) external view returns (AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
         adapterType = AdapterType.CHAINLINK;
         path = new address[][](2);
         decimals = new uint8[](2);
@@ -172,9 +126,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
 
         if (path[0].length > 0) {
-            decimals[0] = path[0][0] == Denominations.ETH
-                ? ETH_DECIMALS
-                : _aggregatorDecimals(path[0][0]);
+            decimals[0] = path[0][0] == Denominations.ETH ? ETH_DECIMALS : _aggregatorDecimals(path[0][0]);
         }
 
         if (path[1].length > 0) {
@@ -198,10 +150,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @inheritdoc IChainlinkAdapter
-    function pricingPath(
-        address tokenA,
-        address tokenB
-    ) external view returns (PricingPath) {
+    function pricingPath(address tokenA, address tokenB) external view returns (PricingPath) {
         (PricingPath path, , ) = _pricingPath(tokenA, tokenB, false);
         return path;
     }
@@ -211,20 +160,12 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address tokenA,
         address tokenB,
         bool sortTokens
-    )
-        internal
-        view
-        returns (PricingPath path, address mappedTokenA, address mappedTokenB)
-    {
+    ) internal view returns (PricingPath path, address mappedTokenA, address mappedTokenB) {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
-        (address sortedA, address sortedB) = mappedTokenA.sortTokens(
-            mappedTokenB
-        );
+        (address sortedA, address sortedB) = mappedTokenA.sortTokens(mappedTokenB);
 
-        path = ChainlinkAdapterStorage.layout().pricingPath[
-            sortedA.keyForSortedPair(sortedB)
-        ];
+        path = ChainlinkAdapterStorage.layout().pricingPath[sortedA.keyForSortedPair(sortedB)];
 
         if (sortTokens) {
             mappedTokenA = sortedA;
@@ -245,19 +186,12 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         if (path == PricingPath.ETH_USD) {
             price = _getETHUSD(target);
         } else if (path == PricingPath.TOKEN_USD) {
-            price = _getPriceAgainstUSD(
-                tokenOut.isUSD() ? tokenIn : tokenOut,
-                target
-            );
+            price = _getPriceAgainstUSD(tokenOut.isUSD() ? tokenIn : tokenOut, target);
         } else if (path == PricingPath.TOKEN_ETH) {
-            price = _getPriceAgainstETH(
-                tokenOut.isETH() ? tokenIn : tokenOut,
-                target
-            );
+            price = _getPriceAgainstETH(tokenOut.isETH() ? tokenIn : tokenOut, target);
         }
 
-        bool invert = tokenIn.isUSD() ||
-            (path == PricingPath.TOKEN_ETH && tokenIn.isETH());
+        bool invert = tokenIn.isUSD() || (path == PricingPath.TOKEN_ETH && tokenIn.isETH());
 
         return invert ? price.inv() : price;
     }
@@ -270,13 +204,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
-        int8 factor = PricingPath.TOKEN_USD_TOKEN == path
-            ? int8(ETH_DECIMALS - FOREX_DECIMALS)
-            : int8(0);
+        int8 factor = PricingPath.TOKEN_USD_TOKEN == path ? int8(ETH_DECIMALS - FOREX_DECIMALS) : int8(0);
 
-        address base = path == PricingPath.TOKEN_USD_TOKEN
-            ? Denominations.USD
-            : Denominations.ETH;
+        address base = path == PricingPath.TOKEN_USD_TOKEN ? Denominations.USD : Denominations.ETH;
 
         uint256 tokenInToBase = _fetchQuote(tokenIn, base, target);
         uint256 tokenOutToBase = _fetchQuote(tokenOut, base, target);
@@ -297,8 +227,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     ) internal view returns (UD60x18) {
         UD60x18 adjustedEthToUSDPrice = _getETHUSD(target);
 
-        bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B &&
-            tokenIn < tokenOut) ||
+        bool isTokenInUSD = (path == PricingPath.A_USD_ETH_B && tokenIn < tokenOut) ||
             (path == PricingPath.A_ETH_USD_B && tokenIn > tokenOut);
 
         if (isTokenInUSD) {
@@ -308,31 +237,18 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         } else {
             UD60x18 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
 
-            UD60x18 adjustedTokenOutToUSD = _getPriceAgainstUSD(
-                tokenOut,
-                target
-            );
+            UD60x18 adjustedTokenOutToUSD = _getPriceAgainstUSD(tokenOut, target);
 
-            return
-                (tokenInToETH * adjustedEthToUSDPrice) / adjustedTokenOutToUSD;
+            return (tokenInToETH * adjustedEthToUSDPrice) / adjustedTokenOutToUSD;
         }
     }
 
     /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is token/WBTC
-    function _getPriceWBTCPrice(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) internal view returns (UD60x18) {
+    function _getPriceWBTCPrice(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
         bool isTokenInWBTC = tokenIn == WRAPPED_BTC_TOKEN;
 
-        UD60x18 adjustedWBTCToUSDPrice = _getWBTCBTC(target) *
-            _getBTCUSD(target);
-
-        UD60x18 adjustedTokenToUSD = _getPriceAgainstUSD(
-            !isTokenInWBTC ? tokenIn : tokenOut,
-            target
-        );
+        UD60x18 adjustedWBTCToUSDPrice = _getWBTCBTC(target) * _getBTCUSD(target);
+        UD60x18 adjustedTokenToUSD = _getPriceAgainstUSD(!isTokenInWBTC ? tokenIn : tokenOut, target);
 
         UD60x18 price = adjustedWBTCToUSDPrice / adjustedTokenToUSD;
         return !isTokenInWBTC ? price.inv() : price;
@@ -340,12 +256,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @notice Returns the pricing path between `tokenA` and `tokenB`
     /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _determinePricingPath(
-        address tokenA,
-        address tokenB
-    ) internal view virtual returns (PricingPath) {
-        if (tokenA == tokenB)
-            revert OracleAdapter__TokensAreSame(tokenA, tokenB);
+    function _determinePricingPath(address tokenA, address tokenB) internal view virtual returns (PricingPath) {
+        if (tokenA == tokenB) revert OracleAdapter__TokensAreSame(tokenA, tokenB);
 
         bool isTokenAUSD = tokenA.isUSD();
         bool isTokenBUSD = tokenB.isUSD();
@@ -363,10 +275,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         PricingPath preferredPath;
         PricingPath fallbackPath;
 
-        bool wbtcUSDFeedExists = _feedExists(
-            isTokenAWBTC ? tokenA : tokenB,
-            Denominations.USD
-        );
+        bool wbtcUSDFeedExists = _feedExists(isTokenAWBTC ? tokenA : tokenB, Denominations.USD);
 
         if ((isTokenAWBTC || isTokenBWBTC) && !wbtcUSDFeedExists) {
             // If one of the token is WBTC and there is no WBTC/USD feed, we want to convert the other token to WBTC
@@ -419,13 +328,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             return PricingPath.NONE;
         }
 
-        return
-            _tryToFindPath(
-                srcToken,
-                conversionType,
-                preferredPath,
-                fallbackPath
-            );
+        return _tryToFindPath(srcToken, conversionType, preferredPath, fallbackPath);
     }
 
     /// @notice Attempts to find the best pricing path for `token` based on the `conversionType`, if a feed exists
@@ -465,22 +368,12 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @notice Returns the price of `tokenIn` denominated in `tokenOut` at `target`
-    function _fetchQuote(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) internal view returns (uint256) {
-        return
-            target == 0
-                ? _fetchLatestQuote(tokenIn, tokenOut)
-                : _fetchQuoteFrom(tokenIn, tokenOut, target);
+    function _fetchQuote(address tokenIn, address tokenOut, uint256 target) internal view returns (uint256) {
+        return target == 0 ? _fetchLatestQuote(tokenIn, tokenOut) : _fetchQuoteFrom(tokenIn, tokenOut, target);
     }
 
     /// @notice Returns the latest price of `tokenIn` denominated in `tokenOut`
-    function _fetchLatestQuote(
-        address tokenIn,
-        address tokenOut
-    ) internal view returns (uint256) {
+    function _fetchLatestQuote(address tokenIn, address tokenOut) internal view returns (uint256) {
         address feed = _feed(tokenIn, tokenOut);
         (, int256 price, , , ) = _latestRoundData(feed);
         _revertIfPriceInvalid(price);
@@ -488,23 +381,12 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @notice Returns the historical price of `tokenIn` denominated in `tokenOut` at `target`.
-    function _fetchQuoteFrom(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) internal view returns (uint256) {
+    function _fetchQuoteFrom(address tokenIn, address tokenOut, uint256 target) internal view returns (uint256) {
         address feed = _feed(tokenIn, tokenOut);
 
-        (
-            uint80 roundId,
-            int256 price,
-            ,
-            uint256 updatedAt,
+        (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
 
-        ) = _latestRoundData(feed);
-
-        (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage
-            .parseRoundId(roundId);
+        (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
         int256 previousPrice = price;
         uint256 previousUpdatedAt = updatedAt;
@@ -521,10 +403,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         // ===========================================================
 
         while (aggregatorRoundId > 0) {
-            roundId = ChainlinkAdapterStorage.formatRoundId(
-                phaseId,
-                --aggregatorRoundId
-            );
+            roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, --aggregatorRoundId);
 
             (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
@@ -550,9 +429,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @notice Try/Catch wrapper for Chainlink aggregator's latestRoundData() function
-    function _latestRoundData(
-        address feed
-    ) internal view returns (uint80, int256, uint256, uint256, uint80) {
+    function _latestRoundData(address feed) internal view returns (uint80, int256, uint256, uint256, uint80) {
         try AggregatorProxyInterface(feed).latestRoundData() returns (
             uint80 roundId,
             int256 answer,
@@ -589,97 +466,54 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @notice Returns the Chainlink aggregator for pair `tokenA` and `tokenB`
-    function _aggregator(
-        address tokenA,
-        address tokenB
-    ) internal view returns (address[] memory aggregator) {
+    function _aggregator(address tokenA, address tokenB) internal view returns (address[] memory aggregator) {
         address feed = _feed(tokenA, tokenB);
         aggregator = new address[](1);
         aggregator[0] = AggregatorProxyInterface(feed).aggregator();
     }
 
     /// @notice Returns decimals for `aggregator`
-    function _aggregatorDecimals(
-        address aggregator
-    ) internal view returns (uint8) {
+    function _aggregatorDecimals(address aggregator) internal view returns (uint8) {
         return AggregatorProxyInterface(aggregator).decimals();
     }
 
     /// @notice Returns the scaled price of `token` denominated in USD at `target`
-    function _getPriceAgainstUSD(
-        address token,
-        uint256 target
-    ) internal view returns (UD60x18) {
+    function _getPriceAgainstUSD(address token, uint256 target) internal view returns (UD60x18) {
         return
             token.isUSD()
                 ? ONE
-                : ud(
-                    _scale(
-                        _fetchQuote(token, Denominations.USD, target),
-                        int8(ETH_DECIMALS - FOREX_DECIMALS)
-                    )
-                );
+                : ud(_scale(_fetchQuote(token, Denominations.USD, target), int8(ETH_DECIMALS - FOREX_DECIMALS)));
     }
 
     /// @notice Returns the scaled price of `token` denominated in ETH at `target`
-    function _getPriceAgainstETH(
-        address token,
-        uint256 target
-    ) internal view returns (UD60x18) {
-        return
-            token.isETH()
-                ? ONE
-                : ud(_fetchQuote(token, Denominations.ETH, target));
+    function _getPriceAgainstETH(address token, uint256 target) internal view returns (UD60x18) {
+        return token.isETH() ? ONE : ud(_fetchQuote(token, Denominations.ETH, target));
     }
 
     /// @notice Returns the scaled price of ETH denominated in USD at `target`
     function _getETHUSD(uint256 target) internal view returns (UD60x18) {
         return
-            ud(
-                _scale(
-                    _fetchQuote(Denominations.ETH, Denominations.USD, target),
-                    int8(ETH_DECIMALS - FOREX_DECIMALS)
-                )
-            );
+            ud(_scale(_fetchQuote(Denominations.ETH, Denominations.USD, target), int8(ETH_DECIMALS - FOREX_DECIMALS)));
     }
 
     /// @notice Returns the scaled price of BTC denominated in USD at `target`
     function _getBTCUSD(uint256 target) internal view returns (UD60x18) {
         return
-            ud(
-                _scale(
-                    _fetchQuote(Denominations.BTC, Denominations.USD, target),
-                    int8(ETH_DECIMALS - FOREX_DECIMALS)
-                )
-            );
+            ud(_scale(_fetchQuote(Denominations.BTC, Denominations.USD, target), int8(ETH_DECIMALS - FOREX_DECIMALS)));
     }
 
     /// @notice Returns the scaled price of WBTC denominated in BTC at `target`
     function _getWBTCBTC(uint256 target) internal view returns (UD60x18) {
         return
-            ud(
-                _scale(
-                    _fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target),
-                    int8(ETH_DECIMALS - FOREX_DECIMALS)
-                )
-            );
+            ud(_scale(_fetchQuote(WRAPPED_BTC_TOKEN, Denominations.BTC, target), int8(ETH_DECIMALS - FOREX_DECIMALS)));
     }
 
     /// @notice Revert if price is stale and MAX_DELAY has not passed
-    function _revertIfPriceAfterTargetStale(
-        uint256 target,
-        uint256 updatedAt
-    ) internal view {
+    function _revertIfPriceAfterTargetStale(uint256 target, uint256 updatedAt) internal view {
         if (
-            target >= updatedAt &&
-            block.timestamp - target < MAX_DELAY &&
-            target - updatedAt >= PRICE_STALE_THRESHOLD
+            target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt >= PRICE_STALE_THRESHOLD
         ) {
-            revert ChainlinkAdapter__PriceAfterTargetIsStale(
-                target,
-                updatedAt,
-                block.timestamp
-            );
+            revert ChainlinkAdapter__PriceAfterTargetIsStale(target, updatedAt, block.timestamp);
         }
     }
 }

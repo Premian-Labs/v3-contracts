@@ -21,17 +21,10 @@ contract ChainlinkOraclePriceStub {
         LAST_ROUND_DATA_REVERT
     }
 
-    function setup(
-        FailureMode _failureMode,
-        int256[] memory _prices,
-        uint256[] memory _updatedAtTimestamps
-    ) external {
+    function setup(FailureMode _failureMode, int256[] memory _prices, uint256[] memory _updatedAtTimestamps) external {
         failureMode = _failureMode;
 
-        require(
-            _prices.length == _updatedAtTimestamps.length,
-            "length mismatch"
-        );
+        require(_prices.length == _updatedAtTimestamps.length, "length mismatch");
 
         AGGREGATOR_ROUND_ID = uint64(_prices.length);
 
@@ -43,12 +36,8 @@ contract ChainlinkOraclePriceStub {
         return prices[index];
     }
 
-    function getRoundData(
-        uint80 roundId
-    ) external view returns (uint80, int256, uint256, uint256, uint80) {
-        (, uint64 aggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(
-            roundId
-        );
+    function getRoundData(uint80 roundId) external view returns (uint80, int256, uint256, uint256, uint80) {
+        (, uint64 aggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
         if (failureMode == FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON) {
             require(false, "reverted with reason");
@@ -58,24 +47,11 @@ contract ChainlinkOraclePriceStub {
             revert();
         }
 
-        return (
-            roundId,
-            prices[aggregatorRoundId],
-            0,
-            updatedAtTimestamps[aggregatorRoundId],
-            0
-        );
+        return (roundId, prices[aggregatorRoundId], 0, updatedAtTimestamps[aggregatorRoundId], 0);
     }
 
-    function latestRoundData()
-        external
-        view
-        returns (uint80, int256, uint256, uint256, uint80)
-    {
-        uint80 roundId = ChainlinkAdapterStorage.formatRoundId(
-            PHASE_ID,
-            AGGREGATOR_ROUND_ID
-        );
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        uint80 roundId = ChainlinkAdapterStorage.formatRoundId(PHASE_ID, AGGREGATOR_ROUND_ID);
         uint64 aggregatorRoundId = AGGREGATOR_ROUND_ID - 1;
 
         if (failureMode == FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON) {
@@ -86,12 +62,6 @@ contract ChainlinkOraclePriceStub {
             revert();
         }
 
-        return (
-            roundId,
-            prices[aggregatorRoundId],
-            0,
-            updatedAtTimestamps[aggregatorRoundId],
-            0
-        );
+        return (roundId, prices[aggregatorRoundId], 0, updatedAtTimestamps[aggregatorRoundId], 0);
     }
 }

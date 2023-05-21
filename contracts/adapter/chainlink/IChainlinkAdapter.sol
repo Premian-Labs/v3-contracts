@@ -43,11 +43,7 @@ interface IChainlinkAdapter is IOracleAdapter {
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
     /// @notice Thrown when the price after the target time is stale
-    error ChainlinkAdapter__PriceAfterTargetIsStale(
-        uint256 target,
-        uint256 updatedAt,
-        uint256 blockTimestamp
-    );
+    error ChainlinkAdapter__PriceAfterTargetIsStale(uint256 target, uint256 updatedAt, uint256 blockTimestamp);
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA One of the pair's tokens
@@ -60,8 +56,5 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The pricing path that will be used
-    function pricingPath(
-        address tokenA,
-        address tokenB
-    ) external view returns (PricingPath);
+    function pricingPath(address tokenA, address tokenB) external view returns (PricingPath);
 }

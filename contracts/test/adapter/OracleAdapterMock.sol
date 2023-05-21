@@ -17,12 +17,7 @@ contract OracleAdapterMock {
 
     mapping(uint256 => UD60x18) internal quoteFromAmountMap;
 
-    constructor(
-        address _base,
-        address _quote,
-        UD60x18 _quoteAmount,
-        UD60x18 _quoteFromAmount
-    ) {
+    constructor(address _base, address _quote, UD60x18 _quoteAmount, UD60x18 _quoteFromAmount) {
         BASE = _base;
         QUOTE = _quote;
         quoteAmount = _quoteAmount;
@@ -47,11 +42,7 @@ contract OracleAdapterMock {
         return quoteAmount;
     }
 
-    function quoteFrom(
-        address,
-        address,
-        uint256 maturity
-    ) external view returns (UD60x18) {
+    function quoteFrom(address, address, uint256 maturity) external view returns (UD60x18) {
         if (quoteFromAmountMap[maturity] != ud(0)) {
             return quoteFromAmountMap[maturity];
         }
@@ -61,15 +52,7 @@ contract OracleAdapterMock {
 
     function describePricingPath(
         address token
-    )
-        external
-        view
-        returns (
-            IOracleAdapter.AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        )
-    {
+    ) external view returns (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
         adapterType = IOracleAdapter.AdapterType.CHAINLINK;
 
         path = new address[][](1);

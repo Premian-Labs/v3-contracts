@@ -20,13 +20,11 @@ contract UniswapV3AdapterProxy is ProxyUpgradeableOwnable {
         uint256 cardinalityPerMinute,
         address implementation
     ) ProxyUpgradeableOwnable(implementation) {
-        if (cardinalityPerMinute == 0)
-            revert UniswapV3AdapterProxy__CardinalityPerMinuteNotSet();
+        if (cardinalityPerMinute == 0) revert UniswapV3AdapterProxy__CardinalityPerMinuteNotSet();
 
         if (period == 0) revert UniswapV3AdapterProxy__PeriodNotSet();
 
-        UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage
-            .layout();
+        UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage.layout();
 
         l.targetCardinality = uint16((period * cardinalityPerMinute) / 60);
         l.cardinalityPerMinute = cardinalityPerMinute;

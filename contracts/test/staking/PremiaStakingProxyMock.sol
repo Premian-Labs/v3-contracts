@@ -7,9 +7,7 @@ import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/E
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";
 
 contract PremiaStakingProxyMock is ProxyUpgradeableOwnable {
-    constructor(
-        address implementation
-    ) ProxyUpgradeableOwnable(implementation) {
+    constructor(address implementation) ProxyUpgradeableOwnable(implementation) {
         ERC20MetadataStorage.Layout storage l = ERC20MetadataStorage.layout();
 
         l.name = "Staked Premia";

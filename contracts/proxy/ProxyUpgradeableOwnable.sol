@@ -41,8 +41,7 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
 
     /// @notice set address of implementation contract
     function _setImplementation(address implementation) internal {
-        if (!implementation.isContract())
-            revert InvalidImplementation(implementation);
+        if (!implementation.isContract()) revert InvalidImplementation(implementation);
 
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
         emit ImplementationSet(implementation);

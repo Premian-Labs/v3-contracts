@@ -101,16 +101,11 @@ contract OptionMathTest is Test, Assertions {
         ];
 
         for (uint256 i = 0; i < expected.length; i++) {
-            assertEq(
-                OptionMath.relu(expected[i][0]),
-                expected[i][1].intoUD60x18()
-            );
+            assertEq(OptionMath.relu(expected[i][0]), expected[i][1].intoUD60x18());
         }
     }
 
-    function _test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices(
-        bool isCall
-    ) internal {
+    function _test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices(bool isCall) internal {
         UD60x18 strike = ud(0.8e18);
         UD60x18 timeToMaturity = ud(0.53e18);
         UD60x18 volAnnualized = ud(0.732e18);
@@ -144,14 +139,7 @@ contract OptionMathTest is Test, Assertions {
         for (uint256 i = 0; i < cases.length; i++) {
             assertApproxEqAbs(
                 OptionMath
-                    .blackScholesPrice(
-                        cases[i][0],
-                        strike,
-                        timeToMaturity,
-                        volAnnualized,
-                        riskFreeRate,
-                        isCall
-                    )
+                    .blackScholesPrice(cases[i][0], strike, timeToMaturity, volAnnualized, riskFreeRate, isCall)
                     .unwrap(),
                 cases[i][1].unwrap(),
                 0.00001e18
@@ -159,21 +147,15 @@ contract OptionMathTest is Test, Assertions {
         }
     }
 
-    function test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices_Call()
-        public
-    {
+    function test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices_Call() public {
         _test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices(true);
     }
 
-    function test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices_Put()
-        public
-    {
+    function test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices_Put() public {
         _test_blackScholesPrice_ReturnExpectedValue_VaryingSpotPrices(false);
     }
 
-    function _test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility(
-        bool isCall
-    ) internal {
+    function _test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility(bool isCall) internal {
         UD60x18 spot = ud(1.3e18);
         UD60x18 strike = ud(0.8e18);
         UD60x18 timeToMaturity = ud(0.53e18);
@@ -206,31 +188,18 @@ contract OptionMathTest is Test, Assertions {
 
         for (uint256 i = 0; i < cases.length; i++) {
             assertApproxEqAbs(
-                OptionMath
-                    .blackScholesPrice(
-                        spot,
-                        strike,
-                        timeToMaturity,
-                        cases[i][0],
-                        riskFreeRate,
-                        isCall
-                    )
-                    .unwrap(),
+                OptionMath.blackScholesPrice(spot, strike, timeToMaturity, cases[i][0], riskFreeRate, isCall).unwrap(),
                 cases[i][1].unwrap(),
                 0.00001e18
             );
         }
     }
 
-    function test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility_Call()
-        public
-    {
+    function test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility_Call() public {
         _test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility(true);
     }
 
-    function test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility_Put()
-        public
-    {
+    function test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility_Put() public {
         _test_blackScholesPrice_ReturnExpectedValue_VaryingVolatility(false);
     }
 
@@ -257,16 +226,8 @@ contract OptionMathTest is Test, Assertions {
                 volAnnualized,
                 riskFreeRate
             );
-            assertApproxEqAbs(
-                (d1 - cases[i][1]).unwrap(),
-                0,
-                0.00000000000001e18
-            );
-            assertApproxEqAbs(
-                (d2 - cases[i][2]).unwrap(),
-                0,
-                0.00000000000001e18
-            );
+            assertApproxEqAbs((d1 - cases[i][1]).unwrap(), 0, 0.00000000000001e18);
+            assertApproxEqAbs((d2 - cases[i][2]).unwrap(), 0, 0.00000000000001e18);
         }
     }
 
@@ -304,14 +265,7 @@ contract OptionMathTest is Test, Assertions {
         for (uint256 i = 0; i < cases.length; i++) {
             assertApproxEqAbs(
                 OptionMath
-                    .optionDelta(
-                        cases[i][0].intoUD60x18(),
-                        strike,
-                        timeToMaturity,
-                        varAnnualized,
-                        riskFreeRate,
-                        isCall
-                    )
+                    .optionDelta(cases[i][0].intoUD60x18(), strike, timeToMaturity, varAnnualized, riskFreeRate, isCall)
                     .unwrap(),
                 cases[i][1].unwrap(),
                 0.00001e18
@@ -353,23 +307,14 @@ contract OptionMathTest is Test, Assertions {
     }
 
     function test_isLastFriday_ReturnFalse_IfNotLastWeekOfMonth() public {
-        uint32[6] memory timestamps = [
-            1675324800,
-            1675411200,
-            1675670400,
-            1676016000,
-            1676620800,
-            1676707200
-        ];
+        uint32[6] memory timestamps = [1675324800, 1675411200, 1675670400, 1676016000, 1676620800, 1676707200];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             assertFalse(OptionMath.isLastFriday(timestamps[i]));
         }
     }
 
-    function test_isLastFriday_ReturnFalse_IfLastWeekOfMonthAndNotFriday()
-        public
-    {
+    function test_isLastFriday_ReturnFalse_IfLastWeekOfMonthAndNotFriday() public {
         uint32[9] memory timestamps = [
             1677139200,
             1677312000,
@@ -401,10 +346,7 @@ contract OptionMathTest is Test, Assertions {
 
         vm.warp(timestamp);
 
-        assertEq(
-            OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)),
-            oneWeek
-        );
+        assertEq(OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)), oneWeek);
     }
 
     function test_calculateStrikeInterval_ReturnExpectedValue() public {
@@ -469,10 +411,7 @@ contract OptionMathTest is Test, Assertions {
         ];
 
         for (uint256 i = 0; i < values.length; i++) {
-            assertEq(
-                OptionMath.calculateStrikeInterval(values[i][0]),
-                values[i][1]
-            );
+            assertEq(OptionMath.calculateStrikeInterval(values[i][0]), values[i][1]);
         }
     }
 }

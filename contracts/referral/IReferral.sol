@@ -14,23 +14,11 @@ interface IReferral {
     error Referral__NoRebatesToClaim();
     error Referral__PoolNotAuthorized();
 
-    event ClaimRebate(
-        address indexed referrer,
-        address indexed token,
-        uint256 amount
-    );
+    event ClaimRebate(address indexed referrer, address indexed token, uint256 amount);
 
-    event SetPrimaryRebatePercent(
-        RebateTier tier,
-        UD60x18 oldPercent,
-        UD60x18 newPercent
-    );
+    event SetPrimaryRebatePercent(RebateTier tier, UD60x18 oldPercent, UD60x18 newPercent);
 
-    event SetRebateTier(
-        address indexed referrer,
-        RebateTier oldTier,
-        RebateTier newTier
-    );
+    event SetRebateTier(address indexed referrer, RebateTier oldTier, RebateTier newTier);
 
     event SetSecondaryRebatePercent(UD60x18 oldPercent, UD60x18 newPercent);
 
@@ -51,9 +39,7 @@ interface IReferral {
     /// @notice Returns the rebate tier for a given referrer
     /// @param referrer The address of the referrer
     /// @return tier The rebate tier
-    function getRebateTier(
-        address referrer
-    ) external view returns (RebateTier tier);
+    function getRebateTier(address referrer) external view returns (RebateTier tier);
 
     /// @notice Returns the primary and secondary rebate percents
     /// @return primaryRebatePercents The primary rebate percents (18 decimals)
@@ -61,10 +47,7 @@ interface IReferral {
     function getRebatePercents()
         external
         view
-        returns (
-            UD60x18[] memory primaryRebatePercents,
-            UD60x18 secondaryRebatePercent
-        );
+        returns (UD60x18[] memory primaryRebatePercents, UD60x18 secondaryRebatePercent);
 
     /// @notice Returns the primary and secondary rebate percents for a given referrer
     /// @param referrer The address of the referrer
@@ -72,18 +55,13 @@ interface IReferral {
     /// @return secondaryRebatePercent The secondary rebate percent (18 decimals)
     function getRebatePercents(
         address referrer
-    )
-        external
-        view
-        returns (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent);
+    ) external view returns (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent);
 
     /// @notice Returns the rebates for a given referrer
     /// @param referrer The address of the referrer
     /// @return tokens The tokens for which the referrer has rebates
     /// @return rebates The rebates for each token (token decimals)
-    function getRebates(
-        address referrer
-    ) external view returns (address[] memory tokens, uint256[] memory rebates);
+    function getRebates(address referrer) external view returns (address[] memory tokens, uint256[] memory rebates);
 
     /// @notice Sets the rebate tier for a given referrer - caller must be owner
     /// @param referrer The address of the referrer
@@ -106,12 +84,7 @@ interface IReferral {
     /// @param primaryReferrer The address of the primary referrer
     /// @param token The address of the token
     /// @param tradingFee The trading fee (18 decimals)
-    function useReferral(
-        address user,
-        address primaryReferrer,
-        address token,
-        UD60x18 tradingFee
-    ) external;
+    function useReferral(address user, address primaryReferrer, address token, UD60x18 tradingFee) external;
 
     /// @notice Claims the rebates for the msg.sender
     function claimRebate() external;

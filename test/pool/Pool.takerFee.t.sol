@@ -11,8 +11,7 @@ import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTakerFeeTest is DeployTest {
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
-    UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE =
-        UD60x18.wrap(0.003e18); // 0.3%
+    UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
 
     function stake(uint256 amount) internal {
         vm.startPrank(users.trader);
@@ -35,9 +34,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         UD60x18 normalizedPremium = collateralToContracts(deNormalizedPremium);
 
-        uint256 premium = scaleDecimals(
-            isPremiumNormalized ? normalizedPremium : deNormalizedPremium
-        );
+        uint256 premium = scaleDecimals(isPremiumNormalized ? normalizedPremium : deNormalizedPremium);
 
         UD60x18 fee;
 
@@ -45,11 +42,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
             UD60x18 premiumFee = normalizedPremium * PREMIUM_FEE_PERCENTAGE;
             UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
 
-            assertEq(
-                premiumFee > notionalFee,
-                premiumIsFee,
-                "premiumFee should be greater than notionalFee"
-            );
+            assertEq(premiumFee > notionalFee, premiumIsFee, "premiumFee should be greater than notionalFee");
 
             fee = PRBMathExtra.max(premiumFee, notionalFee);
 
@@ -58,29 +51,18 @@ abstract contract PoolTakerFeeTest is DeployTest {
             }
         }
 
-        uint256 protocolFee = pool.takerFee(
-            users.trader,
-            size,
-            premium,
-            isPremiumNormalized
-        );
+        uint256 protocolFee = pool.takerFee(users.trader, size, premium, isPremiumNormalized);
 
         uint256 expectedFee = scaleDecimals(contractsToCollateral(fee));
 
-        assertEq(
-            protocolFee,
-            expectedFee,
-            "protocol fee should equal expected"
-        );
+        assertEq(protocolFee, expectedFee, "protocol fee should equal expected");
     }
 
     function test_takerFee_premium_fee_without_discount() public {
         _test_takerFee(true, false, ud(100 ether), ud(1 ether), ud(0));
     }
 
-    function test_takerFee_premium_fee_without_discount_premium_normalized()
-        public
-    {
+    function test_takerFee_premium_fee_without_discount_premium_normalized() public {
         _test_takerFee(true, true, ud(100 ether), ud(1 ether), ud(0));
     }
 
@@ -88,9 +70,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         _test_takerFee(false, false, ud(100 ether), ud(0.01 ether), ud(0));
     }
 
-    function test_takerFee_collateral_fee_without_discount_premium_normalized()
-        public
-    {
+    function test_takerFee_collateral_fee_without_discount_premium_normalized() public {
         _test_takerFee(false, true, ud(100 ether), ud(0.01 ether), ud(0));
     }
 
@@ -105,9 +85,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         vm.stopPrank();
     }
 
-    function test_takerFee_premium_fee_with_discount_premium_normalized()
-        public
-    {
+    function test_takerFee_premium_fee_with_discount_premium_normalized() public {
         stake(100_000 ether);
         uint256 discount = vxPremia.getDiscount(users.trader);
 
@@ -124,32 +102,18 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         vm.startPrank(users.trader);
 
-        _test_takerFee(
-            false,
-            false,
-            ud(100 ether),
-            ud(0.01 ether),
-            ud(discount)
-        );
+        _test_takerFee(false, false, ud(100 ether), ud(0.01 ether), ud(discount));
 
         vm.stopPrank();
     }
 
-    function test_takerFee_collateral_fee_with_discount_premium_normalized()
-        public
-    {
+    function test_takerFee_collateral_fee_with_discount_premium_normalized() public {
         stake(100_000 ether);
         uint256 discount = vxPremia.getDiscount(users.trader);
 
         vm.startPrank(users.trader);
 
-        _test_takerFee(
-            false,
-            true,
-            ud(100 ether),
-            ud(0.01 ether),
-            ud(discount)
-        );
+        _test_takerFee(false, true, ud(100 ether), ud(0.01 ether), ud(discount));
 
         vm.stopPrank();
     }

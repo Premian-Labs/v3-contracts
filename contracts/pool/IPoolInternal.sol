@@ -11,17 +11,10 @@ import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize(UD60x18 size, UD60x18 quoteSize);
-    error Pool__AboveMaxSlippage(
-        uint256 value,
-        uint256 minimum,
-        uint256 maximum
-    );
+    error Pool__AboveMaxSlippage(uint256 value, uint256 minimum, uint256 maximum);
     error Pool__AgentNotAuthorized();
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
-    error Pool__CostNotAuthorized(
-        UD60x18 costInWrappedNative,
-        UD60x18 authorizedCost
-    );
+    error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCost);
     error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
@@ -47,11 +40,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__PositionCantHoldLongAndShort(UD60x18 longs, UD60x18 shorts);
     error Pool__QuoteRFQCancelled();
     error Pool__QuoteRFQExpired();
-    error Pool__QuoteRFQOverfilled(
-        UD60x18 filledAmount,
-        UD60x18 size,
-        UD60x18 quoteRFQSize
-    );
+    error Pool__QuoteRFQOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteRFQSize);
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);

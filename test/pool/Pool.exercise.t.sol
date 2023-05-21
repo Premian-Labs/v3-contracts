@@ -21,36 +21,22 @@ struct TradeInternal {
 }
 
 abstract contract PoolExerciseTest is DeployTest {
-    function _test_exercise_trade_Buy100Options()
-        internal
-        returns (TradeInternal memory trade)
-    {
+    function _test_exercise_trade_Buy100Options() internal returns (TradeInternal memory trade) {
         posKey.orderType = Position.OrderType.CS;
 
         trade.initialCollateral = deposit(1000 ether);
         trade.size = ud(100 ether);
-        (trade.totalPremium, ) = pool.getQuoteAMM(
-            users.trader,
-            trade.size,
-            true
-        );
+        (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, true);
 
         trade.poolToken = getPoolToken();
-        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
-            feeReceiver
-        );
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
 
         vm.startPrank(users.trader);
 
         deal(trade.poolToken, users.trader, trade.totalPremium);
         IERC20(trade.poolToken).approve(address(router), trade.totalPremium);
 
-        pool.trade(
-            trade.size,
-            true,
-            trade.totalPremium + trade.totalPremium / 10,
-            address(0)
-        );
+        pool.trade(trade.size, true, trade.totalPremium + trade.totalPremium / 10, address(0));
 
         vm.stopPrank();
     }
@@ -67,28 +53,16 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.prank(users.trader);
         pool.exercise();
 
-        uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isITM, trade.size, settlementPrice)
-        );
+        uint256 exerciseValue = scaleDecimals(getExerciseValue(isITM, trade.size, settlementPrice));
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(users.trader),
-            exerciseValue
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(users.trader), exerciseValue);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
-            trade.initialCollateral +
-                trade.totalPremium -
-                exerciseValue -
-                protocolFees
+            trade.initialCollateral + trade.totalPremium - exerciseValue - protocolFees
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 
@@ -123,13 +97,7 @@ abstract contract PoolExerciseTest is DeployTest {
 
         pool.setApprovalForAll(users.otherTrader, true);
 
-        pool.safeTransferFrom(
-            users.trader,
-            users.otherTrader,
-            PoolStorage.LONG,
-            (trade.size / TWO).unwrap(),
-            ""
-        );
+        pool.safeTransferFrom(users.trader, users.otherTrader, PoolStorage.LONG, (trade.size / TWO).unwrap(), "");
 
         vm.stopPrank();
 
@@ -145,35 +113,20 @@ abstract contract PoolExerciseTest is DeployTest {
 
         pool.exerciseFor(holders, cost);
 
-        uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(true, trade.size / TWO, settlementPrice)
-        );
+        uint256 exerciseValue = scaleDecimals(getExerciseValue(true, trade.size / TWO, settlementPrice));
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(users.trader),
-            exerciseValue - cost
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(users.trader), exerciseValue - cost);
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(users.otherTrader),
-            exerciseValue - cost
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(users.otherTrader), exerciseValue - cost);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.agent), (cost * 2));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
-            trade.initialCollateral +
-                trade.totalPremium -
-                (exerciseValue * 2) -
-                protocolFees
+            trade.initialCollateral + trade.totalPremium - (exerciseValue * 2) - protocolFees
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 
@@ -196,11 +149,7 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__CostExceedsPayout.selector,
-                scaleDecimalsTo(cost),
-                0
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, scaleDecimalsTo(cost), 0)
         );
 
         vm.prank(users.agent);
@@ -236,11 +185,7 @@ abstract contract PoolExerciseTest is DeployTest {
         uint256 cost = scaleDecimals(_cost);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__CostNotAuthorized.selector,
-                (_cost * quote).unwrap(),
-                0
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
         );
 
         vm.prank(users.agent);

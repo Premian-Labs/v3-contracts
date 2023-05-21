@@ -21,8 +21,7 @@ contract VolatilityOracleTest is Test, Assertions {
     address relayer;
     address token = address(1);
 
-    bytes32 constant paramsFormatted =
-        0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8;
+    bytes32 constant paramsFormatted = 0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8;
 
     int256[5] params = [
         int256(839159148341),
@@ -42,9 +41,7 @@ contract VolatilityOracleTest is Test, Assertions {
 
     function setUp() public {
         VolatilityOracleMock impl = new VolatilityOracleMock();
-        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(
-            address(impl)
-        );
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
         oracle = VolatilityOracleMock(address(proxy));
 
         relayer = vm.addr(10);
@@ -85,12 +82,7 @@ contract VolatilityOracleTest is Test, Assertions {
 
     function test_formatParams_RevertIf_VariableOutOfBounds() public {
         params[4] = int256(1) << 51;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IVolatilityOracle.VolatilityOracle__OutOfBounds.selector,
-                params[4]
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IVolatilityOracle.VolatilityOracle__OutOfBounds.selector, params[4]));
         oracle.formatParams(params);
     }
 
@@ -113,12 +105,7 @@ contract VolatilityOracleTest is Test, Assertions {
     function test_getVolatility_PerformExtrapolation_ShortTerm() public {
         _updateParams();
 
-        UD60x18 iv = oracle.getVolatility(
-            token,
-            ud(2800e18),
-            ud(3500e18),
-            ud(0.001e18)
-        );
+        UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(3500e18), ud(0.001e18));
 
         uint256 expected = 1.3682433159664105e18;
         assertApproxEqAbs(iv.unwrap(), expected, 0.001e18);
@@ -127,12 +114,7 @@ contract VolatilityOracleTest is Test, Assertions {
     function test_getVolatility_PerformInterpolation_OnFirstInterval() public {
         _updateParams();
 
-        UD60x18 iv = oracle.getVolatility(
-            token,
-            ud(2800e18),
-            ud(3500e18),
-            ud(0.02e18)
-        );
+        UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(3500e18), ud(0.02e18));
 
         uint256 expected = 0.8541332587538256e18;
         assertApproxEqAbs(iv.unwrap(), expected, 0.001e18);
@@ -141,12 +123,7 @@ contract VolatilityOracleTest is Test, Assertions {
     function test_getVolatility_PerformInterpolation_OnLastInterval() public {
         _updateParams();
 
-        UD60x18 iv = oracle.getVolatility(
-            token,
-            ud(2800e18),
-            ud(5000e18),
-            ud(0.3e18)
-        );
+        UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(5000e18), ud(0.3e18));
 
         uint256 expected = 0.8715627609068288e18;
         assertApproxEqAbs(iv.unwrap(), expected, 0.001e18);
@@ -155,12 +132,7 @@ contract VolatilityOracleTest is Test, Assertions {
     function test_getVolatility_PerformInterpolation_LongTerm() public {
         _updateParams();
 
-        UD60x18 iv = oracle.getVolatility(
-            token,
-            ud(2800e18),
-            ud(7000e18),
-            ud(0.5e18)
-        );
+        UD60x18 iv = oracle.getVolatility(token, ud(2800e18), ud(7000e18), ud(0.5e18));
 
         uint256 expected = 0.88798013e18;
         assertApproxEqAbs(iv.unwrap(), expected, 0.001e18);

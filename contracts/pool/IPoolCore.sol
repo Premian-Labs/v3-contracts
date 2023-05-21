@@ -36,35 +36,21 @@ interface IPoolCore is IPoolInternal {
     function getPoolSettings()
         external
         view
-        returns (
-            address base,
-            address quote,
-            address oracleAdapter,
-            UD60x18 strike,
-            uint256 maturity,
-            bool isCallPool
-        );
+        returns (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool);
 
     /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that price
     /// @param  price The normalized option price of the tick (18 decimals)
     /// @return The tick at the price, with the liquidityNet (18 decimals) of the tick
-    function tick(
-        UD60x18 price
-    ) external view returns (IPoolInternal.TickWithLiquidity memory);
+    function tick(UD60x18 price) external view returns (IPoolInternal.TickWithLiquidity memory);
 
     /// @notice Returns all ticks in the pool, including net liquidity for each tick
     /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
-    function ticks()
-        external
-        view
-        returns (IPoolInternal.TickWithLiquidity[] memory);
+    function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory);
 
     /// @notice Returns the net liquidity for a given tick, to the next tick in the range
     /// @param  price The normalized option price of the tick (18 decimals)
     /// @return liquidityNet The net liquidity of the tick (18 decimals)
-    function liquidityForTick(
-        UD60x18 price
-    ) external view returns (UD60x18 liquidityNet);
+    function liquidityForTick(UD60x18 price) external view returns (UD60x18 liquidityNet);
 
     /// @notice Returns the net liquidity for a given range of ticks
     /// @param  lower The normalized option price of the lower tick (18 decimals)
@@ -87,9 +73,7 @@ interface IPoolCore is IPoolInternal {
     /// @notice Returns total claimable fees for the position
     /// @param p The position key
     /// @return The total claimable fees for the position (poolToken decimals)
-    function getClaimableFees(
-        Position.Key calldata p
-    ) external view returns (uint256);
+    function getClaimableFees(Position.Key calldata p) external view returns (uint256);
 
     /// @notice Underwrite an option by depositing collateral. By default the taker fee and referral are applied to the
     ///         underwriter, if the caller is a registered vault the longReceiver is used instead.
@@ -98,12 +82,7 @@ interface IPoolCore is IPoolInternal {
     /// @param longReceiver The address which will receive the long token
     /// @param size The number of contracts being underwritten (18 decimals)
     /// @param referrer The referrer of the user doing the trade
-    function writeFrom(
-        address underwriter,
-        address longReceiver,
-        UD60x18 size,
-        address referrer
-    ) external;
+    function writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
     ///         NOTE: This function can be called post or prior to expiration.
@@ -121,10 +100,7 @@ interface IPoolCore is IPoolInternal {
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
     /// @return The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic
     ///         exercise (poolToken decimals)
-    function exerciseFor(
-        address[] calldata holders,
-        uint256 costPerHolder
-    ) external returns (uint256[] memory);
+    function exerciseFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
 
     /// @notice Settles all short options held by caller
     /// @return The amount of collateral left after settlement (poolToken decimals)
@@ -137,10 +113,7 @@ interface IPoolCore is IPoolInternal {
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
     /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic
     ///         settlement (poolToken decimals)
-    function settleFor(
-        address[] calldata holders,
-        uint256 costPerHolder
-    ) external returns (uint256[] memory);
+    function settleFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
@@ -154,20 +127,12 @@ interface IPoolCore is IPoolInternal {
     /// @param costPerHolder The cost charged by the authorized agent, per position holder (poolToken decimals)
     /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic
     ///         settlement (poolToken decimals)
-    function settlePositionFor(
-        Position.Key[] calldata p,
-        uint256 costPerHolder
-    ) external returns (uint256[] memory);
+    function settlePositionFor(Position.Key[] calldata p, uint256 costPerHolder) external returns (uint256[] memory);
 
     /// @notice Transfer a LP position to a new owner/operator
     /// @param srcP The position key
     /// @param newOwner The new owner
     /// @param newOperator The new operator
     /// @param size The size to transfer (18 decimals)
-    function transferPosition(
-        Position.Key calldata srcP,
-        address newOwner,
-        address newOperator,
-        UD60x18 size
-    ) external;
+    function transferPosition(Position.Key calldata srcP, address newOwner, address newOperator, UD60x18 size) external;
 }

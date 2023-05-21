@@ -11,9 +11,7 @@ import {IOFT} from "./IOFT.sol";
 import {IOFTCore} from "./IOFTCore.sol";
 
 contract OFTProxy is ProxyUpgradeableOwnable, ERC165BaseInternal {
-    constructor(
-        address implementation
-    ) ProxyUpgradeableOwnable(implementation) {
+    constructor(address implementation) ProxyUpgradeableOwnable(implementation) {
         {
             _setSupportsInterface(type(IERC165).interfaceId, true);
             _setSupportsInterface(type(IERC20).interfaceId, true);

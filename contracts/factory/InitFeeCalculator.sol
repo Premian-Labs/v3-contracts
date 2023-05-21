@@ -36,10 +36,7 @@ contract InitFeeCalculator is IInitFeeCalculator {
     ) external view returns (UD60x18) {
         uint256 discountFactor = maturityCount + strikeCount;
 
-        UD60x18 discount = (ONE - discountPerPool)
-            .intoSD59x18()
-            .powu(discountFactor)
-            .intoUD60x18();
+        UD60x18 discount = (ONE - discountPerPool).intoSD59x18().powu(discountFactor).intoUD60x18();
 
         UD60x18 spot = _getSpotPrice(k.oracleAdapter, k.base, k.quote);
         UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
@@ -49,21 +46,13 @@ contract InitFeeCalculator is IInitFeeCalculator {
 
     // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
     //         This is used in the calculation of the initializationFee
-    function _getSpotPrice(
-        address oracleAdapter,
-        address base,
-        address quote
-    ) internal view returns (UD60x18) {
+    function _getSpotPrice(address oracleAdapter, address base, address quote) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).quote(base, quote);
     }
 
     // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
     //         This is used to convert the initializationFee from USD to native token
     function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
-        return
-            IOracleAdapter(CHAINLINK_ADAPTER).quote(
-                WRAPPED_NATIVE_TOKEN,
-                Denominations.USD
-            );
+        return IOracleAdapter(CHAINLINK_ADAPTER).quote(WRAPPED_NATIVE_TOKEN, Denominations.USD);
     }
 }

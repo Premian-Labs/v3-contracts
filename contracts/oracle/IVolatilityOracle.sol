@@ -30,16 +30,12 @@ interface IVolatilityOracle {
     /// @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`
     /// @param params Parameters of IV model to pack
     /// @return result The packed parameters of IV model
-    function formatParams(
-        int256[5] calldata params
-    ) external pure returns (bytes32 result);
+    function formatParams(int256[5] calldata params) external pure returns (bytes32 result);
 
     /// @notice Unpack IV model parameters from a bytes32
     /// @param input Packed IV model parameters to unpack
     /// @return params The unpacked parameters of the IV model
-    function parseParams(
-        bytes32 input
-    ) external pure returns (int256[5] memory params);
+    function parseParams(bytes32 input) external pure returns (int256[5] memory params);
 
     /// @notice Update a list of Anchored eSSVI model parameters
     /// @param tokens List of the base tokens
@@ -60,16 +56,12 @@ interface IVolatilityOracle {
     /// @notice Get the IV model parameters of a token pair
     /// @param token The token address
     /// @return The IV model parameters
-    function getParams(
-        address token
-    ) external view returns (VolatilityOracleStorage.Update memory);
+    function getParams(address token) external view returns (VolatilityOracleStorage.Update memory);
 
     /// @notice Get unpacked IV model parameters
     /// @param token The token address
     /// @return The unpacked IV model parameters
-    function getParamsUnpacked(
-        address token
-    ) external view returns (VolatilityOracleStorage.Params memory);
+    function getParamsUnpacked(address token) external view returns (VolatilityOracleStorage.Params memory);
 
     /// @notice Calculate the annualized volatility for given set of parameters
     /// @param token The token address

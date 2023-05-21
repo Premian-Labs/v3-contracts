@@ -31,10 +31,7 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, tokenId()), depositSize);
         assertEq(pool.totalSupply(tokenId()), depositSize);
         assertEq(token.balanceOf(address(pool)), collateralValue);
-        assertEq(
-            token.balanceOf(users.lp),
-            initialCollateral - collateralValue
-        );
+        assertEq(token.balanceOf(users.lp), initialCollateral - collateralValue);
         assertEq(pool.marketPrice(), posKey.upper);
     }
 
@@ -42,12 +39,7 @@ abstract contract PoolDepositTest is DeployTest {
         posKey.operator = users.trader;
 
         vm.prank(users.lp);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__OperatorNotAuthorized.selector,
-                users.lp
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.lp));
 
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
@@ -62,24 +54,14 @@ abstract contract PoolDepositTest is DeployTest {
         UD60x18 minPrice = posKey.upper + ud(1);
         UD60x18 maxPrice = posKey.upper;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__AboveMaxSlippage.selector,
-                posKey.upper,
-                minPrice,
-                maxPrice
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__AboveMaxSlippage.selector, posKey.upper, minPrice, maxPrice)
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
 
         minPrice = posKey.upper - ud(10);
         maxPrice = posKey.upper - ud(1);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__AboveMaxSlippage.selector,
-                posKey.upper,
-                minPrice,
-                maxPrice
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__AboveMaxSlippage.selector, posKey.upper, minPrice, maxPrice)
         );
         pool.deposit(posKey, ZERO, ZERO, THREE, minPrice, maxPrice);
     }
@@ -106,57 +88,27 @@ abstract contract PoolDepositTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ZERO;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidRange.selector,
-                posKey.lower,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, posKey.lower, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ZERO;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidRange.selector,
-                posKey.lower,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, posKey.lower, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = ONE_HALF;
         posKey.upper = ONE_HALF / TWO;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidRange.selector,
-                posKey.lower,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, posKey.lower, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = ud(0.0001e18);
         posKey.upper = posKeySave.upper;
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidRange.selector,
-                posKey.lower,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, posKey.lower, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ud(1.01e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidRange.selector,
-                posKey.lower,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, posKey.lower, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
@@ -166,22 +118,12 @@ abstract contract PoolDepositTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ud(0.2501e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__TickWidthInvalid.selector,
-                posKey.lower
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.lower));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ud(0.7501e18);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__TickWidthInvalid.selector,
-                posKey.upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.upper));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 

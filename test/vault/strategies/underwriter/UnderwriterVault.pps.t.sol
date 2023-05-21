@@ -14,13 +14,8 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
-    function getInfos()
-        internal
-        view
-        returns (UnderwriterVaultMock.MaturityInfo[] memory)
-    {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
+    function getInfos() internal view returns (UnderwriterVaultMock.MaturityInfo[] memory) {
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](2);
@@ -65,8 +60,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
     function test_getTotalLiabilitiesExpired_ReturnExpectedValue() public {
         setupOracleAdapterMock();
 
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](4);
@@ -108,16 +102,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         infos[3].sizes[0] = ud(2e18);
         infos[3].sizes[1] = ud(2e18);
 
-        uint256[8] memory timestamps = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 days,
-            t1,
-            t1 + 1 days,
-            t2 + 1 days,
-            t3,
-            t3 + 1 days
-        ];
+        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
 
         UD60x18[8] memory expected = isCallTest
             ? [
@@ -148,11 +133,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             vault.setTimestamp(timestamps[i]);
-            assertApproxEqAbs(
-                vault.getTotalLiabilitiesExpired().unwrap(),
-                expected[i].unwrap(),
-                isCallTest ? 1e8 : 0
-            );
+            assertApproxEqAbs(vault.getTotalLiabilitiesExpired().unwrap(), expected[i].unwrap(), isCallTest ? 1e8 : 0);
         }
     }
 
@@ -165,32 +146,11 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         vault.setListingsAndSizes(getInfos());
         vault.setSpotPrice(ud(1000e18));
 
-        uint256[6] memory timestamps = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 days,
-            t2 + 1 days,
-            t3,
-            t3 + 1 days
-        ];
+        uint256[6] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t2 + 1 days, t3, t3 + 1 days];
 
         UD60x18[6] memory expected = isCallTest
-            ? [
-                ud(0.679618e18),
-                ud(0.541099e18),
-                ud(0.534583e18),
-                ud(0),
-                ud(0),
-                ud(0)
-            ]
-            : [
-                ud(6576.0e18),
-                ud(4537.998e18),
-                ud(4531.865e18),
-                ud(998.767e18),
-                ud(0),
-                ud(0)
-            ];
+            ? [ud(0.679618e18), ud(0.541099e18), ud(0.534583e18), ud(0), ud(0), ud(0)]
+            : [ud(6576.0e18), ud(4537.998e18), ud(4531.865e18), ud(998.767e18), ud(0), ud(0)];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             vault.setTimestamp(timestamps[i]);
@@ -209,16 +169,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         vault.setListingsAndSizes(getInfos());
         vault.setSpotPrice(ud(1000e18));
 
-        uint256[8] memory timestamps = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 days,
-            t1,
-            t1 + 1 days,
-            t2 + 1 days,
-            t3,
-            t3 + 1 days
-        ];
+        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
 
         UD60x18[8] memory expected = isCallTest
             ? [
@@ -272,16 +223,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
         vault.setListingsAndSizes(infos);
         vault.setSpotPrice(ud(1000e18));
 
-        uint256[8] memory timestamps = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 days,
-            t1,
-            t1 + 1 days,
-            t2 + 1 days,
-            t3,
-            t3 + 1 days
-        ];
+        uint256[8] memory timestamps = [t0 - 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2 + 1 days, t3, t3 + 1 days];
 
         UD60x18[8] memory expected = isCallTest
             ? [
@@ -345,13 +287,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
             addDeposit(users.lp, deposit);
 
             t0 = block.timestamp + 7 days;
-            volOracle.setVolatility(
-                base,
-                ud(1500e18),
-                ud(1200e18),
-                ud(19178082191780821),
-                ud(0.51e18)
-            );
+            volOracle.setVolatility(base, ud(1500e18), ud(1200e18), ud(19178082191780821), ud(0.51e18));
 
             assertEq(vault.totalAssets(), scaleDecimals(deposit));
             assertEq(vault.totalSupply(), deposit);
@@ -360,8 +296,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
             vault.setMaxMaturity(t0);
 
             if (tradeSize > ud(0)) {
-                UnderwriterVaultMock.MaturityInfo[]
-                    memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
+                UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
                 infos[0].maturity = t0;
                 infos[0].strikes = new UD60x18[](1);
                 infos[0].sizes = new UD60x18[](1);
@@ -372,11 +307,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
                 vault.increaseTotalLockedAssets(tradeSize);
             }
 
-            assertApproxEqAbs(
-                vault.getPricePerShare().unwrap(),
-                expected.unwrap(),
-                0.000002e18
-            );
+            assertApproxEqAbs(vault.getPricePerShare().unwrap(), expected.unwrap(), 0.000002e18);
 
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();

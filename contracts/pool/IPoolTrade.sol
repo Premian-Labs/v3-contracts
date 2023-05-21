@@ -77,8 +77,5 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     /// @param provider Provider of the RFQ quote
     /// @param quoteRFQHash Hash of the RFQ quote
     /// @return The size already filled (18 decimals)
-    function getQuoteRFQFilledAmount(
-        address provider,
-        bytes32 quoteRFQHash
-    ) external view returns (UD60x18);
+    function getQuoteRFQFilledAmount(address provider, bytes32 quoteRFQHash) external view returns (UD60x18);
 }

@@ -39,18 +39,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address settings,
         address vaultRegistry,
         address vxPremia
-    )
-        PoolInternal(
-            factory,
-            router,
-            wrappedNativeToken,
-            feeReceiver,
-            referral,
-            settings,
-            vaultRegistry,
-            vxPremia
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver, referral, settings, vaultRegistry, vxPremia) {}
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (UD60x18) {
@@ -66,64 +55,33 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        return
-            l.toPoolTokenDecimals(
-                _takerFee(
-                    l,
-                    taker,
-                    size,
-                    l.fromPoolTokenDecimals(premium),
-                    isPremiumNormalized
-                )
-            );
+        return l.toPoolTokenDecimals(_takerFee(l, taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized));
     }
 
     /// @inheritdoc IPoolCore
     function getPoolSettings()
         external
         view
-        returns (
-            address base,
-            address quote,
-            address oracleAdapter,
-            UD60x18 strike,
-            uint256 maturity,
-            bool isCallPool
-        )
+        returns (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool)
     {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return (
-            l.base,
-            l.quote,
-            l.oracleAdapter,
-            l.strike,
-            l.maturity,
-            l.isCallPool
-        );
+        return (l.base, l.quote, l.oracleAdapter, l.strike, l.maturity, l.isCallPool);
     }
 
     /// @inheritdoc IPoolCore
-    function tick(
-        UD60x18 price
-    ) external view returns (IPoolInternal.TickWithLiquidity memory) {
+    function tick(UD60x18 price) external view returns (IPoolInternal.TickWithLiquidity memory) {
         IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[price];
 
         return
             IPoolInternal.TickWithLiquidity({
                 tick: _tick,
                 price: price,
-                liquidityNet: price == Pricing.MAX_TICK_PRICE
-                    ? ZERO
-                    : liquidityForTick(price)
+                liquidityNet: price == Pricing.MAX_TICK_PRICE ? ZERO : liquidityForTick(price)
             });
     }
 
     /// @inheritdoc IPoolCore
-    function ticks()
-        external
-        view
-        returns (IPoolInternal.TickWithLiquidity[] memory)
-    {
+    function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
@@ -132,8 +90,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
         uint256 count;
 
-        IPoolInternal.TickWithLiquidity[]
-            memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
+        IPoolInternal.TickWithLiquidity[] memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
 
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
             while (true) {
@@ -194,9 +151,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function liquidityForTick(
-        UD60x18 price
-    ) public view returns (UD60x18 liquidityNet) {
+    function liquidityForTick(UD60x18 price) public view returns (UD60x18 liquidityNet) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
 
@@ -204,12 +159,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         // If the tick is found, we can calculate the liquidity
         if (l.currentTick == price) {
-            return
-                liquidityForRange(
-                    l.currentTick,
-                    l.tickIndex.next(l.currentTick),
-                    liquidityRate
-                );
+            return liquidityForRange(l.currentTick, l.tickIndex.next(l.currentTick), liquidityRate);
         }
 
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
@@ -275,28 +225,19 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function claim(
-        Position.Key calldata p
-    ) external nonReentrant returns (uint256) {
+    function claim(Position.Key calldata p) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _claim(p.toKeyInternal(l.strike, l.isCallPool));
     }
 
     /// @inheritdoc IPoolCore
-    function getClaimableFees(
-        Position.Key calldata p
-    ) external view returns (uint256) {
+    function getClaimableFees(Position.Key calldata p) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(
-            l,
-            p.toKeyInternal(l.strike, l.isCallPool),
-            pData
-        );
+        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p.toKeyInternal(l.strike, l.isCallPool), pData);
 
-        return
-            l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
+        return l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
     /// @inheritdoc IPoolCore
@@ -338,10 +279,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             exerciseValues[i] = _exercise(holders[i], _cost);
         }
 
-        IERC20(l.getPoolToken()).safeTransfer(
-            msg.sender,
-            holders.length * costPerHolder
-        );
+        IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
 
         return exerciseValues;
     }
@@ -370,18 +308,13 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             collateral[i] = _settle(holders[i], _cost);
         }
 
-        IERC20(l.getPoolToken()).safeTransfer(
-            msg.sender,
-            holders.length * costPerHolder
-        );
+        IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
 
         return collateral;
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(
-        Position.Key calldata p
-    ) external nonReentrant returns (uint256) {
+    function settlePosition(Position.Key calldata p) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOperatorNotAuthorized(p.operator);
         return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
@@ -403,16 +336,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
-            collateral[i] = _settlePosition(
-                p[i].toKeyInternal(l.strike, l.isCallPool),
-                _cost
-            );
+            collateral[i] = _settlePosition(p[i].toKeyInternal(l.strike, l.isCallPool), _cost);
         }
 
-        IERC20(l.getPoolToken()).safeTransfer(
-            msg.sender,
-            p.length * costPerHolder
-        );
+        IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * costPerHolder);
 
         return collateral;
     }
@@ -428,11 +355,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         _revertIfOperatorNotAuthorized(srcP.operator);
 
-        _transferPosition(
-            srcP.toKeyInternal(l.strike, l.isCallPool),
-            newOwner,
-            newOperator,
-            size
-        );
+        _transferPosition(srcP.toKeyInternal(l.strike, l.isCallPool), newOwner, newOperator, size);
     }
 }

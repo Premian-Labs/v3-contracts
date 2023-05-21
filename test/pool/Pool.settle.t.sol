@@ -21,48 +21,27 @@ struct TradeInternal {
 }
 
 abstract contract PoolSettleTest is DeployTest {
-    function _test_settle_trade_Sell100Options()
-        internal
-        returns (TradeInternal memory trade)
-    {
+    function _test_settle_trade_Sell100Options() internal returns (TradeInternal memory trade) {
         UD60x18 depositSize = ud(1000 ether);
         deposit(depositSize);
 
-        trade.initialCollateral = scaleDecimals(
-            contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper)
-        );
+        trade.initialCollateral = scaleDecimals(contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper));
 
         trade.size = ud(100 ether);
 
-        trade.traderCollateral = scaleDecimals(
-            contractsToCollateral(trade.size)
-        );
+        trade.traderCollateral = scaleDecimals(contractsToCollateral(trade.size));
 
-        (trade.totalPremium, ) = pool.getQuoteAMM(
-            users.trader,
-            trade.size,
-            false
-        );
+        (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, false);
 
         trade.poolToken = getPoolToken();
-        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
-            feeReceiver
-        );
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
 
         vm.startPrank(users.trader);
 
         deal(trade.poolToken, users.trader, trade.traderCollateral);
-        IERC20(trade.poolToken).approve(
-            address(router),
-            trade.traderCollateral
-        );
+        IERC20(trade.poolToken).approve(address(router), trade.traderCollateral);
 
-        pool.trade(
-            trade.size,
-            false,
-            trade.totalPremium - trade.totalPremium / 10,
-            address(0)
-        );
+        pool.trade(trade.size, false, trade.totalPremium - trade.totalPremium / 10, address(0));
 
         vm.stopPrank();
     }
@@ -79,9 +58,7 @@ abstract contract PoolSettleTest is DeployTest {
         vm.prank(users.trader);
         pool.settle();
 
-        uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isITM, trade.size, settlementPrice)
-        );
+        uint256 exerciseValue = scaleDecimals(getExerciseValue(isITM, trade.size, settlementPrice));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
@@ -90,17 +67,10 @@ abstract contract PoolSettleTest is DeployTest {
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
-            trade.initialCollateral +
-                exerciseValue -
-                trade.totalPremium -
-                protocolFees
+            trade.initialCollateral + exerciseValue - trade.totalPremium - protocolFees
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 
@@ -136,13 +106,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         pool.setApprovalForAll(users.otherTrader, true);
 
-        pool.safeTransferFrom(
-            users.trader,
-            users.otherTrader,
-            PoolStorage.SHORT,
-            (trade.size / TWO).unwrap(),
-            ""
-        );
+        pool.safeTransferFrom(users.trader, users.otherTrader, PoolStorage.SHORT, (trade.size / TWO).unwrap(), "");
 
         vm.stopPrank();
 
@@ -159,16 +123,11 @@ abstract contract PoolSettleTest is DeployTest {
 
         pool.settleFor(holders, cost);
 
-        uint256 exerciseValue = scaleDecimals(
-            getExerciseValue(isITM, trade.size / TWO, settlementPrice)
-        );
+        uint256 exerciseValue = scaleDecimals(getExerciseValue(isITM, trade.size / TWO, settlementPrice));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
-            (trade.traderCollateral / 2) +
-                trade.totalPremium -
-                exerciseValue -
-                cost
+            (trade.traderCollateral / 2) + trade.totalPremium - exerciseValue - cost
         );
 
         assertEq(
@@ -180,17 +139,10 @@ abstract contract PoolSettleTest is DeployTest {
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
-            trade.initialCollateral +
-                (exerciseValue * 2) -
-                trade.totalPremium -
-                protocolFees
+            trade.initialCollateral + (exerciseValue * 2) - trade.totalPremium - protocolFees
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 
@@ -215,11 +167,7 @@ abstract contract PoolSettleTest is DeployTest {
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
-        UD60x18 exerciseValue = getExerciseValue(
-            false,
-            trade.size,
-            settlementPrice
-        );
+        UD60x18 exerciseValue = getExerciseValue(false, trade.size, settlementPrice);
 
         UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
 
@@ -232,9 +180,7 @@ abstract contract PoolSettleTest is DeployTest {
         userSettings.setAuthorizedAgents(agents);
 
         // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(
-            isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap()
-        );
+        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
 
         vm.stopPrank();
         vm.warp(poolKey.maturity);
@@ -280,11 +226,7 @@ abstract contract PoolSettleTest is DeployTest {
         uint256 cost = scaleDecimals(_cost);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__CostNotAuthorized.selector,
-                (_cost * quote).unwrap(),
-                0
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
         );
 
         vm.prank(users.agent);

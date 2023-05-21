@@ -26,11 +26,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     // Contract handling the calculation of initialization fee
     address internal immutable INIT_FEE_CALCULATOR;
 
-    constructor(
-        address diamond,
-        address chainlinkAdapter,
-        address initFeeCalculator
-    ) {
+    constructor(address diamond, address chainlinkAdapter, address initFeeCalculator) {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
         INIT_FEE_CALCULATOR = initFeeCalculator;
@@ -42,9 +38,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @inheritdoc IPoolFactory
-    function getPoolAddress(
-        PoolKey calldata k
-    ) external view returns (address pool, bool isDeployed) {
+    function getPoolAddress(PoolKey calldata k) external view returns (address pool, bool isDeployed) {
         pool = _getPoolAddress(k.poolKey());
         isDeployed = true;
 
@@ -60,9 +54,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(
-        PoolKey calldata k
-    ) public view returns (UD60x18) {
+    function initializationFee(PoolKey calldata k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         return
@@ -89,38 +81,25 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @inheritdoc IPoolFactory
-    function deployPool(
-        PoolKey calldata k
-    ) external payable returns (address poolAddress) {
+    function deployPool(PoolKey calldata k) external payable returns (address poolAddress) {
         if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
 
-        if (
-            k.base == address(0) ||
-            k.quote == address(0) ||
-            k.oracleAdapter == address(0)
-        ) revert PoolFactory__ZeroAddress();
+        if (k.base == address(0) || k.quote == address(0) || k.oracleAdapter == address(0))
+            revert PoolFactory__ZeroAddress();
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
 
-        _revertIfOptionStrikeInvalid(
-            k.strike,
-            k.oracleAdapter,
-            k.base,
-            k.quote
-        );
-
+        _revertIfOptionStrikeInvalid(k.strike, k.oracleAdapter, k.base, k.quote);
         _revertIfOptionMaturityInvalid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k).unwrap();
 
         address _poolAddress = _getPoolAddress(poolKey);
-        if (_poolAddress != address(0))
-            revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
+        if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
         if (fee > 0) {
-            if (msg.value < fee)
-                revert PoolFactory__InitializationFeeRequired(msg.value, fee);
+            if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
 
             payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
 
@@ -132,15 +111,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         bytes32 salt = keccak256(_encodePoolProxyArgs(k));
 
         poolAddress = address(
-            new PoolProxy{salt: salt}(
-                DIAMOND,
-                k.base,
-                k.quote,
-                k.oracleAdapter,
-                k.strike,
-                k.maturity,
-                k.isCallPool
-            )
+            new PoolProxy{salt: salt}(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool)
         );
 
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
@@ -149,15 +120,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         l.strikeCount[k.strikeKey()] += 1;
         l.maturityCount[k.maturityKey()] += 1;
 
-        emit PoolDeployed(
-            k.base,
-            k.quote,
-            k.oracleAdapter,
-            k.strike,
-            k.maturity,
-            k.isCallPool,
-            poolAddress
-        );
+        emit PoolDeployed(k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool, poolAddress);
 
         {
             (
@@ -188,33 +151,19 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     function removeDiscount(PoolKey calldata k) external {
         if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
 
-        if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender)
-            revert PoolFactory__NotAuthorized();
+        if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender) revert PoolFactory__NotAuthorized();
 
         PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
     /// @notice Returns the encoded arguments for the pool proxy using pool key `k`
-    function _encodePoolProxyArgs(
-        PoolKey memory k
-    ) internal view returns (bytes memory) {
-        return
-            abi.encode(
-                DIAMOND,
-                k.base,
-                k.quote,
-                k.oracleAdapter,
-                k.strike,
-                k.maturity,
-                k.isCallPool
-            );
+    function _encodePoolProxyArgs(PoolKey memory k) internal view returns (bytes memory) {
+        return abi.encode(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool);
     }
 
     /// @notice Calculates the pool address using the pool key `k`
-    function _calculatePoolAddress(
-        PoolKey memory k
-    ) internal view returns (address) {
+    function _calculatePoolAddress(PoolKey memory k) internal view returns (address) {
         bytes memory args = _encodePoolProxyArgs(k);
 
         bytes32 hash = keccak256(
@@ -243,31 +192,25 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         UD60x18 spot = IOracleAdapter(oracleAdapter).quote(base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
 
-        if (strike % strikeInterval != ZERO)
-            revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
+        if (strike % strikeInterval != ZERO) revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
     }
 
     /// @notice Revert if the maturity is invalid
     function _revertIfOptionMaturityInvalid(uint256 maturity) internal view {
-        if (maturity <= block.timestamp)
-            revert PoolFactory__OptionExpired(maturity);
+        if (maturity <= block.timestamp) revert PoolFactory__OptionExpired(maturity);
 
-        if ((maturity % 24 hours) % 8 hours != 0)
-            revert PoolFactory__OptionMaturityNot8UTC(maturity);
+        if ((maturity % 24 hours) % 8 hours != 0) revert PoolFactory__OptionMaturityNot8UTC(maturity);
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
         if (ttm >= 3 days && ttm <= 30 days) {
-            if (!OptionMath.isFriday(maturity))
-                revert PoolFactory__OptionMaturityNotFriday(maturity);
+            if (!OptionMath.isFriday(maturity)) revert PoolFactory__OptionMaturityNotFriday(maturity);
         }
 
         if (ttm > 30 days) {
-            if (!OptionMath.isLastFriday(maturity))
-                revert PoolFactory__OptionMaturityNotLastFriday(maturity);
+            if (!OptionMath.isLastFriday(maturity)) revert PoolFactory__OptionMaturityNotLastFriday(maturity);
         }
 
-        if (ttm > 365 days)
-            revert PoolFactory__OptionMaturityExceedsMax(maturity);
+        if (ttm > 365 days) revert PoolFactory__OptionMaturityExceedsMax(maturity);
     }
 }

@@ -31,20 +31,16 @@ contract UnderwriterVaultProxy is Proxy {
     ) {
         VAULT_REGISTRY = vaultRegistry;
 
-        ERC20MetadataStorage.Layout storage metadata = ERC20MetadataStorage
-            .layout();
+        ERC20MetadataStorage.Layout storage metadata = ERC20MetadataStorage.layout();
         metadata.name = name;
         metadata.symbol = symbol;
         metadata.decimals = 18;
 
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        bytes memory settings = IVaultRegistry(VAULT_REGISTRY).getSettings(
-            VAULT_TYPE
-        );
+        bytes memory settings = IVaultRegistry(VAULT_REGISTRY).getSettings(VAULT_TYPE);
         l.updateSettings(settings);
 
         l.isCall = isCall;

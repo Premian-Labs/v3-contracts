@@ -49,9 +49,7 @@ contract VaultRegistryTest is Test, Assertions {
         VaultRegistryHarness impl = new VaultRegistryHarness();
 
         // 2. Create registry proxy
-        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(
-            address(impl)
-        );
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(impl));
 
         registry = VaultRegistryHarness(address(proxy));
 
@@ -148,10 +146,7 @@ contract VaultRegistryTest is Test, Assertions {
         assertEq(vault.vault, address(10));
         assertEq(vault.vaultType, keccak256("Vault1"));
         assertEq(uint8(vault.side), uint8(IVaultRegistry.TradeSide.Sell));
-        assertEq(
-            uint8(vault.optionType),
-            uint8(IVaultRegistry.OptionType.Call)
-        );
+        assertEq(uint8(vault.optionType), uint8(IVaultRegistry.OptionType.Call));
 
         vault = registry.getVault(address(17));
         assertEq(vault.vault, address(17));
@@ -170,10 +165,7 @@ contract VaultRegistryTest is Test, Assertions {
         assertEq(vaults[3].vault, address(13));
         assertEq(vaults[3].vaultType, keccak256("Vault2"));
         assertEq(uint8(vaults[3].side), uint8(IVaultRegistry.TradeSide.Both));
-        assertEq(
-            uint8(vaults[3].optionType),
-            uint8(IVaultRegistry.OptionType.Put)
-        );
+        assertEq(uint8(vaults[3].optionType), uint8(IVaultRegistry.OptionType.Put));
     }
 
     function test_getVaultsByFilter() public {
@@ -272,9 +264,7 @@ contract VaultRegistryTest is Test, Assertions {
 
     function test_getVaultByTradeSide() public {
         // Buy
-        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByTradeSide(
-            IVaultRegistry.TradeSide.Buy
-        );
+        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByTradeSide(IVaultRegistry.TradeSide.Buy);
 
         assertEq(vaults.length, 6);
 
@@ -292,9 +282,7 @@ contract VaultRegistryTest is Test, Assertions {
 
     function test_getVaultByOptionType() public {
         // Call
-        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByOptionType(
-            IVaultRegistry.OptionType.Call
-        );
+        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByOptionType(IVaultRegistry.OptionType.Call);
 
         assertEq(vaults.length, 7);
         assertEq(vaults[0].vault, address(10));
@@ -314,9 +302,7 @@ contract VaultRegistryTest is Test, Assertions {
 
     function test_getVaultByType() public {
         // Vault 1
-        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByType(
-            keccak256("Vault1")
-        );
+        IVaultRegistry.Vault[] memory vaults = registry.getVaultsByType(keccak256("Vault1"));
 
         assertEq(vaults.length, 2);
         assertEq(vaults[0].vault, address(10));

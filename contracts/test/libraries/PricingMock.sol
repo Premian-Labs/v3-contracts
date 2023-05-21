@@ -7,56 +7,35 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
 
 contract PricingMock {
-    function proportion(
-        UD60x18 lower,
-        UD60x18 upper,
-        UD60x18 marketPrice
-    ) external pure returns (UD60x18) {
+    function proportion(UD60x18 lower, UD60x18 upper, UD60x18 marketPrice) external pure returns (UD60x18) {
         return Pricing.proportion(lower, upper, marketPrice);
     }
 
-    function amountOfTicksBetween(
-        UD60x18 lower,
-        UD60x18 upper
-    ) external pure returns (UD60x18) {
+    function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) external pure returns (UD60x18) {
         return Pricing.amountOfTicksBetween(lower, upper);
     }
 
-    function liquidity(
-        Pricing.Args memory args
-    ) external pure returns (UD60x18) {
+    function liquidity(Pricing.Args memory args) external pure returns (UD60x18) {
         return Pricing.liquidity(args);
     }
 
-    function bidLiquidity(
-        Pricing.Args memory args
-    ) external pure returns (UD60x18) {
+    function bidLiquidity(Pricing.Args memory args) external pure returns (UD60x18) {
         return Pricing.bidLiquidity(args);
     }
 
-    function askLiquidity(
-        Pricing.Args memory args
-    ) external pure returns (UD60x18) {
+    function askLiquidity(Pricing.Args memory args) external pure returns (UD60x18) {
         return Pricing.askLiquidity(args);
     }
 
-    function maxTradeSize(
-        Pricing.Args memory args
-    ) external pure returns (UD60x18) {
+    function maxTradeSize(Pricing.Args memory args) external pure returns (UD60x18) {
         return Pricing.maxTradeSize(args);
     }
 
-    function price(
-        Pricing.Args memory args,
-        UD60x18 tradeSize
-    ) external pure returns (UD60x18) {
+    function price(Pricing.Args memory args, UD60x18 tradeSize) external pure returns (UD60x18) {
         return Pricing.price(args, tradeSize);
     }
 
-    function nextPrice(
-        Pricing.Args memory args,
-        UD60x18 tradeSize
-    ) external pure returns (UD60x18) {
+    function nextPrice(Pricing.Args memory args, UD60x18 tradeSize) external pure returns (UD60x18) {
         return Pricing.nextPrice(args, tradeSize);
     }
 }

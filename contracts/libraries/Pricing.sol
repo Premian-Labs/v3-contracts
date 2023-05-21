@@ -36,13 +36,8 @@ library Pricing {
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
-    function proportion(
-        UD60x18 lower,
-        UD60x18 upper,
-        UD60x18 marketPrice
-    ) internal pure returns (UD60x18) {
-        if (lower >= upper)
-            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
+    function proportion(UD60x18 lower, UD60x18 upper, UD60x18 marketPrice) internal pure returns (UD60x18) {
+        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
         if (lower > marketPrice || marketPrice > upper)
             revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPrice);
 
@@ -68,20 +63,14 @@ library Pricing {
     ///
     ///         Then there are two active ticks, 0.01 and 0.02, within the active tick range.
     ///         ===========================================================
-    function amountOfTicksBetween(
-        UD60x18 lower,
-        UD60x18 upper
-    ) internal pure returns (UD60x18) {
-        if (lower >= upper)
-            revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
+    function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) internal pure returns (UD60x18) {
+        if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
         return (upper - lower) / MIN_TICK_DISTANCE;
     }
 
     /// @notice Returns the number of ticks between `args.lower` and `args.upper`
-    function amountOfTicksBetween(
-        Args memory args
-    ) internal pure returns (UD60x18) {
+    function amountOfTicksBetween(Args memory args) internal pure returns (UD60x18) {
         return amountOfTicksBetween(args.lower, args.upper);
     }
 
@@ -107,18 +96,14 @@ library Pricing {
 
     /// @notice Computes price reached from the current lower/upper tick after buying/selling `trade_size` amount of
     ///         contracts
-    function price(
-        Args memory args,
-        UD60x18 tradeSize
-    ) internal pure returns (UD60x18) {
+    function price(Args memory args, UD60x18 tradeSize) internal pure returns (UD60x18) {
         UD60x18 liq = liquidity(args);
         if (liq == ZERO) return args.isBuy ? args.upper : args.lower;
 
         UD60x18 _proportion;
         if (tradeSize > ZERO) _proportion = tradeSize / liq;
 
-        if (_proportion > ONE)
-            revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
+        if (_proportion > ONE) revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             args.isBuy
@@ -127,10 +112,7 @@ library Pricing {
     }
 
     /// @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts
-    function nextPrice(
-        Args memory args,
-        UD60x18 tradeSize
-    ) internal pure returns (UD60x18) {
+    function nextPrice(Args memory args, UD60x18 tradeSize) internal pure returns (UD60x18) {
         UD60x18 offset = args.isBuy ? bidLiquidity(args) : askLiquidity(args);
         return price(args, offset + tradeSize);
     }

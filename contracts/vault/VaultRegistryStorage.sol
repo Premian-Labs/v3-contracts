@@ -9,8 +9,7 @@ import {IVaultRegistry} from "./IVaultRegistry.sol";
 library VaultRegistryStorage {
     using VaultRegistryStorage for VaultRegistryStorage.Layout;
 
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.VaultRegistry");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.VaultRegistry");
 
     struct Layout {
         EnumerableSet.AddressSet vaultAddresses;

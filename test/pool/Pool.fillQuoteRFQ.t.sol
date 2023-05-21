@@ -61,22 +61,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size)
-        );
+        uint256 premium = scaleDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
 
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size)
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
 
-        uint256 protocolFee = pool.takerFee(
-            users.trader,
-            quoteRFQ.size,
-            premium,
-            false
-        );
+        uint256 protocolFee = pool.takerFee(users.trader, quoteRFQ.size, premium, false);
 
         uint256 initialCollateral = getInitialCollateral();
 
@@ -86,28 +77,12 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             "poolToken lp"
         );
 
-        assertEq(
-            IERC20(poolToken).balanceOf(users.trader),
-            initialCollateral - premium,
-            "poolToken trader"
-        );
+        assertEq(IERC20(poolToken).balanceOf(users.trader), initialCollateral - premium, "poolToken trader");
 
-        assertEq(
-            pool.balanceOf(users.trader, PoolStorage.SHORT),
-            0,
-            "short trader"
-        );
-        assertEq(
-            pool.balanceOf(users.trader, PoolStorage.LONG),
-            quoteRFQ.size,
-            "long trader"
-        );
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0, "short trader");
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), quoteRFQ.size, "long trader");
 
-        assertEq(
-            pool.balanceOf(users.lp, PoolStorage.SHORT),
-            quoteRFQ.size,
-            "short lp"
-        );
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), quoteRFQ.size, "short lp");
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0, "long lp");
     }
 
@@ -120,27 +95,15 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        uint256 premium = scaleDecimals(
-            contractsToCollateral(quoteRFQ.price * quoteRFQ.size)
-        );
+        uint256 premium = scaleDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
 
-        uint256 protocolFee = pool.takerFee(
-            users.trader,
-            quoteRFQ.size,
-            premium,
-            false
-        );
+        uint256 protocolFee = pool.takerFee(users.trader, quoteRFQ.size, premium, false);
 
-        (
-            UD60x18 primaryRebatePercent,
-            UD60x18 secondaryRebatePercent
-        ) = referral.getRebatePercents(users.referrer);
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(protocolFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(protocolFee);
 
-        UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(protocolFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(protocolFee);
 
         uint256 primaryRebate = scaleDecimals(_primaryRebate);
         uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -149,40 +112,24 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(quoteRFQ.size)
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
 
         uint256 initialCollateral = getInitialCollateral();
 
         if (isBuy) {
-            assertEq(
-                IERC20(token).balanceOf(users.lp),
-                initialCollateral - premium
-            );
+            assertEq(IERC20(token).balanceOf(users.lp), initialCollateral - premium);
 
             assertEq(
                 IERC20(token).balanceOf(users.trader),
-                initialCollateral +
-                    premium +
-                    totalRebate -
-                    collateral -
-                    protocolFee
+                initialCollateral + premium + totalRebate - collateral - protocolFee
             );
         } else {
             assertEq(
                 IERC20(token).balanceOf(users.lp),
-                initialCollateral +
-                    premium +
-                    totalRebate -
-                    collateral -
-                    protocolFee
+                initialCollateral + premium + totalRebate - collateral - protocolFee
             );
 
-            assertEq(
-                IERC20(token).balanceOf(users.trader),
-                initialCollateral - premium
-            );
+            assertEq(IERC20(token).balanceOf(users.trader), initialCollateral - premium);
         }
 
         assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
@@ -213,23 +160,13 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         quoteRFQ.price = ud(1);
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__OutOfBoundsPrice.selector,
-                quoteRFQ.price
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OutOfBoundsPrice.selector, quoteRFQ.price));
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
         quoteRFQ.price = ud(1 ether + 1);
         sig = signQuoteRFQ(quoteRFQ);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__OutOfBoundsPrice.selector,
-                quoteRFQ.price
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OutOfBoundsPrice.selector, quoteRFQ.price));
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
     }
 
@@ -297,9 +234,6 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size / TWO, sig, address(0));
 
         bytes32 quoteRFQHash = pool.quoteRFQHash(quoteRFQ);
-        assertEq(
-            pool.getQuoteRFQFilledAmount(quoteRFQ.provider, quoteRFQHash),
-            quoteRFQ.size / TWO
-        );
+        assertEq(pool.getQuoteRFQFilledAmount(quoteRFQ.provider, quoteRFQHash), quoteRFQ.size / TWO);
     }
 }

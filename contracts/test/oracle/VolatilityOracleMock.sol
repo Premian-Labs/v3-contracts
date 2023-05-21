@@ -14,10 +14,7 @@ contract VolatilityOracleMock is VolatilityOracle {
     mapping(bytes32 => UD60x18) internal volatilityMap;
     UD60x18 internal riskFreeRate;
 
-    function findInterval(
-        SD59x18[5] memory arr,
-        SD59x18 value
-    ) external pure returns (uint256) {
+    function findInterval(SD59x18[5] memory arr, SD59x18 value) external pure returns (uint256) {
         return VolatilityOracle._findInterval(arr, value);
     }
 
@@ -38,9 +35,7 @@ contract VolatilityOracleMock is VolatilityOracle {
         UD60x18 timeToMaturity,
         UD60x18 volatility
     ) external {
-        volatilityMap[
-            keccak256(abi.encode(token, spot, strike, timeToMaturity))
-        ] = volatility;
+        volatilityMap[keccak256(abi.encode(token, spot, strike, timeToMaturity))] = volatility;
     }
 
     function getVolatility(
@@ -49,9 +44,7 @@ contract VolatilityOracleMock is VolatilityOracle {
         UD60x18 strike,
         UD60x18 timeToMaturity
     ) public view override returns (UD60x18) {
-        UD60x18 volatility = volatilityMap[
-            keccak256(abi.encode(token, spot, strike, timeToMaturity))
-        ];
+        UD60x18 volatility = volatilityMap[keccak256(abi.encode(token, spot, strike, timeToMaturity))];
 
         if (volatility != ud(0)) return volatility;
 
@@ -67,17 +60,10 @@ contract VolatilityOracleMock is VolatilityOracle {
         UD60x18[] memory result = new UD60x18[](strike.length);
 
         for (uint256 i = 0; i < strike.length; i++) {
-            result[i] = volatilityMap[
-                keccak256(abi.encode(token, spot, strike[i], timeToMaturity[i]))
-            ];
+            result[i] = volatilityMap[keccak256(abi.encode(token, spot, strike[i], timeToMaturity[i]))];
 
             if (result[i] == ud(0)) {
-                result[i] = super.getVolatility(
-                    token,
-                    spot,
-                    strike[i],
-                    timeToMaturity[i]
-                );
+                result[i] = super.getVolatility(token, spot, strike[i], timeToMaturity[i]);
             }
         }
 

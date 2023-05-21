@@ -57,13 +57,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         longCall = address(new ERC20Mock("LONG_CALL", 18));
         shortCall = address(new ERC20Mock("SHORT_CALL", 18));
 
-        address[5] memory users = [
-            users.caller,
-            users.receiver,
-            users.underwriter,
-            users.lp,
-            users.trader
-        ];
+        address[5] memory users = [users.caller, users.receiver, users.underwriter, users.lp, users.trader];
 
         for (uint256 i; i < users.length; i++) {
             deal(base, users[i], 1_000e18);
@@ -167,8 +161,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         uint256 minMaturity = block.timestamp + 10 * 1 days;
         uint256 maxMaturity = block.timestamp + 20 * 1 days;
 
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
         infos[0].maturity = minMaturity;
         infos[1].maturity = maxMaturity;
 
@@ -221,16 +214,9 @@ contract UnderwriterVaultDeployTest is DeployTest {
         setupGetFeeVars(vars);
 
         uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
-        deal(
-            getPoolToken(),
-            address(vault),
-            vaultDeposit + scaleDecimals(vars.protocolFeesInitial)
-        );
+        deal(getPoolToken(), address(vault), vaultDeposit + scaleDecimals(vars.protocolFeesInitial));
         vault.setProtocolFees(vars.protocolFeesInitial);
-        vault.setNetUserDeposit(
-            users.receiver,
-            vars.netUserDepositReceiver.unwrap()
-        );
+        vault.setNetUserDeposit(users.receiver, vars.netUserDepositReceiver.unwrap());
     }
 
     // prettier-ignore

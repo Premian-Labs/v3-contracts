@@ -39,13 +39,7 @@ contract PricingTest is Test, Assertions {
         UD60x18 lower = ud(0.75e18);
         UD60x18 upper = ud(0.25e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPricing.Pricing__UpperNotGreaterThanLower.selector,
-                lower,
-                upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
         Pricing.proportion(lower, upper, ud(0));
     }
@@ -55,14 +49,7 @@ contract PricingTest is Test, Assertions {
         UD60x18 upper = ud(0.75e18);
         UD60x18 marketPrice = ud(0.2e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPricing.Pricing__PriceOutOfRange.selector,
-                lower,
-                upper,
-                marketPrice
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
         Pricing.proportion(lower, upper, marketPrice);
     }
@@ -72,14 +59,7 @@ contract PricingTest is Test, Assertions {
         UD60x18 upper = ud(0.75e18);
         UD60x18 marketPrice = ud(0.8e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPricing.Pricing__PriceOutOfRange.selector,
-                lower,
-                upper,
-                marketPrice
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
         Pricing.proportion(lower, upper, marketPrice);
     }
@@ -95,26 +75,14 @@ contract PricingTest is Test, Assertions {
         UD60x18 lower = ud(0.2e18);
         UD60x18 upper = ud(0.01e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPricing.Pricing__UpperNotGreaterThanLower.selector,
-                lower,
-                upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
         Pricing.amountOfTicksBetween(lower, upper);
 
         lower = ud(0.1e18);
         upper = ud(0.1e18);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPricing.Pricing__UpperNotGreaterThanLower.selector,
-                lower,
-                upper
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
         Pricing.amountOfTicksBetween(lower, upper);
     }
@@ -198,9 +166,7 @@ contract PricingTest is Test, Assertions {
         assertEq(args.price(ud(0)), args.upper);
     }
 
-    function test_price_ReturnPrice_ForBuyOrder_IfLiqGtZero_AndTradeSizeGtZero()
-        public
-    {
+    function test_price_ReturnPrice_ForBuyOrder_IfLiqGtZero_AndTradeSizeGtZero() public {
         args.marketPrice = ud(0.75e18);
         args.isBuy = true;
 
@@ -250,9 +216,7 @@ contract PricingTest is Test, Assertions {
         assertEq(args.price(bidLiq), avg);
     }
 
-    function test_price_ReturnPrice_ForSellOrder_IfLiqGtZero_AndTradeSizeGtZero()
-        public
-    {
+    function test_price_ReturnPrice_ForSellOrder_IfLiqGtZero_AndTradeSizeGtZero() public {
         args.marketPrice = ud(0.75e18);
         args.isBuy = false;
 
@@ -340,9 +304,7 @@ contract PricingTest is Test, Assertions {
         assertEq(args.nextPrice(ud(0)), args.marketPrice);
     }
 
-    function test_nextPrice_ReturnNextPrice_ForBuyOrder_IfLiquidityGtZero_AndTradeSizeGtZero()
-        public
-    {
+    function test_nextPrice_ReturnNextPrice_ForBuyOrder_IfLiquidityGtZero_AndTradeSizeGtZero() public {
         args.isBuy = true;
 
         UD60x18 liq = args.liquidity();
@@ -390,9 +352,7 @@ contract PricingTest is Test, Assertions {
         assertEq(args.nextPrice(bidLiq / ud(4e18)), avg);
     }
 
-    function test_nextPrice_ReturnNextPrice_ForSellOrder_IfLiquidityGtZero_AndTradeSizeGtZero()
-        public
-    {
+    function test_nextPrice_ReturnNextPrice_ForSellOrder_IfLiquidityGtZero_AndTradeSizeGtZero() public {
         args.marketPrice = ud(0.75e18);
         args.isBuy = false;
 

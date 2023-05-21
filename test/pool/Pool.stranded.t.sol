@@ -22,8 +22,7 @@ abstract contract PoolStrandedTest is DeployTest {
         uint256 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
-        return
-            depositSpecified(ud(depositSize), ud(lower), ud(upper), orderType);
+        return depositSpecified(ud(depositSize), ud(lower), ud(upper), orderType);
     }
 
     function depositSpecified(
@@ -33,34 +32,18 @@ abstract contract PoolStrandedTest is DeployTest {
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
-        initialCollateral = scaleDecimals(
-            isCallTest ? depositSize : depositSize * poolKey.strike
-        );
+        initialCollateral = scaleDecimals(isCallTest ? depositSize : depositSize * poolKey.strike);
 
         vm.startPrank(users.lp);
 
         deal(address(token), users.lp, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        posKey = Position.Key({
-            owner: users.lp,
-            operator: users.lp,
-            lower: lower,
-            upper: upper,
-            orderType: orderType
-        });
+        posKey = Position.Key({owner: users.lp, operator: users.lp, lower: lower, upper: upper, orderType: orderType});
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool
-            .getNearestTicksBelow(posKey.lower, posKey.upper);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        pool.deposit(
-            posKey,
-            nearestBelowLower,
-            nearestBelowUpper,
-            depositSize,
-            ZERO,
-            ONE
-        );
+        pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
 
         vm.stopPrank();
     }
@@ -71,13 +54,7 @@ abstract contract PoolStrandedTest is DeployTest {
         uint256 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
-        return
-            withdrawSpecified(
-                ud(withdrawSize),
-                ud(lower),
-                ud(upper),
-                orderType
-            );
+        return withdrawSpecified(ud(withdrawSize), ud(lower), ud(upper), orderType);
     }
 
     function withdrawSpecified(
@@ -86,19 +63,11 @@ abstract contract PoolStrandedTest is DeployTest {
         UD60x18 upper,
         Position.OrderType orderType
     ) internal returns (uint256 initialCollateral) {
-        initialCollateral = scaleDecimals(
-            isCallTest ? withdrawSize : withdrawSize * poolKey.strike
-        );
+        initialCollateral = scaleDecimals(isCallTest ? withdrawSize : withdrawSize * poolKey.strike);
 
         vm.startPrank(users.lp);
 
-        posKey = Position.Key({
-            owner: users.lp,
-            operator: users.lp,
-            lower: lower,
-            upper: upper,
-            orderType: orderType
-        });
+        posKey = Position.Key({owner: users.lp, operator: users.lp, lower: lower, upper: upper, orderType: orderType});
 
         pool.withdraw(posKey, withdrawSize, ud(0.001 ether), ud(1 ether));
 
@@ -138,9 +107,7 @@ abstract contract PoolStrandedTest is DeployTest {
         assertEq(upper.unwrap(), 0.4 ether);
     }
 
-    function test_stranded_ZeroLiquidity_MarketPriceWithinStrandedArea()
-        public
-    {
+    function test_stranded_ZeroLiquidity_MarketPriceWithinStrandedArea() public {
         // - zero liquidity area marked with (Z)
         // - non-zero liquidity area marked with (L)
         //               market price (0.35)
@@ -155,12 +122,7 @@ abstract contract PoolStrandedTest is DeployTest {
         depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
         depositSpecified(1 ether, 0.35 ether, 0.4 ether, Position.OrderType.CS);
         vm.warp(600);
-        withdrawSpecified(
-            1 ether,
-            0.35 ether,
-            0.4 ether,
-            Position.OrderType.CS
-        );
+        withdrawSpecified(1 ether, 0.35 ether, 0.4 ether, Position.OrderType.CS);
         assertEq(pool.getLiquidityRate(), 0 ether);
         assertEq(pool.marketPrice(), 0.35 ether);
 
@@ -255,10 +217,7 @@ abstract contract PoolStrandedTest is DeployTest {
             isCall: poolKey.isCallPool
         });
 
-        bool isStranded = pool.exposed_isMarketPriceStranded(
-            posKeyInternal,
-            true
-        );
+        bool isStranded = pool.exposed_isMarketPriceStranded(posKeyInternal, true);
         assertEq(isStranded, true);
 
         posKeyInternal = Position.KeyInternal({
@@ -311,16 +270,10 @@ abstract contract PoolStrandedTest is DeployTest {
             strike: poolKey.strike,
             isCall: poolKey.isCallPool
         });
-        UD60x18 price = pool.exposed_getStrandedMarketPriceUpdate(
-            posKeyInternal,
-            true
-        );
+        UD60x18 price = pool.exposed_getStrandedMarketPriceUpdate(posKeyInternal, true);
         assertEq(price.unwrap(), 0.7 ether);
 
-        price = pool.exposed_getStrandedMarketPriceUpdate(
-            posKeyInternal,
-            false
-        );
+        price = pool.exposed_getStrandedMarketPriceUpdate(posKeyInternal, false);
         assertEq(price.unwrap(), 0.48 ether);
     }
 }

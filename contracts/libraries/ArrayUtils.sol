@@ -37,12 +37,8 @@ library ArrayUtils {
     }
 
     /// @notice Reverts if trying to expand array size, as increasing array size through inline assembly is not safe
-    function revertIfTryingToExpand(
-        uint256 currentLength,
-        uint256 targetSize
-    ) internal pure {
+    function revertIfTryingToExpand(uint256 currentLength, uint256 targetSize) internal pure {
         if (currentLength == targetSize) return;
-        if (currentLength < targetSize)
-            revert ArrayUtils__ArrayCannotExpand(currentLength, targetSize);
+        if (currentLength < targetSize) revert ArrayUtils__ArrayCannotExpand(currentLength, targetSize);
     }
 }

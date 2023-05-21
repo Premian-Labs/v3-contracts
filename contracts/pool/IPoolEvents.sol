@@ -47,12 +47,7 @@ interface IPoolEvents {
         UD60x18 currentTick
     );
 
-    event ClaimFees(
-        address indexed owner,
-        uint256 indexed tokenId,
-        UD60x18 feesClaimed,
-        UD60x18 lastFeeRate
-    );
+    event ClaimFees(address indexed owner, uint256 indexed tokenId, UD60x18 feesClaimed, UD60x18 lastFeeRate);
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
@@ -127,19 +122,9 @@ interface IPoolEvents {
         UD60x18 agentCost
     );
 
-    event TransferPosition(
-        address indexed owner,
-        address indexed receiver,
-        uint256 srcTokenId,
-        uint256 destTokenId
-    );
+    event TransferPosition(address indexed owner, address indexed receiver, uint256 srcTokenId, uint256 destTokenId);
 
     event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
 
-    event FlashLoan(
-        address indexed initiator,
-        address indexed receiver,
-        UD60x18 amount,
-        UD60x18 fee
-    );
+    event FlashLoan(address indexed initiator, address indexed receiver, UD60x18 amount, UD60x18 fee);
 }

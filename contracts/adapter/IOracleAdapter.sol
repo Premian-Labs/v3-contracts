@@ -43,10 +43,7 @@ interface IOracleAdapter {
     /// @param tokenB The other of the pair's tokens
     /// @return isCached True if the pair has been cached, false otherwise
     /// @return hasPath True if the pair has a valid path, false otherwise
-    function isPairSupported(
-        address tokenA,
-        address tokenB
-    ) external view returns (bool isCached, bool hasPath);
+    function isPairSupported(address tokenA, address tokenB) external view returns (bool isCached, bool hasPath);
 
     /// @notice Stores or updates the given token pair data provider configuration. This function will let the adapter
     ///         take some actions to configure the pair, in preparation for future quotes. Can be called many times in
@@ -59,21 +56,14 @@ interface IOracleAdapter {
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @return Spot price of base denominated in quote token (18 decimals)
-    function quote(
-        address tokenIn,
-        address tokenOut
-    ) external view returns (UD60x18);
+    function quote(address tokenIn, address tokenOut) external view returns (UD60x18);
 
     /// @notice Returns a quote closest to the target timestamp, based on the given token pair
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @param target Reference timestamp of the quote
     /// @return Historical price of base denominated in quote token (18 decimals)
-    function quoteFrom(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) external view returns (UD60x18);
+    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18);
 
     /// @notice Describes the pricing path used to convert the token to ETH
     /// @param token The token from where the pricing path starts
@@ -82,12 +72,5 @@ interface IOracleAdapter {
     /// @return decimals The decimals of each token in the path
     function describePricingPath(
         address token
-    )
-        external
-        view
-        returns (
-            AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        );
+    ) external view returns (AdapterType adapterType, address[][] memory path, uint8[] memory decimals);
 }

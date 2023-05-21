@@ -11,11 +11,7 @@ import {LzAppStorage} from "./LzAppStorage.sol";
 import {BytesLib} from "../util/BytesLib.sol";
 
 // A generic LzReceiver implementation
-abstract contract LzApp is
-    OwnableInternal,
-    ILayerZeroReceiver,
-    ILayerZeroUserApplicationConfig
-{
+abstract contract LzApp is OwnableInternal, ILayerZeroReceiver, ILayerZeroUserApplicationConfig {
     using BytesLib for bytes;
 
     ILayerZeroEndpoint public immutable lzEndpoint;
@@ -33,19 +29,12 @@ abstract contract LzApp is
     }
 
     /// @inheritdoc ILayerZeroReceiver
-    function lzReceive(
-        uint16 srcChainId,
-        bytes memory srcAddress,
-        uint64 nonce,
-        bytes memory payload
-    ) public virtual {
+    function lzReceive(uint16 srcChainId, bytes memory srcAddress, uint64 nonce, bytes memory payload) public virtual {
         // lzReceive must be called by the endpoint for security
-        if (msg.sender != address(lzEndpoint))
-            revert LzApp__InvalidEndpointCaller();
+        if (msg.sender != address(lzEndpoint)) revert LzApp__InvalidEndpointCaller();
 
         // if will still block the message pathway from (srcChainId, srcAddress). should not receive message from untrusted remote.
-        if (!_isTrustedRemote(srcChainId, srcAddress))
-            revert LzApp__InvalidSource();
+        if (!_isTrustedRemote(srcChainId, srcAddress)) revert LzApp__InvalidSource();
 
         _blockingLzReceive(srcChainId, srcAddress, nonce, payload);
     }
@@ -66,9 +55,7 @@ abstract contract LzApp is
         bytes memory adapterParams,
         uint256 nativeFee
     ) internal virtual {
-        bytes memory trustedRemote = LzAppStorage.layout().trustedRemote[
-            dstChainId
-        ];
+        bytes memory trustedRemote = LzAppStorage.layout().trustedRemote[dstChainId];
         if (trustedRemote.length == 0) revert LzApp__NotTrustedSource();
         lzEndpoint.send{value: nativeFee}(
             dstChainId,
@@ -87,17 +74,11 @@ abstract contract LzApp is
         address,
         uint256 configType
     ) external view returns (bytes memory) {
-        return
-            lzEndpoint.getConfig(version, chainId, address(this), configType);
+        return lzEndpoint.getConfig(version, chainId, address(this), configType);
     }
 
     /// @inheritdoc ILayerZeroUserApplicationConfig
-    function setConfig(
-        uint16 version,
-        uint16 chainId,
-        uint256 configType,
-        bytes calldata config
-    ) external onlyOwner {
+    function setConfig(uint16 version, uint16 chainId, uint256 configType, bytes calldata config) external onlyOwner {
         lzEndpoint.setConfig(version, chainId, configType, config);
     }
 
@@ -112,27 +93,16 @@ abstract contract LzApp is
     }
 
     /// @inheritdoc ILayerZeroUserApplicationConfig
-    function forceResumeReceive(
-        uint16 srcChainId,
-        bytes calldata srcAddress
-    ) external onlyOwner {
+    function forceResumeReceive(uint16 srcChainId, bytes calldata srcAddress) external onlyOwner {
         lzEndpoint.forceResumeReceive(srcChainId, srcAddress);
     }
 
-    function setTrustedRemoteAddress(
-        uint16 remoteChainId,
-        bytes calldata remoteAddress
-    ) external onlyOwner {
-        LzAppStorage.layout().trustedRemote[remoteChainId] = abi.encodePacked(
-            remoteAddress,
-            address(this)
-        );
+    function setTrustedRemoteAddress(uint16 remoteChainId, bytes calldata remoteAddress) external onlyOwner {
+        LzAppStorage.layout().trustedRemote[remoteChainId] = abi.encodePacked(remoteAddress, address(this));
         emit SetTrustedRemoteAddress(remoteChainId, remoteAddress);
     }
 
-    function getTrustedRemoteAddress(
-        uint16 _remoteChainId
-    ) external view returns (bytes memory) {
+    function getTrustedRemoteAddress(uint16 _remoteChainId) external view returns (bytes memory) {
         bytes memory path = LzAppStorage.layout().trustedRemote[_remoteChainId];
         if (path.length == 0) revert LzApp__NoTrustedPathRecord();
         return path.slice(0, path.length - 20); // the last 20 bytes should be address(this)
@@ -145,20 +115,12 @@ abstract contract LzApp is
 
     //--------------------------- VIEW FUNCTION ----------------------------------------
 
-    function isTrustedRemote(
-        uint16 srcChainId,
-        bytes memory srcAddress
-    ) external view returns (bool) {
+    function isTrustedRemote(uint16 srcChainId, bytes memory srcAddress) external view returns (bool) {
         return _isTrustedRemote(srcChainId, srcAddress);
     }
 
-    function _isTrustedRemote(
-        uint16 srcChainId,
-        bytes memory srcAddress
-    ) internal view returns (bool) {
-        bytes memory trustedRemote = LzAppStorage.layout().trustedRemote[
-            srcChainId
-        ];
+    function _isTrustedRemote(uint16 srcChainId, bytes memory srcAddress) internal view returns (bool) {
+        bytes memory trustedRemote = LzAppStorage.layout().trustedRemote[srcChainId];
 
         return
             srcAddress.length == trustedRemote.length &&

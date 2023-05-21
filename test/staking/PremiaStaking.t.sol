@@ -38,20 +38,11 @@ contract PremiaStakingTest is DeployTest {
         usdc = quote;
 
         address premiaStakingImplementation = address(
-            new PremiaStakingMock(
-                address(0),
-                address(premia),
-                address(usdc),
-                address(exchangeHelper)
-            )
+            new PremiaStakingMock(address(0), address(premia), address(usdc), address(exchangeHelper))
         );
 
-        address premiaStakingProxy = address(
-            new PremiaStakingProxyMock(premiaStakingImplementation)
-        );
-        address otherPremiaStakingProxy = address(
-            new PremiaStakingProxyMock(premiaStakingImplementation)
-        );
+        address premiaStakingProxy = address(new PremiaStakingProxyMock(premiaStakingImplementation));
+        address otherPremiaStakingProxy = address(new PremiaStakingProxyMock(premiaStakingImplementation));
 
         premiaStaking = PremiaStakingMock(premiaStakingProxy);
         otherPremiaStaking = PremiaStakingMock(otherPremiaStakingProxy);
@@ -79,15 +70,7 @@ contract PremiaStakingTest is DeployTest {
         vm.prank(fromUser);
 
         // Mocked bridge out
-        _premiaStaking.sendFrom(
-            user,
-            0,
-            abi.encode(user),
-            amount,
-            payable(user),
-            address(0),
-            ""
-        );
+        _premiaStaking.sendFrom(user, 0, abi.encode(user), amount, payable(user), address(0), "");
 
         // Mocked bridge in
         _otherPremiaStaking.creditTo(user, amount, stakePeriod, lockedUntil);
@@ -108,9 +91,7 @@ contract PremiaStakingTest is DeployTest {
 
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-                ),
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
                 owner,
                 spender,
                 value,
@@ -121,9 +102,7 @@ contract PremiaStakingTest is DeployTest {
 
         bytes32 domainSeparator = keccak256(
             abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes("Premia")),
                 keccak256(bytes("1")),
                 chainId,
@@ -131,9 +110,7 @@ contract PremiaStakingTest is DeployTest {
             )
         );
 
-        bytes32 hash = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, structHash)
-        );
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
 
         (v, r, s) = vm.sign(signerId, hash);
     }
@@ -176,21 +153,13 @@ contract PremiaStakingTest is DeployTest {
 
         premiaStaking.stake(stakeAmount, 365 days);
         assertEq(premiaStaking.getUserPower(alice), 150000e18);
-        assertApproxEqAbs(
-            premiaStaking.getDiscount(alice),
-            0.2722e18,
-            0.0001e18
-        );
+        assertApproxEqAbs(premiaStaking.getDiscount(alice), 0.2722e18, 0.0001e18);
 
         vm.warp(block.timestamp + 365 days + 1);
 
         premiaStaking.startWithdraw(10000e18);
         assertEq(premiaStaking.getUserPower(alice), 137500e18);
-        assertApproxEqAbs(
-            premiaStaking.getDiscount(alice),
-            0.2694e18,
-            0.0001e18
-        );
+        assertApproxEqAbs(premiaStaking.getDiscount(alice), 0.2694e18, 0.0001e18);
 
         deal(address(premia), alice, 5000000e18);
         premiaStaking.stake(5000000e18, 365 days);
@@ -286,9 +255,7 @@ contract PremiaStakingTest is DeployTest {
         vm.prank(bob);
         otherPremiaStaking.startWithdraw(5e18);
 
-        vm.expectRevert(
-            IPremiaStaking.PremiaStaking__NotEnoughLiquidity.selector
-        );
+        vm.expectRevert(IPremiaStaking.PremiaStaking__NotEnoughLiquidity.selector);
         vm.prank(alice);
         otherPremiaStaking.startWithdraw(10e18);
     }
@@ -298,9 +265,7 @@ contract PremiaStakingTest is DeployTest {
         deal(address(premia), alice, 100e18); // Override Alice balance
         premiaStaking.stake(100e18, 0);
 
-        vm.expectRevert(
-            IPremiaStaking.PremiaStaking__NoPendingWithdrawal.selector
-        );
+        vm.expectRevert(IPremiaStaking.PremiaStaking__NoPendingWithdrawal.selector);
         premiaStaking.withdraw();
 
         premiaStaking.startWithdraw(40e18);
@@ -308,9 +273,7 @@ contract PremiaStakingTest is DeployTest {
 
         vm.warp(block.timestamp + 10 days - 5);
 
-        vm.expectRevert(
-            IPremiaStaking.PremiaStaking__WithdrawalStillPending.selector
-        );
+        vm.expectRevert(IPremiaStaking.PremiaStaking__WithdrawalStillPending.selector);
         premiaStaking.withdraw();
 
         vm.warp(block.timestamp + 10);
@@ -319,9 +282,7 @@ contract PremiaStakingTest is DeployTest {
         assertEq(premiaStaking.balanceOf(alice), 60e18);
         assertEq(premia.balanceOf(alice), 40e18);
 
-        vm.expectRevert(
-            IPremiaStaking.PremiaStaking__NoPendingWithdrawal.selector
-        );
+        vm.expectRevert(IPremiaStaking.PremiaStaking__NoPendingWithdrawal.selector);
         premiaStaking.withdraw();
     }
 
@@ -352,9 +313,7 @@ contract PremiaStakingTest is DeployTest {
         // PremiaStaking get 50 USDC rewards
         premiaStaking.addRewards(50e6);
 
-        (uint256 bobPendingWithdrawal, , ) = premiaStaking.getPendingWithdrawal(
-            bob
-        );
+        (uint256 bobPendingWithdrawal, , ) = premiaStaking.getPendingWithdrawal(bob);
 
         assertEq(bobPendingWithdrawal, 10e18);
 
@@ -393,28 +352,17 @@ contract PremiaStakingTest is DeployTest {
         vm.warp(timestamp + 30 days);
 
         uint256 pendingRewards1 = premiaStaking.getPendingRewards();
-        (uint256 availableRewards, uint256 unstakeRewards) = premiaStaking
-            .getAvailableRewards();
+        (uint256 availableRewards, uint256 unstakeRewards) = premiaStaking.getAvailableRewards();
 
-        uint256 decayValue = premiaStaking.decay(
-            50e6,
-            timestamp,
-            timestamp + 30 days
-        );
+        uint256 decayValue = premiaStaking.decay(50e6, timestamp, timestamp + 30 days);
 
         assertEq(pendingRewards1, 50e6 - decayValue);
         assertEq(availableRewards, 50e6 - (50e6 - decayValue));
         assertEq(unstakeRewards, 0);
 
-        (uint256 alicePendingRewards, ) = premiaStaking.getPendingUserRewards(
-            alice
-        );
-        (uint256 bobPendingRewards, ) = premiaStaking.getPendingUserRewards(
-            bob
-        );
-        (uint256 carolPendingRewards, ) = premiaStaking.getPendingUserRewards(
-            carol
-        );
+        (uint256 alicePendingRewards, ) = premiaStaking.getPendingUserRewards(alice);
+        (uint256 bobPendingRewards, ) = premiaStaking.getPendingUserRewards(bob);
+        (uint256 carolPendingRewards, ) = premiaStaking.getPendingUserRewards(carol);
 
         assertEq(alicePendingRewards, (pendingRewards1 * 30) / 50);
         assertEq(bobPendingRewards, (pendingRewards1 * 10) / 50);
@@ -453,8 +401,7 @@ contract PremiaStakingTest is DeployTest {
         vm.warp(timestamp + 30 days);
 
         uint256 pendingRewards2 = premiaStaking.getPendingRewards();
-        (availableRewards, unstakeRewards) = premiaStaking
-            .getAvailableRewards();
+        (availableRewards, unstakeRewards) = premiaStaking.getAvailableRewards();
         decayValue = premiaStaking.decay(100e6, timestamp, timestamp + 30 days);
 
         assertEq(pendingRewards2, 100e6 - decayValue);
@@ -465,18 +412,9 @@ contract PremiaStakingTest is DeployTest {
         (bobPendingRewards, ) = premiaStaking.getPendingUserRewards(bob);
         (carolPendingRewards, ) = premiaStaking.getPendingUserRewards(carol);
 
-        assertEq(
-            alicePendingRewards,
-            (50e6 * 30) / 50 + (pendingRewards2 * 25) / 75
-        );
-        assertEq(
-            bobPendingRewards,
-            (50e6 * 10) / 50 + (pendingRewards2 * 40) / 75
-        );
-        assertEq(
-            carolPendingRewards,
-            (50e6 * 10) / 50 + (pendingRewards2 * 10) / 75
-        );
+        assertEq(alicePendingRewards, (50e6 * 30) / 50 + (pendingRewards2 * 25) / 75);
+        assertEq(bobPendingRewards, (50e6 * 10) / 50 + (pendingRewards2 * 40) / 75);
+        assertEq(carolPendingRewards, (50e6 * 10) / 50 + (pendingRewards2 * 10) / 75);
 
         vm.warp(block.timestamp + 300000 days);
 
@@ -516,29 +454,14 @@ contract PremiaStakingTest is DeployTest {
         (carolPendingRewards, ) = premiaStaking.getPendingUserRewards(carol);
 
         // Note : Doesnt compile without the uint256 casts
-        assertEq(
-            alicePendingRewards,
-            (50e6 * 30) / 50 + uint256(100e6 * 25) / 75
-        );
-        assertEq(
-            bobPendingRewards,
-            (50e6 * 10) / 50 + uint256(100e6 * 40) / 75
-        );
-        assertEq(
-            carolPendingRewards,
-            (50e6 * 10) / 50 + uint256(100e6 * 10) / 75
-        );
+        assertEq(alicePendingRewards, (50e6 * 30) / 50 + uint256(100e6 * 25) / 75);
+        assertEq(bobPendingRewards, (50e6 * 10) / 50 + uint256(100e6 * 40) / 75);
+        assertEq(carolPendingRewards, (50e6 * 10) / 50 + uint256(100e6 * 10) / 75);
     }
 
     function test_decay_ReturnExpectedValue() public {
-        assertEq(
-            premiaStaking.decay(100e18, 0, 30 days),
-            49.666471687219732700e18
-        );
-        assertEq(
-            premiaStaking.decay(100e18, 0, 60 days),
-            24.667584098573993300e18
-        );
+        assertEq(premiaStaking.decay(100e18, 0, 30 days), 49.666471687219732700e18);
+        assertEq(premiaStaking.decay(100e18, 0, 60 days), 24.667584098573993300e18);
     }
 
     function test_BridgeToOtherContract() public {
@@ -560,8 +483,7 @@ contract PremiaStakingTest is DeployTest {
     }
 
     function test_getStakeLevels_ReturnExpectedValue() public {
-        IPremiaStaking.StakeLevel[] memory stakeLevels = premiaStaking
-            .getStakeLevels();
+        IPremiaStaking.StakeLevel[] memory stakeLevels = premiaStaking.getStakeLevels();
         assertEq(stakeLevels.length, 4);
         assertEq(stakeLevels[0].amount, 5000e18);
         assertEq(stakeLevels[0].discount, 0.1e18);
@@ -592,9 +514,7 @@ contract PremiaStakingTest is DeployTest {
 
         vm.warp(block.timestamp + 30 days);
 
-        (uint256 alicePendingRewards, ) = premiaStaking.getPendingUserRewards(
-            alice
-        );
+        (uint256 alicePendingRewards, ) = premiaStaking.getPendingUserRewards(alice);
 
         vm.prank(alice);
         premiaStaking.harvest();
@@ -629,8 +549,7 @@ contract PremiaStakingTest is DeployTest {
         vm.prank(alice);
         premiaStaking.earlyUnstake(100e18);
 
-        (uint256 alicePendingWithdrawal, , ) = premiaStaking
-            .getPendingWithdrawal(alice);
+        (uint256 alicePendingWithdrawal, , ) = premiaStaking.getPendingWithdrawal(alice);
 
         assertEq(alicePendingWithdrawal, 50e18);
 
@@ -638,12 +557,8 @@ contract PremiaStakingTest is DeployTest {
         uint256 bobFeeReward = uint256(50e18) / 3;
         uint256 carolFeeReward = uint256(50e18 * 2) / 3;
 
-        (, uint256 bobUnstakeRewards) = premiaStaking.getPendingUserRewards(
-            bob
-        );
-        (, uint256 carolUnstakeRewards) = premiaStaking.getPendingUserRewards(
-            carol
-        );
+        (, uint256 bobUnstakeRewards) = premiaStaking.getPendingUserRewards(bob);
+        (, uint256 carolUnstakeRewards) = premiaStaking.getPendingUserRewards(carol);
         assertEq(bobUnstakeRewards, bobFeeReward);
         assertEq(carolUnstakeRewards, carolFeeReward);
 
@@ -661,9 +576,7 @@ contract PremiaStakingTest is DeployTest {
 
         premiaStaking.stake(1000, 0);
 
-        PremiaStakingStorage.UserInfo memory uInfo = premiaStaking.getUserInfo(
-            alice
-        );
+        PremiaStakingStorage.UserInfo memory uInfo = premiaStaking.getUserInfo(alice);
         assertEq(uInfo.stakePeriod, 0);
         assertEq(uInfo.lockedUntil, block.timestamp);
         assertEq(premiaStaking.getUserPower(alice), 250);
@@ -685,10 +598,7 @@ contract PremiaStakingTest is DeployTest {
         premiaStaking.stake(amount, 2.5 * 365 days);
 
         // Period multiplier of x2.75
-        assertEq(
-            premiaStaking.getStakePeriodMultiplier(2.5 * 365 days),
-            2.75e18
-        );
+        assertEq(premiaStaking.getStakePeriodMultiplier(2.5 * 365 days), 2.75e18);
 
         // Total power of 10000 * 2.75 = 27500
         assertEq(premiaStaking.getUserPower(alice), 27500e18);
@@ -705,10 +615,7 @@ contract PremiaStakingTest is DeployTest {
         premiaStaking.stake(amount, 2.5 * 365 days);
 
         // Period multiplier of x2.75
-        assertEq(
-            premiaStaking.getStakePeriodMultiplier(2.5 * 365 days),
-            2.75e18
-        );
+        assertEq(premiaStaking.getStakePeriodMultiplier(2.5 * 365 days), 2.75e18);
 
         // Total power of 10000 * 2.75 = 27500
         assertEq(premiaStaking.getUserPower(alice), 27500e18);
@@ -721,10 +628,7 @@ contract PremiaStakingTest is DeployTest {
     function test_getStakePeriodMultiplier_ReturnExpectedValue() public {
         assertEq(premiaStaking.getStakePeriodMultiplier(0), 0.25e18);
         assertEq(premiaStaking.getStakePeriodMultiplier(365 days), 1.25e18);
-        assertEq(
-            premiaStaking.getStakePeriodMultiplier(1.5 * 365 days),
-            1.75e18
-        );
+        assertEq(premiaStaking.getStakePeriodMultiplier(1.5 * 365 days), 1.75e18);
         assertEq(premiaStaking.getStakePeriodMultiplier(3 * 365 days), 3.25e18);
         assertEq(premiaStaking.getStakePeriodMultiplier(5 * 365 days), 4.25e18);
     }
@@ -732,18 +636,9 @@ contract PremiaStakingTest is DeployTest {
     function test_getStakePeriodMultiplierBPS_ReturnExpectedValue() public {
         assertEq(premiaStaking.getStakePeriodMultiplierBPS(0), 2500);
         assertEq(premiaStaking.getStakePeriodMultiplierBPS(365 days), 12500);
-        assertEq(
-            premiaStaking.getStakePeriodMultiplierBPS(1.5 * 365 days),
-            17500
-        );
-        assertEq(
-            premiaStaking.getStakePeriodMultiplierBPS(3 * 365 days),
-            32500
-        );
-        assertEq(
-            premiaStaking.getStakePeriodMultiplierBPS(5 * 365 days),
-            42500
-        );
+        assertEq(premiaStaking.getStakePeriodMultiplierBPS(1.5 * 365 days), 17500);
+        assertEq(premiaStaking.getStakePeriodMultiplierBPS(3 * 365 days), 32500);
+        assertEq(premiaStaking.getStakePeriodMultiplierBPS(5 * 365 days), 42500);
     }
 
     function test_getEarlyUnstakeFee_ReturnExpectedValue() public {
@@ -772,15 +667,7 @@ contract PremiaStakingTest is DeployTest {
         vm.startPrank(alice);
         premiaStaking.stake(1, 0);
 
-        premiaStaking.sendFrom(
-            alice,
-            0,
-            abi.encode(alice),
-            1,
-            payable(alice),
-            address(0),
-            ""
-        );
+        premiaStaking.sendFrom(alice, 0, abi.encode(alice), 1, payable(alice), address(0), "");
     }
 
     function test_sendFrom_RevertIf_NotApprovedNotOwner() public {
@@ -788,14 +675,6 @@ contract PremiaStakingTest is DeployTest {
 
         vm.expectRevert(IOFT.OFT_InsufficientAllowance.selector);
 
-        premiaStaking.sendFrom(
-            address(premiaStaking),
-            0,
-            abi.encode(alice),
-            1,
-            payable(alice),
-            address(0),
-            ""
-        );
+        premiaStaking.sendFrom(address(premiaStaking), 0, abi.encode(alice), 1, payable(alice), address(0), "");
     }
 }

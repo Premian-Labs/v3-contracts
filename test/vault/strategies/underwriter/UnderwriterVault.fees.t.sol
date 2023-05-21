@@ -27,11 +27,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         uint256 timeOfDepositReceiverAfter;
     }
 
-    function _testCases()
-        internal
-        pure
-        returns (TestVars[2] memory vars, TestResult[2] memory results)
-    {
+    function _testCases() internal pure returns (TestVars[2] memory vars, TestResult[2] memory results) {
         vars[0].totalSupply = ud(2.2e18);
         vars[0].shares = ud(1.1e18);
         vars[0].pps = ud(1.0e18);
@@ -96,10 +92,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         deal(poolToken, feeReceiver, scaleDecimals(balanceOfFeeReceiver));
         vault.claimFees();
 
-        assertEq(
-            IERC20(poolToken).balanceOf(feeReceiver),
-            scaleDecimals(balanceOfFeeReceiver + protocolFees)
-        );
+        assertEq(IERC20(poolToken).balanceOf(feeReceiver), scaleDecimals(balanceOfFeeReceiver + protocolFees));
     }
 
     function test_getAveragePricePerShare_ReturnExpectedValue() public {
@@ -109,19 +102,14 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
 
         for (uint256 i; i < cases.length; i++) {
             setup(cases[i]);
-            assertEq(
-                vault.getAveragePricePerShare(users.caller),
-                cases[i].ppsUser
-            );
+            assertEq(vault.getAveragePricePerShare(users.caller), cases[i].ppsUser);
 
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
         }
     }
 
-    function test_updateTimeOfDeposit_UpdateTimeOfDeposit_ToTimestampOfFirstDeposit()
-        public
-    {
+    function test_updateTimeOfDeposit_UpdateTimeOfDeposit_ToTimestampOfFirstDeposit() public {
         uint256 sharesInitial = 0;
         uint256 shareAmount = 1e18;
 
@@ -133,9 +121,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         assertEq(vault.getTimeOfDeposit(users.caller), 300000);
     }
 
-    function test_updateTimeOfDeposit_UpdateTimeOfDeposit_ToWeightedAvgBasedOnShares()
-        public
-    {
+    function test_updateTimeOfDeposit_UpdateTimeOfDeposit_ToWeightedAvgBasedOnShares() public {
         uint256 sharesInitial = 2e18;
         uint256 shareAmount = 3e18;
         uint256 timeOfDeposit = 300000;
@@ -166,14 +152,8 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
 
             assertEq(feeVars.assets, results[i].assets);
             assertEq(feeVars.balanceShares, results[i].balanceShares);
-            assertEq(
-                feeVars.performanceFeeInAssets,
-                results[i].performanceFeeInAssets
-            );
-            assertEq(
-                feeVars.managementFeeInAssets,
-                results[i].managementFeeInAssets
-            );
+            assertEq(feeVars.performanceFeeInAssets, results[i].performanceFeeInAssets);
+            assertEq(feeVars.managementFeeInAssets, results[i].managementFeeInAssets);
             assertEq(feeVars.totalFeeInShares, results[i].totalFeeInShares);
             assertEq(feeVars.totalFeeInAssets, results[i].totalFeeInAssets);
 
@@ -203,25 +183,13 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
 
             assertEq(feeVars.balanceShares, results[i].balanceShares);
 
-            assertEq(
-                feeVars.performanceFeeInAssets,
-                (ONE - discount) * results[i].performanceFeeInAssets
-            );
+            assertEq(feeVars.performanceFeeInAssets, (ONE - discount) * results[i].performanceFeeInAssets);
 
-            assertEq(
-                feeVars.managementFeeInAssets,
-                (ONE - discount) * results[i].managementFeeInAssets
-            );
+            assertEq(feeVars.managementFeeInAssets, (ONE - discount) * results[i].managementFeeInAssets);
 
-            assertEq(
-                feeVars.totalFeeInShares,
-                (ONE - discount) * results[i].totalFeeInShares
-            );
+            assertEq(feeVars.totalFeeInShares, (ONE - discount) * results[i].totalFeeInShares);
 
-            assertEq(
-                feeVars.totalFeeInAssets,
-                (ONE - discount) * results[i].totalFeeInAssets
-            );
+            assertEq(feeVars.totalFeeInAssets, (ONE - discount) * results[i].totalFeeInAssets);
 
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
@@ -245,11 +213,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         cases[2].timeOfDeposit = 3000000000;
         cases[2].timestamp = 3000000000 + 1 days;
 
-        uint256[3] memory results = [
-            uint256(1.099939726027397261e18),
-            uint256(2.22525e18),
-            uint256(0)
-        ];
+        uint256[3] memory results = [uint256(1.099939726027397261e18), uint256(2.22525e18), uint256(0)];
 
         uint256 snapshot = vm.snapshot();
 
@@ -279,17 +243,9 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
             setupBeforeTokenTransfer(cases[i]);
             vm.warp(cases[i].timestamp);
 
-            vault.beforeTokenTransfer(
-                users.caller,
-                users.receiver,
-                cases[i].transferAmount.unwrap()
-            );
+            vault.beforeTokenTransfer(users.caller, users.receiver, cases[i].transferAmount.unwrap());
 
-            assertApproxEqAbs(
-                vault.balanceOf(users.caller),
-                results[i].sharesAfter.unwrap(),
-                1e8
-            );
+            assertApproxEqAbs(vault.balanceOf(users.caller), results[i].sharesAfter.unwrap(), 1e8);
             assertEq(vault.getProtocolFees(), results[i].protocolFees);
             assertEq(vault.getPricePerShare(), cases[i].pps);
             assertApproxEqAbs(
@@ -302,10 +258,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
                 results[i].netUserDepositReceiverAfter.unwrap(),
                 1e8
             );
-            assertEq(
-                vault.getTimeOfDeposit(users.receiver),
-                results[i].timeOfDepositReceiverAfter
-            );
+            assertEq(vault.getTimeOfDeposit(users.receiver), results[i].timeOfDepositReceiverAfter);
 
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
@@ -316,11 +269,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         (TestVars[2] memory cases, ) = _testCases();
 
         setupBeforeTokenTransfer(cases[1]);
-        vault.beforeTokenTransfer(
-            users.caller,
-            address(0),
-            cases[1].transferAmount.unwrap()
-        );
+        vault.beforeTokenTransfer(users.caller, address(0), cases[1].transferAmount.unwrap());
 
         assertEq(vault.getNetUserDeposit(address(0)), 0);
         assertEq(vault.getNetUserDeposit(users.caller), 2.76e18);
@@ -330,28 +279,18 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         (TestVars[2] memory cases, ) = _testCases();
 
         setupBeforeTokenTransfer(cases[1]);
-        vault.beforeTokenTransfer(
-            address(0),
-            users.receiver,
-            cases[1].transferAmount.unwrap()
-        );
+        vault.beforeTokenTransfer(address(0), users.receiver, cases[1].transferAmount.unwrap());
 
         assertEq(vault.getNetUserDeposit(address(0)), 0);
         assertEq(vault.getNetUserDeposit(users.receiver), 1.2e18);
     }
 
-    function test_beforeTokenTransfer_IfReceiverIsVault_DoNotUpdate_NetUserDeposit()
-        public
-    {
+    function test_beforeTokenTransfer_IfReceiverIsVault_DoNotUpdate_NetUserDeposit() public {
         (TestVars[2] memory cases, TestResult[2] memory results) = _testCases();
 
         setupBeforeTokenTransfer(cases[1]);
         vm.warp(cases[1].timestamp);
-        vault.beforeTokenTransfer(
-            users.caller,
-            address(vault),
-            cases[1].transferAmount.unwrap()
-        );
+        vault.beforeTokenTransfer(users.caller, address(vault), cases[1].transferAmount.unwrap());
 
         assertEq(vault.getNetUserDeposit(address(vault)), 0);
         assertApproxEqAbs(
@@ -370,22 +309,12 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         uint256 maxTransferableShares = 2.22525e18;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IVault.Vault__TransferExceedsBalance.selector,
-                2.227354375e18,
-                2.23525e18
-            )
+            abi.encodeWithSelector(IVault.Vault__TransferExceedsBalance.selector, 2.227354375e18, 2.23525e18)
         );
-        vault.beforeTokenTransfer(
-            users.caller,
-            users.receiver,
-            maxTransferableShares + 0.01e18
-        );
+        vault.beforeTokenTransfer(users.caller, users.receiver, maxTransferableShares + 0.01e18);
     }
 
-    function test_afterDeposit_IncrementNetUserDeposits_ByScaledAssetAmount()
-        public
-    {
+    function test_afterDeposit_IncrementNetUserDeposits_ByScaledAssetAmount() public {
         uint256 timestamp = 1000000;
         vault.setTimestamp(timestamp);
 
@@ -403,11 +332,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         uint256 newlyMintedShares = 2e18;
         vault.mintMock(users.caller, newlyMintedShares);
         vault.setTimestamp(timestamp + 7 days);
-        vault.afterDeposit(
-            users.caller,
-            newlyDepositedAssets,
-            newlyMintedShares
-        );
+        vault.afterDeposit(users.caller, newlyDepositedAssets, newlyMintedShares);
 
         assertEq(vault.totalAssets(), scaleDecimals(ud(5.5e18)));
         assertEq(vault.getNetUserDeposit(users.caller), ud(5.5e18));
@@ -431,9 +356,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         vault.afterDeposit(users.caller, 1e18, 0);
     }
 
-    function test_beforeWithdraw_CallBeforeTokenTransfer_ToTransferPerformanceRelatedFees()
-        public
-    {
+    function test_beforeWithdraw_CallBeforeTokenTransfer_ToTransferPerformanceRelatedFees() public {
         uint256 timeOfDeposit = 3000000000;
         vault.setManagementFeeRate(ud(0.02e18));
         vault.setPerformanceFeeRate(ud(0.05e18));
@@ -453,10 +376,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         // factor = 1.5 * (1.5 - 1 - 0.06) / 1.5
         // totalFeeInAssets = 0.06 * 2 = 1.2
         // netUserDeposit should decrease proportionally to the shares redeemed + share fees
-        assertEq(
-            vault.getNetUserDeposit(users.caller),
-            0.439999999999999999e18
-        );
+        assertEq(vault.getNetUserDeposit(users.caller), 0.439999999999999999e18);
         // time of deposit should not change on a withdrawal
         assertEq(vault.getTimeOfDeposit(users.caller), timeOfDeposit);
 

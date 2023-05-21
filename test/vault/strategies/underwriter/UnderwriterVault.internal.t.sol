@@ -23,8 +23,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         t1 = startTime + 10 days;
         t2 = startTime + 14 days;
 
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
 
         infos[0].maturity = t0;
         infos[1].maturity = t1;
@@ -37,9 +36,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         UD60x18 spreadUnlockingRateT0 = ud(1.24e18) / ud(7 days * 1e18);
         UD60x18 spreadUnlockingRateT1 = ud(5.56e18) / ud(10 days * 1e18);
         UD60x18 spreadUnlockingRateT2 = ud(11.2e18) / ud(14 days * 1e18);
-        UD60x18 spreadUnlockingRate = spreadUnlockingRateT0 +
-            spreadUnlockingRateT1 +
-            spreadUnlockingRateT2;
+        UD60x18 spreadUnlockingRate = spreadUnlockingRateT0 + spreadUnlockingRateT1 + spreadUnlockingRateT2;
 
         vault.increaseSpreadUnlockingTick(t0, spreadUnlockingRateT0);
         vault.increaseSpreadUnlockingTick(t1, spreadUnlockingRateT1);
@@ -82,9 +79,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.increasePositionSize(t0, strike, ud(1.234e18));
 
-        UD60x18 lockedAmount = isCallTest
-            ? ud(1.234e18)
-            : ud(1.234e18) * strike;
+        UD60x18 lockedAmount = isCallTest ? ud(1.234e18) : ud(1.234e18) * strike;
         vault.increaseTotalLockedAssetsNoTransfer(lockedAmount);
 
         vault.setTimestamp(startTime + 1 days);
@@ -97,22 +92,13 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         assertEq(vault.positionSize(t0, strike), ud(1.234e18) + size);
         // spreadUnlockingTick should be incremented by the spread amount divided by the the time to maturity
         UD60x18 increment = ud(10e18) / ud(6 days * 1e18);
-        assertEq(
-            vault.spreadUnlockingTicks(t0),
-            ud(1.24e18) / ud(7 days * 1e18) + increment
-        );
+        assertEq(vault.spreadUnlockingTicks(t0), ud(1.24e18) / ud(7 days * 1e18) + increment);
 
         // totalLockedSpread should be incremented by the spread earned (10) after updating the state
-        assertEq(
-            vault.totalLockedSpread(),
-            ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread
-        );
+        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread);
 
         assertEq(vault.getLastTradeTimestamp(), startTime + 1 days);
-        assertEq(
-            vault.totalLockedAssets(),
-            (isCallTest ? size : size * strike) + lockedAmount
-        );
+        assertEq(vault.totalLockedAssets(), (isCallTest ? size : size * strike) + lockedAmount);
     }
 
     function test_settleMaturity_Success() public {
@@ -128,8 +114,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         addDeposit(users.caller, deposit);
         assertEq(vault.totalAssets(), scaleDecimals(deposit));
 
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](2);
@@ -181,10 +166,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             0.0000001e18
         );
 
-        assertEq(
-            vault.totalLockedAssets(),
-            isCallTest ? ud(2e18) : ud(2000e18)
-        );
+        assertEq(vault.totalLockedAssets(), isCallTest ? ud(2e18) : ud(2000e18));
     }
 
     function test_settle_Success() public {
@@ -200,11 +182,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             deal(
                 quote,
                 users.caller,
-                OptionMath.scaleDecimals(
-                    totalAssets.unwrap(),
-                    18,
-                    ISolidStateERC20(quote).decimals()
-                )
+                OptionMath.scaleDecimals(totalAssets.unwrap(), 18, ISolidStateERC20(quote).decimals())
             );
 
         UD60x18 strikeT0_0 = ud(1000e18);
@@ -214,8 +192,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         UD60x18 strikeT2_1 = ud(1300e18);
         UD60x18 strikeT2_2 = ud(2000e18);
 
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](2);
@@ -256,11 +233,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
                 factory.deployPool{value: 1 ether}(poolKey);
 
                 vm.prank(users.caller);
-                vault.mintFromPool(
-                    infos[i].strikes[j],
-                    infos[i].maturity,
-                    infos[i].sizes[j]
-                );
+                vault.mintFromPool(infos[i].strikes[j], infos[i].maturity, infos[i].sizes[j]);
             }
         }
 
@@ -279,35 +252,17 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.increaseSpreadUnlockingTick(t1, spreadUnlockingRateT1);
         vault.increaseSpreadUnlockingTick(t2, spreadUnlockingRateT2);
-        vault.increaseSpreadUnlockingRate(
-            spreadUnlockingRateT1 + spreadUnlockingRateT2
-        );
+        vault.increaseSpreadUnlockingRate(spreadUnlockingRateT1 + spreadUnlockingRateT2);
         vault.increaseTotalLockedSpread(ud(1e18 + 11.2e18));
 
-        uint256[7] memory timestamps = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 hours,
-            t1,
-            t1 + 1 hours,
-            t2,
-            t2 + 1 hours
-        ];
+        uint256[7] memory timestamps = [t0 - 1 days, t0, t0 + 1 hours, t1, t1 + 1 hours, t2, t2 + 1 hours];
 
         uint256[7] memory minMaturity = [t0, t1, t1, t2, t2, 0, 0];
         uint256[7] memory maxMaturity = [t2, t2, t2, t2, t2, 0, 0];
 
         UD60x18[7] memory newLocked = isCallTest
             ? [ud(10e18), ud(7e18), ud(7e18), ud(6e18), ud(6e18), ud(0), ud(0)]
-            : [
-                ud(14100e18),
-                ud(10100e18),
-                ud(10100e18),
-                ud(8300e18),
-                ud(8300e18),
-                ud(0),
-                ud(0)
-            ];
+            : [ud(14100e18), ud(10100e18), ud(10100e18), ud(8300e18), ud(8300e18), ud(0), ud(0)];
 
         UD60x18[7] memory newTotalAssets = isCallTest
             ? [
@@ -336,20 +291,12 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             vault.settle();
             uint256 delta = isCallTest ? 0.00001e18 : 0;
 
-            assertApproxEqAbs(
-                scaleDecimals(vault.totalAssets()).unwrap(),
-                newTotalAssets[i].unwrap(),
-                delta
-            );
+            assertApproxEqAbs(scaleDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
             assertEq(vault.totalLockedAssets(), newLocked[i]);
             assertEq(vault.minMaturity(), minMaturity[i]);
             assertEq(vault.maxMaturity(), maxMaturity[i]);
 
-            if (
-                timestamps[i] == t0 ||
-                timestamps[i] == t1 ||
-                timestamps[i] == t2
-            ) {
+            if (timestamps[i] == t0 || timestamps[i] == t1 || timestamps[i] == t2) {
                 UD60x18[] memory strikes;
                 if (timestamps[i] == t0) {
                     strikes = infos[0].strikes;
@@ -374,14 +321,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     function test_getLockedSpreadInternal_ReturnExpectedValue() public {
         setupSpreadVault();
 
-        uint256[6] memory timestamps = [
-            startTime + 1 days,
-            t0,
-            t0 + 1 days,
-            t1,
-            t1 + 1 days,
-            t2
-        ];
+        uint256[6] memory timestamps = [startTime + 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2];
 
         UD60x18[6] memory totalLockSpreads = [
             ud(16.4668e18),
@@ -405,14 +345,9 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             vault.setTimestamp(timestamps[i]);
-            IUnderwriterVault.LockedSpreadInternal memory lockSpread = vault
-                .getLockedSpreadInternal();
+            IUnderwriterVault.LockedSpreadInternal memory lockSpread = vault.getLockedSpreadInternal();
 
-            assertApproxEqAbs(
-                lockSpread.totalLockedSpread.unwrap(),
-                totalLockSpreads[i].unwrap(),
-                0.001e18
-            );
+            assertApproxEqAbs(lockSpread.totalLockedSpread.unwrap(), totalLockSpreads[i].unwrap(), 0.001e18);
             assertApproxEqAbs(
                 lockSpread.spreadUnlockingRate.unwrap(),
                 spreadUnlockingRates[i].unwrap(),
@@ -421,11 +356,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             assertEq(lockSpread.lastSpreadUnlockUpdate, timestamps[i]);
 
             assertEq(vault.totalLockedSpread(), 18e18);
-            assertApproxEqAbs(
-                vault.spreadUnlockingRate().unwrap(),
-                0.0000177447e18,
-                0.0000000001e18
-            );
+            assertApproxEqAbs(vault.spreadUnlockingRate().unwrap(), 0.0000177447e18, 0.0000000001e18);
             assertEq(vault.lastSpreadUnlockUpdate(), startTime);
 
             vm.revertTo(snapshot);
@@ -436,14 +367,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     function test_updateState_Success() public {
         setupSpreadVault();
 
-        uint256[6] memory timestamps = [
-            startTime + 1 days,
-            t0,
-            t0 + 1 days,
-            t1,
-            t1 + 1 days,
-            t2
-        ];
+        uint256[6] memory timestamps = [startTime + 1 days, t0, t0 + 1 days, t1, t1 + 1 days, t2];
 
         UD60x18[6] memory totalLockSpreads = [
             ud(16.4668e18),
@@ -469,16 +393,8 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             vault.setTimestamp(timestamps[i]);
             vault.updateState();
 
-            assertApproxEqAbs(
-                vault.totalLockedSpread().unwrap(),
-                totalLockSpreads[i].unwrap(),
-                0.001e18
-            );
-            assertApproxEqAbs(
-                vault.spreadUnlockingRate().unwrap(),
-                spreadUnlockingRates[i].unwrap(),
-                0.0000000001e18
-            );
+            assertApproxEqAbs(vault.totalLockedSpread().unwrap(), totalLockSpreads[i].unwrap(), 0.001e18);
+            assertApproxEqAbs(vault.spreadUnlockingRate().unwrap(), spreadUnlockingRates[i].unwrap(), 0.0000000001e18);
             assertEq(vault.lastSpreadUnlockUpdate(), timestamps[i]);
 
             vm.revertTo(snapshot);
@@ -499,10 +415,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
         vault.getPoolAddress(badStrike, badMaturity);
 
-        assertEq(
-            vault.getPoolAddress(poolKey.strike, poolKey.maturity),
-            address(pool)
-        );
+        assertEq(vault.getPoolAddress(poolKey.strike, poolKey.maturity), address(pool));
     }
 
     function test__revertIfNotTradeableWithVault__Success() public {
@@ -543,13 +456,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         vault.revertIfOptionInvalid(ud(1500e18), 1200);
 
         // trading an expired option
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IVault.Vault__OptionExpired.selector,
-                1000,
-                800
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IVault.Vault__OptionExpired.selector, 1000, 800));
         vault.revertIfOptionInvalid(ud(1500e18), 800);
 
         // trading an option with a strike equal to zero

@@ -165,23 +165,17 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         assertEq(vault.previewMint(4e18), scaleDecimals(ud(3.6e18)));
     }
 
-    function test_convertToShares_MintedShareEqualDepositedAssets_IfNoSharesMinted()
-        public
-    {
+    function test_convertToShares_MintedShareEqualDepositedAssets_IfNoSharesMinted() public {
         assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 2e18);
     }
 
-    function test_convertToShares_MintedSharesEqualsDepositedAssets_IfSupplyNonZero_AndPricePerShareIsOne()
-        public
-    {
+    function test_convertToShares_MintedSharesEqualsDepositedAssets_IfSupplyNonZero_AndPricePerShareIsOne() public {
         setMaturities();
         addDeposit(users.receiver, ud(8e18));
         assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 2e18);
     }
 
-    function test_convertToShares_MintedSharesEqualsDepositedAssets_AdjustedByPricePerShare_IfSupplyNonZero()
-        public
-    {
+    function test_convertToShares_MintedSharesEqualsDepositedAssets_AdjustedByPricePerShare_IfSupplyNonZero() public {
         setMaturities();
         addDeposit(users.receiver, ud(2e18));
 
@@ -190,9 +184,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 4e18);
     }
 
-    function test_convertToAssets_WithdrawnAssetsEqualsShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOne()
-        public
-    {
+    function test_convertToAssets_WithdrawnAssetsEqualsShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOne() public {
         setMaturities();
         addDeposit(users.receiver, ud(2e18));
         assertEq(vault.convertToAssets(2e18), scaleDecimals(ud(2e18)));
@@ -216,9 +208,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         assertEq(vault.asset(), isCallTest ? base : quote);
     }
 
-    function test_transfer_ShouldUpdate_NetUserDeposit_And_TimeOfDeposit()
-        public
-    {
+    function test_transfer_ShouldUpdate_NetUserDeposit_And_TimeOfDeposit() public {
         TestVars memory vars;
         vars.totalSupply = ud(2.2e18);
         vars.shares = ud(1.1e18);
@@ -245,10 +235,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vm.prank(users.caller);
         vault.transfer(users.receiver, 0.1e18);
 
-        assertEq(
-            vault.getTimeOfDeposit(users.receiver),
-            3000000000 + 1 days + (365 days / 2)
-        );
+        assertEq(vault.getTimeOfDeposit(users.receiver), 3000000000 + 1 days + (365 days / 2));
         assertEq(vault.getNetUserDeposit(users.receiver), 1.4e18);
         assertEq(vault.balanceOf(users.receiver), 0.2e18);
     }
@@ -305,10 +292,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vm.prank(users.caller);
         vault.withdraw(assetAmount, users.caller, users.caller);
 
-        assertEq(
-            vault.getNetUserDeposit(users.caller),
-            0.699978082191780821e18
-        );
+        assertEq(vault.getNetUserDeposit(users.caller), 0.699978082191780821e18);
         assertEq(vault.getTimeOfDeposit(users.caller), 3000000000);
         assertEq(vault.balanceOf(users.caller), 0.699978082191780822e18);
     }

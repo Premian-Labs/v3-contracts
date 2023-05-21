@@ -21,36 +21,22 @@ struct TradeInternal {
 }
 
 abstract contract PoolSettlePositionTest is DeployTest {
-    function _test_settlePosition_trade_Buy100Options()
-        internal
-        returns (TradeInternal memory trade)
-    {
+    function _test_settlePosition_trade_Buy100Options() internal returns (TradeInternal memory trade) {
         posKey.orderType = Position.OrderType.CS;
 
         trade.initialCollateral = deposit(1000 ether);
         trade.size = ud(100 ether);
-        (trade.totalPremium, ) = pool.getQuoteAMM(
-            users.trader,
-            trade.size,
-            true
-        );
+        (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, true);
 
         trade.poolToken = getPoolToken();
-        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(
-            feeReceiver
-        );
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
 
         vm.startPrank(users.trader);
 
         deal(trade.poolToken, users.trader, trade.totalPremium);
         IERC20(trade.poolToken).approve(address(router), trade.totalPremium);
 
-        pool.trade(
-            trade.size,
-            true,
-            trade.totalPremium + trade.totalPremium / 10,
-            address(0)
-        );
+        pool.trade(trade.size, true, trade.totalPremium + trade.totalPremium / 10, address(0));
 
         vm.stopPrank();
     }
@@ -77,17 +63,10 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
-            trade.initialCollateral +
-                trade.totalPremium -
-                collateral -
-                protocolFees
+            trade.initialCollateral + trade.totalPremium - collateral - protocolFees
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.getClaimableFees(posKey), 0);
         assertEq(pool.protocolFees(), 0);
@@ -112,12 +91,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
     }
 
     function test_settlePosition_RevertIf_OperatorNotAuthorized() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__OperatorNotAuthorized.selector,
-                users.trader
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.trader));
         vm.prank(users.trader);
         pool.settlePosition(posKey);
     }
@@ -142,12 +116,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         vm.startPrank(posKey.operator);
 
-        pool.transferPosition(
-            posKey,
-            users.otherLP,
-            users.otherLP,
-            ud(pool.balanceOf(posKey.operator, tokenId()) / 2)
-        );
+        pool.transferPosition(posKey, users.otherLP, users.otherLP, ud(pool.balanceOf(posKey.operator, tokenId()) / 2));
 
         vm.stopPrank();
 
@@ -169,36 +138,21 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(address(pool)),
-            collateral * 2
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral * 2);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost * 2);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
-            (trade.initialCollateral / 2) +
-                (trade.totalPremium / 2) -
-                collateral -
-                (protocolFees / 2) -
-                cost
+            (trade.initialCollateral / 2) + (trade.totalPremium / 2) - collateral - (protocolFees / 2) - cost
         );
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey2.operator),
-            (trade.initialCollateral / 2) +
-                (trade.totalPremium / 2) -
-                collateral -
-                (protocolFees / 2) -
-                cost
+            (trade.initialCollateral / 2) + (trade.totalPremium / 2) - collateral - (protocolFees / 2) - cost
         );
 
-        assertEq(
-            IERC20(trade.poolToken).balanceOf(feeReceiver) -
-                trade.feeReceiverBalance,
-            protocolFees
-        );
+        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.getClaimableFees(posKey), 0);
         assertEq(pool.getClaimableFees(posKey2), 0);
@@ -206,12 +160,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         assertEq(pool.balanceOf(posKey.operator, tokenId()), 0);
 
-        uint256 tokenId2 = PoolStorage.formatTokenId(
-            posKey2.operator,
-            posKey2.lower,
-            posKey2.upper,
-            posKey2.orderType
-        );
+        uint256 tokenId2 = PoolStorage.formatTokenId(posKey2.operator, posKey2.lower, posKey2.upper, posKey2.orderType);
 
         assertEq(pool.balanceOf(posKey2.operator, tokenId2), 0);
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), trade.size);
@@ -226,9 +175,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         _test_settlePositionFor_Buy100Options(false);
     }
 
-    function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue()
-        public
-    {
+    function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
@@ -253,9 +200,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         userSettings.setAuthorizedAgents(agents);
 
         // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(
-            isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap()
-        );
+        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
 
         vm.stopPrank();
         vm.warp(poolKey.maturity);
@@ -299,11 +244,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         uint256 cost = scaleDecimals(_cost);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__CostNotAuthorized.selector,
-                (_cost * quote).unwrap(),
-                0
-            )
+            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
         );
 
         vm.prank(users.agent);

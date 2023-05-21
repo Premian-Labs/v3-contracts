@@ -9,9 +9,7 @@ import {ProxyUpgradeableOwnable} from "../proxy/ProxyUpgradeableOwnable.sol";
 import {ReferralStorage} from "./ReferralStorage.sol";
 
 contract ReferralProxy is ProxyUpgradeableOwnable {
-    constructor(
-        address implementation
-    ) ProxyUpgradeableOwnable(implementation) {
+    constructor(address implementation) ProxyUpgradeableOwnable(implementation) {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         l.primaryRebatePercents.push(UD60x18.wrap(0.05e18)); // 5%

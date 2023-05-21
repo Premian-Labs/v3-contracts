@@ -27,8 +27,5 @@ interface IFeedRegistry {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The feed address
-    function feed(
-        address tokenA,
-        address tokenB
-    ) external view returns (address);
+    function feed(address tokenA, address tokenB) external view returns (address);
 }

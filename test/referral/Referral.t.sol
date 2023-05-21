@@ -39,8 +39,7 @@ contract ReferralTest is DeployTest {
             uint256 secondaryRebate1
         ) = _test_useReferral_Rebate_Primary_And_Secondary();
 
-        (address[] memory tokens, uint256[] memory rebates) = referral
-            .getRebates(users.referrer);
+        (address[] memory tokens, uint256[] memory rebates) = referral.getRebates(users.referrer);
 
         assertEq(tokens[0], token0);
         assertEq(rebates[0], primaryRebate0);
@@ -57,27 +56,21 @@ contract ReferralTest is DeployTest {
         assertEq(rebates[1], secondaryRebate1);
     }
 
-    function test_internal_trySetReferrer_No_Referrer_Provided_Referrer_Not_Set()
-        public
-    {
+    function test_internal_trySetReferrer_No_Referrer_Provided_Referrer_Not_Set() public {
         vm.prank(users.trader);
         address referrer = referral.__trySetReferrer(address(0));
         assertEq(referrer, address(0));
         assertEq(referral.getReferrer(users.trader), address(0));
     }
 
-    function test_internal_trySetReferrer_Referrer_Provided_Referrer_Not_Set()
-        public
-    {
+    function test_internal_trySetReferrer_Referrer_Provided_Referrer_Not_Set() public {
         vm.prank(users.trader);
         address referrer = referral.__trySetReferrer(users.referrer);
         assertEq(referrer, users.referrer);
         assertEq(referral.getReferrer(users.trader), users.referrer);
     }
 
-    function test_internal_trySetReferrer_No_Referrer_Provided_Referrer_Set()
-        public
-    {
+    function test_internal_trySetReferrer_No_Referrer_Provided_Referrer_Set() public {
         vm.startPrank(users.trader);
 
         address referrer = referral.__trySetReferrer(users.referrer);
@@ -91,9 +84,7 @@ contract ReferralTest is DeployTest {
         assertEq(referral.getReferrer(users.trader), users.referrer);
     }
 
-    function test_internal_trySetReferrer_Referrer_Provided_Referrer_Set()
-        public
-    {
+    function test_internal_trySetReferrer_Referrer_Provided_Referrer_Set() public {
         vm.startPrank(users.trader);
 
         address referrer = referral.__trySetReferrer(users.referrer);
@@ -108,42 +99,26 @@ contract ReferralTest is DeployTest {
     }
 
     function test_setRebateTier_Success() public {
-        assertEq(
-            uint8(referral.getRebateTier(users.referrer)),
-            uint8(IReferral.RebateTier.PRIMARY_REBATE_1)
-        );
+        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PRIMARY_REBATE_1));
 
-        referral.setRebateTier(
-            users.referrer,
-            IReferral.RebateTier.PRIMARY_REBATE_2
-        );
+        referral.setRebateTier(users.referrer, IReferral.RebateTier.PRIMARY_REBATE_2);
 
-        assertEq(
-            uint8(referral.getRebateTier(users.referrer)),
-            uint8(IReferral.RebateTier.PRIMARY_REBATE_2)
-        );
+        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PRIMARY_REBATE_2));
     }
 
     function test_setRebateTier_RevertIf_Not_Owner() public {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(users.trader);
 
-        referral.setRebateTier(
-            users.referrer,
-            IReferral.RebateTier.PRIMARY_REBATE_2
-        );
+        referral.setRebateTier(users.referrer, IReferral.RebateTier.PRIMARY_REBATE_2);
     }
 
     function test_setPrimaryRebatePercent_Success() public {
         UD60x18 percent = ud(100e18);
 
-        referral.setPrimaryRebatePercent(
-            percent,
-            IReferral.RebateTier.PRIMARY_REBATE_1
-        );
+        referral.setPrimaryRebatePercent(percent, IReferral.RebateTier.PRIMARY_REBATE_1);
 
-        (UD60x18[] memory primaryRebatePercents, ) = referral
-            .getRebatePercents();
+        (UD60x18[] memory primaryRebatePercents, ) = referral.getRebatePercents();
 
         assertEq(primaryRebatePercents[0], percent);
     }
@@ -152,10 +127,7 @@ contract ReferralTest is DeployTest {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(users.trader);
 
-        referral.setPrimaryRebatePercent(
-            ud(100e18),
-            IReferral.RebateTier.PRIMARY_REBATE_1
-        );
+        referral.setPrimaryRebatePercent(ud(100e18), IReferral.RebateTier.PRIMARY_REBATE_1);
     }
 
     function test_setSecondaryRebatePercent_Success() public {
@@ -181,12 +153,7 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        referral.useReferral(
-            users.trader,
-            address(0),
-            token,
-            scaleDecimals(tradingFee)
-        );
+        referral.useReferral(users.trader, address(0), token, scaleDecimals(tradingFee));
 
         vm.stopPrank();
 
@@ -208,25 +175,15 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        referral.useReferral(
-            users.trader,
-            users.referrer,
-            token,
-            scaleDecimals(tradingFee)
-        );
+        referral.useReferral(users.trader, users.referrer, token, scaleDecimals(tradingFee));
 
         vm.stopPrank();
 
-        (
-            UD60x18 primaryRebatePercent,
-            UD60x18 secondaryRebatePercent
-        ) = referral.getRebatePercents(users.referrer);
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(tradingFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(tradingFee);
 
-        UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(tradingFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(tradingFee);
 
         uint256 primaryRebate = scaleDecimals(_primaryRebate);
         uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -235,10 +192,7 @@ contract ReferralTest is DeployTest {
 
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
-        assertEq(
-            IERC20(token).balanceOf(address(pool)),
-            tradingFee - totalRebate
-        );
+        assertEq(IERC20(token).balanceOf(address(pool)), tradingFee - totalRebate);
 
         assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
     }
@@ -261,25 +215,15 @@ contract ReferralTest is DeployTest {
         deal(token, address(pool), tradingFee);
         IERC20(token).approve(address(referral), tradingFee);
 
-        referral.useReferral(
-            users.trader,
-            users.referrer,
-            token,
-            scaleDecimals(tradingFee)
-        );
+        referral.useReferral(users.trader, users.referrer, token, scaleDecimals(tradingFee));
 
         vm.stopPrank();
 
-        (
-            UD60x18 primaryRebatePercent,
-            UD60x18 secondaryRebatePercent
-        ) = referral.getRebatePercents(users.referrer);
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent *
-            scaleDecimals(tradingFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(tradingFee);
 
-        UD60x18 _secondaryRebate = secondaryRebatePercent *
-            scaleDecimals(tradingFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(tradingFee);
 
         primaryRebate = scaleDecimals(_primaryRebate);
         secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -288,10 +232,7 @@ contract ReferralTest is DeployTest {
 
         assertEq(referral.getReferrer(users.trader), users.referrer);
 
-        assertEq(
-            IERC20(token).balanceOf(address(pool)),
-            tradingFee - totalRebate
-        );
+        assertEq(IERC20(token).balanceOf(address(pool)), tradingFee - totalRebate);
 
         assertEq(IERC20(token).balanceOf(address(referral)), totalRebate);
     }
@@ -304,12 +245,7 @@ contract ReferralTest is DeployTest {
         vm.prank(users.trader);
         vm.expectRevert(IReferral.Referral__PoolNotAuthorized.selector);
 
-        referral.useReferral(
-            users.trader,
-            users.referrer,
-            address(0),
-            ud(100e18)
-        );
+        referral.useReferral(users.trader, users.referrer, address(0), ud(100e18));
     }
 
     function test_claimRebate_Success() public {
@@ -341,8 +277,7 @@ contract ReferralTest is DeployTest {
         assertEq(IERC20(token1).balanceOf(users.referrer), primaryRebate1);
         assertEq(IERC20(token1).balanceOf(secondaryReferrer), secondaryRebate1);
 
-        (address[] memory tokens, uint256[] memory rebates) = referral
-            .getRebates(users.referrer);
+        (address[] memory tokens, uint256[] memory rebates) = referral.getRebates(users.referrer);
 
         assertEq(tokens.length, 0);
         assertEq(rebates.length, 0);

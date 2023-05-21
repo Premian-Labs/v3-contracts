@@ -18,9 +18,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         IERC20 poolToken = IERC20(getPoolToken());
 
         uint256 initialCollateral = scaleDecimals(
-            contractsToCollateral(
-                isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike
-            )
+            contractsToCollateral(isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike)
         );
 
         deal(address(poolToken), users.lp, initialCollateral);
@@ -64,15 +62,11 @@ abstract contract PoolWriteFromTest is DeployTest {
         uint256 totalRebate;
 
         {
-            (
-                UD60x18 primaryRebatePercent,
-                UD60x18 secondaryRebatePercent
-            ) = referral.getRebatePercents(users.referrer);
+            (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
             UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(fee);
 
-            UD60x18 _secondaryRebate = secondaryRebatePercent *
-                scaleDecimals(fee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(fee);
 
             uint256 primaryRebate = scaleDecimals(_primaryRebate);
             uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -86,14 +80,8 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         assertEq(poolToken.balanceOf(address(referral)), totalRebate);
 
-        assertEq(
-            poolToken.balanceOf(address(pool)),
-            collateral + fee - totalRebate
-        );
-        assertEq(
-            poolToken.balanceOf(users.lp),
-            initialCollateral - collateral - fee
-        );
+        assertEq(poolToken.balanceOf(address(pool)), collateral + fee - totalRebate);
+        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral - fee);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), size);
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
@@ -102,9 +90,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
     }
 
-    function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress()
-        public
-    {
+    function test_writeFrom_Write_500_Options_OnBehalfOfAnotherAddress() public {
         uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
@@ -139,35 +125,21 @@ abstract contract PoolWriteFromTest is DeployTest {
     );
 
     function test_writeFrom_UseUnderwriterAsTaker() public {
-        uint256 initialCollateral = _mintForLP();
+        _mintForLP();
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
 
         vm.expectEmit();
 
-        emit WriteFrom(
-            users.lp,
-            users.trader,
-            users.lp,
-            size,
-            contractsToCollateral(size),
-            ud(scaleDecimalsTo(fee))
-        );
+        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), ud(scaleDecimalsTo(fee)));
 
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
     }
 
-    function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval()
-        public
-    {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__OperatorNotAuthorized.selector,
-                users.otherTrader
-            )
-        );
+    function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval() public {
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.otherTrader));
         vm.prank(users.otherTrader);
         pool.writeFrom(users.lp, users.trader, ud(500 ether), address(0));
     }

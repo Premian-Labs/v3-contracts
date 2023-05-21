@@ -21,18 +21,9 @@ contract PoolNameTest is Test {
     }
 
     function test_name_Success() public {
-        assertEq(
-            PoolName.name(weth, dai, 1260262160, 100.25e18, true),
-            "WETH-DAI-08DEC2009-100.25-C"
-        );
-        assertEq(
-            PoolName.name(dai, wbtc, 1698190000, 1000e18, false),
-            "DAI-WBTC-24OCT2023-1000-P"
-        );
-        assertEq(
-            PoolName.name(weth, usdc, 1709190000, 100000e18, true),
-            "WETH-USDC-29FEB2024-100000-C"
-        );
+        assertEq(PoolName.name(weth, dai, 1260262160, 100.25e18, true), "WETH-DAI-08DEC2009-100.25-C");
+        assertEq(PoolName.name(dai, wbtc, 1698190000, 1000e18, false), "DAI-WBTC-24OCT2023-1000-P");
+        assertEq(PoolName.name(weth, usdc, 1709190000, 100000e18, true), "WETH-USDC-29FEB2024-100000-C");
     }
 
     function test_strikeToString_Success() public {
@@ -81,18 +72,11 @@ contract PoolNameTest is Test {
         assertEq(PoolName.monthToString(11), "NOV");
         assertEq(PoolName.monthToString(12), "DEC");
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__InvalidMonth.selector,
-                13
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 13));
 
         PoolName.monthToString(13);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 0)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 0));
 
         PoolName.monthToString(0);
     }

@@ -24,10 +24,5 @@ interface IFeeConverter {
     /// @param callee exchange address to call to execute the trade.
     /// @param allowanceTarget address for which to set allowance for the trade
     /// @param data calldata to execute the trade
-    function convert(
-        address sourceToken,
-        address callee,
-        address allowanceTarget,
-        bytes calldata data
-    ) external;
+    function convert(address sourceToken, address callee, address allowanceTarget, bytes calldata data) external;
 }

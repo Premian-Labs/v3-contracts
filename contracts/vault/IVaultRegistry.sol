@@ -72,13 +72,7 @@ interface IVaultRegistry {
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
-    function addVault(
-        address vault,
-        address asset,
-        bytes32 vaultType,
-        TradeSide side,
-        OptionType optionType
-    ) external;
+    function addVault(address vault, address asset, bytes32 vaultType, TradeSide side, OptionType optionType) external;
 
     /// @notice Removes a vault from the registry.
     /// @param vault The proxy address of the vault.
@@ -106,18 +100,12 @@ interface IVaultRegistry {
     /// @notice Adds a set of supported token pairs to the vault.
     /// @param vault The proxy address of the vault.
     /// @param tokenPairs The token pairs to add.
-    function addSupportedTokenPairs(
-        address vault,
-        TokenPair[] memory tokenPairs
-    ) external;
+    function addSupportedTokenPairs(address vault, TokenPair[] memory tokenPairs) external;
 
     /// @notice Removes a set of supported token pairs from the vault.
     /// @param vault The proxy address of the vault.
     /// @param tokenPairsToRemove The token pairs to remove.
-    function removeSupportedTokenPairs(
-        address vault,
-        TokenPair[] memory tokenPairsToRemove
-    ) external;
+    function removeSupportedTokenPairs(address vault, TokenPair[] memory tokenPairsToRemove) external;
 
     /// @notice Gets the vault at the specified by the proxy address.
     /// @param vault The proxy address of the vault.
@@ -127,9 +115,7 @@ interface IVaultRegistry {
     /// @notice Gets the token supports supported for trading within the vault.
     /// @param vault The proxy address of the vault.
     /// @return The token pairs supported for trading within the vault.
-    function getSupportedTokenPairs(
-        address vault
-    ) external view returns (TokenPair[] memory);
+    function getSupportedTokenPairs(address vault) external view returns (TokenPair[] memory);
 
     /// @notice Gets all vaults in the registry.
     /// @return All vaults in the registry.
@@ -149,65 +135,45 @@ interface IVaultRegistry {
     /// @notice Gets all vaults with `asset` as their deposit token.
     /// @param asset The desired asset.
     /// @return All vaults with `asset` as their deposit token.
-    function getVaultsByAsset(
-        address asset
-    ) external view returns (Vault[] memory);
+    function getVaultsByAsset(address asset) external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with `tokenPair` in their trading set.
     /// @param tokenPair The desired token pair.
     /// @return All vaults with `tokenPair` in their trading set.
-    function getVaultsByTokenPair(
-        TokenPair memory tokenPair
-    ) external view returns (Vault[] memory);
+    function getVaultsByTokenPair(TokenPair memory tokenPair) external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with trade side `side`.
     /// @param side The trade side.
     /// @return All vaults with trade side `side`.
-    function getVaultsByTradeSide(
-        TradeSide side
-    ) external view returns (Vault[] memory);
+    function getVaultsByTradeSide(TradeSide side) external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with option type `optionType`.
     /// @param optionType The option type.
     /// @return All vaults with option type `optionType`.
-    function getVaultsByOptionType(
-        OptionType optionType
-    ) external view returns (Vault[] memory);
+    function getVaultsByOptionType(OptionType optionType) external view returns (Vault[] memory);
 
     /// @notice Gets all the vaults of type `vaultType`.
     /// @param vaultType The vault type.
     /// @return All the vaults of type `vaultType`.
-    function getVaultsByType(
-        bytes32 vaultType
-    ) external view returns (Vault[] memory);
+    function getVaultsByType(bytes32 vaultType) external view returns (Vault[] memory);
 
     /// @notice Gets the settings for the vaultType.
     /// @param vaultType The vault type.
     /// @return The vault settings.
-    function getSettings(
-        bytes32 vaultType
-    ) external view returns (bytes memory);
+    function getSettings(bytes32 vaultType) external view returns (bytes memory);
 
     /// @notice Sets the implementation for the vaultType.
     /// @param vaultType The vault type.
     /// @param updatedSettings The updated settings for the vault type.
-    function updateSettings(
-        bytes32 vaultType,
-        bytes memory updatedSettings
-    ) external;
+    function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external;
 
     /// @notice Gets the implementation for the vaultType.
     /// @param vaultType The vault type.
     /// @return The implementation address.
-    function getImplementation(
-        bytes32 vaultType
-    ) external view returns (address);
+    function getImplementation(bytes32 vaultType) external view returns (address);
 
     /// @notice Sets the implementation for the vaultType.
     /// @param vaultType The vault type.
     /// @param implementation The implementation contract address
-    function setImplementation(
-        bytes32 vaultType,
-        address implementation
-    ) external;
+    function setImplementation(bytes32 vaultType, address implementation) external;
 }

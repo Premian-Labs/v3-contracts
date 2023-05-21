@@ -36,12 +36,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
     function test_maxFlashLoan_RevertIf_NotPoolToken() public {
         address otherToken = address(0x111);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__NotPoolToken.selector,
-                otherToken
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__NotPoolToken.selector, otherToken));
         pool.maxFlashLoan(otherToken);
     }
 
@@ -54,20 +49,12 @@ abstract contract PoolFlashLoanTest is DeployTest {
         address poolToken = getPoolToken();
         deal(poolToken, users.trader, 100 ether);
 
-        assertEq(
-            pool.flashFee(poolToken, initialCollateral / 2),
-            calculateFee(initialCollateral / 2)
-        );
+        assertEq(pool.flashFee(poolToken, initialCollateral / 2), calculateFee(initialCollateral / 2));
     }
 
     function test_flashFee_RevertIf_NotPoolToken() public {
         address otherToken = address(0x111);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__NotPoolToken.selector,
-                otherToken
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__NotPoolToken.selector, otherToken));
         pool.flashFee(otherToken, 1);
     }
 
@@ -86,19 +73,12 @@ abstract contract PoolFlashLoanTest is DeployTest {
         IERC20(poolToken).transfer(address(flashLoanMock), fee);
 
         flashLoanMock.singleFlashLoan(
-            FlashLoanMock.FlashLoan({
-                pool: address(pool),
-                token: poolToken,
-                amount: initialCollateral / 2
-            }),
+            FlashLoanMock.FlashLoan({pool: address(pool), token: poolToken, amount: initialCollateral / 2}),
             true
         );
 
         assertEq(IERC20(poolToken).balanceOf(address(flashLoanMock)), 0);
-        assertEq(
-            IERC20(poolToken).balanceOf(address(pool)),
-            initialCollateral + fee
-        );
+        assertEq(IERC20(poolToken).balanceOf(address(pool)), initialCollateral + fee);
     }
 
     function test_flashLoan_Single_RevertIf_NotRepayed() public {
@@ -118,11 +98,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
         vm.expectRevert(IPoolInternal.Pool__FlashLoanNotRepayed.selector);
 
         flashLoanMock.singleFlashLoan(
-            FlashLoanMock.FlashLoan({
-                pool: address(pool),
-                token: poolToken,
-                amount: initialCollateral / 2
-            }),
+            FlashLoanMock.FlashLoan({pool: address(pool), token: poolToken, amount: initialCollateral / 2}),
             false
         );
     }
@@ -148,28 +124,16 @@ abstract contract PoolFlashLoanTest is DeployTest {
             isCallPool: poolKey.isCallPool
         });
 
-        IPoolMock poolTwo = IPoolMock(
-            factory.deployPool{value: 1 ether}(poolKeyTwo)
-        );
+        IPoolMock poolTwo = IPoolMock(factory.deployPool{value: 1 ether}(poolKeyTwo));
 
-        IPoolMock poolThree = IPoolMock(
-            factory.deployPool{value: 1 ether}(poolKeyThree)
-        );
+        IPoolMock poolThree = IPoolMock(factory.deployPool{value: 1 ether}(poolKeyThree));
 
         //
 
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(pool, poolKey.strike, depositSize);
-        uint256 initialCollateralTwo = deposit(
-            poolTwo,
-            poolKeyTwo.strike,
-            depositSize
-        );
-        uint256 initialCollateralThree = deposit(
-            poolThree,
-            poolKeyThree.strike,
-            depositSize
-        );
+        uint256 initialCollateralTwo = deposit(poolTwo, poolKeyTwo.strike, depositSize);
+        uint256 initialCollateralThree = deposit(poolThree, poolKeyThree.strike, depositSize);
 
         //
 
@@ -181,13 +145,8 @@ abstract contract PoolFlashLoanTest is DeployTest {
         uint256 feeTwo = calculateFee(initialCollateralTwo / 2);
         uint256 feeThree = calculateFee(initialCollateralThree / 2);
 
-        FlashLoanMock.FlashLoan[]
-            memory flashLoans = new FlashLoanMock.FlashLoan[](3);
-        flashLoans[0] = FlashLoanMock.FlashLoan({
-            pool: address(pool),
-            token: poolToken,
-            amount: initialCollateral / 2
-        });
+        FlashLoanMock.FlashLoan[] memory flashLoans = new FlashLoanMock.FlashLoan[](3);
+        flashLoans[0] = FlashLoanMock.FlashLoan({pool: address(pool), token: poolToken, amount: initialCollateral / 2});
 
         flashLoans[1] = FlashLoanMock.FlashLoan({
             pool: address(poolTwo),
@@ -201,38 +160,21 @@ abstract contract PoolFlashLoanTest is DeployTest {
             amount: initialCollateralThree / 2
         });
 
-        IERC20(poolToken).transfer(
-            address(flashLoanMock),
-            fee + feeTwo + feeThree
-        );
+        IERC20(poolToken).transfer(address(flashLoanMock), fee + feeTwo + feeThree);
 
         flashLoanMock.multiFlashLoan(flashLoans);
 
         //
 
         assertEq(IERC20(poolToken).balanceOf(address(flashLoanMock)), 0);
-        assertEq(
-            IERC20(poolToken).balanceOf(address(pool)),
-            initialCollateral + fee
-        );
-        assertEq(
-            IERC20(poolToken).balanceOf(address(poolTwo)),
-            initialCollateralTwo + feeTwo
-        );
-        assertEq(
-            IERC20(poolToken).balanceOf(address(poolThree)),
-            initialCollateralThree + feeThree
-        );
+        assertEq(IERC20(poolToken).balanceOf(address(pool)), initialCollateral + fee);
+        assertEq(IERC20(poolToken).balanceOf(address(poolTwo)), initialCollateralTwo + feeTwo);
+        assertEq(IERC20(poolToken).balanceOf(address(poolThree)), initialCollateralThree + feeThree);
     }
 
     function test_flashLoan_RevertIf_NotPoolToken() public {
         address otherToken = address(0x111);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__NotPoolToken.selector,
-                otherToken
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__NotPoolToken.selector, otherToken));
         pool.flashLoan(flashLoanMock, otherToken, 1, "");
     }
 }

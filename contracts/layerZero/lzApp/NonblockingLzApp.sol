@@ -18,19 +18,8 @@ abstract contract NonblockingLzApp is LzApp {
 
     constructor(address endpoint) LzApp(endpoint) {}
 
-    event MessageFailed(
-        uint16 srcChainId,
-        bytes srcAddress,
-        uint64 nonce,
-        bytes payload,
-        bytes reason
-    );
-    event RetryMessageSuccess(
-        uint16 srcChainId,
-        bytes srcAddress,
-        uint64 nonce,
-        bytes32 payloadHash
-    );
+    event MessageFailed(uint16 srcChainId, bytes srcAddress, uint64 nonce, bytes payload, bytes reason);
+    event RetryMessageSuccess(uint16 srcChainId, bytes srcAddress, uint64 nonce, bytes32 payloadHash);
 
     // overriding the virtual function in LzReceiver
     function _blockingLzReceive(
@@ -42,19 +31,11 @@ abstract contract NonblockingLzApp is LzApp {
         (bool success, bytes memory reason) = address(this).excessivelySafeCall(
             gasleft(),
             150,
-            abi.encodeWithSelector(
-                this.nonblockingLzReceive.selector,
-                srcChainId,
-                srcAddress,
-                nonce,
-                payload
-            )
+            abi.encodeWithSelector(this.nonblockingLzReceive.selector, srcChainId, srcAddress, nonce, payload)
         );
         // try-catch all errors/exceptions
         if (!success) {
-            NonblockingLzAppStorage.layout().failedMessages[srcChainId][
-                srcAddress
-            ][nonce] = keccak256(payload);
+            NonblockingLzAppStorage.layout().failedMessages[srcChainId][srcAddress][nonce] = keccak256(payload);
             emit MessageFailed(srcChainId, srcAddress, nonce, payload, reason);
         }
     }
@@ -66,8 +47,7 @@ abstract contract NonblockingLzApp is LzApp {
         bytes memory payload
     ) public virtual {
         // only internal transaction
-        if (msg.sender != address(this))
-            revert NonblockingLzApp__CallerNotLzApp();
+        if (msg.sender != address(this)) revert NonblockingLzApp__CallerNotLzApp();
         _nonblockingLzReceive(srcChainId, srcAddress, nonce, payload);
     }
 
@@ -85,17 +65,14 @@ abstract contract NonblockingLzApp is LzApp {
         uint64 nonce,
         bytes memory payload
     ) public payable virtual {
-        NonblockingLzAppStorage.Layout storage l = NonblockingLzAppStorage
-            .layout();
+        NonblockingLzAppStorage.Layout storage l = NonblockingLzAppStorage.layout();
 
         // assert there is message to retry
         bytes32 payloadHash = l.failedMessages[srcChainId][srcAddress][nonce];
 
-        if (payloadHash == bytes32(0))
-            revert NonblockingLzApp__NoStoredMessage();
+        if (payloadHash == bytes32(0)) revert NonblockingLzApp__NoStoredMessage();
 
-        if (keccak256(payload) != payloadHash)
-            revert NonblockingLzApp__InvalidPayload();
+        if (keccak256(payload) != payloadHash) revert NonblockingLzApp__InvalidPayload();
 
         // clear the stored message
         delete l.failedMessages[srcChainId][srcAddress][nonce];
@@ -104,14 +81,7 @@ abstract contract NonblockingLzApp is LzApp {
         emit RetryMessageSuccess(srcChainId, srcAddress, nonce, payloadHash);
     }
 
-    function failedMessages(
-        uint16 srcChainId,
-        bytes memory srcAddress,
-        uint64 nonce
-    ) external view returns (bytes32) {
-        return
-            NonblockingLzAppStorage.layout().failedMessages[srcChainId][
-                srcAddress
-            ][nonce];
+    function failedMessages(uint16 srcChainId, bytes memory srcAddress, uint64 nonce) external view returns (bytes32) {
+        return NonblockingLzAppStorage.layout().failedMessages[srcChainId][srcAddress][nonce];
     }
 }

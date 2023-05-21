@@ -35,8 +35,7 @@ library PoolStorage {
 
     UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
 
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.Pool");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.Pool");
 
     struct Layout {
         // ERC20 token addresses
@@ -77,60 +76,40 @@ library PoolStorage {
         }
     }
 
-    function getPoolTokenDecimals(
-        Layout storage l
-    ) internal view returns (uint8) {
+    function getPoolTokenDecimals(Layout storage l) internal view returns (uint8) {
         return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
     }
 
     /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
-    function toPoolTokenDecimals(
-        Layout storage l,
-        uint256 value
-    ) internal view returns (uint256) {
+    function toPoolTokenDecimals(Layout storage l, uint256 value) internal view returns (uint256) {
         uint8 decimals = l.getPoolTokenDecimals();
         return OptionMath.scaleDecimals(value, 18, decimals);
     }
 
     /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
-    function toPoolTokenDecimals(
-        Layout storage l,
-        int256 value
-    ) internal view returns (int256) {
+    function toPoolTokenDecimals(Layout storage l, int256 value) internal view returns (int256) {
         uint8 decimals = l.getPoolTokenDecimals();
         return OptionMath.scaleDecimals(value, 18, decimals);
     }
 
     /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
-    function toPoolTokenDecimals(
-        Layout storage l,
-        UD60x18 value
-    ) internal view returns (uint256) {
+    function toPoolTokenDecimals(Layout storage l, UD60x18 value) internal view returns (uint256) {
         return l.toPoolTokenDecimals(value.unwrap());
     }
 
     /// @notice Adjust decimals of a value with 18 decimals to match the pool token decimals
-    function toPoolTokenDecimals(
-        Layout storage l,
-        SD59x18 value
-    ) internal view returns (int256) {
+    function toPoolTokenDecimals(Layout storage l, SD59x18 value) internal view returns (int256) {
         return l.toPoolTokenDecimals(value.unwrap());
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
-    function fromPoolTokenDecimals(
-        Layout storage l,
-        uint256 value
-    ) internal view returns (UD60x18) {
+    function fromPoolTokenDecimals(Layout storage l, uint256 value) internal view returns (UD60x18) {
         uint8 decimals = l.getPoolTokenDecimals();
         return ud(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with pool token decimals to 18 decimals
-    function fromPoolTokenDecimals(
-        Layout storage l,
-        int256 value
-    ) internal view returns (SD59x18) {
+    function fromPoolTokenDecimals(Layout storage l, int256 value) internal view returns (SD59x18) {
         uint8 decimals = l.getPoolTokenDecimals();
         return sd(OptionMath.scaleDecimals(value, decimals, 18));
     }
@@ -143,11 +122,7 @@ library PoolStorage {
 
     function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
         if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(
-                l.base,
-                l.quote,
-                l.maturity
-            );
+            l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(l.base, l.quote, l.maturity);
         }
 
         return l.settlementPrice;
@@ -183,13 +158,7 @@ library PoolStorage {
     )
         internal
         pure
-        returns (
-            uint8 version,
-            address operator,
-            UD60x18 lower,
-            UD60x18 upper,
-            Position.OrderType orderType
-        )
+        returns (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType)
     {
         uint256 minTickDistance = MIN_TICK_DISTANCE.unwrap();
 
@@ -219,18 +188,7 @@ library PoolStorage {
     }
 
     /// @notice Converts `value` to pool token decimals and transfers `token`
-    function safeTransferFrom(
-        IERC20Router router,
-        address token,
-        address from,
-        address to,
-        UD60x18 value
-    ) internal {
-        router.safeTransferFrom(
-            token,
-            from,
-            to,
-            PoolStorage.layout().toPoolTokenDecimals(value)
-        );
+    function safeTransferFrom(IERC20Router router, address token, address from, address to, UD60x18 value) internal {
+        router.safeTransferFrom(token, from, to, PoolStorage.layout().toPoolTokenDecimals(value));
     }
 }

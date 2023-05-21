@@ -33,14 +33,9 @@ contract PoolFactoryTest is DeployTest {
     function test_deployPool_DeployPool() public {
         address pool = factory.deployPool{value: 1 ether}(poolKey);
 
-        (
-            address base,
-            address quote,
-            address oracleAdapter,
-            UD60x18 strike,
-            uint256 maturity,
-            bool isCallPool
-        ) = IPool(pool).getPoolSettings();
+        (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool) = IPool(
+            pool
+        ).getPoolSettings();
 
         assertEq(base, poolKey.base);
         assertEq(quote, poolKey.quote);
@@ -81,31 +76,19 @@ contract PoolFactoryTest is DeployTest {
     function test_deployPool_RevertIf_StrikeIsZero() public {
         poolKey.strike = ud(0);
 
-        vm.expectRevert(
-            IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector
-        );
+        vm.expectRevert(IPoolFactory.PoolFactory__OptionStrikeEqualsZero.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
     function test_deployPool_RevertIf_AlreadyDeployed() public {
         address poolAddress = factory.deployPool{value: 1 ether}(poolKey);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector,
-                poolAddress
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__PoolAlreadyDeployed.selector, poolAddress));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
     function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
-        uint256[4] memory strike = [
-            uint256(99990 ether),
-            uint256(1050 ether),
-            uint256(950 ether),
-            uint256(11 ether)
-        ];
+        uint256[4] memory strike = [uint256(99990 ether), uint256(1050 ether), uint256(950 ether), uint256(11 ether)];
 
         uint256 strikeInterval = 100 ether;
 
@@ -127,12 +110,7 @@ contract PoolFactoryTest is DeployTest {
     function test_deployPool_RevertIf_MaturityExpired() public {
         poolKey.maturity = 1679758930;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__OptionExpired.selector,
-                poolKey.maturity
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionExpired.selector, poolKey.maturity));
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
@@ -140,10 +118,7 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1679768950;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector,
-                poolKey.maturity
-            )
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -152,10 +127,7 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1680163200;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__OptionMaturityNotFriday.selector,
-                poolKey.maturity
-            )
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNotFriday.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -164,10 +136,7 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1683878400;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__OptionMaturityNotLastFriday.selector,
-                poolKey.maturity
-            )
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNotLastFriday.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }
@@ -176,10 +145,7 @@ contract PoolFactoryTest is DeployTest {
         poolKey.maturity = 1714118400;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector,
-                poolKey.maturity
-            )
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityExceedsMax.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
     }

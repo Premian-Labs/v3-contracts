@@ -14,10 +14,7 @@ import {DeployTest} from "../Deploy.t.sol";
 abstract contract PoolClaimTest is DeployTest {
     function test_claim_ClaimFees() public {
         uint256 tradeSize = 1 ether;
-        (uint256 initialCollateral, uint256 totalPremium) = trade(
-            tradeSize,
-            true
-        );
+        (uint256 initialCollateral, uint256 totalPremium) = trade(tradeSize, true);
 
         uint256 claimableFees = pool.getClaimableFees(posKey);
         uint256 protocolFees = pool.protocolFees();
@@ -26,18 +23,10 @@ abstract contract PoolClaimTest is DeployTest {
         vm.prank(users.lp);
         pool.claim(posKey);
 
-        uint256 collateral = scaleDecimals(
-            contractsToCollateral(ud(tradeSize))
-        );
+        uint256 collateral = scaleDecimals(contractsToCollateral(ud(tradeSize)));
 
-        assertEq(
-            poolToken.balanceOf(posKey.operator),
-            initialCollateral - collateral + claimableFees
-        );
-        assertEq(
-            poolToken.balanceOf(address(pool)),
-            collateral + totalPremium - claimableFees - protocolFees
-        );
+        assertEq(poolToken.balanceOf(posKey.operator), initialCollateral - collateral + claimableFees);
+        assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - claimableFees - protocolFees);
         assertEq(poolToken.balanceOf(feeReceiver), protocolFees);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
@@ -52,12 +41,7 @@ abstract contract PoolClaimTest is DeployTest {
         UD60x18 nextPrice = posKey.upper;
         UD60x18 avgPrice = price.avg(nextPrice);
 
-        uint256 takerFee = pool.takerFee(
-            users.trader,
-            ud(tradeSize),
-            scaleDecimals(ud(tradeSize) * avgPrice),
-            true
-        );
+        uint256 takerFee = pool.takerFee(users.trader, ud(tradeSize), scaleDecimals(ud(tradeSize) * avgPrice), true);
 
         assertEq(pool.getClaimableFees(posKey), takerFee / 2); // 50% protocol fee percentage
     }

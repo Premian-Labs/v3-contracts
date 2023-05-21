@@ -136,12 +136,7 @@ contract DeployTest is Test, Assertions {
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
         premia = IERC20(0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70);
 
-        oracleAdapter = new OracleAdapterMock(
-            address(base),
-            address(quote),
-            ud(1000 ether),
-            ud(1000 ether)
-        );
+        oracleAdapter = new OracleAdapterMock(address(base), address(quote), ud(1000 ether), ud(1000 ether));
 
         poolKey = IPoolFactory.PoolKey({
             base: base,
@@ -164,14 +159,9 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(
-            address(base),
-            address(oracleAdapter)
-        );
+        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(address(base), address(oracleAdapter));
 
-        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(
-                address(initFeeCalculatorImpl)
-            );
+        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(address(initFeeCalculatorImpl));
 
         PoolFactory factoryImpl = new PoolFactory(
             address(diamond),
@@ -179,11 +169,7 @@ contract DeployTest is Test, Assertions {
             address(initFeeCalculatorProxy)
         );
 
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(
-            address(factoryImpl),
-            ud(0.1 ether),
-            feeReceiver
-        );
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), feeReceiver);
 
         flashLoanMock = new FlashLoanMock();
 
@@ -197,9 +183,7 @@ contract DeployTest is Test, Assertions {
 
         UserSettings userSettingsImpl = new UserSettings();
 
-        ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(
-            address(userSettingsImpl)
-        );
+        ProxyUpgradeableOwnable userSettingsProxy = new ProxyUpgradeableOwnable(address(userSettingsImpl));
 
         userSettings = IUserSettings(address(userSettingsProxy));
 
@@ -219,9 +203,7 @@ contract DeployTest is Test, Assertions {
 
         address vaultRegistryImpl = address(new VaultRegistry());
 
-        address vaultRegistryProxy = address(
-            new ProxyUpgradeableOwnable(vaultRegistryImpl)
-        );
+        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
 
         vaultRegistry = VaultRegistry(vaultRegistryProxy);
 
@@ -288,16 +270,10 @@ contract DeployTest is Test, Assertions {
 
         // PoolCoreMock
         poolCoreMockSelectors.push(poolCoreMockImpl._getPricing.selector);
-        poolCoreMockSelectors.push(
-            poolCoreMockImpl.exposed_getStrandedArea.selector
-        );
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedArea.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_cross.selector);
-        poolCoreMockSelectors.push(
-            poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector
-        );
-        poolCoreMockSelectors.push(
-            poolCoreMockImpl.exposed_isMarketPriceStranded.selector
-        );
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
@@ -328,9 +304,7 @@ contract DeployTest is Test, Assertions {
         // PoolDepositWithdraw
         poolDepositWithdrawSelectors.push(
             bytes4(
-                keccak256(
-                    "deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)"
-                )
+                keccak256("deposit((address,address,uint256,uint256,uint8),uint256,uint256,uint256,uint256,uint256)")
             )
         );
         poolDepositWithdrawSelectors.push(
@@ -340,12 +314,8 @@ contract DeployTest is Test, Assertions {
                 )
             )
         );
-        poolDepositWithdrawSelectors.push(
-            poolDepositWithdrawImpl.withdraw.selector
-        );
-        poolDepositWithdrawSelectors.push(
-            poolDepositWithdrawImpl.getNearestTicksBelow.selector
-        );
+        poolDepositWithdrawSelectors.push(poolDepositWithdrawImpl.withdraw.selector);
+        poolDepositWithdrawSelectors.push(poolDepositWithdrawImpl.getNearestTicksBelow.selector);
 
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
@@ -358,8 +328,7 @@ contract DeployTest is Test, Assertions {
         poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
 
-        IDiamondWritableInternal.FacetCut[]
-            memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
+        IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
 
         facetCuts[0] = IDiamondWritableInternal.FacetCut(
             address(poolBaseImpl),
@@ -404,15 +373,11 @@ contract DeployTest is Test, Assertions {
         });
     }
 
-    function deposit(
-        uint256 depositSize
-    ) internal returns (uint256 initialCollateral) {
+    function deposit(uint256 depositSize) internal returns (uint256 initialCollateral) {
         return deposit(ud(depositSize));
     }
 
-    function deposit(
-        UD60x18 depositSize
-    ) internal returns (uint256 initialCollateral) {
+    function deposit(UD60x18 depositSize) internal returns (uint256 initialCollateral) {
         return deposit(pool, poolKey.strike, depositSize);
     }
 
@@ -422,34 +387,21 @@ contract DeployTest is Test, Assertions {
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
-        initialCollateral = scaleDecimals(
-            isCallTest ? depositSize : depositSize * strike
-        );
+        initialCollateral = scaleDecimals(isCallTest ? depositSize : depositSize * strike);
 
         vm.startPrank(users.lp);
 
         deal(address(token), users.lp, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool
-            .getNearestTicksBelow(posKey.lower, posKey.upper);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(posKey.lower, posKey.upper);
 
-        _pool.deposit(
-            posKey,
-            nearestBelowLower,
-            nearestBelowUpper,
-            depositSize,
-            ZERO,
-            ONE
-        );
+        _pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
 
         vm.stopPrank();
     }
 
-    function trade(
-        uint256 tradeSize,
-        bool isBuy
-    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+    function trade(uint256 tradeSize, bool isBuy) internal returns (uint256 initialCollateral, uint256 totalPremium) {
         if (isBuy) posKey.orderType = Position.OrderType.CS;
 
         initialCollateral = deposit(tradeSize);
@@ -460,9 +412,7 @@ contract DeployTest is Test, Assertions {
 
         address poolToken = getPoolToken();
 
-        uint256 mintAmount = isBuy
-            ? totalPremium
-            : scaleDecimals(poolKey.strike);
+        uint256 mintAmount = isBuy ? totalPremium : scaleDecimals(poolKey.strike);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, mintAmount);
@@ -471,9 +421,7 @@ contract DeployTest is Test, Assertions {
         pool.trade(
             _tradeSize,
             isBuy,
-            isBuy
-                ? totalPremium + totalPremium / 10
-                : totalPremium - totalPremium / 10,
+            isBuy ? totalPremium + totalPremium / 10 : totalPremium - totalPremium / 10,
             address(0)
         );
         vm.stopPrank();
@@ -483,15 +431,11 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? base : quote;
     }
 
-    function contractsToCollateral(
-        UD60x18 amount
-    ) internal view returns (UD60x18) {
+    function contractsToCollateral(UD60x18 amount) internal view returns (UD60x18) {
         return isCallTest ? amount : amount * poolKey.strike;
     }
 
-    function collateralToContracts(
-        UD60x18 amount
-    ) internal view returns (UD60x18) {
+    function collateralToContracts(UD60x18 amount) internal view returns (UD60x18) {
         return isCallTest ? amount : amount / poolKey.strike;
     }
 
@@ -516,13 +460,7 @@ contract DeployTest is Test, Assertions {
     }
 
     function tokenId() internal view returns (uint256) {
-        return
-            PoolStorage.formatTokenId(
-                posKey.operator,
-                posKey.lower,
-                posKey.upper,
-                posKey.orderType
-            );
+        return PoolStorage.formatTokenId(posKey.operator, posKey.lower, posKey.upper, posKey.orderType);
     }
 
     function getSettlementPrice(bool isITM) internal view returns (UD60x18) {
@@ -550,20 +488,11 @@ contract DeployTest is Test, Assertions {
         return exerciseValue;
     }
 
-    function getCollateralValue(
-        UD60x18 tradeSize,
-        UD60x18 exerciseValue
-    ) internal view returns (UD60x18) {
-        return
-            isCallTest
-                ? tradeSize - exerciseValue
-                : tradeSize * poolKey.strike - exerciseValue;
+    function getCollateralValue(UD60x18 tradeSize, UD60x18 exerciseValue) internal view returns (UD60x18) {
+        return isCallTest ? tradeSize - exerciseValue : tradeSize * poolKey.strike - exerciseValue;
     }
 
-    function handleExerciseSettleAuthorization(
-        address user,
-        uint256 authorizedCost
-    ) internal {
+    function handleExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
         vm.startPrank(user);
 
         address[] memory agents = new address[](1);

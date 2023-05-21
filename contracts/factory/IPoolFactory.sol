@@ -16,10 +16,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__OptionMaturityNotFriday(uint256 maturity);
     error PoolFactory__OptionMaturityNotLastFriday(uint256 maturity);
     error PoolFactory__OptionStrikeEqualsZero();
-    error PoolFactory__OptionStrikeInvalid(
-        UD60x18 strike,
-        UD60x18 strikeInterval
-    );
+    error PoolFactory__OptionStrikeInvalid(UD60x18 strike, UD60x18 strikeInterval);
     error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
     error PoolFactory__ZeroAddress();
@@ -48,16 +45,12 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @param k The pool key
     /// @return pool The pool address
     /// @return isDeployed Whether the pool has been deployed
-    function getPoolAddress(
-        PoolKey calldata k
-    ) external view returns (address pool, bool isDeployed);
+    function getPoolAddress(PoolKey calldata k) external view returns (address pool, bool isDeployed);
 
     /// @notice Returns the fee required to initialize a pool
     /// @param k The pool key
     /// @return The fee required to initialize this pool (18 decimals)
-    function initializationFee(
-        PoolKey calldata k
-    ) external view returns (UD60x18);
+    function initializationFee(PoolKey calldata k) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage (18 decimals)
@@ -70,9 +63,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @notice Deploy a new option pool
     /// @param k The pool key
     /// @return poolAddress The address of the deployed pool
-    function deployPool(
-        PoolKey calldata k
-    ) external payable returns (address poolAddress);
+    function deployPool(PoolKey calldata k) external payable returns (address poolAddress);
 
     /// @notice Removes the discount caused by an existing pool, can only be called by the pool after maturity
     /// @param k The pool key

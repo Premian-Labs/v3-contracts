@@ -14,10 +14,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     error UniswapV3Adapter__FeeTierExists(uint24 feeTier);
 
     /// @notice Thrown if the oldest observation is less than the TWAP period
-    error UniswapV3Adapter__InsufficientObservationPeriod(
-        uint32 oldestObservation,
-        uint32 period
-    );
+    error UniswapV3Adapter__InsufficientObservationPeriod(uint32 oldestObservation, uint32 period);
 
     /// @notice Thrown when trying to add an invalid fee tier
     error UniswapV3Adapter__InvalidFeeTier(uint24 feeTier);
@@ -26,10 +23,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     error UniswapV3Adapter__InvalidTimeRange(uint256 start, uint256 end);
 
     /// @notice Thrown when current observation cardinality is below target cardinality
-    error UniswapV3Adapter__ObservationCardinalityTooLow(
-        uint16 currentCardinality,
-        uint16 targetCardinality
-    );
+    error UniswapV3Adapter__ObservationCardinalityTooLow(uint16 currentCardinality, uint16 targetCardinality);
 
     /// @notice Thrown when tokens are unsorted
     error UniswapV3Adapter__TokensUnsorted(address token0, address token1);
@@ -58,10 +52,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The list of pools that will be used for quoting
-    function poolsForPair(
-        address tokenA,
-        address tokenB
-    ) external view returns (address[] memory);
+    function poolsForPair(address tokenA, address tokenB) external view returns (address[] memory);
 
     /// @notice Returns the address of the UniswapV3 factory
     /// @dev This value is assigned during deployment and cannot be changed

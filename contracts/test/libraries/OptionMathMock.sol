@@ -32,15 +32,7 @@ contract OptionMathMock {
         UD60x18 riskFreeRate,
         bool isCall
     ) external pure returns (SD59x18) {
-        return
-            OptionMath.optionDelta(
-                spot,
-                strike,
-                timeToMaturity,
-                volAnnualized,
-                riskFreeRate,
-                isCall
-            );
+        return OptionMath.optionDelta(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
     }
 
     function blackScholesPrice(
@@ -51,15 +43,7 @@ contract OptionMathMock {
         UD60x18 riskFreeRate,
         bool isCall
     ) external pure returns (UD60x18) {
-        return
-            OptionMath.blackScholesPrice(
-                spot,
-                strike,
-                timeToMaturity,
-                volAnnualized,
-                riskFreeRate,
-                isCall
-            );
+        return OptionMath.blackScholesPrice(spot, strike, timeToMaturity, volAnnualized, riskFreeRate, isCall);
     }
 
     function d1d2(
@@ -69,13 +53,7 @@ contract OptionMathMock {
         UD60x18 volAnnualized,
         UD60x18 riskFreeRate
     ) external pure returns (SD59x18 d1, SD59x18 d2) {
-        (d1, d2) = OptionMath.d1d2(
-            spot,
-            strike,
-            timeToMaturity,
-            volAnnualized,
-            riskFreeRate
-        );
+        (d1, d2) = OptionMath.d1d2(spot, strike, timeToMaturity, volAnnualized, riskFreeRate);
     }
 
     function isFriday(uint256 maturity) external pure returns (bool) {
@@ -86,30 +64,19 @@ contract OptionMathMock {
         return OptionMath.isLastFriday(maturity);
     }
 
-    function calculateTimeToMaturity(
-        uint256 maturity
-    ) external view returns (uint256) {
+    function calculateTimeToMaturity(uint256 maturity) external view returns (uint256) {
         return OptionMath.calculateTimeToMaturity(maturity);
     }
 
-    function calculateStrikeInterval(
-        UD60x18 spot
-    ) external pure returns (UD60x18) {
+    function calculateStrikeInterval(UD60x18 spot) external pure returns (UD60x18) {
         return OptionMath.calculateStrikeInterval(spot);
     }
 
-    function logMoneyness(
-        UD60x18 spot,
-        UD60x18 strike
-    ) external pure returns (UD60x18) {
+    function logMoneyness(UD60x18 spot, UD60x18 strike) external pure returns (UD60x18) {
         return OptionMath.logMoneyness(spot, strike);
     }
 
-    function initializationFee(
-        UD60x18 spot,
-        UD60x18 strike,
-        uint256 maturity
-    ) external view returns (UD60x18) {
+    function initializationFee(UD60x18 spot, UD60x18 strike, uint256 maturity) external view returns (UD60x18) {
         return OptionMath.initializationFee(spot, strike, maturity);
     }
 }

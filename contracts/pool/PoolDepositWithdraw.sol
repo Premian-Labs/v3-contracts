@@ -15,11 +15,7 @@ import {Position} from "../libraries/Position.sol";
 
 import {IPoolDepositWithdraw} from "./IPoolDepositWithdraw.sol";
 
-contract PoolDepositWithdraw is
-    IPoolDepositWithdraw,
-    PoolInternal,
-    ReentrancyGuard
-{
+contract PoolDepositWithdraw is IPoolDepositWithdraw, PoolInternal, ReentrancyGuard {
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using SafeERC20 for IERC20;
@@ -33,18 +29,7 @@ contract PoolDepositWithdraw is
         address settings,
         address vaultRegistry,
         address vxPremia
-    )
-        PoolInternal(
-            factory,
-            router,
-            wrappedNativeToken,
-            feeReceiver,
-            referral,
-            settings,
-            vaultRegistry,
-            vxPremia
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver, referral, settings, vaultRegistry, vxPremia) {}
 
     /// @inheritdoc IPoolDepositWithdraw
     function deposit(
@@ -62,13 +47,7 @@ contract PoolDepositWithdraw is
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
-                DepositArgsInternal(
-                    belowLower,
-                    belowUpper,
-                    size,
-                    minMarketPrice,
-                    maxMarketPrice
-                )
+                DepositArgsInternal(belowLower, belowUpper, size, minMarketPrice, maxMarketPrice)
             );
     }
 
@@ -89,13 +68,7 @@ contract PoolDepositWithdraw is
         return
             _deposit(
                 p.toKeyInternal(l.strike, l.isCallPool),
-                DepositArgsInternal(
-                    belowLower,
-                    belowUpper,
-                    size,
-                    minMarketPrice,
-                    maxMarketPrice
-                ),
+                DepositArgsInternal(belowLower, belowUpper, size, minMarketPrice, maxMarketPrice),
                 isBidIfStrandedMarketPrice
             );
     }
@@ -111,25 +84,14 @@ contract PoolDepositWithdraw is
 
         _revertIfOperatorNotAuthorized(p.operator);
 
-        return
-            _withdraw(
-                p.toKeyInternal(l.strike, l.isCallPool),
-                size,
-                minMarketPrice,
-                maxMarketPrice,
-                true
-            );
+        return _withdraw(p.toKeyInternal(l.strike, l.isCallPool), size, minMarketPrice, maxMarketPrice, true);
     }
 
     /// @inheritdoc IPoolDepositWithdraw
     function getNearestTicksBelow(
         UD60x18 lower,
         UD60x18 upper
-    )
-        external
-        view
-        returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper)
-    {
+    ) external view returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) {
         return _getNearestTicksBelow(lower, upper);
     }
 }

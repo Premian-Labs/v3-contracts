@@ -23,11 +23,9 @@ import {UniswapV3AdapterProxy} from "contracts/adapter/uniswap/UniswapV3AdapterP
 contract UniswapV3AdapterTest is Test, Assertions {
     uint32 constant PERIOD = 600;
     uint256 constant CARDINALITY_PER_MINUTE = 4;
-    uint16 constant TARGET_CARDINALITY =
-        uint16((PERIOD * CARDINALITY_PER_MINUTE) / 60);
+    uint16 constant TARGET_CARDINALITY = uint16((PERIOD * CARDINALITY_PER_MINUTE) / 60);
 
-    IUniswapV3Factory constant UNISWAP_V3_FACTORY =
-        IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    IUniswapV3Factory constant UNISWAP_V3_FACTORY = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
 
     struct Pool {
         address tokenIn;
@@ -42,10 +40,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
     string rpcUrl;
 
     function setUp() public {
-        rpcUrl = string.concat(
-            "https://eth-mainnet.alchemyapi.io/v2/",
-            vm.envString("API_KEY_ALCHEMY")
-        );
+        rpcUrl = string.concat("https://eth-mainnet.alchemyapi.io/v2/", vm.envString("API_KEY_ALCHEMY"));
         mainnetFork = vm.createFork(rpcUrl, 16597500);
         vm.selectFork(mainnetFork);
 
@@ -75,16 +70,8 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function _deployAdapter() internal {
-        address implementation = address(
-            new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000)
-        );
-        address proxy = address(
-            new UniswapV3AdapterProxy(
-                PERIOD,
-                CARDINALITY_PER_MINUTE,
-                implementation
-            )
-        );
+        address implementation = address(new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000));
+        address proxy = address(new UniswapV3AdapterProxy(PERIOD, CARDINALITY_PER_MINUTE, implementation));
         adapter = UniswapV3Adapter(proxy);
     }
 
@@ -102,41 +89,26 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function test_constructor_RevertIf_CardinalityPerMinuteIsZero() public {
-        address implementation = address(
-            new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000)
-        );
+        address implementation = address(new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000));
 
-        vm.expectRevert(
-            UniswapV3AdapterProxy
-                .UniswapV3AdapterProxy__CardinalityPerMinuteNotSet
-                .selector
-        );
+        vm.expectRevert(UniswapV3AdapterProxy.UniswapV3AdapterProxy__CardinalityPerMinuteNotSet.selector);
         new UniswapV3AdapterProxy(PERIOD, 0, implementation);
     }
 
     function test_constructor_RevertIf_PeriodIsZero() public {
-        address implementation = address(
-            new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000)
-        );
+        address implementation = address(new UniswapV3Adapter(UNISWAP_V3_FACTORY, WETH, 22250, 30000));
 
-        vm.expectRevert(
-            UniswapV3AdapterProxy.UniswapV3AdapterProxy__PeriodNotSet.selector
-        );
+        vm.expectRevert(UniswapV3AdapterProxy.UniswapV3AdapterProxy__PeriodNotSet.selector);
         new UniswapV3AdapterProxy(0, CARDINALITY_PER_MINUTE, implementation);
     }
 
-    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists()
-        public
-    {
+    function test_isPairSupported_ReturnTrue_IfPairCachedAndPathExists() public {
         for (uint256 i = 0; i < pools.length; i++) {
             Pool memory p = pools[i];
 
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            (bool isCached, bool hasPath) = adapter.isPairSupported(
-                p.tokenIn,
-                p.tokenOut
-            );
+            (bool isCached, bool hasPath) = adapter.isPairSupported(p.tokenIn, p.tokenOut);
             assertTrue(isCached);
             assertTrue(hasPath);
         }
@@ -154,27 +126,17 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
     function test_upsertPair_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                address(0),
-                WETH
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(0), WETH)
         );
         adapter.upsertPair(address(0), WETH);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector,
-                WBTC,
-                address(0)
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(0))
         );
         adapter.upsertPair(WBTC, address(0));
     }
 
-    function test_upsertPair_NotRevert_IfCalledMultipleTimes_ForSamePair()
-        public
-    {
+    function test_upsertPair_NotRevert_IfCalledMultipleTimes_ForSamePair() public {
         adapter.upsertPair(WETH, WBTC);
         (bool isCached, ) = adapter.isPairSupported(WETH, WBTC);
         assertTrue(isCached);
@@ -221,92 +183,68 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
     function test_quote_RevertIf_PairNotSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IOracleAdapter.OracleAdapter__PairNotSupported.selector,
-                WETH,
-                address(0)
-            )
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
         );
         adapter.quote(WETH, address(0));
     }
 
-    function test_quote_RevertIf_PairNotAdded_AndCardinalityMustBeIncreased()
-        public
-    {
+    function test_quote_RevertIf_PairNotAdded_AndCardinalityMustBeIncreased() public {
         adapter.setCardinalityPerMinute(200);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniswapV3Adapter
-                    .UniswapV3Adapter__ObservationCardinalityTooLow
-                    .selector,
-                1,
-                2000
-            )
+            abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__ObservationCardinalityTooLow.selector, 1, 2000)
         );
         adapter.quote(WETH, DAI);
     }
 
     function test_quote_FindPath_IfPairNotAdded() public {
         // must increase cardinality to 40 for pool
-        IUniswapV3Pool(0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19)
-            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
+        IUniswapV3Pool(0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19).increaseObservationCardinalityNext(
+            TARGET_CARDINALITY
+        );
 
         assertGt(adapter.quote(WETH, DAI).unwrap(), 0);
     }
 
-    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenNoPoolsCached()
-        public
-    {
+    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenNoPoolsCached() public {
         address tokenIn = WETH;
         address tokenOut = MKR;
 
-        IUniswapV3Pool(0x886072A44BDd944495eFF38AcE8cE75C1EacDAF6)
-            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
-
-        IUniswapV3Pool(0x3aFdC5e6DfC0B0a507A8e023c9Dce2CAfC310316)
-            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
-
-        IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(
-            tokenIn,
-            tokenOut,
-            100
+        IUniswapV3Pool(0x886072A44BDd944495eFF38AcE8cE75C1EacDAF6).increaseObservationCardinalityNext(
+            TARGET_CARDINALITY
         );
+
+        IUniswapV3Pool(0x3aFdC5e6DfC0B0a507A8e023c9Dce2CAfC310316).increaseObservationCardinalityNext(
+            TARGET_CARDINALITY
+        );
+
+        IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(tokenIn, tokenOut, 100);
         assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
     }
 
-    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenPoolsAreCached()
-        public
-    {
+    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenPoolsAreCached() public {
         address tokenIn = WETH;
         address tokenOut = MKR;
 
         adapter.upsertPair(tokenIn, tokenOut);
         assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
 
-        IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(
-            tokenIn,
-            tokenOut,
-            100
-        );
+        IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(tokenIn, tokenOut, 100);
         assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
 
-        IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db).initialize(
-            4295128740
-        );
+        IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db).initialize(4295128740);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IUniswapV3Adapter
-                    .UniswapV3Adapter__ObservationCardinalityTooLow
-                    .selector,
+                IUniswapV3Adapter.UniswapV3Adapter__ObservationCardinalityTooLow.selector,
                 1,
                 TARGET_CARDINALITY
             )
         );
         adapter.quote(tokenIn, tokenOut);
 
-        IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db)
-            .increaseObservationCardinalityNext(TARGET_CARDINALITY);
+        IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db).increaseObservationCardinalityNext(
+            TARGET_CARDINALITY
+        );
 
         vm.warp(block.timestamp + 600);
         assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
@@ -397,9 +335,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
         }
     }
 
-    function test_quoteFrom_RevertIf_OldestObservationLessThanTwapPeriod()
-        public
-    {
+    function test_quoteFrom_RevertIf_OldestObservationLessThanTwapPeriod() public {
         mainnetFork = vm.createFork(rpcUrl, 16597040);
         vm.selectFork(mainnetFork);
         _deployAdapter();
@@ -407,13 +343,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
         adapter.upsertPair(UNI, AAVE);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniswapV3Adapter
-                    .UniswapV3Adapter__InsufficientObservationPeriod
-                    .selector,
-                480,
-                600
-            )
+            abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__InsufficientObservationPeriod.selector, 480, 600)
         );
         adapter.quoteFrom(UNI, AAVE, target);
     }
@@ -472,9 +402,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function test_setPeriod_RevertIf_NewValueIsZero() public {
-        vm.expectRevert(
-            IUniswapV3Adapter.UniswapV3Adapter__PeriodNotSet.selector
-        );
+        vm.expectRevert(IUniswapV3Adapter.UniswapV3Adapter__PeriodNotSet.selector);
         adapter.setPeriod(0);
     }
 
@@ -490,11 +418,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function test_setCardinalityPerMinute_RevertIf_NewValueIsZero() public {
-        vm.expectRevert(
-            IUniswapV3Adapter
-                .UniswapV3Adapter__CardinalityPerMinuteNotSet
-                .selector
-        );
+        vm.expectRevert(IUniswapV3Adapter.UniswapV3Adapter__CardinalityPerMinuteNotSet.selector);
         adapter.setCardinalityPerMinute(0);
     }
 
@@ -505,36 +429,20 @@ contract UniswapV3AdapterTest is Test, Assertions {
     }
 
     function test_insertFeeTier_RevertIf_FeeTierInvalid() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniswapV3Adapter.UniswapV3Adapter__InvalidFeeTier.selector,
-                200
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__InvalidFeeTier.selector, 200));
         adapter.insertFeeTier(200);
     }
 
     function test_insertFeeTier_RevertIf_FeeTierAlreadyExists() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IUniswapV3Adapter.UniswapV3Adapter__FeeTierExists.selector,
-                10000
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__FeeTierExists.selector, 10000));
         adapter.insertFeeTier(10000);
     }
 
     function test_describePricingPath_DescribePricingPath() public {
-        (
-            IOracleAdapter.AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        ) = adapter.describePricingPath(address(1));
+        (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
+            .describePricingPath(address(1));
 
-        assertEq(
-            uint256(adapterType),
-            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
-        );
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
         assertEq(path.length, 0);
         assertEq(decimals.length, 0);
 
@@ -542,10 +450,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(WETH);
 
-        assertEq(
-            uint256(adapterType),
-            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
-        );
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
         assertEq(path[0].length, 1);
         assertEq(path[0][0], 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         assertEq(decimals.length, 1);
@@ -555,10 +460,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(DAI);
 
-        assertEq(
-            uint256(adapterType),
-            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
-        );
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
         assertEq(path[0].length, 4);
         assertEq(path[0][0], 0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19);
         assertEq(path[0][1], 0x60594a405d53811d3BC4766596EFD80fd545A270);
@@ -572,10 +474,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(USDC);
 
-        assertEq(
-            uint256(adapterType),
-            uint256(IOracleAdapter.AdapterType.UNISWAP_V3)
-        );
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
         assertEq(path[0].length, 4);
         assertEq(path[0][0], 0xE0554a476A092703abdB3Ef35c80e0D76d32939F);
         assertEq(path[0][1], 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);

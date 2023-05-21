@@ -26,22 +26,16 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
         assertEq(scaleDecimals(vault.convertAssetFromUD60x18(value)), value);
     }
 
-    function test_getMaturityAfterTimestamp_Success_WhenLengthEqualOne()
-        public
-    {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
+    function test_getMaturityAfterTimestamp_Success_WhenLengthEqualOne() public {
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
         infos[0].maturity = 100000;
 
         vault.setListingsAndSizes(infos);
         assertEq(vault.getMaturityAfterTimestamp(50000), infos[0].maturity);
     }
 
-    function test_getMaturityAfterTimestamp_Success_WhenLengthGreaterThanOne()
-        public
-    {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
+    function test_getMaturityAfterTimestamp_Success_WhenLengthGreaterThanOne() public {
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
         infos[0].maturity = 100000;
         infos[1].maturity = 200000;
         infos[2].maturity = 300000;
@@ -53,8 +47,7 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
     }
 
     function test_getNumberOfUnexpiredListings_ReturnExpectedValue() public {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](4);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](4);
@@ -100,35 +93,17 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
 
         vault.setListingsAndSizes(infos);
 
-        uint256[6] memory timestamp = [
-            t0 - 1 days,
-            t0,
-            t0 + 1 days,
-            t2 + 1 days,
-            t3,
-            t3 + 1 days
-        ];
+        uint256[6] memory timestamp = [t0 - 1 days, t0, t0 + 1 days, t2 + 1 days, t3, t3 + 1 days];
 
-        uint256[6] memory expected = [
-            uint256(12),
-            uint256(8),
-            uint256(8),
-            uint256(2),
-            uint256(0),
-            uint256(0)
-        ];
+        uint256[6] memory expected = [uint256(12), uint256(8), uint256(8), uint256(2), uint256(0), uint256(0)];
 
         for (uint256 i = 0; i < timestamp.length; i++) {
-            assertEq(
-                vault.getNumberOfUnexpiredListings(timestamp[i]),
-                expected[i]
-            );
+            assertEq(vault.getNumberOfUnexpiredListings(timestamp[i]), expected[i]);
         }
     }
 
     function test_contains_ReturnExpectedValue() public {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](1);
         infos[0].maturity = 100000;
         infos[0].strikes = new UD60x18[](1);
         infos[0].sizes = new UD60x18[](1);
@@ -187,8 +162,7 @@ abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
     }
 
     function test_removeListing_Success() public {
-        UnderwriterVaultMock.MaturityInfo[]
-            memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
+        UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](3);
 
         infos[0].maturity = t0;
         infos[0].strikes = new UD60x18[](2);

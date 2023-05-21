@@ -3,8 +3,7 @@
 pragma solidity >=0.8.20;
 
 library LzAppStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.LzApp");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.LzApp");
 
     struct Layout {
         mapping(uint16 => bytes) trustedRemote;

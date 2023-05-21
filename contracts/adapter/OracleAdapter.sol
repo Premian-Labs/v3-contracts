@@ -11,10 +11,7 @@ abstract contract OracleAdapter is IOracleAdapter {
     using SafeCast for int8;
 
     /// @notice Scales `amount` by `factor`
-    function _scale(
-        uint256 amount,
-        int8 factor
-    ) internal pure returns (uint256) {
+    function _scale(uint256 amount, int8 factor) internal pure returns (uint256) {
         if (factor == 0) return amount;
 
         if (factor < 0) {
@@ -26,8 +23,7 @@ abstract contract OracleAdapter is IOracleAdapter {
 
     /// @notice Revert if `target` is zero or after block.timestamp
     function _revertIfTargetInvalid(uint256 target) internal view {
-        if (target == 0 || target > block.timestamp)
-            revert OracleAdapter__InvalidTarget(target, block.timestamp);
+        if (target == 0 || target > block.timestamp) revert OracleAdapter__InvalidTarget(target, block.timestamp);
     }
 
     /// @notice Revert if `price` is zero or negative

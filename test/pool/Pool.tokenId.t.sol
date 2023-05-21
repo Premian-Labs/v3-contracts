@@ -11,12 +11,7 @@ import {DeployTest} from "../Deploy.t.sol";
 abstract contract PoolTokenIdTest is DeployTest {
     function test_formatTokenId_ReturnExpectedValue() public {
         address _operator = 0x1000000000000000000000000000000000000001;
-        uint256 tokenId = pool.formatTokenId(
-            _operator,
-            ud(0.001e18),
-            ud(1e18),
-            Position.OrderType.LC
-        );
+        uint256 tokenId = pool.formatTokenId(_operator, ud(0.001e18), ud(1e18), Position.OrderType.LC);
 
         uint256 minTickDistance = 0.001e18;
 
@@ -36,13 +31,8 @@ abstract contract PoolTokenIdTest is DeployTest {
     function test_parseTokenId_ReturnExpectedValue() public {
         uint256 tokenId = 0x10000000000000000021000000000000000000000000000000000000001fa001;
 
-        (
-            uint8 version,
-            address operator,
-            UD60x18 lower,
-            UD60x18 upper,
-            Position.OrderType orderType
-        ) = pool.parseTokenId(tokenId);
+        (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType) = pool
+            .parseTokenId(tokenId);
 
         assertEq(version, 1);
         assertEq(operator, 0x1000000000000000000000000000000000000001);

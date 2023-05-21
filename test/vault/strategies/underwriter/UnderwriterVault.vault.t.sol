@@ -30,20 +30,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
         oracleAdapter.setQuote(spot);
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(19178082191780821),
-            ud(1.54e18)
-        );
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(134246575342465753),
-            ud(1.54e18)
-        );
+        volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -53,23 +41,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     }
 
     function test_computeCLevel_Success() public {
-        UD60x18[6] memory utilisation = [
-            ud(0e18),
-            ud(0.2e18),
-            ud(0.4e18),
-            ud(0.6e18),
-            ud(0.8e18),
-            ud(1e18)
-        ];
+        UD60x18[6] memory utilisation = [ud(0e18), ud(0.2e18), ud(0.4e18), ud(0.6e18), ud(0.8e18), ud(1e18)];
 
-        UD60x18[6] memory duration = [
-            ud(0e18),
-            ud(3e18),
-            ud(6e18),
-            ud(9e18),
-            ud(12e18),
-            ud(15e18)
-        ];
+        UD60x18[6] memory duration = [ud(0e18), ud(3e18), ud(6e18), ud(9e18), ud(12e18), ud(15e18)];
 
         UD60x18[6] memory expected = [
             ud(1e18),
@@ -82,14 +56,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         for (uint256 i = 0; i < utilisation.length; i++) {
             assertEq(
-                vault.computeCLevel(
-                    utilisation[i],
-                    duration[i],
-                    ud(3e18),
-                    ud(1e18),
-                    ud(1.2e18),
-                    ud(0.005e18)
-                ),
+                vault.computeCLevel(utilisation[i], duration[i], ud(3e18), ud(1e18), ud(1.2e18), ud(0.005e18)),
                 expected[i]
             );
         }
@@ -99,8 +66,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         assertApproxEqAbs(
-            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0)))
-                .unwrap(),
+            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
             isCallTest ? 0.15828885563446596e18 : 469.9068335343156e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
@@ -160,19 +126,11 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vault.setTimestamp(maturity + 3 hours);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IVault.Vault__OptionExpired.selector,
-                1677841200,
-                1677830400
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IVault.Vault__OptionExpired.selector, 1677841200, 1677830400));
         vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
-    function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDTEBounds()
-        public
-    {
+    function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDTEBounds() public {
         timestamp = 1676620800;
         maturity = 1682668800;
 
@@ -184,20 +142,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
         oracleAdapter.setQuote(spot);
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(19178082191780821),
-            ud(1.54e18)
-        );
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(134246575342465753),
-            ud(1.54e18)
-        );
+        volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -209,9 +155,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
-    function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDeltaBounds()
-        public
-    {
+    function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDeltaBounds() public {
         timestamp = 1677225600;
         maturity = 1677830400;
         strike = ud(1500e18);
@@ -224,13 +168,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
         oracleAdapter.setQuote(spot);
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(19178082191780821),
-            ud(1.54e18)
-        );
+        volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -247,32 +185,17 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         UD60x18 tradeSize = ud(3e18);
 
-        uint256 totalPremium = vault.getQuote(
-            poolKey,
-            tradeSize,
-            true,
-            address(0)
-        );
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
 
         IERC20 token = IERC20(getPoolToken());
 
         vm.startPrank(users.trader);
         token.approve(address(vault), totalPremium + totalPremium / 10);
-        vault.trade(
-            poolKey,
-            tradeSize,
-            true,
-            totalPremium + totalPremium / 10,
-            address(0)
-        );
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
 
-        uint256 depositSize = scaleDecimals(
-            isCallTest ? ud(5e18) : ud(5e18) * strike
-        );
+        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
 
-        uint256 collateral = scaleDecimals(
-            isCallTest ? ud(3e18) : ud(3e18) * strike
-        );
+        uint256 collateral = scaleDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
         uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
 
@@ -281,10 +204,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // Check that short contracts have been transferred to vault
         assertEq(pool.balanceOf(address(vault), PoolStorage.SHORT), tradeSize);
         // Check that premium has been transferred to vault
-        assertEq(
-            token.balanceOf(address(vault)),
-            depositSize + totalPremium - collateral - mintingFee
-        );
+        assertEq(token.balanceOf(address(vault)), depositSize + totalPremium - collateral - mintingFee);
         // Check that listing has been successfully added to vault
         assertEq(vault.getPositionSize(strike, maturity), tradeSize);
         // Check that collateral and minting fee have been transferred to pool
@@ -296,12 +216,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         UD60x18 tradeSize = ud(3e18);
 
-        uint256 totalPremium = vault.getQuote(
-            poolKey,
-            tradeSize,
-            true,
-            address(0)
-        );
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -309,20 +224,10 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.startPrank(users.trader);
         token.approve(address(vault), totalPremium + totalPremium / 10);
-        vault.trade(
-            poolKey,
-            tradeSize,
-            true,
-            totalPremium + totalPremium / 10,
-            referrer
-        );
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, referrer);
 
-        uint256 depositSize = scaleDecimals(
-            isCallTest ? ud(5e18) : ud(5e18) * strike
-        );
-        uint256 collateral = scaleDecimals(
-            isCallTest ? ud(3e18) : ud(3e18) * strike
-        );
+        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
+        uint256 collateral = scaleDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
         uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
 
@@ -339,17 +244,11 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         // Check that short contracts have been transferred to vault
         assertEq(pool.balanceOf(address(vault), PoolStorage.SHORT), tradeSize);
         // Check that premium has been transferred to vault
-        assertEq(
-            token.balanceOf(address(vault)),
-            depositSize + totalPremium - collateral - mintingFee
-        );
+        assertEq(token.balanceOf(address(vault)), depositSize + totalPremium - collateral - mintingFee);
         // Check that listing has been successfully added to vault
         assertEq(vault.getPositionSize(strike, maturity), tradeSize);
         // Check that collateral and minting fee have been transferred to pool
-        assertEq(
-            token.balanceOf(address(pool)),
-            collateral + mintingFee - totalReferrerRebate
-        );
+        assertEq(token.balanceOf(address(pool)), collateral + mintingFee - totalReferrerRebate);
     }
 
     event WriteFrom(
@@ -367,12 +266,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         UD60x18 tradeSize = ud(3e18);
         uint256 fee = pool.takerFee(users.trader, tradeSize, 0, true);
 
-        uint256 totalPremium = vault.getQuote(
-            poolKey,
-            tradeSize,
-            true,
-            address(0)
-        );
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -390,13 +284,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             ud(scaleDecimalsTo(fee))
         );
 
-        vault.trade(
-            poolKey,
-            tradeSize,
-            true,
-            totalPremium + totalPremium / 10,
-            address(0)
-        );
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
 
         vm.stopPrank();
     }
@@ -419,12 +307,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         UD60x18 tradeSize = ud(3e18);
 
-        uint256 totalPremium = vault.getQuote(
-            poolKey,
-            tradeSize,
-            true,
-            address(0)
-        );
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
 
         IERC20 token = IERC20(getPoolToken());
 
@@ -513,13 +396,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.startPrank(users.trader);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IVault.Vault__OptionExpired.selector,
-                1677841200,
-                1677830400
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(IVault.Vault__OptionExpired.selector, 1677841200, 1677830400));
         vault.trade(poolKey, tradeSize, true, 1000e18, address(0));
     }
 
@@ -535,20 +412,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
         oracleAdapter.setQuote(spot);
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(19178082191780821),
-            ud(1.54e18)
-        );
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(134246575342465753),
-            ud(1.54e18)
-        );
+        volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -560,9 +425,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.trade(poolKey, ud(3e18), true, 1000e18, address(0));
     }
 
-    function test_trade_RevertIf_TryingToBuyOptionNotWithinDeltaBounds()
-        public
-    {
+    function test_trade_RevertIf_TryingToBuyOptionNotWithinDeltaBounds() public {
         timestamp = 1677225600;
         maturity = 1677830400;
         strike = ud(1500e18);
@@ -575,13 +438,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
         oracleAdapter.setQuote(spot);
-        volOracle.setVolatility(
-            base,
-            spot,
-            strike,
-            ud(19178082191780821),
-            ud(1.54e18)
-        );
+        volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);

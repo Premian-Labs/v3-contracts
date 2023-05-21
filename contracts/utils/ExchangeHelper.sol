@@ -37,8 +37,7 @@ contract ExchangeHelper is IExchangeHelper {
 
         // refund unused sourceToken
         sourceLeft = IERC20(sourceToken).balanceOf(address(this));
-        if (sourceLeft > 0)
-            IERC20(sourceToken).safeTransfer(refundAddress, sourceLeft);
+        if (sourceLeft > 0) IERC20(sourceToken).safeTransfer(refundAddress, sourceLeft);
 
         // send the final amount back to the pool
         amountOut = IERC20(targetToken).balanceOf(address(this));

@@ -3,8 +3,7 @@
 pragma solidity >=0.8.20;
 
 library FeeConverterStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.FeeConverter");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.FeeConverter");
 
     struct Layout {
         // Whether the address is authorized to call the convert function or not

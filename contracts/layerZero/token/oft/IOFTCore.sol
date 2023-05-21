@@ -43,12 +43,7 @@ interface IOFTCore is IERC165 {
     function circulatingSupply() external view returns (uint256);
 
     /// @dev Emitted when `amount` tokens are moved from the `sender` to (`dstChainId`, `toAddress`)
-    event SendToChain(
-        address indexed sender,
-        uint16 indexed dstChainId,
-        bytes indexed toAddress,
-        uint256 amount
-    );
+    event SendToChain(address indexed sender, uint16 indexed dstChainId, bytes indexed toAddress, uint256 amount);
 
     /// @dev Emitted when `amount` tokens are received from `srcChainId` into the `toAddress` on the local chain.
     event ReceiveFromChain(

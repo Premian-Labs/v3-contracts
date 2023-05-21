@@ -10,10 +10,5 @@ interface IERC20Router {
     /// @param from Address to transfer tokens from
     /// @param to Address to transfer tokens to
     /// @param amount Amount of tokens to transfer
-    function safeTransferFrom(
-        address token,
-        address from,
-        address to,
-        uint256 amount
-    ) external;
+    function safeTransferFrom(address token, address from, address to, uint256 amount) external;
 }
