@@ -16,6 +16,7 @@ import {PoolAddress} from "@uniswap/v3-periphery/contracts/libraries/PoolAddress
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {ETH_DECIMALS, Tokens} from "../Tokens.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
+import {ArrayUtils} from "../../libraries/ArrayUtils.sol";
 
 import {IUniswapV3Adapter} from "./IUniswapV3Adapter.sol";
 import {UniswapV3AdapterStorage} from "./UniswapV3AdapterStorage.sol";
@@ -191,9 +192,9 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         }
 
         if (decimals[0] == 0) {
-            _resizeArray(decimals, 0);
+            ArrayUtils.resizeArray(decimals, 0);
         } else if (decimals[1] == 0) {
-            _resizeArray(decimals, 1);
+            ArrayUtils.resizeArray(decimals, 1);
         }
     }
 
@@ -399,7 +400,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
             }
         }
 
-        _resizeArray(pools, validPools);
+        ArrayUtils.resizeArray(pools, validPools);
     }
 
     /// @notice Attempts to increase the UniswapV3 pool observation cardinality if it is below the target cardinality

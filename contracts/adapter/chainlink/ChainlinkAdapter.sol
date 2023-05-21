@@ -6,6 +6,7 @@ import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
+import {ArrayUtils} from "../../libraries/ArrayUtils.sol";
 import {ONE} from "../../libraries/Constants.sol";
 import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
 
@@ -190,9 +191,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         }
 
         if (decimals[0] == 0) {
-            _resizeArray(decimals, 0);
+            ArrayUtils.resizeArray(decimals, 0);
         } else if (decimals[1] == 0) {
-            _resizeArray(decimals, 1);
+            ArrayUtils.resizeArray(decimals, 1);
         }
     }
 

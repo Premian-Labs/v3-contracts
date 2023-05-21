@@ -11,6 +11,7 @@ interface IVaultRegistry {
         Sell,
         Both
     }
+
     enum OptionType {
         Call,
         Put,
@@ -20,20 +21,46 @@ interface IVaultRegistry {
     // Structs
     struct Vault {
         address vault;
+        address asset;
         bytes32 vaultType;
         TradeSide side;
         OptionType optionType;
     }
 
+    struct TokenPair {
+        address base;
+        address quote;
+        address oracleAdapter;
+    }
+
     // Events
     event VaultAdded(
         address indexed vault,
+        address indexed asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType
     );
-
     event VaultRemoved(address indexed vault);
+    event VaultUpdated(
+        address indexed vault,
+        address indexed asset,
+        bytes32 vaultType,
+        TradeSide side,
+        OptionType optionType
+    );
+    event SupportedTokenPairAdded(
+        address indexed vault,
+        address indexed base,
+        address indexed quote,
+        address oracleAdapter
+    );
+    event SupportedTokenPairRemoved(
+        address indexed vault,
+        address indexed base,
+        address indexed quote,
+        address oracleAdapter
+    );
 
     /// @notice Gets the total number of vaults in the registry.
     /// @return The total number of vaults in the registry.
@@ -41,11 +68,13 @@ interface IVaultRegistry {
 
     /// @notice Adds a vault to the registry.
     /// @param vault The proxy address of the vault.
+    /// @param asset The address for the token deposited in the vault.
     /// @param vaultType The type of the vault.
     /// @param side The trade side of the vault.
     /// @param optionType The option type of the vault.
     function addVault(
         address vault,
+        address asset,
         bytes32 vaultType,
         TradeSide side,
         OptionType optionType
@@ -60,22 +89,75 @@ interface IVaultRegistry {
     /// @return Whether the given address is a vault
     function isVault(address vault) external view returns (bool);
 
+    /// @notice Updates a vault in the registry.
+    /// @param vault The proxy address of the vault.
+    /// @param asset The address for the token deposited in the vault.
+    /// @param vaultType The type of the vault.
+    /// @param side The trade side of the vault.
+    /// @param optionType The option type of the vault.
+    function updateVault(
+        address vault,
+        address asset,
+        bytes32 vaultType,
+        TradeSide side,
+        OptionType optionType
+    ) external;
+
+    /// @notice Adds a set of supported token pairs to the vault.
+    /// @param vault The proxy address of the vault.
+    /// @param tokenPairs The token pairs to add.
+    function addSupportedTokenPairs(
+        address vault,
+        TokenPair[] memory tokenPairs
+    ) external;
+
+    /// @notice Removes a set of supported token pairs from the vault.
+    /// @param vault The proxy address of the vault.
+    /// @param tokenPairsToRemove The token pairs to remove.
+    function removeSupportedTokenPairs(
+        address vault,
+        TokenPair[] memory tokenPairsToRemove
+    ) external;
+
     /// @notice Gets the vault at the specified by the proxy address.
     /// @param vault The proxy address of the vault.
     /// @return The vault associated with the proxy address.
     function getVault(address vault) external view returns (Vault memory);
+
+    /// @notice Gets the token supports supported for trading within the vault.
+    /// @param vault The proxy address of the vault.
+    /// @return The token pairs supported for trading within the vault.
+    function getSupportedTokenPairs(
+        address vault
+    ) external view returns (TokenPair[] memory);
 
     /// @notice Gets all vaults in the registry.
     /// @return All vaults in the registry.
     function getVaults() external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with trade side `side` and option type `optionType`.
+    /// @param assets The accepted assets (empty list for all assets).
     /// @param side The trade side.
     /// @param optionType The option type.
-    /// @return All vaults with trade side `side` and option type `optionType`.
+    /// @return All vaults meeting all of the passed filter criteria.
     function getVaultsByFilter(
+        address[] memory assets,
         TradeSide side,
         OptionType optionType
+    ) external view returns (Vault[] memory);
+
+    /// @notice Gets all vaults with `asset` as their deposit token.
+    /// @param asset The desired asset.
+    /// @return All vaults with `asset` as their deposit token.
+    function getVaultsByAsset(
+        address asset
+    ) external view returns (Vault[] memory);
+
+    /// @notice Gets all vaults with `tokenPair` in their trading set.
+    /// @param tokenPair The desired token pair.
+    /// @return All vaults with `tokenPair` in their trading set.
+    function getVaultsByTokenPair(
+        TokenPair memory tokenPair
     ) external view returns (Vault[] memory);
 
     /// @notice Gets all vaults with trade side `side`.

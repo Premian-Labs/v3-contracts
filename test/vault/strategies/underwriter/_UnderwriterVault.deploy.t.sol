@@ -134,7 +134,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
         vaultRegistry.addVault(
             callVaultProxy,
-            keccak256("WETH Call Vault"),
+            base,
+            vaultType,
             IVaultRegistry.TradeSide.Both,
             IVaultRegistry.OptionType.Call
         );
@@ -155,7 +156,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
         vaultRegistry.addVault(
             putVaultProxy,
-            keccak256("WETH Put Vault"),
+            quote,
+            vaultType,
             IVaultRegistry.TradeSide.Both,
             IVaultRegistry.OptionType.Put
         );

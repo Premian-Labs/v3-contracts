@@ -17,7 +17,10 @@ library VaultRegistryStorage {
         mapping(bytes32 vaultType => bytes) settings;
         mapping(bytes32 vaultType => address) implementations;
         mapping(address vault => IVaultRegistry.Vault) vaults;
+        mapping(address vault => IVaultRegistry.TokenPair[] supported) supportedTokenPairs;
         mapping(bytes32 vaultType => EnumerableSet.AddressSet vaults) vaultsByType;
+        mapping(address asset => EnumerableSet.AddressSet vaults) vaultsByAsset;
+        mapping(address base => mapping(address quote => mapping(address oracleAdapter => EnumerableSet.AddressSet vaults))) vaultsByTokenPair;
         mapping(IVaultRegistry.TradeSide tradeSide => EnumerableSet.AddressSet vaults) vaultsByTradeSide;
         mapping(IVaultRegistry.OptionType optionType => EnumerableSet.AddressSet vaults) vaultsByOptionType;
     }
