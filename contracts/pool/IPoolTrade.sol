@@ -40,10 +40,12 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     ) external returns (uint256 premiumTaker, Position.Delta memory delta);
 
     /// @notice Completes a trade of `size` on `side` via the AMM using the liquidity in the Pool.
-    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when selling.
+    ///         Tx will revert if total premium is above `totalPremium` when buying, or below `totalPremium` when
+    ///         selling.
     /// @param size The number of contracts being traded (18 decimals)
     /// @param isBuy Whether the taker is buying or selling
-    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
+    /// @param premiumLimit Tx will revert if total premium is above this value when buying, or below this value when
+    ///        selling. (poolToken decimals)
     /// @param referrer The referrer of the user doing the trade
     /// @return totalPremium The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
@@ -56,7 +58,8 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
 
     /// @notice Cancel given RFQ quotes
     /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,
-    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a RFQ quote created by another provider
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a RFQ quote
+    ///      created by another provider
     /// @param hashes The hashes of the RFQ quotes to cancel
     function cancelQuotesRFQ(bytes32[] calldata hashes) external;
 

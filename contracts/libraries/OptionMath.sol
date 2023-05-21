@@ -41,8 +41,8 @@ library OptionMath {
     }
 
     /// @notice Approximation of the normal CDF
-    /// @dev The approximation implemented is based on the paper 'Accurate RMM-Based Approximations for the CDF of the Normal
-    ///      Distribution' by Haim Shore
+    /// @dev The approximation implemented is based on the paper 'Accurate RMM-Based Approximations for the CDF of the
+    ///      Normal Distribution' by Haim Shore
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) (18 decimals)
     /// @return result The normal CDF evaluated at x (18 decimals)
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
@@ -56,7 +56,8 @@ library OptionMath {
     }
 
     /// @notice Normal Distribution Probability Density Function.
-    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with µ = 0 and σ = 1.
+    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with µ = 0 and
+    ///      σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
     /// @param x Number to get PDF for (18 decimals)

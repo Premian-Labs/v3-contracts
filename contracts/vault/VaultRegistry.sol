@@ -84,6 +84,12 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     }
 
     /// @inheritdoc IVaultRegistry
+    function isVault(address vault) external view returns (bool) {
+        VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
+        return l.vaultAddresses.contains(vault);
+    }
+
+    /// @inheritdoc IVaultRegistry
     function updateVault(
         address vault,
         address asset,

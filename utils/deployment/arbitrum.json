@@ -30,5 +30,7 @@
   "PoolBase": "",
   "PoolCore": "",
   "PoolTrade": "",
-  "OrderbookStream": ""
+  "OrderbookStream": "",
+  "VaultRegistryImplementation": "",
+  "VaultRegistryProxy": ""
 }

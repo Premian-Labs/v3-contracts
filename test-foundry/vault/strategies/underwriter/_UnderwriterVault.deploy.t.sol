@@ -15,8 +15,8 @@ import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 import {DeployTest} from "../../../Deploy.t.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/UnderwriterVaultProxy.sol";
+import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
     struct TestVars {
@@ -46,7 +46,6 @@ contract UnderwriterVaultDeployTest is DeployTest {
     address shortCall;
 
     VolatilityOracleMock volOracle;
-    VaultRegistry vaultRegistry;
 
     UnderwriterVaultMock vault;
     UnderwriterVaultMock callVault;
@@ -76,15 +75,16 @@ contract UnderwriterVaultDeployTest is DeployTest {
         volOracle = new VolatilityOracleMock();
         volOracle.setRiskFreeRate(ud(0.01e18));
 
-        poolKey.strike = ud(1500e18);
-
-        // Vault vaultRegistry
-        address vaultRegistryImpl = address(new VaultRegistry());
-        address vaultRegistryProxy = address(
-            new ProxyUpgradeableOwnable(vaultRegistryImpl)
+        volOracle.setVolatility(
+            0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+            ud(1000e18),
+            ud(1100e18),
+            ud(38356164383561643),
+            ud(1.54e18)
         );
 
-        vaultRegistry = VaultRegistry(vaultRegistryProxy);
+        poolKey.strike = ud(1500e18);
+
         vaultType = keccak256("UnderwriterVault");
 
         // Update settings
@@ -106,11 +106,12 @@ contract UnderwriterVaultDeployTest is DeployTest {
         // Deploy and set vault implementation
         address vaultImpl = address(
             new UnderwriterVaultMock(
-                vaultRegistryProxy,
+                address(vaultRegistry),
                 feeReceiver,
                 address(volOracle),
                 address(factory),
-                address(router)
+                address(router),
+                address(vxPremia)
             )
         );
 
@@ -119,7 +120,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         // Deploy vaults
         address callVaultProxy = address(
             new UnderwriterVaultProxy(
-                vaultRegistryProxy,
+                address(vaultRegistry),
                 base,
                 quote,
                 address(oracleAdapter),
@@ -131,9 +132,16 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
         callVault = UnderwriterVaultMock(callVaultProxy);
 
+        vaultRegistry.addVault(
+            callVaultProxy,
+            keccak256("WETH Call Vault"),
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Call
+        );
+
         address putVaultProxy = address(
             new UnderwriterVaultProxy(
-                vaultRegistryProxy,
+                address(vaultRegistry),
                 base,
                 quote,
                 address(oracleAdapter),
@@ -144,6 +152,13 @@ contract UnderwriterVaultDeployTest is DeployTest {
         );
 
         putVault = UnderwriterVaultMock(putVaultProxy);
+
+        vaultRegistry.addVault(
+            putVaultProxy,
+            keccak256("WETH Put Vault"),
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Put
+        );
     }
 
     function setMaturities() internal {

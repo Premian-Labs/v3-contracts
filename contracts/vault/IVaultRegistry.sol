@@ -84,6 +84,11 @@ interface IVaultRegistry {
     /// @param vault The proxy address of the vault.
     function removeVault(address vault) external;
 
+    /// @notice Returns whether the given address is a vault
+    /// @param vault The address to check
+    /// @return Whether the given address is a vault
+    function isVault(address vault) external view returns (bool);
+
     /// @notice Updates a vault in the registry.
     /// @param vault The proxy address of the vault.
     /// @param asset The address for the token deposited in the vault.

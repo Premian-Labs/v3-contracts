@@ -14,8 +14,8 @@ import {IInitFeeCalculator} from "./IInitFeeCalculator.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 
 /// @notice Contract handling the calculation of initialization fee.
-///         This is a separate contract, so that it can be upgraded without having to upgrade the PoolFactory.
-///         (There is some extra complexity in upgrading PoolFactory because of the fact in uses deterministic pool deployment)
+///         This is a separate contract, so that it can be upgraded without having to upgrade the PoolFactory (there is
+///         some extra complexity in upgrading PoolFactory because of the fact in uses deterministic pool deployment)
 contract InitFeeCalculator is IInitFeeCalculator {
     // Wrapped native token address (eg WETH, WFTM, etc)
     address internal immutable WRAPPED_NATIVE_TOKEN;

@@ -99,7 +99,8 @@ interface IReferral {
     /// @param percent The secondary rebate percent (18 decimals)
     function setSecondaryRebatePercent(UD60x18 percent) external;
 
-    /// @notice Calculate the primary and secondary rebate and pulls the tokens from msg.sender  - caller must be an authorized pool
+    /// @notice Calculate the primary and secondary rebate and pulls the tokens from msg.sender  - caller must be an
+    ///         authorized pool
     /// @dev The tokens must be approved for transfer
     /// @param user The address of the user
     /// @param primaryReferrer The address of the primary referrer

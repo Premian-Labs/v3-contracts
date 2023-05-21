@@ -72,6 +72,7 @@ interface IPoolEvents {
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
+        address indexed taker,
         UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 protocolFee

@@ -7,6 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {Position} from "contracts/libraries/Position.sol";
+import {IPoolEvents} from "contracts/pool/IPoolEvents.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
@@ -126,6 +127,36 @@ abstract contract PoolWriteFromTest is DeployTest {
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), 0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), 0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), size);
+    }
+
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        address indexed taker,
+        UD60x18 contractSize,
+        UD60x18 collateral,
+        UD60x18 protocolFee
+    );
+
+    function test_writeFrom_UseUnderwriterAsTaker() public {
+        uint256 initialCollateral = _mintForLP();
+
+        UD60x18 size = ud(500 ether);
+        uint256 fee = pool.takerFee(users.trader, size, 0, true);
+
+        vm.expectEmit();
+
+        emit WriteFrom(
+            users.lp,
+            users.trader,
+            users.lp,
+            size,
+            contractsToCollateral(size),
+            ud(scaleDecimalsTo(fee))
+        );
+
+        vm.prank(users.lp);
+        pool.writeFrom(users.lp, users.trader, size, address(0));
     }
 
     function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval()
