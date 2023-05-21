@@ -24,28 +24,6 @@ abstract contract OracleAdapter is IOracleAdapter {
         }
     }
 
-    /// @notice Resizes the `array` to `size`, reverts if size > array.length
-    function _resizeArray(address[] memory array, uint256 size) internal pure {
-        if (array.length == size) return;
-        if (array.length < size)
-            revert OracleAdapter__ArrayCannotExpand(array.length, size);
-
-        assembly {
-            mstore(array, size)
-        }
-    }
-
-    /// @notice Resizes the `array` to `size`, reverts if size > array.length
-    function _resizeArray(uint8[] memory array, uint256 size) internal pure {
-        if (array.length == size) return;
-        if (array.length < size)
-            revert OracleAdapter__ArrayCannotExpand(array.length, size);
-
-        assembly {
-            mstore(array, size)
-        }
-    }
-
     /// @notice Revert if `target` is zero or after block.timestamp
     function _revertIfTargetInvalid(uint256 target) internal view {
         if (target == 0 || target > block.timestamp)
