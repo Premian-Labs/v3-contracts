@@ -332,7 +332,8 @@ export class PoolUtil {
 
       await vaultRegistryProxy.deployed();
 
-      if (log) console.log(`VxPremiaProxy : ${vaultRegistryProxy.address}`);
+      if (log)
+        console.log(`VaultRegistryProxy : ${vaultRegistryProxy.address}`);
 
       vaultRegistry = vaultRegistryProxy.address;
     }

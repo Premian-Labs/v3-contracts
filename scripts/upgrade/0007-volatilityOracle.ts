@@ -1,7 +1,7 @@
 import {
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
-  VaultRegistry__factory,
+  VolatilityOracle__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -38,22 +38,26 @@ async function main() {
   }
 
   proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.VaultRegistryProxy,
+    addresses.VolatilityOracleProxy,
     deployer,
   );
 
   //////////////////////////
 
-  const vaultRegistryImpl = await new VaultRegistry__factory(deployer).deploy();
+  const volatilityOracleImpl = await new VolatilityOracle__factory(
+    deployer,
+  ).deploy();
 
-  console.log(`VaultRegistry implementation : ${vaultRegistryImpl.address}`);
+  console.log(
+    `VolatilityORacle implementation : ${volatilityOracleImpl.address}`,
+  );
 
   // Save new addresses
-  addresses.VaultRegistryImplementation = vaultRegistryImpl.address;
+  addresses.VolatilityOracleImplementation = volatilityOracleImpl.address;
   fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
 
   if (setImplementation) {
-    await proxy.setImplementation(vaultRegistryImpl.address);
+    await proxy.setImplementation(volatilityOracleImpl.address);
   }
 }
 

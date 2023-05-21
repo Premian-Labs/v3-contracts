@@ -8,6 +8,9 @@
     "USDC": "0x16fA8D635311fc4DA9A2f8793EE016670b0C6Ed2",
     "DAI": "0x53421DB1f41368E028A4239954feB5033C7B3729"
   },
+
+  "feeReceiver": "",
+
   "ChainlinkAdapterImplementation": "0x885bD702c01aA80709e43bc368EA4c9AB25320cd",
   "ChainlinkAdapterProxy": "0x62Bc6a93726413f924b2aaD110283FCE8E30339E",
   "UniswapV3AdapterImplementation": "0x28c8A51238E4cdE33C33411692f51987F8Dc82b2",
@@ -33,5 +36,7 @@
   "PoolDepositWithdraw": "0x5daBBA55B7b9d7b0602050b4823df312D583DCa3",
   "OrderbookStream": "0x54716D4cd0cC91737D858F0FBa8BE1cAFcC8C363",
   "VaultRegistryImplementation": "",
-  "VaultRegistryProxy": ""
+  "VaultRegistryProxy": "",
+  "VolatilityOracleImplementation": "",
+  "VolatilityOracleProxy": ""
 }
