@@ -31,5 +31,7 @@
   "PoolCore": "0xd8cC787915642dec9Ab451D2B24f3782d0658167",
   "PoolTrade": "0x90b5fd8c01D154120d1198269Db996Ae6a4a6e87",
   "PoolDepositWithdraw": "0x5daBBA55B7b9d7b0602050b4823df312D583DCa3",
-  "OrderbookStream": "0x54716D4cd0cC91737D858F0FBa8BE1cAFcC8C363"
+  "OrderbookStream": "0x54716D4cd0cC91737D858F0FBa8BE1cAFcC8C363",
+  "VaultRegistryImplementation": "",
+  "VaultRegistryProxy": ""
 }

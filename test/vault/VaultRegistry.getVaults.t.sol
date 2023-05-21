@@ -125,6 +125,12 @@ contract VaultRegistryTest is Test, Assertions {
         vm.stopPrank();
     }
 
+    function test_isVault() public {
+        assertEq(registry.isVault(address(10)), true);
+        assertEq(registry.isVault(address(17)), true);
+        assertEq(registry.isVault(address(0)), false);
+    }
+
     function test_getVault() public {
         IVaultRegistry.Vault memory vault = registry.getVault(address(10));
         assertEq(vault.vault, address(10));

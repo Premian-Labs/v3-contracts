@@ -23,6 +23,8 @@ export interface ContractAddresses {
   PoolCore: string;
   PoolTrade: string;
   OrderbookStream: string;
+  VaultRegistryImplementation: string;
+  VaultRegistryProxy: string;
 }
 
 export enum ChainID {

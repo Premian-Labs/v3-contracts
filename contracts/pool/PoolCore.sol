@@ -37,6 +37,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     )
         PoolInternal(
@@ -46,6 +47,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             feeReceiver,
             referral,
             settings,
+            vaultRegistry,
             vxPremia
         )
     {}

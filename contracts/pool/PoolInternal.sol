@@ -18,6 +18,7 @@ import {IERC20Router} from "../router/IERC20Router.sol";
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 import {IUserSettings} from "../settings/IUserSettings.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
+import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EIP712} from "../libraries/EIP712.sol";
@@ -54,6 +55,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable FEE_RECEIVER;
     address internal immutable REFERRAL;
     address internal immutable SETTINGS;
+    address internal immutable VAULT_REGISTRY;
     address internal immutable VXPREMIA;
 
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
@@ -76,6 +78,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     ) {
         FACTORY = factory;
@@ -84,6 +87,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         FEE_RECEIVER = feeReceiver;
         REFERRAL = referral;
         SETTINGS = settings;
+        VAULT_REGISTRY = vaultRegistry;
         VXPREMIA = vxPremia;
     }
 
@@ -91,7 +95,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
-    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of
+    ///        1500, and a premium of 750, the normalized premium would be 0.5)
     /// @return The taker fee for an option trade denormalized (18 decimals)
     function _takerFee(
         PoolStorage.Layout storage l,
@@ -115,11 +120,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
-        uint256 discount = IVxPremia(VXPREMIA).getDiscount(taker);
+        UD60x18 discount = ud(IVxPremia(VXPREMIA).getDiscount(taker));
 
-        if (discount > 0) {
-            fee = fee - fee * ud(discount);
-        }
+        if (discount > ZERO) fee = (ONE - discount) * fee;
 
         return Position.contractsToCollateral(fee, strike, isCallPool);
     }
@@ -222,7 +225,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
-    // @notice Returns amount of claimable fees from pending update of claimable fees for the position. This does not include pData.claimableFees
+    /// @notice Returns amount of claimable fees from pending update of claimable fees for the position. This does not
+    ///         include pData.claimableFees
     function _pendingClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
@@ -299,8 +303,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         pData.lastFeeRate = feeRate;
     }
 
-    /// @notice Updates the claimable fees of a position and transfers the claimed fees to the operator of the position. Then resets
-    ///         the claimable fees to zero.
+    /// @notice Updates the claimable fees of a position and transfers the claimed fees to the operator of the position.
+    ///         Then resets the claimable fees to zero.
     /// @param p The position to claim fees for
     /// @return claimedFees The amount of fees claimed (poolToken decimals)
     function _claim(
@@ -344,7 +348,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 
-    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
+    ///         contracts) into the pool.
     /// @param p The position key
     /// @param args The deposit parameters
     /// @return delta The amount of collateral / longs / shorts deposited
@@ -356,14 +361,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _deposit(
                 p,
                 args,
-                p.orderType.isLong() // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that default behavior in case of stranded market price is to deposit collateral
+                // We default to isBid = true if orderType is long and isBid = false if orderType is short, so that
+                // default behavior in case of stranded market price is to deposit collateral
+                p.orderType.isLong()
             );
     }
 
-    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) into the pool.
+    /// @notice Deposits a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
+    ///         contracts) into the pool.
     /// @param p The position key
     /// @param args The deposit parameters
-    /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This argument doesnt matter if market price is not stranded)
+    /// @param isBidIfStrandedMarketPrice Whether this is a bid or ask order when the market price is stranded (This
+    ///        argument doesnt matter if market price is not stranded)
     /// @return delta The amount of collateral / longs / shorts deposited
     function _deposit(
         Position.KeyInternal memory p,
@@ -496,13 +505,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
     }
 
-    /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short contracts) from the pool
+    /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
+    ///         contracts) from the pool
     ///         Tx will revert if market price is not between `minMarketPrice` and `maxMarketPrice`.
     /// @param p The position key
     /// @param size The position size to withdraw (18 decimals)
     /// @param minMarketPrice Min market price, as normalized value. (If below, tx will revert) (18 decimals)
     /// @param maxMarketPrice Max market price, as normalized value. (If above, tx will revert) (18 decimals)
-    /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+    /// @param transferCollateralToUser Whether to transfer collateral to user or not if collateral value is positive.
+    ///        Should be false if that collateral is used for a swap
     /// @return delta The amount of collateral / longs / shorts withdrawn
     function _withdraw(
         Position.KeyInternal memory p,
@@ -703,7 +714,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.isCallPool
         );
 
-        UD60x18 protocolFee = _takerFee(l, underwriter, size, ZERO, true);
+        address taker = underwriter;
+        if (IVaultRegistry(VAULT_REGISTRY).isVault(msg.sender)) {
+            taker = longReceiver;
+        }
+
+        UD60x18 protocolFee = _takerFee(l, taker, size, ZERO, true);
 
         IERC20Router(ROUTER).safeTransferFrom(
             l.getPoolToken(),
@@ -713,19 +729,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         UD60x18 totalReferralRebate = _calculateTotalReferralRebate(
-            longReceiver,
+            taker,
             referrer,
             protocolFee
         );
 
-        _useReferral(
-            l,
-            longReceiver,
-            referrer,
-            totalReferralRebate,
-            protocolFee
-        );
-
+        _useReferral(l, taker, referrer, totalReferralRebate, protocolFee);
         l.protocolFees = l.protocolFees + protocolFee - totalReferralRebate;
 
         _mint(underwriter, PoolStorage.SHORT, size);
@@ -734,6 +743,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         emit WriteFrom(
             underwriter,
             longReceiver,
+            taker,
             size,
             collateral,
             protocolFee
@@ -940,7 +950,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             );
     }
 
-    /// @notice Compute the change in short / long option contracts of an agent in order to transfer the contracts and execute a trade
+    /// @notice Compute the change in short / long option contracts of an agent in order to transfer the contracts and
+    ///         execute a trade
     function _getTradeDelta(
         address user,
         UD60x18 size,
@@ -1007,7 +1018,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return delta;
     }
 
-    /// @notice Execute a trade by transferring the net change in short and long option contracts and collateral to / from an agent.
+    /// @notice Execute a trade by transferring the net change in short and long option contracts and collateral to /
+    ///         from an agent.
     function _updateUserAssets(
         PoolStorage.Layout storage l,
         address user,
@@ -1090,8 +1102,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return r;
     }
 
-    /// @notice Functionality to support the RFQ / OTC system. An LP can create a RFQ quote for which he will do an OTC trade through
-    ///         the exchange. Takers can buy from / sell to the LP then partially or fully while having the price guaranteed.
+    /// @notice Functionality to support the RFQ / OTC system. An LP can create a RFQ quote for which he will do an OTC
+    ///         trade through the exchange. Takers can buy from / sell to the LP then partially or fully while having
+    ///         the price guaranteed.
     /// @param args The fillQuoteRFQ parameters
     /// @param quoteRFQ The RFQ quote given by the provider
     /// @return premiumTaker The premium paid by the taker (poolToken decimals)
@@ -1674,7 +1687,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             price > Pricing.MIN_TICK_PRICE &&
             price < Pricing.MAX_TICK_PRICE &&
-            tick.counter == 0 // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
+            // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
+            tick.counter == 0
         ) {
             if (tick.delta != iZERO) revert Pool__TickDeltaNotZero(tick.delta);
 
@@ -1995,9 +2009,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return l.globalFeeRate - aboveFeeRate - belowFeeRate;
     }
 
-    /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market area does
-    ///         not exist it will return the stranded market area the maximum tick price for both the lower and the upper, in
-    ///         which case the market price is not stranded given any range order info order.
+    /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
+    ///         area does not exist it will return the stranded market area the maximum tick price for both the lower
+    ///         and the upper, in which case the market price is not stranded given any range order info order.
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(
@@ -2065,7 +2079,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return lower <= tick && tick <= upper;
     }
 
-    /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the bid (ask) order.
+    /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the
+    ///         bid (ask) order.
     function _getStrandedMarketPriceUpdate(
         Position.KeyInternal memory p,
         bool isBid
