@@ -174,26 +174,27 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     /// @inheritdoc IVaultRegistry
     function removeSupportedTokenPairs(
         address vault,
-        TokenPair[] memory tokenPairs
+        TokenPair[] memory tokenPairsToRemove
     ) external onlyOwner {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();
 
-        for (uint256 i = 0; i < tokenPairs.length; i++) {
+        for (uint256 i = 0; i < tokenPairsToRemove.length; i++) {
             l
-            .vaultsByTokenPair[tokenPairs[i].base][tokenPairs[i].quote][
-                tokenPairs[i].oracleAdapter
-            ].remove(vault);
+            .vaultsByTokenPair[tokenPairsToRemove[i].base][
+                tokenPairsToRemove[i].quote
+            ][tokenPairsToRemove[i].oracleAdapter].remove(vault);
         }
 
         uint256 length = l.supportedTokenPairs[vault].length;
-        TokenPair[] memory newTokenPairs = new TokenPair[](
-            length - tokenPairs.length
-        );
+        TokenPair[] memory newTokenPairs = new TokenPair[](length);
 
         uint256 count = 0;
         for (uint256 i = 0; i < length; i++) {
             if (
-                !_containsTokenPair(tokenPairs, l.supportedTokenPairs[vault][i])
+                !_containsTokenPair(
+                    tokenPairsToRemove,
+                    l.supportedTokenPairs[vault][i]
+                )
             ) {
                 newTokenPairs[count] = l.supportedTokenPairs[vault][i];
                 count++;
@@ -202,7 +203,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
 
         delete l.supportedTokenPairs[vault];
 
-        for (uint256 i = 0; i < newTokenPairs.length; i++) {
+        for (uint256 i = 0; i < count; i++) {
             l.supportedTokenPairs[vault].push(newTokenPairs[i]);
         }
     }
@@ -214,7 +215,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
     }
 
     /// @inheritdoc IVaultRegistry
-    function supportedTokenPairs(
+    function getSupportedTokenPairs(
         address vault
     ) external view returns (TokenPair[] memory) {
         VaultRegistryStorage.Layout storage l = VaultRegistryStorage.layout();

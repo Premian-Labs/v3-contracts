@@ -122,7 +122,7 @@ interface IVaultRegistry {
     /// @notice Gets the token supports supported for trading within the vault.
     /// @param vault The proxy address of the vault.
     /// @return The token pairs supported for trading within the vault.
-    function supportedTokenPairs(
+    function getSupportedTokenPairs(
         address vault
     ) external view returns (TokenPair[] memory);
 

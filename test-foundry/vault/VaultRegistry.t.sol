@@ -325,4 +325,113 @@ contract VaultRegistryTest is Test, Assertions {
 
         assertEq(impl, address(123));
     }
+
+    function test_addSupportedTokenPairs() public {
+        vm.startPrank(deployer);
+
+        IVaultRegistry.TokenPair[]
+            memory tokenPairs = new IVaultRegistry.TokenPair[](4);
+        tokenPairs[0] = IVaultRegistry.TokenPair(
+            address(1),
+            address(2),
+            address(3)
+        );
+        tokenPairs[1] = IVaultRegistry.TokenPair(
+            address(4),
+            address(5),
+            address(6)
+        );
+        tokenPairs[2] = IVaultRegistry.TokenPair(
+            address(7),
+            address(8),
+            address(9)
+        );
+        tokenPairs[3] = IVaultRegistry.TokenPair(
+            address(10),
+            address(11),
+            address(12)
+        );
+
+        registry.addSupportedTokenPairs(address(123), tokenPairs);
+
+        tokenPairs = registry.getSupportedTokenPairs(address(123));
+
+        assertEq(tokenPairs.length, 4);
+        assertEq(tokenPairs[0].base, address(1));
+        assertEq(tokenPairs[0].quote, address(2));
+        assertEq(tokenPairs[0].oracleAdapter, address(3));
+        assertEq(tokenPairs[1].base, address(4));
+        assertEq(tokenPairs[1].quote, address(5));
+        assertEq(tokenPairs[1].oracleAdapter, address(6));
+        assertEq(tokenPairs[2].base, address(7));
+        assertEq(tokenPairs[2].quote, address(8));
+        assertEq(tokenPairs[2].oracleAdapter, address(9));
+        assertEq(tokenPairs[3].base, address(10));
+        assertEq(tokenPairs[3].quote, address(11));
+        assertEq(tokenPairs[3].oracleAdapter, address(12));
+    }
+
+    function test_removeSupportedTokenPairs() public {
+        vm.startPrank(deployer);
+
+        IVaultRegistry.TokenPair[]
+            memory tokenPairs = new IVaultRegistry.TokenPair[](4);
+        tokenPairs[0] = IVaultRegistry.TokenPair(
+            address(1),
+            address(2),
+            address(3)
+        );
+        tokenPairs[1] = IVaultRegistry.TokenPair(
+            address(4),
+            address(5),
+            address(6)
+        );
+        tokenPairs[2] = IVaultRegistry.TokenPair(
+            address(7),
+            address(8),
+            address(9)
+        );
+        tokenPairs[3] = IVaultRegistry.TokenPair(
+            address(10),
+            address(11),
+            address(12)
+        );
+
+        registry.addSupportedTokenPairs(address(123), tokenPairs);
+
+        tokenPairs = new IVaultRegistry.TokenPair[](3);
+        // Non supported token pairs
+        tokenPairs[0] = IVaultRegistry.TokenPair(
+            address(1),
+            address(2),
+            address(2)
+        );
+        // Supported token pairs
+        tokenPairs[1] = IVaultRegistry.TokenPair(
+            address(7),
+            address(8),
+            address(9)
+        );
+        // Non supported token pairs
+        tokenPairs[2] = IVaultRegistry.TokenPair(
+            address(1),
+            address(1),
+            address(3)
+        );
+
+        registry.removeSupportedTokenPairs(address(123), tokenPairs);
+
+        tokenPairs = registry.getSupportedTokenPairs(address(123));
+
+        assertEq(tokenPairs.length, 3);
+        assertEq(tokenPairs[0].base, address(1));
+        assertEq(tokenPairs[0].quote, address(2));
+        assertEq(tokenPairs[0].oracleAdapter, address(3));
+        assertEq(tokenPairs[1].base, address(4));
+        assertEq(tokenPairs[1].quote, address(5));
+        assertEq(tokenPairs[1].oracleAdapter, address(6));
+        assertEq(tokenPairs[2].base, address(10));
+        assertEq(tokenPairs[2].quote, address(11));
+        assertEq(tokenPairs[2].oracleAdapter, address(12));
+    }
 }
