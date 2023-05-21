@@ -355,7 +355,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
-        address taker,
+        address indexed taker,
         UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 protocolFee
@@ -378,6 +378,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.startPrank(users.trader);
         token.approve(address(vault), totalPremium + totalPremium / 10);
+
+        vm.expectEmit();
 
         emit WriteFrom(
             address(vault),
