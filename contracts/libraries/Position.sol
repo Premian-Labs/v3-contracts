@@ -130,7 +130,7 @@ library Position {
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right.
-    ///
+    ///         ===========================================================
     ///         Usage:
     ///         CS order: f(x) defines the amount of shorts of a CS order holding one unit of liquidity.
     ///         LC order: (1 - f(x)) defines the amount of longs of a LC order holding one unit of liquidity.
@@ -139,6 +139,7 @@ library Position {
     ///         case 1. f(x) = 0                                for x < lower
     ///         case 2. f(x) = (x - lower) / (upper - lower)    for lower <= x <= upper
     ///         case 3. f(x) = 1                                for x > upper
+    ///         ===========================================================
     function pieceWiseLinear(
         KeyInternal memory self,
         UD60x18 price
@@ -152,7 +153,7 @@ library Position {
     }
 
     /// @notice Returns the amount of 'bid-side' collateral associated to a range order with one unit of liquidity.
-    ///
+    ///         ===========================================================
     ///         Usage:
     ///         CS order: bid-side collateral defines the premiums generated from selling options.
     ///         LC order: bid-side collateral defines the collateral used to pay for buying long options.
@@ -161,6 +162,7 @@ library Position {
     ///         case 1. f(x) = 0                                            for x < lower
     ///         case 2. f(x) = (price**2 - lower) / [2 * (upper - lower)]   for lower <= x <= upper
     ///         case 3. f(x) = (upper + lower) / 2                          for x > upper
+    ///         ===========================================================
     function pieceWiseQuadratic(
         KeyInternal memory self,
         UD60x18 price
@@ -220,8 +222,8 @@ library Position {
         return size / amountOfTicks;
     }
 
-    /// @notice Returns the bid collateral (18 decimals) either used to buy back options or revenue/ income generated from
-    ///         underwriting / selling options.
+    /// @notice Returns the bid collateral (18 decimals) either used to buy back options or revenue/ income generated
+    ///         from underwriting / selling options.
     ///         ===========================================================
     ///         For a <= p <= b we have:
     ///
@@ -244,8 +246,8 @@ library Position {
             );
     }
 
-    /// @notice Returns the total collateral (18 decimals) held by the position key `self`. Note that here we do not distinguish
-    ///         between ask- and bid-side collateral. This increases the capital efficiency of the range order.
+    /// @notice Returns the total collateral (18 decimals) held by the position key `self`. Note that here we do not
+    ///         distinguish between ask- and bid-side collateral. This increases the capital efficiency of the range order
     /// @param size The contract amount (18 decimals)
     /// @param price The current market price (18 decimals)
     function collateral(
@@ -327,12 +329,13 @@ library Position {
         }
     }
 
-    /// @notice Calculate the update for the Position. Either increments them in case withdraw is False (i.e. in case there is a deposit)
-    ///         and otherwise decreases them. Returns the change in collateral, longs, shorts. These are transferred to (withdrawal)or
-    ///         transferred from (deposit) the Agent (Position.operator).
+    /// @notice Calculate the update for the Position. Either increments them in case withdraw is False (i.e. in case
+    ///         there is a deposit) and otherwise decreases them. Returns the change in collateral, longs, shorts. These
+    ///         are transferred to (withdrawal)or transferred from (deposit) the Agent (Position.operator).
     /// @param currentBalance The current balance of tokens (18 decimals)
     /// @param amount The number of tokens deposited or withdrawn (18 decimals)
-    /// @param price The current market price, used to compute the change in collateral, long and shorts due to the change in tokens (18 decimals)
+    /// @param price The current market price, used to compute the change in collateral, long and shorts due to the
+    ///        change in tokens (18 decimals)
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         KeyInternal memory self,

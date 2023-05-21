@@ -135,7 +135,8 @@ library PoolStorage {
         return sd(OptionMath.scaleDecimals(value, decimals, 18));
     }
 
-    /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL pools)
+    /// @notice Get the token used as options collateral and for payment of premium. (quote for PUT pools, base for CALL
+    ///         pools)
     function getPoolToken(Layout storage l) internal view returns (address) {
         return l.isCallPool ? l.base : l.quote;
     }

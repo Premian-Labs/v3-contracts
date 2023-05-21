@@ -118,9 +118,11 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether the taker is buying or selling
         bool isBuy;
-        // Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
+        // Tx will revert if total premium is above this value when buying, or below this value when selling.
+        // (poolToken decimals)
         uint256 premiumLimit;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
+        // collateral is used for a swap
         bool transferCollateralToUser;
     }
 
@@ -134,9 +136,11 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct DepositArgsInternal {
-        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
+        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and
+        // validated on-chain to save gas (18 decimals)
         UD60x18 belowLower;
-        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
+        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and
+        // validated on-chain to save gas (18 decimals)
         UD60x18 belowUpper;
         // The position size to deposit (18 decimals)
         UD60x18 size;
@@ -169,7 +173,8 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
+        // collateral is used for a swap
         bool transferCollateralToUser;
     }
 

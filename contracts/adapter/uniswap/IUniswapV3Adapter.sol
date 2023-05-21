@@ -51,10 +51,10 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @param pools The pools that were prepared to support the pair
     event UpdatedPoolsForPair(address tokenA, address tokenB, address[] pools);
 
-    /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could happen that
-    ///         pools are added for the pair at a later stage, and we can't be sure if those pools will be configured correctly.
-    ///         In this case, if a pool has an insufficient observation cardinality, `quote` and `quoteFrom` will revert.
-    ///         This function returns this list of pools known to be prepared.
+    /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could
+    ///         happen that pools are added for the pair at a later stage, and we can't be sure if those pools will be
+    ///         configured correctly. In this case, if a pool has an insufficient observation cardinality, `quote` and
+    ///         `quoteFrom` will revert. This function returns this list of pools known to be prepared.
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The list of pools that will be used for quoting
@@ -96,7 +96,8 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @param newPeriod The new TWAP period (seconds)
     function setPeriod(uint32 newPeriod) external;
 
-    /// @notice Sets the cardinality per minute to be used when increasing observation cardinality at the moment of adding support for pairs
+    /// @notice Sets the cardinality per minute to be used when increasing observation cardinality at the moment of
+    ///         adding support for pairs
     /// @param newCardinalityPerMinute The new cardinality per minute
     function setCardinalityPerMinute(uint256 newCardinalityPerMinute) external;
 
