@@ -19,8 +19,6 @@
   "repository": "https://github.com/Premian-Labs/premia-contracts-v3-private.git",
   "author": "Premia",
   "scripts": {
-    "compile": "hardhat compile",
-    "compile:force": "hardhat compile --force",
     "postinstall": "husky install",
     "test": "forge test -vv",
     "contract-size": "yarn run hardhat size-contracts",

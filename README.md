@@ -55,6 +55,25 @@ Generate a HTML code coverage report using Forge :
 forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage
 ```
 
+### Deployment
+
+Contracts deployment is done through Hardhat.
+Available networks : `arbitrum`, `arbitrumNova`, `goerli`, `arbitrumGoerli`
+
+```bash
+hardhat run ./scripts/deploy/0000-baseLayer.ts --network goerli
+```
+
+### Contracts upgrade
+
+Example to upgrade pools implementation on goerli network :
+
+```bash
+hardhat run ./scripts/upgrade/0000-pools.ts --network goerli
+```
+
+Other upgrades scripts are available in `./scripts/upgrade` to upgrade different components of the protocol.
+
 ## Docker
 
 To run the code in developer mode using docker, start by building the docker image:
