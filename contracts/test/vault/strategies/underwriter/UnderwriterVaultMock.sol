@@ -40,16 +40,18 @@ contract UnderwriterVaultMock is UnderwriterVault {
     constructor(
         address vaultRegistry,
         address feeReceiver,
-        address oracleAddress,
-        address factoryAddress,
-        address routerAddress
+        address oracle,
+        address factory,
+        address router,
+        address vxPremia
     )
         UnderwriterVault(
             vaultRegistry,
             feeReceiver,
-            oracleAddress,
-            factoryAddress,
-            routerAddress
+            oracle,
+            factory,
+            router,
+            vxPremia
         )
     {}
 

@@ -90,7 +90,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
     function getQuote(
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        address taker
     ) external view returns (uint256 premium);
 
     function trade(

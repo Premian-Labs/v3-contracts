@@ -33,6 +33,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     )
         PoolInternal(
@@ -42,6 +43,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
             feeReceiver,
             referral,
             settings,
+            vaultRegistry,
             vxPremia
         )
     {}

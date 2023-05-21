@@ -99,7 +99,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         assertApproxEqAbs(
-            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true)).unwrap(),
+            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0)))
+                .unwrap(),
             isCallTest ? 0.15828885563446596e18 : 469.9068335343156e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
@@ -109,7 +110,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
-        vault.getQuote(poolKey, ud(6e18), true);
+        vault.getQuote(poolKey, ud(6e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_PoolDoesNotExist() public {
@@ -119,14 +120,14 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         poolKey.maturity = maturity;
 
         vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_ZeroSize() public {
         setup();
 
         vm.expectRevert(IVault.Vault__ZeroSize.selector);
-        vault.getQuote(poolKey, ud(0), true);
+        vault.getQuote(poolKey, ud(0), true, address(0));
     }
 
     function test_getQuote_RevertIf_ZeroStrike() public {
@@ -135,7 +136,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         poolKey.strike = ud(0);
 
         vm.expectRevert(IVault.Vault__StrikeZero.selector);
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_BuyWithWrongVault() public {
@@ -144,14 +145,14 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         poolKey.isCallPool = !poolKey.isCallPool;
 
         vm.expectRevert(IVault.Vault__OptionTypeMismatchWithVault.selector);
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_TryingToSellToVault() public {
         setup();
 
         vm.expectRevert(IVault.Vault__TradeMustBeBuy.selector);
-        vault.getQuote(poolKey, ud(3e18), false);
+        vault.getQuote(poolKey, ud(3e18), false, address(0));
     }
 
     function test_getQuote_RevertIf_TryingToBuyExpiredOption() public {
@@ -166,7 +167,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
                 1677830400
             )
         );
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDTEBounds()
@@ -205,7 +206,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setSpotPrice(spot);
 
         vm.expectRevert(IVault.Vault__OutOfDTEBounds.selector);
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_TryingToBuyOptionNotWithinDeltaBounds()
@@ -238,14 +239,21 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         vault.setSpotPrice(spot);
 
         vm.expectRevert(IVault.Vault__OutOfDeltaBounds.selector);
-        vault.getQuote(poolKey, ud(3e18), true);
+        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_trade_ProcessTradeCorrectly() public {
         setup();
 
         UD60x18 tradeSize = ud(3e18);
-        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true);
+
+        uint256 totalPremium = vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            address(0)
+        );
+
         IERC20 token = IERC20(getPoolToken());
 
         vm.startPrank(users.trader);
@@ -261,6 +269,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 depositSize = scaleDecimals(
             isCallTest ? ud(5e18) : ud(5e18) * strike
         );
+
         uint256 collateral = scaleDecimals(
             isCallTest ? ud(3e18) : ud(3e18) * strike
         );
@@ -286,7 +295,14 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         UD60x18 tradeSize = ud(3e18);
-        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true);
+
+        uint256 totalPremium = vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            address(0)
+        );
+
         IERC20 token = IERC20(getPoolToken());
 
         address referrer = address(12345);
@@ -336,6 +352,55 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         );
     }
 
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        address indexed taker,
+        UD60x18 contractSize,
+        UD60x18 collateral,
+        UD60x18 protocolFee
+    );
+
+    function test_trade_UseLongReceiverAsTaker() public {
+        setup();
+
+        UD60x18 tradeSize = ud(3e18);
+        uint256 fee = pool.takerFee(users.trader, tradeSize, 0, true);
+
+        uint256 totalPremium = vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            address(0)
+        );
+
+        IERC20 token = IERC20(getPoolToken());
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+
+        vm.expectEmit();
+
+        emit WriteFrom(
+            address(vault),
+            users.trader,
+            users.trader,
+            tradeSize,
+            contractsToCollateral(tradeSize),
+            ud(scaleDecimalsTo(fee))
+        );
+
+        vault.trade(
+            poolKey,
+            tradeSize,
+            true,
+            totalPremium + totalPremium / 10,
+            address(0)
+        );
+
+        vm.stopPrank();
+    }
+
     function test_trade_RevertIf_NotEnoughAvailableCapital() public {
         setup();
 
@@ -353,7 +418,14 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         UD60x18 tradeSize = ud(3e18);
-        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true);
+
+        uint256 totalPremium = vault.getQuote(
+            poolKey,
+            tradeSize,
+            true,
+            address(0)
+        );
+
         IERC20 token = IERC20(getPoolToken());
 
         vm.startPrank(users.trader);

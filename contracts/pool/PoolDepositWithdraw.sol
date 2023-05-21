@@ -31,6 +31,7 @@ contract PoolDepositWithdraw is
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
     )
         PoolInternal(
@@ -40,6 +41,7 @@ contract PoolDepositWithdraw is
             feeReceiver,
             referral,
             settings,
+            vaultRegistry,
             vxPremia
         )
     {}

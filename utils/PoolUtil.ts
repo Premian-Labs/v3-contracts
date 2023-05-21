@@ -23,6 +23,7 @@ import {
   IReferral__factory,
   Referral__factory,
   ReferralProxy__factory,
+  VaultRegistry__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -65,6 +66,7 @@ export class PoolUtil {
     wrappedNativeToken: string,
     feeReceiver: string,
     referralAddress: string,
+    vaultRegistry: string,
     log = true,
     isDevMode = false,
   ) {
@@ -93,6 +95,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolCoreImpl.deployed();
@@ -117,6 +120,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolDepositWithdrawImpl.deployed();
@@ -141,6 +145,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolTradeImpl.deployed();
@@ -166,6 +171,7 @@ export class PoolUtil {
         feeReceiver,
         referralAddress,
         userSettings,
+        vaultRegistry,
         vxPremia,
       );
       await poolCoreMockImpl.deployed();
@@ -191,6 +197,7 @@ export class PoolUtil {
     log = true,
     isDevMode = false,
     vxPremiaAddress?: string,
+    vaultRegistry?: string,
   ) {
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
@@ -276,6 +283,7 @@ export class PoolUtil {
     await userSettingsProxy.deployed();
 
     if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
+
     // VxPremia
     if (!vxPremiaAddress) {
       const premia = await new ERC20Mock__factory(deployer).deploy(
@@ -308,6 +316,27 @@ export class PoolUtil {
       vxPremiaAddress = vxPremiaProxy.address;
     }
 
+    // Vault Registry
+    if (!vaultRegistry) {
+      const vaultRegistryImpl = await new VaultRegistry__factory(
+        deployer,
+      ).deploy();
+
+      await vaultRegistryImpl.deployed();
+
+      if (log) console.log(`VaultRegistry : ${vaultRegistryImpl.address}`);
+
+      const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
+        deployer,
+      ).deploy(vaultRegistryImpl.address);
+
+      await vaultRegistryProxy.deployed();
+
+      if (log) console.log(`VxPremiaProxy : ${vaultRegistryProxy.address}`);
+
+      vaultRegistry = vaultRegistryProxy.address;
+    }
+
     const referralImpl = await new Referral__factory(deployer).deploy(
       poolFactory.address,
     );
@@ -335,6 +364,7 @@ export class PoolUtil {
       wrappedNativeToken,
       feeReceiver,
       referral.address,
+      vaultRegistry,
       log,
       isDevMode,
     );

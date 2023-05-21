@@ -2,16 +2,15 @@
 
 pragma solidity >=0.8.20;
 
-import "forge-std/console2.sol";
-
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
+import {ONE} from "contracts/libraries/Constants.sol";
 import {UnderwriterVaultMock} from "contracts/test/vault/strategies/underwriter/UnderwriterVaultMock.sol";
 import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
+
+import {UnderwriterVaultDeployTest} from "./_UnderwriterVault.deploy.t.sol";
 
 abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
     struct TestResult {
@@ -177,6 +176,52 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
             );
             assertEq(feeVars.totalFeeInShares, results[i].totalFeeInShares);
             assertEq(feeVars.totalFeeInAssets, results[i].totalFeeInAssets);
+
+            vm.revertTo(snapshot);
+            snapshot = vm.snapshot();
+        }
+    }
+
+    function test_getFeeInternal_WithDiscount_ReturnExpectedValue() public {
+        (TestVars[2] memory cases, TestResult[2] memory results) = _testCases();
+
+        uint256 snapshot = vm.snapshot();
+
+        UD60x18 discount = ud(vxPremia.getDiscount(users.caller));
+
+        for (uint256 i = 0; i < cases.length; i++) {
+            setupGetFeeVars(cases[i]);
+
+            vault.setTimestamp(cases[i].timestamp);
+            IUnderwriterVault.FeeInternal memory feeVars = vault.getFeeInternal(
+                users.caller,
+                cases[i].transferAmount,
+                vault.getPricePerShare()
+            );
+
+            assertEq(feeVars.assets, results[i].assets);
+
+            assertEq(feeVars.balanceShares, results[i].balanceShares);
+
+            assertEq(
+                feeVars.performanceFeeInAssets,
+                (ONE - discount) * results[i].performanceFeeInAssets
+            );
+
+            assertEq(
+                feeVars.managementFeeInAssets,
+                (ONE - discount) * results[i].managementFeeInAssets
+            );
+
+            assertEq(
+                feeVars.totalFeeInShares,
+                (ONE - discount) * results[i].totalFeeInShares
+            );
+
+            assertEq(
+                feeVars.totalFeeInAssets,
+                (ONE - discount) * results[i].totalFeeInAssets
+            );
 
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
