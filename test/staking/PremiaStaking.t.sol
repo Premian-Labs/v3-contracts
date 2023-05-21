@@ -69,8 +69,8 @@ contract PremiaStakingTest is DeployTest {
 
     function bridge(
         address fromUser,
-        PremiaStakingMock premiaStaking,
-        PremiaStakingMock otherPremiaStaking,
+        PremiaStakingMock _premiaStaking,
+        PremiaStakingMock _otherPremiaStaking,
         address user,
         uint256 amount,
         uint64 stakePeriod,
@@ -79,7 +79,7 @@ contract PremiaStakingTest is DeployTest {
         vm.prank(fromUser);
 
         // Mocked bridge out
-        premiaStaking.sendFrom(
+        _premiaStaking.sendFrom(
             user,
             0,
             abi.encode(user),
@@ -90,7 +90,7 @@ contract PremiaStakingTest is DeployTest {
         );
 
         // Mocked bridge in
-        otherPremiaStaking.creditTo(user, amount, stakePeriod, lockedUntil);
+        _otherPremiaStaking.creditTo(user, amount, stakePeriod, lockedUntil);
     }
 
     function sign(
