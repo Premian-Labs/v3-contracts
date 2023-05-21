@@ -108,10 +108,10 @@ interface IVaultRegistry {
 
     /// @notice Removes a set of supported token pairs from the vault.
     /// @param vault The proxy address of the vault.
-    /// @param tokenPairs The token pairs to remove.
+    /// @param tokenPairsToRemove The token pairs to remove.
     function removeSupportedTokenPairs(
         address vault,
-        TokenPair[] memory tokenPairs
+        TokenPair[] memory tokenPairsToRemove
     ) external;
 
     /// @notice Gets the vault at the specified by the proxy address.
