@@ -132,7 +132,7 @@ abstract contract PoolWriteFromTest is DeployTest {
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
-        address taker,
+        address indexed taker,
         UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 protocolFee

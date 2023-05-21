@@ -16,6 +16,7 @@ import {DeployTest} from "../../../Deploy.t.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/UnderwriterVaultProxy.sol";
+import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
     struct TestVars {
@@ -131,6 +132,13 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
         callVault = UnderwriterVaultMock(callVaultProxy);
 
+        vaultRegistry.addVault(
+            callVaultProxy,
+            keccak256("WETH Call Vault"),
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Call
+        );
+
         address putVaultProxy = address(
             new UnderwriterVaultProxy(
                 address(vaultRegistry),
@@ -144,6 +152,13 @@ contract UnderwriterVaultDeployTest is DeployTest {
         );
 
         putVault = UnderwriterVaultMock(putVaultProxy);
+
+        vaultRegistry.addVault(
+            putVaultProxy,
+            keccak256("WETH Put Vault"),
+            IVaultRegistry.TradeSide.Both,
+            IVaultRegistry.OptionType.Put
+        );
     }
 
     function setMaturities() internal {
