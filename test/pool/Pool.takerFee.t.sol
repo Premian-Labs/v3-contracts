@@ -17,8 +17,8 @@ abstract contract PoolTakerFeeTest is DeployTest {
     function stake(uint256 amount) internal {
         vm.startPrank(users.trader);
 
-        deal(premia, users.trader, amount);
-        IERC20(premia).approve(address(vxPremia), amount);
+        deal(address(premia), users.trader, amount);
+        premia.approve(address(vxPremia), amount);
         vxPremia.stake(amount, uint64(2.5 * 365 days));
 
         vm.stopPrank();

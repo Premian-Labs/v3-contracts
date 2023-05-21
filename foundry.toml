@@ -4,7 +4,7 @@ solc = "0.8.20"
 src = 'contracts'
 out = 'out'
 libs = ['lib', 'node_modules']
-test = 'test-foundry'
+test = 'test'
 fork_block_number = 16597500
 
 [rpc_endpoints]
