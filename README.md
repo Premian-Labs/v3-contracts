@@ -4,12 +4,13 @@ https://premia.finance
 
 ## Deployments
 
-TBD
+| Network         |                                               |
+| --------------- | --------------------------------------------- |
+| Goerli          | [📜](./utils/deployments/goerli.json)         |
+| Arbitrum Goerli | [📜](./utils/deployments/arbitrumGoerli.json) |
 
 <!---
-| Network          |                                      |
-| ---------------- | ------------------------------------ |
-| Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
+ | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
 -->
 
 ## Development
