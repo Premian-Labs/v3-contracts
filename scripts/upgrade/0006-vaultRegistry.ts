@@ -45,7 +45,7 @@ async function main() {
   //////////////////////////
 
   const vaultRegistryImpl = await new VaultRegistry__factory(deployer).deploy();
-
+  await vaultRegistryImpl.deployed();
   console.log(`VaultRegistry implementation : ${vaultRegistryImpl.address}`);
 
   // Save new addresses

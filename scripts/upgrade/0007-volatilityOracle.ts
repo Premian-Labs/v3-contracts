@@ -47,9 +47,9 @@ async function main() {
   const volatilityOracleImpl = await new VolatilityOracle__factory(
     deployer,
   ).deploy();
-
+  await volatilityOracleImpl.deployed();
   console.log(
-    `VolatilityORacle implementation : ${volatilityOracleImpl.address}`,
+    `VolatilityOracle implementation : ${volatilityOracleImpl.address}`,
   );
 
   // Save new addresses
