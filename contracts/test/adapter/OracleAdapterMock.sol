@@ -53,7 +53,7 @@ contract OracleAdapterMock {
     function describePricingPath(
         address token
     ) external view returns (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
-        adapterType = IOracleAdapter.AdapterType.CHAINLINK;
+        adapterType = IOracleAdapter.AdapterType.Chainlink;
 
         path = new address[][](1);
         address[] memory aggregator = new address[](1);

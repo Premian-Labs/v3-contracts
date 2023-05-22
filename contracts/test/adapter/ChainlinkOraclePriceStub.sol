@@ -14,11 +14,11 @@ contract ChainlinkOraclePriceStub {
     FailureMode internal failureMode;
 
     enum FailureMode {
-        NONE,
-        GET_ROUND_DATA_REVERT_WITH_REASON,
-        GET_ROUND_DATA_REVERT,
-        LAST_ROUND_DATA_REVERT_WITH_REASON,
-        LAST_ROUND_DATA_REVERT
+        None,
+        GetRoundDataRevertWithReason,
+        GetRoundDataRevert,
+        LastRoundDataRevertWithReason,
+        LastRoundDataRevert
     }
 
     function setup(FailureMode _failureMode, int256[] memory _prices, uint256[] memory _updatedAtTimestamps) external {
@@ -39,11 +39,11 @@ contract ChainlinkOraclePriceStub {
     function getRoundData(uint80 roundId) external view returns (uint80, int256, uint256, uint256, uint80) {
         (, uint64 aggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
-        if (failureMode == FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON) {
+        if (failureMode == FailureMode.GetRoundDataRevertWithReason) {
             require(false, "reverted with reason");
         }
 
-        if (failureMode == FailureMode.GET_ROUND_DATA_REVERT) {
+        if (failureMode == FailureMode.GetRoundDataRevert) {
             revert();
         }
 
@@ -54,11 +54,11 @@ contract ChainlinkOraclePriceStub {
         uint80 roundId = ChainlinkAdapterStorage.formatRoundId(PHASE_ID, AGGREGATOR_ROUND_ID);
         uint64 aggregatorRoundId = AGGREGATOR_ROUND_ID - 1;
 
-        if (failureMode == FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON) {
+        if (failureMode == FailureMode.LastRoundDataRevertWithReason) {
             require(false, "reverted with reason");
         }
 
-        if (failureMode == FailureMode.LAST_ROUND_DATA_REVERT) {
+        if (failureMode == FailureMode.LastRoundDataRevert) {
             revert();
         }
 

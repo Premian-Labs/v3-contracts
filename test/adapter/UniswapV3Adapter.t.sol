@@ -442,7 +442,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
         (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
             .describePricingPath(address(1));
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UniswapV3));
         assertEq(path.length, 0);
         assertEq(decimals.length, 0);
 
@@ -450,7 +450,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(WETH);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UniswapV3));
         assertEq(path[0].length, 1);
         assertEq(path[0][0], 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         assertEq(decimals.length, 1);
@@ -460,7 +460,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(DAI);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UniswapV3));
         assertEq(path[0].length, 4);
         assertEq(path[0][0], 0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19);
         assertEq(path[0][1], 0x60594a405d53811d3BC4766596EFD80fd545A270);
@@ -474,7 +474,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(USDC);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UNISWAP_V3));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.UniswapV3));
         assertEq(path[0].length, 4);
         assertEq(path[0][0], 0xE0554a476A092703abdB3Ef35c80e0D76d32939F);
         assertEq(path[0][1], 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640);

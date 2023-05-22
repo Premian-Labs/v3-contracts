@@ -7,9 +7,9 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 interface IOracleAdapter {
     /// @notice The type of adapter
     enum AdapterType {
-        NONE,
-        CHAINLINK,
-        UNISWAP_V3
+        None,
+        Chainlink,
+        UniswapV3
     }
 
     /// @notice Thrown when attempting to increase array size

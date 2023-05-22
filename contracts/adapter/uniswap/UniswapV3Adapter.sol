@@ -128,7 +128,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
     function describePricingPath(
         address token
     ) external view returns (AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
-        adapterType = AdapterType.UNISWAP_V3;
+        adapterType = AdapterType.UniswapV3;
 
         path = new address[][](1);
         decimals = new uint8[](2);

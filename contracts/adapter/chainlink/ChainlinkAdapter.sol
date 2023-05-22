@@ -108,7 +108,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     function describePricingPath(
         address token
     ) external view returns (AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
-        adapterType = AdapterType.CHAINLINK;
+        adapterType = AdapterType.Chainlink;
         path = new address[][](2);
         decimals = new uint8[](2);
 

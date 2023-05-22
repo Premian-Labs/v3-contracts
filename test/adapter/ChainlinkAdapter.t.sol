@@ -334,14 +334,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
         prices[0] = 100000000000;
         timestamps[0] = target - 90000;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.LAST_ROUND_DATA_REVERT_WITH_REASON, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.LastRoundDataRevertWithReason, prices, timestamps);
 
         vm.expectRevert("reverted with reason");
         adapter.quote(stubCoin, CHAINLINK_USD);
 
         //
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.LAST_ROUND_DATA_REVERT, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.LastRoundDataRevert, prices, timestamps);
 
         vm.expectRevert(
             abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__LatestRoundDataCallReverted.selector, "")
@@ -428,14 +428,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[1] = target + 2;
         timestamps[2] = target + 1;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.GET_ROUND_DATA_REVERT_WITH_REASON, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.GetRoundDataRevertWithReason, prices, timestamps);
 
         vm.expectRevert("reverted with reason");
         adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
 
         //
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.GET_ROUND_DATA_REVERT, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.GetRoundDataRevert, prices, timestamps);
 
         vm.expectRevert(
             abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__GetRoundDataCallReverted.selector, "")
@@ -470,7 +470,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         prices[0] = 100000000000;
         timestamps[0] = target - 90000;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         vm.warp(target + 43200);
         int256 stalePrice = stub.price(0);
@@ -487,7 +487,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         prices[0] = 100000000000;
         timestamps[0] = target - 90000;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -509,7 +509,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         prices[0] = 1000000000000;
         timestamps[0] = target + 100;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         int256 freshPrice = stub.price(0);
         assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
@@ -527,7 +527,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[1] = target + 200;
         timestamps[2] = target + 300;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         freshPrice = stub.price(0);
         assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
@@ -547,7 +547,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[2] = target + 200;
         timestamps[3] = target + 300;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         freshPrice = stub.price(0);
         assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
@@ -567,7 +567,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[2] = target + 300;
         timestamps[3] = target + 500;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         freshPrice = stub.price(1);
         assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
@@ -583,7 +583,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[0] = target - 100;
         timestamps[1] = target - 50;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.NONE, prices, timestamps);
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
         freshPrice = stub.price(1);
         assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
@@ -602,7 +602,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
             .describePricingPath(address(1));
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.CHAINLINK));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
         assertEq(path.length, 0);
         assertEq(decimals.length, 0);
 
@@ -610,7 +610,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(WETH);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.CHAINLINK));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
         assertEq(path.length, 1);
         assertEq(path[0][0], 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         assertEq(decimals.length, 1);
@@ -620,7 +620,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(DAI);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.CHAINLINK));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
         assertEq(path.length, 1);
         assertEq(path[0][0], 0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC);
         assertEq(decimals.length, 1);
@@ -630,7 +630,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         (adapterType, path, decimals) = adapter.describePricingPath(ENS);
 
-        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.CHAINLINK));
+        assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
         assertEq(path.length, 2);
         assertEq(path[0][0], 0x780f1bD91a5a22Ede36d4B2b2c0EcCB9b1726a28);
         assertEq(path[1][0], 0x37bC7498f4FF12C19678ee8fE19d713b87F6a9e6);

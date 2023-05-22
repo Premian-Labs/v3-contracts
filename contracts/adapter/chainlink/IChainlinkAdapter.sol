@@ -5,6 +5,8 @@ pragma solidity >=0.8.20;
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
 interface IChainlinkAdapter is IOracleAdapter {
+    // Note : The following enums do not follow regular style guidelines for the purpose of easier readability
+
     /// @notice The path that will be used to calculate quotes for a given pair
     enum PricingPath {
         // There is no path calculated

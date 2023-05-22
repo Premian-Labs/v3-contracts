@@ -6,9 +6,9 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IReferral {
     enum RebateTier {
-        PRIMARY_REBATE_1,
-        PRIMARY_REBATE_2,
-        PRIMARY_REBATE_3
+        PrimaryRebate1,
+        PrimaryRebate2,
+        PrimaryRebate3
     }
 
     error Referral__NoRebatesToClaim();

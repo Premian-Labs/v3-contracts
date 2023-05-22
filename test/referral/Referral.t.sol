@@ -99,24 +99,24 @@ contract ReferralTest is DeployTest {
     }
 
     function test_setRebateTier_Success() public {
-        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PRIMARY_REBATE_1));
+        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PrimaryRebate1));
 
-        referral.setRebateTier(users.referrer, IReferral.RebateTier.PRIMARY_REBATE_2);
+        referral.setRebateTier(users.referrer, IReferral.RebateTier.PrimaryRebate2);
 
-        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PRIMARY_REBATE_2));
+        assertEq(uint8(referral.getRebateTier(users.referrer)), uint8(IReferral.RebateTier.PrimaryRebate2));
     }
 
     function test_setRebateTier_RevertIf_Not_Owner() public {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(users.trader);
 
-        referral.setRebateTier(users.referrer, IReferral.RebateTier.PRIMARY_REBATE_2);
+        referral.setRebateTier(users.referrer, IReferral.RebateTier.PrimaryRebate2);
     }
 
     function test_setPrimaryRebatePercent_Success() public {
         UD60x18 percent = ud(100e18);
 
-        referral.setPrimaryRebatePercent(percent, IReferral.RebateTier.PRIMARY_REBATE_1);
+        referral.setPrimaryRebatePercent(percent, IReferral.RebateTier.PrimaryRebate1);
 
         (UD60x18[] memory primaryRebatePercents, ) = referral.getRebatePercents();
 
@@ -127,7 +127,7 @@ contract ReferralTest is DeployTest {
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vm.prank(users.trader);
 
-        referral.setPrimaryRebatePercent(ud(100e18), IReferral.RebateTier.PRIMARY_REBATE_1);
+        referral.setPrimaryRebatePercent(ud(100e18), IReferral.RebateTier.PrimaryRebate1);
     }
 
     function test_setSecondaryRebatePercent_Success() public {
