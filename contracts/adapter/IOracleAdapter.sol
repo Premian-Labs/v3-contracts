@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IOracleAdapter {
+    /// @notice The type of adapter
     enum AdapterType {
-        NONE,
-        CHAINLINK,
-        UNISWAP_V3
+        None,
+        Chainlink,
+        UniswapV3
     }
 
     /// @notice Thrown when attempting to increase array size
@@ -32,8 +33,8 @@ interface IOracleAdapter {
     /// @notice Thrown when one of the parameters is a zero address
     error OracleAdapter__ZeroAddress();
 
-    /// @notice Returns whether the pair has already been added to the adapter and if it
-    ///         supports the path required for the pair
+    /// @notice Returns whether the pair has already been added to the adapter and if it supports the path required for
+    ///         the pair
     ///         (true, true): Pair is fully supported
     ///         (false, true): Pair is not supported, but can be added
     ///         (false, false): Pair cannot be supported
@@ -42,14 +43,11 @@ interface IOracleAdapter {
     /// @param tokenB The other of the pair's tokens
     /// @return isCached True if the pair has been cached, false otherwise
     /// @return hasPath True if the pair has a valid path, false otherwise
-    function isPairSupported(
-        address tokenA,
-        address tokenB
-    ) external view returns (bool isCached, bool hasPath);
+    function isPairSupported(address tokenA, address tokenB) external view returns (bool isCached, bool hasPath);
 
-    /// @notice Stores or updates the given token pair data provider configuration. This function will
-    ///         let the adapter take some actions to configure the pair, in preparation for future quotes.
-    ///         Can be called many times in order to let the adapter re-configure for a new context
+    /// @notice Stores or updates the given token pair data provider configuration. This function will let the adapter
+    ///         take some actions to configure the pair, in preparation for future quotes. Can be called many times in
+    ///         order to let the adapter re-configure for a new context
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     function upsertPair(address tokenA, address tokenB) external;
@@ -58,21 +56,14 @@ interface IOracleAdapter {
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @return Spot price of base denominated in quote token (18 decimals)
-    function quote(
-        address tokenIn,
-        address tokenOut
-    ) external view returns (UD60x18);
+    function quote(address tokenIn, address tokenOut) external view returns (UD60x18);
 
     /// @notice Returns a quote closest to the target timestamp, based on the given token pair
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @param target Reference timestamp of the quote
     /// @return Historical price of base denominated in quote token (18 decimals)
-    function quoteFrom(
-        address tokenIn,
-        address tokenOut,
-        uint256 target
-    ) external view returns (UD60x18);
+    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18);
 
     /// @notice Describes the pricing path used to convert the token to ETH
     /// @param token The token from where the pricing path starts
@@ -81,12 +72,5 @@ interface IOracleAdapter {
     /// @return decimals The decimals of each token in the path
     function describePricingPath(
         address token
-    )
-        external
-        view
-        returns (
-            AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        );
+    ) external view returns (AdapterType adapterType, address[][] memory path, uint8[] memory decimals);
 }

@@ -1,19 +1,14 @@
 // Hardhat plugins
-import '@nomicfoundation/hardhat-chai-matchers';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 import '@solidstate/hardhat-4byte-uploader';
-import '@solidstate/hardhat-test-short-circuit';
 import '@typechain/hardhat';
 import Dotenv from 'dotenv';
 import 'hardhat-abi-exporter';
 import 'hardhat-artifactor';
 import 'hardhat-contract-sizer';
 import 'hardhat-dependency-compiler';
-import 'hardhat-docgen';
-import 'hardhat-gas-reporter';
 import 'hardhat-spdx-license-identifier';
-import 'solidity-coverage';
 import 'hardhat-preprocessor';
 import fs from 'fs';
 
@@ -28,13 +23,8 @@ function getRemappings() {
     .map((line: string) => line.trim().split('='));
 }
 
-const {
-  API_KEY_ALCHEMY,
-  API_KEY_ARBISCAN,
-  PKEY_ETH_MAIN,
-  PKEY_ETH_TEST,
-  REPORT_GAS,
-} = process.env;
+const { API_KEY_ALCHEMY, API_KEY_ARBISCAN, PKEY_ETH_MAIN, PKEY_ETH_TEST } =
+  process.env;
 
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
 const pkeyMainnet =
@@ -50,7 +40,7 @@ export default {
   solidity: {
     compilers: [
       {
-        version: '0.8.19',
+        version: '0.8.20',
         settings: {
           viaIR: false,
           optimizer: {
@@ -63,7 +53,7 @@ export default {
     overrides: {
       // Uncomment the following lines if we need to reduce UnderwriterVault bytecode size further
       // 'contracts/vault/strategies/underwriter/UnderwriterVault.sol': {
-      //   version: '0.8.19',
+      //   version: '0.8.20',
       //   settings: {
       //     viaIR: false,
       //     optimizer: {
@@ -73,7 +63,7 @@ export default {
       //   },
       // },
       'contracts/staking/VxPremia.sol': {
-        version: '0.8.19',
+        version: '0.8.20',
         settings: {
           viaIR: true,
           optimizer: {
@@ -145,19 +135,10 @@ export default {
     except: ['@uniswap'],
   },
 
-  docgen: {
-    runOnCompile: false,
-    clear: true,
-  },
-
   etherscan: {
     apiKey: {
       arbitrumOne: API_KEY_ARBISCAN,
     },
-  },
-
-  gasReporter: {
-    enabled: REPORT_GAS === 'true',
   },
 
   spdxLicenseIdentifier: {

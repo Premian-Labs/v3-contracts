@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 interface IFeedRegistry {
     struct FeedMappingArgs {
@@ -27,8 +27,5 @@ interface IFeedRegistry {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The feed address
-    function feed(
-        address tokenA,
-        address tokenB
-    ) external view returns (address);
+    function feed(address tokenA, address tokenB) external view returns (address);
 }

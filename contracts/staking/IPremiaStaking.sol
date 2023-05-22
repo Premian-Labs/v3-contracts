@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
 import {IOFT} from "../layerZero/token/oft/IOFT.sol";
@@ -19,19 +19,9 @@ interface IPremiaStaking is IERC2612, IOFT {
     error PremiaStaking__StakeNotLocked();
     error PremiaStaking__WithdrawalStillPending();
 
-    event Stake(
-        address indexed user,
-        uint256 amount,
-        uint64 stakePeriod,
-        uint64 lockedUntil
-    );
+    event Stake(address indexed user, uint256 amount, uint64 stakePeriod, uint64 lockedUntil);
 
-    event Unstake(
-        address indexed user,
-        uint256 amount,
-        uint256 fee,
-        uint256 startDate
-    );
+    event Unstake(address indexed user, uint256 amount, uint256 fee, uint256 startDate);
 
     event Harvest(address indexed user, uint256 amount);
 
@@ -59,17 +49,9 @@ interface IPremiaStaking is IERC2612, IOFT {
         address refundAddress;
     }
 
-    event BridgeLock(
-        address indexed user,
-        uint64 stakePeriod,
-        uint64 lockedUntil
-    );
+    event BridgeLock(address indexed user, uint64 stakePeriod, uint64 lockedUntil);
 
-    event UpdateLock(
-        address indexed user,
-        uint64 oldStakePeriod,
-        uint64 newStakePeriod
-    );
+    event UpdateLock(address indexed user, uint64 oldStakePeriod, uint64 newStakePeriod);
 
     /// @notice Returns the reward token address
     /// @return The reward token address
@@ -82,10 +64,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @notice get amount of tokens that have not yet been distributed as rewards
     /// @return rewards amount of tokens not yet distributed as rewards
     /// @return unstakeRewards amount of PREMIA not yet claimed from early unstake fees
-    function getAvailableRewards()
-        external
-        view
-        returns (uint256 rewards, uint256 unstakeRewards);
+    function getAvailableRewards() external view returns (uint256 rewards, uint256 unstakeRewards);
 
     /// @notice get pending amount of tokens to be distributed as rewards to stakers
     /// @return amount of tokens pending to be distributed as rewards
@@ -97,10 +76,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @return unlockDate timestamp at which withdrawal becomes available
     function getPendingWithdrawal(
         address user
-    )
-        external
-        view
-        returns (uint256 amount, uint256 startDate, uint256 unlockDate);
+    ) external view returns (uint256 amount, uint256 startDate, uint256 unlockDate);
 
     /// @notice get the amount of PREMIA available for withdrawal
     /// @return amount of PREMIA available for withdrawal
@@ -113,14 +89,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @param v V
     /// @param r R
     /// @param s S
-    function stakeWithPermit(
-        uint256 amount,
-        uint64 period,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
+    function stakeWithPermit(uint256 amount, uint64 period, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;
 
     /// @notice Lockup xPremia for protocol fee discounts
     ///         Longer period of locking will apply a multiplier on the amount staked, in the fee discount calculation
@@ -135,10 +104,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @notice harvest rewards, convert to PREMIA using exchange helper, and stake
     /// @param s swap arguments
     /// @param stakePeriod The lockup period (in seconds)
-    function harvestAndStake(
-        IPremiaStaking.SwapArgs calldata s,
-        uint64 stakePeriod
-    ) external;
+    function harvestAndStake(IPremiaStaking.SwapArgs calldata s, uint64 stakePeriod) external;
 
     /// @notice Harvest rewards directly to user wallet
     function harvest() external;
@@ -147,9 +113,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @param user User for which to calculate pending rewards
     /// @return reward amount of pending rewards from protocol fees (in REWARD_TOKEN)
     /// @return unstakeReward amount of pending rewards from early unstake fees (in PREMIA)
-    function getPendingUserRewards(
-        address user
-    ) external view returns (uint256 reward, uint256 unstakeReward);
+    function getPendingUserRewards(address user) external view returns (uint256 reward, uint256 unstakeReward);
 
     /// @notice unstake tokens before end of the lock period, for a fee
     /// @param amount the amount of vxPremia to unstake
@@ -158,9 +122,7 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @notice get early unstake fee for given user
     /// @param user address of the user
     /// @return feePercentage % fee to pay for early unstake (1e18 = 100%)
-    function getEarlyUnstakeFee(
-        address user
-    ) external view returns (uint256 feePercentage);
+    function getEarlyUnstakeFee(address user) external view returns (uint256 feePercentage);
 
     /// @notice Initiate the withdrawal process by burning xPremia, starting the delay period
     /// @param amount quantity of xPremia to unstake
@@ -197,14 +159,10 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @param period The duration (in seconds) for which tokens are locked
     /// @return The multiplier for this staking period
     ///         Ex : 2e18 = x2
-    function getStakePeriodMultiplier(
-        uint256 period
-    ) external returns (uint256);
+    function getStakePeriodMultiplier(uint256 period) external returns (uint256);
 
     /// @notice Get staking infos of a user
     /// @param user The user address for which to get staking infos
     /// @return The staking infos of the user
-    function getUserInfo(
-        address user
-    ) external view returns (PremiaStakingStorage.UserInfo memory);
+    function getUserInfo(address user) external view returns (PremiaStakingStorage.UserInfo memory);
 }

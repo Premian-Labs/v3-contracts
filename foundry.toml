@@ -1,10 +1,10 @@
 [profile.default]
 auto_detect_solc = false
-solc = "0.8.19"
+solc = "0.8.20"
 src = 'contracts'
 out = 'out'
-libs = ['lib']
-test = 'test-foundry'
+libs = ['lib', 'node_modules']
+test = 'test'
 fork_block_number = 16597500
 
 [rpc_endpoints]

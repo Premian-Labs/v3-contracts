@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
@@ -15,12 +15,9 @@ contract OracleAdapterMock {
     UD60x18 internal quoteAmount;
     UD60x18 internal quoteFromAmount;
 
-    constructor(
-        address _base,
-        address _quote,
-        UD60x18 _quoteAmount,
-        UD60x18 _quoteFromAmount
-    ) {
+    mapping(uint256 => UD60x18) internal quoteFromAmountMap;
+
+    constructor(address _base, address _quote, UD60x18 _quoteAmount, UD60x18 _quoteFromAmount) {
         BASE = _base;
         QUOTE = _quote;
         quoteAmount = _quoteAmount;
@@ -33,6 +30,10 @@ contract OracleAdapterMock {
         quoteAmount = _quoteAmount;
     }
 
+    function setQuoteFrom(uint256 maturity, UD60x18 _quoteFromAmount) external {
+        quoteFromAmountMap[maturity] = _quoteFromAmount;
+    }
+
     function setQuoteFrom(UD60x18 _quoteFromAmount) external {
         quoteFromAmount = _quoteFromAmount;
     }
@@ -41,26 +42,18 @@ contract OracleAdapterMock {
         return quoteAmount;
     }
 
-    function quoteFrom(
-        address,
-        address,
-        uint256
-    ) external view returns (UD60x18) {
+    function quoteFrom(address, address, uint256 maturity) external view returns (UD60x18) {
+        if (quoteFromAmountMap[maturity] != ud(0)) {
+            return quoteFromAmountMap[maturity];
+        }
+
         return quoteFromAmount;
     }
 
     function describePricingPath(
         address token
-    )
-        external
-        view
-        returns (
-            IOracleAdapter.AdapterType adapterType,
-            address[][] memory path,
-            uint8[] memory decimals
-        )
-    {
-        adapterType = IOracleAdapter.AdapterType.CHAINLINK;
+    ) external view returns (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) {
+        adapterType = IOracleAdapter.AdapterType.Chainlink;
 
         path = new address[][](1);
         address[] memory aggregator = new address[](1);

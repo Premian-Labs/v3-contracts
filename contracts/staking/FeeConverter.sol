@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -33,17 +33,11 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     //////////////////////////////////////////////////
 
     modifier onlyAuthorized() {
-        if (FeeConverterStorage.layout().isAuthorized[msg.sender] == false)
-            revert FeeConverter__NotAuthorized();
+        if (FeeConverterStorage.layout().isAuthorized[msg.sender] == false) revert FeeConverter__NotAuthorized();
         _;
     }
 
-    constructor(
-        address exchangeHelper,
-        address usdc,
-        address vxPremia,
-        address treasury
-    ) {
+    constructor(address exchangeHelper, address usdc, address vxPremia, address treasury) {
         EXCHANGE_HELPER = exchangeHelper;
         USDC = usdc;
         VXPREMIA = vxPremia;
@@ -57,11 +51,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     receive() external payable {}
 
     /// @inheritdoc IFeeConverter
-    function getExchangeHelper()
-        external
-        view
-        returns (address exchangeHelper)
-    {
+    function getExchangeHelper() external view returns (address exchangeHelper) {
         exchangeHelper = EXCHANGE_HELPER;
     }
 
@@ -72,10 +62,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
     /// @notice Set authorization for address to use the convert function
     /// @param account The account for which to set new authorization status
     /// @param isAuthorized Whether the account is authorized or not
-    function setAuthorized(
-        address account,
-        bool isAuthorized
-    ) external onlyOwner {
+    function setAuthorized(address account, bool isAuthorized) external onlyOwner {
         FeeConverterStorage.layout().isAuthorized[account] = isAuthorized;
 
         emit SetAuthorized(account, isAuthorized);
@@ -118,12 +105,6 @@ contract FeeConverter is IFeeConverter, OwnableInternal {
         IERC20(USDC).approve(VXPREMIA, outAmount - treasuryAmount);
         IVxPremia(VXPREMIA).addRewards(outAmount - treasuryAmount);
 
-        emit Converted(
-            msg.sender,
-            sourceToken,
-            amount,
-            outAmount,
-            treasuryAmount
-        );
+        emit Converted(msg.sender, sourceToken, amount, outAmount, treasuryAmount);
     }
 }

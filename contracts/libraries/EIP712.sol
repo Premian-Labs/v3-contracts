@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 /// @title EIP-712 typed structured data hashing and signing
 /// @dev see https://eips.ethereum.org/EIPS/eip-712
 library EIP712 {
     // ToDo : Remove when merged in solidstate ( https://github.com/solidstate-network/solidstate-solidity/pull/188/files )
     bytes32 internal constant EIP712_TYPE_HASH =
-        keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     /// @notice calculate unique EIP-712 domain separator
     /// @param nameHash hash of ERC20Metadata token name
@@ -20,14 +18,6 @@ library EIP712 {
         bytes32 versionHash
     ) internal view returns (bytes32 domainSeparator) {
         // no need for assembly, running very rarely
-        domainSeparator = keccak256(
-            abi.encode(
-                EIP712_TYPE_HASH,
-                nameHash,
-                versionHash,
-                block.chainid,
-                address(this)
-            )
-        );
+        domainSeparator = keccak256(abi.encode(EIP712_TYPE_HASH, nameHash, versionHash, block.chainid, address(this)));
     }
 }

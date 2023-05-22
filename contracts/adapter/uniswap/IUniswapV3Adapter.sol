@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 
@@ -14,10 +14,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     error UniswapV3Adapter__FeeTierExists(uint24 feeTier);
 
     /// @notice Thrown if the oldest observation is less than the TWAP period
-    error UniswapV3Adapter__InsufficientObservationPeriod(
-        uint32 oldestObservation,
-        uint32 period
-    );
+    error UniswapV3Adapter__InsufficientObservationPeriod(uint32 oldestObservation, uint32 period);
 
     /// @notice Thrown when trying to add an invalid fee tier
     error UniswapV3Adapter__InvalidFeeTier(uint24 feeTier);
@@ -26,10 +23,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     error UniswapV3Adapter__InvalidTimeRange(uint256 start, uint256 end);
 
     /// @notice Thrown when current observation cardinality is below target cardinality
-    error UniswapV3Adapter__ObservationCardinalityTooLow(
-        uint16 currentCardinality,
-        uint16 targetCardinality
-    );
+    error UniswapV3Adapter__ObservationCardinalityTooLow(uint16 currentCardinality, uint16 targetCardinality);
 
     /// @notice Thrown when tokens are unsorted
     error UniswapV3Adapter__TokensUnsorted(address token0, address token1);
@@ -51,40 +45,37 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @param pools The pools that were prepared to support the pair
     event UpdatedPoolsForPair(address tokenA, address tokenB, address[] pools);
 
-    /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could happen that
-    ///         pools are added for the pair at a later stage, and we can't be sure if those pools will be configured correctly.
-    ///         In this case, if a pool has an insufficient observation cardinality, `quote` and `quoteFrom` will revert.
-    ///         This functions returns this list of pools known to be prepared.
+    /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could
+    ///         happen that pools are added for the pair at a later stage, and we can't be sure if those pools will be
+    ///         configured correctly. In this case, if a pool has an insufficient observation cardinality, `quote` and
+    ///         `quoteFrom` will revert. This function returns this list of pools known to be prepared.
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The list of pools that will be used for quoting
-    function poolsForPair(
-        address tokenA,
-        address tokenB
-    ) external view returns (address[] memory);
+    function poolsForPair(address tokenA, address tokenB) external view returns (address[] memory);
 
-    /// @notice Returns the address of the Uniswap V3 factory
+    /// @notice Returns the address of the UniswapV3 factory
     /// @dev This value is assigned during deployment and cannot be changed
-    /// @return The address of the Uniswap V3 factory
+    /// @return The address of the UniswapV3 factory
     function getFactory() external view returns (IUniswapV3Factory);
 
-    /// @notice Returns the period used for the TWAP calculation
-    /// @return The period used for the TWAP
+    /// @notice Returns the TWAP period (seconds)
+    /// @return The TWAP period (seconds)
     function getPeriod() external view returns (uint32);
 
     /// @notice Returns the cardinality per minute used for adding support to pairs
-    /// @return The cardinality per minute used for increase cardinality calculations
+    /// @return The cardinality per minute
     function getCardinalityPerMinute() external view returns (uint256);
 
-    /// @notice Returns the target observation cardinality for pools
-    /// @return The target observation cardinality for pools
+    /// @notice Returns the target cardinality
+    /// @return The target cardinality
     function getTargetCardinality() external view returns (uint16);
 
     /// @notice Returns the approximate gas cost per each increased cardinality
     /// @return The gas cost per cardinality increase
     function getGasPerCardinality() external view returns (uint256);
 
-    /// @notice Returns the approximate gas cost to add support for a new pool internally
+    /// @notice Returns the approximate gas cost to add support for a new pool
     /// @return The gas cost to support a new pool
     function getGasToSupportPool() external view returns (uint256);
 
@@ -92,11 +83,12 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @return The supported fee tiers
     function getSupportedFeeTiers() external view returns (uint24[] memory);
 
-    /// @notice Sets the period to be used for the TWAP calculation
-    /// @param newPeriod The new period
+    /// @notice Sets the TWAP period (seconds)
+    /// @param newPeriod The new TWAP period (seconds)
     function setPeriod(uint32 newPeriod) external;
 
-    /// @notice Sets the cardinality per minute to be used when increasing observation cardinality at the moment of adding support for pairs
+    /// @notice Sets the cardinality per minute to be used when increasing observation cardinality at the moment of
+    ///         adding support for pairs
     /// @param newCardinalityPerMinute The new cardinality per minute
     function setCardinalityPerMinute(uint256 newCardinalityPerMinute) external;
 

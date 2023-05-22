@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -9,7 +9,6 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iNINE, iTEN} from "./Constants.sol";
 
 library OptionMath {
-    // To prevent stack too deep
     struct BlackScholesPriceVarsInternal {
         int256 discountFactor;
         int256 timeScaledVol;
@@ -42,9 +41,8 @@ library OptionMath {
     }
 
     /// @notice Approximation of the normal CDF
-    /// @dev The approximation implemented is based on the paper
-    /// 'Accurate RMM-Based Approximations for the CDF of the Normal Distribution'
-    /// by Haim Shore
+    /// @dev The approximation implemented is based on the paper 'Accurate RMM-Based Approximations for the CDF of the
+    ///      Normal Distribution' by Haim Shore
     /// @param x input value to evaluate the normal CDF on, F(Z<=x) (18 decimals)
     /// @return result The normal CDF evaluated at x (18 decimals)
     function normalCdf(SD59x18 x) internal pure returns (SD59x18 result) {
@@ -58,8 +56,8 @@ library OptionMath {
     }
 
     /// @notice Normal Distribution Probability Density Function.
-    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`.
-    ///      Only computes pdf of a distribution with µ = 0 and σ = 1.
+    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with µ = 0 and
+    ///      σ = 1.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
     /// @param x Number to get PDF for (18 decimals)
@@ -88,6 +86,15 @@ library OptionMath {
         return ZERO;
     }
 
+    /// @notice Returns the terms d1 and d2 from the Black-Scholes formula that are used
+    ///         to compute the price of a call / put option.
+    /// @param spot The spot price. (18 decimals)
+    /// @param strike The strike price of the option. (18 decimals)
+    /// @param timeToMaturity The time until the option expires. (18 decimals)
+    /// @param volAnnualized The percentage volatility of the geometric Brownian motion. (18 decimals)
+    /// @param riskFreeRate The rate of the risk-less asset, i.e. the risk-free interest rate. (18 decimals)
+    /// @return d1 The term d1 from the Black-Scholes formula. (18 decimals)
+    /// @return d2 The term d2 from the Black-Scholes formula. (18 decimals)
     function d1d2(
         UD60x18 spot,
         UD60x18 strike,
@@ -96,15 +103,12 @@ library OptionMath {
         UD60x18 riskFreeRate
     ) internal pure returns (SD59x18 d1, SD59x18 d2) {
         UD60x18 timeScaledRiskFreeRate = riskFreeRate * timeToMaturity;
-        UD60x18 timeScaledVariance = (volAnnualized.powu(2) / TWO) *
-            timeToMaturity;
+        UD60x18 timeScaledVariance = (volAnnualized.powu(2) / TWO) * timeToMaturity;
         UD60x18 timeScaledStd = volAnnualized * timeToMaturity.sqrt();
         SD59x18 lnSpot = (spot / strike).intoSD59x18().ln();
 
         d1 =
-            (lnSpot +
-                timeScaledVariance.intoSD59x18() +
-                timeScaledRiskFreeRate.intoSD59x18()) /
+            (lnSpot + timeScaledVariance.intoSD59x18() + timeScaledRiskFreeRate.intoSD59x18()) /
             timeScaledStd.intoSD59x18();
 
         d2 = d1 - timeScaledStd.intoSD59x18();
@@ -125,13 +129,7 @@ library OptionMath {
         UD60x18 riskFreeRate,
         bool isCall
     ) internal pure returns (SD59x18) {
-        (SD59x18 d1, ) = d1d2(
-            spot,
-            strike,
-            timeToMaturity,
-            volAnnualized,
-            riskFreeRate
-        );
+        (SD59x18 d1, ) = d1d2(spot, strike, timeToMaturity, volAnnualized, riskFreeRate);
 
         if (isCall) {
             return normalCdf(d1);
@@ -170,28 +168,19 @@ library OptionMath {
 
         SD59x18 discountFactor;
         if (riskFreeRate > ZERO) {
-            discountFactor = (riskFreeRate * timeToMaturity)
-                .intoSD59x18()
-                .exp();
+            discountFactor = (riskFreeRate * timeToMaturity).intoSD59x18().exp();
         } else {
             discountFactor = iONE;
         }
 
-        (SD59x18 d1, SD59x18 d2) = d1d2(
-            spot,
-            strike,
-            timeToMaturity,
-            volAnnualized,
-            riskFreeRate
-        );
+        (SD59x18 d1, SD59x18 d2) = d1d2(spot, strike, timeToMaturity, volAnnualized, riskFreeRate);
         SD59x18 sign = isCall ? iONE : -iONE;
         SD59x18 a = (_spot / _strike) * normalCdf(d1 * sign);
         SD59x18 b = normalCdf(d2 * sign) / discountFactor;
         SD59x18 scaledPrice = (a - b) * sign;
 
         if (scaledPrice < SD59x18.wrap(-1e12)) revert OptionMath__Underflow();
-        if (scaledPrice >= SD59x18.wrap(-1e12) && scaledPrice <= iZERO)
-            scaledPrice = iZERO;
+        if (scaledPrice >= SD59x18.wrap(-1e12) && scaledPrice <= iZERO) scaledPrice = iZERO;
 
         return (scaledPrice * _strike).intoUD60x18();
     }
@@ -216,18 +205,14 @@ library OptionMath {
     /// @notice Calculates the time to maturity in seconds
     /// @param maturity The maturity timestamp of the option
     /// @return Time to maturity in seconds
-    function calculateTimeToMaturity(
-        uint256 maturity
-    ) internal view returns (uint256) {
+    function calculateTimeToMaturity(uint256 maturity) internal view returns (uint256) {
         return maturity - block.timestamp;
     }
 
     /// @notice Calculates the strike interval for the given spot price
     /// @param spot The spot price of the base asset (18 decimals)
     /// @return The strike interval (18 decimals)
-    function calculateStrikeInterval(
-        UD60x18 spot
-    ) internal pure returns (UD60x18) {
+    function calculateStrikeInterval(UD60x18 spot) internal pure returns (UD60x18) {
         SD59x18 o = spot.intoSD59x18().log10().floor();
         SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * (-iONE) - iONE));
         UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
@@ -239,10 +224,7 @@ library OptionMath {
     /// @param spot The spot price (18 decimals)
     /// @param strike The strike price (18 decimals)
     /// @return The log moneyness of the strike price (18 decimals)
-    function logMoneyness(
-        UD60x18 spot,
-        UD60x18 strike
-    ) internal pure returns (UD60x18) {
+    function logMoneyness(UD60x18 spot, UD60x18 strike) internal pure returns (UD60x18) {
         return (spot / strike).intoSD59x18().ln().abs().intoUD60x18();
     }
 
@@ -251,11 +233,7 @@ library OptionMath {
     /// @param strike The strike price (18 decimals)
     /// @param maturity The maturity timestamp of the option
     /// @return The initialization fee (18 decimals)
-    function initializationFee(
-        UD60x18 spot,
-        UD60x18 strike,
-        uint256 maturity
-    ) internal view returns (UD60x18) {
+    function initializationFee(UD60x18 spot, UD60x18 strike, uint256 maturity) internal view returns (UD60x18) {
         UD60x18 moneyness = logMoneyness(spot, strike);
         uint256 timeToMaturity = calculateTimeToMaturity(maturity);
         UD60x18 kBase = moneyness < ATM_MONEYNESS
@@ -274,14 +252,9 @@ library OptionMath {
     /// @param inputDecimals The amount of decimals the input value has
     /// @param targetDecimals The amount of decimals to convert to
     /// @return The converted value
-    function scaleDecimals(
-        uint256 value,
-        uint8 inputDecimals,
-        uint8 targetDecimals
-    ) internal pure returns (uint256) {
+    function scaleDecimals(uint256 value, uint8 inputDecimals, uint8 targetDecimals) internal pure returns (uint256) {
         if (targetDecimals == inputDecimals) return value;
-        if (targetDecimals > inputDecimals)
-            return value * (10 ** (targetDecimals - inputDecimals));
+        if (targetDecimals > inputDecimals) return value * (10 ** (targetDecimals - inputDecimals));
 
         return value / (10 ** (inputDecimals - targetDecimals));
     }
@@ -291,14 +264,9 @@ library OptionMath {
     /// @param inputDecimals The amount of decimals the input value has
     /// @param targetDecimals The amount of decimals to convert to
     /// @return The converted value
-    function scaleDecimals(
-        int256 value,
-        uint8 inputDecimals,
-        uint8 targetDecimals
-    ) internal pure returns (int256) {
+    function scaleDecimals(int256 value, uint8 inputDecimals, uint8 targetDecimals) internal pure returns (int256) {
         if (targetDecimals == inputDecimals) return value;
-        if (targetDecimals > inputDecimals)
-            return value * int256(10 ** (targetDecimals - inputDecimals));
+        if (targetDecimals > inputDecimals) return value * int256(10 ** (targetDecimals - inputDecimals));
 
         return value / int256(10 ** (inputDecimals - targetDecimals));
     }

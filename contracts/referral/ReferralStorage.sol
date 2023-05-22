@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
@@ -11,8 +11,7 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 import {IReferral} from "./IReferral.sol";
 
 library ReferralStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.Referral");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.Referral");
 
     struct Layout {
         UD60x18[] primaryRebatePercents;
@@ -30,10 +29,8 @@ library ReferralStorage {
         }
     }
 
-    function toPoolTokenDecimals(
-        address token,
-        UD60x18 value
-    ) internal view returns (uint256) {
+    /// @notice Adjust decimals of `value` with 18 decimals to match the `token` decimals
+    function toTokenDecimals(address token, UD60x18 value) internal view returns (uint256) {
         uint8 decimals = IERC20Metadata(token).decimals();
         return OptionMath.scaleDecimals(value.unwrap(), 18, decimals);
     }

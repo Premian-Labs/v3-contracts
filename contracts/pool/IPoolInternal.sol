@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
@@ -11,17 +11,10 @@ import {Position} from "../libraries/Position.sol";
 
 interface IPoolInternal is IPosition, IPricing {
     error Pool__AboveQuoteSize(UD60x18 size, UD60x18 quoteSize);
-    error Pool__AboveMaxSlippage(
-        uint256 value,
-        uint256 minimum,
-        uint256 maximum
-    );
+    error Pool__AboveMaxSlippage(uint256 value, uint256 minimum, uint256 maximum);
     error Pool__AgentNotAuthorized();
     error Pool__CostExceedsPayout(UD60x18 cost, UD60x18 payout);
-    error Pool__CostNotAuthorized(
-        UD60x18 costInWrappedNative,
-        UD60x18 authorizedCost
-    );
+    error Pool__CostNotAuthorized(UD60x18 costInWrappedNative, UD60x18 authorizedCost);
     error Pool__FlashLoanCallbackFailed();
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
@@ -47,11 +40,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__PositionCantHoldLongAndShort(UD60x18 longs, UD60x18 shorts);
     error Pool__QuoteRFQCancelled();
     error Pool__QuoteRFQExpired();
-    error Pool__QuoteRFQOverfilled(
-        UD60x18 filledAmount,
-        UD60x18 size,
-        UD60x18 quoteRFQSize
-    );
+    error Pool__QuoteRFQOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteRFQSize);
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
@@ -118,9 +107,11 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether the taker is buying or selling
         bool isBuy;
-        // Tx will revert if total premium is above this value when buying, or below this value when selling. (poolToken decimals)
+        // Tx will revert if total premium is above this value when buying, or below this value when selling.
+        // (poolToken decimals)
         uint256 premiumLimit;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
+        // collateral is used for a swap
         bool transferCollateralToUser;
     }
 
@@ -134,9 +125,11 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct DepositArgsInternal {
-        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
+        // The normalized price of nearest existing tick below lower. The search is done off-chain, passed as arg and
+        // validated on-chain to save gas (18 decimals)
         UD60x18 belowLower;
-        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and validated on-chain to save gas (18 decimals)
+        // The normalized price of nearest existing tick below upper. The search is done off-chain, passed as arg and
+        // validated on-chain to save gas (18 decimals)
         UD60x18 belowUpper;
         // The position size to deposit (18 decimals)
         UD60x18 size;
@@ -169,7 +162,8 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;
-        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that collateral is used for a swap
+        // Whether to transfer collateral to user or not if collateral value is positive. Should be false if that
+        // collateral is used for a swap
         bool transferCollateralToUser;
     }
 

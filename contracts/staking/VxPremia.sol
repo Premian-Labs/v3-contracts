@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {PremiaStaking} from "./PremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -30,19 +30,11 @@ contract VxPremia is IVxPremia, PremiaStaking {
             PremiaStakingStorage.layout().userInfo[user].stakePeriod
         );
 
-        _subtractExtraUserVotes(
-            VxPremiaStorage.layout(),
-            user,
-            votingPowerUnstaked
-        );
+        _subtractExtraUserVotes(VxPremiaStorage.layout(), user, votingPowerUnstaked);
     }
 
     /// @notice subtract user votes, starting from the end of the list, if not enough voting power is left after amountUnstaked is unstaked
-    function _subtractExtraUserVotes(
-        VxPremiaStorage.Layout storage l,
-        address user,
-        uint256 amountUnstaked
-    ) internal {
+    function _subtractExtraUserVotes(VxPremiaStorage.Layout storage l, address user, uint256 amountUnstaked) internal {
         uint256 votingPower = _calculateUserPower(
             _balanceOf(user),
             PremiaStakingStorage.layout().userInfo[user].stakePeriod
@@ -52,21 +44,13 @@ contract VxPremia is IVxPremia, PremiaStaking {
 
         unchecked {
             if (votingPowerUsed > votingPowerLeftAfterUnstake) {
-                _subtractUserVotes(
-                    l,
-                    user,
-                    votingPowerUsed - votingPowerLeftAfterUnstake
-                );
+                _subtractUserVotes(l, user, votingPowerUsed - votingPowerLeftAfterUnstake);
             }
         }
     }
 
     /// @notice subtract user votes, starting from the end of the list
-    function _subtractUserVotes(
-        VxPremiaStorage.Layout storage l,
-        address user,
-        uint256 amount
-    ) internal {
+    function _subtractUserVotes(VxPremiaStorage.Layout storage l, address user, uint256 amount) internal {
         VxPremiaStorage.Vote[] storage userVotes = l.userVotes[user];
 
         unchecked {
@@ -93,12 +77,8 @@ contract VxPremia is IVxPremia, PremiaStaking {
         }
     }
 
-    function _calculateUserVotingPowerUsed(
-        address user
-    ) internal view returns (uint256 votingPowerUsed) {
-        VxPremiaStorage.Vote[] memory userVotes = VxPremiaStorage
-            .layout()
-            .userVotes[user];
+    function _calculateUserVotingPowerUsed(address user) internal view returns (uint256 votingPowerUsed) {
+        VxPremiaStorage.Vote[] memory userVotes = VxPremiaStorage.layout().userVotes[user];
 
         unchecked {
             for (uint256 i = 0; i < userVotes.length; i++) {
@@ -108,17 +88,12 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function getPoolVotes(
-        VxPremiaStorage.VoteVersion version,
-        bytes calldata target
-    ) external view returns (uint256) {
+    function getPoolVotes(VxPremiaStorage.VoteVersion version, bytes calldata target) external view returns (uint256) {
         return VxPremiaStorage.layout().votes[version][target];
     }
 
     /// @inheritdoc IVxPremia
-    function getUserVotes(
-        address user
-    ) external view returns (VxPremiaStorage.Vote[] memory) {
+    function getUserVotes(address user) external view returns (VxPremiaStorage.Vote[] memory) {
         return VxPremiaStorage.layout().userVotes[user];
     }
 
@@ -145,14 +120,11 @@ contract VxPremia is IVxPremia, PremiaStaking {
             VxPremiaStorage.Vote memory vote = votes[i];
 
             votingPowerUsed += vote.amount;
-            if (votingPowerUsed > userVotingPower)
-                revert VxPremia__NotEnoughVotingPower();
+            if (votingPowerUsed > userVotingPower) revert VxPremia__NotEnoughVotingPower();
 
             // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
-            if (
-                vote.version != VxPremiaStorage.VoteVersion.V2 ||
-                vote.target.length != 21
-            ) revert VxPremia__InvalidVoteTarget();
+            if (vote.version != VxPremiaStorage.VoteVersion.V2 || vote.target.length != 21)
+                revert VxPremia__InvalidVoteTarget();
 
             // Check that the pool address is valid
             address contractAddress = address(

@@ -2,8 +2,7 @@
 pragma solidity >=0.7.6;
 
 library ExcessivelySafeCall {
-    uint256 constant LOW_28_MASK =
-        0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 constant LOW_28_MASK = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     /// @notice Use when you _really_ really _really_ don't trust the called
     /// contract. This prevents the called contract from causing reversion of
@@ -115,10 +114,7 @@ library ExcessivelySafeCall {
     /// only be used with caution.
     /// @param _newSelector The new 4-byte selector
     /// @param _buf The encoded contract args
-    function swapSelector(
-        bytes4 _newSelector,
-        bytes memory _buf
-    ) internal pure {
+    function swapSelector(bytes4 _newSelector, bytes memory _buf) internal pure {
         require(_buf.length >= 4);
         uint256 _mask = LOW_28_MASK;
         assembly {

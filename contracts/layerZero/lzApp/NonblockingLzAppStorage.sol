@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 library NonblockingLzAppStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.NonblockingLzApp");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.NonblockingLzApp");
 
     struct Layout {
         mapping(uint16 => mapping(bytes => mapping(uint64 => bytes32))) failedMessages;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -22,22 +22,11 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
-    )
-        PoolInternal(
-            factory,
-            router,
-            wrappedNativeToken,
-            feeReceiver,
-            referral,
-            settings,
-            vxPremia
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver, referral, settings, vaultRegistry, vxPremia) {}
 
-    function _getPricing(
-        bool isBuy
-    ) external view returns (Pricing.Args memory) {
+    function _getPricing(bool isBuy) external view returns (Pricing.Args memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _getPricing(l, isBuy);
     }
@@ -51,9 +40,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
     }
 
-    function quoteRFQHash(
-        QuoteRFQ memory quoteRFQ
-    ) external view returns (bytes32) {
+    function quoteRFQHash(QuoteRFQ memory quoteRFQ) external view returns (bytes32) {
         return _quoteRFQHash(quoteRFQ);
     }
 
@@ -62,13 +49,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     )
         external
         pure
-        returns (
-            uint8 version,
-            address operator,
-            UD60x18 lower,
-            UD60x18 upper,
-            Position.OrderType orderType
-        )
+        returns (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType)
     {
         return PoolStorage.parseTokenId(tokenId);
     }
@@ -82,11 +63,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         _cross(isBuy);
     }
 
-    function exposed_getStrandedArea()
-        external
-        view
-        returns (UD60x18 lower, UD60x18 upper)
-    {
+    function exposed_getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _getStrandedArea(l);
     }
@@ -98,10 +75,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _getStrandedMarketPriceUpdate(p, isBid);
     }
 
-    function exposed_isMarketPriceStranded(
-        Position.KeyInternal memory p,
-        bool isBid
-    ) external view returns (bool) {
+    function exposed_isMarketPriceStranded(Position.KeyInternal memory p, bool isBid) external view returns (bool) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return _isMarketPriceStranded(l, p, isBid);
     }

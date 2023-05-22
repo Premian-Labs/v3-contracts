@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -9,8 +9,7 @@ import {IPoolFactory} from "./IPoolFactory.sol";
 library PoolFactoryStorage {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
 
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.PoolFactory");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.PoolFactory");
 
     struct Layout {
         mapping(bytes32 key => address pool) pools;
@@ -30,49 +29,18 @@ library PoolFactoryStorage {
         }
     }
 
-    function poolKey(
-        IPoolFactory.PoolKey memory k
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    k.base,
-                    k.quote,
-                    k.oracleAdapter,
-                    k.strike,
-                    k.maturity,
-                    k.isCallPool
-                )
-            );
+    /// @notice Returns the encoded pool key using the pool key `k`
+    function poolKey(IPoolFactory.PoolKey memory k) internal pure returns (bytes32) {
+        return keccak256(abi.encode(k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool));
     }
 
-    function strikeKey(
-        IPoolFactory.PoolKey memory k
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    k.base,
-                    k.quote,
-                    k.oracleAdapter,
-                    k.strike,
-                    k.isCallPool
-                )
-            );
+    /// @notice Returns the encoded strike key using the pool key `k`
+    function strikeKey(IPoolFactory.PoolKey memory k) internal pure returns (bytes32) {
+        return keccak256(abi.encode(k.base, k.quote, k.oracleAdapter, k.strike, k.isCallPool));
     }
 
-    function maturityKey(
-        IPoolFactory.PoolKey memory k
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    k.base,
-                    k.quote,
-                    k.oracleAdapter,
-                    k.maturity,
-                    k.isCallPool
-                )
-            );
+    /// @notice Returns the encoded maturity key using the pool key `k`
+    function maturityKey(IPoolFactory.PoolKey memory k) internal pure returns (bytes32) {
+        return keccak256(abi.encode(k.base, k.quote, k.oracleAdapter, k.maturity, k.isCallPool));
     }
 }

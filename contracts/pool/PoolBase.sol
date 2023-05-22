@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 import {ERC1155Base} from "@solidstate/contracts/token/ERC1155/base/ERC1155Base.sol";
@@ -16,25 +16,12 @@ import {Position} from "../libraries/Position.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
 
-contract PoolBase is
-    IPoolBase,
-    ERC1155Base,
-    ERC1155Enumerable,
-    ERC165Base,
-    Multicall
-{
+contract PoolBase is IPoolBase, ERC1155Base, ERC1155Enumerable, ERC165Base, Multicall {
     /// @inheritdoc IPoolBase
     function name() external view returns (string memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        return
-            PoolName.name(
-                l.base,
-                l.quote,
-                l.maturity,
-                l.strike.unwrap(),
-                l.isCallPool
-            );
+        return PoolName.name(l.base, l.quote, l.maturity, l.strike.unwrap(), l.isCallPool);
     }
 
     function _beforeTokenTransfer(
@@ -44,16 +31,11 @@ contract PoolBase is
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    )
-        internal
-        virtual
-        override(ERC1155BaseInternal, ERC1155EnumerableInternal)
-    {
+    ) internal virtual override(ERC1155BaseInternal, ERC1155EnumerableInternal) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         for (uint256 i; i < ids.length; i++) {
-            if (ids[i] > PoolStorage.LONG)
-                revert Pool__UseTransferPositionToTransferLPTokens();
+            if (ids[i] > PoolStorage.LONG) revert Pool__UseTransferPositionToTransferLPTokens();
         }
     }
 }

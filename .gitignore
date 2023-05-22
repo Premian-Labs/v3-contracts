@@ -8,6 +8,7 @@ todoList.txt
 .envrc
 .DS_Store
 yarn-error.log
+lcov.info
 
 coverage/
 coverage.json

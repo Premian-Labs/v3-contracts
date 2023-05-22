@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -37,8 +37,7 @@ contract ExchangeHelper is IExchangeHelper {
 
         // refund unused sourceToken
         sourceLeft = IERC20(sourceToken).balanceOf(address(this));
-        if (sourceLeft > 0)
-            IERC20(sourceToken).safeTransfer(refundAddress, sourceLeft);
+        if (sourceLeft > 0) IERC20(sourceToken).safeTransfer(refundAddress, sourceLeft);
 
         // send the final amount back to the pool
         amountOut = IERC20(targetToken).balanceOf(address(this));

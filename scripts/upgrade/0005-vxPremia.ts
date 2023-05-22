@@ -59,7 +59,7 @@ async function main() {
     addresses.tokens.USDC,
     addresses.ExchangeHelper,
   );
-
+  await vxPremiaImpl.deployed();
   console.log(`VxPremia implementation : ${vxPremiaImpl.address}`);
 
   // Save new addresses

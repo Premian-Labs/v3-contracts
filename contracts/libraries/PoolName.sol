@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
@@ -12,6 +13,7 @@ import {WAD} from "./Constants.sol";
 library PoolName {
     using UintUtils for uint256;
 
+    /// @notice Returns pool parameters as human-readable text
     function name(
         address base,
         address quote,
@@ -35,9 +37,8 @@ library PoolName {
             );
     }
 
-    function strikeToString(
-        uint256 strike
-    ) internal pure returns (string memory) {
+    /// @notice Converts the `strike` into a string
+    function strikeToString(uint256 strike) internal pure returns (string memory) {
         bytes memory strikeBytes;
         if (strike >= WAD) {
             strikeBytes = abi.encodePacked((strike / WAD).toString());
@@ -45,18 +46,9 @@ library PoolName {
             strike = ((strike * 100) / WAD) % 100;
             if (strike > 0) {
                 if (strike % 10 == 0) {
-                    strikeBytes = abi.encodePacked(
-                        strikeBytes,
-                        ".",
-                        (strike / 10).toString()
-                    );
+                    strikeBytes = abi.encodePacked(strikeBytes, ".", (strike / 10).toString());
                 } else {
-                    strikeBytes = abi.encodePacked(
-                        strikeBytes,
-                        ".",
-                        strike < 10 ? "0" : "",
-                        strike.toString()
-                    );
+                    strikeBytes = abi.encodePacked(strikeBytes, ".", strike < 10 ? "0" : "", strike.toString());
                 }
             }
         } else {
@@ -68,44 +60,26 @@ library PoolName {
                 strike *= 10;
             }
 
-            strikeBytes = abi.encodePacked(
-                strikeBytes,
-                (strike / WAD).toString()
-            );
+            strikeBytes = abi.encodePacked(strikeBytes, (strike / WAD).toString());
 
             uint256 lastDecimal = (strike * 10) / WAD - (strike / WAD) * 10;
             if (lastDecimal != 0) {
-                strikeBytes = abi.encodePacked(
-                    strikeBytes,
-                    lastDecimal.toString()
-                );
+                strikeBytes = abi.encodePacked(strikeBytes, lastDecimal.toString());
             }
         }
 
         return string(strikeBytes);
     }
 
-    function maturityToString(
-        uint256 maturity
-    ) internal pure returns (string memory) {
-        (uint256 year, uint256 month, uint256 day) = DateTime.timestampToDate(
-            maturity
-        );
+    /// @notice Converts the `maturity` into a string
+    function maturityToString(uint256 maturity) internal pure returns (string memory) {
+        (uint256 year, uint256 month, uint256 day) = DateTime.timestampToDate(maturity);
 
-        return
-            string(
-                abi.encodePacked(
-                    day < 10 ? "0" : "",
-                    day.toString(),
-                    monthToString(month),
-                    year.toString()
-                )
-            );
+        return string(abi.encodePacked(day < 10 ? "0" : "", day.toString(), monthToString(month), year.toString()));
     }
 
-    function monthToString(
-        uint256 month
-    ) internal pure returns (string memory) {
+    /// @notice Converts the `month` into a string
+    function monthToString(uint256 month) internal pure returns (string memory) {
         if (month == 1) return "JAN";
         if (month == 2) return "FEB";
         if (month == 3) return "MAR";

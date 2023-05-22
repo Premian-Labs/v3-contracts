@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -77,6 +77,21 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         UD60x18 spread;
         // fee for minting the option through the pool
         UD60x18 mintingFee;
+    }
+
+    struct QuoteArgsInternal {
+        // the strike price of the option
+        UD60x18 strike;
+        // the maturity of the option
+        uint256 maturity;
+        // whether the option is a call or a put
+        bool isCall;
+        // the amount of contracts
+        UD60x18 size;
+        // whether the trade is a buy or a sell
+        bool isBuy;
+        // the address of the taker
+        address taker;
     }
 
     struct FeeInternal {

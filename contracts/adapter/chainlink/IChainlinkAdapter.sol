@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 
 interface IChainlinkAdapter is IOracleAdapter {
+    // Note : The following enums do not follow regular style guidelines for the purpose of easier readability
+
     /// @notice The path that will be used to calculate quotes for a given pair
     enum PricingPath {
         // There is no path calculated
@@ -27,6 +29,7 @@ interface IChainlinkAdapter is IOracleAdapter {
         TOKEN_USD_BTC_WBTC
     }
 
+    /// @notice The conversion type used when determining the token pair pricing path
     enum ConversionType {
         TO_BTC, // Token -> BTC
         TO_USD, // Token -> USD
@@ -42,11 +45,7 @@ interface IChainlinkAdapter is IOracleAdapter {
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
     /// @notice Thrown when the price after the target time is stale
-    error ChainlinkAdapter__PriceAfterTargetIsStale(
-        uint256 target,
-        uint256 updatedAt,
-        uint256 blockTimestamp
-    );
+    error ChainlinkAdapter__PriceAfterTargetIsStale(uint256 target, uint256 updatedAt, uint256 blockTimestamp);
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA One of the pair's tokens
@@ -59,8 +58,5 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The pricing path that will be used
-    function pricingPath(
-        address tokenA,
-        address tokenB
-    ) external view returns (PricingPath);
+    function pricingPath(address tokenA, address tokenB) external view returns (PricingPath);
 }

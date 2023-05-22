@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+
+pragma solidity >=0.8.20;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -20,12 +21,9 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolStorage for PoolStorage.Layout;
 
-    // ToDo : Define final value
-    // ToDo : Make this part of global pool settings ?
     UD60x18 internal constant FLASH_LOAN_FEE = UD60x18.wrap(0.0009e18); // 0.09%
 
-    bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS =
-        keccak256("ERC3156FlashBorrower.onFlashLoan");
+    bytes32 internal constant FLASH_LOAN_CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(
         address factory,
@@ -34,18 +32,9 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         address feeReceiver,
         address referral,
         address settings,
+        address vaultRegistry,
         address vxPremia
-    )
-        PoolInternal(
-            factory,
-            router,
-            wrappedNativeToken,
-            feeReceiver,
-            referral,
-            settings,
-            vxPremia
-        )
-    {}
+    ) PoolInternal(factory, router, wrappedNativeToken, feeReceiver, referral, settings, vaultRegistry, vxPremia) {}
 
     /// @inheritdoc IPoolTrade
     function getQuoteAMM(
@@ -62,22 +51,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         Signature calldata signature,
         address referrer
-    )
-        external
-        nonReentrant
-        returns (uint256 premiumTaker, Position.Delta memory delta)
-    {
-        return
-            _fillQuoteRFQ(
-                FillQuoteRFQArgsInternal(
-                    msg.sender,
-                    referrer,
-                    size,
-                    signature,
-                    true
-                ),
-                quoteRFQ
-            );
+    ) external nonReentrant returns (uint256 premiumTaker, Position.Delta memory delta) {
+        return _fillQuoteRFQ(FillQuoteRFQArgsInternal(msg.sender, referrer, size, signature, true), quoteRFQ);
     }
 
     /// @inheritdoc IPoolTrade
@@ -86,31 +61,15 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         bool isBuy,
         uint256 premiumLimit,
         address referrer
-    )
-        external
-        nonReentrant
-        returns (uint256 totalPremium, Position.Delta memory delta)
-    {
-        return
-            _trade(
-                TradeArgsInternal(
-                    msg.sender,
-                    referrer,
-                    size,
-                    isBuy,
-                    premiumLimit,
-                    true
-                )
-            );
+    ) external nonReentrant returns (uint256 totalPremium, Position.Delta memory delta) {
+        return _trade(TradeArgsInternal(msg.sender, referrer, size, isBuy, premiumLimit, true));
     }
 
     /// @inheritdoc IPoolTrade
     function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
-            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = ud(
-                type(uint256).max
-            );
+            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = ud(type(uint256).max);
             emit CancelQuoteRFQ(msg.sender, hashes[i]);
         }
     }
@@ -126,25 +85,15 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return
             _areQuoteRFQAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(
-                    msg.sender,
-                    address(0),
-                    size,
-                    sig,
-                    true
-                ),
+                FillQuoteRFQArgsInternal(msg.sender, address(0), size, sig, true),
                 quoteRFQ,
                 quoteRFQHash
             );
     }
 
     /// @inheritdoc IPoolTrade
-    function getQuoteRFQFilledAmount(
-        address provider,
-        bytes32 quoteRFQHash
-    ) external view returns (UD60x18) {
-        return
-            PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
+    function getQuoteRFQFilledAmount(address provider, bytes32 quoteRFQHash) external view returns (UD60x18) {
+        return PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
     }
 
     /// @inheritdoc IERC3156FlashLender
@@ -154,17 +103,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IERC3156FlashLender
-    function flashFee(
-        address token,
-        uint256 amount
-    ) external view returns (uint256) {
+    function flashFee(address token, uint256 amount) external view returns (uint256) {
         _revertIfNotPoolToken(token);
         return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
     }
 
     function _flashFee(uint256 amount) internal view returns (UD60x18) {
-        return
-            PoolStorage.layout().fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
+        return PoolStorage.layout().fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
     }
 
     /// @inheritdoc IERC3156FlashLender
@@ -184,13 +129,8 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         uint256 _fee = l.toPoolTokenDecimals(fee);
 
         if (
-            IERC3156FlashBorrower(receiver).onFlashLoan(
-                msg.sender,
-                token,
-                amount,
-                _fee,
-                data
-            ) != FLASH_LOAN_CALLBACK_SUCCESS
+            IERC3156FlashBorrower(receiver).onFlashLoan(msg.sender, token, amount, _fee, data) !=
+            FLASH_LOAN_CALLBACK_SUCCESS
         ) revert Pool__FlashLoanCallbackFailed();
 
         uint256 endBalance = IERC20(token).balanceOf(address(this));
@@ -198,18 +138,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
 
         if (endBalance < endBalanceRequired) revert Pool__FlashLoanNotRepayed();
 
-        emit FlashLoan(
-            msg.sender,
-            address(receiver),
-            l.fromPoolTokenDecimals(amount),
-            fee
-        );
+        emit FlashLoan(msg.sender, address(receiver), l.fromPoolTokenDecimals(amount), fee);
 
         return true;
     }
 
+    /// @notice Revert if `token` is not the pool token
     function _revertIfNotPoolToken(address token) internal view {
-        if (token != PoolStorage.layout().getPoolToken())
-            revert Pool__NotPoolToken(token);
+        if (token != PoolStorage.layout().getPoolToken()) revert Pool__NotPoolToken(token);
     }
 }

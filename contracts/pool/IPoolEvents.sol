@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -47,12 +47,7 @@ interface IPoolEvents {
         UD60x18 currentTick
     );
 
-    event ClaimFees(
-        address indexed owner,
-        uint256 indexed tokenId,
-        UD60x18 feesClaimed,
-        UD60x18 lastFeeRate
-    );
+    event ClaimFees(address indexed owner, uint256 indexed tokenId, UD60x18 feesClaimed, UD60x18 lastFeeRate);
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
@@ -72,6 +67,7 @@ interface IPoolEvents {
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
+        address indexed taker,
         UD60x18 contractSize,
         UD60x18 collateral,
         UD60x18 protocolFee
@@ -126,19 +122,9 @@ interface IPoolEvents {
         UD60x18 agentCost
     );
 
-    event TransferPosition(
-        address indexed owner,
-        address indexed receiver,
-        uint256 srcTokenId,
-        uint256 destTokenId
-    );
+    event TransferPosition(address indexed owner, address indexed receiver, uint256 srcTokenId, uint256 destTokenId);
 
     event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
 
-    event FlashLoan(
-        address indexed initiator,
-        address indexed receiver,
-        UD60x18 amount,
-        UD60x18 fee
-    );
+    event FlashLoan(address indexed initiator, address indexed receiver, UD60x18 amount, UD60x18 fee);
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
@@ -43,12 +43,7 @@ interface IOFTCore is IERC165 {
     function circulatingSupply() external view returns (uint256);
 
     /// @dev Emitted when `amount` tokens are moved from the `sender` to (`dstChainId`, `toAddress`)
-    event SendToChain(
-        address indexed sender,
-        uint16 indexed dstChainId,
-        bytes indexed toAddress,
-        uint256 amount
-    );
+    event SendToChain(address indexed sender, uint16 indexed dstChainId, bytes indexed toAddress, uint256 amount);
 
     /// @dev Emitted when `amount` tokens are received from `srcChainId` into the `toAddress` on the local chain.
     event ReceiveFromChain(

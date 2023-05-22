@@ -31,7 +31,7 @@ async function main() {
     quote: addresses.tokens.USDC,
     oracleAdapter: addresses.ChainlinkAdapterProxy,
     strike: parseEther('2000'),
-    maturity: BigNumber.from(await getValidMaturity(1, 'months', false)),
+    maturity: BigNumber.from(await getValidMaturity(1, 'months')),
     isCallPool: true,
   };
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
@@ -39,9 +39,9 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
         _setImplementation(implementation);
     }
 
+    /// @notice set address of implementation contract
     function _setImplementation(address implementation) internal {
-        if (!implementation.isContract())
-            revert InvalidImplementation(implementation);
+        if (!implementation.isContract()) revert InvalidImplementation(implementation);
 
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
         emit ImplementationSet(implementation);

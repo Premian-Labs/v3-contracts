@@ -8,6 +8,8 @@
     "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
   },
 
+  "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+
   "ChainlinkAdapterImplementation": "",
   "ChainlinkAdapterProxy": "",
   "UniswapV3AdapterImplementation": "",
@@ -30,5 +32,9 @@
   "PoolBase": "",
   "PoolCore": "",
   "PoolTrade": "",
-  "OrderbookStream": ""
+  "OrderbookStream": "",
+  "VaultRegistryImplementation": "",
+  "VaultRegistryProxy": "",
+  "VolatilityOracleImplementation": "",
+  "VolatilityOracleProxy": ""
 }

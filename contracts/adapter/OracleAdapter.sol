@@ -1,35 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
-/// @title Base oracle adapter implementation, which suppoprts access control multi-call and ERC165
+/// @title Base oracle adapter implementation
 abstract contract OracleAdapter is IOracleAdapter {
     using SafeCast for int8;
 
-    function _keyForUnsortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        (address sortedA, address sortedTokenB) = _sortTokens(tokenA, tokenB);
-        return _keyForSortedPair(sortedA, sortedTokenB);
-    }
-
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
-    function _keyForSortedPair(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(tokenA, tokenB));
-    }
-
-    function _scale(
-        uint256 amount,
-        int8 factor
-    ) internal pure returns (uint256) {
+    /// @notice Scales `amount` by `factor`
+    function _scale(uint256 amount, int8 factor) internal pure returns (uint256) {
         if (factor == 0) return amount;
 
         if (factor < 0) {
@@ -39,40 +21,12 @@ abstract contract OracleAdapter is IOracleAdapter {
         }
     }
 
-    function _sortTokens(
-        address tokenA,
-        address tokenB
-    ) internal pure returns (address _tokenA, address _tokenB) {
-        (_tokenA, _tokenB) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
-    }
-
-    function _resizeArray(address[] memory array, uint256 size) internal pure {
-        if (array.length == size) return;
-        if (array.length < size)
-            revert OracleAdapter__ArrayCannotExpand(array.length, size);
-
-        assembly {
-            mstore(array, size)
-        }
-    }
-
-    function _resizeArray(uint8[] memory array, uint256 size) internal pure {
-        if (array.length == size) return;
-        if (array.length < size)
-            revert OracleAdapter__ArrayCannotExpand(array.length, size);
-
-        assembly {
-            mstore(array, size)
-        }
-    }
-
+    /// @notice Revert if `target` is zero or after block.timestamp
     function _revertIfTargetInvalid(uint256 target) internal view {
-        if (target == 0 || target > block.timestamp)
-            revert OracleAdapter__InvalidTarget(target, block.timestamp);
+        if (target == 0 || target > block.timestamp) revert OracleAdapter__InvalidTarget(target, block.timestamp);
     }
 
+    /// @notice Revert if `price` is zero or negative
     function _revertIfPriceInvalid(int256 price) internal pure {
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
     }

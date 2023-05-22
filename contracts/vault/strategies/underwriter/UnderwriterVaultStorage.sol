@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -15,8 +15,7 @@ library UnderwriterVaultStorage {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
 
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.UnderwriterVaultStorage");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.UnderwriterVaultStorage");
 
     struct Layout {
         // ====================================================================
@@ -124,28 +123,15 @@ library UnderwriterVaultStorage {
         return l.isCall ? l.baseDecimals : l.quoteDecimals;
     }
 
-    function collateral(
-        Layout storage l,
-        UD60x18 size,
-        UD60x18 strike
-    ) internal view returns (UD60x18) {
+    function collateral(Layout storage l, UD60x18 size, UD60x18 strike) internal view returns (UD60x18) {
         return l.isCall ? size : size * strike;
     }
 
-    function convertAssetToUD60x18(
-        Layout storage l,
-        uint256 value
-    ) internal view returns (UD60x18) {
-        return
-            UD60x18.wrap(
-                OptionMath.scaleDecimals(value, l.assetDecimals(), 18)
-            );
+    function convertAssetToUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
+        return UD60x18.wrap(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
     }
 
-    function convertAssetFromUD60x18(
-        Layout storage l,
-        UD60x18 value
-    ) internal view returns (uint256) {
+    function convertAssetFromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
         return OptionMath.scaleDecimals(value.unwrap(), 18, l.assetDecimals());
     }
 
@@ -153,10 +139,7 @@ library UnderwriterVaultStorage {
     ///         of the timestamp being on a maturity
     /// @param timestamp The given timestamp
     /// @return The nearest maturity after the given timestamp
-    function getMaturityAfterTimestamp(
-        Layout storage l,
-        uint256 timestamp
-    ) internal view returns (uint256) {
+    function getMaturityAfterTimestamp(Layout storage l, uint256 timestamp) internal view returns (uint256) {
         uint256 current = l.minMaturity;
 
         while (current <= timestamp && current != 0) {
@@ -169,10 +152,7 @@ library UnderwriterVaultStorage {
     ///         options underwritten by this vault at the current time
     /// @param timestamp The given timestamp
     /// @return The number of unexpired listings
-    function getNumberOfUnexpiredListings(
-        Layout storage l,
-        uint256 timestamp
-    ) internal view returns (uint256) {
+    function getNumberOfUnexpiredListings(Layout storage l, uint256 timestamp) internal view returns (uint256) {
         uint256 n = 0;
 
         if (l.maxMaturity <= timestamp) return 0;
@@ -191,11 +171,7 @@ library UnderwriterVaultStorage {
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
     /// @return If listing exists, return true, otherwise false
-    function contains(
-        Layout storage l,
-        UD60x18 strike,
-        uint256 maturity
-    ) internal view returns (bool) {
+    function contains(Layout storage l, UD60x18 strike, uint256 maturity) internal view returns (bool) {
         if (!l.maturities.contains(maturity)) return false;
 
         return l.maturityToStrikes[maturity].contains(strike);
@@ -204,19 +180,13 @@ library UnderwriterVaultStorage {
     /// @notice Adds a listing to the internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    function addListing(
-        Layout storage l,
-        UD60x18 strike,
-        uint256 maturity
-    ) internal {
+    function addListing(Layout storage l, UD60x18 strike, uint256 maturity) internal {
         // Insert maturity if it doesn't exist
         if (!l.maturities.contains(maturity)) {
             if (maturity < l.minMaturity) {
                 l.maturities.insertBefore(l.minMaturity, maturity);
                 l.minMaturity = maturity;
-            } else if (
-                (l.minMaturity < maturity) && (maturity) < l.maxMaturity
-            ) {
+            } else if ((l.minMaturity < maturity) && (maturity) < l.maxMaturity) {
                 uint256 next = l.getMaturityAfterTimestamp(maturity);
                 l.maturities.insertBefore(next, maturity);
             } else {
@@ -229,27 +199,20 @@ library UnderwriterVaultStorage {
         }
 
         // Insert strike into the set of strikes for given maturity
-        if (!l.maturityToStrikes[maturity].contains(strike))
-            l.maturityToStrikes[maturity].add(strike);
+        if (!l.maturityToStrikes[maturity].contains(strike)) l.maturityToStrikes[maturity].add(strike);
     }
 
     /// @notice Removes a listing from internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    function removeListing(
-        Layout storage l,
-        UD60x18 strike,
-        uint256 maturity
-    ) internal {
+    function removeListing(Layout storage l, UD60x18 strike, uint256 maturity) internal {
         if (l.contains(strike, maturity)) {
             l.maturityToStrikes[maturity].remove(strike);
 
             // Remove maturity if there are no strikes left
             if (l.maturityToStrikes[maturity].length() == 0) {
-                if (maturity == l.minMaturity)
-                    l.minMaturity = l.maturities.next(maturity);
-                if (maturity == l.maxMaturity)
-                    l.maxMaturity = l.maturities.prev(maturity);
+                if (maturity == l.minMaturity) l.minMaturity = l.maturities.next(maturity);
+                if (maturity == l.maxMaturity) l.maxMaturity = l.maturities.prev(maturity);
 
                 l.maturities.remove(maturity);
             }

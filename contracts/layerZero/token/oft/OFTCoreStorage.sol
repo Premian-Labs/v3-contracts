@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 library OFTCoreStorage {
-    bytes32 internal constant STORAGE_SLOT =
-        keccak256("premia.contracts.storage.OFTCore");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.OFTCore");
 
     struct Layout {
         bool useCustomAdapterParams;

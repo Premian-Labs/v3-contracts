@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
@@ -31,20 +31,16 @@ contract UnderwriterVaultProxy is Proxy {
     ) {
         VAULT_REGISTRY = vaultRegistry;
 
-        ERC20MetadataStorage.Layout storage metadata = ERC20MetadataStorage
-            .layout();
+        ERC20MetadataStorage.Layout storage metadata = ERC20MetadataStorage.layout();
         metadata.name = name;
         metadata.symbol = symbol;
         metadata.decimals = 18;
 
         ERC4626BaseStorage.layout().asset = isCall ? base : quote;
 
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage
-            .layout();
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        bytes memory settings = IVaultRegistry(VAULT_REGISTRY).getSettings(
-            VAULT_TYPE
-        );
+        bytes memory settings = IVaultRegistry(VAULT_REGISTRY).getSettings(VAULT_TYPE);
         l.updateSettings(settings);
 
         l.isCall = isCall;

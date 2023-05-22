@@ -19,8 +19,11 @@ import {
   VxPremia__factory,
   VxPremiaProxy__factory,
   ExchangeHelper__factory,
+  IReferral,
+  IReferral__factory,
   Referral__factory,
   ReferralProxy__factory,
+  VaultRegistry__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -32,6 +35,7 @@ interface PoolUtilArgs {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
   router: ERC20Router;
+  referral: IReferral;
 }
 
 interface DeployedFacets {
@@ -44,11 +48,13 @@ export class PoolUtil {
   premiaDiamond: Premia;
   poolFactory: PoolFactory;
   router: ERC20Router;
+  referral: IReferral;
 
   constructor(args: PoolUtilArgs) {
     this.premiaDiamond = args.premiaDiamond;
     this.poolFactory = args.poolFactory;
     this.router = args.router;
+    this.referral = args.referral;
   }
 
   static async deployPoolImplementations(
@@ -60,6 +66,7 @@ export class PoolUtil {
     wrappedNativeToken: string,
     feeReceiver: string,
     referralAddress: string,
+    vaultRegistry: string,
     log = true,
     isDevMode = false,
   ) {
@@ -88,6 +95,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolCoreImpl.deployed();
@@ -112,6 +120,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolDepositWithdrawImpl.deployed();
@@ -136,6 +145,7 @@ export class PoolUtil {
       feeReceiver,
       referralAddress,
       userSettings,
+      vaultRegistry,
       vxPremia,
     );
     await poolTradeImpl.deployed();
@@ -161,6 +171,7 @@ export class PoolUtil {
         feeReceiver,
         referralAddress,
         userSettings,
+        vaultRegistry,
         vxPremia,
       );
       await poolCoreMockImpl.deployed();
@@ -186,6 +197,7 @@ export class PoolUtil {
     log = true,
     isDevMode = false,
     vxPremiaAddress?: string,
+    vaultRegistry?: string,
   ) {
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
@@ -271,6 +283,7 @@ export class PoolUtil {
     await userSettingsProxy.deployed();
 
     if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
+
     // VxPremia
     if (!vxPremiaAddress) {
       const premia = await new ERC20Mock__factory(deployer).deploy(
@@ -303,6 +316,28 @@ export class PoolUtil {
       vxPremiaAddress = vxPremiaProxy.address;
     }
 
+    // Vault Registry
+    if (!vaultRegistry) {
+      const vaultRegistryImpl = await new VaultRegistry__factory(
+        deployer,
+      ).deploy();
+
+      await vaultRegistryImpl.deployed();
+
+      if (log) console.log(`VaultRegistry : ${vaultRegistryImpl.address}`);
+
+      const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
+        deployer,
+      ).deploy(vaultRegistryImpl.address);
+
+      await vaultRegistryProxy.deployed();
+
+      if (log)
+        console.log(`VaultRegistryProxy : ${vaultRegistryProxy.address}`);
+
+      vaultRegistry = vaultRegistryProxy.address;
+    }
+
     const referralImpl = await new Referral__factory(deployer).deploy(
       poolFactory.address,
     );
@@ -316,6 +351,11 @@ export class PoolUtil {
     await referralProxy.deployed();
     if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
 
+    const referral = IReferral__factory.connect(
+      referralProxy.address,
+      deployer,
+    );
+
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
       poolFactory.address,
@@ -324,7 +364,8 @@ export class PoolUtil {
       vxPremiaAddress,
       wrappedNativeToken,
       feeReceiver,
-      referralProxy.address,
+      referral.address,
+      vaultRegistry,
       log,
       isDevMode,
     );
@@ -344,6 +385,6 @@ export class PoolUtil {
       );
     }
 
-    return new PoolUtil({ premiaDiamond, poolFactory, router });
+    return new PoolUtil({ premiaDiamond, poolFactory, router, referral });
   }
 }

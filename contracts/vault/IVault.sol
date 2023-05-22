@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
@@ -85,18 +85,34 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
+    /// @notice Updates the vault settings
+    /// @param settings Encoding of the new settings
     function updateSettings(bytes memory settings) external;
 
+    /// @notice Returns the trade quote premium
+    /// @param poolKey The option pool key
+    /// @param size The size of the trade
+    /// @param isBuy Whether the trade is a buy or sell
+    /// @param taker The address of the taker
+    /// @return premium The trade quote premium
     function getQuote(
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
-        bool isBuy
+        bool isBuy,
+        address taker
     ) external view returns (uint256 premium);
 
+    /// @notice Executes a trade with the vault
+    /// @param poolKey The option pool key
+    /// @param size The size of the trade
+    /// @param isBuy Whether the trade is a buy or sell
+    /// @param premiumLimit The premium limit of the trade
+    /// @param referrer The address of the referrer
     function trade(
         IPoolFactory.PoolKey calldata poolKey,
         UD60x18 size,
         bool isBuy,
-        uint256 premiumLimit
+        uint256 premiumLimit,
+        address referrer
     ) external;
 }

@@ -33,17 +33,17 @@ async function main() {
   if (chainId === ChainID.Arbitrum) {
     weth = arbitrumAddresses.tokens.WETH;
     wbtc = arbitrumAddresses.tokens.WBTC;
-    feeReceiver = ''; // ToDo : Set fee receiver
+    feeReceiver = arbitrumAddresses.feeReceiver;
     vxPremia = arbitrumAddresses.VxPremiaProxy;
   } else if (chainId === ChainID.Goerli) {
     weth = goerliAddresses.tokens.WETH;
     wbtc = goerliAddresses.tokens.WBTC;
-    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+    feeReceiver = goerliAddresses.feeReceiver;
     vxPremia = goerliAddresses.VxPremiaProxy;
   } else if (chainId == ChainID.ArbitrumGoerli) {
     weth = arbitrumGoerliAddresses.tokens.WETH;
     wbtc = arbitrumGoerliAddresses.tokens.WBTC;
-    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
+    feeReceiver = arbitrumAddresses.feeReceiver;
     vxPremia = arbitrumGoerliAddresses.VxPremiaProxy;
   } else {
     throw new Error('ChainId not implemented');

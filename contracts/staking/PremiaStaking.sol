@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity >=0.8.20;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
@@ -46,22 +46,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 unstakeReward;
     }
 
-    constructor(
-        address lzEndpoint,
-        address premia,
-        address rewardToken,
-        address exchangeHelper
-    ) OFT(lzEndpoint) {
+    constructor(address lzEndpoint, address premia, address rewardToken, address exchangeHelper) OFT(lzEndpoint) {
         PREMIA = premia;
         REWARD_TOKEN = rewardToken;
         EXCHANGE_HELPER = exchangeHelper;
     }
 
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256
-    ) internal virtual override {
+    function _beforeTokenTransfer(address from, address to, uint256) internal virtual override {
         if (from == address(0) || to == address(0)) return;
 
         revert PremiaStaking__CantTransfer();
@@ -78,22 +69,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 amount,
         bool useZro,
         bytes memory adapterParams
-    )
-        public
-        view
-        virtual
-        override(OFTCore, IOFTCore)
-        returns (uint256 nativeFee, uint256 zroFee)
-    {
+    ) public view virtual override(OFTCore, IOFTCore) returns (uint256 nativeFee, uint256 zroFee) {
         // Convert bytes to address
         address to;
         assembly {
             to := mload(add(toAddress, 32))
         }
 
-        PremiaStakingStorage.UserInfo storage u = PremiaStakingStorage
-            .layout()
-            .userInfo[to];
+        PremiaStakingStorage.UserInfo storage u = PremiaStakingStorage.layout().userInfo[to];
 
         return
             lzEndpoint.estimateFees(
@@ -120,31 +103,18 @@ contract PremiaStaking is IPremiaStaking, OFT {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[from];
 
-        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(
-            l,
-            u,
-            from
-        );
+        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(l, u, from);
 
         bytes memory toAddress = abi.encodePacked(from);
         _debitFrom(from, dstChainId, toAddress, amount);
 
-        args.newPower = _calculateUserPower(
-            args.balance - amount + args.unstakeReward,
-            u.stakePeriod
-        );
+        args.newPower = _calculateUserPower(args.balance - amount + args.unstakeReward, u.stakePeriod);
 
         _updateUser(l, u, args);
 
         _lzSend(
             dstChainId,
-            abi.encode(
-                PT_SEND,
-                toAddress,
-                amount,
-                u.stakePeriod,
-                u.lockedUntil
-            ),
+            abi.encode(PT_SEND, toAddress, amount, u.stakePeriod, u.lockedUntil),
             refundAddress,
             zroPaymentAddress,
             adapterParams,
@@ -160,13 +130,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint64,
         bytes memory payload
     ) internal virtual override {
-        (
-            ,
-            bytes memory toAddressBytes,
-            uint256 amount,
-            uint64 stakePeriod,
-            uint64 lockedUntil
-        ) = abi.decode(payload, (uint16, bytes, uint256, uint64, uint64));
+        (, bytes memory toAddressBytes, uint256 amount, uint64 stakePeriod, uint64 lockedUntil) = abi.decode(
+            payload,
+            (uint16, bytes, uint256, uint64, uint64)
+        );
 
         address to = toAddressBytes.toAddress(0);
 
@@ -184,49 +151,30 @@ contract PremiaStaking is IPremiaStaking, OFT {
         unchecked {
             _updateRewards();
 
-            PremiaStakingStorage.Layout storage l = PremiaStakingStorage
-                .layout();
+            PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
             PremiaStakingStorage.UserInfo storage u = l.userInfo[toAddress];
 
-            UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(
-                l,
-                u,
-                toAddress
-            );
+            UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(l, u, toAddress);
 
             uint64 lockedUntil = u.lockedUntil;
 
             uint64 lockLeft = uint64(
                 _calculateWeightedAverage(
-                    creditLockedUntil > block.timestamp
-                        ? creditLockedUntil - block.timestamp
-                        : 0,
-                    lockedUntil > block.timestamp
-                        ? lockedUntil - block.timestamp
-                        : 0,
+                    creditLockedUntil > block.timestamp ? creditLockedUntil - block.timestamp : 0,
+                    lockedUntil > block.timestamp ? lockedUntil - block.timestamp : 0,
                     amount + args.unstakeReward,
                     args.balance
                 )
             );
 
             u.lockedUntil = lockedUntil = uint64(block.timestamp) + lockLeft;
-
             u.stakePeriod = uint64(
-                _calculateWeightedAverage(
-                    stakePeriod,
-                    u.stakePeriod,
-                    amount + args.unstakeReward,
-                    args.balance
-                )
+                _calculateWeightedAverage(stakePeriod, u.stakePeriod, amount + args.unstakeReward, args.balance)
             );
 
-            args.newPower = _calculateUserPower(
-                args.balance + amount + args.unstakeReward,
-                u.stakePeriod
-            );
+            args.newPower = _calculateUserPower(args.balance + amount + args.unstakeReward, u.stakePeriod);
 
             _mint(toAddress, amount);
-
             _updateUser(l, u, args);
 
             if (bridge) {
@@ -241,22 +189,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
     function addRewards(uint256 amount) external {
         _updateRewards();
 
-        IERC20(REWARD_TOKEN).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        IERC20(REWARD_TOKEN).safeTransferFrom(msg.sender, address(this), amount);
         PremiaStakingStorage.layout().availableRewards += amount;
 
         emit RewardsAdded(amount);
     }
 
     /// @inheritdoc IPremiaStaking
-    function getAvailableRewards()
-        external
-        view
-        returns (uint256 rewards, uint256 unstakeRewards)
-    {
+    function getAvailableRewards() external view returns (uint256 rewards, uint256 unstakeRewards) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         unchecked {
             rewards = l.availableRewards - getPendingRewards();
@@ -267,28 +207,19 @@ contract PremiaStaking is IPremiaStaking, OFT {
     /// @inheritdoc IPremiaStaking
     function getPendingRewards() public view returns (uint256) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
-        return
-            l.availableRewards -
-            _decay(l.availableRewards, l.lastRewardUpdate, block.timestamp);
+        return l.availableRewards - _decay(l.availableRewards, l.lastRewardUpdate, block.timestamp);
     }
 
     function _updateRewards() internal {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
-        if (
-            l.lastRewardUpdate == 0 ||
-            l.totalPower == 0 ||
-            l.availableRewards == 0
-        ) {
+        if (l.lastRewardUpdate == 0 || l.totalPower == 0 || l.availableRewards == 0) {
             l.lastRewardUpdate = block.timestamp;
             return;
         }
 
         uint256 pendingRewards = getPendingRewards();
-
-        l.accRewardPerShare +=
-            (pendingRewards * ACC_REWARD_PRECISION) /
-            l.totalPower;
+        l.accRewardPerShare += (pendingRewards * ACC_REWARD_PRECISION) / l.totalPower;
 
         unchecked {
             l.availableRewards -= pendingRewards;
@@ -298,24 +229,8 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function stakeWithPermit(
-        uint256 amount,
-        uint64 period,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external {
-        IERC2612(PREMIA).permit(
-            msg.sender,
-            address(this),
-            amount,
-            deadline,
-            v,
-            r,
-            s
-        );
-
+    function stakeWithPermit(uint256 amount, uint64 period, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
+        IERC2612(PREMIA).permit(msg.sender, address(this), amount, deadline, v, r, s);
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount);
 
         _stake(msg.sender, amount, period);
@@ -340,23 +255,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
         if (period <= oldPeriod) revert PremiaStaking__PeriodTooShort();
 
-        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(
-            l,
-            u,
-            msg.sender
-        );
+        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(l, u, msg.sender);
 
         unchecked {
             uint64 lockToAdd = period - oldPeriod;
-            u.lockedUntil =
-                uint64(Math.max(u.lockedUntil, block.timestamp)) +
-                lockToAdd;
+            u.lockedUntil = uint64(Math.max(u.lockedUntil, block.timestamp)) + lockToAdd;
             u.stakePeriod = period;
 
-            args.newPower = _calculateUserPower(
-                args.balance + args.unstakeReward,
-                period
-            );
+            args.newPower = _calculateUserPower(args.balance + args.unstakeReward, period);
         }
 
         _updateUser(l, u, args);
@@ -365,29 +271,24 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function harvestAndStake(
-        IPremiaStaking.SwapArgs calldata s,
-        uint64 stakePeriod
-    ) external {
+    function harvestAndStake(IPremiaStaking.SwapArgs calldata s, uint64 stakePeriod) external {
         uint256 amountRewardToken = _harvest(msg.sender);
 
         if (amountRewardToken == 0) return;
 
         IERC20(REWARD_TOKEN).safeTransfer(EXCHANGE_HELPER, amountRewardToken);
 
-        (uint256 amountPremia, ) = IExchangeHelper(EXCHANGE_HELPER)
-            .swapWithToken(
-                REWARD_TOKEN,
-                PREMIA,
-                amountRewardToken,
-                s.callee,
-                s.allowanceTarget,
-                s.data,
-                s.refundAddress
-            );
+        (uint256 amountPremia, ) = IExchangeHelper(EXCHANGE_HELPER).swapWithToken(
+            REWARD_TOKEN,
+            PREMIA,
+            amountRewardToken,
+            s.callee,
+            s.allowanceTarget,
+            s.data,
+            s.refundAddress
+        );
 
-        if (amountPremia < s.amountOutMin)
-            revert PremiaStaking__InsufficientSwapOutput();
+        if (amountPremia < s.amountOutMin) revert PremiaStaking__InsufficientSwapOutput();
 
         _stake(msg.sender, amountPremia, stakePeriod);
     }
@@ -401,50 +302,28 @@ contract PremiaStaking is IPremiaStaking, OFT {
         return (A * weightA + B * weightB) / (weightA + weightB);
     }
 
-    function _stake(
-        address toAddress,
-        uint256 amount,
-        uint64 stakePeriod
-    ) internal {
-        if (stakePeriod > MAX_PERIOD)
-            revert PremiaStaking__ExcessiveStakePeriod();
+    function _stake(address toAddress, uint256 amount, uint64 stakePeriod) internal {
+        if (stakePeriod > MAX_PERIOD) revert PremiaStaking__ExcessiveStakePeriod();
 
         unchecked {
-            _creditTo(
-                toAddress,
-                amount,
-                stakePeriod,
-                uint64(block.timestamp) + stakePeriod,
-                false
-            );
+            _creditTo(toAddress, amount, stakePeriod, uint64(block.timestamp) + stakePeriod, false);
         }
     }
 
     /// @inheritdoc IPremiaStaking
-    function getPendingUserRewards(
-        address user
-    ) external view returns (uint256 reward, uint256 unstakeReward) {
+    function getPendingUserRewards(address user) external view returns (uint256 reward, uint256 unstakeReward) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[user];
 
         uint256 accRewardPerShare = l.accRewardPerShare;
         if (l.lastRewardUpdate > 0 && l.availableRewards > 0) {
-            accRewardPerShare +=
-                (getPendingRewards() * ACC_REWARD_PRECISION) /
-                l.totalPower;
+            accRewardPerShare += (getPendingRewards() * ACC_REWARD_PRECISION) / l.totalPower;
         }
 
         uint256 power = _calculateUserPower(_balanceOf(user), u.stakePeriod);
+        reward = u.reward + _calculateReward(accRewardPerShare, power, u.rewardDebt);
 
-        reward =
-            u.reward +
-            _calculateReward(accRewardPerShare, power, u.rewardDebt);
-
-        unstakeReward = _calculateReward(
-            l.accUnstakeRewardPerShare,
-            power,
-            u.unstakeRewardDebt
-        );
+        unstakeReward = _calculateReward(l.accUnstakeRewardPerShare, power, u.unstakeRewardDebt);
     }
 
     function harvest() external {
@@ -458,17 +337,10 @@ contract PremiaStaking is IPremiaStaking, OFT {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[account];
 
-        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(
-            l,
-            u,
-            account
-        );
+        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(l, u, account);
 
         if (args.unstakeReward > 0) {
-            args.newPower = _calculateUserPower(
-                args.balance + args.unstakeReward,
-                u.stakePeriod
-            );
+            args.newPower = _calculateUserPower(args.balance + args.unstakeReward, u.stakePeriod);
         } else {
             args.newPower = args.oldPower;
         }
@@ -499,25 +371,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
     function earlyUnstake(uint256 amount) external {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
-        _startWithdraw(
-            l,
-            l.userInfo[msg.sender],
-            amount,
-            (ud(amount) * ud(getEarlyUnstakeFee(msg.sender))).unwrap()
-        );
+        _startWithdraw(l, l.userInfo[msg.sender], amount, (ud(amount) * ud(getEarlyUnstakeFee(msg.sender))).unwrap());
     }
 
     /// @inheritdoc IPremiaStaking
-    function getEarlyUnstakeFee(
-        address user
-    ) public view returns (uint256 feePercentage) {
-        uint256 lockedUntil = PremiaStakingStorage
-            .layout()
-            .userInfo[user]
-            .lockedUntil;
+    function getEarlyUnstakeFee(address user) public view returns (uint256 feePercentage) {
+        uint256 lockedUntil = PremiaStakingStorage.layout().userInfo[user].lockedUntil;
 
-        if (lockedUntil <= block.timestamp)
-            revert PremiaStaking__StakeNotLocked();
+        if (lockedUntil <= block.timestamp) revert PremiaStaking__StakeNotLocked();
 
         uint256 lockLeft;
 
@@ -532,9 +393,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     // @dev `getEarlyUnstakeFee` is preferred as it is more precise. This function is kept for backwards compatibility.
-    function getEarlyUnstakeFeeBPS(
-        address user
-    ) external view returns (uint256 feePercentageBPS) {
+    function getEarlyUnstakeFeeBPS(address user) external view returns (uint256 feePercentageBPS) {
         return getEarlyUnstakeFee(user) / BPS_CONVERSION;
     }
 
@@ -543,8 +402,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[msg.sender];
 
-        if (u.lockedUntil > block.timestamp)
-            revert PremiaStaking__StakeLocked();
+        if (u.lockedUntil > block.timestamp) revert PremiaStaking__StakeLocked();
 
         _startWithdraw(l, u, amount, 0);
     }
@@ -560,33 +418,22 @@ contract PremiaStaking is IPremiaStaking, OFT {
             amountMinusFee = amount - fee;
         }
 
-        if (getAvailablePremiaAmount() < amountMinusFee)
-            revert PremiaStaking__NotEnoughLiquidity();
+        if (getAvailablePremiaAmount() < amountMinusFee) revert PremiaStaking__NotEnoughLiquidity();
 
         _updateRewards();
         _beforeUnstake(msg.sender, amount);
 
-        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(
-            l,
-            u,
-            msg.sender
-        );
+        UpdateArgsInternal memory args = _getInitialUpdateArgsInternal(l, u, msg.sender);
 
         _burn(msg.sender, amount);
         l.pendingWithdrawal += amountMinusFee;
 
         if (fee > 0) {
-            l.accUnstakeRewardPerShare +=
-                (fee * ACC_REWARD_PRECISION) /
-                (l.totalPower - args.oldPower); // User who early unstake doesnt collect any of the fee
-
+            l.accUnstakeRewardPerShare += (fee * ACC_REWARD_PRECISION) / (l.totalPower - args.oldPower); // User who early unstake doesnt collect any of the fee
             l.availableUnstakeRewards += fee;
         }
 
-        args.newPower = _calculateUserPower(
-            args.balance - amount + args.unstakeReward,
-            u.stakePeriod
-        );
+        args.newPower = _calculateUserPower(args.balance - amount + args.unstakeReward, u.stakePeriod);
 
         _updateUser(l, u, args);
 
@@ -607,8 +454,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         if (startDate == 0) revert PremiaStaking__NoPendingWithdrawal();
 
         unchecked {
-            if (block.timestamp <= startDate + WITHDRAWAL_DELAY)
-                revert PremiaStaking__WithdrawalStillPending();
+            if (block.timestamp <= startDate + WITHDRAWAL_DELAY) revert PremiaStaking__WithdrawalStillPending();
         }
 
         uint256 amount = l.withdrawals[msg.sender].amount;
@@ -627,21 +473,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     /// @inheritdoc IPremiaStaking
     function getUserPower(address user) external view returns (uint256) {
-        return
-            _calculateUserPower(
-                _balanceOf(user),
-                PremiaStakingStorage.layout().userInfo[user].stakePeriod
-            );
+        return _calculateUserPower(_balanceOf(user), PremiaStakingStorage.layout().userInfo[user].stakePeriod);
     }
 
     /// @inheritdoc IPremiaStaking
     function getDiscount(address user) public view returns (uint256) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
-        uint256 userPower = _calculateUserPower(
-            _balanceOf(user),
-            l.userInfo[user].stakePeriod
-        );
+        uint256 userPower = _calculateUserPower(_balanceOf(user), l.userInfo[user].stakePeriod);
 
         if (userPower == 0) return 0;
 
@@ -651,8 +490,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
             if (userPower >= l.totalPower >> 1) {
                 return MAX_CONTRACT_DISCOUNT;
             } else {
-                return
-                    (userPower * MAX_CONTRACT_DISCOUNT) / (l.totalPower >> 1);
+                return (userPower * MAX_CONTRACT_DISCOUNT) / (l.totalPower >> 1);
             }
         }
 
@@ -678,17 +516,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
                         discountPrevLevel = 0;
                     }
 
-                    uint256 remappedDiscount = level.discount -
-                        discountPrevLevel;
+                    uint256 remappedDiscount = level.discount - discountPrevLevel;
 
                     uint256 remappedAmount = level.amount - amountPrevLevel;
                     uint256 remappedPower = userPower - amountPrevLevel;
-                    UD60x18 levelProgress = ud(remappedPower * WAD) /
-                        ud(remappedAmount * WAD);
+                    UD60x18 levelProgress = ud(remappedPower * WAD) / ud(remappedAmount * WAD);
 
-                    return
-                        discountPrevLevel +
-                        (ud(remappedDiscount) * levelProgress).unwrap();
+                    return discountPrevLevel + (ud(remappedDiscount) * levelProgress).unwrap();
                 }
             }
 
@@ -703,9 +537,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function getUserInfo(
-        address user
-    ) external view returns (PremiaStakingStorage.UserInfo memory) {
+    function getUserInfo(address user) external view returns (PremiaStakingStorage.UserInfo memory) {
         return PremiaStakingStorage.layout().userInfo[user];
     }
 
@@ -715,11 +547,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     function getPendingWithdrawal(
         address user
-    )
-        external
-        view
-        returns (uint256 amount, uint256 startDate, uint256 unlockDate)
-    {
+    ) external view returns (uint256 amount, uint256 startDate, uint256 unlockDate) {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         amount = l.withdrawals[user].amount;
         startDate = l.withdrawals[user].startDate;
@@ -736,17 +564,11 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 oldTimestamp,
         uint256 newTimestamp
     ) internal pure returns (uint256) {
-        return
-            ((ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp) *
-                ud(pendingRewards)).unwrap();
+        return ((ONE - DECAY_RATE).powu(newTimestamp - oldTimestamp) * ud(pendingRewards)).unwrap();
     }
 
     /// @inheritdoc IPremiaStaking
-    function getStakeLevels()
-        public
-        pure
-        returns (IPremiaStaking.StakeLevel[] memory stakeLevels)
-    {
+    function getStakeLevels() public pure returns (IPremiaStaking.StakeLevel[] memory stakeLevels) {
         stakeLevels = new IPremiaStaking.StakeLevel[](4);
 
         stakeLevels[0] = IPremiaStaking.StakeLevel(5000e18, 0.1e18); // -10%
@@ -756,9 +578,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function getStakePeriodMultiplier(
-        uint256 period
-    ) public pure returns (uint256) {
+    function getStakePeriodMultiplier(uint256 period) public pure returns (uint256) {
         unchecked {
             uint256 oneYear = 365 days;
 
@@ -770,18 +590,12 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @dev `getStakePeriodMultiplier` is preferred as it is more precise. This function is kept for backwards compatibility.
-    function getStakePeriodMultiplierBPS(
-        uint256 period
-    ) external pure returns (uint256) {
+    function getStakePeriodMultiplierBPS(uint256 period) external pure returns (uint256) {
         return getStakePeriodMultiplier(period) / BPS_CONVERSION;
     }
 
-    function _calculateUserPower(
-        uint256 balance,
-        uint64 stakePeriod
-    ) internal pure returns (uint256) {
-        return
-            (ud(balance) * ud(getStakePeriodMultiplier(stakePeriod))).unwrap();
+    function _calculateUserPower(uint256 balance, uint64 stakePeriod) internal pure returns (uint256) {
+        return (ud(balance) * ud(getStakePeriodMultiplier(stakePeriod))).unwrap();
     }
 
     function _calculateReward(
@@ -789,8 +603,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         uint256 power,
         uint256 rewardDebt
     ) internal pure returns (uint256) {
-        return
-            ((accRewardPerShare * power) / ACC_REWARD_PRECISION) - rewardDebt;
+        return ((accRewardPerShare * power) / ACC_REWARD_PRECISION) - rewardDebt;
     }
 
     function _creditRewards(
@@ -822,24 +635,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
             args.oldPower = _calculateUserPower(args.balance, u.stakePeriod);
         }
 
-        args.reward = _calculateReward(
-            l.accRewardPerShare,
-            args.oldPower,
-            u.rewardDebt
-        );
-        args.unstakeReward = _calculateReward(
-            l.accUnstakeRewardPerShare,
-            args.oldPower,
-            u.unstakeRewardDebt
-        );
+        args.reward = _calculateReward(l.accRewardPerShare, args.oldPower, u.rewardDebt);
+        args.unstakeReward = _calculateReward(l.accUnstakeRewardPerShare, args.oldPower, u.unstakeRewardDebt);
 
         return args;
     }
 
-    function _calculateRewardDebt(
-        uint256 accRewardPerShare,
-        uint256 power
-    ) internal pure returns (uint256) {
+    function _calculateRewardDebt(uint256 accRewardPerShare, uint256 power) internal pure returns (uint256) {
         return (power * accRewardPerShare) / ACC_REWARD_PRECISION;
     }
 
@@ -850,10 +652,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     ) internal {
         // Update reward debt
         u.rewardDebt = _calculateRewardDebt(l.accRewardPerShare, args.newPower);
-        u.unstakeRewardDebt = _calculateRewardDebt(
-            l.accUnstakeRewardPerShare,
-            args.newPower
-        );
+        u.unstakeRewardDebt = _calculateRewardDebt(l.accUnstakeRewardPerShare, args.newPower);
 
         _creditRewards(l, u, args.user, args.reward, args.unstakeReward);
         _updateTotalPower(l, args.oldPower, args.newPower);
@@ -861,8 +660,6 @@ contract PremiaStaking is IPremiaStaking, OFT {
 
     /// @inheritdoc IPremiaStaking
     function getAvailablePremiaAmount() public view returns (uint256) {
-        return
-            IERC20(PREMIA).balanceOf(address(this)) -
-            PremiaStakingStorage.layout().pendingWithdrawal;
+        return IERC20(PREMIA).balanceOf(address(this)) - PremiaStakingStorage.layout().pendingWithdrawal;
     }
 }
