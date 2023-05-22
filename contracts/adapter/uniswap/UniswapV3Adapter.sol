@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-pragma solidity >=0.8.20;
+pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";

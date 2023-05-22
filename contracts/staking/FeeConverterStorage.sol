@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.20;
+pragma solidity >=0.8.19;
 
 library FeeConverterStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.FeeConverter");
