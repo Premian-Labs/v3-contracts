@@ -84,7 +84,7 @@ async function main() {
   const gasPerCardinality = 22250;
   const gasPerPool = 30000;
   const period = 600;
-  const cardinalityPerMinute = 200;
+  const cardinalityPerMinute = 100; // Max 1 update per second on 600s period = 60 per minute, to which we add an extra buffer
 
   const uniswapV3AdapterImpl = await new UniswapV3Adapter__factory(
     deployer,
