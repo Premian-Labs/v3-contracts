@@ -8,6 +8,10 @@
     "USDC": "0x53421DB1f41368E028A4239954feB5033C7B3729",
     "DAI": "0x350bC4115F09E619bFBc6E56AD87d5e122b7B8c5"
   },
+  "vaults": {
+    "SV-ETH/USDC-C": "0xB3b7C9321fBce76768eaBa292b05F1469695e0e0",
+    "SV-ETH/USDC-P": "0x813ECaA696DcaeCfeD376a65CeBeE5520883839e"
+  },
   "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
   "ChainlinkAdapterImplementation": "0xff7248B43e09d33042d0fcDA95bCE4dbC5BA109a",
   "ChainlinkAdapterProxy": "0xB89756634Bae979d13721d9883e67CF22cc31D6b",
@@ -20,7 +24,7 @@
   "PremiaDiamond": "0xCFb3000bD2Ac6FdaFb4c77C43F603c3ae14De308",
   "PoolFactoryImplementation": "0xAD7D18F1d3290f9fAca7FcA450F5Cfe224396A18",
   "PoolFactoryProxy": "0x78438a37Ab82d757657e47E15d28646843FAaeDD",
-  "UserSettingsImplementation": "0xF0Ee51CA19691A2FA8D669cf08472853EA788b99",
+  "UserSettingsImplementation": "0x1cFB7B9380c62d1d930a7e2081e1c6Cf74728E06",
   "UserSettingsProxy": "0x6A1bec4D03A7e2CBDb5AD4a151065dC9e9A8076E",
   "ExchangeHelper": "0x98d8df5cbCBF97AB2c4979eFB7c7Ac2e80b2e292",
   "ReferralImplementation": "0x82Ce10065699cfff24054dc75C870F366a25A06F",
@@ -32,9 +36,10 @@
   "PoolCore": "0xE3e8F475A3C1A90146f184c45AF8335e030e1dA0",
   "PoolTrade": "0xf0eb7c0E7D85fbcDdC131101eD6905EA3cf0061E",
   "PoolDepositWithdraw": "0x635B4E80A11d36EeDB633E088f482c8F15B6B03C",
-  "OrderbookStream": "0x4A6bF3a03458FAD82b7f4d89746D70EBf068e73F",
+  "OrderbookStream": "0x423AB2d6E11c1ce0E33A1186D88bb30cD6ab15b5",
   "VaultRegistryImplementation": "0x72872a7Ea16D7c415F0772fc8aa2e377c6d29F0e",
   "VaultRegistryProxy": "0x80196c9D4094B36f3e142C80C4Fd12247f79ef2D",
   "VolatilityOracleImplementation": "0x8f634992E7811AA2330703659cAe8073544aE2f5",
-  "VolatilityOracleProxy": "0xBE464F3a7eFE0c97Ef905CFB1162CAffff1761f3"
+  "VolatilityOracleProxy": "0xBE464F3a7eFE0c97Ef905CFB1162CAffff1761f3",
+  "UnderwriterVaultImplementation": "0xCC0B6d01d6F8cE6D387cF366473755D4d1423daF"
 }
