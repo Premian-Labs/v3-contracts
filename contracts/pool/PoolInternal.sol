@@ -3,6 +3,7 @@
 pragma solidity >=0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
+import {EIP712} from "@solidstate/contracts/cryptography/EIP712.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -21,7 +22,6 @@ import {IVxPremia} from "../staking/IVxPremia.sol";
 import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
-import {EIP712} from "../libraries/EIP712.sol";
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";

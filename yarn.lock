@@ -1104,10 +1104,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solidstate/contracts@npm:^0.0.56":
-  version: 0.0.56
-  resolution: "@solidstate/contracts@npm:0.0.56"
-  checksum: 63454923a638f4c7abdf3aedea9556d782e45f0a0612031be5f264cad8b798a20a674f5aee99d45e42a92ebd9d95c61c4ba1c287f2ae810c712c8bf0ef4a5917
+"@solidstate/contracts@npm:^0.0.57":
+  version: 0.0.57
+  resolution: "@solidstate/contracts@npm:0.0.57"
+  checksum: 267aa0202bb57b3c96c038ecf519dba412be739a4e9e51491b15fe5c9e1f69dce11f84a418886f1fddfabbc3182e13c48a4f175914f279bed5ccccfb748d9af7
   languageName: node
   linkType: hard
 
@@ -4488,7 +4488,7 @@ __metadata:
     "@ethersproject/providers": ^5.7.2
     "@nomiclabs/hardhat-ethers": ^2.2.3
     "@nomiclabs/hardhat-etherscan": ^3.1.7
-    "@solidstate/contracts": ^0.0.56
+    "@solidstate/contracts": ^0.0.57
     "@solidstate/hardhat-4byte-uploader": ^1.1.0
     "@solidstate/library": ^0.0.56
     "@solidstate/spec": ^0.0.56
