@@ -1,5 +1,6 @@
 export interface ContractAddresses {
   tokens: { [symbol: string]: string };
+  vaults: { [name: string]: string };
   feeReceiver: string;
 
   ChainlinkAdapterImplementation: string;

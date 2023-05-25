@@ -8,6 +8,7 @@
     "USDC": "0x53421DB1f41368E028A4239954feB5033C7B3729",
     "DAI": "0x350bC4115F09E619bFBc6E56AD87d5e122b7B8c5"
   },
+  "vaults": {},
   "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
   "ChainlinkAdapterImplementation": "0xff7248B43e09d33042d0fcDA95bCE4dbC5BA109a",
   "ChainlinkAdapterProxy": "0xB89756634Bae979d13721d9883e67CF22cc31D6b",

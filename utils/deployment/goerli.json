@@ -8,6 +8,10 @@
     "USDC": "0x16fA8D635311fc4DA9A2f8793EE016670b0C6Ed2",
     "DAI": "0x53421DB1f41368E028A4239954feB5033C7B3729"
   },
+  "vaults": {
+    "SV-ETH/USDC-C": "",
+    "SV-ETH/USDC-P": ""
+  },
   "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
   "ChainlinkAdapterImplementation": "0xbfda6e47bC34848DaCE1E667A4C2804C19e09117",
   "ChainlinkAdapterProxy": "0x62Bc6a93726413f924b2aaD110283FCE8E30339E",
