@@ -127,7 +127,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
     }
 
-    function test_ticks_ReturnExpectedValues() internal {
+    function test_ticks_ReturnExpectedValues() public {
         deposit(1000 ether);
 
         IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
@@ -141,5 +141,51 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[1].liquidityNet, ud(1000 ether));
         assertEq(ticks[2].liquidityNet, ZERO);
         assertEq(ticks[3].liquidityNet, ZERO);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.2 ether),
+            upper: ud(0.3 ether),
+            orderType: Position.OrderType.LC
+        });
+
+        deposit(customPosKey, ud(1000 ether));
+
+        ticks = pool.ticks();
+
+        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[1].price, posKey.lower);
+        assertEq(ticks[2].price, customPosKey.lower);
+        assertEq(ticks[3].price, posKey.upper);
+        assertEq(ticks[4].price, Pricing.MAX_TICK_PRICE);
+
+        assertEq(ticks[0].liquidityNet, ZERO);
+        assertEq(ticks[1].liquidityNet, ud(500 ether));
+        assertEq(ticks[2].liquidityNet, ud(1500 ether));
+        assertEq(ticks[3].liquidityNet, ZERO);
+        assertEq(ticks[4].liquidityNet, ZERO);
+    }
+
+    function test_ticks_DepositMinTick() public {
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.001 ether),
+            upper: ud(0.5 ether),
+            orderType: Position.OrderType.LC
+        });
+
+        deposit(customPosKey, ud(500 ether));
+
+        IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
+
+        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[1].price, customPosKey.upper);
+        assertEq(ticks[2].price, Pricing.MAX_TICK_PRICE);
+
+        assertEq(ticks[0].liquidityNet, ud(500 ether));
+        assertEq(ticks[1].liquidityNet, ZERO);
+        assertEq(ticks[2].liquidityNet, ZERO);
     }
 }

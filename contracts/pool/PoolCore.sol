@@ -23,6 +23,8 @@ import {IPoolCore} from "./IPoolCore.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
+import "forge-std/console2.sol";
+
 contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
@@ -92,6 +94,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         IPoolInternal.TickWithLiquidity[] memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
 
+        console2.log("Start: ");
+        console2.log(liquidityRate.unwrap());
+
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
             while (true) {
                 liquidityRate = liquidityRate.add(l.ticks[curr].delta);
@@ -113,12 +118,17 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         prev = curr;
 
+        console2.log("Before: ");
+        console2.log(liquidityRate.unwrap());
+
         while (true) {
             if (curr <= l.currentTick) {
                 liquidityRate = liquidityRate.sub(l.ticks[curr].delta);
             } else {
                 liquidityRate = liquidityRate.add(l.ticks[curr].delta);
             }
+
+            console2.log(liquidityRate.unwrap());
 
             curr = l.tickIndex.next(curr);
 
