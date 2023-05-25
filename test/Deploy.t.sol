@@ -400,7 +400,7 @@ contract DeployTest is Test, Assertions {
         UD60x18 strike,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
-        deposit(_pool, posKey, strike, depositSize);
+        return deposit(_pool, posKey, strike, depositSize);
     }
 
     function deposit(
