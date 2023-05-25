@@ -38,19 +38,9 @@ interface IPoolCore is IPoolInternal {
         view
         returns (address base, address quote, address oracleAdapter, UD60x18 strike, uint256 maturity, bool isCallPool);
 
-    /// @notice Returns the IPoolInternal.Tick with the liquidity rate at that price
-    /// @param  price The normalized option price of the tick (18 decimals)
-    /// @return The tick at the price, with the liquidityNet (18 decimals) of the tick
-    function tick(UD60x18 price) external view returns (IPoolInternal.TickWithLiquidity memory);
-
     /// @notice Returns all ticks in the pool, including net liquidity for each tick
     /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
     function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory);
-
-    /// @notice Returns the net liquidity for a given tick, to the next tick in the range
-    /// @param  price The normalized option price of the tick (18 decimals)
-    /// @return liquidityNet The net liquidity of the tick (18 decimals)
-    function liquidityForTick(UD60x18 price) external view returns (UD60x18 liquidityNet);
 
     /// @notice Returns the net liquidity for a given range of ticks
     /// @param  lower The normalized option price of the lower tick (18 decimals)

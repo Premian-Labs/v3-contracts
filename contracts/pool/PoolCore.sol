@@ -69,18 +69,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function tick(UD60x18 price) external view returns (IPoolInternal.TickWithLiquidity memory) {
-        IPoolInternal.Tick memory _tick = PoolStorage.layout().ticks[price];
-
-        return
-            IPoolInternal.TickWithLiquidity({
-                tick: _tick,
-                price: price,
-                liquidityNet: price == Pricing.MAX_TICK_PRICE ? ZERO : liquidityForTick(price)
-            });
-    }
-
-    /// @inheritdoc IPoolCore
     function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 liquidityRate = l.liquidityRate;
@@ -143,62 +131,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         return _ticks;
-    }
-
-    /// @inheritdoc IPoolCore
-    function liquidityForTick(UD60x18 price) public view returns (UD60x18 liquidityNet) {
-        PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 liquidityRate = l.liquidityRate;
-
-        if (price >= Pricing.MAX_TICK_PRICE) revert Pool__InvalidTickPrice();
-
-        // If the tick is found, we can calculate the liquidity
-        if (l.currentTick == price) {
-            return liquidityForRange(l.currentTick, l.tickIndex.next(l.currentTick), liquidityRate);
-        }
-
-        UD60x18 prev = l.tickIndex.prev(l.currentTick);
-        UD60x18 next = l.currentTick;
-
-        // If the price is less than the current tick, we need to search left
-        if (price < l.currentTick) {
-            while (true) {
-                if (prev == price) {
-                    return liquidityForRange(prev, next, liquidityRate);
-                }
-
-                // If we reached the end of the left side, the tick does not exist
-                if (prev == Pricing.MIN_TICK_PRICE) {
-                    revert Pool__InvalidTickPrice();
-                }
-
-                // Otherwise, add the delta to the liquidity rate, and move to the next tick
-                liquidityRate = liquidityRate.add(l.ticks[prev].delta);
-                next = prev;
-                prev = l.tickIndex.prev(prev);
-            }
-        }
-
-        prev = l.currentTick;
-
-        // The tick must be to the right side, search right for the tick
-        while (true) {
-            next = l.tickIndex.next(prev);
-
-            if (next == price) {
-                return liquidityForRange(prev, next, liquidityRate);
-            }
-
-            // If we reached the end of the right side, the tick does not exist
-            if (next == Pricing.MAX_TICK_PRICE) {
-                revert Pool__InvalidTickPrice();
-            }
-
-            liquidityRate = liquidityRate.add(l.ticks[next].delta);
-            prev = next;
-        }
-
-        revert Pool__InvalidTickPrice();
     }
 
     /// @inheritdoc IPoolCore
