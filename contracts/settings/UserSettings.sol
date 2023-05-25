@@ -3,11 +3,12 @@
 pragma solidity >=0.8.19;
 
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {IUserSettings} from "./IUserSettings.sol";
 import {UserSettingsStorage} from "./UserSettingsStorage.sol";
 
-contract UserSettings is IUserSettings {
+contract UserSettings is IUserSettings, Multicall {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @inheritdoc IUserSettings
