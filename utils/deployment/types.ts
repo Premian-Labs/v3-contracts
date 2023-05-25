@@ -1,5 +1,6 @@
 export interface ContractAddresses {
   tokens: { [symbol: string]: string };
+  vaults: { [name: string]: string };
   feeReceiver: string;
 
   ChainlinkAdapterImplementation: string;
@@ -29,6 +30,7 @@ export interface ContractAddresses {
   VaultRegistryProxy: string;
   VolatilityOracleImplementation: string;
   VolatilityOracleProxy: string;
+  UnderwriterVaultImplementation: string;
 }
 
 export enum ChainID {

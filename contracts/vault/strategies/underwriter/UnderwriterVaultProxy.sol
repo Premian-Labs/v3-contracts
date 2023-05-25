@@ -15,10 +15,7 @@ contract UnderwriterVaultProxy is Proxy {
 
     // Constants
     bytes32 public constant VAULT_TYPE = keccak256("UnderwriterVault");
-
     address internal immutable VAULT_REGISTRY;
-
-    // Errors
 
     constructor(
         address vaultRegistry,
