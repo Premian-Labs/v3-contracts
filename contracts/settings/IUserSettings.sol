@@ -2,7 +2,9 @@
 
 pragma solidity >=0.8.19;
 
-interface IUserSettings {
+import {IMulticall} from "@solidstate/contracts/utils/IMulticall.sol";
+
+interface IUserSettings is IMulticall {
     /// @notice Returns true if the agent is authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor` on
     ///         behalf of the user
     /// @param user The user who has authorized the agent
