@@ -76,7 +76,7 @@ async function main() {
     deployer,
   );
   const currentSettings = await vaultRegistry.getSettings(vaultType);
-  if (currentSettings.length == 0) {
+  if (currentSettings == '0x') {
     await vaultRegistry.updateSettings(vaultType, settings);
   }
 
