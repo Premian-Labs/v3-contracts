@@ -36,5 +36,6 @@
   "VaultRegistryImplementation": "0x1041C02801113aa83086A48e74af3a06506E10d3",
   "VaultRegistryProxy": "0xBB7599c4772c75B908Efe35525b168f252a24505",
   "VolatilityOracleImplementation": "0x82586d9cB8F479A11785b401F12a608482087B14",
-  "VolatilityOracleProxy": "0x4DeE5A6cAefafc8cF6698A8Afe6e30BF7D1538e2"
+  "VolatilityOracleProxy": "0x4DeE5A6cAefafc8cF6698A8Afe6e30BF7D1538e2",
+  "UnderwriterVaultImplementation": "0x2920dD36d56142822092b6Ed33164AC18a7719db"
 }

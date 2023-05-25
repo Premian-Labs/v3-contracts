@@ -35,5 +35,6 @@
   "VaultRegistryImplementation": "",
   "VaultRegistryProxy": "",
   "VolatilityOracleImplementation": "",
-  "VolatilityOracleProxy": ""
+  "VolatilityOracleProxy": "",
+  "UnderwriterVaultImplementation": ""
 }

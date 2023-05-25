@@ -29,6 +29,7 @@ export interface ContractAddresses {
   VaultRegistryProxy: string;
   VolatilityOracleImplementation: string;
   VolatilityOracleProxy: string;
+  UnderwriterVaultImplementation: string;
 }
 
 export enum ChainID {
