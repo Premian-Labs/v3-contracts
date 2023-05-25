@@ -43,29 +43,20 @@ async function main() {
 
   // Set settings for vaultType if not yet set
   const settings = defaultAbiCoder.encode(
+    ['uint256[]'],
     [
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-      'uint256',
-    ],
-    [
-      parseEther('3'), // Alpha C Level
-      parseEther('0.005'), // Hourly decay discount
-      parseEther('1'), // Min C Level
-      parseEther('1.2'), // Max C Level
-      parseEther('3'), // Min DTE
-      parseEther('30'), // Max DTE
-      parseEther('0.1'), // Min Delta
-      parseEther('0.7'), // Max Delta
-      parseEther('0.2'), // Performance fee rate
-      parseEther('0.02'), // Management fee rate
+      [
+        parseEther('3'), // Alpha C Level
+        parseEther('0.005'), // Hourly decay discount
+        parseEther('1'), // Min C Level
+        parseEther('1.2'), // Max C Level
+        parseEther('3'), // Min DTE
+        parseEther('30'), // Max DTE
+        parseEther('0.1'), // Min Delta
+        parseEther('0.7'), // Max Delta
+        parseEther('0.2'), // Performance fee rate
+        parseEther('0.02'), // Management fee rate
+      ],
     ],
   );
 
