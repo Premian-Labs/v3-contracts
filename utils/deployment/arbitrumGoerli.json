@@ -9,7 +9,7 @@
     "DAI": "0x350bC4115F09E619bFBc6E56AD87d5e122b7B8c5"
   },
   "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
-  "ChainlinkAdapterImplementation": "0xff7248B43e09d33042d0fcDA95bCE4dbC5BA109a",
+  "ChainlinkAdapterImplementation": "0x249d009C0e55c3aB8a4746E91349084d3a70e7c9",
   "ChainlinkAdapterProxy": "0xB89756634Bae979d13721d9883e67CF22cc31D6b",
   "UniswapV3AdapterImplementation": "0x2611935EDa6727cc6a39F48c7f19E2DC6f2dCAd7",
   "UniswapV3AdapterProxy": "0x906A204B5fA880ab1818bB6ECFcA68C756D1C501",
