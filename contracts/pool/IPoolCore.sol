@@ -40,18 +40,7 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Returns all ticks in the pool, including net liquidity for each tick
     /// @return ticks All pool ticks with the liquidityNet (18 decimals) of each tick
-    function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory);
-
-    /// @notice Returns the net liquidity for a given range of ticks
-    /// @param  lower The normalized option price of the lower tick (18 decimals)
-    /// @param  upper The normalized option price of the upper tick (18 decimals)
-    /// @param  liquidityRate The liquidity rate at the tick range (18 decimals)
-    /// @return liquidityNet The net liquidity for the range (18 decimals)
-    function liquidityForRange(
-        UD60x18 lower,
-        UD60x18 upper,
-        UD60x18 liquidityRate
-    ) external view returns (UD60x18 liquidityNet);
+    function ticks() external view returns (IPoolInternal.TickWithRates[] memory);
 
     /// @notice Updates the claimable fees of a position and transfers the claimed
     ///         fees to the operator of the position. Then resets the claimable fees to

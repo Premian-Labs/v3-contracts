@@ -297,7 +297,6 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);
-        poolCoreSelectors.push(poolCoreImpl.liquidityForRange.selector);
 
         // PoolDepositWithdraw
         poolDepositWithdrawSelectors.push(

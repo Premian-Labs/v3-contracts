@@ -56,11 +56,11 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 counter;
     }
 
-    struct TickWithLiquidity {
+    struct TickWithRates {
         Tick tick;
         UD60x18 price;
-        UD60x18 longLiq;
-        UD60x18 shortLiq;
+        UD60x18 longRate;
+        UD60x18 shortRate;
     }
 
     struct QuoteRFQ {

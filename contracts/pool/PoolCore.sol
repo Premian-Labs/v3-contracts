@@ -69,7 +69,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory) {
+    function ticks() external view returns (IPoolInternal.TickWithRates[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         UD60x18 longRate = l.longRate;
         UD60x18 shortRate = l.shortRate;
@@ -79,7 +79,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
         uint256 count;
 
-        IPoolInternal.TickWithLiquidity[] memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
+        IPoolInternal.TickWithRates[] memory _ticks = new IPoolInternal.TickWithRates[](maxTicks);
 
         // compute the longRate and shortRate at MIN_TICK_PRICE
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
@@ -100,19 +100,19 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         curr = l.tickIndex.next(Pricing.MIN_TICK_PRICE);
 
         while (true) {
-            _ticks[count++] = IPoolInternal.TickWithLiquidity({
+            _ticks[count++] = IPoolInternal.TickWithRates({
                 tick: l.ticks[prev],
                 price: prev,
-                longLiq: liquidityForRange(prev, curr, longRate),
-                shortLiq: liquidityForRange(prev, curr, shortRate)
+                longRate: longRate,
+                shortRate: shortRate
             });
 
             if (curr == Pricing.MAX_TICK_PRICE) {
-                _ticks[count++] = IPoolInternal.TickWithLiquidity({
+                _ticks[count++] = IPoolInternal.TickWithRates({
                     tick: l.ticks[curr],
                     price: curr,
-                    longLiq: ZERO,
-                    shortLiq: ZERO
+                    longRate: ZERO,
+                    shortRate: ZERO
                 });
                 break;
             }
@@ -137,24 +137,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         return _ticks;
-    }
-
-    /// @inheritdoc IPoolCore
-    function liquidityForRange(
-        UD60x18 lower,
-        UD60x18 upper,
-        UD60x18 liquidityRate
-    ) public pure returns (UD60x18 liquidityNet) {
-        return
-            Pricing.liquidity(
-                Pricing.Args({
-                    lower: lower,
-                    upper: upper,
-                    liquidityRate: liquidityRate,
-                    marketPrice: ZERO, // Not used
-                    isBuy: false // Not used
-                })
-            );
     }
 
     /// @inheritdoc IPoolCore
