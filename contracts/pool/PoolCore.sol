@@ -261,11 +261,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function exerciseFor(
         address[] calldata holders,
         uint256 costPerHolder
-    ) external nonReentrant returns (uint256[] memory) {
+    ) external nonReentrant returns (uint256[] memory exerciseValues) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
-        uint256[] memory exerciseValues = new uint256[](holders.length);
+        exerciseValues = new uint256[](holders.length);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
@@ -277,7 +277,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
-        return exerciseValues;
     }
 
     /// @inheritdoc IPoolCore
@@ -289,11 +288,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function settleFor(
         address[] calldata holders,
         uint256 costPerHolder
-    ) external nonReentrant returns (uint256[] memory) {
+    ) external nonReentrant returns (uint256[] memory collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
-        uint256[] memory collateral = new uint256[](holders.length);
+        collateral = new uint256[](holders.length);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
@@ -305,7 +304,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
-        return collateral;
     }
 
     /// @inheritdoc IPoolCore
@@ -319,11 +317,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function settlePositionFor(
         Position.Key[] calldata p,
         uint256 costPerHolder
-    ) external nonReentrant returns (uint256[] memory) {
+    ) external nonReentrant returns (uint256[] memory collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
-        uint256[] memory collateral = new uint256[](p.length);
+        collateral = new uint256[](p.length);
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
@@ -335,7 +333,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * costPerHolder);
-        return collateral;
     }
 
     /// @inheritdoc IPoolCore
