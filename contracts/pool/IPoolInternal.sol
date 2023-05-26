@@ -59,7 +59,8 @@ interface IPoolInternal is IPosition, IPricing {
     struct TickWithLiquidity {
         Tick tick;
         UD60x18 price;
-        UD60x18 liquidityNet;
+        UD60x18 longLiq;
+        UD60x18 shortLiq;
     }
 
     struct QuoteRFQ {

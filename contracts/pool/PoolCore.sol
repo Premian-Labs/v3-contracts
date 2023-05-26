@@ -71,7 +71,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function ticks() external view returns (IPoolInternal.TickWithLiquidity[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 liquidityRate = l.liquidityRate;
+        UD60x18 longRate = l.longRate;
+        UD60x18 shortRate = l.shortRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
         UD60x18 curr = l.currentTick;
 
@@ -80,10 +81,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         IPoolInternal.TickWithLiquidity[] memory _ticks = new IPoolInternal.TickWithLiquidity[](maxTicks);
 
-        // compute the liquidityRate at MIN_TICK_PRICE
+        // compute the longRate and shortRate at MIN_TICK_PRICE
         if (l.currentTick != Pricing.MIN_TICK_PRICE) {
             while (true) {
-                liquidityRate = liquidityRate.add(l.ticks[curr].delta);
+                longRate = longRate.add(l.ticks[curr].longDelta);
+                shortRate = shortRate.add(l.ticks[curr].shortDelta);
 
                 if (prev == Pricing.MIN_TICK_PRICE) {
                     break;
@@ -101,14 +103,16 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             _ticks[count++] = IPoolInternal.TickWithLiquidity({
                 tick: l.ticks[prev],
                 price: prev,
-                liquidityNet: liquidityForRange(prev, curr, liquidityRate)
+                longLiq: liquidityForRange(prev, curr, longRate),
+                shortLiq: liquidityForRange(prev, curr, shortRate)
             });
 
             if (curr == Pricing.MAX_TICK_PRICE) {
                 _ticks[count++] = IPoolInternal.TickWithLiquidity({
                     tick: l.ticks[curr],
                     price: curr,
-                    liquidityNet: ZERO
+                    longLiq: ZERO,
+                    shortLiq: ZERO
                 });
                 break;
             }
@@ -116,9 +120,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             prev = curr;
 
             if (curr <= l.currentTick) {
-                liquidityRate = liquidityRate.sub(l.ticks[curr].delta);
+                longRate = longRate.sub(l.ticks[curr].longDelta);
+                shortRate = shortRate.sub(l.ticks[curr].shortDelta);
             } else {
-                liquidityRate = liquidityRate.add(l.ticks[curr].delta);
+                longRate = longRate.add(l.ticks[curr].longDelta);
+                shortRate = shortRate.add(l.ticks[curr].shortDelta);
             }
             curr = l.tickIndex.next(curr);
         }

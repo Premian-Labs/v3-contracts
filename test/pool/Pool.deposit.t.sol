@@ -138,10 +138,10 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[2].price, posKey.upper);
         assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].liquidityNet, ZERO);
-        assertEq(ticks[1].liquidityNet, ud(1000 ether));
-        assertEq(ticks[2].liquidityNet, ZERO);
-        assertEq(ticks[3].liquidityNet, ZERO);
+        assertEq(ticks[0].longLiq, ZERO);
+        assertEq(ticks[1].longLiq, ud(1000 ether));
+        assertEq(ticks[2].longLiq, ZERO);
+        assertEq(ticks[3].longLiq, ZERO);
 
         Position.Key memory customPosKey = Position.Key({
             owner: users.lp,
@@ -161,11 +161,11 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[3].price, posKey.upper);
         assertEq(ticks[4].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].liquidityNet, ZERO);
-        assertEq(ticks[1].liquidityNet, ud(500 ether));
-        assertEq(ticks[2].liquidityNet, ud(1500 ether));
-        assertEq(ticks[3].liquidityNet, ZERO);
-        assertEq(ticks[4].liquidityNet, ZERO);
+        assertEq(ticks[0].longLiq, ZERO);
+        assertEq(ticks[1].longLiq, ud(500 ether));
+        assertEq(ticks[2].longLiq, ud(1500 ether));
+        assertEq(ticks[3].longLiq, ZERO);
+        assertEq(ticks[4].longLiq, ZERO);
     }
 
     function test_ticks_NoDeposit() public {
@@ -174,31 +174,47 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
         assertEq(ticks[1].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].liquidityNet, ZERO);
-        assertEq(ticks[1].liquidityNet, ZERO);
+        assertEq(ticks[0].longLiq, ZERO);
+        assertEq(ticks[0].shortLiq, ZERO);
+        assertEq(ticks[1].longLiq, ZERO);
+        assertEq(ticks[1].shortLiq, ZERO);
     }
 
     function test_ticks_DepositMinTick() public {
-        Position.Key memory customPosKey = Position.Key({
+        Position.Key memory customPosKey0 = Position.Key({
             owner: users.lp,
             operator: users.lp,
             lower: ud(0.001 ether),
-            upper: ud(0.5 ether),
+            upper: ud(0.005 ether),
             orderType: Position.OrderType.LC
         });
 
-        deposit(customPosKey, ud(200 ether));
+        deposit(customPosKey0, ud(200 ether));
+
+        Position.Key memory customPosKey1 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.005 ether),
+            upper: ud(0.009 ether),
+            orderType: Position.OrderType.CS
+        });
+
+        deposit(customPosKey1, ud(10 ether));
 
         IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
 
         assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
-        assertEq(ticks[1].price, customPosKey.upper);
-        assertEq(ticks[2].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[1].price, customPosKey0.upper);
+        assertEq(ticks[2].price, customPosKey1.upper);
+        assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
 
-        // rounding error of liquidity rate - will come out at 199.999999999999999675 total liquidity in the active tick range
-        assertEq(ticks[0].liquidityNet, ud(199999999999999999675));
-        assertEq(ticks[1].liquidityNet, ZERO);
-        assertEq(ticks[2].liquidityNet, ZERO);
+        assertEq(ticks[0].longLiq, ud(200 ether));
+        assertEq(ticks[1].longLiq, ZERO);
+        assertEq(ticks[2].longLiq, ZERO);
+        assertEq(ticks[0].shortLiq, ZERO);
+        assertEq(ticks[1].shortLiq, ud(10 ether));
+        assertEq(ticks[2].shortLiq, ZERO);
+        assertEq(ticks[3].shortLiq, ZERO);
     }
 
     function test_ticks_ThreeDeposits() public {
@@ -232,6 +248,16 @@ abstract contract PoolDepositTest is DeployTest {
 
         deposit(customPosKey2, ud(100 ether));
 
+        Position.Key memory customPosKey3 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.6 ether),
+            upper: ud(0.8 ether),
+            orderType: Position.OrderType.CS
+        });
+
+        deposit(customPosKey3, ud(10 ether));
+
         IPoolInternal.TickWithLiquidity[] memory ticks = pool.ticks();
 
         assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
@@ -239,21 +265,28 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[2].price, customPosKey1.lower);
         assertEq(ticks[3].price, customPosKey1.upper);
         assertEq(ticks[4].price, customPosKey2.upper);
-        assertEq(ticks[5].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[5].price, customPosKey3.upper);
+        assertEq(ticks[6].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].liquidityNet, ud(40 ether));
+        assertEq(ticks[0].longLiq, ud(40 ether));
+        assertEq(ticks[0].shortLiq, ZERO);
         // lr (0.002 - 0.2)
-        assertEq(ticks[1].liquidityNet, ud(0 ether));
+        assertEq(ticks[1].longLiq, ud(0 ether));
+        assertEq(ticks[1].shortLiq, ZERO);
         // lr (0.2 and 0.4)
         // 10 / 200 + (100 / 400) = 0.3
         // total liquidity is numTicks * liqRate = 200 * 0.3 = 60
-        assertEq(ticks[2].liquidityNet, ud(60 ether));
+        assertEq(ticks[2].longLiq, ud(60 ether));
+        assertEq(ticks[2].shortLiq, ZERO);
         // lr (0.4 and 0.6)
         // total liquidity is numTicks * liqRate = 200 * 0.25 = 50
-        assertEq(ticks[3].liquidityNet, ud(50 ether));
-        // lr (0.6 and 1.0)
-        assertEq(ticks[4].liquidityNet, ZERO);
-        // lr (1.0)
-        assertEq(ticks[5].liquidityNet, ZERO);
+        assertEq(ticks[3].longLiq, ud(50 ether));
+        assertEq(ticks[3].shortLiq, ZERO);
+        // lr (0.6 and 0.8)
+        assertEq(ticks[4].longLiq, ZERO);
+        assertEq(ticks[4].shortLiq, ud(10 ether));
+        // lr (0.8 and 1.0)
+        assertEq(ticks[5].longLiq, ZERO);
+        assertEq(ticks[5].shortLiq, ZERO);
     }
 }
