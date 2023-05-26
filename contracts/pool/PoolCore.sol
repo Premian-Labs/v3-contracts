@@ -54,7 +54,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         bool isPremiumNormalized
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
         return l.toPoolTokenDecimals(_takerFee(l, taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized));
     }
 
@@ -234,9 +233,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function getClaimableFees(Position.Key calldata p) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
-
         (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p.toKeyInternal(l.strike, l.isCallPool), pData);
-
         return l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
@@ -280,7 +277,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
-
         return exerciseValues;
     }
 
@@ -309,7 +305,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
-
         return collateral;
     }
 
@@ -340,7 +335,6 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * costPerHolder);
-
         return collateral;
     }
 
@@ -352,9 +346,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 size
     ) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
         _revertIfOperatorNotAuthorized(srcP.operator);
-
         _transferPosition(srcP.toKeyInternal(l.strike, l.isCallPool), newOwner, newOperator, size);
     }
 }
