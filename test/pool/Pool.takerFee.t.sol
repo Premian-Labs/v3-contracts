@@ -5,7 +5,8 @@ pragma solidity >=0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {PRBMathExtra} from "../../contracts/libraries/PRBMathExtra.sol";
+import {ZERO} from "contracts/libraries/Constants.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -81,6 +82,18 @@ abstract contract PoolTakerFeeTest is DeployTest {
         vm.startPrank(users.trader);
 
         _test_takerFee(true, false, ud(100 ether), ud(1 ether), ud(discount));
+
+        vm.stopPrank();
+    }
+
+    function test_takerFee_premium_fee_with_discount_null_address() public {
+        stake(100_000 ether);
+
+        users.trader = address(0);
+
+        vm.startPrank(users.trader);
+
+        _test_takerFee(true, false, ud(100 ether), ud(1 ether), ZERO);
 
         vm.stopPrank();
     }
