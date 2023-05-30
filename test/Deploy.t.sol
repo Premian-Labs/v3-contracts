@@ -296,10 +296,7 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
-        poolCoreSelectors.push(poolCoreImpl.tick.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);
-        poolCoreSelectors.push(poolCoreImpl.liquidityForTick.selector);
-        poolCoreSelectors.push(poolCoreImpl.liquidityForRange.selector);
 
         // PoolDepositWithdraw
         poolDepositWithdrawSelectors.push(
@@ -378,11 +375,34 @@ contract DeployTest is Test, Assertions {
     }
 
     function deposit(UD60x18 depositSize) internal returns (uint256 initialCollateral) {
-        return deposit(pool, poolKey.strike, depositSize);
+        return deposit(pool, posKey, poolKey.strike, depositSize);
+    }
+
+    function deposit(
+        Position.Key memory customPosKey,
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, customPosKey, poolKey.strike, ud(depositSize));
+    }
+
+    function deposit(
+        Position.Key memory customPosKey,
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, customPosKey, poolKey.strike, depositSize);
     }
 
     function deposit(
         IPoolMock _pool,
+        UD60x18 strike,
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(_pool, posKey, strike, depositSize);
+    }
+
+    function deposit(
+        IPoolMock _pool,
+        Position.Key memory customPosKey,
         UD60x18 strike,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
@@ -394,9 +414,12 @@ contract DeployTest is Test, Assertions {
         deal(address(token), users.lp, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(posKey.lower, posKey.upper);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
 
-        _pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
+        _pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
 
         vm.stopPrank();
     }
