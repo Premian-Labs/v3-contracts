@@ -135,4 +135,8 @@ interface IPoolCore is IPoolInternal {
     /// @param newOperator The new operator
     /// @param size The size to transfer (18 decimals)
     function transferPosition(Position.Key calldata srcP, address newOwner, address newOperator, UD60x18 size) external;
+
+    /// @notice Returns the settlement price of the option.
+    /// @return The settlement price of the option (18 decimals). Returns 0 if option is not settled yet.
+    function getSettlementPrice() external view returns (UD60x18);
 }

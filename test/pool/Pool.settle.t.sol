@@ -236,4 +236,13 @@ abstract contract PoolSettleTest is DeployTest {
 
         pool.settleFor(holders, cost);
     }
+
+    function test_getSettlementPrice_ReturnExpectedValue() public {
+        assertEq(pool.getSettlementPrice(), 0);
+
+        bool isITM = true;
+        UD60x18 _settlementPrice = getSettlementPrice(isITM);
+        _test_settle_Sell100Options(isITM);
+        assertEq(pool.getSettlementPrice(), _settlementPrice);
+    }
 }

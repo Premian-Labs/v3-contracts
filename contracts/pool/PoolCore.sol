@@ -346,4 +346,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         _revertIfOperatorNotAuthorized(srcP.operator);
         _transferPosition(srcP.toKeyInternal(l.strike, l.isCallPool), newOwner, newOperator, size);
     }
+
+    /// @inheritdoc IPoolCore
+    function getSettlementPrice() external view returns (UD60x18) {
+        return PoolStorage.layout().settlementPrice;
+    }
 }
