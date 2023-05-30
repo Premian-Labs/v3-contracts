@@ -28,9 +28,9 @@ async function main() {
   const base = addresses.tokens.testWETH;
   const quote = addresses.tokens.USDC;
   const oracleAdapter = addresses.ChainlinkAdapterProxy;
-  const name = 'Short Volatility - ETH/USDC-C';
-  const symbol = 'pSV-ETH/USDC-C';
   const isCall = true;
+  const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
+  const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
 
   const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
     deployer,
@@ -55,7 +55,7 @@ async function main() {
 
   await vaultRegistry.addVault(
     underwriterVaultProxy.address,
-    isCall ? quote : base,
+    isCall ? base : quote,
     vaultType,
     TradeSide.SELL,
     isCall ? OptionType.CALL : OptionType.PUT,
