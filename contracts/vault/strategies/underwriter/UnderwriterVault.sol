@@ -295,6 +295,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(assets);
     }
 
+    /// @inheritdoc ERC4626BaseInternal
+    function _deposit(uint256 assetAmount, address receiver) internal virtual override returns (uint256 shareAmount) {
+        return super._deposit(assetAmount, receiver);
+    }
+
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
         assetAmount = _totalSupplyUD60x18() == ZERO ? shareAmount : shareAmount * _getPricePerShareUD60x18();
     }
@@ -303,6 +308,11 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     function _previewMint(uint256 shareAmount) internal view virtual override returns (uint256 assetAmount) {
         UD60x18 assets = _previewMintUD60x18(ud(shareAmount));
         assetAmount = UnderwriterVaultStorage.layout().convertAssetFromUD60x18(assets);
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _mint(uint256 shareAmount, address receiver) internal virtual override returns (uint256 assetAmount) {
+        return super._mint(shareAmount, receiver);
     }
 
     function _maxRedeemUD60x18(
