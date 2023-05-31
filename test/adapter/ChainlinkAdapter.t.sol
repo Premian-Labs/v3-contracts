@@ -14,6 +14,7 @@ import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.s
 import {ChainlinkAdapter} from "contracts/adapter/chainlink/ChainlinkAdapter.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 
+import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePriceStub.sol";
 
 contract ChainlinkAdapterTest is Test, Assertions {
@@ -285,6 +286,23 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
+    function test_quote_Return1e18ForPairWithSameFeed() public {
+        // tokenIn > tokenOut, tokenIn == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+        address testWETH = address(new ERC20Mock("testWETH", 18));
+
+        IFeedRegistry.FeedMappingArgs[] memory feedMapping = new IFeedRegistry.FeedMappingArgs[](1);
+
+        feedMapping[0] = IFeedRegistry.FeedMappingArgs(
+            testWETH,
+            CHAINLINK_USD,
+            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 // Same feed as WETH/USD
+        );
+
+        adapter.batchRegisterFeedMappings(feedMapping);
+        assertEq(adapter.quote(WETH, testWETH), ud(1e18));
+        assertEq(adapter.quote(testWETH, WETH), ud(1e18));
+    }
+
     function test_quote_ReturnQuoteUsingCorrectDenomination() public {
         address tokenIn = WETH;
         address tokenOut = DAI;
@@ -411,6 +429,23 @@ contract ChainlinkAdapterTest is Test, Assertions {
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
         }
+    }
+
+    function test_quoteFrom_Return1e18ForPairWithSameFeed() public {
+        // tokenIn > tokenOut, tokenIn == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+        address testWETH = address(new ERC20Mock("testWETH", 18));
+
+        IFeedRegistry.FeedMappingArgs[] memory feedMapping = new IFeedRegistry.FeedMappingArgs[](1);
+
+        feedMapping[0] = IFeedRegistry.FeedMappingArgs(
+            testWETH,
+            CHAINLINK_USD,
+            0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 // Same feed as WETH/USD
+        );
+
+        adapter.batchRegisterFeedMappings(feedMapping);
+        assertEq(adapter.quoteFrom(WETH, testWETH, target), ud(1e18));
+        assertEq(adapter.quoteFrom(testWETH, WETH, target), ud(1e18));
     }
 
     function test_quoteFrom_CatchRevert() public {

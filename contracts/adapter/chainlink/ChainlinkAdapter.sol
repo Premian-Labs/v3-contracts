@@ -42,7 +42,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @inheritdoc IOracleAdapter
     function isPairSupported(address tokenA, address tokenB) external view returns (bool isCached, bool hasPath) {
-        (PricingPath path, address mappedTokenA, address mappedTokenB) = _pricingPath(tokenA, tokenB, true);
+        (PricingPath path, address mappedTokenA, address mappedTokenB) = _pricingPath(tokenA, tokenB);
 
         isCached = path != PricingPath.NONE;
         if (isCached) return (isCached, true);
@@ -86,7 +86,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @notice Returns a quote price based on the pricing path between `tokenIn` and `tokenOut`
     function _quoteFrom(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
-        (PricingPath path, address mappedTokenIn, address mappedTokenOut) = _pricingPath(tokenIn, tokenOut, false);
+        (PricingPath path, address mappedTokenIn, address mappedTokenOut) = _pricingPath(tokenIn, tokenOut);
 
         if (path == PricingPath.NONE) {
             path = _determinePricingPath(mappedTokenIn, mappedTokenOut);
@@ -151,26 +151,20 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @inheritdoc IChainlinkAdapter
     function pricingPath(address tokenA, address tokenB) external view returns (PricingPath) {
-        (PricingPath path, , ) = _pricingPath(tokenA, tokenB, false);
+        (PricingPath path, , ) = _pricingPath(tokenA, tokenB);
         return path;
     }
 
-    /// @notice Returns the pricing path between `tokenA` and `tokenB` and the mapped tokens (sorted or unsorted)
+    /// @notice Returns the pricing path between `tokenA` and `tokenB` and the mapped tokens (unsorted)
     function _pricingPath(
         address tokenA,
-        address tokenB,
-        bool sortTokens
+        address tokenB
     ) internal view returns (PricingPath path, address mappedTokenA, address mappedTokenB) {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
 
         (address sortedA, address sortedB) = mappedTokenA.sortTokens(mappedTokenB);
 
         path = ChainlinkAdapterStorage.layout().pricingPath[sortedA.keyForSortedPair(sortedB)];
-
-        if (sortTokens) {
-            mappedTokenA = sortedA;
-            mappedTokenB = sortedB;
-        }
     }
 
     /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when the pair is either ETH/USD, token/ETH or
@@ -255,9 +249,10 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @notice Returns the pricing path between `tokenA` and `tokenB`
-    /// @dev Expects `tokenA` and `tokenB` to be sorted
     function _determinePricingPath(address tokenA, address tokenB) internal view virtual returns (PricingPath) {
         if (tokenA == tokenB) revert OracleAdapter__TokensAreSame(tokenA, tokenB);
+
+        (tokenA, tokenB) = tokenA.sortTokens(tokenB);
 
         bool isTokenAUSD = tokenA.isUSD();
         bool isTokenBUSD = tokenB.isUSD();
