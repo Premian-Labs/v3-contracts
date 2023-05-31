@@ -43,8 +43,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         address oracle,
         address factory,
         address router,
-        address vxPremia
-    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia) {}
+        address vxPremia,
+        address poolDiamond
+    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia, poolDiamond) {}
 
     function _getBlockTimestamp() internal view override returns (uint256) {
         return mockTimestamp == 0 ? block.timestamp : mockTimestamp;

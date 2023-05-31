@@ -42,6 +42,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     address internal immutable FACTORY;
     address internal immutable ROUTER;
     address internal immutable VXPREMIA;
+    address internal immutable POOL_DIAMOND;
 
     constructor(
         address vaultRegistry,
@@ -49,7 +50,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         address oracle,
         address factory,
         address router,
-        address vxPremia
+        address vxPremia,
+        address poolDiamond
     ) {
         VAULT_REGISTRY = vaultRegistry;
         FEE_RECEIVER = feeReceiver;
@@ -57,6 +59,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         FACTORY = factory;
         ROUTER = router;
         VXPREMIA = vxPremia;
+        POOL_DIAMOND = poolDiamond;
     }
 
     function updateSettings(bytes memory settings) external {
@@ -491,10 +494,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         l.lastTradeTimestamp = _getBlockTimestamp();
     }
 
-    /// @notice Gets the pool address corresponding to the given strike and maturity.
+    /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
     /// @param strike The strike price for the pool
     /// @param maturity The maturity for the pool
-    /// @return The pool factory address
+    /// @return The pool address (zero address if pool is not deployed)
     function _getPoolAddress(
         UnderwriterVaultStorage.Layout storage l,
         UD60x18 strike,
@@ -511,8 +514,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         });
 
         (address pool, bool isDeployed) = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
-        if (!isDeployed) revert Vault__OptionPoolNotListed();
-        return pool;
+
+        return isDeployed ? pool : address(0);
     }
 
     /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
@@ -631,7 +634,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     /// @notice Get the variables needed in order to compute the quote for a trade
     function _getQuoteInternal(
         UnderwriterVaultStorage.Layout storage l,
-        QuoteArgsInternal memory args
+        QuoteArgsInternal memory args,
+        bool revertIfPoolNotDeployed
     ) internal view returns (QuoteInternal memory quote) {
         _revertIfZeroSize(args.size);
         _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
@@ -690,7 +694,19 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
-        quote.mintingFee = l.convertAssetToUD60x18(IPool(quote.pool).takerFee(args.taker, args.size, 0, true));
+        if (revertIfPoolNotDeployed && quote.pool == address(0)) revert Vault__OptionPoolNotListed();
+
+        // This is to deal with the scenario where user request a quote for a pool not yet deployed
+        // Instead of calling `takerFee` on the pool, we call `_takerFeeLowLevel` directly on `POOL_DIAMOND`.
+        // This function doesnt require any data from pool storage and therefore will succeed even if pool is not deployed yet.
+        quote.mintingFee = IPool(POOL_DIAMOND)._takerFeeLowLevel(
+            args.taker,
+            args.size,
+            ud(0),
+            true,
+            args.strike,
+            l.isCall
+        );
     }
 
     /// @inheritdoc IVault
@@ -711,7 +727,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
                 size: size,
                 isBuy: isBuy,
                 taker: taker
-            })
+            }),
+            false
         );
 
         premium = l.convertAssetFromUD60x18(quote.premium + quote.spread + quote.mintingFee);
@@ -736,7 +753,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
                 size: size,
                 isBuy: isBuy,
                 taker: msg.sender
-            })
+            }),
+            true
         );
 
         UD60x18 totalPremium = quote.premium + quote.spread + quote.mintingFee;

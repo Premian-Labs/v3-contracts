@@ -403,18 +403,6 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     }
 
     function test_getPoolAddress_ReturnExpectedValue() public {
-        UD60x18 badStrike = ud(100e18);
-        uint256 badMaturity = 10000000;
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, poolKey.maturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(poolKey.strike, badMaturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, badMaturity);
-
         assertEq(vault.getPoolAddress(poolKey.strike, poolKey.maturity), address(pool));
     }
 

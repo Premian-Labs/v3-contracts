@@ -295,6 +295,7 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePositionFor.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
+        poolCoreSelectors.push(poolCoreImpl._takerFeeLowLevel.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);

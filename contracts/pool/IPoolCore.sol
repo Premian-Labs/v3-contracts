@@ -26,6 +26,28 @@ interface IPoolCore is IPoolInternal {
         bool isPremiumNormalized
     ) external view returns (uint256);
 
+    /// @notice Calculates the fee for a trade based on the `size` and `premiumNormalized` of the trade.
+    ///         WARNING : It is recommended to use `takerFee` instead of this function. This function is a lower level
+    ///                   function here to be used when a pool has not yet be deployed, by calling it from the diamond
+    ///                   contract directly rather than a pool proxy. If using it from the pool,
+    ///                   you should pass the same value as the pool for `strike` and `isCallPool` in order to get the accurate takerFee
+    /// @param taker The taker of a trade
+    /// @param size The size of a trade (number of contracts) (18 decimals)
+    /// @param premium The total cost of option(s) for a purchase (18 decimals)
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of
+    ///        1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @param strike The strike of the option (18 decimals)
+    /// @param isCallPool Whether the pool is a call pool or not
+    /// @return The taker fee for an option trade denormalized. (18 decimals)
+    function _takerFeeLowLevel(
+        address taker,
+        UD60x18 size,
+        UD60x18 premium,
+        bool isPremiumNormalized,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18);
+
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
     /// @return quote Address of quote token

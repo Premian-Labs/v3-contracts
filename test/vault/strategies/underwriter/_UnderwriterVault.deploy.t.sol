@@ -105,7 +105,8 @@ contract UnderwriterVaultDeployTest is DeployTest {
                 address(volOracle),
                 address(factory),
                 address(router),
-                address(vxPremia)
+                address(vxPremia),
+                address(diamond)
             )
         );
 
