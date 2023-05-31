@@ -15,6 +15,7 @@ import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
 import {ZERO, ONE} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
+import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
@@ -107,7 +108,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             for (uint256 i = 0; i < l.maturityToStrikes[current].length(); i++) {
                 UD60x18 strike = l.maturityToStrikes[current].at(i);
 
-                UD60x18 price = OptionMath.blackScholesPrice(settlement, strike, ZERO, ONE, ZERO, l.isCall);
+                UD60x18 price = OptionMathExternal.blackScholesPrice(settlement, strike, ZERO, ONE, ZERO, l.isCall);
 
                 UD60x18 premium = l.isCall ? (price / settlement) : price;
                 total = total + premium * l.positionSizes[current][strike];
@@ -142,16 +143,18 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
             sigmas: new UD60x18[](n)
         });
 
-        uint256 i = 0;
-        while (current <= l.maxMaturity && current != 0) {
-            for (uint256 j = 0; j < l.maturityToStrikes[current].length(); j++) {
-                vars.strikes[i] = l.maturityToStrikes[current].at(j);
-                vars.timeToMaturities[i] = ud((current - timestamp) * WAD) / ud(OptionMath.ONE_YEAR_TTM * WAD);
-                vars.maturities[i] = current;
-                i++;
-            }
+        {
+            uint256 i = 0;
+            while (current <= l.maxMaturity && current != 0) {
+                for (uint256 j = 0; j < l.maturityToStrikes[current].length(); j++) {
+                    vars.strikes[i] = l.maturityToStrikes[current].at(j);
+                    vars.timeToMaturities[i] = ud((current - timestamp) * WAD) / ud(OptionMath.ONE_YEAR_TTM * WAD);
+                    vars.maturities[i] = current;
+                    i++;
+                }
 
-            current = l.maturities.next(current);
+                current = l.maturities.next(current);
+            }
         }
 
         vars.sigmas = IVolatilityOracle(IV_ORACLE).getVolatility(
@@ -162,7 +165,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         );
 
         for (uint256 k = 0; k < n; k++) {
-            UD60x18 price = OptionMath.blackScholesPrice(
+            UD60x18 price = OptionMathExternal.blackScholesPrice(
                 vars.spot,
                 vars.strikes[k],
                 vars.timeToMaturities[k],
@@ -648,13 +651,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         vars.riskFreeRate = IVolatilityOracle(IV_ORACLE).getRiskFreeRate();
 
         // Compute delta and check bounds
-        vars.delta = OptionMath
+        vars.delta = OptionMathExternal
             .optionDelta(vars.spot, args.strike, vars.tau, vars.sigma, vars.riskFreeRate, l.isCall)
             .abs();
 
         _revertIfOutOfDeltaBounds(vars.delta.intoUD60x18(), l.minDelta, l.maxDelta);
 
-        vars.price = OptionMath.blackScholesPrice(
+        vars.price = OptionMathExternal.blackScholesPrice(
             vars.spot,
             args.strike,
             vars.tau,

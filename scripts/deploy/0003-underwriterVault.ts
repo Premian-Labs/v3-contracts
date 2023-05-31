@@ -1,4 +1,5 @@
 import {
+  OptionMathExternal__factory,
   UnderwriterVault__factory,
   VaultRegistry__factory,
   VxPremiaProxy,
@@ -71,8 +72,19 @@ async function main() {
     await vaultRegistry.updateSettings(vaultType, settings);
   }
 
+  const optionMathExternal = await new OptionMathExternal__factory(
+    deployer,
+  ).deploy();
+  await optionMathExternal.deployed();
+
+  console.log('OptionMathExternal : ', optionMathExternal.address);
+
   // Deploy UnderwriterVault implementation
   const underwriterVaultImpl = await new UnderwriterVault__factory(
+    {
+      'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
+        optionMathExternal.address,
+    },
     deployer,
   ).deploy(
     addresses.VaultRegistryProxy,

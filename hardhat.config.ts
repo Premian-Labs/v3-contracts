@@ -51,16 +51,17 @@ export default {
       },
     ],
     overrides: {
-      'contracts/vault/strategies/underwriter/UnderwriterVault.sol': {
-        version: '0.8.19',
-        settings: {
-          viaIR: false,
-          optimizer: {
-            enabled: true,
-            runs: 20,
-          },
-        },
-      },
+      // This override allows to save ~0.5kB contract size if necessary
+      // 'contracts/vault/strategies/underwriter/UnderwriterVault.sol': {
+      //   version: '0.8.19',
+      //   settings: {
+      //     viaIR: false,
+      //     optimizer: {
+      //       enabled: true,
+      //       runs: 20,
+      //     },
+      //   },
+      // },
       'contracts/staking/VxPremia.sol': {
         version: '0.8.19',
         settings: {
