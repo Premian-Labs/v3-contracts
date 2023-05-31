@@ -9,6 +9,7 @@ import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20Bas
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
@@ -24,7 +25,7 @@ import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option contracts by using collateral deposited by users
-contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
+contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGuard {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -296,7 +297,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    function _deposit(uint256 assetAmount, address receiver) internal virtual override returns (uint256 shareAmount) {
+    function _deposit(
+        uint256 assetAmount,
+        address receiver
+    ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         return super._deposit(assetAmount, receiver);
     }
 
@@ -311,7 +315,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    function _mint(uint256 shareAmount, address receiver) internal virtual override returns (uint256 assetAmount) {
+    function _mint(
+        uint256 shareAmount,
+        address receiver
+    ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         return super._mint(shareAmount, receiver);
     }
 
@@ -335,7 +342,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 shareAmount,
         address receiver,
         address owner
-    ) internal virtual override returns (uint256 assetAmount) {
+    ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         UD60x18 shares = ud(shareAmount);
@@ -393,7 +400,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         uint256 assetAmount,
         address receiver,
         address owner
-    ) internal virtual override returns (uint256 shareAmount) {
+    ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
@@ -714,7 +721,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
         bool isBuy,
         uint256 premiumLimit,
         address referrer
-    ) external override {
+    ) external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         QuoteInternal memory quote = _getQuoteInternal(
@@ -775,7 +782,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626 {
     }
 
     /// @inheritdoc IUnderwriterVault
-    function settle() external override {
+    function settle() external override nonReentrant {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         // Needs to update state as settle effects the listed postions, i.e. maturities and maturityToStrikes.
         _updateState(l);
