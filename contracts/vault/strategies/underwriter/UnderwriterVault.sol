@@ -285,7 +285,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     }
 
     function _convertToAssetsUD60x18(UD60x18 shareAmount, UD60x18 pps) internal view returns (UD60x18 assetAmount) {
-        if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
+        _revertIfZeroShares(_totalSupplyUD60x18().unwrap());
 
         assetAmount = shareAmount * pps;
     }
@@ -301,17 +301,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         uint256 assetAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
-        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-
-        if (assetAmount > _maxDeposit(receiver))
-            revert Vault__MaximumAmountExceeded(
-                l.convertAssetToUD60x18(_maxDeposit(receiver)),
-                l.convertAssetToUD60x18(assetAmount)
-            );
-
-        shareAmount = _previewDeposit(assetAmount);
-
-        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
+        return super._deposit(assetAmount, receiver);
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -329,12 +319,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         uint256 shareAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
-        if (shareAmount > _maxMint(receiver))
-            revert Vault__MaximumAmountExceeded(ud(_maxMint(receiver)), ud(shareAmount));
-
-        assetAmount = _previewMint(shareAmount);
-
-        _deposit(msg.sender, receiver, assetAmount, shareAmount, 0, 0);
+        return super._mint(shareAmount, receiver);
     }
 
     function _maxRedeemUD60x18(
@@ -342,7 +327,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         address owner,
         UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
-        if (owner == address(0)) revert Vault__AddressZero();
+        _revertIfAddressZero(owner);
 
         return _maxWithdrawUD60x18(l, owner, pps) / pps;
     }
@@ -364,7 +349,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxRedeem = _maxRedeemUD60x18(l, owner, pps);
 
-        if (shares > maxRedeem) revert Vault__MaximumAmountExceeded(maxRedeem, shares);
+        _revertIfMaximumAmountExceeded(maxRedeem, shares);
 
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
@@ -376,7 +361,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         address owner,
         UD60x18 pps
     ) internal view returns (UD60x18 withdrawableAssets) {
-        if (owner == address(0)) revert Vault__AddressZero();
+        _revertIfAddressZero(owner);
 
         FeeInternal memory vars = _getFeeInternal(l, owner, _balanceOfUD60x18(owner), pps);
         UD60x18 assetsOwner = _maxTransferableShares(vars) * pps;
@@ -397,7 +382,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 assetAmount,
         UD60x18 pps
     ) internal view returns (UD60x18 shareAmount) {
-        if (_totalSupplyUD60x18() == ZERO) revert Vault__ZeroShares();
+        _revertIfZeroShares(_totalSupplyUD60x18().unwrap());
         if (_availableAssetsUD60x18(l) == ZERO) revert Vault__InsufficientFunds();
         shareAmount = assetAmount / pps;
     }
@@ -422,7 +407,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxWithdraw = _maxWithdrawUD60x18(l, owner, pps);
 
-        if (assets > maxWithdraw) revert Vault__MaximumAmountExceeded(maxWithdraw, assets);
+        _revertIfMaximumAmountExceeded(maxWithdraw, assets);
 
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
@@ -442,9 +427,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
 
     /// @inheritdoc ERC4626BaseInternal
     function _afterDeposit(address receiver, uint256 assetAmount, uint256 shareAmount) internal virtual override {
-        if (receiver == address(0)) revert Vault__AddressZero();
-        if (assetAmount == 0) revert Vault__ZeroAsset();
-        if (shareAmount == 0) revert Vault__ZeroShares();
+        _revertIfAddressZero(receiver);
+        _revertIfZeroAsset(assetAmount);
+        _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -462,9 +447,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
 
     /// @inheritdoc ERC4626BaseInternal
     function _beforeWithdraw(address owner, uint256 assetAmount, uint256 shareAmount) internal virtual override {
-        if (owner == address(0)) revert Vault__AddressZero();
-        if (assetAmount == 0) revert Vault__ZeroAsset();
-        if (shareAmount == 0) revert Vault__ZeroShares();
+        _revertIfAddressZero(owner);
+        _revertIfZeroAsset(assetAmount);
+        _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
@@ -556,9 +541,34 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
-    /// @param size The amount of contracts.
+    /// @param size The amount of contracts
     function _revertIfZeroSize(UD60x18 size) internal pure {
         if (size == ZERO) revert Vault__ZeroSize();
+    }
+
+    /// @notice Ensures that a share amount is non zero.
+    /// @param shares The amount of shares
+    function _revertIfZeroShares(uint256 shares) internal pure {
+        if (shares == 0) revert Vault__ZeroShares();
+    }
+
+    /// @notice Ensures that an asset amount is non zero.
+    /// @param amount The amount of assets
+    function _revertIfZeroAsset(uint256 amount) internal pure {
+        if (amount == 0) revert Vault__ZeroAsset();
+    }
+
+    /// @notice Ensures that an address is non zero.
+    /// @param addr The address to check
+    function _revertIfAddressZero(address addr) internal pure {
+        if (addr == address(0)) revert Vault__AddressZero();
+    }
+
+    /// @notice Ensures that an amount is not above maximum
+    /// @param maximum The maximum amount
+    /// @param amount The amount to check
+    function _revertIfMaximumAmountExceeded(UD60x18 maximum, UD60x18 amount) internal pure {
+        if (amount > maximum) revert Vault__MaximumAmountExceeded(maximum, amount);
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
