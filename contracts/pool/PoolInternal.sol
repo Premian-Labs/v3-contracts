@@ -1836,9 +1836,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Revert if `totalPremium` is exceeds max slippage
     function _revertIfTradeAboveMaxSlippage(uint256 totalPremium, uint256 premiumLimit, bool isBuy) internal pure {
-        if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(premiumLimit, 0, totalPremium);
+        if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(totalPremium, 0, premiumLimit);
         if (!isBuy && totalPremium < premiumLimit)
-            revert Pool__AboveMaxSlippage(premiumLimit, totalPremium, type(uint256).max);
+            revert Pool__AboveMaxSlippage(totalPremium, premiumLimit, type(uint256).max);
     }
 
     /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`
