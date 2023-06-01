@@ -32,6 +32,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         oracleAdapter.setQuote(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
         volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
+        volOracle.setVolatility(base, spot, ud(1050e18), ud(19178082191780821), ud(1.54e18));
+        volOracle.setVolatility(base, spot, ud(1050e18), ud(134246575342465753), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
         addDeposit(users.lp, depositSize);
@@ -72,21 +74,23 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         );
     }
 
+    function test_getQuote_ReturnCorrectQuote_ForPoolNotDeployed() public {
+        setup();
+
+        poolKey.strike = ud(1050e18);
+
+        assertApproxEqAbs(
+            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
+            isCallTest ? 0.20945141965280406e18 : 363.255965e18,
+            isCallTest ? 0.000001e18 : 0.01e18
+        );
+    }
+
     function test_getQuote_RevertIf_NotEnoughAvailableAssets() public {
         setup();
 
         vm.expectRevert(IVault.Vault__InsufficientFunds.selector);
         vault.getQuote(poolKey, ud(6e18), true, address(0));
-    }
-
-    function test_getQuote_RevertIf_PoolDoesNotExist() public {
-        setup();
-
-        maturity = 1678435200;
-        poolKey.maturity = maturity;
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getQuote(poolKey, ud(3e18), true, address(0));
     }
 
     function test_getQuote_RevertIf_ZeroSize() public {
