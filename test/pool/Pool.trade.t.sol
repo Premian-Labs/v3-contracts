@@ -168,7 +168,7 @@ abstract contract PoolTradeTest is DeployTest {
         IERC20(poolToken).approve(address(router), totalPremium);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__AboveMaxSlippage.selector, totalPremium - 1, 0, totalPremium)
+            abi.encodeWithSelector(IPoolInternal.Pool__AboveMaxSlippage.selector, totalPremium, 0, totalPremium - 1)
         );
         pool.trade(tradeSize, true, totalPremium - 1, address(0));
     }
@@ -190,8 +190,8 @@ abstract contract PoolTradeTest is DeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IPoolInternal.Pool__AboveMaxSlippage.selector,
-                totalPremium + 1,
                 totalPremium,
+                totalPremium + 1,
                 type(uint256).max
             )
         );
