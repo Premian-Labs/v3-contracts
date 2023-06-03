@@ -140,4 +140,11 @@ interface IPoolCore is IPoolInternal {
     /// @notice Returns the settlement price of the option.
     /// @return The settlement price of the option (18 decimals). Returns 0 if option is not settled yet.
     function getSettlementPrice() external view returns (UD60x18);
+
+    /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
+    ///         area does not exist it will return the stranded market area the maximum tick price for both the lower
+    ///         and the upper, in which case the market price is not stranded given any range order info order.
+    /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
+    /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
+    function getStrandedArea(UD60x18 tick, bool isBid) external view returns (UD60x18 lower, UD60x18 upper);
 }
