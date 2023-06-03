@@ -146,5 +146,5 @@ interface IPoolCore is IPoolInternal {
     ///         and the upper, in which case the market price is not stranded given any range order info order.
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
-    function getStrandedArea(UD60x18 tick, bool isBid) external view returns (UD60x18 lower, UD60x18 upper);
+    function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper);
 }

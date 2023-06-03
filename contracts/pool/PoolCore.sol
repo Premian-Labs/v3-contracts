@@ -283,7 +283,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function getStrandedArea(UD60x18 tick, bool isBid) external view returns (UD60x18 lower, UD60x18 upper) {
+    function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper) {
         return _getStrandedArea(PoolStorage.layout());
     }
 }
