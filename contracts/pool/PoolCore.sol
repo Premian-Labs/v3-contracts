@@ -281,4 +281,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function getSettlementPrice() external view returns (UD60x18) {
         return PoolStorage.layout().settlementPrice;
     }
+
+    /// @inheritdoc IPoolCore
+    function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper) {
+        return _getStrandedArea(PoolStorage.layout());
+    }
 }
