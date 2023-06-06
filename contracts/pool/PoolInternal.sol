@@ -1250,6 +1250,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 lower,
         UD60x18 upper
     ) internal view returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) {
+        _revertIfRangeInvalid(lower, upper);
         Position.revertIfLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
@@ -1272,7 +1273,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         UD60x18 next = l.tickIndex.next(left);
-        while (left != ZERO && next <= price) {
+        while (left != ZERO && next <= price && left != Pricing.MAX_TICK_PRICE) {
             left = next;
             next = l.tickIndex.next(left);
         }
