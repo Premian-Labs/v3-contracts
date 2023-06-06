@@ -48,7 +48,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         _mint(longReceiver, longTokenId, size, "");
         _mint(underwriter, shortTokenId, size, "");
 
-        // emit WriteFrom()
+        emit WriteFrom(underwriter, longReceiver, size, strike, maturity);
     }
 
     function exercise() external nonReentrant {}
