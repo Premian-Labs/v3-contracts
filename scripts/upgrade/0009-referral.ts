@@ -1,7 +1,7 @@
 import {
-  ProxyUpgradeableOwnable,
-  ProxyUpgradeableOwnable__factory,
   Referral__factory,
+  ReferralProxy,
+  ReferralProxy__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
@@ -16,7 +16,7 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: ProxyUpgradeableOwnable;
+  let proxy: ReferralProxy;
   let addresses: ContractAddresses;
   let addressesPath: string;
   let setImplementation: boolean;
@@ -37,10 +37,7 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.ReferralProxy,
-    deployer,
-  );
+  proxy = ReferralProxy__factory.connect(addresses.ReferralProxy, deployer);
 
   //////////////////////////
 
