@@ -209,6 +209,13 @@ library OptionMath {
         return maturity - block.timestamp;
     }
 
+    /// @notice Calculates the 8AM UTC timestamp in seconds. If `timestamp` is before 8AM UTC, the
+    ///         8AM UTC timestamp of the previous day is returned
+    function calculateTimestamp8AMUTC(uint256 timestamp) internal pure returns (uint256 timestamp8AMUTC) {
+        timestamp8AMUTC = timestamp - (timestamp % 24 hours) + 8 hours;
+        if (timestamp % 24 hours < 8 hours) timestamp8AMUTC = timestamp8AMUTC - 24 hours;
+    }
+
     /// @notice Calculates the strike interval for the given spot price
     /// @param spot The spot price of the base asset (18 decimals)
     /// @return The strike interval (18 decimals)
