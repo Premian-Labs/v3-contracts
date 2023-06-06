@@ -1026,7 +1026,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         if (srcTokenId == dstTokenId) {
-            _transfer(address(this), srcP.owner, newOwner, srcTokenId, size.unwrap(), "");
+            _safeTransfer(address(this), srcP.owner, newOwner, srcTokenId, size.unwrap(), "");
         } else {
             _burn(srcP.owner, srcTokenId, size);
             _mint(newOwner, dstTokenId, size);
