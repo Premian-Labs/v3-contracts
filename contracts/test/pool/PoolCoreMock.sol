@@ -9,6 +9,7 @@ import {Pricing} from "../../libraries/Pricing.sol";
 
 import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
+import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
@@ -92,6 +93,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.liquidityRate;
+    }
+
+    function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory) {
+        return _getTick(price);
     }
 
     function getLongRate() external view returns (UD60x18) {

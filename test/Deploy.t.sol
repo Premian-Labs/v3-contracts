@@ -273,6 +273,7 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedArea.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_cross.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_mint.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);

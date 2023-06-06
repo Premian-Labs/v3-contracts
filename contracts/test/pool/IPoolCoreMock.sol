@@ -50,4 +50,6 @@ interface IPoolCoreMock {
     function getLongRate() external view returns (UD60x18);
 
     function getShortRate() external view returns (UD60x18);
+
+    function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory);
 }

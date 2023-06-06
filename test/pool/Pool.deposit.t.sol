@@ -361,6 +361,286 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.getShortRate(), 0.01 ether);
     }
 
+    function _setup_CS() public {
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.25 ether),
+            upper: ud(0.75 ether),
+            orderType: Position.OrderType.CS
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.0 ether));
+        assertEq(pool.getCurrentTick(), ud(0.001 ether));
+        assertEq(pool.marketPrice(), ud(0.25 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.25 ether));
+        assertEq(tick0.delta.unwrap(), 0.002 ether);
+        assertEq(tick0.shortDelta.unwrap(), 0.002 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(ud(0.75 ether));
+        assertEq(tick1.delta.unwrap(), -0.002 ether);
+        assertEq(tick1.shortDelta.unwrap(), -0.002 ether);
+    }
+
+    function _setup_LC() public {
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.25 ether),
+            upper: ud(0.75 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.25 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.25 ether));
+        assertEq(tick0.delta.unwrap(), -0.002 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.002 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(ud(0.75 ether));
+        assertEq(tick1.delta.unwrap(), -0.002 ether);
+        assertEq(tick1.longDelta.unwrap(), -0.002 ether);
+    }
+
+    function test_deposit_Case1() public {
+        _setup_LC();
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.01 ether),
+            upper: ud(0.05 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.25 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.01 ether));
+        assertEq(tick0.delta.unwrap(), -0.025 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.025 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(ud(0.05 ether));
+        assertEq(tick1.delta.unwrap(), 0.025 ether);
+        assertEq(tick1.longDelta.unwrap(), 0.025 ether);
+    }
+
+    function test_deposit_Case2() public {
+        _setup_LC();
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.05 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.25 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.005 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.005 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), 0.003 ether);
+        assertEq(tick1.longDelta.unwrap(), 0.003 ether);
+    }
+
+    function test_deposit_Case3() public {
+        _setup_LC();
+        // liq per tick of position is 0.004
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.25 ether),
+            upper: ud(0.5 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.5 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.006 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.006 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), 0.004 ether);
+        assertEq(tick1.longDelta.unwrap(), 0.004 ether);
+    }
+
+    function test_deposit_Case4() public {
+        _setup_LC();
+        // liq per tick of position is 0.005
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.3 ether),
+            upper: ud(0.5 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.5 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.005 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.005 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), 0.005 ether);
+        assertEq(tick1.longDelta.unwrap(), 0.005 ether);
+    }
+
+    function test_deposit_Case5() public {
+        _setup_LC();
+        // liq per tick of position is 0.0025
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.35 ether),
+            upper: ud(0.75 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.0045 ether));
+        assertEq(pool.getCurrentTick(), ud(0.35 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.0025 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.0025 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.0045 ether);
+        assertEq(tick1.longDelta.unwrap(), -0.0045 ether);
+    }
+
+    function test_deposit_Case6() public {
+        _setup_LC();
+        // liq per tick of position is 0.02
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.75 ether),
+            upper: ud(0.8 ether),
+            orderType: Position.OrderType.CS
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.002 ether));
+        assertEq(pool.getCurrentTick(), ud(0.25 ether));
+        assertEq(pool.marketPrice(), ud(0.75 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), 0.018 ether);
+        assertEq(tick0.shortDelta.unwrap(), 0.02 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.02 ether);
+        assertEq(tick1.shortDelta.unwrap(), -0.02 ether);
+    }
+
+    function test_deposit_Case7() public {
+        _setup_LC();
+        // liq per tick of position is 0.05
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.78 ether),
+            upper: ud(0.8 ether),
+            orderType: Position.OrderType.CS
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.0 ether));
+        assertEq(pool.getCurrentTick(), ud(0.75 ether));
+        assertEq(pool.marketPrice(), ud(0.78 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), 0.05 ether);
+        assertEq(tick0.shortDelta.unwrap(), 0.05 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.05 ether);
+        assertEq(tick1.shortDelta.unwrap(), -0.05 ether);
+    }
+
+    function test_deposit_Case8() public {
+        _setup_CS();
+        // liq per tick of position is 0.025
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.01 ether),
+            upper: ud(0.05 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.025 ether));
+        assertEq(pool.getCurrentTick(), ud(0.01 ether));
+        assertEq(pool.marketPrice(), ud(0.05 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.025 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.025 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.025 ether);
+        assertEq(tick1.longDelta.unwrap(), -0.025 ether);
+    }
+
+    function test_deposit_Case9() public {
+        _setup_CS();
+        // liq per tick of position is 0.005
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.05 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.LC
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.005 ether));
+        assertEq(pool.getCurrentTick(), ud(0.05 ether));
+        assertEq(pool.marketPrice(), ud(0.25 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), -0.005 ether);
+        assertEq(tick0.longDelta.unwrap(), -0.005 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.003 ether);
+        assertEq(tick1.longDelta.unwrap(), -0.005 ether);
+    }
+
+    function test_deposit_Case10() public {
+        _setup_CS();
+        // liq per tick of position is 0.004
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.25 ether),
+            upper: ud(0.5 ether),
+            orderType: Position.OrderType.CS
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.0 ether));
+        assertEq(pool.getCurrentTick(), ud(0.001 ether));
+        assertEq(pool.marketPrice(), ud(0.25 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), 0.006 ether);
+        assertEq(tick0.shortDelta.unwrap(), 0.006 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.004 ether);
+        assertEq(tick1.shortDelta.unwrap(), -0.004 ether);
+    }
+
+    function test_deposit_Case11() public {
+        _setup_CS();
+        // liq per tick of position is 0.005
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.3 ether),
+            upper: ud(0.5 ether),
+            orderType: Position.OrderType.CS
+        });
+        deposit(customPosKey0, ud(1 ether));
+        assertEq(pool.getLiquidityRate(), ud(0.0 ether));
+        assertEq(pool.getCurrentTick(), ud(0.001 ether));
+        assertEq(pool.marketPrice(), ud(0.25 ether));
+        IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
+        assertEq(tick0.delta.unwrap(), 0.005 ether);
+        assertEq(tick0.shortDelta.unwrap(), 0.005 ether);
+        IPoolInternal.Tick memory tick1 = pool.exposed_getTick(customPosKey0.upper);
+        assertEq(tick1.delta.unwrap(), -0.005 ether);
+        assertEq(tick1.shortDelta.unwrap(), -0.005 ether);
+    }
+
     function test_deposit_RevertIf_SenderNotOperator() public {
         posKey.operator = users.trader;
 
