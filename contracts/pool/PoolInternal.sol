@@ -554,14 +554,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         if (longs + shorts > ZERO) {
-            _safeTransfer(
-                address(this),
-                from,
-                to,
-                longs > ZERO ? PoolStorage.LONG : PoolStorage.SHORT,
-                longs > ZERO ? longs.unwrap() : shorts.unwrap(),
-                ""
-            );
+            uint256 id = longs > ZERO ? PoolStorage.LONG : PoolStorage.SHORT;
+            uint256 amount = longs > ZERO ? longs.unwrap() : shorts.unwrap();
+
+            if (to == address(this)) {
+                // We bypass the acceptance check by using `_transfer` instead of `_safeTransfer if transferring to the pool,
+                // so that we do not have to blindly accept any transfer
+                _transfer(address(this), from, to, id, amount, "");
+            } else {
+                _safeTransfer(address(this), from, to, id, amount, "");
+            }
         }
     }
 
