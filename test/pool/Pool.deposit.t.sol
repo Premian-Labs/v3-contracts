@@ -933,6 +933,6 @@ abstract contract PoolDepositTest is DeployTest {
         vm.expectRevert(
             abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, ud(0.001 ether), ud(2 ether))
         );
-        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.001 ether), ud(2 ether));
+        pool.getNearestTicksBelow(ud(0.001 ether), ud(2 ether));
     }
 }
