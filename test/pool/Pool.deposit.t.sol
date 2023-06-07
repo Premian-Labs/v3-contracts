@@ -15,7 +15,7 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
-import {console} from "forge-std/console.sol";
+import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolDepositTest is DeployTest {
     function test_deposit_1000_LC_WithToken() public {
@@ -34,6 +34,331 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(token.balanceOf(address(pool)), collateralValue);
         assertEq(token.balanceOf(users.lp), initialCollateral - collateralValue);
         assertEq(pool.marketPrice(), posKey.upper);
+    }
+
+    function test_deposit_CS_BelowMarketPrice() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.005 ether),
+            upper: ud(0.006 ether),
+            orderType: Position.OrderType.CS
+        });
+        // need to mint 1.0 short options
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+
+        IERC20 token = IERC20(getPoolToken());
+        uint256 balanceAfter = token.balanceOf(users.lp);
+        assertEq(balanceAfter, isCallTest ? ud(0.8445 ether) : ud(0.8445e9));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        assertEq(pool.getLiquidityRate().unwrap(), 0.01 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.0 ether);
+    }
+
+    function test_deposit_CSUP_BelowMarketPrice() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.005 ether),
+            upper: ud(0.006 ether),
+            orderType: Position.OrderType.CSUP
+        });
+        // need to mint 1.0 short options
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+
+        IERC20 token = IERC20(getPoolToken());
+        uint256 balanceAfter = token.balanceOf(users.lp);
+        assertEq(balanceAfter, isCallTest ? ud(0.85 ether) : ud(0.85e9));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        assertEq(pool.getLiquidityRate().unwrap(), 0.01 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.0 ether);
+    }
+
+    function test_deposit_LC_AboveMarketPrice() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.CS;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.3 ether),
+            upper: ud(0.4 ether),
+            orderType: Position.OrderType.LC
+        });
+        // need to mint 1.0 short options
+        IERC20 token = IERC20(getPoolToken());
+        uint256 balanceBefore = token.balanceOf(users.lp);
+        pool.exposed_mint(users.lp, PoolStorage.LONG, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+
+        uint256 balanceAfter = token.balanceOf(users.lp);
+        assertEq(balanceAfter, balanceBefore);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.5 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.1 ether);
+        assertEq(pool.getCurrentTick(), 0.001 ether);
+        assertEq(pool.getLiquidityRate().unwrap(), 0.0 ether);
+        assertEq(pool.getLongRate(), 0.0 ether);
+        assertEq(pool.getShortRate(), 0.0 ether);
+    }
+
+    function test_deposit_CS_Straddle() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.15 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.CS
+        });
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        IERC20 token = IERC20(getPoolToken());
+        assertEq(token.balanceOf(users.lp), isCallTest ? 0.2625 ether : 262.500000e6);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.0 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        // market price 0.2 -> current 0.1 -> next 0.15
+        // reconcile -> cross 0.15
+        assertEq(pool.getCurrentTick(), 0.15 ether);
+        // reconcile -> kick in liquidity at tick 0.15
+        assertEq(pool.getLiquidityRate().unwrap(), 0.02 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.01 ether);
+    }
+
+    function test_deposit_CS_StraddlePartiallyTraversed() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, false, depositSize);
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.15 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.CS
+        });
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.25 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        // market price 0.175 -> current 0.1 -> next 0.15
+        // reconcile -> cross 0.15
+        assertEq(pool.getCurrentTick(), 0.15 ether);
+        // reconcile -> kick in liquidity at tick 0.15
+        assertEq(pool.getLiquidityRate().unwrap(), 0.02 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.01 ether);
+    }
+
+    function test_deposit_CSUP_Straddle() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.15 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.CSUP
+        });
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.0 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        // market price 0.2 -> current 0.1 -> next 0.15
+        // reconcile -> cross 0.15
+        assertEq(pool.getCurrentTick(), 0.15 ether);
+        // reconcile -> kick in liquidity at tick 0.15
+        assertEq(pool.getLiquidityRate().unwrap(), 0.02 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.01 ether);
+    }
+
+    function test_deposit_CSUP_StraddlePartiallyTraversed() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, false, depositSize);
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.15 ether),
+            upper: ud(0.25 ether),
+            orderType: Position.OrderType.CSUP
+        });
+        pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.25 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        // market price 0.175 -> current 0.1 -> next 0.15
+        // reconcile -> cross 0.15
+        assertEq(pool.getCurrentTick(), 0.15 ether);
+        // reconcile -> kick in liquidity at tick 0.15
+        assertEq(pool.getLiquidityRate().unwrap(), 0.02 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.01 ether);
+    }
+
+    function test_deposit_LC_Straddle() public {
+        posKey.lower = ud(0.15 ether);
+        posKey.upper = ud(0.25 ether);
+        posKey.orderType = Position.OrderType.CS;
+
+        uint256 depositSize = 1 ether;
+        deposit(depositSize);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.1 ether),
+            upper: ud(0.2 ether),
+            orderType: Position.OrderType.LC
+        });
+        // need to mint 1.0 short options
+        IERC20 token = IERC20(getPoolToken());
+        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        deal(address(token), users.lp, initialCollateral);
+        pool.exposed_mint(users.lp, PoolStorage.LONG, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        token.approve(address(router), initialCollateral);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(token.balanceOf(users.lp), isCallTest ? (1 ether - 0.0625 ether) : (1e9 - 0.0625e9));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(1.0 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.15 ether);
+        // market price 0.15 -> current 0.01 -> next 0.1
+        // reconcile -> cross 0.1
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        // cross kicks in liquidity from the LC order, however not from the CS order
+        assertEq(pool.getLiquidityRate().unwrap(), 0.01 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.0 ether);
+    }
+
+    function test_deposit_LC_StraddlePartiallyTraversed() public {
+        posKey.lower = ud(0.15 ether);
+        posKey.upper = ud(0.25 ether);
+        posKey.orderType = Position.OrderType.CS;
+
+        uint256 depositSize = 1 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, true, depositSize);
+
+        Position.Key memory customPosKey = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.1 ether),
+            upper: ud(0.2 ether),
+            orderType: Position.OrderType.LC
+        });
+        // need to mint 1.0 short options
+        IERC20 token = IERC20(getPoolToken());
+        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        deal(address(token), users.lp, initialCollateral);
+        pool.exposed_mint(users.lp, PoolStorage.LONG, ud(1.5 ether));
+        vm.startPrank(users.lp);
+        token.approve(address(router), initialCollateral);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
+        pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(1.25 ether));
+        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        // market price 0.175 -> current 0.15
+        // reconcile -> no crossing
+        assertEq(pool.getCurrentTick(), 0.15 ether);
+        // liquidity from the LC order should be added during deposit
+        assertEq(pool.getLiquidityRate().unwrap(), 0.02 ether);
+        assertEq(pool.getLongRate(), 0.01 ether);
+        assertEq(pool.getShortRate(), 0.01 ether);
     }
 
     function test_deposit_RevertIf_SenderNotOperator() public {

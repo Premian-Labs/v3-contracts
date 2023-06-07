@@ -80,6 +80,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _isMarketPriceStranded(l, p, isBid);
     }
 
+    function exposed_mint(address account, uint256 id, UD60x18 amount) external {
+        _mint(account, id, amount.unwrap(), "");
+    }
+
     function getCurrentTick() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.currentTick;
@@ -88,5 +92,15 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.liquidityRate;
+    }
+
+    function getLongRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.longRate;
+    }
+
+    function getShortRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.shortRate;
     }
 }

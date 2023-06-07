@@ -41,7 +41,13 @@ interface IPoolCoreMock {
 
     function exposed_isMarketPriceStranded(Position.KeyInternal memory p, bool isBid) external view returns (bool);
 
+    function exposed_mint(address account, uint256 id, UD60x18 amount) external;
+
     function getCurrentTick() external view returns (UD60x18);
 
     function getLiquidityRate() external view returns (UD60x18);
+
+    function getLongRate() external view returns (UD60x18);
+
+    function getShortRate() external view returns (UD60x18);
 }
