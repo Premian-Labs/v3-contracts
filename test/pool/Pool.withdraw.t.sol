@@ -15,7 +15,6 @@ import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
-import {console2} from "forge-std/console2.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
     function test_withdraw_750LC() public {
