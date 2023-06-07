@@ -5,6 +5,9 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
+import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
+
+import {ONE} from "../libraries/Constants.sol";
 
 import {IProxyUpgradeableOwnable} from "../proxy/IProxyUpgradeableOwnable.sol";
 import {MiningPoolStorage} from "./MiningPoolStorage.sol";
@@ -31,10 +34,15 @@ contract MiningPoolProxy is Proxy {
 
         l.base = base;
         l.quote = quote;
+
+        l.baseDecimals = IERC20Metadata(base).decimals();
+
         l.priceRepository = priceRepository;
         l.paymentSplitter = paymentSplitter;
+
         l.discount = discount;
         l.penalty = penalty;
+
         l.expiryDuration = expiryDuration;
         l.exerciseDuration = exerciseDuration;
         l.lockupDuration = lockupDuration;

@@ -34,15 +34,16 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         ) revert MiningPool__OperatorNotAuthorized(msg.sender);
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        uint256 _contractSize = contractSize.unwrap();
+        uint256 _contractSize = _toBaseTokenDecimals(l, contractSize);
         IERC20(l.base).safeTransferFrom(underwriter, address(this), _contractSize);
 
         uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
         uint64 maturity = (timestamp8AMUTC + l.expiryDuration).toUint64();
 
+        // NOTE: Spot price must be 18 decimals
         UD60x18 spot = IPriceRepository(l.priceRepository).getDailyOpenPriceFrom(l.base, l.quote, timestamp8AMUTC);
         UD60x18 _strike = OptionMath.roundToNearestTenth(spot * l.discount);
-        int128 strike = fromUD60x18ToInt128(_strike);
+        int128 strike = _fromUD60x18ToInt128(_strike);
 
         uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);
         uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
@@ -92,5 +93,23 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         bytes memory data
     ) internal virtual override(ERC1155BaseInternal, ERC1155EnumerableInternal) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+    }
+
+    // TODO: move to storage
+    /// @notice Adjust decimals of a value with 18 decimals to match the base token decimals
+    function _toBaseTokenDecimals(MiningPoolStorage.Layout storage l, UD60x18 value) internal view returns (uint256) {
+        return OptionMath.scaleDecimals(value.unwrap(), 18, l.baseDecimals);
+    }
+
+    function _fromUD60x18ToInt128(UD60x18 u) internal pure returns (int128) {
+        return u.unwrap().toInt256().toInt128();
+    }
+
+    function _fromInt128ToUD60x18(int128 i) internal pure returns (UD60x18) {
+        return ud(int256(i).toUint256());
+    }
+
+    function _revertIfOptionNotExpired(uint64 maturity) internal view {
+        if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
     }
 }

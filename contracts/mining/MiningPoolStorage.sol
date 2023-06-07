@@ -8,6 +8,7 @@ library MiningPoolStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.MiningPool");
 
     struct Layout {
+        uint8 baseDecimals;
         address base;
         address quote;
         address priceRepository;
