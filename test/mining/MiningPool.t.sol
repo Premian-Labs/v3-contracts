@@ -95,7 +95,7 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.startPrank(users.underwriter);
         IERC20(base).approve(address(miningPool), size);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, size);
+        miningPool.writeFrom(users.underwriter, users.longReceiver, ud(size));
         vm.stopPrank();
 
         uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, int128(0.55e18));
@@ -123,7 +123,7 @@ contract MiningPoolTest is Assertions, Test {
         vm.stopPrank();
 
         vm.prank(users.longReceiver);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, size);
+        miningPool.writeFrom(users.underwriter, users.longReceiver, ud(size));
 
         uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, int128(0.55e18));
         uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, int128(0.55e18));
@@ -142,6 +142,6 @@ contract MiningPoolTest is Assertions, Test {
         );
 
         vm.prank(users.longReceiver);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, 1_000_000);
+        miningPool.writeFrom(users.underwriter, users.longReceiver, ud(1_000_000e18));
     }
 }

@@ -22,7 +22,7 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
         uint64 maturity
     );
 
-    function writeFrom(address underwriter, address longReceiver, uint256 size) external;
+    function writeFrom(address underwriter, address longReceiver, UD60x18 contractSize) external;
 
     function exercise() external;
 
