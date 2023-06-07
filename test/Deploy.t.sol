@@ -427,9 +427,17 @@ contract DeployTest is Test, Assertions {
     }
 
     function trade(uint256 tradeSize, bool isBuy) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        (initialCollateral, totalPremium) = trade(tradeSize, isBuy, tradeSize);
+    }
+
+    function trade(
+        uint256 tradeSize,
+        bool isBuy,
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
         if (isBuy) posKey.orderType = Position.OrderType.CS;
 
-        initialCollateral = deposit(tradeSize);
+        initialCollateral = deposit(depositSize);
 
         UD60x18 _tradeSize = ud(tradeSize);
 

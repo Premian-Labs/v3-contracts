@@ -1656,8 +1656,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(PoolStorage.Layout storage l) internal view returns (UD60x18 lower, UD60x18 upper) {
-        lower = ONE;
-        upper = ONE;
+        lower = Pricing.MAX_TICK_PRICE + ONE;
+        upper = Pricing.MAX_TICK_PRICE + ONE;
 
         UD60x18 current = l.currentTick;
         UD60x18 right = l.tickIndex.next(current);
