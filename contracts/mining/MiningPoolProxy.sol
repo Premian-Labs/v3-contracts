@@ -18,8 +18,9 @@ contract MiningPoolProxy is Proxy {
         address quote,
         address priceRepository,
         address paymentSplitter,
-        UD60x18 percentOfSpot,
-        uint256 daysToExpiry,
+        UD60x18 discount,
+        UD60x18 penalty,
+        uint256 expiryDuration,
         uint256 exerciseDuration,
         uint256 lockupDuration
     ) {
@@ -32,8 +33,9 @@ contract MiningPoolProxy is Proxy {
         l.quote = quote;
         l.priceRepository = priceRepository;
         l.paymentSplitter = paymentSplitter;
-        l.percentOfSpot = percentOfSpot;
-        l.daysToExpiry = daysToExpiry;
+        l.discount = discount;
+        l.penalty = penalty;
+        l.expiryDuration = expiryDuration;
         l.exerciseDuration = exerciseDuration;
         l.lockupDuration = lockupDuration;
     }

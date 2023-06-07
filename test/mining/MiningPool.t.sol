@@ -69,6 +69,7 @@ contract MiningPoolTest is Assertions, Test {
                 address(priceRepository),
                 address(0),
                 ud(0.55e18),
+                ud(0.80e18),
                 daysToExpiry,
                 30 days,
                 365 days

@@ -18,8 +18,9 @@ contract MiningPoolFactory {
         address quote,
         address priceRepository,
         address paymentSplitter,
-        UD60x18 percentOfSpot,
-        uint256 daysToExpiry,
+        UD60x18 discount,
+        UD60x18 penalty,
+        uint256 expiryDuration,
         uint256 exerciseDuration,
         uint256 lockupDuration
     ) external returns (address) {
@@ -29,8 +30,9 @@ contract MiningPoolFactory {
             quote,
             priceRepository,
             paymentSplitter,
-            percentOfSpot,
-            daysToExpiry,
+            discount,
+            penalty,
+            expiryDuration,
             exerciseDuration,
             lockupDuration
         );

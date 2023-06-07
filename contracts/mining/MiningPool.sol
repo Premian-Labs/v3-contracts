@@ -38,13 +38,14 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         IERC20(l.base).safeTransferFrom(underwriter, address(this), _contractSize);
 
         uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-        uint64 maturity = (timestamp8AMUTC + l.daysToExpiry).toUint64();
+        uint64 maturity = (timestamp8AMUTC + l.expiryDuration).toUint64();
 
         UD60x18 spot = IPriceRepository(l.priceRepository).getDailyOpenPriceFrom(l.base, l.quote, timestamp8AMUTC);
-        int256 strike = OptionMath.roundToNearestTenth(spot * l.percentOfSpot).unwrap().toInt256();
+        UD60x18 _strike = OptionMath.roundToNearestTenth(spot * l.discount);
+        int128 strike = fromUD60x18ToInt128(_strike);
 
-        uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike.toInt128());
-        uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike.toInt128());
+        uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);
+        uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
 
         _mint(longReceiver, longTokenId, _contractSize, "");
         _mint(underwriter, shortTokenId, _contractSize, "");

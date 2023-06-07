@@ -18,7 +18,7 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
         address indexed underwriter,
         address indexed longReceiver,
         UD60x18 contractSize,
-        int256 strike,
+        UD60x18 strike,
         uint64 maturity
     );
 
