@@ -1252,6 +1252,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 lower,
         UD60x18 upper
     ) internal view returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) {
+        _revertIfRangeInvalid(lower, upper);
         Position.revertIfLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
@@ -1274,7 +1275,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         UD60x18 next = l.tickIndex.next(left);
-        while (left != ZERO && next <= price) {
+        while (left != ZERO && next <= price && left != Pricing.MAX_TICK_PRICE) {
             left = next;
             next = l.tickIndex.next(left);
         }
@@ -1657,8 +1658,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(PoolStorage.Layout storage l) internal view returns (UD60x18 lower, UD60x18 upper) {
-        lower = ONE;
-        upper = ONE;
+        lower = Pricing.MAX_TICK_PRICE + ONE;
+        upper = Pricing.MAX_TICK_PRICE + ONE;
 
         UD60x18 current = l.currentTick;
         UD60x18 right = l.tickIndex.next(current);

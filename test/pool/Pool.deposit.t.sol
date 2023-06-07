@@ -614,4 +614,45 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[5].longRate, ZERO);
         assertEq(ticks[5].shortRate, ZERO);
     }
+
+    function test_getNearestTicksBelow_MaxTickPrice() public {
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.002 ether), ud(1 ether));
+        assertEq(belowLower, ud(0.001 ether));
+        assertEq(belowUpper, ud(1 ether));
+    }
+
+    function test_getNearestTicksBelow_MinTickPrice() public {
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.001 ether), ud(1 ether));
+        assertEq(belowLower, ud(0.001 ether));
+        assertEq(belowUpper, ud(1 ether));
+    }
+
+    function test_getNearestTicksBelow_LowerIsBelowUpper() public {
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.002 ether), ud(0.999 ether));
+        assertEq(belowLower, ud(0.001 ether));
+        assertEq(belowUpper, ud(0.002 ether));
+    }
+
+    function test_getNearestTicksBelow_OneDeposit() public {
+        Position.Key memory customPosKey0 = Position.Key({
+            owner: users.lp,
+            operator: users.lp,
+            lower: ud(0.002 ether),
+            upper: ud(0.004 ether),
+            orderType: Position.OrderType.LC
+        });
+
+        deposit(customPosKey0, ud(40 ether));
+
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.003 ether), ud(1 ether));
+        assertEq(belowLower, ud(0.002 ether));
+        assertEq(belowUpper, ud(1 ether));
+    }
+
+    function test_getNearestTicksBelow_RevertIf_InvalidRange() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, ud(0.001 ether), ud(2 ether))
+        );
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.001 ether), ud(2 ether));
+    }
 }
