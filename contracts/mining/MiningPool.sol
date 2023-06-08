@@ -36,8 +36,8 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         ) revert MiningPool__OperatorNotAuthorized(msg.sender);
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        uint256 _contractSize = _toBaseTokenDecimals(l, contractSize);
-        IERC20(l.base).safeTransferFrom(underwriter, address(this), _contractSize);
+        uint256 _contractSize = contractSize.unwrap();
+        IERC20(l.base).safeTransferFrom(underwriter, address(this), _toTokenDecimals(l, contractSize, true));
 
         uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
         uint64 maturity = (timestamp8AMUTC + l.expiryDuration).toUint64();
