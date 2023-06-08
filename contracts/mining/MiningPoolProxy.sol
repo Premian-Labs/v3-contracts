@@ -32,10 +32,19 @@ contract MiningPoolProxy is Proxy {
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
 
-        l.base = base;
-        l.quote = quote;
+        // TODO: custom error messages
+        if (base == address(0) || quote == address(0) || priceRepository == address(0) || paymentSplitter == address(0))
+            revert();
+        // TODO: custom error messages
+        if (discount > ONE || penalty > ONE) revert();
+        // TODO: custom error messages
+        if (expiryDuration == 0 || exerciseDuration == 0 || lockupDuration == 0) revert();
 
         l.baseDecimals = IERC20Metadata(base).decimals();
+        l.quoteDecimals = IERC20Metadata(quote).decimals();
+
+        l.base = base;
+        l.quote = quote;
 
         l.priceRepository = priceRepository;
         l.paymentSplitter = paymentSplitter;

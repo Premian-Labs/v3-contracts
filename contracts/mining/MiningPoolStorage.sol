@@ -9,6 +9,7 @@ library MiningPoolStorage {
 
     struct Layout {
         uint8 baseDecimals;
+        uint8 quoteDecimals;
         address base;
         address quote;
         address priceRepository;
