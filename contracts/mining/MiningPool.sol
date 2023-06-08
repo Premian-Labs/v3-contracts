@@ -36,8 +36,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         ) revert MiningPool__OperatorNotAuthorized(msg.sender);
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        uint256 _contractSize = contractSize.unwrap();
-        IERC20(l.base).safeTransferFrom(underwriter, address(this), _toTokenDecimals(l, contractSize, true));
+        _safeTransferFromUD60x18(l.base, underwriter, address(this), _toTokenDecimals(l, contractSize, true));
 
         uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
         uint64 maturity = (timestamp8AMUTC + l.expiryDuration).toUint64();
@@ -50,8 +49,8 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);
         uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
 
-        _mint(longReceiver, longTokenId, _contractSize, "");
-        _mint(underwriter, shortTokenId, _contractSize, "");
+        _mintUD60x18(longReceiver, longTokenId, contractSize);
+        _mintUD60x18(underwriter, shortTokenId, contractSize);
 
         // TODO: add strike/ maturity to event?
         emit WriteFrom(underwriter, longReceiver, contractSize);
@@ -84,12 +83,12 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
             }
         }
 
-        uint256 exerciseCost = _toTokenDecimals(l, strike * contractSize, false);
-        IERC20(l.quote).safeTransferFrom(msg.sender, l.paymentSplitter, exerciseCost);
+        UD60x18 exerciseCost = _toTokenDecimals(l, strike * contractSize, false);
+        _safeTransferFromUD60x18(l.quote, msg.sender, l.paymentSplitter, exerciseCost);
         // TODO: IPaymentSplitter(l.paymentSplitter).reward(exerciseCost);
 
-        _burn(msg.sender, longTokenId, contractSize.unwrap());
-        IERC20(l.base).safeTransfer(msg.sender, _toTokenDecimals(l, exerciseValue, true));
+        _burnUD60x18(msg.sender, longTokenId, contractSize);
+        _safeTransferUD60x18(l.base, msg.sender, _toTokenDecimals(l, exerciseValue, true));
 
         // TODO: add strike/ maturity to event?
         emit Exercise(msg.sender, contractSize, exerciseValue, settlementPrice);
@@ -134,15 +133,27 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
     }
 
+    function _mintUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
+        _mint(account, tokenId, amount.unwrap(), "");
+    }
+
+    function _burnUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
+        _burn(account, tokenId, amount.unwrap());
+    }
+
+    function _revertIfOptionNotExpired(uint64 maturity) internal view {
+        if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
+    }
+
     // TODO: move to storage
     /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
     function _toTokenDecimals(
         MiningPoolStorage.Layout storage l,
         UD60x18 value,
         bool isBase
-    ) internal view returns (uint256) {
+    ) internal view returns (UD60x18) {
         uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
-        return OptionMath.scaleDecimals(value.unwrap(), 18, decimals);
+        return ud(OptionMath.scaleDecimals(value.unwrap(), 18, decimals));
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals
@@ -163,7 +174,11 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         return ud(int256(i).toUint256());
     }
 
-    function _revertIfOptionNotExpired(uint64 maturity) internal view {
-        if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
+    function _safeTransferFromUD60x18(address token, address from, address to, UD60x18 amount) internal {
+        IERC20(token).safeTransferFrom(from, to, amount.unwrap());
+    }
+
+    function _safeTransferUD60x18(address token, address to, UD60x18 amount) internal {
+        IERC20(token).safeTransfer(to, amount.unwrap());
     }
 }
