@@ -60,7 +60,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(longTokenId);
 
-        if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong(tokenType);
+        if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong();
         _revertIfOptionNotExpired(maturity);
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
@@ -80,7 +80,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
                 exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
                 exerciseValue = exerciseValue * (ONE - l.penalty);
             } else {
-                revert MiningPool__LockupPeriodNotExpired(block.timestamp, lockupPeriodStart, lockupPeriodEnd);
+                revert MiningPool__LockupPeriodNotExpired(lockupStart, lockupEnd);
             }
         }
 

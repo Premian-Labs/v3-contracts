@@ -12,11 +12,11 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
         SHORT
     }
 
-    error MiningPool__LockupPeriodNotExpired(uint256 timestamp, uint256 lockupPeriodStart, uint256 lockupPeriodEnd);
+    error MiningPool__LockupPeriodNotExpired(uint256 lockupStart, uint256 lockupEnd);
     error MiningPool__OperatorNotAuthorized(address sender);
     error MiningPool__OptionNotExpired(uint256 maturity);
     error MiningPool__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
-    error MiningPool__TokenTypeNotLong(TokenType tokenType);
+    error MiningPool__TokenTypeNotLong();
 
     event Exercise(address indexed holder, UD60x18 contractSize, UD60x18 exerciseValue, UD60x18 settlementPrice);
 
