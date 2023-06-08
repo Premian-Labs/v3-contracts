@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 import {ERC1155Base} from "@solidstate/contracts/token/ERC1155/base/ERC1155Base.sol";
 import {ERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseInternal.sol";
@@ -15,10 +15,12 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
+import {ONE} from "../libraries/Constants.sol";
 
 import {IMiningPool} from "./IMiningPool.sol";
 import {IPriceRepository} from "./IPriceRepository.sol";
 import {MiningPoolStorage} from "./MiningPoolStorage.sol";
+import {IPaymentSplitter} from "./IPaymentSplitter.sol";
 
 import "forge-std/console2.sol";
 
@@ -51,10 +53,47 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         _mint(longReceiver, longTokenId, _contractSize, "");
         _mint(underwriter, shortTokenId, _contractSize, "");
 
-        emit WriteFrom(underwriter, longReceiver, contractSize, _strike, maturity);
+        // TODO: add strike/ maturity to event?
+        emit WriteFrom(underwriter, longReceiver, contractSize);
     }
 
-    function exercise() external nonReentrant {}
+    function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
+        (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(longTokenId);
+
+        if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong(tokenType);
+        _revertIfOptionNotExpired(maturity);
+
+        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
+        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getDailyOpenPriceFrom(l.base, l.quote, maturity);
+        UD60x18 strike = ud(int256(_strike).toUint256());
+
+        if (settlementPrice < strike) revert MiningPool__OptionOutTheMoney(settlementPrice, strike);
+
+        uint256 lockupPeriodStart = maturity + l.exerciseDuration;
+        uint256 lockupPeriodEnd = lockupPeriodStart + l.lockupDuration;
+
+        UD60x18 exerciseValue = contractSize;
+
+        if (block.timestamp >= lockupPeriodStart) {
+            if (block.timestamp >= lockupPeriodEnd) {
+                UD60x18 intrinsicValue = settlementPrice - strike;
+                exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
+                exerciseValue = exerciseValue * (ONE - l.penalty);
+            } else {
+                revert MiningPool__LockupPeriodNotExpired(block.timestamp, lockupPeriodStart, lockupPeriodEnd);
+            }
+        }
+
+        uint256 exerciseCost = _toTokenDecimals(l, strike * contractSize, false);
+        IERC20(l.quote).safeTransferFrom(msg.sender, l.paymentSplitter, exerciseCost);
+        // TODO: IPaymentSplitter(l.paymentSplitter).reward(exerciseCost);
+
+        _burn(msg.sender, longTokenId, contractSize.unwrap());
+        IERC20(l.base).safeTransfer(msg.sender, _toTokenDecimals(l, exerciseValue, true));
+
+        // TODO: add strike/ maturity to event?
+        emit Exercise(msg.sender, contractSize, exerciseValue, settlementPrice);
+    }
 
     function settle() external nonReentrant {}
 
@@ -96,9 +135,24 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
     }
 
     // TODO: move to storage
-    /// @notice Adjust decimals of a value with 18 decimals to match the base token decimals
-    function _toBaseTokenDecimals(MiningPoolStorage.Layout storage l, UD60x18 value) internal view returns (uint256) {
-        return OptionMath.scaleDecimals(value.unwrap(), 18, l.baseDecimals);
+    /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
+    function _toTokenDecimals(
+        MiningPoolStorage.Layout storage l,
+        UD60x18 value,
+        bool isBase
+    ) internal view returns (uint256) {
+        uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
+        return OptionMath.scaleDecimals(value.unwrap(), 18, decimals);
+    }
+
+    /// @notice Adjust decimals of a value with token decimals to 18 decimals
+    function _fromTokenDecimals(
+        MiningPoolStorage.Layout storage l,
+        UD60x18 value,
+        bool isBase
+    ) internal view returns (UD60x18) {
+        uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
+        return ud(OptionMath.scaleDecimals(value.unwrap(), decimals, 18));
     }
 
     function _fromUD60x18ToInt128(UD60x18 u) internal pure returns (int128) {
