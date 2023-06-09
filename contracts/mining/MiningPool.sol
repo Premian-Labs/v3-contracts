@@ -14,7 +14,7 @@ import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/R
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ONE} from "../libraries/Constants.sol";
+import {ZERO, ONE} from "../libraries/Constants.sol";
 
 import {IMiningPool} from "./IMiningPool.sol";
 import {IPriceRepository} from "./IPriceRepository.sol";
@@ -56,40 +56,41 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(longTokenId);
-
         if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong();
-        _revertIfOptionNotExpired(maturity);
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getDailyOpenPriceFrom(l.base, l.quote, maturity);
+
+        uint256 lockupStart = maturity + l.exerciseDuration;
+        uint256 lockupEnd = lockupStart + l.lockupDuration;
+
+        _revertIfOptionNotExpired(maturity);
+        _revertIfLockupNotExpired(lockupStart, lockupEnd);
+
+        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
         UD60x18 strike = _strike.fromInt128ToUD60x18();
 
         if (settlementPrice < strike) revert MiningPool__OptionOutTheMoney(settlementPrice, strike);
 
-        uint256 lockupPeriodStart = maturity + l.exerciseDuration;
-        uint256 lockupPeriodEnd = lockupPeriodStart + l.lockupDuration;
-
         UD60x18 exerciseValue = contractSize;
+        UD60x18 exerciseCost = l.toTokenDecimals(strike * contractSize, false);
 
-        if (block.timestamp >= lockupPeriodStart) {
-            if (block.timestamp >= lockupPeriodEnd) {
-                UD60x18 intrinsicValue = settlementPrice - strike;
-                exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
-                exerciseValue = exerciseValue * (ONE - l.penalty);
-            } else {
-                revert MiningPool__LockupPeriodNotExpired(lockupStart, lockupEnd);
-            }
+        if (block.timestamp >= lockupEnd) {
+            UD60x18 intrinsicValue = settlementPrice - strike;
+            exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
+            exerciseValue = exerciseValue * (ONE - l.penalty);
+            exerciseCost = ZERO;
         }
 
-        UD60x18 exerciseCost = l.toTokenDecimals(strike * contractSize, false);
-        IERC20(l.quote).safeTransferFromUD60x18(msg.sender, l.paymentSplitter, exerciseCost);
-        // TODO: IPaymentSplitter(l.paymentSplitter).reward(exerciseCost);
+        if (exerciseCost > ZERO) {
+            IERC20(l.quote).safeTransferFromUD60x18(msg.sender, l.paymentSplitter, exerciseCost);
+            // TODO: IPaymentSplitter(l.paymentSplitter).reward(exerciseCost);
+        }
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
         IERC20(l.base).safeTransferUD60x18(msg.sender, l.toTokenDecimals(exerciseValue, true));
 
         // TODO: add strike/ maturity to event?
-        emit Exercise(msg.sender, contractSize, exerciseValue, settlementPrice);
+        emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice);
     }
 
     function settle() external nonReentrant {}
@@ -130,6 +131,11 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
     function _revertIfOptionNotExpired(uint64 maturity) internal view {
         if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
+    }
+
+    function _revertIfLockupNotExpired(uint256 lockupStart, uint256 lockupEnd) internal view {
+        if (block.timestamp >= lockupStart && block.timestamp < lockupEnd)
+            revert MiningPool__LockupNotExpired(lockupStart, lockupEnd);
     }
 
     function _beforeTokenTransfer(
