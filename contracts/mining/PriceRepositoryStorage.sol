@@ -9,8 +9,8 @@ library PriceRepositoryStorage {
 
     struct Layout {
         address keeper;
-        // price recorded at 8AM UTC each day
-        mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) dailyOpenPrice;
+        mapping(address base => mapping(address quote => UD60x18 price)) latestPrice;
+        mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) prices;
     }
 
     function layout() internal pure returns (Layout storage l) {

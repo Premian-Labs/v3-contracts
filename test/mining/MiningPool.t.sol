@@ -80,7 +80,7 @@ contract MiningPoolTest is Assertions, Test {
         MiningPoolFactory miningPoolFactory = new MiningPoolFactory(address(miningPoolProxy));
 
         _data[0] = Data(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
-        _data[1] = Data(ud(0.1e18), ud(30000e18), ud(35000e18), ud(0.20e18), 30 days, 90 days, 30 days);
+        _data[1] = Data(ud(0.1e18), ud(30000e18), ud(35000e18), ud(0.20e18), 60 days, 90 days, 30 days);
         //        data[2] = Data(0.90e18,  ud(0.80e18), 30 days, 30 days, 365 days);
 
         premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70; // PREMIA (18 decimals)
@@ -135,12 +135,12 @@ contract MiningPoolTest is Assertions, Test {
     }
 
     function getMaturity(uint256 timestamp, uint256 expiryDuration) internal pure returns (uint256 maturity) {
-        maturity = OptionMath.calculateTimestamp8AMUTC(timestamp) + expiryDuration;
+        maturity = timestamp - (timestamp % 24 hours) + 8 hours + expiryDuration;
     }
 
-    function setPrice(uint256 timestamp, UD60x18 price, address base, address quote) internal {
+    function setPriceAt(uint256 timestamp, UD60x18 price, address base, address quote) internal {
         vm.prank(users.keeper);
-        priceRepository.setDailyOpenPrice(base, quote, timestamp, price);
+        priceRepository.setPriceAt(base, quote, timestamp, price);
     }
 
     function scaleDecimalsFrom(address token, uint256 amount) internal view returns (UD60x18) {
@@ -160,9 +160,8 @@ contract MiningPoolTest is Assertions, Test {
         address base,
         address quote
     ) internal {
-        uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-        uint64 maturity = uint64(getMaturity(timestamp8AMUTC, data.expiryDuration));
-        setPrice(timestamp8AMUTC, data.spot, base, quote);
+        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+        setPriceAt(block.timestamp, data.spot, base, quote);
 
         UD60x18 _size = ud(size);
         uint256 collateral = scaleDecimalsTo(base, _size);
@@ -198,9 +197,8 @@ contract MiningPoolTest is Assertions, Test {
         address base,
         address quote
     ) internal {
-        uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-        uint64 maturity = uint64(getMaturity(timestamp8AMUTC, data.expiryDuration));
-        setPrice(timestamp8AMUTC, data.spot, base, quote);
+        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+        setPriceAt(block.timestamp, data.spot, base, quote);
 
         UD60x18 _size = ud(size);
         uint256 collateral = scaleDecimalsTo(base, _size);
@@ -249,12 +247,8 @@ contract MiningPoolTest is Assertions, Test {
         address base,
         address quote
     ) internal {
-        uint64 maturity;
-        {
-            uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-            maturity = uint64(getMaturity(timestamp8AMUTC, data.expiryDuration));
-            setPrice(timestamp8AMUTC, data.spot, base, quote);
-        }
+        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+        setPriceAt(block.timestamp, data.spot, base, quote);
 
         UD60x18 _size = ud(size);
         uint256 collateral = scaleDecimalsTo(base, _size);
@@ -266,11 +260,7 @@ contract MiningPoolTest is Assertions, Test {
         vm.stopPrank();
 
         vm.warp(maturity);
-
-        {
-            uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-            setPrice(timestamp8AMUTC, data.settlementITM, base, quote);
-        }
+        setPriceAt(maturity, data.settlementITM, base, quote);
 
         UD60x18 _strike = data.discount * data.spot;
         int128 strike = _strike.unwrap().toInt256().toInt128();

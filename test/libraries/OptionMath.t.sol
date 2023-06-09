@@ -343,40 +343,8 @@ contract OptionMathTest is Test, Assertions {
     function test_calculateTimeToMaturity_ReturnExpectedValue() public {
         uint256 timestamp = 1683240000;
         uint256 oneWeek = 7 * 24 * 3600;
-
         vm.warp(timestamp);
-
         assertEq(OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)), oneWeek);
-    }
-
-    function test_calculateTimestamp8AMUTC_ReturnExpectedValue() public {
-        uint256 expectedTimestamp = 1683187200; // Thu May 04 2023 08:00:00 GMT+0000
-
-        uint256 timestamp = 1683240000; // Thu May 04 2023 22:40:00 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683244799; // Thu May 04 2023 23:59:59 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683244800; // Fri May 05 2023 00:00:00 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683273599; // Fri May 05 2023 07:59:59 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        expectedTimestamp = 1683273600; // Fri May 05 2023 08:00:00 GMT+0000
-
-        timestamp = 1683273600; // Fri May 05 2023 08:00:00 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683331199; // Fri May 05 2023 23:59:59 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683331200; // Sat May 06 2023 00:00:00 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
-
-        timestamp = 1683359999; // Sat May 06 2023 07:59:59 GMT+0000
-        assertEq(OptionMath.calculateTimestamp8AMUTC(timestamp), expectedTimestamp);
     }
 
     function test_calculateStrikeInterval_ReturnExpectedValue() public {

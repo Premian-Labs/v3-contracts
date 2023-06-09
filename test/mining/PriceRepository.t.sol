@@ -50,34 +50,42 @@ contract PriceRepositoryTest is Assertions, Test {
         priceRepository.setKeeper(address(0));
     }
 
-    function test_setDailyOpenPrice_Success() public {
+    function test_setPriceAt_Success() public {
         vm.prank(users.keeper);
-        priceRepository.setDailyOpenPrice(address(1), address(2), block.timestamp, ONE);
+        priceRepository.setPriceAt(address(1), address(2), block.timestamp, ONE);
     }
 
-    function test_setDailyOpenPrice_RevertIf_KeeperNotAuthorized() public {
+    function test_setPriceAt_RevertIf_KeeperNotAuthorized() public {
         vm.prank(users.user);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IPriceRepository.PriceRepository__KeeperNotAuthorized.selector,
-                users.user,
-                users.keeper
-            )
+            abi.encodeWithSelector(IPriceRepository.PriceRepository__KeeperNotAuthorized.selector, users.keeper)
         );
 
-        priceRepository.setDailyOpenPrice(address(1), address(2), block.timestamp, ONE);
+        priceRepository.setPriceAt(address(1), address(2), block.timestamp, ONE);
     }
 
-    function test_getDailyOpenPriceFrom_Success() public {
+    function test_getPrice_Success() public {
         uint256 timestamp = block.timestamp;
         vm.prank(users.keeper);
-        priceRepository.setDailyOpenPrice(address(1), address(2), timestamp, ONE);
-        assertEq(priceRepository.getDailyOpenPriceFrom(address(1), address(2), timestamp), ONE);
+        priceRepository.setPriceAt(address(1), address(2), timestamp, ONE);
+        assertEq(priceRepository.getPrice(address(1), address(2)), ONE);
     }
 
-    function test_getDailyOpenPriceFrom_RevertIf_NoPriceRecorded() public {
+    function test_getPrice_RevertIf_NoPriceRecorded() public {
         vm.expectRevert(IPriceRepository.PriceRepository__NoPriceRecorded.selector);
-        priceRepository.getDailyOpenPriceFrom(address(1), address(2), block.timestamp);
+        priceRepository.getPrice(address(1), address(2));
+    }
+
+    function test_getPriceAt_Success() public {
+        uint256 timestamp = block.timestamp;
+        vm.prank(users.keeper);
+        priceRepository.setPriceAt(address(1), address(2), timestamp, ONE);
+        assertEq(priceRepository.getPriceAt(address(1), address(2), timestamp), ONE);
+    }
+
+    function test_getPriceAt_RevertIf_NoPriceRecorded() public {
+        vm.expectRevert(IPriceRepository.PriceRepository__NoPriceRecorded.selector);
+        priceRepository.getPriceAt(address(1), address(2), block.timestamp);
     }
 }

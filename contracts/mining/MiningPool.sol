@@ -39,12 +39,9 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
         IERC20(l.base).safeTransferFromUD60x18(underwriter, address(this), l.toTokenDecimals(contractSize, true));
 
-        uint256 timestamp8AMUTC = OptionMath.calculateTimestamp8AMUTC(block.timestamp);
-        uint64 maturity = (timestamp8AMUTC + l.expiryDuration).toUint64();
-
-        // NOTE: Spot price must be 18 decimals
-        UD60x18 spot = IPriceRepository(l.priceRepository).getDailyOpenPriceFrom(l.base, l.quote, timestamp8AMUTC);
-        UD60x18 _strike = OptionMath.roundToNearestTenth(spot * l.discount);
+        uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
+        UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
+        UD60x18 _strike = OptionMath.roundToNearestTenth(price * l.discount);
         int128 strike = _strike.fromUD60x18ToInt128();
 
         uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);

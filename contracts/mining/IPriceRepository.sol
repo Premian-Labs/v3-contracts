@@ -7,13 +7,19 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPriceRepositoryEvents} from "./IPriceRepositoryEvents.sol";
 
 interface IPriceRepository is IPriceRepositoryEvents {
-    error PriceRepository__KeeperNotAuthorized(address sender, address keeper);
+    error PriceRepository__KeeperNotAuthorized(address keeper);
     error PriceRepository__NoPriceRecorded();
 
-    /// @notice Returns the cached daily open spot price at a given timestamp. Note, prices are recorded daily at 8AM UTC
+    /// @notice Returns the most recent cached price
+    /// @param base The exchange token (base token)
+    /// @param quote The token to quote against (quote token)
+    /// @return price for token pair (18 decimals)
+    function getPrice(address base, address quote) external view returns (UD60x18);
+
+    /// @notice Returns the cached price at a given timestamp
     /// @param base The exchange token (base token)
     /// @param quote The token to quote against (quote token)
     /// @param timestamp Reference timestamp (in seconds)
-    /// @return Daily open price (18 decimals)
-    function getDailyOpenPriceFrom(address base, address quote, uint256 timestamp) external view returns (UD60x18);
+    /// @return price for token pair (18 decimals)
+    function getPriceAt(address base, address quote, uint256 timestamp) external view returns (UD60x18);
 }
