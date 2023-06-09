@@ -41,6 +41,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__QuoteRFQCancelled();
     error Pool__QuoteRFQExpired();
     error Pool__QuoteRFQOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteRFQSize);
+    error Pool__SettlementFailed();
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);
