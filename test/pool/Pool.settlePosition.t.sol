@@ -294,8 +294,6 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         // take a snapshot of various balances before the attack
         uint256 originalPoolBalance = IERC20(poolToken).balanceOf(address(pool));
-        // uint256 originalOwnerBalance = IERC20(poolToken).balanceOf(address(user));
-        // uint256 originalAgentBalance = IERC20(poolToken).balanceOf(address(agent));
 
         // Skip ahead in time to when the positions have matured
         vm.warp(poolKey.maturity);
