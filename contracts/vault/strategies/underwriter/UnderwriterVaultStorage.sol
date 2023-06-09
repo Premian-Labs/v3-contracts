@@ -89,9 +89,8 @@ library UnderwriterVaultStorage {
         // ====================================================================
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
-        mapping(address => UD60x18) netUserDeposits;
-        mapping(address => uint256) timeOfDeposit;
         UD60x18 protocolFees;
+        uint256 lastManagementFeeTimestamp;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -19,20 +19,6 @@ import {UnderwriterVaultProxy} from "contracts/vault/strategies/underwriter/Unde
 import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 
 contract UnderwriterVaultDeployTest is DeployTest {
-    struct TestVars {
-        UD60x18 totalSupply;
-        UD60x18 shares;
-        UD60x18 pps;
-        UD60x18 ppsUser;
-        UD60x18 performanceFeeRate;
-        UD60x18 managementFeeRate;
-        uint256 timeOfDeposit;
-        uint256 timestamp;
-        UD60x18 protocolFeesInitial;
-        UD60x18 netUserDepositReceiver;
-        UD60x18 transferAmount;
-    }
-
     uint256 startTime = 100000;
 
     uint256 t0 = startTime + 7 days;
@@ -181,43 +167,17 @@ contract UnderwriterVaultDeployTest is DeployTest {
         vm.stopPrank();
     }
 
-    function setup(TestVars memory vars) internal {
-        // set pps and totalSupply vault
-        vault.increaseTotalShares((vars.totalSupply - vars.shares).unwrap());
-        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
+    function addMint(address user, UD60x18 amount) internal {
+        IERC20 token = IERC20(getPoolToken());
+        uint256 assetAmount = scaleDecimals(amount);
 
-        deal(getPoolToken(), address(vault), vaultDeposit);
-        vault.increaseTotalAssets(vars.pps * vars.totalSupply);
+        vm.startPrank(user);
 
-        // set pps and shares user
-        vault.mintMock(users.caller, vars.shares.unwrap());
-        UD60x18 userDeposit = vars.shares * vars.ppsUser;
-        vault.setNetUserDeposit(users.caller, userDeposit.unwrap());
-        vault.setTimeOfDeposit(users.caller, vars.timeOfDeposit);
+        token.approve(address(vault), assetAmount);
+        uint256 shareAmount = vault.previewDeposit(assetAmount);
+        vault.mint(shareAmount, user);
 
-        if (vars.shares > ud(0)) {
-            uint256 ppsAvg = vault.getAveragePricePerShare(users.caller);
-            assertEq(ppsAvg, vars.ppsUser.unwrap());
-        }
-
-        assertEq(vault.totalSupply(), vars.totalSupply);
-        assertEq(vault.getPricePerShare(), vars.pps);
-    }
-
-    function setupGetFeeVars(TestVars memory vars) internal {
-        setup(vars);
-
-        vault.setPerformanceFeeRate(vars.performanceFeeRate);
-        vault.setManagementFeeRate(vars.managementFeeRate);
-    }
-
-    function setupBeforeTokenTransfer(TestVars memory vars) internal {
-        setupGetFeeVars(vars);
-
-        uint256 vaultDeposit = scaleDecimals(vars.pps * vars.totalSupply);
-        deal(getPoolToken(), address(vault), vaultDeposit + scaleDecimals(vars.protocolFeesInitial));
-        vault.setProtocolFees(vars.protocolFeesInitial);
-        vault.setNetUserDeposit(users.receiver, vars.netUserDepositReceiver.unwrap());
+        vm.stopPrank();
     }
 
     // prettier-ignore
