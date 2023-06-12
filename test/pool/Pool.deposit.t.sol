@@ -998,19 +998,19 @@ abstract contract PoolDepositTest is DeployTest {
     }
 
     function test_getNearestTicksBelow_MaxTickPrice() public {
-        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.002 ether), ud(1 ether));
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.998 ether), ud(1 ether));
         assertEq(belowLower, ud(0.001 ether));
         assertEq(belowUpper, ud(1 ether));
     }
 
     function test_getNearestTicksBelow_MinTickPrice() public {
-        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.001 ether), ud(1 ether));
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.001 ether), ud(0.005 ether));
         assertEq(belowLower, ud(0.001 ether));
-        assertEq(belowUpper, ud(1 ether));
+        assertEq(belowUpper, ud(0.001 ether));
     }
 
     function test_getNearestTicksBelow_LowerIsBelowUpper() public {
-        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.002 ether), ud(0.999 ether));
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.002 ether), ud(0.802 ether));
         assertEq(belowLower, ud(0.001 ether));
         assertEq(belowUpper, ud(0.002 ether));
     }
@@ -1026,9 +1026,9 @@ abstract contract PoolDepositTest is DeployTest {
 
         deposit(customPosKey0, ud(40 ether));
 
-        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.003 ether), ud(1 ether));
+        (UD60x18 belowLower, UD60x18 belowUpper) = pool.getNearestTicksBelow(ud(0.003 ether), ud(0.013 ether));
         assertEq(belowLower, ud(0.002 ether));
-        assertEq(belowUpper, ud(1 ether));
+        assertEq(belowUpper, ud(0.004 ether));
     }
 
     function test_getNearestTicksBelow_RevertIf_InvalidRange() public {
@@ -1036,5 +1036,47 @@ abstract contract PoolDepositTest is DeployTest {
             abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, ud(0.001 ether), ud(2 ether))
         );
         pool.getNearestTicksBelow(ud(0.001 ether), ud(2 ether));
+    }
+
+    function test_isRateNonTerminating() public {
+        // Test that 1 = 2^0*5^0 is terminating
+        bool result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.002 ether));
+        assertFalse(result);
+
+        // Test that 2 = 2^1*5^0 is terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.003 ether));
+        assertFalse(result);
+
+        // Test that 8 = 2^3*5^0 is terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.009 ether));
+        assertFalse(result);
+
+        // Test that 10 = 2^1*5^1 is terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.011 ether));
+        assertFalse(result);
+
+        // Test that 20 = 2^2*5^1 is terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.021 ether));
+        assertFalse(result);
+
+        // Test that 25 = 2^0*5^2 is terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.026 ether));
+        assertFalse(result);
+
+        // Test that 3 is non-terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.004 ether));
+        assertTrue(result);
+
+        // Test that 7 is non-terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.008 ether));
+        assertTrue(result);
+
+        // Test that 9 is non-terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.010 ether));
+        assertTrue(result);
+
+        // Test that 28 is non-terminating
+        result = pool.exposed_isRateNonTerminating(ud(0.001 ether), ud(0.029 ether));
+        assertTrue(result);
     }
 }

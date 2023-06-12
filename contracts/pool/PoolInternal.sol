@@ -25,13 +25,16 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
-import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
+import {iZERO, ZERO, ONE, TWO, FIVE} from "../libraries/Constants.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
+
+import {console} from "forge-std/console.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
@@ -1805,6 +1808,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         IERC20(token).approve(REFERRAL, 0);
     }
 
+    /// @notice Checks if the liquidity rate of the range results in a ono-terminating decimal.
+    function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
+        UD60x18 den = (upper - lower) / Pricing.MIN_TICK_DISTANCE;
+
+        while (den % TWO == ZERO) {
+            den = den / TWO;
+        }
+
+        while (den % FIVE == ZERO) {
+            den = den / FIVE;
+        }
+
+        return den != ONE;
+    }
+
     /// @notice Revert if the `lower` and `upper` tick range is invalid
     function _revertIfRangeInvalid(UD60x18 lower, UD60x18 upper) internal pure {
         if (
@@ -1812,7 +1830,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upper == ZERO ||
             lower >= upper ||
             lower < Pricing.MIN_TICK_PRICE ||
-            upper > Pricing.MAX_TICK_PRICE
+            upper > Pricing.MAX_TICK_PRICE ||
+            _isRateNonTerminating(lower, upper)
         ) revert Pool__InvalidRange(lower, upper);
     }
 

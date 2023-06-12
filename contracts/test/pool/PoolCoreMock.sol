@@ -99,6 +99,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _getTick(price);
     }
 
+    function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool) {
+        return _isRateNonTerminating(lower, upper);
+    }
+
     function getLongRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.longRate;
