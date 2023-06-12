@@ -47,6 +47,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickWidthInvalid(UD60x18 price);
     error Pool__WithdrawalDelayNotElapsed(uint256 unlockTime);
     error Pool__ZeroSize();
+    error Pool__InvalidSize(UD60x18 depositSize);
 
     struct Tick {
         SD59x18 delta;

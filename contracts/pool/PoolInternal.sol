@@ -345,6 +345,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, args.size);
 
         uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
 
@@ -443,6 +444,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, size);
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -981,6 +983,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator) revert Pool__InvalidTransfer();
 
         _revertIfZeroSize(size);
+        _revertIfInvalidSize(srcP.lower, srcP.upper, size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1861,6 +1864,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(totalPremium, 0, premiumLimit);
         if (!isBuy && totalPremium < premiumLimit)
             revert Pool__AboveMaxSlippage(totalPremium, premiumLimit, type(uint256).max);
+    }
+
+    function _revertIfInvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 size) internal pure {
+        UD60x18 numTicks = (upper - lower) / Pricing.MIN_TICK_PRICE;
+        if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(size);
     }
 
     /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`
