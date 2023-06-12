@@ -670,8 +670,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                 UD60x18 dist = (l.marketPrice.intoSD59x18() - oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
 
-                vars.shortDelta = vars.shortDelta + (l.shortRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
-                vars.longDelta = vars.longDelta + (l.longRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
+                vars.shortDelta = vars.shortDelta + l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
+                vars.longDelta = vars.longDelta + l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
 
                 if (maxSize >= remaining) {
                     remaining = ZERO;
