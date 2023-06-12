@@ -156,11 +156,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             UD60x18 nextPrice;
             // Compute next price
-            if (vars.liquidity == ZERO) {
+            if (vars.liquidity == ZERO || tradeSize == vars.maxSize) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
                 UD60x18 priceDelta = ((pricing.upper - pricing.lower) * tradeSize) / vars.liquidity;
-
                 nextPrice = isBuy ? pricing.marketPrice + priceDelta : pricing.marketPrice - priceDelta;
             }
 
