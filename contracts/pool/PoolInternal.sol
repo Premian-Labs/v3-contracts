@@ -1096,14 +1096,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
-    function _exercise(address holder, UD60x18 costPerHolder) internal returns (uint256 exerciseValue) {
+    /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
+    ///         automatic exercise (poolToken decimals)
+    /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
+    function _exercise(address holder, UD60x18 costPerHolder) internal returns (uint256 exerciseValue, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (UD60x18 size, UD60x18 _exerciseValue, ) = _beforeExerciseOrSettle(l, true, holder);
 
-        if (size == ZERO) return 0;
-
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
+
+        if (size == ZERO) return (0, false);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
@@ -1116,19 +1119,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (_exerciseValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, _exerciseValue);
         }
+
+        success = true;
     }
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
-    function _settle(address holder, UD60x18 costPerHolder) internal returns (uint256 collateral) {
+    /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
+    ///         automatic settlement (poolToken decimals)
+    /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
+    function _settle(address holder, UD60x18 costPerHolder) internal returns (uint256 collateral, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (UD60x18 size, UD60x18 exerciseValue, UD60x18 _collateral) = _beforeExerciseOrSettle(l, false, holder);
 
-        if (size == ZERO) return 0;
-
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
+
+        if (size == ZERO) return (0, false);
 
         collateral = l.toPoolTokenDecimals(_collateral);
 
@@ -1141,15 +1149,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (_collateral > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, _collateral);
         }
+
+        success = true;
     }
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
+    /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
+    ///         automatic settlement (poolToken decimals)
+    /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
     function _settlePosition(
         Position.KeyInternal memory p,
         UD60x18 costPerHolder
-    ) internal returns (uint256 collateral) {
+    ) internal returns (uint256 collateral, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionNotExpired(l);
         _removeInitFeeDiscount(l);
@@ -1163,7 +1176,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
 
         vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
-        if (vars.size == ZERO) return 0;
+        if (vars.size == ZERO) {
+            // Revert if costPerHolder > 0
+            _revertIfCostExceedsPayout(costPerHolder, ZERO);
+            return (0, false);
+        }
 
         {
             // Update claimable fees
@@ -1237,6 +1254,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (vars.collateral > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
         }
+
+        success = true;
     }
 
     ////////////////////////////////////////////////////////////////

@@ -91,8 +91,8 @@ interface IPoolCore is IPoolInternal {
     function annihilate(UD60x18 size) external;
 
     /// @notice Exercises all long options held by caller
-    /// @return The exercise value as amount of collateral paid out (poolToken decimals)
-    function exercise() external returns (uint256);
+    /// @return exerciseValue The exercise value as amount of collateral paid out (poolToken decimals)
+    function exercise() external returns (uint256 exerciseValue);
 
     /// @notice Batch exercises all long options held by each `holder`, caller is reimbursed with the cost deducted from
     ///         the proceeds of the exercised options. Only authorized agents may execute this function on behalf of the
@@ -104,8 +104,8 @@ interface IPoolCore is IPoolInternal {
     function exerciseFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
 
     /// @notice Settles all short options held by caller
-    /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settle() external returns (uint256);
+    /// @return collateral The amount of collateral left after settlement (poolToken decimals)
+    function settle() external returns (uint256 collateral);
 
     /// @notice Batch settles all short options held by each `holder`, caller is reimbursed with the cost deducted from
     ///         the proceeds of the settled options. Only authorized agents may execute this function on behalf of the
@@ -118,8 +118,8 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settlePosition(Position.Key calldata p) external returns (uint256);
+    /// @return collateral The amount of collateral left after settlement (poolToken decimals)
+    function settlePosition(Position.Key calldata p) external returns (uint256 collateral);
 
     /// @notice Batch reconciles each `position` to account for settlement payouts post-expiration. Caller is reimbursed
     ///         with the cost deducted from the proceeds of the settled position. Only authorized agents may execute
