@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {EIP712} from "@solidstate/contracts/cryptography/EIP712.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
@@ -1785,6 +1787,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             referrer
         );
 
+        console2.log("a : %s", (tradingFee * primaryRebatePercent).unwrap());
+        console2.log("b : %s", (tradingFee * secondaryRebatePercent).unwrap());
+
         totalReferralRebate = (tradingFee * primaryRebatePercent) + (tradingFee * secondaryRebatePercent);
     }
 
@@ -1799,7 +1804,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (tradingFee == ZERO) return;
 
         address token = l.getPoolToken();
-        IERC20(token).approve(REFERRAL, totalReferralRebate);
+        IERC20(token).approve(REFERRAL, l.toPoolTokenDecimals(totalReferralRebate));
 
         IReferral(REFERRAL).useReferral(user, referrer, token, tradingFee);
         IERC20(token).approve(REFERRAL, 0);

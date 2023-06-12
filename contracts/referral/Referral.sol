@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -119,6 +121,9 @@ contract Referral is IReferral, OwnableInternal {
             primaryRebate = token.toTokenDecimals(_primaryRebate);
             secondaryRebate = token.toTokenDecimals(_secondaryRebate);
             uint256 _totalRebate = primaryRebate + secondaryRebate;
+
+            console2.log("c : %s", _primaryRebate.unwrap());
+            console2.log("d : %s", _secondaryRebate.unwrap());
 
             IERC20(token).safeTransferFrom(msg.sender, address(this), _totalRebate);
         }
