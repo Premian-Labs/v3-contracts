@@ -28,7 +28,8 @@ interface IReferral {
         address indexed secondaryReferrer,
         address token,
         UD60x18 tier,
-        UD60x18 totalRebate
+        UD60x18 primaryRebate,
+        UD60x18 secondaryRebate
     );
 
     /// @notice Returns the address of the referrer for a given user

@@ -123,8 +123,11 @@ contract Referral is IReferral, OwnableInternal {
         referrer = _trySetReferrer(user, referrer);
         if (referrer == address(0)) return;
 
-        UD60x18 totalRebate = primaryRebate + secondaryRebate;
-        IERC20(token).safeTransferFrom(msg.sender, address(this), token.toTokenDecimals(totalRebate));
+        IERC20(token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            token.toTokenDecimals(primaryRebate + secondaryRebate)
+        );
 
         ReferralStorage.Layout storage l = ReferralStorage.layout();
         address secondaryReferrer = l.referrals[referrer];
@@ -138,7 +141,7 @@ contract Referral is IReferral, OwnableInternal {
         if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
 
         (UD60x18 primaryRebatePercent, ) = getRebatePercents(referrer);
-        emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, totalRebate);
+        emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, primaryRebate, secondaryRebate);
     }
 
     /// @inheritdoc IReferral
