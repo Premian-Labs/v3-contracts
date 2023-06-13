@@ -25,7 +25,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
-import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
+import {iZERO, ZERO, ONE, TWO, FIVE} from "../libraries/Constants.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
@@ -341,6 +341,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, args.size);
 
         uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
 
@@ -439,6 +440,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, size);
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -675,8 +677,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                 UD60x18 dist = (l.marketPrice.intoSD59x18() - vars.oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
 
-                vars.shortDelta = vars.shortDelta + (l.shortRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
-                vars.longDelta = vars.longDelta + (l.longRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
+                vars.shortDelta = vars.shortDelta + l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
+                vars.longDelta = vars.longDelta + l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
 
                 if (vars.maxSize >= remaining) {
                     remaining = ZERO;
@@ -996,6 +998,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator) revert Pool__InvalidTransfer();
 
         _revertIfZeroSize(size);
+        _revertIfInvalidSize(srcP.lower, srcP.upper, size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1825,6 +1828,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         IERC20(token).approve(REFERRAL, 0);
     }
 
+    /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
+    function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
+        UD60x18 den = (upper - lower) / Pricing.MIN_TICK_DISTANCE;
+
+        while (den % TWO == ZERO) {
+            den = den / TWO;
+        }
+
+        while (den % FIVE == ZERO) {
+            den = den / FIVE;
+        }
+
+        return den != ONE;
+    }
+
     /// @notice Revert if the `lower` and `upper` tick range is invalid
     function _revertIfRangeInvalid(UD60x18 lower, UD60x18 upper) internal pure {
         if (
@@ -1832,7 +1850,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upper == ZERO ||
             lower >= upper ||
             lower < Pricing.MIN_TICK_PRICE ||
-            upper > Pricing.MAX_TICK_PRICE
+            upper > Pricing.MAX_TICK_PRICE ||
+            _isRateNonTerminating(lower, upper)
         ) revert Pool__InvalidRange(lower, upper);
     }
 
@@ -1862,6 +1881,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(totalPremium, 0, premiumLimit);
         if (!isBuy && totalPremium < premiumLimit)
             revert Pool__AboveMaxSlippage(totalPremium, premiumLimit, type(uint256).max);
+    }
+
+    function _revertIfInvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 size) internal pure {
+        UD60x18 numTicks = (upper - lower) / Pricing.MIN_TICK_PRICE;
+        if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(lower, upper, size);
     }
 
     /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`

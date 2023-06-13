@@ -279,7 +279,7 @@ abstract contract PoolStrandedTest is DeployTest {
     }
 
     function test_stranded_noStrandedMarketArea_StrandedPricesCoincide() public {
-        depositSpecified(1 ether, 0.1 ether, 0.4 ether, Position.OrderType.LC);
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
         depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
         (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
         // has to hold for downstream functionality
@@ -287,7 +287,7 @@ abstract contract PoolStrandedTest is DeployTest {
     }
 
     function test_stranded_noStrandedMarketArea_LCCS() public {
-        depositSpecified(1 ether, 0.1 ether, 0.4 ether, Position.OrderType.LC);
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
         depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
         (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
         assertEq(lower.unwrap(), 2 ether);
@@ -296,7 +296,7 @@ abstract contract PoolStrandedTest is DeployTest {
 
     function test_stranded_noStrandedMarketArea_CSLC() public {
         depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
-        depositSpecified(1 ether, 0.1 ether, 0.4 ether, Position.OrderType.LC);
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
         (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
         assertEq(lower.unwrap(), 2 ether);
         assertEq(upper.unwrap(), 2 ether);

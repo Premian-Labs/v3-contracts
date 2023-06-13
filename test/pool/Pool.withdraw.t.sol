@@ -249,12 +249,40 @@ abstract contract PoolWithdrawTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ud(0.2501e18);
+        posKey.upper = ud(0.7501e18);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.lower));
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ud(0.7501e18);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.upper));
+        // we won't catch the second tickWidth revert as there is no way to define a valid lower and an invalid upper
+        // without having an invalid range
+        vm.expectRevert();
         pool.withdraw(posKey, THREE, ZERO, ONE);
+    }
+
+    function test_withdraw_RevertIf_InvalidSize() public {
+        uint256 size = 1 ether + 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
+        size = 1 ether + 199;
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
+        // this one below is expected to pass as the range order has a width of 200 ticks
+        size = 1 ether + 400;
+        deposit(size);
+        vm.warp(block.timestamp + 60);
+        vm.startPrank(users.lp);
+        size = 1 ether + 200;
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
     }
 }
