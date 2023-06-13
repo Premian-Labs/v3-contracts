@@ -90,14 +90,20 @@ interface IReferral {
     /// @param percent The secondary rebate percent (18 decimals)
     function setSecondaryRebatePercent(UD60x18 percent) external;
 
-    /// @notice Calculate the primary and secondary rebate and pulls the tokens from msg.sender  - caller must be an
-    ///         authorized pool
+    /// @notice Pulls the total rebate amount from msg.sender - caller must be an authorized pool
     /// @dev The tokens must be approved for transfer
     /// @param user The address of the user
-    /// @param primaryReferrer The address of the primary referrer
+    /// @param referrer The address of the primary referrer
     /// @param token The address of the token
-    /// @param tradingFee The trading fee (18 decimals)
-    function useReferral(address user, address primaryReferrer, address token, UD60x18 tradingFee) external;
+    /// @param primaryRebate The primary rebate amount (18 decimals)
+    /// @param secondaryRebate The secondary rebate amount (18 decimals)
+    function useReferral(
+        address user,
+        address referrer,
+        address token,
+        UD60x18 primaryRebate,
+        UD60x18 secondaryRebate
+    ) external;
 
     /// @notice Claims the rebates for the msg.sender
     function claimRebate() external;

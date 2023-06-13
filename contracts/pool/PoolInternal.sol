@@ -591,9 +591,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), underwriter, address(this), collateral + protocolFee);
 
-        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(taker, referrer, protocolFee);
+        (UD60x18 totalReferralRebate, UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(
+            REFERRAL
+        ).getRebateAmounts(taker, referrer, protocolFee);
 
-        _useReferral(l, taker, referrer, totalReferralRebate, protocolFee);
+        _useReferral(l, taker, referrer, primaryReferralRebate, secondaryReferralRebate);
         l.protocolFees = l.protocolFees + protocolFee - totalReferralRebate;
 
         _mint(underwriter, PoolStorage.SHORT, size);
@@ -845,8 +847,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
         r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool);
-        r.totalReferralRebate = _calculateTotalReferralRebate(taker, referrer, r.protocolFee);
-        r.protocolFee = r.protocolFee - r.totalReferralRebate;
+
+        (UD60x18 totalReferralRebate, UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(
+            REFERRAL
+        ).getRebateAmounts(taker, referrer, r.protocolFee);
+
+        r.referral.totalRebate = totalReferralRebate;
+        r.referral.primaryRebate = primaryReferralRebate;
+        r.referral.secondaryRebate = secondaryReferralRebate;
+
+        r.protocolFee = r.protocolFee - r.referral.totalRebate;
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(r.premium, l.strike, l.isCallPool);
@@ -915,8 +925,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 args.user,
                 args.referrer,
-                premiumAndFee.totalReferralRebate,
-                premiumAndFee.protocolFee + premiumAndFee.totalReferralRebate
+                premiumAndFee.referral.primaryRebate,
+                premiumAndFee.referral.secondaryRebate
             );
 
             // Process trade maker
@@ -939,7 +949,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaTaker,
             premiumAndFee.premium,
             premiumAndFee.protocolFee,
-            premiumAndFee.totalReferralRebate,
+            premiumAndFee.referral.totalRebate,
             !quoteRFQ.isBuy
         );
 
@@ -1773,40 +1783,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(account, id, amount.unwrap());
     }
 
-    /// @notice Calculates the total referral rebate amount (primary + secondary)
-    function _calculateTotalReferralRebate(
-        address user,
-        address referrer,
-        UD60x18 tradingFee
-    ) internal view returns (UD60x18 totalReferralRebate) {
-        if (referrer == address(0)) referrer = IReferral(REFERRAL).getReferrer(user);
-
-        if (referrer == address(0)) return ZERO;
-
-        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = IReferral(REFERRAL).getRebatePercents(
-            referrer
-        );
-
-        console2.log("a : %s", (tradingFee * primaryRebatePercent).unwrap());
-        console2.log("b : %s", (tradingFee * secondaryRebatePercent).unwrap());
-
-        totalReferralRebate = (tradingFee * primaryRebatePercent) + (tradingFee * secondaryRebatePercent);
-    }
-
     /// @notice Applies the referral rebate to `tradingFee` paid by `user`
     function _useReferral(
         PoolStorage.Layout storage l,
         address user,
         address referrer,
-        UD60x18 totalReferralRebate,
-        UD60x18 tradingFee
+        UD60x18 primaryReferralRebate,
+        UD60x18 secondaryReferralRebate
     ) internal {
-        if (tradingFee == ZERO) return;
+        UD60x18 totalReferralRebate = primaryReferralRebate + secondaryReferralRebate;
+        if (totalReferralRebate == ZERO) return;
 
         address token = l.getPoolToken();
-        IERC20(token).approve(REFERRAL, l.toPoolTokenDecimals(totalReferralRebate));
-
-        IReferral(REFERRAL).useReferral(user, referrer, token, tradingFee);
+        IERC20(token).approve(REFERRAL, totalReferralRebate);
+        IReferral(REFERRAL).useReferral(user, referrer, token, primaryReferralRebate, secondaryReferralRebate);
         IERC20(token).approve(REFERRAL, 0);
     }
 

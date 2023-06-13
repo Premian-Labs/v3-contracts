@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
-
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -114,48 +112,34 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function useReferral(address user, address primaryReferrer, address token, UD60x18 tradingFee) external {
-        ReferralStorage.Layout storage l = ReferralStorage.layout();
-
+    function useReferral(
+        address user,
+        address referrer,
+        address token,
+        UD60x18 primaryRebate,
+        UD60x18 secondaryRebate
+    ) external {
         _revertIfPoolNotAuthorized();
 
-        primaryReferrer = _trySetReferrer(user, primaryReferrer);
-        if (primaryReferrer == address(0)) return;
+        referrer = _trySetReferrer(user, referrer);
+        if (referrer == address(0)) return;
 
-        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(primaryReferrer);
+        UD60x18 totalRebate = primaryRebate + secondaryRebate;
+        IERC20(token).safeTransferFrom(msg.sender, address(this), token.toTokenDecimals(totalRebate));
 
-        uint256 primaryRebate;
-        uint256 secondaryRebate;
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        address secondaryReferrer = l.referrals[referrer];
 
-        UD60x18 totalRebate;
-        {
-            UD60x18 _primaryRebate = tradingFee * primaryRebatePercent;
-            UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
-            totalRebate = _primaryRebate + _secondaryRebate;
-
-            primaryRebate = token.toTokenDecimals(_primaryRebate);
-            secondaryRebate = token.toTokenDecimals(_secondaryRebate);
-            uint256 _totalRebate = primaryRebate + secondaryRebate;
-
-            console2.log("c : %s", _primaryRebate.unwrap());
-            console2.log("d : %s", _secondaryRebate.unwrap());
-
-            IERC20(token).safeTransferFrom(msg.sender, address(this), _totalRebate);
-        }
-
-        address secondaryReferrer = l.referrals[primaryReferrer];
-
-        if (secondaryRebate > 0) {
-            l.rebates[secondaryReferrer][token] += secondaryRebate;
-
+        if (secondaryRebate > ZERO) {
+            l.rebates[secondaryReferrer][token] += token.toTokenDecimals(secondaryRebate);
             if (!l.rebateTokens[secondaryReferrer].contains(token)) l.rebateTokens[secondaryReferrer].add(token);
         }
 
-        l.rebates[primaryReferrer][token] += primaryRebate;
+        l.rebates[referrer][token] += token.toTokenDecimals(primaryRebate);
+        if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
 
-        if (!l.rebateTokens[primaryReferrer].contains(token)) l.rebateTokens[primaryReferrer].add(token);
-
-        emit Refer(user, primaryReferrer, secondaryReferrer, token, primaryRebatePercent, totalRebate);
+        (UD60x18 primaryRebatePercent, ) = getRebatePercents(referrer);
+        emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, totalRebate);
     }
 
     /// @inheritdoc IReferral
