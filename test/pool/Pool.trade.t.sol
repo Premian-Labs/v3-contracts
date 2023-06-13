@@ -15,7 +15,7 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTradeTest is DeployTest {
-    function test_trade_Buy50Options_WithApproval() public {
+    function test_trade_Buy500Options_WithApproval() public {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -37,7 +37,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), 0);
     }
 
-    function test_trade_Buy50Options_WithReferral() public {
+    function test_trade_Buy500Options_WithReferral() public {
         posKey.orderType = Position.OrderType.CS;
         uint256 initialCollateral = deposit(1000 ether);
 
@@ -80,7 +80,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(token).balanceOf(address(pool)), initialCollateral + totalPremium - totalRebate);
     }
 
-    function test_trade_Sell50Options_WithApproval() public {
+    function test_trade_Sell500Options_WithApproval() public {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
@@ -101,7 +101,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), totalPremium);
     }
 
-    function test_trade_Sell50Options_WithReferral() public {
+    function test_trade_Sell500Options_WithReferral() public {
         uint256 depositSize = 1000 ether;
         deposit(depositSize);
 
