@@ -1826,7 +1826,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         IERC20(token).approve(REFERRAL, 0);
     }
 
-    /// @notice Checks if the liquidity rate of the range results in a ono-terminating decimal.
+    /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
     function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
         UD60x18 den = (upper - lower) / Pricing.MIN_TICK_DISTANCE;
 
