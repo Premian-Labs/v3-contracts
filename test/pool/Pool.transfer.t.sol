@@ -268,12 +268,16 @@ abstract contract PoolTransferTest is DeployTest {
 
     function test_transferPosition_RevertIf_InvalidSize() public {
         uint256 size = 1 ether + 1;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
         vm.startPrank(users.lp);
         pool.transferPosition(posKey, users.trader, users.trader, ud(size));
         vm.stopPrank();
         size = 1 ether + 199;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
         vm.startPrank(users.lp);
         pool.transferPosition(posKey, users.trader, users.trader, ud(size));
         vm.stopPrank();

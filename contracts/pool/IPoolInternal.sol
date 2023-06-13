@@ -27,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidQuoteRFQTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
+    error Pool__InvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 depositSize);
     error Pool__InvalidTickPrice();
     error Pool__InvalidTransfer();
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
@@ -48,7 +49,6 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__TickWidthInvalid(UD60x18 price);
     error Pool__WithdrawalDelayNotElapsed(uint256 unlockTime);
     error Pool__ZeroSize();
-    error Pool__InvalidSize(UD60x18 depositSize);
 
     struct Tick {
         SD59x18 delta;

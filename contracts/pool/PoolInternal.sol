@@ -1883,7 +1883,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     function _revertIfInvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 size) internal pure {
         UD60x18 numTicks = (upper - lower) / Pricing.MIN_TICK_PRICE;
-        if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(size);
+        if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(lower, upper, size);
     }
 
     /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`

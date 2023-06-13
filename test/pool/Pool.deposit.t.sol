@@ -840,12 +840,16 @@ abstract contract PoolDepositTest is DeployTest {
 
     function test_deposit_RevertIf_InvalidSize() public {
         uint256 depositSize = 1 ether + 1;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, depositSize));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, depositSize)
+        );
         vm.startPrank(users.lp);
         pool.deposit(posKey, ZERO, ZERO, ud(depositSize), ZERO, ONE);
         vm.stopPrank();
         depositSize = 1 ether + 199;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, depositSize));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, depositSize)
+        );
         vm.startPrank(users.lp);
         pool.deposit(posKey, ZERO, ZERO, ud(depositSize), ZERO, ONE);
         vm.stopPrank();

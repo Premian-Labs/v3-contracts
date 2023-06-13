@@ -263,12 +263,16 @@ abstract contract PoolWithdrawTest is DeployTest {
 
     function test_withdraw_RevertIf_InvalidSize() public {
         uint256 size = 1 ether + 1;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(size), ZERO, ONE);
         vm.stopPrank();
         size = 1 ether + 199;
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(size), ZERO, ONE);
         vm.stopPrank();
