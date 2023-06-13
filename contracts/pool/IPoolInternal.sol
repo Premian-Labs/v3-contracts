@@ -117,13 +117,22 @@ interface IPoolInternal is IPosition, IPricing {
         bool transferCollateralToUser;
     }
 
+    struct ReferralVarsInternal {
+        UD60x18 totalRebate;
+        UD60x18 primaryRebate;
+        UD60x18 secondaryRebate;
+    }
+
     struct TradeVarsInternal {
-        UD60x18 totalReferralRebate;
+        UD60x18 maxSize;
+        UD60x18 tradeSize;
+        UD60x18 oldMarketPrice;
         UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
         UD60x18 longDelta;
         UD60x18 shortDelta;
+        ReferralVarsInternal referral;
     }
 
     struct DepositArgsInternal {
@@ -175,6 +184,7 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 protocolFee;
         UD60x18 premiumTaker;
         UD60x18 premiumMaker;
+        ReferralVarsInternal referral;
     }
 
     struct QuoteAMMVarsInternal {

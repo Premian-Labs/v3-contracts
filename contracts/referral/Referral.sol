@@ -27,7 +27,7 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function getReferrer(address user) external view returns (address) {
+    function getReferrer(address user) public view returns (address) {
         return ReferralStorage.layout().referrals[user];
     }
 
@@ -74,6 +74,20 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
+    function getRebateAmounts(
+        address user,
+        address referrer,
+        UD60x18 tradingFee
+    ) external view returns (UD60x18 primaryRebate, UD60x18 secondaryRebate) {
+        if (referrer == address(0)) referrer = getReferrer(user);
+        if (referrer == address(0)) return (ZERO, ZERO);
+
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(referrer);
+        primaryRebate = tradingFee * primaryRebatePercent;
+        secondaryRebate = primaryRebate * secondaryRebatePercent;
+    }
+
+    /// @inheritdoc IReferral
     function setRebateTier(address referrer, RebateTier tier) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
         emit SetRebateTier(referrer, l.rebateTiers[referrer], tier);
@@ -97,45 +111,37 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function useReferral(address user, address primaryReferrer, address token, UD60x18 tradingFee) external {
-        ReferralStorage.Layout storage l = ReferralStorage.layout();
-
+    function useReferral(
+        address user,
+        address referrer,
+        address token,
+        UD60x18 primaryRebate,
+        UD60x18 secondaryRebate
+    ) external {
         _revertIfPoolNotAuthorized();
 
-        primaryReferrer = _trySetReferrer(user, primaryReferrer);
-        if (primaryReferrer == address(0)) return;
+        referrer = _trySetReferrer(user, referrer);
+        if (referrer == address(0)) return;
 
-        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(primaryReferrer);
+        IERC20(token).safeTransferFrom(
+            msg.sender,
+            address(this),
+            token.toTokenDecimals(primaryRebate + secondaryRebate)
+        );
 
-        uint256 primaryRebate;
-        uint256 secondaryRebate;
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        address secondaryReferrer = l.referrals[referrer];
 
-        UD60x18 totalRebate;
-        {
-            UD60x18 _primaryRebate = tradingFee * primaryRebatePercent;
-            UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
-            totalRebate = _primaryRebate + _secondaryRebate;
-
-            primaryRebate = token.toTokenDecimals(_primaryRebate);
-            secondaryRebate = token.toTokenDecimals(_secondaryRebate);
-            uint256 _totalRebate = primaryRebate + secondaryRebate;
-
-            IERC20(token).safeTransferFrom(msg.sender, address(this), _totalRebate);
-        }
-
-        address secondaryReferrer = l.referrals[primaryReferrer];
-
-        if (secondaryRebate > 0) {
-            l.rebates[secondaryReferrer][token] += secondaryRebate;
-
+        if (secondaryRebate > ZERO) {
+            l.rebates[secondaryReferrer][token] += token.toTokenDecimals(secondaryRebate);
             if (!l.rebateTokens[secondaryReferrer].contains(token)) l.rebateTokens[secondaryReferrer].add(token);
         }
 
-        l.rebates[primaryReferrer][token] += primaryRebate;
+        l.rebates[referrer][token] += token.toTokenDecimals(primaryRebate);
+        if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
 
-        if (!l.rebateTokens[primaryReferrer].contains(token)) l.rebateTokens[primaryReferrer].add(token);
-
-        emit Refer(user, primaryReferrer, secondaryReferrer, token, primaryRebatePercent, totalRebate);
+        (UD60x18 primaryRebatePercent, ) = getRebatePercents(referrer);
+        emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, primaryRebate, secondaryRebate);
     }
 
     /// @inheritdoc IReferral
