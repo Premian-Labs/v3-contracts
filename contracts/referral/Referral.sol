@@ -78,14 +78,13 @@ contract Referral is IReferral, OwnableInternal {
         address user,
         address referrer,
         UD60x18 tradingFee
-    ) external view returns (UD60x18 totalRebate, UD60x18 primaryRebate, UD60x18 secondaryRebate) {
+    ) external view returns (UD60x18 primaryRebate, UD60x18 secondaryRebate) {
         if (referrer == address(0)) referrer = getReferrer(user);
-        if (referrer == address(0)) return (ZERO, ZERO, ZERO);
+        if (referrer == address(0)) return (ZERO, ZERO);
 
         (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(referrer);
         primaryRebate = tradingFee * primaryRebatePercent;
         secondaryRebate = primaryRebate * secondaryRebatePercent;
-        totalRebate = primaryRebate + secondaryRebate;
     }
 
     /// @inheritdoc IReferral

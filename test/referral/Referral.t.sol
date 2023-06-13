@@ -74,23 +74,21 @@ contract ReferralTest is DeployTest {
 
     function test_getRebateAmounts_Success() public {
         vm.prank(users.trader);
-        (UD60x18 __totalRebate, UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
+        (UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
             users.trader,
             address(0),
             _tradingFee
         );
+
+        UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
 
         assertEq(__totalRebate, ZERO);
         assertEq(__primaryRebate, ZERO);
         assertEq(__secondaryRebate, ZERO);
 
         vm.prank(users.trader);
-        (__totalRebate, __primaryRebate, __secondaryRebate) = referral.getRebateAmounts(
-            users.trader,
-            users.referrer,
-            _tradingFee
-        );
-
+        (__primaryRebate, __secondaryRebate) = referral.getRebateAmounts(users.trader, users.referrer, _tradingFee);
+        __totalRebate = __primaryRebate + __secondaryRebate;
         assertEq(__totalRebate, _primaryRebate);
         assertEq(__primaryRebate, _primaryRebate);
         assertEq(__secondaryRebate, ZERO);
@@ -99,12 +97,8 @@ contract ReferralTest is DeployTest {
         referral.__trySetReferrer(users.referrer);
 
         vm.prank(users.trader);
-        (__totalRebate, __primaryRebate, __secondaryRebate) = referral.getRebateAmounts(
-            users.trader,
-            address(0),
-            _tradingFee
-        );
-
+        (__primaryRebate, __secondaryRebate) = referral.getRebateAmounts(users.trader, address(0), _tradingFee);
+        __totalRebate = __primaryRebate + __secondaryRebate;
         assertEq(__totalRebate, _primaryRebate);
         assertEq(__primaryRebate, _primaryRebate);
         assertEq(__secondaryRebate, ZERO);
@@ -113,12 +107,8 @@ contract ReferralTest is DeployTest {
         referral.__trySetReferrer(secondaryReferrer);
 
         vm.prank(users.trader);
-        (__totalRebate, __primaryRebate, __secondaryRebate) = referral.getRebateAmounts(
-            users.trader,
-            address(0),
-            _tradingFee
-        );
-
+        (__primaryRebate, __secondaryRebate) = referral.getRebateAmounts(users.trader, address(0), _tradingFee);
+        __totalRebate = __primaryRebate + __secondaryRebate;
         assertEq(__totalRebate, _totalRebate);
         assertEq(__primaryRebate, _primaryRebate);
         assertEq(__secondaryRebate, _secondaryRebate);
@@ -264,11 +254,13 @@ contract ReferralTest is DeployTest {
         vm.startPrank(address(pool));
         deal(token, address(pool), __tradingFee);
 
-        (UD60x18 __totalRebate, UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
+        (UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
             users.trader,
             users.referrer,
             scaleDecimals(__tradingFee)
         );
+
+        UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
 
         IERC20(token).approve(address(referral), scaleDecimals(__totalRebate));
 
