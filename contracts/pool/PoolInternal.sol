@@ -33,9 +33,6 @@ import {IPoolInternal} from "./IPoolInternal.sol";
 import {IPoolEvents} from "./IPoolEvents.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 
-import {console} from "forge-std/console.sol";
-import {console2} from "forge-std/console2.sol";
-
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;

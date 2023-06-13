@@ -194,9 +194,9 @@ abstract contract PoolTransferTest is DeployTest {
         vm.startPrank(users.lp);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__NotEnoughTokens.selector, 1000 ether, 1000 ether + 1)
+            abi.encodeWithSelector(IPoolInternal.Pool__NotEnoughTokens.selector, 1000 ether, 1000 ether + 1000)
         );
-        pool.transferPosition(posKey, users.trader, users.lp, ud(1000 ether + 1));
+        pool.transferPosition(posKey, users.trader, users.lp, ud(1000 ether + 1000));
     }
 
     function test_safeTransferFrom_TransferLongToken() public {
@@ -264,5 +264,25 @@ abstract contract PoolTransferTest is DeployTest {
         vm.prank(users.otherTrader);
         vm.expectRevert(IERC1155BaseInternal.ERC1155Base__NotOwnerOrApproved.selector);
         pool.safeTransferFrom(users.trader, users.otherTrader, PoolStorage.SHORT, transferAmount, "");
+    }
+
+    function test_transferPosition_RevertIf_InvalidSize() public {
+        uint256 size = 1 ether + 1;
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.startPrank(users.lp);
+        pool.transferPosition(posKey, users.trader, users.trader, ud(size));
+        vm.stopPrank();
+        size = 1 ether + 199;
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, size));
+        vm.startPrank(users.lp);
+        pool.transferPosition(posKey, users.trader, users.trader, ud(size));
+        vm.stopPrank();
+        // this one below is expected to pass as the range order has a width of 200 ticks
+        size = 1 ether + 400;
+        deposit(size);
+        vm.startPrank(users.lp);
+        size = 1 ether + 200;
+        pool.transferPosition(posKey, users.trader, users.trader, ud(size));
+        vm.stopPrank();
     }
 }

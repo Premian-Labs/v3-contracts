@@ -826,13 +826,32 @@ abstract contract PoolDepositTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ud(0.2501e18);
+        posKey.upper = ud(0.7501e18);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.lower));
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ud(0.7501e18);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.upper));
+        // we won't catch the second tickWidth revert as there is no way to define a valid lower and an invalid upper
+        // without having an invalid range
+        vm.expectRevert();
         pool.deposit(posKey, ZERO, ZERO, THREE, ZERO, ONE);
+    }
+
+    function test_deposit_RevertIf_InvalidSize() public {
+        uint256 depositSize = 1 ether + 1;
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, depositSize));
+        vm.startPrank(users.lp);
+        pool.deposit(posKey, ZERO, ZERO, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        depositSize = 1 ether + 199;
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, depositSize));
+        vm.startPrank(users.lp);
+        pool.deposit(posKey, ZERO, ZERO, ud(depositSize), ZERO, ONE);
+        vm.stopPrank();
+        // this one below is expected to pass as the range order has a width of 200 ticks
+        depositSize = 1 ether + 200;
+        deposit(depositSize);
     }
 
     function test_ticks_ReturnExpectedValues() public {
