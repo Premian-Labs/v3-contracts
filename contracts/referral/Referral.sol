@@ -29,7 +29,7 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function getReferrer(address user) external view returns (address) {
+    function getReferrer(address user) public view returns (address) {
         return ReferralStorage.layout().referrals[user];
     }
 
@@ -73,6 +73,21 @@ contract Referral is IReferral, OwnableInternal {
         }
 
         return (tokens, rebates);
+    }
+
+    /// @inheritdoc IReferral
+    function getRebateAmounts(
+        address user,
+        address referrer,
+        UD60x18 tradingFee
+    ) external view returns (UD60x18 totalRebate, UD60x18 primaryRebate, UD60x18 secondaryRebate) {
+        if (referrer == address(0)) referrer = getReferrer(user);
+        if (referrer == address(0)) return (ZERO, ZERO, ZERO);
+
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(referrer);
+        primaryRebate = tradingFee * primaryRebatePercent;
+        secondaryRebate = primaryRebate * secondaryRebatePercent;
+        totalRebate = primaryRebate + secondaryRebate;
     }
 
     /// @inheritdoc IReferral
