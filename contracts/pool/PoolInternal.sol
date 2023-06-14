@@ -1362,7 +1362,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         tick = Tick({
             delta: iZERO,
-            externalFeeRate: price <= l.marketPrice ? l.globalFeeRate : ZERO,
+            externalFeeRate: price <= l.currentTick ? l.globalFeeRate : ZERO,
             longDelta: iZERO,
             shortDelta: iZERO,
             counter: 0
