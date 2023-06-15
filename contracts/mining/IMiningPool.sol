@@ -28,7 +28,7 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
 
     event WriteFrom(address indexed underwriter, address indexed longReceiver, UD60x18 contractSize);
 
-    function writeFrom(address underwriter, address longReceiver, UD60x18 contractSize) external;
+    function writeFrom(address longReceiver, UD60x18 contractSize) external;
 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external;
 

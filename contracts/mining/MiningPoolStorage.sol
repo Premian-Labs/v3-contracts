@@ -21,6 +21,7 @@ library MiningPoolStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
+        address underwriter;
         address priceRepository;
         address paymentSplitter;
         // percentage of the asset spot price used to set the strike price

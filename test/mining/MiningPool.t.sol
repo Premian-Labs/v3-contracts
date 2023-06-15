@@ -93,6 +93,7 @@ contract MiningPoolTest is Assertions, Test {
             miningPoolFactory.deployMiningPool(
                 premia,
                 usdc,
+                users.underwriter,
                 address(priceRepository),
                 // TODO: deploy payment splitter
                 address(1),
@@ -108,6 +109,7 @@ contract MiningPoolTest is Assertions, Test {
             miningPoolFactory.deployMiningPool(
                 wbtc,
                 usdc,
+                users.underwriter,
                 address(priceRepository),
                 // TODO: deploy payment splitter
                 address(1),

@@ -31,13 +31,11 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
     using SafeCast for uint256;
 
     // caller must approve token
-    function writeFrom(address underwriter, address longReceiver, UD60x18 contractSize) external nonReentrant {
-        if (
-            msg.sender != underwriter && ERC1155BaseStorage.layout().operatorApprovals[underwriter][msg.sender] == false
-        ) revert MiningPool__OperatorNotAuthorized(msg.sender);
-
+    function writeFrom(address longReceiver, UD60x18 contractSize) external nonReentrant {
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        IERC20(l.base).safeTransferFromUD60x18(underwriter, address(this), l.toTokenDecimals(contractSize, true));
+        if (msg.sender != l.underwriter) revert MiningPool__UnderwriterNotAuthorized(msg.sender);
+
+        IERC20(l.base).safeTransferFromUD60x18(l.underwriter, address(this), l.toTokenDecimals(contractSize, true));
 
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
         UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
@@ -48,10 +46,10 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
 
         _mintUD60x18(longReceiver, longTokenId, contractSize);
-        _mintUD60x18(underwriter, shortTokenId, contractSize);
+        _mintUD60x18(l.underwriter, shortTokenId, contractSize);
 
         // TODO: add strike/ maturity to event?
-        emit WriteFrom(underwriter, longReceiver, contractSize);
+        emit WriteFrom(l.underwriter, longReceiver, contractSize);
     }
 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {

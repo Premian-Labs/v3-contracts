@@ -16,6 +16,7 @@ contract MiningPoolFactory {
     function deployMiningPool(
         address base,
         address quote,
+        address underwriter,
         address priceRepository,
         address paymentSplitter,
         UD60x18 discount,
@@ -28,6 +29,7 @@ contract MiningPoolFactory {
             PROXY,
             base,
             quote,
+            underwriter,
             priceRepository,
             paymentSplitter,
             discount,

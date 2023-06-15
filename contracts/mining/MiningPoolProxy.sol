@@ -19,6 +19,7 @@ contract MiningPoolProxy is Proxy {
         address proxy,
         address base,
         address quote,
+        address underwriter,
         address priceRepository,
         address paymentSplitter,
         UD60x18 discount,
@@ -45,6 +46,8 @@ contract MiningPoolProxy is Proxy {
 
         l.base = base;
         l.quote = quote;
+
+        l.underwriter = underwriter;
 
         l.priceRepository = priceRepository;
         l.paymentSplitter = paymentSplitter;
