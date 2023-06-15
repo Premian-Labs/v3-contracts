@@ -59,4 +59,33 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         vm.expectRevert(IPoolInternal.Pool__InsufficientLiquidity.selector);
         pool.getQuoteAMM(users.trader, ud(1001 ether), false);
     }
+
+    function test_getQuoteAMM_MultipleRangeOrders() public {
+        // bug was detected due to rounding errors.
+        // update:  with the new restricted tick widths this test is not anymore as critical
+        //          and can be viewed more as an integration test
+        posKey.lower = ud(0.001 ether);
+        posKey.upper = ud(0.129 ether);
+        posKey.orderType = Position.OrderType.LC;
+        deposit(10 ether);
+        (uint256 totalNetPremium, uint256 totalTakerFee) = pool.getQuoteAMM(address(1), ud(9 ether), false);
+        // nextPrice = 0.129 - 9 / 10 * (0.129 - 0.001) = 0.0138
+        // totalPremium = (0.0138 + 0.129) / 2 * 9 = 0.6426
+        // totalNetPremium = 0.6426 - 0.027 = 0.6156
+        // there will be a rounding error due to the liquidity rate
+        // put case is with 6 decimals and needs to be multiplied by the strike value (1000)
+        assertEq(totalNetPremium, isCallTest ? 0.6156 ether : 615.6e6);
+        assertEq(totalTakerFee, isCallTest ? 0.027 ether : 27e6);
+        posKey.lower = ud(0.104 ether);
+        posKey.upper = ud(0.120 ether);
+        posKey.orderType = Position.OrderType.LC;
+        deposit(5 ether);
+        (uint256 totalNetPremiumUpdated, uint256 totalTakerFeeUpdated) = pool.getQuoteAMM(
+            address(1),
+            ud(9 ether),
+            false
+        );
+        assertEq(totalNetPremiumUpdated, isCallTest ? 0.915568750 ether : 915.568750e6);
+        assertEq(totalTakerFeeUpdated, isCallTest ? 0.058031250 ether : 58.031250e6);
+    }
 }

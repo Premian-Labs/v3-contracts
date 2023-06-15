@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writable/IDiamondWritableInternal.sol";
 
 import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
@@ -12,10 +13,17 @@ import {Position} from "contracts/libraries/Position.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
+import {PoolTrade} from "contracts/pool/PoolTrade.sol";
+import {IPoolTrade} from "contracts/pool/IPoolTrade.sol";
+import {Premia} from "contracts/proxy/Premia.sol";
+import {Referral} from "contracts/referral/Referral.sol";
+import {ReferralProxy} from "contracts/referral/ReferralProxy.sol";
+import {IPool} from "contracts/pool/IPool.sol";
+
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTradeTest is DeployTest {
-    function test_trade_Buy50Options_WithApproval() public {
+    function test_trade_Buy500Options_WithApproval() public {
         posKey.orderType = Position.OrderType.CS;
         deposit(1000 ether);
 
@@ -37,7 +45,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), 0);
     }
 
-    function test_trade_Buy50Options_WithReferral() public {
+    function test_trade_Buy500Options_WithReferral() public {
         posKey.orderType = Position.OrderType.CS;
         uint256 initialCollateral = deposit(1000 ether);
 
@@ -80,7 +88,59 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(token).balanceOf(address(pool)), initialCollateral + totalPremium - totalRebate);
     }
 
-    function test_trade_Sell50Options_WithApproval() public {
+    function test_trade_HandleRoundingErrors_WithReferral() public {
+        // This test is ensuring a fix related to rounded errors in referral contract we encountered on testnet during
+        // testing is solves
+        // We cant reproduce the exact same scenario easily by reproducing steps leading to this, because of some other
+        // upgrades made
+        // This test will probably need to be removed at some point as it will fail once Goerli is deprecated
+        string memory RPC_URL = string.concat("https://arb-goerli.g.alchemy.com/v2/", vm.envString("API_KEY_ALCHEMY"));
+        uint256 fork = vm.createFork(RPC_URL, 25474288);
+        vm.selectFork(fork);
+
+        address poolTrade = address(
+            new PoolTrade(
+                0x78438a37Ab82d757657e47E15d28646843FAaeDD,
+                0xC42f597D6b05033199aa5aB8A953C572ab63072a,
+                0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999,
+                0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54,
+                0x1f6A482AD83D0fb990897FCea83C226312109D0B,
+                0x6A1bec4D03A7e2CBDb5AD4a151065dC9e9A8076E,
+                0x80196c9D4094B36f3e142C80C4Fd12247f79ef2D,
+                0xe416d620436F77e4F4867b67E269A08972067808
+            )
+        );
+
+        IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](1);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = IPoolTrade.trade.selector;
+
+        facetCuts[0] = IDiamondWritableInternal.FacetCut(
+            address(poolTrade),
+            IDiamondWritableInternal.FacetCutAction.REPLACE,
+            selectors
+        );
+
+        vm.prank(0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54);
+        Premia(payable(0xCFb3000bD2Ac6FdaFb4c77C43F603c3ae14De308)).diamondCut(facetCuts, address(0), "");
+
+        address referral = address(new Referral(0x78438a37Ab82d757657e47E15d28646843FAaeDD));
+
+        vm.prank(0x0e2fF9cbb1b0866b9988311C4d55BbC3e584bb54);
+        ReferralProxy(payable(0x1f6A482AD83D0fb990897FCea83C226312109D0B)).setImplementation(referral);
+
+        vm.startPrank(0xA28eBeb2d86f349d974BAA5b631ee64a71c4c220);
+
+        IPool(0x51509B559ce5E83CCd579985eC846617e76D0797).trade(
+            ud(500000000000000000),
+            true,
+            78646633752380059,
+            0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709
+        );
+    }
+
+    function test_trade_Sell500Options_WithApproval() public {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
@@ -101,7 +161,7 @@ abstract contract PoolTradeTest is DeployTest {
         assertEq(IERC20(poolToken).balanceOf(users.trader), totalPremium);
     }
 
-    function test_trade_Sell50Options_WithReferral() public {
+    function test_trade_Sell500Options_WithReferral() public {
         uint256 depositSize = 1000 ether;
         deposit(depositSize);
 
