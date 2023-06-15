@@ -175,7 +175,7 @@ contract MiningPoolTest is Assertions, Test {
         miningPool.writeFrom(users.longReceiver, _size);
         vm.stopPrank();
 
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
+        UD60x18 strike = data.discount * data.spot;
         longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
         shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
 
@@ -313,7 +313,7 @@ contract MiningPoolTest is Assertions, Test {
     function _test_exercise_RevertIf_TokenTypeNotLong(Data memory data, MiningPool miningPool) internal {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
+        UD60x18 strike = data.discount * data.spot;
         uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
 
         vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotLong.selector);
@@ -329,7 +329,7 @@ contract MiningPoolTest is Assertions, Test {
     function _test_exercise_RevertIf_OptionNotExpired(Data memory data, MiningPool miningPool) internal {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
+        UD60x18 strike = data.discount * data.spot;
         uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
 
         vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
@@ -446,10 +446,10 @@ contract MiningPoolTest is Assertions, Test {
         _test_settle_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 
-    function _test_exercise_RevertIf_TokenTypeNotShort(Data memory data, MiningPool miningPool) internal {
+    function _test_settle_RevertIf_TokenTypeNotShort(Data memory data, MiningPool miningPool) internal {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
+        UD60x18 strike = data.discount * data.spot;
         uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
 
         vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotShort.selector);
@@ -458,9 +458,9 @@ contract MiningPoolTest is Assertions, Test {
         miningPool.settle(longTokenId, ud(1000000e18));
     }
 
-    function test_exercise_RevertIf_TokenTypeNotShort() public {
-        _test_exercise_RevertIf_TokenTypeNotShort(_data[0], premiaUSDCMiningPool);
-        _test_exercise_RevertIf_TokenTypeNotShort(_data[1], wbtcUSDCMiningPool);
+    function test_settle_RevertIf_TokenTypeNotShort() public {
+        _test_settle_RevertIf_TokenTypeNotShort(_data[0], premiaUSDCMiningPool);
+        _test_settle_RevertIf_TokenTypeNotShort(_data[1], wbtcUSDCMiningPool);
     }
 
     function _test_settle_RevertIf_OptionNotExpired(
