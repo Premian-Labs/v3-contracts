@@ -273,9 +273,14 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedArea.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_cross.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isRateNonTerminating.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getLongRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getShortRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.quoteRFQHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
@@ -295,6 +300,7 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePositionFor.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
+        poolCoreSelectors.push(poolCoreImpl._takerFeeLowLevel.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);
@@ -426,9 +432,27 @@ contract DeployTest is Test, Assertions {
     }
 
     function trade(uint256 tradeSize, bool isBuy) internal returns (uint256 initialCollateral, uint256 totalPremium) {
-        if (isBuy) posKey.orderType = Position.OrderType.CS;
+        (initialCollateral, totalPremium) = trade(tradeSize, isBuy, tradeSize, false);
+    }
 
-        initialCollateral = deposit(tradeSize);
+    function trade(
+        uint256 tradeSize,
+        bool isBuy,
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        (initialCollateral, totalPremium) = trade(tradeSize, isBuy, depositSize, false);
+    }
+
+    function trade(
+        uint256 tradeSize,
+        bool isBuy,
+        uint256 depositSize,
+        bool isCSUP
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        if (isBuy && isCSUP) posKey.orderType = Position.OrderType.CSUP;
+        if (isBuy && !isCSUP) posKey.orderType = Position.OrderType.CS;
+
+        initialCollateral = deposit(depositSize);
 
         UD60x18 _tradeSize = ud(tradeSize);
 

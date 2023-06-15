@@ -9,6 +9,7 @@ import {Pricing} from "../../libraries/Pricing.sol";
 
 import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
+import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
@@ -80,6 +81,10 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _isMarketPriceStranded(l, p, isBid);
     }
 
+    function exposed_mint(address account, uint256 id, UD60x18 amount) external {
+        _mint(account, id, amount.unwrap(), "");
+    }
+
     function getCurrentTick() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.currentTick;
@@ -88,5 +93,23 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.liquidityRate;
+    }
+
+    function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory) {
+        return _getTick(price);
+    }
+
+    function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool) {
+        return _isRateNonTerminating(lower, upper);
+    }
+
+    function getLongRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.longRate;
+    }
+
+    function getShortRate() external view returns (UD60x18) {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        return l.shortRate;
     }
 }

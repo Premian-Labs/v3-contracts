@@ -42,6 +42,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     address internal immutable FACTORY;
     address internal immutable ROUTER;
     address internal immutable VXPREMIA;
+    address internal immutable POOL_DIAMOND;
 
     constructor(
         address vaultRegistry,
@@ -49,7 +50,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         address oracle,
         address factory,
         address router,
-        address vxPremia
+        address vxPremia,
+        address poolDiamond
     ) {
         VAULT_REGISTRY = vaultRegistry;
         FEE_RECEIVER = feeReceiver;
@@ -57,6 +59,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         FACTORY = factory;
         ROUTER = router;
         VXPREMIA = vxPremia;
+        POOL_DIAMOND = poolDiamond;
     }
 
     function updateSettings(bytes memory settings) external {
@@ -245,14 +248,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     function _getPricePerShareUD60x18() internal view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        if ((_totalSupplyUD60x18() != ZERO) && (l.totalAssets != ZERO))
-            return (_availableAssetsUD60x18(l) + _getTotalFairValue(l)) / _totalSupplyUD60x18();
+        if ((_totalSupplyUD60x18() != ZERO) && (l.totalAssets != ZERO)) {
+            UD60x18 managementFeeInShares = _computeManagementFee(l, _getBlockTimestamp());
+            UD60x18 totalAssets = _availableAssetsUD60x18(l) + _getTotalFairValue(l);
+            return totalAssets / (_totalSupplyUD60x18() + managementFeeInShares);
+        }
 
         return ONE;
-    }
-
-    function _getAveragePricePerShareUD60x18(address owner) internal view returns (UD60x18) {
-        return UnderwriterVaultStorage.layout().netUserDeposits[owner] / _balanceOfUD60x18(owner); // (assets / shares)
     }
 
     /// @notice updates total spread in storage to be able to compute the price per share
@@ -304,6 +306,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         uint256 assetAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
+        // charge management fees such that the timestamp is up to date
+        _chargeManagementFees();
         return super._deposit(assetAmount, receiver);
     }
 
@@ -322,6 +326,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         uint256 shareAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
+        // charge management fees such that the timestamp is up to date
+        _chargeManagementFees();
         return super._mint(shareAmount, receiver);
     }
 
@@ -348,6 +354,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     ) internal virtual override nonReentrant returns (uint256 assetAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
+        // charge management fees such that vault share holder pays management fees due
+        _chargeManagementFees();
+
         UD60x18 shares = ud(shareAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxRedeem = _maxRedeemUD60x18(l, owner, pps);
@@ -366,8 +375,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     ) internal view returns (UD60x18 withdrawableAssets) {
         _revertIfAddressZero(owner);
 
-        FeeInternal memory vars = _getFeeInternal(l, owner, _balanceOfUD60x18(owner), pps);
-        UD60x18 assetsOwner = _maxTransferableShares(vars) * pps;
+        UD60x18 assetsOwner = _balanceOfUD60x18(owner) * pps;
         UD60x18 availableAssets = _availableAssetsUD60x18(l);
 
         withdrawableAssets = assetsOwner > availableAssets ? availableAssets : assetsOwner;
@@ -406,6 +414,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
+        // charge management fees such that vault share holder pays management fees due
+        _chargeManagementFees();
+
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
         UD60x18 pps = _getPricePerShareUD60x18();
         UD60x18 maxWithdraw = _maxWithdrawUD60x18(l, owner, pps);
@@ -415,17 +426,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
-    }
-
-    function _updateTimeOfDeposit(
-        UnderwriterVaultStorage.Layout storage l,
-        address owner,
-        uint256 shareBalanceBefore,
-        uint256 shareAmount
-    ) internal {
-        l.timeOfDeposit[owner] =
-            (l.timeOfDeposit[owner] * shareBalanceBefore + _getBlockTimestamp() * shareAmount) /
-            (shareBalanceBefore + shareAmount);
     }
 
     /// @inheritdoc ERC4626BaseInternal
@@ -440,10 +440,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         // This is needed to compute average price per share
         UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
 
-        l.netUserDeposits[receiver] = l.netUserDeposits[receiver] + assets;
         l.totalAssets = l.totalAssets + assets;
-
-        _updateTimeOfDeposit(l, receiver, _balanceOf(receiver) - shareAmount, shareAmount);
 
         emit UpdateQuotes();
     }
@@ -455,8 +452,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-
-        _beforeTokenTransfer(owner, address(this), shareAmount);
 
         // Remove the assets from totalAssets
         l.totalAssets = l.totalAssets - l.convertAssetToUD60x18(assetAmount);
@@ -475,26 +470,35 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 strike,
         uint256 maturity,
         UD60x18 size,
-        UD60x18 spread
+        UD60x18 spread,
+        UD60x18 premium
     ) internal {
         // @magnus: spread state needs to be updated otherwise spread dispersion is inconsistent
         // we can make this function more efficient later on by not writing twice to storage, i.e.
         // compute the updated state, then increment values, then write to storage
         _updateState(l);
-        UD60x18 spreadRate = spread / ud((maturity - _getBlockTimestamp()) * WAD);
 
-        l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRate;
-        l.spreadUnlockingTicks[maturity] = l.spreadUnlockingTicks[maturity] + spreadRate;
-        l.totalLockedSpread = l.totalLockedSpread + spread;
+        UD60x18 spreadProtocol = spread * l.performanceFeeRate;
+        UD60x18 spreadLP = spread - spreadProtocol;
+
+        UD60x18 spreadRateLP = spreadLP / ud((maturity - _getBlockTimestamp()) * WAD);
+
+        l.totalAssets = l.totalAssets + premium + spreadLP;
+        l.spreadUnlockingRate = l.spreadUnlockingRate + spreadRateLP;
+        l.spreadUnlockingTicks[maturity] = l.spreadUnlockingTicks[maturity] + spreadRateLP;
+        l.totalLockedSpread = l.totalLockedSpread + spreadLP;
         l.totalLockedAssets = l.totalLockedAssets + l.collateral(size, strike);
         l.positionSizes[maturity][strike] = l.positionSizes[maturity][strike] + size;
         l.lastTradeTimestamp = _getBlockTimestamp();
+        // we cannot mint new shares as we did for management fees as this would require computing the fair value of the options which would be inefficient.
+        l.protocolFees = l.protocolFees + spreadProtocol;
+        emit PerformanceFeePaid(FEE_RECEIVER, l.convertAssetFromUD60x18(spreadProtocol));
     }
 
-    /// @notice Gets the pool address corresponding to the given strike and maturity.
+    /// @notice Gets the pool address corresponding to the given strike and maturity. Returns zero address if pool is not deployed.
     /// @param strike The strike price for the pool
     /// @param maturity The maturity for the pool
-    /// @return The pool factory address
+    /// @return The pool address (zero address if pool is not deployed)
     function _getPoolAddress(
         UnderwriterVaultStorage.Layout storage l,
         UD60x18 strike,
@@ -511,8 +515,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         });
 
         (address pool, bool isDeployed) = IPoolFactory(FACTORY).getPoolAddress(_poolKey);
-        if (!isDeployed) revert Vault__OptionPoolNotListed();
-        return pool;
+
+        return isDeployed ? pool : address(0);
     }
 
     /// @notice Calculates the C-level given a utilisation value and time since last trade value (duration).
@@ -631,7 +635,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     /// @notice Get the variables needed in order to compute the quote for a trade
     function _getQuoteInternal(
         UnderwriterVaultStorage.Layout storage l,
-        QuoteArgsInternal memory args
+        QuoteArgsInternal memory args,
+        bool revertIfPoolNotDeployed
     ) internal view returns (QuoteInternal memory quote) {
         _revertIfZeroSize(args.size);
         _revertIfNotTradeableWithVault(l.isCall, args.isCall, args.isBuy);
@@ -690,7 +695,19 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         quote.spread = (vars.cLevel - l.minCLevel) * quote.premium;
         quote.pool = _getPoolAddress(l, args.strike, args.maturity);
 
-        quote.mintingFee = l.convertAssetToUD60x18(IPool(quote.pool).takerFee(args.taker, args.size, 0, true));
+        if (revertIfPoolNotDeployed && quote.pool == address(0)) revert Vault__OptionPoolNotListed();
+
+        // This is to deal with the scenario where user request a quote for a pool not yet deployed
+        // Instead of calling `takerFee` on the pool, we call `_takerFeeLowLevel` directly on `POOL_DIAMOND`.
+        // This function doesnt require any data from pool storage and therefore will succeed even if pool is not deployed yet.
+        quote.mintingFee = IPool(POOL_DIAMOND)._takerFeeLowLevel(
+            args.taker,
+            args.size,
+            ud(0),
+            true,
+            args.strike,
+            l.isCall
+        );
     }
 
     /// @inheritdoc IVault
@@ -711,7 +728,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
                 size: size,
                 isBuy: isBuy,
                 taker: taker
-            })
+            }),
+            false
         );
 
         premium = l.convertAssetFromUD60x18(quote.premium + quote.spread + quote.mintingFee);
@@ -736,7 +754,8 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
                 size: size,
                 isBuy: isBuy,
                 taker: msg.sender
-            })
+            }),
+            true
         );
 
         UD60x18 totalPremium = quote.premium + quote.spread + quote.mintingFee;
@@ -745,9 +764,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
 
         // Add listing
         l.addListing(poolKey.strike, poolKey.maturity);
-
-        // Add everything except mintingFee
-        l.totalAssets = l.totalAssets + quote.premium + quote.spread;
 
         // Collect option premium from buyer
         IERC20(_asset()).safeTransferFrom(msg.sender, address(this), l.convertAssetFromUD60x18(totalPremium));
@@ -761,7 +777,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         IPool(quote.pool).writeFrom(address(this), msg.sender, size, referrer);
 
         // Handle the premiums and spread capture generated
-        _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread);
+        _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
 
         // Emit trade event
         emit Trade(msg.sender, quote.pool, size, true, totalPremium, quote.mintingFee, ZERO, quote.spread);
@@ -819,114 +835,43 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         emit UpdateQuotes();
     }
 
-    /// @notice Computes the fee variables needed for computed performance and management fees.
-    /// @param owner The owner of the shares.
-    /// @param shares The amount of shares to be transferred.
-    /// @param pps The price per share.
-    /// @return The fee variables needed for computed performance and management fees.
-    function _getFeeInternal(
+    /// @notice Computes and returns the management fee in shares that have to be paid by vault share holders for using the vault.
+    /// @param l Contains stored parameters of the vault, including the managementFeeRate and the lastManagementFeeTimestamp
+    /// @param timestamp The block's current timestamp.
+    /// @return managementFeeInShares Returns the amount due in management fees in terms of shares (18 decimals).
+    function _computeManagementFee(
         UnderwriterVaultStorage.Layout storage l,
-        address owner,
-        UD60x18 shares,
-        UD60x18 pps
-    ) internal view returns (FeeInternal memory) {
-        FeeInternal memory vars;
-
-        vars.balanceShares = _balanceOfUD60x18(owner);
-
-        UD60x18 performance;
-        if (vars.balanceShares > ZERO) {
-            performance = pps / _getAveragePricePerShareUD60x18(owner);
-            vars.assets = shares * pps;
+        uint256 timestamp
+    ) internal view returns (UD60x18 managementFeeInShares) {
+        if (l.totalAssets == ZERO) {
+            managementFeeInShares = ZERO;
+        } else {
+            UD60x18 timeSinceLastDeposit = ud((timestamp - l.lastManagementFeeTimestamp) * WAD) /
+                ud(OptionMath.ONE_YEAR_TTM * WAD);
+            // gamma is the percentage we charge in management fees from the totalAssets resulting in the new pps
+            // newPPS = A * (1 - gamma) / S = A / ( S * ( 1 / (1 - gamma) )
+            // from this we can compute the shares that need to be minted
+            // sharesToMint = S * (1 / (1 - gamma)) - S = S * gamma / (1 - gamma)
+            UD60x18 gamma = l.managementFeeRate * timeSinceLastDeposit;
+            managementFeeInShares = _totalSupplyUD60x18() * (gamma / (ONE - gamma));
         }
-
-        UD60x18 discount = ud(IVxPremia(VXPREMIA).getDiscount(owner));
-
-        UD60x18 performanceFeeInShares;
-        if (performance > ONE) {
-            performanceFeeInShares = shares * (performance - ONE) * l.performanceFeeRate;
-
-            if (discount > ZERO) {
-                performanceFeeInShares = (ONE - discount) * performanceFeeInShares;
-            }
-
-            vars.performanceFeeInAssets = performanceFeeInShares * pps;
-        }
-
-        // Time since last deposit in years
-        UD60x18 timeSinceLastDeposit = ud((_getBlockTimestamp() - l.timeOfDeposit[owner]) * WAD) /
-            ud(OptionMath.ONE_YEAR_TTM * WAD);
-
-        UD60x18 managementFeeInShares = shares * l.managementFeeRate * timeSinceLastDeposit;
-
-        if (discount > ZERO) {
-            managementFeeInShares = (ONE - discount) * managementFeeInShares;
-        }
-
-        vars.managementFeeInAssets = _convertToAssetsUD60x18(managementFeeInShares, pps);
-
-        vars.totalFeeInShares = managementFeeInShares + performanceFeeInShares;
-
-        vars.totalFeeInAssets = vars.managementFeeInAssets + vars.performanceFeeInAssets;
-
-        return vars;
     }
 
-    /// @notice Gets the maximum amount of shares a user can transfer.
-    /// @param vars The variables needed to compute fees.
-    /// @return The maximum amount of shares a user can transfer.
-    function _maxTransferableShares(FeeInternal memory vars) internal pure returns (UD60x18) {
-        if (vars.balanceShares == ZERO) return ZERO;
-        return vars.balanceShares - vars.totalFeeInShares;
-    }
+    /// @notice Charges the management fees from by liquidity providers.
+    function _chargeManagementFees() internal {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-    /// @inheritdoc ERC20BaseInternal
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
-        super._beforeTokenTransfer(from, to, amount);
+        uint256 timestamp = _getBlockTimestamp();
+        if (timestamp == l.lastManagementFeeTimestamp) return;
 
-        // mint: from = address(0), in this case no fees have to be paid
-        // burn: to = address(0),
-        //      1. fees are paid already in _beforeWithdraw, we do not want to double charge.
-        //      2. furthermore, we need to call burn inside _beforeTokenTransfer, it would result in a nested call.
-        //         we bypass this by calling _beforeWithdraw and using to = address(this).
-        if (from != address(0) && to != address(0)) {
-            UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-
-            UD60x18 shares = ud(amount);
-
-            FeeInternal memory vars = _getFeeInternal(l, from, shares, _getPricePerShareUD60x18());
-
-            UD60x18 maxShares = _maxTransferableShares(vars);
-
-            if (shares > maxShares) revert Vault__TransferExceedsBalance(maxShares, shares);
-
-            if (vars.totalFeeInShares > ZERO) {
-                _burn(from, vars.totalFeeInShares.unwrap());
-            }
-
-            // fees collected denominated in the reference token
-            // fees are tracked in order to keep the pps unaffected during the burn
-            // (totalAssets - feeInShares * pps) / (totalSupply - feeInShares) = pps
-            l.protocolFees = l.protocolFees + vars.totalFeeInAssets;
-            l.totalAssets = l.totalAssets - vars.totalFeeInAssets;
-
-            if (vars.performance > ONE) {
-                emit PerformanceFeePaid(FEE_RECEIVER, vars.performanceFeeInAssets.unwrap());
-            }
-            emit ManagementFeePaid(FEE_RECEIVER, vars.managementFeeInAssets.unwrap());
-
-            // need to increment totalShares by the feeInShares such that we can adjust netUserDeposits
-            UD60x18 fractionKept = (vars.balanceShares - shares - vars.totalFeeInShares) / vars.balanceShares;
-
-            l.netUserDeposits[from] = l.netUserDeposits[from] * fractionKept;
-
-            if (to != address(this)) {
-                l.netUserDeposits[to] = l.netUserDeposits[to] + vars.assets;
-                _updateTimeOfDeposit(l, to, _balanceOf(to), amount);
-            }
-
-            emit UpdateQuotes();
+        // if there are no totalAssets we won't charge management fees
+        if (l.totalAssets > ZERO) {
+            UD60x18 managementFeeInShares = _computeManagementFee(l, timestamp);
+            _mint(FEE_RECEIVER, managementFeeInShares.unwrap());
+            emit ManagementFeePaid(FEE_RECEIVER, managementFeeInShares.unwrap());
         }
+
+        l.lastManagementFeeTimestamp = timestamp;
     }
 
     /// @notice Transfers fees to the FEE_RECEIVER.
@@ -936,6 +881,6 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         l.protocolFees = ZERO;
         IERC20(_asset()).safeTransfer(FEE_RECEIVER, claimedFees);
 
-        emit ClaimProtocolFees(FEE_RECEIVER, l.convertAssetToUD60x18(claimedFees));
+        emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 }

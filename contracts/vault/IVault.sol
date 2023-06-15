@@ -85,6 +85,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
 
     event PerformanceFeePaid(address indexed recipient, uint256 performanceFee);
 
+    event ClaimProtocolFees(address indexed feeReceiver, uint256 feesClaimed);
+
     /// @notice Updates the vault settings
     /// @param settings Encoding of the new settings
     function updateSettings(bytes memory settings) external;

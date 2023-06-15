@@ -17,6 +17,8 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
+    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged);
+
     function setupSpreadVault() internal {
         startTime = 1678435200 + 500 * 7 days;
         t0 = startTime + 7 days;
@@ -71,6 +73,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     function test_afterBuy_Success() public {
         setupSpreadVault();
 
+        UD60x18 premium = ud(20e18);
         UD60x18 spread = ud(10e18);
         UD60x18 strike = ud(100e18);
         UD60x18 size = ud(1e18);
@@ -79,26 +82,37 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.increasePositionSize(t0, strike, ud(1.234e18));
 
+        UD60x18 initialTotalAssets = ud(1e18);
+        vault.increaseTotalAssets(initialTotalAssets);
         UD60x18 lockedAmount = isCallTest ? ud(1.234e18) : ud(1.234e18) * strike;
         vault.increaseTotalLockedAssetsNoTransfer(lockedAmount);
+        UD60x18 initialProtocolFees = vault.getProtocolFees();
 
         vault.setTimestamp(startTime + 1 days);
-        vault.afterBuy(strike, t0, size, spread);
+        vm.expectEmit();
+        emit PerformanceFeePaid(feeReceiver, scaleDecimals(spread * ud(0.05e18)));
+        vault.afterBuy(strike, t0, size, spread, premium);
 
         // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there
         assertEq(vault.lastSpreadUnlockUpdate(), startTime + 1 days);
-        assertEq(vault.spreadUnlockingRate(), 37034832451498);
+        // (1,24 / 7 + 5,56 / 10 + 11,2 / 14 + (10 * 0,95) / 6) / (24 * 60 * 60) = 0,000036070326278658
+        assertEq(vault.spreadUnlockingRate(), 36070326278658);
         // positionSize should be incremented by the bought amount and equal 2.234
         assertEq(vault.positionSize(t0, strike), ud(1.234e18) + size);
         // spreadUnlockingTick should be incremented by the spread amount divided by the the time to maturity
-        UD60x18 increment = ud(10e18) / ud(6 days * 1e18);
+        UD60x18 increment = (ud(10e18) * ud(0.95e18)) / ud(6 days * 1e18);
         assertEq(vault.spreadUnlockingTicks(t0), ud(1.24e18) / ud(7 days * 1e18) + increment);
-
         // totalLockedSpread should be incremented by the spread earned (10) after updating the state
-        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread);
-
+        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread * ud(0.95e18));
+        // totalAssets should be incremented by the premiums collected and the spread
+        uint256 totalAssets = vault.totalAssets();
+        assertEq(totalAssets, scaleDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));
+        // last trade timestamp should be updated
         assertEq(vault.getLastTradeTimestamp(), startTime + 1 days);
+        // total locked assets should be incremented by the notional value of the option
         assertEq(vault.totalLockedAssets(), (isCallTest ? size : size * strike) + lockedAmount);
+        // protocol fees should be incremented
+        assertEq(vault.getProtocolFees(), initialProtocolFees + spread * ud(0.05e18));
     }
 
     function test_settleMaturity_Success() public {
@@ -403,18 +417,6 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     }
 
     function test_getPoolAddress_ReturnExpectedValue() public {
-        UD60x18 badStrike = ud(100e18);
-        uint256 badMaturity = 10000000;
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, poolKey.maturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(poolKey.strike, badMaturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, badMaturity);
-
         assertEq(vault.getPoolAddress(poolKey.strike, poolKey.maturity), address(pool));
     }
 

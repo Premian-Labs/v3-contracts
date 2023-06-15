@@ -25,7 +25,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
-import {iZERO, ZERO, ONE} from "../libraries/Constants.sol";
+import {iZERO, ZERO, ONE, TWO, FIVE} from "../libraries/Constants.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
@@ -90,23 +90,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         VXPREMIA = vxPremia;
     }
 
-    /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade
+    /// @notice Calculates the fee for a trade based on the `size` and `premium` of the trade.
     /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of
     ///        1500, and a premium of 750, the normalized premium would be 0.5)
-    /// @return The taker fee for an option trade denormalized (18 decimals)
+    /// @param strike The strike of the option (18 decimals)
+    /// @param isCallPool Whether the pool is a call pool or not
+    /// @return The taker fee for an option trade denormalized. (18 decimals)
     function _takerFee(
-        PoolStorage.Layout storage l,
         address taker,
         UD60x18 size,
         UD60x18 premium,
-        bool isPremiumNormalized
+        bool isPremiumNormalized,
+        UD60x18 strike,
+        bool isCallPool
     ) internal view returns (UD60x18) {
-        UD60x18 strike = l.strike;
-        bool isCallPool = l.isCallPool;
-
         if (!isPremiumNormalized) {
             // Normalize premium
             premium = Position.collateralToContracts(premium, strike, isCallPool);
@@ -156,18 +156,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             UD60x18 nextPrice;
             // Compute next price
-            if (vars.liquidity == ZERO) {
+            if (vars.liquidity == ZERO || tradeSize == vars.maxSize) {
                 nextPrice = isBuy ? pricing.upper : pricing.lower;
             } else {
                 UD60x18 priceDelta = ((pricing.upper - pricing.lower) * tradeSize) / vars.liquidity;
-
                 nextPrice = isBuy ? pricing.marketPrice + priceDelta : pricing.marketPrice - priceDelta;
             }
 
             if (tradeSize > ZERO) {
                 UD60x18 premium = pricing.marketPrice.avg(nextPrice) * tradeSize;
 
-                UD60x18 takerFee = _takerFee(l, taker, size, premium, true);
+                UD60x18 takerFee = _takerFee(taker, size, premium, true, l.strike, l.isCallPool);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
@@ -342,6 +341,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, args.size);
 
         uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
 
@@ -440,6 +440,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
+        _revertIfInvalidSize(p.lower, p.upper, size);
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
@@ -554,14 +555,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         if (longs + shorts > ZERO) {
-            _safeTransfer(
-                address(this),
-                from,
-                to,
-                longs > ZERO ? PoolStorage.LONG : PoolStorage.SHORT,
-                longs > ZERO ? longs.unwrap() : shorts.unwrap(),
-                ""
-            );
+            uint256 id = longs > ZERO ? PoolStorage.LONG : PoolStorage.SHORT;
+            uint256 amount = longs > ZERO ? longs.unwrap() : shorts.unwrap();
+
+            if (to == address(this)) {
+                // We bypass the acceptance check by using `_transfer` instead of `_safeTransfer if transferring to the pool,
+                // so that we do not have to blindly accept any transfer
+                _transfer(address(this), from, to, id, amount, "");
+            } else {
+                _safeTransfer(address(this), from, to, id, amount, "");
+            }
         }
     }
 
@@ -583,14 +586,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             taker = longReceiver;
         }
 
-        UD60x18 protocolFee = _takerFee(l, taker, size, ZERO, true);
+        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool);
 
         IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), underwriter, address(this), collateral + protocolFee);
 
-        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(taker, referrer, protocolFee);
+        (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
+            taker,
+            referrer,
+            protocolFee
+        );
 
-        _useReferral(l, taker, referrer, totalReferralRebate, protocolFee);
-        l.protocolFees = l.protocolFees + protocolFee - totalReferralRebate;
+        _useReferral(l, taker, referrer, primaryReferralRebate, secondaryReferralRebate);
+        l.protocolFees = l.protocolFees + protocolFee - (primaryReferralRebate + secondaryReferralRebate);
 
         _mint(underwriter, PoolStorage.SHORT, size);
         _mint(longReceiver, PoolStorage.LONG, size);
@@ -617,14 +624,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             while (remaining > ZERO) {
                 Pricing.Args memory pricing = _getPricing(l, args.isBuy);
-                UD60x18 maxSize = pricing.maxTradeSize();
-                UD60x18 tradeSize = PRBMathExtra.min(remaining, maxSize);
-                UD60x18 oldMarketPrice = l.marketPrice;
+                vars.maxSize = pricing.maxTradeSize();
+                vars.tradeSize = PRBMathExtra.min(remaining, vars.maxSize);
+                vars.oldMarketPrice = l.marketPrice;
 
                 {
                     UD60x18 nextMarketPrice;
-                    if (tradeSize != maxSize) {
-                        nextMarketPrice = pricing.nextPrice(tradeSize);
+                    if (vars.tradeSize != vars.maxSize) {
+                        nextMarketPrice = pricing.nextPrice(vars.tradeSize);
                     } else {
                         nextMarketPrice = args.isBuy ? pricing.upper : pricing.lower;
                     }
@@ -633,18 +640,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     {
                         UD60x18 quoteAMMPrice = l.marketPrice.avg(nextMarketPrice);
-                        premium = quoteAMMPrice * tradeSize;
+                        premium = quoteAMMPrice * vars.tradeSize;
                     }
 
-                    UD60x18 takerFee = _takerFee(l, args.user, tradeSize, premium, true);
+                    UD60x18 takerFee = _takerFee(args.user, vars.tradeSize, premium, true, l.strike, l.isCallPool);
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
 
                     // Update price and liquidity variables
                     {
-                        UD60x18 totalReferralRebate = _calculateTotalReferralRebate(args.user, args.referrer, takerFee);
-                        vars.totalReferralRebate = vars.totalReferralRebate + totalReferralRebate;
+                        (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL)
+                            .getRebateAmounts(args.user, args.referrer, takerFee);
+
+                        UD60x18 totalReferralRebate = primaryReferralRebate + secondaryReferralRebate;
+                        vars.referral.totalRebate = vars.referral.totalRebate + totalReferralRebate;
+                        vars.referral.primaryRebate = vars.referral.primaryRebate + primaryReferralRebate;
+                        vars.referral.secondaryRebate = vars.referral.secondaryRebate + secondaryReferralRebate;
 
                         UD60x18 takerFeeSansRebate = takerFee - totalReferralRebate;
                         UD60x18 protocolFee = takerFeeSansRebate * PROTOCOL_FEE_PERCENTAGE;
@@ -663,12 +675,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.marketPrice = nextMarketPrice;
                 }
 
-                UD60x18 dist = (l.marketPrice.intoSD59x18() - oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
+                UD60x18 dist = (l.marketPrice.intoSD59x18() - vars.oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
 
-                vars.shortDelta = vars.shortDelta + (l.shortRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
-                vars.longDelta = vars.longDelta + (l.longRate * dist) / PoolStorage.MIN_TICK_DISTANCE;
+                vars.shortDelta = vars.shortDelta + l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
+                vars.longDelta = vars.longDelta + l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
 
-                if (maxSize >= remaining) {
+                if (vars.maxSize >= remaining) {
                     remaining = ZERO;
                 } else {
                     // The trade will require crossing into the next tick range
@@ -677,7 +689,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                     if (!args.isBuy && l.currentTick <= Pricing.MIN_TICK_PRICE) revert Pool__InsufficientBidLiquidity();
 
-                    remaining = remaining - tradeSize;
+                    remaining = remaining - vars.tradeSize;
                     _cross(args.isBuy);
                 }
             }
@@ -696,7 +708,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.transferCollateralToUser
         );
 
-        _useReferral(l, args.user, args.referrer, vars.totalReferralRebate, vars.totalTakerFees);
+        _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
         if (args.isBuy) {
             if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta);
@@ -716,7 +728,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.marketPrice,
             l.liquidityRate,
             l.currentTick,
-            vars.totalReferralRebate,
+            vars.referral.totalRebate,
             args.isBuy
         );
     }
@@ -840,9 +852,19 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(l, taker, size, r.premium, true);
-        r.totalReferralRebate = _calculateTotalReferralRebate(taker, referrer, r.protocolFee);
-        r.protocolFee = r.protocolFee - r.totalReferralRebate;
+        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool);
+
+        (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
+            taker,
+            referrer,
+            r.protocolFee
+        );
+
+        r.referral.totalRebate = primaryReferralRebate + secondaryReferralRebate;
+        r.referral.primaryRebate = primaryReferralRebate;
+        r.referral.secondaryRebate = secondaryReferralRebate;
+
+        r.protocolFee = r.protocolFee - r.referral.totalRebate;
 
         // Denormalize premium
         r.premium = Position.contractsToCollateral(r.premium, l.strike, l.isCallPool);
@@ -911,8 +933,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 l,
                 args.user,
                 args.referrer,
-                premiumAndFee.totalReferralRebate,
-                premiumAndFee.protocolFee + premiumAndFee.totalReferralRebate
+                premiumAndFee.referral.primaryRebate,
+                premiumAndFee.referral.secondaryRebate
             );
 
             // Process trade maker
@@ -935,7 +957,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             deltaTaker,
             premiumAndFee.premium,
             premiumAndFee.protocolFee,
-            premiumAndFee.totalReferralRebate,
+            premiumAndFee.referral.totalRebate,
             !quoteRFQ.isBuy
         );
 
@@ -976,6 +998,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (srcP.owner == newOwner && srcP.operator == newOperator) revert Pool__InvalidTransfer();
 
         _revertIfZeroSize(size);
+        _revertIfInvalidSize(srcP.lower, srcP.upper, size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1095,14 +1118,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
-    function _exercise(address holder, UD60x18 costPerHolder) internal returns (uint256 exerciseValue) {
+    /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
+    ///         automatic exercise (poolToken decimals)
+    /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
+    function _exercise(address holder, UD60x18 costPerHolder) internal returns (uint256 exerciseValue, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (UD60x18 size, UD60x18 _exerciseValue, ) = _beforeExerciseOrSettle(l, true, holder);
 
-        if (size == ZERO) return 0;
-
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
+
+        if (size == ZERO) return (0, false);
 
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
@@ -1115,19 +1141,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (_exerciseValue > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, _exerciseValue);
         }
+
+        success = true;
     }
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
     /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
-    function _settle(address holder, UD60x18 costPerHolder) internal returns (uint256 collateral) {
+    /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
+    ///         automatic settlement (poolToken decimals)
+    /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
+    function _settle(address holder, UD60x18 costPerHolder) internal returns (uint256 collateral, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (UD60x18 size, UD60x18 exerciseValue, UD60x18 _collateral) = _beforeExerciseOrSettle(l, false, holder);
 
-        if (size == ZERO) return 0;
-
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
+
+        if (size == ZERO) return (0, false);
 
         collateral = l.toPoolTokenDecimals(_collateral);
 
@@ -1140,15 +1171,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (_collateral > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(holder, _collateral);
         }
+
+        success = true;
     }
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
     /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
+    /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
+    ///         automatic settlement (poolToken decimals)
+    /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
     function _settlePosition(
         Position.KeyInternal memory p,
         UD60x18 costPerHolder
-    ) internal returns (uint256 collateral) {
+    ) internal returns (uint256 collateral, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionNotExpired(l);
         _removeInitFeeDiscount(l);
@@ -1162,7 +1198,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
 
         vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
-        if (vars.size == ZERO) return 0;
+        if (vars.size == ZERO) {
+            // Revert if costPerHolder > 0
+            _revertIfCostExceedsPayout(costPerHolder, ZERO);
+            return (0, false);
+        }
 
         {
             // Update claimable fees
@@ -1236,6 +1276,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (vars.collateral > ZERO) {
             IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
         }
+
+        success = true;
     }
 
     ////////////////////////////////////////////////////////////////
@@ -1250,6 +1292,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 lower,
         UD60x18 upper
     ) internal view returns (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) {
+        _revertIfRangeInvalid(lower, upper);
         Position.revertIfLowerGreaterOrEqualUpper(lower, upper);
 
         nearestBelowLower = _getNearestTickBelow(lower);
@@ -1272,7 +1315,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         UD60x18 next = l.tickIndex.next(left);
-        while (left != ZERO && next <= price) {
+        while (left != ZERO && next <= price && left != Pricing.MAX_TICK_PRICE) {
             left = next;
             next = l.tickIndex.next(left);
         }
@@ -1319,7 +1362,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         tick = Tick({
             delta: iZERO,
-            externalFeeRate: price <= l.marketPrice ? l.globalFeeRate : ZERO,
+            externalFeeRate: price <= l.currentTick ? l.globalFeeRate : ZERO,
             longDelta: iZERO,
             shortDelta: iZERO,
             counter: 0
@@ -1655,8 +1698,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(PoolStorage.Layout storage l) internal view returns (UD60x18 lower, UD60x18 upper) {
-        lower = ONE;
-        upper = ONE;
+        lower = Pricing.MAX_TICK_PRICE + ONE;
+        upper = Pricing.MAX_TICK_PRICE + ONE;
 
         UD60x18 current = l.currentTick;
         UD60x18 right = l.tickIndex.next(current);
@@ -1768,38 +1811,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _burn(account, id, amount.unwrap());
     }
 
-    /// @notice Calculates the total referral rebate amount (primary + secondary)
-    function _calculateTotalReferralRebate(
-        address user,
-        address referrer,
-        UD60x18 tradingFee
-    ) internal view returns (UD60x18 totalReferralRebate) {
-        if (referrer == address(0)) referrer = IReferral(REFERRAL).getReferrer(user);
-
-        if (referrer == address(0)) return ZERO;
-
-        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = IReferral(REFERRAL).getRebatePercents(
-            referrer
-        );
-
-        totalReferralRebate = (tradingFee * primaryRebatePercent) + (tradingFee * secondaryRebatePercent);
-    }
-
-    /// @notice Applies the referral rebate to `tradingFee` paid by `user`
+    /// @notice Applies the primary and secondary referral rebates, if total rebates are greater than zero
     function _useReferral(
         PoolStorage.Layout storage l,
         address user,
         address referrer,
-        UD60x18 totalReferralRebate,
-        UD60x18 tradingFee
+        UD60x18 primaryReferralRebate,
+        UD60x18 secondaryReferralRebate
     ) internal {
-        if (tradingFee == ZERO) return;
+        UD60x18 totalReferralRebate = primaryReferralRebate + secondaryReferralRebate;
+        if (totalReferralRebate == ZERO) return;
 
         address token = l.getPoolToken();
         IERC20(token).approve(REFERRAL, totalReferralRebate);
-
-        IReferral(REFERRAL).useReferral(user, referrer, token, tradingFee);
+        IReferral(REFERRAL).useReferral(user, referrer, token, primaryReferralRebate, secondaryReferralRebate);
         IERC20(token).approve(REFERRAL, 0);
+    }
+
+    /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
+    function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
+        UD60x18 den = (upper - lower) / Pricing.MIN_TICK_DISTANCE;
+
+        while (den % TWO == ZERO) {
+            den = den / TWO;
+        }
+
+        while (den % FIVE == ZERO) {
+            den = den / FIVE;
+        }
+
+        return den != ONE;
     }
 
     /// @notice Revert if the `lower` and `upper` tick range is invalid
@@ -1809,7 +1850,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upper == ZERO ||
             lower >= upper ||
             lower < Pricing.MIN_TICK_PRICE ||
-            upper > Pricing.MAX_TICK_PRICE
+            upper > Pricing.MAX_TICK_PRICE ||
+            _isRateNonTerminating(lower, upper)
         ) revert Pool__InvalidRange(lower, upper);
     }
 
@@ -1836,9 +1878,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Revert if `totalPremium` is exceeds max slippage
     function _revertIfTradeAboveMaxSlippage(uint256 totalPremium, uint256 premiumLimit, bool isBuy) internal pure {
-        if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(premiumLimit, 0, totalPremium);
+        if (isBuy && totalPremium > premiumLimit) revert Pool__AboveMaxSlippage(totalPremium, 0, premiumLimit);
         if (!isBuy && totalPremium < premiumLimit)
-            revert Pool__AboveMaxSlippage(premiumLimit, totalPremium, type(uint256).max);
+            revert Pool__AboveMaxSlippage(totalPremium, premiumLimit, type(uint256).max);
+    }
+
+    function _revertIfInvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 size) internal pure {
+        UD60x18 numTicks = (upper - lower) / Pricing.MIN_TICK_PRICE;
+        if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(lower, upper, size);
     }
 
     /// @notice Revert if `marketPrice` is below `minMarketPrice` or above `maxMarketPrice`

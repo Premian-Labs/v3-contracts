@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+import {Position} from "contracts/libraries/Position.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 

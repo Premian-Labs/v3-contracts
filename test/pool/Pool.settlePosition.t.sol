@@ -254,4 +254,71 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         pool.settlePositionFor(p, cost);
     }
+
+    function test_settlePositionFor_RevertIf_CostNotCovered() public {
+        // This test is a PoC for an issue discovered in the audit which is now fixed
+
+        uint256 poolValue = 1000 ether;
+        // as an LP, deposit ether into a pool
+        // deposit is a helper function that handles this for us
+        deposit(poolValue);
+
+        // an attacker sees the liquidity in the pool, and using two addresses will
+        // conspire to drain the pool of its liquidity
+        address user = vm.addr(10);
+        address agent = vm.addr(11);
+
+        // attackerUser sets attackerAgent as their agent, and assigns a cost of
+        // the entire pool value
+        vm.startPrank(user);
+
+        address[] memory agents = new address[](1);
+        agents[0] = agent;
+
+        userSettings.setAuthorizedAgents(agents);
+        userSettings.setAuthorizedCost(poolValue);
+
+        vm.stopPrank();
+
+        // create an erroneous position that will be used to 'settle' and steal all
+        // the tokens out of the pool
+        Position.Key memory fakePosition1 = Position.Key({
+            owner: user,
+            operator: agent,
+            lower: posKey.lower,
+            upper: posKey.upper,
+            orderType: Position.OrderType.LC
+        });
+
+        address poolToken = getPoolToken();
+
+        // take a snapshot of various balances before the attack
+        uint256 originalPoolBalance = IERC20(poolToken).balanceOf(address(pool));
+
+        // Skip ahead in time to when the positions have matured
+        vm.warp(poolKey.maturity);
+
+        // This is the key to the attack. We need to trick the pool into generating an invalid tokenId. To do this, we
+        // update one of the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
+        fakePosition1.lower = ud(.7e18);
+
+        // settlePositionFor batches handling position settlements, so we need to provide an array
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = fakePosition1;
+
+        // Verify that the pool contains tokens (so we can steal them)
+        assertGt(originalPoolBalance, 0);
+
+        // Set the cost ("settlement fee") equal to the current balance of the pool
+        uint256 cost = originalPoolBalance;
+
+        // This call will short-circuit before closing the position due to the invalid `lower` values
+        // set above, but it will still pay the agent their fee (all the tokens in the pool)
+        vm.prank(agent);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, isCallTest ? 200e18 : 200_000e18, 0)
+        );
+        pool.settlePositionFor(p, cost);
+    }
 }

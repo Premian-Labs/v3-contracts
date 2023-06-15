@@ -93,6 +93,7 @@ async function main() {
     addresses.PoolFactoryProxy,
     addresses.ERC20Router,
     addresses.VxPremiaProxy,
+    addresses.PremiaDiamond,
   );
   await underwriterVaultImpl.deployed();
 

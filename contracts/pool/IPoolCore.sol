@@ -26,6 +26,28 @@ interface IPoolCore is IPoolInternal {
         bool isPremiumNormalized
     ) external view returns (uint256);
 
+    /// @notice Calculates the fee for a trade based on the `size` and `premiumNormalized` of the trade.
+    ///         WARNING : It is recommended to use `takerFee` instead of this function. This function is a lower level
+    ///                   function here to be used when a pool has not yet be deployed, by calling it from the diamond
+    ///                   contract directly rather than a pool proxy. If using it from the pool,
+    ///                   you should pass the same value as the pool for `strike` and `isCallPool` in order to get the accurate takerFee
+    /// @param taker The taker of a trade
+    /// @param size The size of a trade (number of contracts) (18 decimals)
+    /// @param premium The total cost of option(s) for a purchase (18 decimals)
+    /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of
+    ///        1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @param strike The strike of the option (18 decimals)
+    /// @param isCallPool Whether the pool is a call pool or not
+    /// @return The taker fee for an option trade denormalized. (18 decimals)
+    function _takerFeeLowLevel(
+        address taker,
+        UD60x18 size,
+        UD60x18 premium,
+        bool isPremiumNormalized,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18);
+
     /// @notice Returns all pool parameters used for deployment
     /// @return base Address of base token
     /// @return quote Address of quote token
@@ -69,8 +91,8 @@ interface IPoolCore is IPoolInternal {
     function annihilate(UD60x18 size) external;
 
     /// @notice Exercises all long options held by caller
-    /// @return The exercise value as amount of collateral paid out (poolToken decimals)
-    function exercise() external returns (uint256);
+    /// @return exerciseValue The exercise value as amount of collateral paid out (poolToken decimals)
+    function exercise() external returns (uint256 exerciseValue);
 
     /// @notice Batch exercises all long options held by each `holder`, caller is reimbursed with the cost deducted from
     ///         the proceeds of the exercised options. Only authorized agents may execute this function on behalf of the
@@ -82,8 +104,8 @@ interface IPoolCore is IPoolInternal {
     function exerciseFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
 
     /// @notice Settles all short options held by caller
-    /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settle() external returns (uint256);
+    /// @return collateral The amount of collateral left after settlement (poolToken decimals)
+    function settle() external returns (uint256 collateral);
 
     /// @notice Batch settles all short options held by each `holder`, caller is reimbursed with the cost deducted from
     ///         the proceeds of the settled options. Only authorized agents may execute this function on behalf of the
@@ -96,8 +118,8 @@ interface IPoolCore is IPoolInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @return The amount of collateral left after settlement (poolToken decimals)
-    function settlePosition(Position.Key calldata p) external returns (uint256);
+    /// @return collateral The amount of collateral left after settlement (poolToken decimals)
+    function settlePosition(Position.Key calldata p) external returns (uint256 collateral);
 
     /// @notice Batch reconciles each `position` to account for settlement payouts post-expiration. Caller is reimbursed
     ///         with the cost deducted from the proceeds of the settled position. Only authorized agents may execute
@@ -118,4 +140,11 @@ interface IPoolCore is IPoolInternal {
     /// @notice Returns the settlement price of the option.
     /// @return The settlement price of the option (18 decimals). Returns 0 if option is not settled yet.
     function getSettlementPrice() external view returns (UD60x18);
+
+    /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
+    ///         area does not exist it will return the stranded market area the maximum tick price for both the lower
+    ///         and the upper, in which case the market price is not stranded given any range order info order.
+    /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
+    /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
+    function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper);
 }

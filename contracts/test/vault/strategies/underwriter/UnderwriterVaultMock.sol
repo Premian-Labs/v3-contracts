@@ -43,8 +43,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         address oracle,
         address factory,
         address router,
-        address vxPremia
-    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia) {}
+        address vxPremia,
+        address poolDiamond
+    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia, poolDiamond) {}
 
     function _getBlockTimestamp() internal view override returns (uint256) {
         return mockTimestamp == 0 ? block.timestamp : mockTimestamp;
@@ -340,8 +341,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _getPoolAddress(UnderwriterVaultStorage.layout(), strike, maturity);
     }
 
-    function afterBuy(UD60x18 strike, uint256 maturity, UD60x18 size, UD60x18 spread) external {
-        _afterBuy(UnderwriterVaultStorage.layout(), strike, maturity, size, spread);
+    function afterBuy(UD60x18 strike, uint256 maturity, UD60x18 size, UD60x18 spread, UD60x18 premium) external {
+        _afterBuy(UnderwriterVaultStorage.layout(), strike, maturity, size, spread, premium);
     }
 
     function getSpotPrice() public view returns (UD60x18) {
@@ -483,40 +484,8 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return UnderwriterVaultStorage.layout().protocolFees;
     }
 
-    function setNetUserDeposit(address owner, uint256 value) external {
-        UnderwriterVaultStorage.layout().netUserDeposits[owner] = UD60x18.wrap(value);
-    }
-
-    function getNetUserDeposit(address owner) external view returns (UD60x18) {
-        return UnderwriterVaultStorage.layout().netUserDeposits[owner];
-    }
-
-    function setTimeOfDeposit(address owner, uint256 value) external {
-        UnderwriterVaultStorage.layout().timeOfDeposit[owner] = value;
-    }
-
-    function getTimeOfDeposit(address owner) external view returns (uint256) {
-        return UnderwriterVaultStorage.layout().timeOfDeposit[owner];
-    }
-
-    function maxTransferableShares(FeeInternal memory vars) external pure returns (uint256) {
-        return _maxTransferableShares(vars).unwrap();
-    }
-
-    function getAveragePricePerShare(address owner) external view returns (uint256) {
-        return _getAveragePricePerShareUD60x18(owner).unwrap();
-    }
-
-    function beforeTokenTransfer(address from, address to, uint256 amount) external {
-        _beforeTokenTransfer(from, to, amount);
-    }
-
     function claimFees() external {
         _claimFees(UnderwriterVaultStorage.layout());
-    }
-
-    function getFeeInternal(address from, UD60x18 shares, UD60x18 pps) external view returns (FeeInternal memory) {
-        return _getFeeInternal(UnderwriterVaultStorage.layout(), from, shares, pps);
     }
 
     function afterDeposit(address receiver, uint256 assetAmount, uint256 shareAmount) external {
@@ -527,7 +496,22 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _beforeWithdraw(receiver, assetAmount, shareAmount);
     }
 
-    function updateTimeOfDeposit(address owner, uint256 shareBalanceBefore, uint256 shareAmount) external {
-        _updateTimeOfDeposit(UnderwriterVaultStorage.layout(), owner, shareBalanceBefore, shareAmount);
+    function getLastManagementFeeTimestamp() external returns (uint256) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.lastManagementFeeTimestamp;
+    }
+
+    function setLastManagementFeeTimestamp(uint256 timestamp) external {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        l.lastManagementFeeTimestamp = timestamp;
+    }
+
+    function chargeManagementFees() external {
+        _chargeManagementFees();
+    }
+
+    function computeManagementFees() external returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return _computeManagementFee(l, _getBlockTimestamp());
     }
 }

@@ -54,7 +54,22 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         bool isPremiumNormalized
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.toPoolTokenDecimals(_takerFee(l, taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized));
+        return
+            l.toPoolTokenDecimals(
+                _takerFee(taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized, l.strike, l.isCallPool)
+            );
+    }
+
+    /// @inheritdoc IPoolCore
+    function _takerFeeLowLevel(
+        address taker,
+        UD60x18 size,
+        UD60x18 premium,
+        bool isPremiumNormalized,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18) {
+        return _takerFee(taker, size, premium, isPremiumNormalized, strike, isCallPool);
     }
 
     /// @inheritdoc IPoolCore
@@ -168,8 +183,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise() external nonReentrant returns (uint256) {
-        return _exercise(msg.sender, ZERO);
+    function exercise() external nonReentrant returns (uint256 exerciseValue) {
+        (exerciseValue, ) = _exercise(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
@@ -188,15 +203,17 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
-            exerciseValues[i] = _exercise(holders[i], _cost);
+            (uint256 exerciseValue, bool success) = _exercise(holders[i], _cost);
+            if (!success) revert Pool__SettlementFailed();
+            exerciseValues[i] = exerciseValue;
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
     }
 
     /// @inheritdoc IPoolCore
-    function settle() external nonReentrant returns (uint256) {
-        return _settle(msg.sender, ZERO);
+    function settle() external nonReentrant returns (uint256 collateral) {
+        (collateral, ) = _settle(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
@@ -215,17 +232,19 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
-            collateral[i] = _settle(holders[i], _cost);
+            (uint256 _collateral, bool success) = _settle(holders[i], _cost);
+            if (!success) revert Pool__SettlementFailed();
+            collateral[i] = _collateral;
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
     }
 
     /// @inheritdoc IPoolCore
-    function settlePosition(Position.Key calldata p) external nonReentrant returns (uint256) {
+    function settlePosition(Position.Key calldata p) external nonReentrant returns (uint256 collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOperatorNotAuthorized(p.operator);
-        return _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
+        (collateral, ) = _settlePosition(p.toKeyInternal(l.strike, l.isCallPool), ZERO);
     }
 
     /// @inheritdoc IPoolCore
@@ -244,7 +263,9 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
-            collateral[i] = _settlePosition(p[i].toKeyInternal(l.strike, l.isCallPool), _cost);
+            (uint256 _collateral, bool success) = _settlePosition(p[i].toKeyInternal(l.strike, l.isCallPool), _cost);
+            if (!success) revert Pool__SettlementFailed();
+            collateral[i] = _collateral;
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, p.length * costPerHolder);
@@ -265,5 +286,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function getSettlementPrice() external view returns (UD60x18) {
         return PoolStorage.layout().settlementPrice;
+    }
+
+    /// @inheritdoc IPoolCore
+    function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper) {
+        return _getStrandedArea(PoolStorage.layout());
     }
 }

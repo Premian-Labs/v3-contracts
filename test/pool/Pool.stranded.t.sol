@@ -14,6 +14,7 @@ import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
+import {console} from "forge-std/console.sol";
 
 abstract contract PoolStrandedTest is DeployTest {
     function depositSpecified(
@@ -275,5 +276,82 @@ abstract contract PoolStrandedTest is DeployTest {
 
         price = pool.exposed_getStrandedMarketPriceUpdate(posKeyInternal, false);
         assertEq(price.unwrap(), 0.48 ether);
+    }
+
+    function test_stranded_noStrandedMarketArea_StrandedPricesCoincide() public {
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
+        depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        // has to hold for downstream functionality
+        assertEq(lower.unwrap(), upper.unwrap());
+    }
+
+    function test_stranded_noStrandedMarketArea_LCCS() public {
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
+        depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 2 ether);
+        assertEq(upper.unwrap(), 2 ether);
+    }
+
+    function test_stranded_noStrandedMarketArea_CSLC() public {
+        depositSpecified(1 ether, 0.4 ether, 0.5 ether, Position.OrderType.CS);
+        depositSpecified(1 ether, 0.2 ether, 0.4 ether, Position.OrderType.LC);
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 2 ether);
+        assertEq(upper.unwrap(), 2 ether);
+    }
+
+    function test_stranded_noStrandedMarketAreaPartiallyTraversedOrder() public {
+        uint256 depositSize = 2 ether;
+        uint256 tradeSize = 1 ether;
+        trade(tradeSize, true, depositSize);
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 2 ether);
+        assertEq(upper.unwrap(), 2 ether);
+    }
+
+    function test_stranded_noStrandedMarketAreaFullyTraversedOrder_MaxTick() public {
+        uint256 tradeSize = 1 ether;
+        posKey.lower = ud(0.999 ether);
+        posKey.upper = ud(1 ether);
+        trade(tradeSize, true);
+        assertEq(pool.marketPrice(), ud(1 ether));
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 2 ether);
+        assertEq(upper.unwrap(), 2 ether);
+    }
+
+    function test_stranded_noStrandedMarketAreaFullyTraversedOrder_MinTick() public {
+        uint256 tradeSize = 1 ether;
+        posKey.lower = ud(0.001 ether);
+        posKey.upper = ud(0.101 ether);
+        trade(tradeSize, false);
+        assertEq(pool.marketPrice(), ud(0.001 ether));
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 2 ether);
+        assertEq(upper.unwrap(), 2 ether);
+    }
+
+    function test_stranded_strandedMarketAreaFullyTraversedOrder_Sell() public {
+        uint256 tradeSize = 1 ether;
+        posKey.lower = ud(0.002 ether);
+        posKey.upper = ud(0.102 ether);
+        trade(tradeSize, false);
+        assertEq(pool.marketPrice(), ud(0.002e18));
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 0.001 ether);
+        assertEq(upper.unwrap(), 0.002 ether);
+    }
+
+    function test_stranded_strandedMarketAreaFullyTraversedOrder_Buy() public {
+        uint256 tradeSize = 1 ether;
+        posKey.lower = ud(0.002 ether);
+        posKey.upper = ud(0.102 ether);
+        trade(tradeSize, true);
+        assertEq(pool.marketPrice(), ud(0.102e18));
+        (UD60x18 lower, UD60x18 upper) = pool.exposed_getStrandedArea();
+        assertEq(lower.unwrap(), 0.102 ether);
+        assertEq(upper.unwrap(), 1 ether);
     }
 }

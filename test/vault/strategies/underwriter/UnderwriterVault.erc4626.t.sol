@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
-
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -39,6 +37,8 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
             uint256 assetAmount = scaleDecimals(cases[i][2]);
             UD60x18 shareAmount = cases[i][3];
 
+            vault.setTimestamp(startTime);
+            vault.setLastManagementFeeTimestamp(startTime);
             vault.increaseTotalAssets(totalAssets);
             vault.increaseTotalShares(totalSupply);
 
@@ -84,8 +84,6 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         uint256 assetAmount = vault.maxWithdraw(users.receiver);
         assertEq(assetAmount, scaleDecimals(ud(1.999890410958904110e18)));
 
-        //
-
         vm.revertTo(snapshot);
 
         addDeposit(users.caller, ud(8e18));
@@ -98,6 +96,9 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
         assetAmount = vault.maxWithdraw(users.receiver);
         assertEq(assetAmount, scaleDecimals(ud(1.999890410958904110e18)));
+        vault.increaseTotalLockedAssets(ud(8.0e18));
+        assetAmount = vault.maxWithdraw(users.receiver);
+        assertEq(assetAmount, scaleDecimals(ud(1.5 ether)));
     }
 
     function test_maxWithdraw_ReturnAssetsReceiverOwns() public {
@@ -123,27 +124,6 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vault.increaseTotalLockedAssets(ud(0.5e18));
         uint256 assetAmount = vault.maxRedeem(users.receiver);
         assertEq(assetAmount, 2.482758620689655174e18);
-    }
-
-    function test_maxRedeem_ReturnMaxTransferableSharesOfCaller() public {
-        // assets caller: 2.3 * 1.5
-        // tax caller: 2.3 * 1.5 * 0.05 * 0.25 = 0.43125
-        // maxWithdrawable = assets - tax = 3.406875
-
-        TestVars memory vars;
-
-        vars.shares = ud(2.3e18);
-        vars.pps = ud(1.5e18);
-        vars.ppsUser = ud(1.2e18);
-        vars.totalSupply = ud(2.5e18);
-
-        setup(vars);
-
-        vault.setPerformanceFeeRate(ud(0.05e18));
-        vault.setManagementFeeRate(ud(0));
-
-        uint256 assetAmount = vault.maxRedeem(users.caller);
-        assertEq(assetAmount, 2.27125e18);
     }
 
     function test_maxRedeem_RevertIf_ZeroAddress() public {
@@ -206,94 +186,5 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
     function test_asset_ReturnExpectedValue() public {
         assertEq(vault.asset(), isCallTest ? base : quote);
-    }
-
-    function test_transfer_ShouldUpdate_NetUserDeposit_And_TimeOfDeposit() public {
-        TestVars memory vars;
-        vars.totalSupply = ud(2.2e18);
-        vars.shares = ud(1.1e18);
-        vars.pps = ud(1e18);
-        vars.ppsUser = ud(1e18);
-        vars.performanceFeeRate = ud(0.01e18);
-        vars.managementFeeRate = ud(0.02e18);
-        vars.timeOfDeposit = 3000000000;
-        vars.protocolFeesInitial = ud(0.1e18);
-        vars.netUserDepositReceiver = ud(1.2e18);
-
-        setupBeforeTokenTransfer(vars);
-
-        vault.setTimestamp(3000000000 + 1 days);
-        vm.prank(users.caller);
-        vault.transfer(users.receiver, 0.1e18);
-
-        assertEq(vault.getTimeOfDeposit(users.receiver), 3000000000 + 1 days);
-        assertEq(vault.getNetUserDeposit(users.receiver), 1.3e18);
-        assertEq(vault.balanceOf(users.receiver), 0.1e18);
-
-        vault.setTimestamp(3000000000 + 366 days);
-
-        vm.prank(users.caller);
-        vault.transfer(users.receiver, 0.1e18);
-
-        assertEq(vault.getTimeOfDeposit(users.receiver), 3000000000 + 1 days + (365 days / 2));
-        assertEq(vault.getNetUserDeposit(users.receiver), 1.4e18);
-        assertEq(vault.balanceOf(users.receiver), 0.2e18);
-    }
-
-    function test_deposit_UpdateFeeRelatedNumbers() public {
-        TestVars memory vars;
-        vars.totalSupply = ud(2.2e18);
-        vars.shares = ud(1.1e18);
-        vars.pps = ud(1e18);
-        vars.ppsUser = ud(1e18);
-        vars.performanceFeeRate = ud(0.01e18);
-        vars.managementFeeRate = ud(0.02e18);
-        vars.timeOfDeposit = 3000000000;
-        vars.protocolFeesInitial = ud(0.1e18);
-        vars.netUserDepositReceiver = ud(1.2e18);
-
-        setupBeforeTokenTransfer(vars);
-
-        IERC20 token = IERC20(getPoolToken());
-
-        uint256 assetAmount = scaleDecimals(ud(1.4e18));
-
-        vm.startPrank(users.caller);
-
-        deal(address(token), users.caller, assetAmount);
-        token.approve(address(vault), assetAmount);
-        vault.setTimestamp(3000000000 + 1 days);
-        vault.deposit(assetAmount, users.caller);
-
-        // 1.1 + 1.4 = 2.5
-        assertEq(vault.getNetUserDeposit(users.caller), 2.5e18);
-        // (1.1 * 3000000000 + 1.4 * 3000086400) / 2.5
-        assertEq(vault.getTimeOfDeposit(users.caller), 3000048384);
-        assertEq(vault.balanceOf(users.caller), 2.5e18);
-    }
-
-    function test_withdraw_UpdateFeeRelatedNumbers() public {
-        TestVars memory vars;
-        vars.totalSupply = ud(2.2e18);
-        vars.shares = ud(1.1e18);
-        vars.pps = ud(1e18);
-        vars.ppsUser = ud(1e18);
-        vars.performanceFeeRate = ud(0.01e18);
-        vars.managementFeeRate = ud(0.02e18);
-        vars.timeOfDeposit = 3000000000;
-        vars.protocolFeesInitial = ud(0.1e18);
-        vars.netUserDepositReceiver = ud(1.2e18);
-
-        setupBeforeTokenTransfer(vars);
-
-        uint256 assetAmount = scaleDecimals(ud(0.4e18));
-        vault.setTimestamp(3000000000 + 1 days);
-
-        vm.prank(users.caller);
-        vault.withdraw(assetAmount, users.caller, users.caller);
-
-        assertEq(vault.getNetUserDeposit(users.caller), 0.699978082191780821e18);
-        assertEq(vault.getTimeOfDeposit(users.caller), 3000000000);
-        assertEq(vault.balanceOf(users.caller), 0.699978082191780822e18);
     }
 }
