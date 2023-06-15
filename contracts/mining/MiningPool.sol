@@ -94,8 +94,26 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice);
     }
 
-    function settle() external nonReentrant {}
+    function settle(uint256 shortTokenId, UD60x18 contractSize) external nonReentrant {
+        (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(shortTokenId);
+        if (tokenType != TokenType.SHORT) revert MiningPool__TokenTypeNotShort();
 
+        _revertIfOptionNotExpired(maturity);
+
+        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
+        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
+        UD60x18 strike = _strike.fromInt128ToUD60x18();
+
+        if (settlementPrice >= strike) revert MiningPool__OptionInTheMoney(settlementPrice, strike);
+
+        _burnUD60x18(l.underwriter, shortTokenId, contractSize);
+        IERC20(l.base).safeTransferUD60x18(l.underwriter, l.toTokenDecimals(contractSize, true));
+
+        // TODO: add strike/ maturity to event?
+        emit Settle(l.underwriter, contractSize, settlementPrice);
+    }
+
+    // TODO: make internal/ move to storage
     /**
      * @notice Calculate ERC1155 token id for given option parameters
      * @param tokenType TokenType enum

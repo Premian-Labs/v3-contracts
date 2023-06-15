@@ -317,6 +317,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
 
         vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotLong.selector);
+        vm.prank(users.longReceiver);
         miningPool.exercise(shortTokenId, ud(1000000e18));
     }
 
@@ -333,6 +334,7 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
         vm.warp(maturity - 1);
+        vm.prank(users.longReceiver);
         miningPool.exercise(longTokenId, ud(1000000e18));
     }
 
@@ -356,13 +358,12 @@ contract MiningPoolTest is Assertions, Test {
         vm.warp(maturity);
         setPriceAt(maturity, settlementOTM, base, quote);
 
-        vm.startPrank(users.longReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(IMiningPool.MiningPool__OptionOutTheMoney.selector, settlementOTM, _strike)
         );
 
+        vm.prank(users.longReceiver);
         miningPool.exercise(longTokenId, ud(size));
-        vm.stopPrank();
     }
 
     function test_exercise_RevertIf_OptionOutTheMoney() public {
@@ -387,17 +388,127 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.warp(lockupStart);
 
-        vm.startPrank(users.longReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(IMiningPool.MiningPool__LockupNotExpired.selector, lockupStart, lockupEnd)
         );
 
+        vm.prank(users.longReceiver);
         miningPool.exercise(longTokenId, ud(size));
-        vm.stopPrank();
     }
 
     function test_exercise_RevertIf_LockupNotExpired() public {
         _test_exercise_RevertIf_LockupNotExpired(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
         _test_exercise_RevertIf_LockupNotExpired(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
+    }
+
+    function _test_settle_Success(
+        Data memory data,
+        MiningPool miningPool,
+        uint256 size,
+        address base,
+        address quote
+    ) public {
+        (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
+            data,
+            miningPool,
+            size,
+            base,
+            quote
+        );
+
+        UD60x18 _strike = data.discount * data.spot;
+        UD60x18 settlementOTM = _strike.sub(ud(1));
+
+        vm.warp(maturity);
+        setPriceAt(maturity, settlementOTM, base, quote);
+
+        vm.prank(users.underwriter);
+        miningPool.settle(shortTokenId, ud(size));
+
+        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), size);
+        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
+        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), 0);
+        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
+
+        assertEq(IERC20(quote).balanceOf(address(users.longReceiver)), 0);
+        assertEq(IERC20(quote).balanceOf(address(users.underwriter)), 0);
+
+        // TODO: assertEq(IERC20(quote).balanceOf(address(vxPREMIA)), 0);
+        // TODO: assertEq(IERC20(quote).balanceOf(address(TREASURY)), 0);
+
+        assertEq(IERC20(base).balanceOf(address(users.longReceiver)), 0);
+        assertEq(IERC20(base).balanceOf(address(users.underwriter)), collateral);
+        assertEq(IERC20(base).balanceOf(address(miningPool)), 0);
+    }
+
+    function test_settle_Success() public {
+        _test_settle_Success(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
+        _test_settle_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
+    }
+
+    function _test_exercise_RevertIf_TokenTypeNotShort(Data memory data, MiningPool miningPool) internal {
+        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+
+        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
+        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
+
+        vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotShort.selector);
+
+        vm.prank(users.underwriter);
+        miningPool.settle(longTokenId, ud(1000000e18));
+    }
+
+    function test_exercise_RevertIf_TokenTypeNotShort() public {
+        _test_exercise_RevertIf_TokenTypeNotShort(_data[0], premiaUSDCMiningPool);
+        _test_exercise_RevertIf_TokenTypeNotShort(_data[1], wbtcUSDCMiningPool);
+    }
+
+    function _test_settle_RevertIf_OptionNotExpired(
+        Data memory data,
+        MiningPool miningPool,
+        uint256 size,
+        address base,
+        address quote
+    ) public {
+        (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success(data, miningPool, size, base, quote);
+
+        vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
+
+        vm.prank(users.underwriter);
+        miningPool.settle(shortTokenId, ud(size));
+    }
+
+    function test_settle_RevertIf_OptionNotExpired() public {
+        _test_settle_RevertIf_OptionNotExpired(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
+        _test_settle_RevertIf_OptionNotExpired(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
+    }
+
+    function _test_settle_RevertIf_OptionInTheMoney(
+        Data memory data,
+        MiningPool miningPool,
+        uint256 size,
+        address base,
+        address quote
+    ) public {
+        (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success(data, miningPool, size, base, quote);
+
+        vm.warp(maturity);
+        setPriceAt(maturity, data.settlementITM, base, quote);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IMiningPool.MiningPool__OptionInTheMoney.selector,
+                data.settlementITM,
+                data.discount * data.spot
+            )
+        );
+
+        vm.prank(users.underwriter);
+        miningPool.settle(shortTokenId, ud(size));
+    }
+
+    function test_settle_RevertIf_OptionInTheMoney() public {
+        _test_settle_RevertIf_OptionInTheMoney(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
+        _test_settle_RevertIf_OptionInTheMoney(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 }
