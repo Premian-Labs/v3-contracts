@@ -74,8 +74,11 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
         if (block.timestamp >= lockupEnd) {
             UD60x18 intrinsicValue = settlementPrice - strike;
+
             exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
             exerciseValue = exerciseValue * (ONE - l.penalty);
+
+            IERC20(l.base).safeTransferUD60x18(l.underwriter, l.toTokenDecimals(contractSize - exerciseValue, true));
             exerciseCost = ZERO;
         }
 
