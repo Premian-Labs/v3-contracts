@@ -157,27 +157,27 @@ contract MiningPoolTest is Assertions, Test {
     }
 
     function _test_writeFrom_Success(
-        Data storage data,
+        Data memory data,
         MiningPool miningPool,
         uint256 size,
         address base,
         address quote
-    ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+    ) internal returns (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) {
+        maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
         setPriceAt(block.timestamp, data.spot, base, quote);
 
         UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
+        collateral = scaleDecimalsTo(base, _size);
         deal(base, users.underwriter, collateral);
 
         vm.startPrank(users.underwriter);
         IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
+        miningPool.writeFrom(users.longReceiver, _size);
         vm.stopPrank();
 
         int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
-        uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
+        longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
+        shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
 
         assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), size);
         assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
@@ -193,83 +193,35 @@ contract MiningPoolTest is Assertions, Test {
         _test_writeFrom_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 
-    function _test_writeFrom_OnBehalfOfUnderwriter(
-        Data storage data,
-        MiningPool miningPool,
-        uint256 size,
-        address base,
-        address quote
-    ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot, base, quote);
-
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
-        deal(base, users.underwriter, collateral);
-
-        vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.setApprovalForAll(users.longReceiver, true);
-        vm.stopPrank();
-
-        vm.startPrank(users.longReceiver);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
-        vm.stopPrank();
-
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
-        uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
-
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), size);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
-
-        assertEq(IERC20(base).balanceOf(address(users.underwriter)), 0);
-        assertEq(IERC20(base).balanceOf(address(miningPool)), collateral);
-    }
-
-    function test_writeFrom_OnBehalfOfUnderwriter() public {
-        _test_writeFrom_OnBehalfOfUnderwriter(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
-        _test_writeFrom_OnBehalfOfUnderwriter(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
-    }
-
-    function test_writeFrom_RevertIf_OperatorNotAuthorized() public {
+    function test_writeFrom_RevertIf_UnderwriterNotAuthorized() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IMiningPool.MiningPool__OperatorNotAuthorized.selector, users.longReceiver)
+            abi.encodeWithSelector(IMiningPool.MiningPool__UnderwriterNotAuthorized.selector, users.longReceiver)
         );
 
         vm.prank(users.longReceiver);
-        premiaUSDCMiningPool.writeFrom(users.underwriter, users.longReceiver, ud(1000000e18));
+        premiaUSDCMiningPool.writeFrom(users.longReceiver, ud(1000000e18));
     }
 
     function _test_exercise_PhysicallySettled_Success(
-        Data storage data,
+        Data memory data,
         MiningPool miningPool,
         uint256 size,
         address base,
         address quote
     ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot, base, quote);
-
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
-        deal(base, users.underwriter, collateral);
-
-        vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
-        vm.stopPrank();
+        (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
+            data,
+            miningPool,
+            size,
+            base,
+            quote
+        );
 
         vm.warp(maturity);
         setPriceAt(maturity, data.settlementITM, base, quote);
 
         UD60x18 _strike = data.discount * data.spot;
-        int128 strike = _strike.unwrap().toInt256().toInt128();
-
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
-        uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
+        UD60x18 _size = ud(size);
 
         vm.startPrank(users.longReceiver);
         uint256 exerciseCost = scaleDecimalsTo(quote, (_size * _strike));
@@ -302,25 +254,20 @@ contract MiningPoolTest is Assertions, Test {
         _test_exercise_PhysicallySettled_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 
-    // TODO: Fuzz test?
     function _test_exercise_CashSettled_Success(
-        Data storage data,
+        Data memory data,
         MiningPool miningPool,
         uint256 size,
         address base,
         address quote
     ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot, base, quote);
-
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
-        deal(base, users.underwriter, collateral);
-
-        vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
-        vm.stopPrank();
+        (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
+            data,
+            miningPool,
+            size,
+            base,
+            quote
+        );
 
         vm.warp(maturity);
         setPriceAt(maturity, data.settlementITM, base, quote);
@@ -331,30 +278,16 @@ contract MiningPoolTest is Assertions, Test {
             vm.warp(lockupEnd);
         }
 
-        UD60x18 _strike = data.discount * data.spot;
-
         uint256 exerciseValue;
         {
-            UD60x18 intrinsicValue = (data.settlementITM - _strike);
-            UD60x18 _exerciseValue = (_size * intrinsicValue) / data.settlementITM;
+            UD60x18 intrinsicValue = data.settlementITM - data.discount * data.spot;
+            UD60x18 _exerciseValue = (ud(size) * intrinsicValue) / data.settlementITM;
             _exerciseValue = _exerciseValue * (ONE - data.penalty);
             exerciseValue = scaleDecimalsTo(base, _exerciseValue);
         }
 
-        uint256 longTokenId = miningPool.formatTokenId(
-            IMiningPool.TokenType.LONG,
-            maturity,
-            _strike.unwrap().toInt256().toInt128()
-        );
-
-        uint256 shortTokenId = miningPool.formatTokenId(
-            IMiningPool.TokenType.SHORT,
-            maturity,
-            _strike.unwrap().toInt256().toInt128()
-        );
-
         vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, _size);
+        miningPool.exercise(longTokenId, ud(size));
 
         assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), 0);
         assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
@@ -368,8 +301,8 @@ contract MiningPoolTest is Assertions, Test {
         // TODO: assertEq(IERC20(quote).balanceOf(address(TREASURY)), 0);
 
         assertEq(IERC20(base).balanceOf(address(users.longReceiver)), exerciseValue);
-        assertEq(IERC20(base).balanceOf(address(users.underwriter)), 0);
-        assertEq(IERC20(base).balanceOf(address(miningPool)), collateral - exerciseValue);
+        assertApproxEqAbs(IERC20(base).balanceOf(address(users.underwriter)), collateral - exerciseValue, 1); // handles rounding error of 1 wei
+        assertApproxEqAbs(IERC20(base).balanceOf(address(miningPool)), 0, 1); // handles rounding error of 1 wei
     }
 
     function test_exercise_CashSettled_Success() public {
@@ -377,7 +310,7 @@ contract MiningPoolTest is Assertions, Test {
         _test_exercise_CashSettled_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 
-    function _test_exercise_RevertIf_TokenTypeNotLong(Data storage data, MiningPool miningPool) internal {
+    function _test_exercise_RevertIf_TokenTypeNotLong(Data memory data, MiningPool miningPool) internal {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
@@ -392,7 +325,7 @@ contract MiningPoolTest is Assertions, Test {
         _test_exercise_RevertIf_TokenTypeNotLong(_data[1], wbtcUSDCMiningPool);
     }
 
-    function _test_exercise_RevertIf_OptionNotExpired(Data storage data, MiningPool miningPool) internal {
+    function _test_exercise_RevertIf_OptionNotExpired(Data memory data, MiningPool miningPool) internal {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
@@ -409,39 +342,26 @@ contract MiningPoolTest is Assertions, Test {
     }
 
     function _test_exercise_RevertIf_OptionOutTheMoney(
-        Data storage data,
+        Data memory data,
         MiningPool miningPool,
         uint256 size,
         address base,
         address quote
     ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot, base, quote);
-
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
-        deal(base, users.underwriter, collateral);
-
-        vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
-        vm.stopPrank();
-
-        vm.warp(maturity);
+        (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success(data, miningPool, size, base, quote);
 
         UD60x18 _strike = data.discount * data.spot;
-        int128 strike = _strike.unwrap().toInt256().toInt128();
         UD60x18 settlementOTM = _strike.sub(ud(1));
-        setPriceAt(maturity, settlementOTM, base, quote);
 
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
+        vm.warp(maturity);
+        setPriceAt(maturity, settlementOTM, base, quote);
 
         vm.startPrank(users.longReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(IMiningPool.MiningPool__OptionOutTheMoney.selector, settlementOTM, _strike)
         );
 
-        miningPool.exercise(longTokenId, _size);
+        miningPool.exercise(longTokenId, ud(size));
         vm.stopPrank();
     }
 
@@ -451,23 +371,13 @@ contract MiningPoolTest is Assertions, Test {
     }
 
     function _test_exercise_RevertIf_LockupNotExpired(
-        Data storage data,
+        Data memory data,
         MiningPool miningPool,
         uint256 size,
         address base,
         address quote
     ) internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot, base, quote);
-
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
-        deal(base, users.underwriter, collateral);
-
-        vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.underwriter, users.longReceiver, _size);
-        vm.stopPrank();
+        (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success(data, miningPool, size, base, quote);
 
         vm.warp(maturity);
         setPriceAt(maturity, data.settlementITM, base, quote);
@@ -477,15 +387,12 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.warp(lockupStart);
 
-        int128 strike = (data.discount * data.spot).unwrap().toInt256().toInt128();
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
-
         vm.startPrank(users.longReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(IMiningPool.MiningPool__LockupNotExpired.selector, lockupStart, lockupEnd)
         );
 
-        miningPool.exercise(longTokenId, _size);
+        miningPool.exercise(longTokenId, ud(size));
         vm.stopPrank();
     }
 
