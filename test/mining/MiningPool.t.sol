@@ -23,8 +23,6 @@ import {PriceRepositoryProxy} from "contracts/mining/PriceRepositoryProxy.sol";
 
 import {Assertions} from "../Assertions.sol";
 
-import "forge-std/console2.sol";
-
 contract MiningPoolTest is Assertions, Test {
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -191,6 +189,56 @@ contract MiningPoolTest is Assertions, Test {
     function test_writeFrom_Success() public {
         _test_writeFrom_Success(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
         _test_writeFrom_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
+    }
+
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        UD60x18 contractSize,
+        UD60x18 strike,
+        uint64 maturity
+    );
+
+    function test_writeFrom_CorrectMaturity() public {
+        setPriceAt(block.timestamp, ONE, premia, usdc);
+
+        uint256 collateral = scaleDecimalsTo(premia, ud(100e18));
+        deal(premia, users.underwriter, collateral);
+
+        vm.prank(users.underwriter);
+        IERC20(premia).approve(address(premiaUSDCMiningPool), collateral);
+
+        UD60x18 size = ONE;
+
+        // block.timestamp = Apr-22-2023 09:30:23 AM +UTC
+        uint64 timeToMaturity = uint64(30 days);
+        uint64 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
+        uint64 expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-22-2023 08:00:00 AM +UTC
+
+        vm.expectEmit();
+        emit WriteFrom(users.underwriter, users.longReceiver, size, ud(0.55e18), expectedMaturity);
+
+        vm.prank(users.underwriter);
+        premiaUSDCMiningPool.writeFrom(users.longReceiver, size);
+
+        vm.warp(1682207999); // Apr-22-2023 23:59:59 PM +UTC
+
+        expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-22-2023 08:00:00 AM +UTC
+        vm.expectEmit();
+        emit WriteFrom(users.underwriter, users.longReceiver, size, ud(0.55e18), expectedMaturity);
+
+        vm.prank(users.underwriter);
+        premiaUSDCMiningPool.writeFrom(users.longReceiver, size);
+
+        vm.warp(1682208000); // Apr-23-2023 00:00:00 PM +UTC
+
+        timestamp8AMUTC = 1682236800; // Apr-23-2023 08:00:00 AM +UTC
+        expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-23-2023 08:00:00 AM +UTC
+        vm.expectEmit();
+        emit WriteFrom(users.underwriter, users.longReceiver, size, ud(0.55e18), expectedMaturity);
+
+        vm.prank(users.underwriter);
+        premiaUSDCMiningPool.writeFrom(users.longReceiver, size);
     }
 
     function test_writeFrom_RevertIf_UnderwriterNotAuthorized() public {
