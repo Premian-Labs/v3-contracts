@@ -21,15 +21,24 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
     error MiningPool__TokenTypeNotShort();
 
     event Exercise(
-        address indexed holder,
+        address indexed user,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 exerciseCost,
-        UD60x18 settlementPrice
+        UD60x18 settlementPrice,
+        UD60x18 strike,
+        uint64 maturity
     );
 
-    event Settle(address indexed holder, UD60x18 contractSize, UD60x18 settlementPrice);
-    event WriteFrom(address indexed underwriter, address indexed longReceiver, UD60x18 contractSize);
+    event Settle(address indexed user, UD60x18 contractSize, UD60x18 settlementPrice, UD60x18 strike, uint64 maturity);
+
+    event WriteFrom(
+        address indexed underwriter,
+        address indexed longReceiver,
+        UD60x18 contractSize,
+        UD60x18 strike,
+        uint64 maturity
+    );
 
     function writeFrom(address longReceiver, UD60x18 contractSize) external;
 

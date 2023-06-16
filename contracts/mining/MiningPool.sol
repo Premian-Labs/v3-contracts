@@ -47,8 +47,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         _mintUD60x18(longReceiver, longTokenId, contractSize);
         _mintUD60x18(l.underwriter, shortTokenId, contractSize);
 
-        // TODO: add strike/ maturity to event?
-        emit WriteFrom(l.underwriter, longReceiver, contractSize);
+        emit WriteFrom(l.underwriter, longReceiver, contractSize, strike, maturity);
     }
 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
@@ -89,8 +88,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
         IERC20(l.base).safeTransferUD60x18(msg.sender, l.toTokenDecimals(exerciseValue, true));
 
-        // TODO: add strike/ maturity to event?
-        emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice);
+        emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
     }
 
     function settle(uint256 shortTokenId, UD60x18 contractSize) external nonReentrant {
@@ -108,8 +106,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         _burnUD60x18(l.underwriter, shortTokenId, contractSize);
         IERC20(l.base).safeTransferUD60x18(l.underwriter, l.toTokenDecimals(contractSize, true));
 
-        // TODO: add strike/ maturity to event?
-        emit Settle(l.underwriter, contractSize, settlementPrice);
+        emit Settle(l.underwriter, contractSize, settlementPrice, strike, maturity);
     }
 
     // TODO: make internal/ move to storage
