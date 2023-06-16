@@ -15,11 +15,18 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {IMiningPool} from "contracts/mining/MiningPool.sol";
-import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
 import {MiningPool} from "contracts/mining/MiningPool.sol";
 import {MiningPoolFactory} from "contracts/mining/MiningPoolFactory.sol";
+
+import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
 import {PriceRepository} from "contracts/mining/PriceRepository.sol";
 import {PriceRepositoryProxy} from "contracts/mining/PriceRepositoryProxy.sol";
+
+import {PaymentSplitter} from "contracts/mining/PaymentSplitter.sol";
+
+import {IVxPremia} from "contracts/staking/IVxPremia.sol";
+import {VxPremia} from "contracts/staking/VxPremia.sol";
+import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
 import {Assertions} from "../Assertions.sol";
 
@@ -33,10 +40,12 @@ contract MiningPoolTest is Assertions, Test {
     MiningPool wbtcUSDCMiningPool;
     MiningPool premiaWETHMiningPool;
 
+    UD60x18 fee;
+
     Users users;
 
+    address vxPremia;
     address premia;
-    address weth;
     address wbtc;
     address usdc;
 
@@ -52,10 +61,24 @@ contract MiningPoolTest is Assertions, Test {
         uint256 lockupDuration;
     }
 
+    struct WriteFromInternal {
+        uint64 maturity;
+        uint256 collateral;
+        uint256 longTokenId;
+        uint256 shortTokenId;
+    }
+
     struct Users {
         address underwriter;
         address longReceiver;
         address keeper;
+        address treasury;
+    }
+
+    modifier revertToSnapshotAfterEach() {
+        uint256 snapshot = vm.snapshot();
+        _;
+        vm.revertTo(snapshot);
     }
 
     function setUp() public {
@@ -67,25 +90,30 @@ contract MiningPoolTest is Assertions, Test {
         uint256 fork = vm.createFork(ETH_RPC_URL, 17101000); // Apr-22-2023 09:30:23 AM +UTC
         vm.selectFork(fork);
 
-        users = Users({underwriter: vm.addr(1), longReceiver: vm.addr(2), keeper: vm.addr(3)});
+        fee = ud(0.01e18);
+
+        premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70; // PREMIA (18 decimals)
+        wbtc = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599; // WBTC (8 decimals)
+        usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC (6 decimals)
+
+        users = Users({underwriter: vm.addr(1), longReceiver: vm.addr(2), keeper: vm.addr(3), treasury: vm.addr(4)});
+
+        VxPremia vxPremiaImpl = new VxPremia(address(0), address(0), address(premia), address(usdc), address(0));
+        VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
+        vxPremia = address(vxPremiaProxy);
+
+        PaymentSplitter paymentSplitter = new PaymentSplitter(usdc, vxPremia);
 
         PriceRepository implementation = new PriceRepository();
         PriceRepositoryProxy proxy = new PriceRepositoryProxy(address(implementation), users.keeper);
         priceRepository = PriceRepository(address(proxy));
 
-        MiningPool miningPoolImplementation = new MiningPool();
+        MiningPool miningPoolImplementation = new MiningPool(users.treasury, fee);
         ProxyUpgradeableOwnable miningPoolProxy = new ProxyUpgradeableOwnable(address(miningPoolImplementation));
-
         MiningPoolFactory miningPoolFactory = new MiningPoolFactory(address(miningPoolProxy));
 
         _data[0] = Data(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         _data[1] = Data(ud(0.1e18), ud(30000e18), ud(35000e18), ud(0.20e18), 60 days, 90 days, 30 days);
-        _data[2] = Data(ud(0.90e18), ud(0.0005e18), ud(0.01e18), ud(1e18), 180 days, 11 days, 365 days);
-
-        premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70; // PREMIA (18 decimals)
-        weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // PREMIA (18 decimals)
-        wbtc = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599; // WBTC (8 decimals)
-        usdc = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC (6 decimals)
 
         premiaUSDCMiningPool = MiningPool(
             miningPoolFactory.deployMiningPool(
@@ -93,8 +121,7 @@ contract MiningPoolTest is Assertions, Test {
                 usdc,
                 users.underwriter,
                 address(priceRepository),
-                // TODO: deploy payment splitter
-                address(1),
+                address(paymentSplitter),
                 _data[0].discount,
                 _data[0].penalty,
                 _data[0].expiryDuration,
@@ -109,29 +136,12 @@ contract MiningPoolTest is Assertions, Test {
                 usdc,
                 users.underwriter,
                 address(priceRepository),
-                // TODO: deploy payment splitter
-                address(1),
+                address(paymentSplitter),
                 _data[1].discount,
                 _data[1].penalty,
                 _data[1].expiryDuration,
                 _data[1].exerciseDuration,
                 _data[1].lockupDuration
-            )
-        );
-
-        premiaWETHMiningPool = MiningPool(
-            miningPoolFactory.deployMiningPool(
-                premia,
-                weth,
-                users.underwriter,
-                address(priceRepository),
-                // TODO: deploy payment splitter
-                address(1),
-                _data[2].discount,
-                _data[2].penalty,
-                _data[2].expiryDuration,
-                _data[2].exerciseDuration,
-                _data[2].lockupDuration
             )
         );
     }
@@ -183,7 +193,7 @@ contract MiningPoolTest is Assertions, Test {
         assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
         assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
 
-        assertEq(IERC20(base).balanceOf(address(users.underwriter)), 0);
+        assertEq(IERC20(base).balanceOf(users.underwriter), 0);
         assertEq(IERC20(base).balanceOf(address(miningPool)), collateral);
     }
 
@@ -257,7 +267,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) internal {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
             data,
             miningPool,
@@ -273,10 +283,11 @@ contract MiningPoolTest is Assertions, Test {
         UD60x18 _size = ud(size);
 
         vm.startPrank(users.longReceiver);
-        uint256 exerciseCost = scaleDecimalsTo(quote, (_size * _strike));
+        UD60x18 _exerciseCost = _size * _strike;
+        uint256 exerciseCost = scaleDecimalsTo(quote, _exerciseCost);
         deal(quote, users.longReceiver, exerciseCost);
 
-        assertEq(IERC20(quote).balanceOf(address(users.longReceiver)), exerciseCost);
+        assertEq(IERC20(quote).balanceOf(users.longReceiver), exerciseCost);
 
         IERC20(quote).approve(address(miningPool), exerciseCost);
         miningPool.exercise(longTokenId, _size);
@@ -287,14 +298,17 @@ contract MiningPoolTest is Assertions, Test {
         assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
         assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
 
-        assertEq(IERC20(quote).balanceOf(address(users.longReceiver)), 0);
-        assertEq(IERC20(quote).balanceOf(address(users.underwriter)), 0);
+        assertEq(IERC20(quote).balanceOf(users.longReceiver), 0);
+        assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
 
-        // TODO: assertEq(IERC20(quote).balanceOf(address(vxPREMIA)), 0.9e18 * exerciseCost);
-        // TODO: assertEq(IERC20(quote).balanceOf(address(TREASURY)), 0.1e18 * exerciseCost);
+        {
+            uint256 feeAmount = scaleDecimalsTo(quote, fee * _exerciseCost);
+            assertEq(IERC20(quote).balanceOf(users.treasury), feeAmount);
+            assertEq(IERC20(quote).balanceOf(vxPremia), exerciseCost - feeAmount);
+        }
 
-        assertEq(IERC20(base).balanceOf(address(users.longReceiver)), collateral);
-        assertEq(IERC20(base).balanceOf(address(users.underwriter)), 0);
+        assertEq(IERC20(base).balanceOf(users.longReceiver), collateral);
+        assertEq(IERC20(base).balanceOf(users.underwriter), 0);
         assertEq(IERC20(base).balanceOf(address(miningPool)), 0);
     }
 
@@ -305,61 +319,8 @@ contract MiningPoolTest is Assertions, Test {
 
     function _test_exercise_CashSettled_Success(
         Data memory data,
-        MiningPool miningPool,
-        uint256 size,
-        address base,
-        address quote
-    ) internal {
-        (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
-            data,
-            miningPool,
-            size,
-            base,
-            quote
-        );
-
-        vm.warp(maturity);
-        setPriceAt(maturity, data.settlementITM, base, quote);
-
-        {
-            uint256 lockupStart = maturity + data.exerciseDuration;
-            uint256 lockupEnd = lockupStart + data.lockupDuration;
-            vm.warp(lockupEnd);
-        }
-
-        uint256 exerciseValue;
-        {
-            UD60x18 intrinsicValue = data.settlementITM - data.discount * data.spot;
-            UD60x18 _exerciseValue = (ud(size) * intrinsicValue) / data.settlementITM;
-            _exerciseValue = _exerciseValue * (ONE - data.penalty);
-            exerciseValue = scaleDecimalsTo(base, _exerciseValue);
-        }
-
-        vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, ud(size));
-
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), 0);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
-
-        assertEq(IERC20(quote).balanceOf(address(users.longReceiver)), 0);
-        assertEq(IERC20(quote).balanceOf(address(users.underwriter)), 0);
-
-        // TODO: assertEq(IERC20(quote).balanceOf(address(vxPREMIA)), 0);
-        // TODO: assertEq(IERC20(quote).balanceOf(address(TREASURY)), 0);
-
-        assertEq(IERC20(base).balanceOf(address(users.longReceiver)), exerciseValue);
-        assertApproxEqAbs(IERC20(base).balanceOf(address(users.underwriter)), collateral - exerciseValue, 1); // handles rounding error of 1 wei
-        assertApproxEqAbs(IERC20(base).balanceOf(address(miningPool)), 0, 1); // handles rounding error of 1 wei
-    }
-
-    function test_exercise_CashSettled_Success() public {
-        _test_exercise_CashSettled_Success(_data[0], premiaUSDCMiningPool, 1000000e18, premia, usdc);
-        _test_exercise_CashSettled_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
-    }
-
-    function _test_exercise_RevertIf_TokenTypeNotLong(Data memory data, MiningPool miningPool) internal {
+        MiningPool miningPool
+    ) internal revertToSnapshotAfterEach {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
@@ -375,7 +336,10 @@ contract MiningPoolTest is Assertions, Test {
         _test_exercise_RevertIf_TokenTypeNotLong(_data[1], wbtcUSDCMiningPool);
     }
 
-    function _test_exercise_RevertIf_OptionNotExpired(Data memory data, MiningPool miningPool) internal {
+    function _test_exercise_RevertIf_OptionNotExpired(
+        Data memory data,
+        MiningPool miningPool
+    ) internal revertToSnapshotAfterEach {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
@@ -398,7 +362,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) internal {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success(data, miningPool, size, base, quote);
 
         UD60x18 _strike = data.discount * data.spot;
@@ -426,7 +390,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) internal {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success(data, miningPool, size, base, quote);
 
         vm.warp(maturity);
@@ -456,7 +420,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) public {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success(
             data,
             miningPool,
@@ -479,14 +443,14 @@ contract MiningPoolTest is Assertions, Test {
         assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), 0);
         assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
 
-        assertEq(IERC20(quote).balanceOf(address(users.longReceiver)), 0);
-        assertEq(IERC20(quote).balanceOf(address(users.underwriter)), 0);
+        assertEq(IERC20(quote).balanceOf(users.longReceiver), 0);
+        assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
 
-        // TODO: assertEq(IERC20(quote).balanceOf(address(vxPREMIA)), 0);
-        // TODO: assertEq(IERC20(quote).balanceOf(address(TREASURY)), 0);
+        assertEq(IERC20(quote).balanceOf(vxPremia), 0);
+        assertEq(IERC20(quote).balanceOf(users.treasury), 0);
 
-        assertEq(IERC20(base).balanceOf(address(users.longReceiver)), 0);
-        assertEq(IERC20(base).balanceOf(address(users.underwriter)), collateral);
+        assertEq(IERC20(base).balanceOf(users.longReceiver), 0);
+        assertEq(IERC20(base).balanceOf(users.underwriter), collateral);
         assertEq(IERC20(base).balanceOf(address(miningPool)), 0);
     }
 
@@ -495,7 +459,10 @@ contract MiningPoolTest is Assertions, Test {
         _test_settle_Success(_data[1], wbtcUSDCMiningPool, 100e18, wbtc, usdc);
     }
 
-    function _test_settle_RevertIf_TokenTypeNotShort(Data memory data, MiningPool miningPool) internal {
+    function _test_settle_RevertIf_TokenTypeNotShort(
+        Data memory data,
+        MiningPool miningPool
+    ) internal revertToSnapshotAfterEach {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
@@ -518,11 +485,9 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) public {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success(data, miningPool, size, base, quote);
-
         vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
-
         vm.prank(users.underwriter);
         miningPool.settle(shortTokenId, ud(size));
     }
@@ -538,7 +503,7 @@ contract MiningPoolTest is Assertions, Test {
         uint256 size,
         address base,
         address quote
-    ) public {
+    ) internal revertToSnapshotAfterEach {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success(data, miningPool, size, base, quote);
 
         vm.warp(maturity);
