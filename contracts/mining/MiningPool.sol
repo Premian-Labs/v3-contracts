@@ -21,14 +21,20 @@ import {IPriceRepository} from "./IPriceRepository.sol";
 import {MiningPoolStorage} from "./MiningPoolStorage.sol";
 import {IPaymentSplitter} from "./IPaymentSplitter.sol";
 
-import "forge-std/console2.sol";
-
 contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, ReentrancyGuard {
     using MiningPoolStorage for IERC20;
     using MiningPoolStorage for int128;
     using MiningPoolStorage for MiningPoolStorage.Layout;
     using MiningPoolStorage for UD60x18;
     using SafeCast for uint256;
+
+    address public immutable TREASURY;
+    UD60x18 public immutable TREASURY_FEE;
+
+    constructor(address treasury, UD60x18 treasuryFee) {
+        TREASURY = treasury;
+        TREASURY_FEE = treasuryFee;
+    }
 
     // caller must approve token
     function writeFrom(address longReceiver, UD60x18 contractSize) external nonReentrant {
@@ -81,8 +87,14 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         }
 
         if (exerciseCost > ZERO) {
-            IERC20(l.quote).safeTransferFromUD60x18(msg.sender, l.paymentSplitter, exerciseCost);
-            // TODO: IPaymentSplitter(l.paymentSplitter).reward(exerciseCost);
+            IERC20(l.quote).safeTransferFromUD60x18(msg.sender, address(this), exerciseCost);
+
+            UD60x18 fee = exerciseCost * TREASURY_FEE;
+            IERC20(l.quote).safeTransferUD60x18(TREASURY, fee);
+
+            uint256 rewardAmount = (exerciseCost - fee).unwrap();
+            IERC20(l.quote).approve(l.paymentSplitter, rewardAmount);
+            IPaymentSplitter(l.paymentSplitter).addReward(rewardAmount);
         }
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
