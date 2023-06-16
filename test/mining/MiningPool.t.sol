@@ -80,7 +80,7 @@ contract MiningPoolTest is Assertions, Test {
 
         _data[0] = Data(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         _data[1] = Data(ud(0.1e18), ud(30000e18), ud(35000e18), ud(0.20e18), 60 days, 90 days, 30 days);
-        //        data[2] = Data(0.90e18,  ud(0.80e18), 30 days, 30 days, 365 days);
+        _data[2] = Data(ud(0.90e18), ud(0.0005e18), ud(0.01e18), ud(1e18), 180 days, 11 days, 365 days);
 
         premia = 0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70; // PREMIA (18 decimals)
         weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // PREMIA (18 decimals)
@@ -119,20 +119,21 @@ contract MiningPoolTest is Assertions, Test {
             )
         );
 
-        //        premiaWETHMiningPool = MiningPool(
-        //            miningPoolFactory.deployMiningPool(
-        //                premia,
-        //                weth,
-        //                address(priceRepository),
-        //                // TODO: deploy payment splitter
-        //                address(1),
-        //                ud(strike),
-        //                penalty,
-        //                expiryDuration,
-        //                180 days,
-        //                180 days
-        //            )
-        //        );
+        premiaWETHMiningPool = MiningPool(
+            miningPoolFactory.deployMiningPool(
+                premia,
+                weth,
+                users.underwriter,
+                address(priceRepository),
+                // TODO: deploy payment splitter
+                address(1),
+                _data[2].discount,
+                _data[2].penalty,
+                _data[2].expiryDuration,
+                _data[2].exerciseDuration,
+                _data[2].lockupDuration
+            )
+        );
     }
 
     function getMaturity(uint256 timestamp, uint256 expiryDuration) internal pure returns (uint256 maturity) {
