@@ -45,7 +45,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
         UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
-        UD60x18 strike = OptionMath.roundToNearestTenth(price * l.discount);
+        UD60x18 strike = OptionMath.round(price * l.discount);
 
         uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);
         uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
