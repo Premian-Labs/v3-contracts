@@ -27,7 +27,7 @@ interface IPoolEvents {
         UD60x18 collateral,
         UD60x18 longs,
         UD60x18 shorts,
-        UD60x18 lastFeeRate,
+        SD59x18 lastFeeRate,
         UD60x18 claimableFees,
         UD60x18 marketPrice,
         UD60x18 liquidityRate,
@@ -40,14 +40,14 @@ interface IPoolEvents {
         UD60x18 collateral,
         UD60x18 longs,
         UD60x18 shorts,
-        UD60x18 lastFeeRate,
+        SD59x18 lastFeeRate,
         UD60x18 claimableFees,
         UD60x18 marketPrice,
         UD60x18 liquidityRate,
         UD60x18 currentTick
     );
 
-    event ClaimFees(address indexed owner, uint256 indexed tokenId, UD60x18 feesClaimed, UD60x18 lastFeeRate);
+    event ClaimFees(address indexed owner, uint256 indexed tokenId, UD60x18 feesClaimed, SD59x18 lastFeeRate);
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
