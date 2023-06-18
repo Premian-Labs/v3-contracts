@@ -413,6 +413,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         // Adjust tick deltas
         _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
+
+        SD59x18 feeRatePUpdate;
+        {
+            // If ticks dont exist they are created and inserted into the linked list
+            Tick memory lowerTick = _getOrCreateTick(p.lower, belowLower);
+            Tick memory upperTick = _getOrCreateTick(p.upper, belowUpper);
+
+            feeRatePUpdate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
+        }
+        if (feeRate != feeRatePUpdate) revert Pool__InvalidTickUpdate();
     }
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short

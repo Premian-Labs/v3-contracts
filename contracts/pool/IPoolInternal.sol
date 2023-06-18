@@ -29,6 +29,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 depositSize);
     error Pool__InvalidTickPrice();
+    error Pool__InvalidTickUpdate();
     error Pool__InvalidTransfer();
     error Pool__NotEnoughTokens(UD60x18 balance, UD60x18 size);
     error Pool__NotPoolToken(address token);
