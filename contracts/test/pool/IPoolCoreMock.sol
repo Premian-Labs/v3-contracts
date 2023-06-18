@@ -54,4 +54,6 @@ interface IPoolCoreMock {
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory);
 
     function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool);
+
+    function mint(address account, uint256 id, UD60x18 amount) external;
 }
