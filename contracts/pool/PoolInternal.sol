@@ -395,34 +395,32 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
         }
 
-        UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
-        UD60x18 liquidityPerTick;
-
-        if (initialSize > ZERO) {
-            liquidityPerTick = p.liquidityPerTick(initialSize);
-
-            _updateClaimableFees(pData, feeRate, liquidityPerTick);
-        } else {
-            pData.lastFeeRate = feeRate;
-        }
-
-        _mint(p.owner, tokenId, size);
-
-        SD59x18 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD59x18() -
-            liquidityPerTick.intoSD59x18();
-
-        // Adjust tick deltas
-        _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
-
-        SD59x18 feeRatePUpdate;
         {
-            // If ticks dont exist they are created and inserted into the linked list
-            Tick memory lowerTick = _getOrCreateTick(p.lower, belowLower);
-            Tick memory upperTick = _getOrCreateTick(p.upper, belowUpper);
+            UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
+            UD60x18 liquidityPerTick;
 
-            feeRatePUpdate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
+            if (initialSize > ZERO) {
+                liquidityPerTick = p.liquidityPerTick(initialSize);
+
+                _updateClaimableFees(pData, feeRate, liquidityPerTick);
+            } else {
+                pData.lastFeeRate = feeRate;
+            }
+
+            _mint(p.owner, tokenId, size);
+
+            SD59x18 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD59x18() -
+                liquidityPerTick.intoSD59x18();
+
+            // Adjust tick deltas
+            _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
         }
-        if (feeRate != feeRatePUpdate) revert Pool__InvalidTickUpdate();
+
+        // Safeguard, should never happen
+        if (
+            feeRate !=
+            _rangeFeeRate(l, p.lower, p.upper, l.ticks[p.lower].externalFeeRate, l.ticks[p.upper].externalFeeRate)
+        ) revert Pool__InvalidTickUpdate();
     }
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
