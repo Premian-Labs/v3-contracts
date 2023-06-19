@@ -237,11 +237,15 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.stopPrank();
         vm.prank(referrer);
-        referral.claimRebate();
+
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(token);
+
+        referral.claimRebate(tokens);
 
         // primary rebate = 5% = 1/20
         uint256 totalReferrerRebate = mintingFee / 20;
-        assertEq(token.balanceOf(referrer), totalReferrerRebate, "a");
+        assertEq(token.balanceOf(referrer), totalReferrerRebate);
 
         // Check that long contracts have been transferred to trader
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
