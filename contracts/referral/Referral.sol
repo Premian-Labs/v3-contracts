@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -15,7 +16,7 @@ import {IPoolFactory} from "../factory/PoolFactory.sol";
 import {IReferral} from "./IReferral.sol";
 import {ReferralStorage} from "./ReferralStorage.sol";
 
-contract Referral is IReferral, OwnableInternal {
+contract Referral is IReferral, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using ReferralStorage for address;
@@ -97,9 +98,7 @@ contract Referral is IReferral, OwnableInternal {
     /// @inheritdoc IReferral
     function setPrimaryRebatePercent(UD60x18 percent, RebateTier tier) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
-
         emit SetPrimaryRebatePercent(tier, l.primaryRebatePercents[uint8(tier)], percent);
-
         l.primaryRebatePercents[uint8(tier)] = percent;
     }
 
@@ -145,17 +144,15 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function claimRebate() external {
+    function claimRebate() external nonReentrant {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
         (address[] memory tokens, uint256[] memory rebates) = getRebates(msg.sender);
-
         if (tokens.length == 0) revert Referral__NoRebatesToClaim();
 
         for (uint256 i = 0; i < tokens.length; i++) {
             l.rebates[msg.sender][tokens[i]] = 0;
             l.rebateTokens[msg.sender].remove(tokens[i]);
-
             IERC20(tokens[i]).safeTransfer(msg.sender, rebates[i]);
             emit ClaimRebate(msg.sender, tokens[i], rebates[i]);
         }
