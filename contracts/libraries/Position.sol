@@ -58,7 +58,7 @@ library Position {
     /// @notice All the data required to be saved in storage
     struct Data {
         // Used to track claimable fees over time (18 decimals)
-        UD60x18 lastFeeRate;
+        SD59x18 lastFeeRate;
         // The amount of fees a user can claim now. Resets after claim (18 decimals)
         UD60x18 claimableFees;
         // The timestamp of the last deposit. Used to enforce withdrawal delay

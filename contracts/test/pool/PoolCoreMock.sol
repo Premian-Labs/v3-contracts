@@ -112,4 +112,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.shortRate;
     }
+
+    function mint(address account, uint256 id, UD60x18 amount) external {
+        _mint(account, id, amount.unwrap(), "");
+    }
 }
