@@ -13,19 +13,20 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO, ONE} from "../libraries/Constants.sol";
+import {OptionMath} from "../libraries/OptionMath.sol";
 
 import {IMiningPool} from "./IMiningPool.sol";
+import {IPaymentSplitter} from "./IPaymentSplitter.sol";
 import {IPriceRepository} from "./IPriceRepository.sol";
 import {MiningPoolStorage} from "./MiningPoolStorage.sol";
-import {IPaymentSplitter} from "./IPaymentSplitter.sol";
 
 contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, ReentrancyGuard {
     using MiningPoolStorage for IERC20;
     using MiningPoolStorage for int128;
+    using MiningPoolStorage for uint256;
     using MiningPoolStorage for MiningPoolStorage.Layout;
-    using MiningPoolStorage for UD60x18;
+    using MiningPoolStorage for TokenType;
     using SafeCast for uint256;
 
     address public immutable TREASURY;
@@ -47,8 +48,8 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
         UD60x18 strike = OptionMath.round(price * l.discount);
 
-        uint256 longTokenId = formatTokenId(TokenType.LONG, maturity, strike);
-        uint256 shortTokenId = formatTokenId(TokenType.SHORT, maturity, strike);
+        uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
+        uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
 
         _mintUD60x18(longReceiver, longTokenId, contractSize);
         _mintUD60x18(l.underwriter, shortTokenId, contractSize);
@@ -57,7 +58,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
     }
 
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
-        (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(longTokenId);
+        (TokenType tokenType, uint64 maturity, int128 _strike) = longTokenId.parseTokenId();
         if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong();
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
@@ -104,7 +105,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
     }
 
     function settle(uint256 shortTokenId, UD60x18 contractSize) external nonReentrant {
-        (TokenType tokenType, uint64 maturity, int128 _strike) = parseTokenId(shortTokenId);
+        (TokenType tokenType, uint64 maturity, int128 _strike) = shortTokenId.parseTokenId();
         if (tokenType != TokenType.SHORT) revert MiningPool__TokenTypeNotShort();
 
         _revertIfOptionNotExpired(maturity);
@@ -119,36 +120,6 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         IERC20(l.base).safeTransferUD60x18(l.underwriter, l.toTokenDecimals(contractSize, true));
 
         emit Settle(l.underwriter, contractSize, settlementPrice, strike, maturity);
-    }
-
-    // TODO: make internal/ move to storage
-    /**
-     * @notice Calculate ERC1155 token id for given option parameters
-     * @param tokenType TokenType enum
-     * @param maturity Timestamp of option maturity
-     * @param strike Strike price
-     * @return tokenId Token id
-     */
-    function formatTokenId(TokenType tokenType, uint64 maturity, UD60x18 strike) public pure returns (uint256 tokenId) {
-        tokenId =
-            (uint256(tokenType) << 248) +
-            (uint256(maturity) << 128) +
-            uint256(int256(strike.fromUD60x18ToInt128()));
-    }
-
-    /**
-     * @notice Derive option maturity and strike price from ERC1155 token id
-     * @param tokenId Token id
-     * @return tokenType TokenType enum
-     * @return maturity Timestamp of option maturity
-     * @return strike Option strike price
-     */
-    function parseTokenId(uint256 tokenId) public pure returns (TokenType tokenType, uint64 maturity, int128 strike) {
-        assembly {
-            tokenType := shr(248, tokenId)
-            maturity := shr(128, tokenId)
-            strike := tokenId
-        }
     }
 
     function _mintUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {

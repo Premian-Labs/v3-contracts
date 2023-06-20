@@ -9,6 +9,8 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
 
+import {IMiningPool} from "./IMiningPool.sol";
+
 library MiningPoolStorage {
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -44,22 +46,37 @@ library MiningPoolStorage {
         }
     }
 
+    /// @notice Calculate ERC1155 token id for given option parameters
+    function formatTokenId(
+        IMiningPool.TokenType tokenType,
+        uint64 maturity,
+        UD60x18 strike
+    ) internal pure returns (uint256 tokenId) {
+        tokenId =
+            (uint256(tokenType) << 248) +
+            (uint256(maturity) << 128) +
+            uint256(int256(fromUD60x18ToInt128(strike)));
+    }
+
+    /// @notice Derive option maturity and strike price from ERC1155 token id
+    function parseTokenId(
+        uint256 tokenId
+    ) internal pure returns (IMiningPool.TokenType tokenType, uint64 maturity, int128 strike) {
+        assembly {
+            tokenType := shr(248, tokenId)
+            maturity := shr(128, tokenId)
+            strike := tokenId
+        }
+    }
+
     /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
-    function toTokenDecimals(
-        MiningPoolStorage.Layout storage l,
-        UD60x18 value,
-        bool isBase
-    ) internal view returns (UD60x18) {
+    function toTokenDecimals(Layout storage l, UD60x18 value, bool isBase) internal view returns (UD60x18) {
         uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
         return ud(OptionMath.scaleDecimals(value.unwrap(), 18, decimals));
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals
-    function fromTokenDecimals(
-        MiningPoolStorage.Layout storage l,
-        UD60x18 value,
-        bool isBase
-    ) internal view returns (UD60x18) {
+    function fromTokenDecimals(Layout storage l, UD60x18 value, bool isBase) internal view returns (UD60x18) {
         uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
         return ud(OptionMath.scaleDecimals(value.unwrap(), decimals, 18));
     }

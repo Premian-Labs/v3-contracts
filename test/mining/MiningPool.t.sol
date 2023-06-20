@@ -15,7 +15,8 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {IMiningPool} from "contracts/mining/MiningPool.sol";
-import {MiningPool} from "contracts/mining/MiningPool.sol";
+import {MiningPoolMock} from "contracts/test/mining/MiningPoolMock.sol";
+import {MiningPoolStorage} from "contracts/mining/MiningPoolStorage.sol";
 import {MiningPoolFactory} from "contracts/mining/MiningPoolFactory.sol";
 
 import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
@@ -36,10 +37,7 @@ contract MiningPoolTest is Assertions, Test {
 
     PaymentSplitter paymentSplitter;
     PriceRepository priceRepository;
-
-    MiningPool miningPool;
-    MiningPool wbtcUSDCMiningPool;
-    MiningPool premiaWETHMiningPool;
+    MiningPoolMock miningPool;
 
     UD60x18 fee;
     uint256 size;
@@ -95,14 +93,14 @@ contract MiningPoolTest is Assertions, Test {
         PriceRepositoryProxy proxy = new PriceRepositoryProxy(address(implementation), users.keeper);
         priceRepository = PriceRepository(address(proxy));
 
-        MiningPool miningPoolImplementation = new MiningPool(users.treasury, fee);
+        MiningPoolMock miningPoolImplementation = new MiningPoolMock(users.treasury, fee);
         ProxyUpgradeableOwnable miningPoolProxy = new ProxyUpgradeableOwnable(address(miningPoolImplementation));
         MiningPoolFactory miningPoolFactory = new MiningPoolFactory(address(miningPoolProxy));
 
         data = DataInternal(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         size = 1000000e18;
 
-        miningPool = MiningPool(
+        miningPool = MiningPoolMock(
             miningPoolFactory.deployMiningPool(
                 base,
                 quote,
