@@ -15,7 +15,11 @@ import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolAnnihilateTest is DeployTest {
-    function test_annihilate_Success() public {
+    UD60x18 internal withdrawSize = UD60x18.wrap(300 ether);
+    UD60x18 internal annihilateSize = UD60x18.wrap(100 ether);
+    UD60x18 internal tradeSize = UD60x18.wrap(1000 ether);
+
+    function init() internal returns (uint256 totalPremium) {
         deposit(1000 ether);
         vm.startPrank(users.lp);
 
@@ -27,16 +31,13 @@ abstract contract PoolAnnihilateTest is DeployTest {
 
         assertEq(IERC20(poolToken).balanceOf(address(pool)), depositCollateralValue, "1");
 
-        UD60x18 tradeSize = ud(1000 ether);
-
-        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
+        (totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
 
         pool.trade(tradeSize, false, totalPremium - totalPremium / 10, address(0));
 
         assertEq(IERC20(poolToken).balanceOf(users.lp), totalPremium, "poolToken lp 0");
 
         vm.warp(block.timestamp + 60);
-        UD60x18 withdrawSize = ud(300 ether);
 
         pool.withdraw(posKey, withdrawSize, ZERO, ONE);
 
@@ -44,8 +45,14 @@ abstract contract PoolAnnihilateTest is DeployTest {
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), withdrawSize, "lp long 1");
         assertEq(pool.balanceOf(address(pool), PoolStorage.LONG), tradeSize - withdrawSize, "pool long 1");
         assertEq(IERC20(poolToken).balanceOf(users.lp), totalPremium, "poolToken lp 1");
+        vm.stopPrank();
+    }
 
-        UD60x18 annihilateSize = ud(100 ether);
+    function test_annihilate_Success() public {
+        uint256 totalPremium = init();
+        address poolToken = getPoolToken();
+
+        vm.prank(users.lp);
         pool.annihilate(annihilateSize);
 
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeSize - annihilateSize, "lp short 2");
@@ -55,5 +62,32 @@ abstract contract PoolAnnihilateTest is DeployTest {
             totalPremium + scaleDecimals(contractsToCollateral(annihilateSize)),
             "poolToken lp 2"
         );
+    }
+
+    function test_annihilateFor_Success() public {
+        uint256 totalPremium = init();
+        address poolToken = getPoolToken();
+
+        vm.prank(users.lp);
+        pool.setApprovalForAll(users.agent, true);
+
+        vm.prank(users.agent);
+        pool.annihilateFor(users.lp, annihilateSize);
+
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeSize - annihilateSize, "lp short 2");
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), withdrawSize - annihilateSize, "lp long 2");
+        assertEq(
+            IERC20(poolToken).balanceOf(users.lp),
+            totalPremium + scaleDecimals(contractsToCollateral(annihilateSize)),
+            "poolToken lp 2"
+        );
+    }
+
+    function test_annihilateFor_RevertIf_AgentNotApproved() public {
+        init();
+
+        vm.prank(users.agent);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.agent));
+        pool.annihilateFor(users.lp, annihilateSize);
     }
 }

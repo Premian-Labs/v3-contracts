@@ -289,6 +289,7 @@ contract DeployTest is Test, Assertions {
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
+        poolCoreSelectors.push(poolCoreImpl.annihilateFor.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.exerciseFor.selector);

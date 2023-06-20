@@ -183,6 +183,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
+    function annihilateFor(address account, UD60x18 size) external nonReentrant {
+        _annihilate(account, size);
+    }
+
+    /// @inheritdoc IPoolCore
     function exercise() external nonReentrant returns (uint256 exerciseValue) {
         (exerciseValue, ) = _exercise(msg.sender, ZERO);
     }
