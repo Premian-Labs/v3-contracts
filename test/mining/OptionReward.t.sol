@@ -15,6 +15,7 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {IOptionReward} from "contracts/mining/OptionReward.sol";
+import {IOptionRewardFactory} from "contracts/mining/IOptionRewardFactory.sol";
 import {OptionRewardMock} from "contracts/test/mining/OptionRewardMock.sol";
 import {OptionRewardStorage} from "contracts/mining/OptionRewardStorage.sol";
 import {OptionRewardFactory} from "contracts/mining/OptionRewardFactory.sol";
@@ -100,20 +101,24 @@ contract OptionRewardTest is Assertions, Test {
         data = DataInternal(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         size = 1000000e18;
 
-        optionReward = OptionRewardMock(
-            optionRewardFactory.deployOptionReward(
-                base,
-                quote,
-                users.underwriter,
-                address(priceRepository),
-                address(paymentSplitter),
-                data.discount,
-                data.penalty,
-                data.expiryDuration,
-                data.exerciseDuration,
-                data.lockupDuration
-            )
+        IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs(
+            base,
+            quote,
+            users.underwriter,
+            address(priceRepository),
+            address(paymentSplitter),
+            data.discount,
+            data.penalty,
+            data.expiryDuration,
+            data.exerciseDuration,
+            data.lockupDuration
         );
+
+        optionReward = OptionRewardMock(optionRewardFactory.deployProxy(args));
+
+        assertTrue(optionRewardFactory.isProxyDeployed(address(optionReward)));
+        (address _optionReward, ) = optionRewardFactory.getProxyAddress(args);
+        assertEq(address(optionReward), _optionReward);
     }
 
     function getMaturity(uint256 timestamp, uint256 expiryDuration) internal pure returns (uint256 maturity) {
