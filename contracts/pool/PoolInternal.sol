@@ -978,7 +978,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         This function can be called post or prior to expiration.
     ///         ===========================================================
     function _annihilate(address owner, UD60x18 size) internal {
-        if (msg.sender != owner && ERC1155BaseStorage.layout().operatorApprovals[owner][msg.sender] == false)
+        if (msg.sender != owner && IUserSettings(SETTINGS).isAuthorizedAnnihilate(owner, msg.sender) == false)
             revert Pool__OperatorNotAuthorized(msg.sender);
 
         _revertIfZeroSize(size);

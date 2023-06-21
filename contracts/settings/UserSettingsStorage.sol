@@ -10,6 +10,8 @@ library UserSettingsStorage {
     struct Layout {
         mapping(address user => EnumerableSet.AddressSet agents) authorizedAgents;
         mapping(address user => uint256 cost) authorizedCost;
+        // Operators allowed to call `annihilateFor` on behalf of user
+        mapping(address user => EnumerableSet.AddressSet operators) authorizedAnnihilate;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -69,7 +69,7 @@ abstract contract PoolAnnihilateTest is DeployTest {
         address poolToken = getPoolToken();
 
         vm.prank(users.lp);
-        pool.setApprovalForAll(users.agent, true);
+        userSettings.setAuthorizedAnnihilate(users.agent, true);
 
         vm.prank(users.agent);
         pool.annihilateFor(users.lp, annihilateSize);

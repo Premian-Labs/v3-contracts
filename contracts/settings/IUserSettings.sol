@@ -32,4 +32,19 @@ interface IUserSettings is IMulticall {
     ///         `exerciseFor`, `settleFor`, and `settlePositionFor`
     /// @param amount The users authorized cost in the ERC20 Native token (WETH, WFTM, etc) (18 decimals)
     function setAuthorizedCost(uint256 amount) external;
+
+    /// @notice Sets whether the given operator is authorized or not to call `annihilateFor` on behalf of the user
+    /// @param operator The operator who is authorized or not
+    /// @param isAuthorized True if the operator is authorized, false otherwise
+    function setAuthorizedAnnihilate(address operator, bool isAuthorized) external;
+
+    /// @notice Returns the addresses of operators authorized to call `annihilateFor` on behalf of the user
+    /// @param user The user from which to get authorized operators
+    /// @return The addresses of authorized operators
+    function getAuthorizedAnnihilate(address user) external view returns (address[] memory);
+
+    /// @notice Returns true if the operator is authorized to call `annihilateFor` on behalf of the user
+    /// @param user The user for which to check if the operator is authorized
+    /// @param operator The operator to check if authorized
+    function isAuthorizedAnnihilate(address user, address operator) external view returns (bool);
 }
