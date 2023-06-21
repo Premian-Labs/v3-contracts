@@ -44,10 +44,13 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
 
         IERC20(l.base).safeTransferFromUD60x18(l.underwriter, address(this), l.toTokenDecimals(contractSize, true));
 
+        // Calculates the maturity starting from the 8AM UTC timestamp of the current day
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
-        UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
-        UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
 
+        UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
+        _revertIfPriceIsZero(price);
+
+        UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
 
@@ -71,8 +74,9 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
         _revertIfLockupNotExpired(lockupStart, lockupEnd);
 
         UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
-        UD60x18 strike = _strike.fromInt128ToUD60x18();
+        _revertIfPriceIsZero(settlementPrice);
 
+        UD60x18 strike = _strike.fromInt128ToUD60x18();
         if (settlementPrice < strike) revert OptionReward__OptionOutTheMoney(settlementPrice, strike);
 
         // If the option is in-the-money during the exercise period, the position is physically settled.
@@ -115,9 +119,11 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
         _revertIfOptionNotExpired(maturity);
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
-        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
-        UD60x18 strike = _strike.fromInt128ToUD60x18();
 
+        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
+        _revertIfPriceIsZero(settlementPrice);
+
+        UD60x18 strike = _strike.fromInt128ToUD60x18();
         if (settlementPrice >= strike) revert OptionReward__OptionInTheMoney(settlementPrice, strike);
 
         _burnUD60x18(l.underwriter, shortTokenId, contractSize);
@@ -134,6 +140,11 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
     /// @notice `_burn` wrapper, converts `UD60x18` to `uint256`
     function _burnUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _burn(account, tokenId, amount.unwrap());
+    }
+
+    /// @notice Revert if price is zero
+    function _revertIfPriceIsZero(UD60x18 price) internal view {
+        if (price == ZERO) revert OptionReward__PriceIsZero();
     }
 
     /// @notice Revert if option has not expired

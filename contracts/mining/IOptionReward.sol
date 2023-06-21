@@ -17,6 +17,7 @@ interface IOptionReward is IERC1155Base, IERC1155Enumerable {
     error OptionReward__OptionNotExpired(uint256 maturity);
     error OptionReward__OptionInTheMoney(UD60x18 settlementPrice, UD60x18 strike);
     error OptionReward__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
+    error OptionReward__PriceIsZero();
     error OptionReward__TokenTypeNotLong();
     error OptionReward__TokenTypeNotShort();
 

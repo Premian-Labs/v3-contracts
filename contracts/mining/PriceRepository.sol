@@ -29,12 +29,10 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
     /// @inheritdoc IPriceRepository
     function getPrice(address base, address quote) external view returns (UD60x18 price) {
         price = PriceRepositoryStorage.layout().latestPrice[base][quote];
-        if (price == ZERO) revert PriceRepository__NoPriceRecorded();
     }
 
     /// @inheritdoc IPriceRepository
     function getPriceAt(address base, address quote, uint256 timestamp) external view returns (UD60x18 price) {
         price = PriceRepositoryStorage.layout().prices[base][quote][timestamp];
-        if (price == ZERO) revert PriceRepository__NoPriceRecorded();
     }
 }

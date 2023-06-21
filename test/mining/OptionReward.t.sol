@@ -223,13 +223,24 @@ contract OptionRewardTest is Assertions, Test {
         optionReward.writeFrom(users.longReceiver, _size);
     }
 
+    function test_writeFrom_RevertIf_PriceIsZero() public {
+        UD60x18 _size = ud(size);
+        uint256 collateral = scaleDecimalsTo(base, _size);
+        deal(base, users.underwriter, collateral);
+        vm.startPrank(users.underwriter);
+        IERC20(base).approve(address(optionReward), collateral);
+        vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
+        optionReward.writeFrom(users.longReceiver, _size);
+        vm.stopPrank();
+    }
+
     function test_writeFrom_RevertIf_UnderwriterNotAuthorized() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionReward.OptionReward__UnderwriterNotAuthorized.selector, users.longReceiver)
         );
 
         vm.prank(users.longReceiver);
-        optionReward.writeFrom(users.longReceiver, ud(1000000e18));
+        optionReward.writeFrom(users.longReceiver, ud(size));
     }
 
     function _test_exercise_PhysicallySettled_Success() internal {
@@ -318,6 +329,14 @@ contract OptionRewardTest is Assertions, Test {
 
     function test_exercise_CashSettled_Success() public {
         _test_exercise_CashSettled_Success();
+    }
+
+    function test_exercise_RevertIf_PriceIsZero() public {
+        (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success();
+        vm.warp(maturity);
+        vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
+        vm.prank(users.longReceiver);
+        optionReward.exercise(longTokenId, ud(size));
     }
 
     function _test_exercise_RevertIf_TokenTypeNotLong() internal {
@@ -424,6 +443,14 @@ contract OptionRewardTest is Assertions, Test {
 
     function test_settle_Success() public {
         _test_settle_Success();
+    }
+
+    function test_settle_RevertIf_PriceIsZero() public {
+        (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success();
+        vm.warp(maturity);
+        vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
+        vm.prank(users.underwriter);
+        optionReward.settle(shortTokenId, ud(size));
     }
 
     function _test_settle_RevertIf_TokenTypeNotShort() internal {

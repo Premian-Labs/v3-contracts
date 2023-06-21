@@ -72,20 +72,10 @@ contract PriceRepositoryTest is Assertions, Test {
         assertEq(priceRepository.getPrice(address(1), address(2)), ONE);
     }
 
-    function test_getPrice_RevertIf_NoPriceRecorded() public {
-        vm.expectRevert(IPriceRepository.PriceRepository__NoPriceRecorded.selector);
-        priceRepository.getPrice(address(1), address(2));
-    }
-
     function test_getPriceAt_Success() public {
         uint256 timestamp = block.timestamp;
         vm.prank(users.keeper);
         priceRepository.setPriceAt(address(1), address(2), timestamp, ONE);
         assertEq(priceRepository.getPriceAt(address(1), address(2), timestamp), ONE);
-    }
-
-    function test_getPriceAt_RevertIf_NoPriceRecorded() public {
-        vm.expectRevert(IPriceRepository.PriceRepository__NoPriceRecorded.selector);
-        priceRepository.getPriceAt(address(1), address(2), block.timestamp);
     }
 }
