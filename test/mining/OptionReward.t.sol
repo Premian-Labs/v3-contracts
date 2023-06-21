@@ -41,6 +41,7 @@ contract OptionRewardTest is Assertions, Test {
     OptionRewardMock optionReward;
 
     UD60x18 fee;
+    UD60x18 _size;
     uint256 size;
 
     Users users;
@@ -100,6 +101,7 @@ contract OptionRewardTest is Assertions, Test {
 
         data = DataInternal(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         size = 1000000e18;
+        _size = ud(size);
 
         IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs(
             base,
@@ -121,21 +123,16 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(address(optionReward), _optionReward);
     }
 
-    function getMaturity(uint256 timestamp, uint256 expiryDuration) internal pure returns (uint256 maturity) {
+    function _getMaturity(uint256 timestamp, uint256 expiryDuration) internal pure returns (uint256 maturity) {
         maturity = timestamp - (timestamp % 24 hours) + 8 hours + expiryDuration;
     }
 
-    function setPriceAt(uint256 timestamp, UD60x18 price) internal {
+    function _setPriceAt(uint256 timestamp, UD60x18 price) internal {
         vm.prank(users.keeper);
         priceRepository.setPriceAt(base, quote, timestamp, price);
     }
 
-    function scaleDecimalsFrom(address token, uint256 amount) internal view returns (UD60x18) {
-        uint8 decimals = IERC20Metadata(token).decimals();
-        return ud(OptionMath.scaleDecimals(amount, decimals, 18));
-    }
-
-    function scaleDecimalsTo(address token, UD60x18 amount) internal view returns (uint256) {
+    function _toTokenDecimals(address token, UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = IERC20Metadata(token).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
@@ -144,11 +141,10 @@ contract OptionRewardTest is Assertions, Test {
         internal
         returns (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId)
     {
-        maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
-        setPriceAt(block.timestamp, data.spot);
+        maturity = uint64(_getMaturity(block.timestamp, data.expiryDuration));
+        _setPriceAt(block.timestamp, data.spot);
 
-        UD60x18 _size = ud(size);
-        collateral = scaleDecimalsTo(base, _size);
+        collateral = _toTokenDecimals(base, _size);
         deal(base, users.underwriter, collateral);
 
         vm.startPrank(users.underwriter);
@@ -182,15 +178,13 @@ contract OptionRewardTest is Assertions, Test {
     );
 
     function test_writeFrom_CorrectMaturity() public {
-        setPriceAt(block.timestamp, ONE);
+        _setPriceAt(block.timestamp, ONE);
 
-        uint256 collateral = scaleDecimalsTo(base, ud(100e18));
+        uint256 collateral = _toTokenDecimals(base, ud(100e18));
         deal(base, users.underwriter, collateral);
 
         vm.prank(users.underwriter);
         IERC20(base).approve(address(optionReward), collateral);
-
-        UD60x18 _size = ONE;
 
         // block.timestamp = Apr-22-2023 09:30:23 AM +UTC
         uint64 expiryDuration = uint64(30 days);
@@ -198,34 +192,33 @@ contract OptionRewardTest is Assertions, Test {
         uint64 expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
 
         vm.expectEmit();
-        emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
+        emit WriteFrom(users.underwriter, users.longReceiver, ONE, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        optionReward.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, ONE);
 
         vm.warp(1682207999); // Apr-22-2023 23:59:59 PM +UTC
 
         expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
         vm.expectEmit();
-        emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
+        emit WriteFrom(users.underwriter, users.longReceiver, ONE, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        optionReward.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, ONE);
 
         vm.warp(1682208000); // Apr-23-2023 00:00:00 PM +UTC
 
         timestamp8AMUTC = 1682236800; // Apr-23-2023 08:00:00 AM +UTC
         expectedMaturity = timestamp8AMUTC + expiryDuration; // May-23-2023 08:00:00 AM +UTC
         vm.expectEmit();
-        emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
+        emit WriteFrom(users.underwriter, users.longReceiver, ONE, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        optionReward.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, ONE);
     }
 
     function test_writeFrom_RevertIf_PriceIsZero() public {
-        UD60x18 _size = ud(size);
-        uint256 collateral = scaleDecimalsTo(base, _size);
+        uint256 collateral = _toTokenDecimals(base, _size);
         deal(base, users.underwriter, collateral);
         vm.startPrank(users.underwriter);
         IERC20(base).approve(address(optionReward), collateral);
@@ -240,21 +233,20 @@ contract OptionRewardTest is Assertions, Test {
         );
 
         vm.prank(users.longReceiver);
-        optionReward.writeFrom(users.longReceiver, ud(size));
+        optionReward.writeFrom(users.longReceiver, _size);
     }
 
-    function _test_exercise_PhysicallySettled_Success() internal {
+    function test_exercise_PhysicallySettled_Success() public {
         (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success();
 
         vm.warp(maturity);
-        setPriceAt(maturity, data.settlementITM);
+        _setPriceAt(maturity, data.settlementITM);
 
         UD60x18 _strike = data.discount * data.spot;
-        UD60x18 _size = ud(size);
 
         vm.startPrank(users.longReceiver);
         UD60x18 _exerciseCost = _size * _strike;
-        uint256 exerciseCost = scaleDecimalsTo(quote, _exerciseCost);
+        uint256 exerciseCost = _toTokenDecimals(quote, _exerciseCost);
         deal(quote, users.longReceiver, exerciseCost);
 
         assertEq(IERC20(quote).balanceOf(users.longReceiver), exerciseCost);
@@ -272,7 +264,7 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
 
         {
-            uint256 feeAmount = scaleDecimalsTo(quote, fee * _exerciseCost);
+            uint256 feeAmount = _toTokenDecimals(quote, fee * _exerciseCost);
             assertEq(IERC20(quote).balanceOf(users.treasury), feeAmount);
             assertEq(IERC20(quote).balanceOf(vxPremia), exerciseCost - feeAmount);
             assertEq(IERC20(quote).balanceOf(address(paymentSplitter)), 0);
@@ -283,15 +275,11 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(IERC20(base).balanceOf(address(optionReward)), 0);
     }
 
-    function test_exercise_PhysicallySettled_Success() public {
-        _test_exercise_PhysicallySettled_Success();
-    }
-
-    function _test_exercise_CashSettled_Success() internal {
+    function test_exercise_CashSettled_Success() public {
         (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success();
 
         vm.warp(maturity);
-        setPriceAt(maturity, data.settlementITM);
+        _setPriceAt(maturity, data.settlementITM);
 
         {
             uint256 lockupStart = maturity + data.exerciseDuration;
@@ -302,13 +290,13 @@ contract OptionRewardTest is Assertions, Test {
         uint256 exerciseValue;
         {
             UD60x18 intrinsicValue = data.settlementITM - data.discount * data.spot;
-            UD60x18 _exerciseValue = (ud(size) * intrinsicValue) / data.settlementITM;
+            UD60x18 _exerciseValue = (_size * intrinsicValue) / data.settlementITM;
             _exerciseValue = _exerciseValue * (ONE - data.penalty);
-            exerciseValue = scaleDecimalsTo(base, _exerciseValue);
+            exerciseValue = _toTokenDecimals(base, _exerciseValue);
         }
 
         vm.prank(users.longReceiver);
-        optionReward.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, _size);
 
         assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), 0);
         assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
@@ -327,20 +315,16 @@ contract OptionRewardTest is Assertions, Test {
         assertApproxEqAbs(IERC20(base).balanceOf(address(optionReward)), 0, 1); // handles rounding error of 1 wei
     }
 
-    function test_exercise_CashSettled_Success() public {
-        _test_exercise_CashSettled_Success();
-    }
-
     function test_exercise_RevertIf_PriceIsZero() public {
         (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success();
         vm.warp(maturity);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         vm.prank(users.longReceiver);
-        optionReward.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, _size);
     }
 
-    function _test_exercise_RevertIf_TokenTypeNotLong() internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+    function test_exercise_RevertIf_TokenTypeNotLong() public {
+        uint64 maturity = uint64(_getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
         uint256 shortTokenId = optionReward.formatTokenId(IOptionReward.TokenType.SHORT, maturity, strike);
@@ -350,12 +334,8 @@ contract OptionRewardTest is Assertions, Test {
         optionReward.exercise(shortTokenId, ud(1000000e18));
     }
 
-    function test_exercise_RevertIf_TokenTypeNotLong() public {
-        _test_exercise_RevertIf_TokenTypeNotLong();
-    }
-
-    function _test_exercise_RevertIf_OptionNotExpired() internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+    function test_exercise_RevertIf_OptionNotExpired() public {
+        uint64 maturity = uint64(_getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
         uint256 longTokenId = optionReward.formatTokenId(IOptionReward.TokenType.LONG, maturity, strike);
@@ -366,35 +346,27 @@ contract OptionRewardTest is Assertions, Test {
         optionReward.exercise(longTokenId, ud(1000000e18));
     }
 
-    function test_exercise_RevertIf_OptionNotExpired() public {
-        _test_exercise_RevertIf_OptionNotExpired();
-    }
-
-    function _test_exercise_RevertIf_OptionOutTheMoney() internal {
+    function test_exercise_RevertIf_OptionOutTheMoney() public {
         (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success();
 
         UD60x18 _strike = data.discount * data.spot;
         UD60x18 settlementOTM = _strike.sub(ud(1));
 
         vm.warp(maturity);
-        setPriceAt(maturity, settlementOTM);
+        _setPriceAt(maturity, settlementOTM);
 
         vm.expectRevert(
             abi.encodeWithSelector(IOptionReward.OptionReward__OptionOutTheMoney.selector, settlementOTM, _strike)
         );
 
         vm.prank(users.longReceiver);
-        optionReward.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, _size);
     }
 
-    function test_exercise_RevertIf_OptionOutTheMoney() public {
-        _test_exercise_RevertIf_OptionOutTheMoney();
-    }
-
-    function _test_exercise_RevertIf_LockupNotExpired() internal {
+    function test_exercise_RevertIf_LockupNotExpired() public {
         (uint64 maturity, , uint256 longTokenId, ) = _test_writeFrom_Success();
         vm.warp(maturity);
-        setPriceAt(maturity, data.settlementITM);
+        _setPriceAt(maturity, data.settlementITM);
 
         uint256 lockupStart = maturity + data.exerciseDuration;
         uint256 lockupEnd = lockupStart + data.lockupDuration;
@@ -406,24 +378,20 @@ contract OptionRewardTest is Assertions, Test {
         );
 
         vm.prank(users.longReceiver);
-        optionReward.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, _size);
     }
 
-    function test_exercise_RevertIf_LockupNotExpired() public {
-        _test_exercise_RevertIf_LockupNotExpired();
-    }
-
-    function _test_settle_Success() internal {
+    function test_settle_Success() public {
         (uint64 maturity, uint256 collateral, uint256 longTokenId, uint256 shortTokenId) = _test_writeFrom_Success();
 
         UD60x18 _strike = data.discount * data.spot;
         UD60x18 settlementOTM = _strike.sub(ud(1));
 
         vm.warp(maturity);
-        setPriceAt(maturity, settlementOTM);
+        _setPriceAt(maturity, settlementOTM);
 
         vm.prank(users.underwriter);
-        optionReward.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, _size);
 
         assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), size);
         assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
@@ -441,20 +409,16 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(IERC20(base).balanceOf(address(optionReward)), 0);
     }
 
-    function test_settle_Success() public {
-        _test_settle_Success();
-    }
-
     function test_settle_RevertIf_PriceIsZero() public {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success();
         vm.warp(maturity);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         vm.prank(users.underwriter);
-        optionReward.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, _size);
     }
 
-    function _test_settle_RevertIf_TokenTypeNotShort() internal {
-        uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
+    function test_settle_RevertIf_TokenTypeNotShort() public {
+        uint64 maturity = uint64(_getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
         uint256 longTokenId = optionReward.formatTokenId(IOptionReward.TokenType.LONG, maturity, strike);
@@ -465,25 +429,17 @@ contract OptionRewardTest is Assertions, Test {
         optionReward.settle(longTokenId, ud(1000000e18));
     }
 
-    function test_settle_RevertIf_TokenTypeNotShort() public {
-        _test_settle_RevertIf_TokenTypeNotShort();
-    }
-
-    function _test_settle_RevertIf_OptionNotExpired() internal {
+    function test_settle_RevertIf_OptionNotExpired() public {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success();
         vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__OptionNotExpired.selector, maturity));
         vm.prank(users.underwriter);
-        optionReward.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, _size);
     }
 
-    function test_settle_RevertIf_OptionNotExpired() public {
-        _test_settle_RevertIf_OptionNotExpired();
-    }
-
-    function _test_settle_RevertIf_OptionInTheMoney() internal {
+    function test_settle_RevertIf_OptionInTheMoney() public {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success();
         vm.warp(maturity);
-        setPriceAt(maturity, data.settlementITM);
+        _setPriceAt(maturity, data.settlementITM);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -494,10 +450,6 @@ contract OptionRewardTest is Assertions, Test {
         );
 
         vm.prank(users.underwriter);
-        optionReward.settle(shortTokenId, ud(size));
-    }
-
-    function test_settle_RevertIf_OptionInTheMoney() public {
-        _test_settle_RevertIf_OptionInTheMoney();
+        optionReward.settle(shortTokenId, _size);
     }
 }
