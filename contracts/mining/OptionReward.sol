@@ -143,7 +143,7 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
     }
 
     /// @notice Revert if price is zero
-    function _revertIfPriceIsZero(UD60x18 price) internal view {
+    function _revertIfPriceIsZero(UD60x18 price) internal pure {
         if (price == ZERO) revert OptionReward__PriceIsZero();
     }
 

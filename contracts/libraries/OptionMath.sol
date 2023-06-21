@@ -223,7 +223,7 @@ library OptionMath {
     /// @notice Rounds `price` using the calculated strike interval
     /// @param price The price to round (18 decimals)
     /// @return The rounded strike price (18 decimals)
-    function roundToStrikeInterval(UD60x18 price) internal view returns (UD60x18) {
+    function roundToStrikeInterval(UD60x18 price) internal pure returns (UD60x18) {
         uint256 strike = price.div(ONE).unwrap();
         uint256 interval = calculateStrikeInterval(price).div(ONE).unwrap();
         uint256 lower = interval * (strike / interval);
