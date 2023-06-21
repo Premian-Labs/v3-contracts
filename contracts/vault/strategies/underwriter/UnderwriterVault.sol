@@ -878,9 +878,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     function _claimFees(UnderwriterVaultStorage.Layout storage l) internal {
         uint256 claimedFees = l.convertAssetFromUD60x18(l.protocolFees);
 
+        if (claimedFees == 0) return;
+
         l.protocolFees = ZERO;
         IERC20(_asset()).safeTransfer(FEE_RECEIVER, claimedFees);
-
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 }
