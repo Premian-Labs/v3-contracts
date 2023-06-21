@@ -7,8 +7,6 @@ import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorag
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
-import {ONE} from "../libraries/Constants.sol";
-
 import {IProxyUpgradeableOwnable} from "../proxy/IProxyUpgradeableOwnable.sol";
 import {MiningPoolStorage} from "./MiningPoolStorage.sol";
 
@@ -24,7 +22,7 @@ contract MiningPoolProxy is Proxy {
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
-        uint256 expiryDuration,
+        uint256 expiryDuration, // TODO;
         uint256 exerciseDuration,
         uint256 lockupDuration
     ) {
@@ -32,14 +30,6 @@ contract MiningPoolProxy is Proxy {
         OwnableStorage.layout().owner = msg.sender;
 
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-
-        // TODO: custom error messages
-        if (base == address(0) || quote == address(0) || priceRepository == address(0) || paymentSplitter == address(0))
-            revert();
-        // TODO: custom error messages
-        if (discount > ONE || penalty > ONE) revert();
-        // TODO: custom error messages
-        if (expiryDuration == 0 || exerciseDuration == 0 || lockupDuration == 0) revert();
 
         l.baseDecimals = IERC20Metadata(base).decimals();
         l.quoteDecimals = IERC20Metadata(quote).decimals();

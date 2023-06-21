@@ -40,9 +40,18 @@ interface IMiningPool is IERC1155Base, IERC1155Enumerable {
         uint64 maturity
     );
 
+    /// @notice Underwrite an option by depositing collateral - only `underwriter` may call this function
+    /// @param longReceiver address of long token receiver
+    /// @param contractSize number of long tokens to mint (18 decimals)
     function writeFrom(address longReceiver, UD60x18 contractSize) external;
 
+    /// @notice Exercises the long options held by the caller.
+    /// @param longTokenId The ID of the long token to exercise
+    /// @param contractSize number of long tokens to exercise (18 decimals)
     function exercise(uint256 longTokenId, UD60x18 contractSize) external;
 
+    /// @notice Settles the short options held by the caller.
+    /// @param shortTokenId The ID of the short token to settle
+    /// @param contractSize number of short tokens to settle (18 decimals)
     function settle(uint256 shortTokenId, UD60x18 contractSize) external;
 }

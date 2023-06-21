@@ -29,7 +29,7 @@ library MiningPoolStorage {
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;
         // percentage of the intrinsic value that is reduced after lockup period (ie 80% penalty (0.80e18), means the
-        // long holder receives 20% of the options intrinsic value, the remaining 80% is refunded).
+        // long holder receives 20% of the options intrinsic value, the remaining collateral is refunded).
         UD60x18 penalty;
         // amount of time the option lasts (in seconds)
         uint256 expiryDuration;
@@ -81,19 +81,23 @@ library MiningPoolStorage {
         return ud(OptionMath.scaleDecimals(value.unwrap(), decimals, 18));
     }
 
+    /// @notice Converts `UD60x18` to `int128`
     function fromUD60x18ToInt128(UD60x18 u) internal pure returns (int128) {
         return u.unwrap().toInt256().toInt128();
     }
 
+    /// @notice Converts `int128` to `UD60x18`
     function fromInt128ToUD60x18(int128 i) internal pure returns (UD60x18) {
         return ud(int256(i).toUint256());
     }
 
-    function safeTransferFromUD60x18(IERC20 token, address from, address to, UD60x18 amount) internal {
-        token.safeTransferFrom(from, to, amount.unwrap());
-    }
-
+    /// @notice `safeTransfer` wrapper, converts `amount` to `uint256`
     function safeTransferUD60x18(IERC20 token, address to, UD60x18 amount) internal {
         token.safeTransfer(to, amount.unwrap());
+    }
+
+    /// @notice `safeTransferFrom` wrapper, converts `amount` to `uint256`
+    function safeTransferFromUD60x18(IERC20 token, address from, address to, UD60x18 amount) internal {
+        token.safeTransferFrom(from, to, amount.unwrap());
     }
 }

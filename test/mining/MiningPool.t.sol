@@ -188,9 +188,9 @@ contract MiningPoolTest is Assertions, Test {
         UD60x18 _size = ONE;
 
         // block.timestamp = Apr-22-2023 09:30:23 AM +UTC
-        uint64 timeToMaturity = uint64(30 days);
+        uint64 expiryDuration = uint64(30 days);
         uint64 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
-        uint64 expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-22-2023 08:00:00 AM +UTC
+        uint64 expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
 
         vm.expectEmit();
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
@@ -200,7 +200,7 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.warp(1682207999); // Apr-22-2023 23:59:59 PM +UTC
 
-        expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-22-2023 08:00:00 AM +UTC
+        expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
         vm.expectEmit();
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
 
@@ -210,7 +210,7 @@ contract MiningPoolTest is Assertions, Test {
         vm.warp(1682208000); // Apr-23-2023 00:00:00 PM +UTC
 
         timestamp8AMUTC = 1682236800; // Apr-23-2023 08:00:00 AM +UTC
-        expectedMaturity = timestamp8AMUTC + timeToMaturity; // May-23-2023 08:00:00 AM +UTC
+        expectedMaturity = timestamp8AMUTC + expiryDuration; // May-23-2023 08:00:00 AM +UTC
         vm.expectEmit();
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
 

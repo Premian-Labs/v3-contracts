@@ -37,7 +37,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         TREASURY_FEE = treasuryFee;
     }
 
-    // caller must approve token
+    /// @inheritdoc IMiningPool
     function writeFrom(address longReceiver, UD60x18 contractSize) external nonReentrant {
         MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
         if (msg.sender != l.underwriter) revert MiningPool__UnderwriterNotAuthorized(msg.sender);
@@ -57,6 +57,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit WriteFrom(l.underwriter, longReceiver, contractSize, strike, maturity);
     }
 
+    /// @inheritdoc IMiningPool
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = longTokenId.parseTokenId();
         if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong();
@@ -74,10 +75,12 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
         if (settlementPrice < strike) revert MiningPool__OptionOutTheMoney(settlementPrice, strike);
 
+        // If the option is in-the-money during the exercise period, the position is physically settled.
         UD60x18 exerciseValue = contractSize;
         UD60x18 exerciseCost = l.toTokenDecimals(strike * contractSize, false);
 
         if (block.timestamp >= lockupEnd) {
+            // If the option is exercised after the lockup period, the option is cash settled with a penalty.
             UD60x18 intrinsicValue = settlementPrice - strike;
 
             exerciseValue = (intrinsicValue * contractSize) / settlementPrice;
@@ -104,6 +107,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
     }
 
+    /// @inheritdoc IMiningPool
     function settle(uint256 shortTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = shortTokenId.parseTokenId();
         if (tokenType != TokenType.SHORT) revert MiningPool__TokenTypeNotShort();
@@ -122,18 +126,22 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit Settle(l.underwriter, contractSize, settlementPrice, strike, maturity);
     }
 
+    /// @notice `_mint` wrapper, converts `UD60x18` to `uint256`
     function _mintUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _mint(account, tokenId, amount.unwrap(), "");
     }
 
+    /// @notice `_burn` wrapper, converts `UD60x18` to `uint256`
     function _burnUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _burn(account, tokenId, amount.unwrap());
     }
 
+    /// @notice Revert if option has not expired
     function _revertIfOptionNotExpired(uint64 maturity) internal view {
         if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
     }
 
+    /// @notice Revert if lockup period has not expired
     function _revertIfLockupNotExpired(uint256 lockupStart, uint256 lockupEnd) internal view {
         if (block.timestamp >= lockupStart && block.timestamp < lockupEnd)
             revert MiningPool__LockupNotExpired(lockupStart, lockupEnd);
