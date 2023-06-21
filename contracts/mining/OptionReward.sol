@@ -46,7 +46,7 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
 
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
         UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
-        UD60x18 strike = OptionMath.round(price * l.discount);
+        UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);

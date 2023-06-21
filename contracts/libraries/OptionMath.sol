@@ -220,15 +220,15 @@ library OptionMath {
         return spot < ONE_THOUSAND ? y : y.ceil();
     }
 
-    /// @notice Rounds `price` to the second highest decimal value
+    /// @notice Rounds `price` using the calculated strike interval
     /// @param price The price to round (18 decimals)
-    /// @return The rounded price (18 decimals)
-    function round(UD60x18 price) internal pure returns (UD60x18) {
-        SD59x18 v = price.intoSD59x18().log10().sub(iONE).floor();
-        SD59x18 r = price.intoSD59x18().div(iTEN.pow(v));
-        r = r.frac() < iONE_HALF ? r.floor() : r.ceil();
-        UD60x18 s = r.mul(iTEN.pow(v)).intoUD60x18();
-        return price < ONE_THOUSAND ? s : s.ceil();
+    /// @return The rounded strike price (18 decimals)
+    function roundToStrikeInterval(UD60x18 price) internal view returns (UD60x18) {
+        uint256 strike = price.div(ONE).unwrap();
+        uint256 interval = calculateStrikeInterval(price).div(ONE).unwrap();
+        uint256 lower = interval * (strike / interval);
+        uint256 upper = interval * ((strike / interval) + 1);
+        return (strike - lower < upper - strike) ? ud(lower) : ud(upper);
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
