@@ -10,6 +10,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
@@ -36,6 +37,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using EnumerableSet for EnumerableSet.UintSet;
     using PoolStorage for IERC20;
     using PoolStorage for IERC20Router;
     using PoolStorage for PoolStorage.Layout;
@@ -2054,5 +2056,34 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Revert if `cost` exceeds `payout`
     function _revertIfCostExceedsPayout(UD60x18 cost, UD60x18 payout) internal pure {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        // We do not need to revert here if positions are transferred like in PoolBase, as ERC1155 transfers functions
+        // are not external in this diamond facet
+        for (uint256 i; i < ids.length; i++) {
+            uint256 id = ids[i];
+
+            if (amounts[i] == 0) continue;
+
+            if (from == address(0)) {
+                l.tokenIds.add(id);
+            }
+
+            if (to == address(0) && _totalSupply(id) == 0) {
+                l.tokenIds.remove(id);
+            }
+        }
     }
 }

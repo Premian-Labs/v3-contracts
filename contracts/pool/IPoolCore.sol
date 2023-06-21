@@ -147,4 +147,8 @@ interface IPoolCore is IPoolInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper);
+
+    /// @notice Returns the list of existing tokenIds with non zero balance
+    /// @return tokenIds The list of existing tokenIds
+    function getTokenIds() external view returns (uint256[] memory);
 }
