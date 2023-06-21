@@ -783,7 +783,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         // Annihilate shorts and longs for user
         UD60x18 shorts = ud(IERC1155(quote.pool).balanceOf(msg.sender, 0));
         UD60x18 longs = ud(IERC1155(quote.pool).balanceOf(msg.sender, 1));
-        IPool(quote.pool).annihilateFor(msg.sender, PRBMathExtra.min(shorts, longs));
+        UD60x18 size = PRBMathExtra.min(shorts, longs);
+        if (size > ZERO) {
+            IPool(quote.pool).annihilateFor(msg.sender, size);
+        }
 
         // Emit trade event
         emit Trade(msg.sender, quote.pool, size, true, totalPremium, quote.mintingFee, ZERO, quote.spread);
