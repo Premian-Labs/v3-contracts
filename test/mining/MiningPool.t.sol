@@ -14,10 +14,10 @@ import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
-import {IMiningPool} from "contracts/mining/MiningPool.sol";
-import {MiningPoolMock} from "contracts/test/mining/MiningPoolMock.sol";
-import {MiningPoolStorage} from "contracts/mining/MiningPoolStorage.sol";
-import {MiningPoolFactory} from "contracts/mining/MiningPoolFactory.sol";
+import {IOptionReward} from "contracts/mining/OptionReward.sol";
+import {OptionRewardMock} from "contracts/test/mining/OptionRewardMock.sol";
+import {OptionRewardStorage} from "contracts/mining/OptionRewardStorage.sol";
+import {OptionRewardFactory} from "contracts/mining/OptionRewardFactory.sol";
 
 import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
 import {PriceRepository} from "contracts/mining/PriceRepository.sol";
@@ -31,13 +31,13 @@ import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
 
 import {Assertions} from "../Assertions.sol";
 
-contract MiningPoolTest is Assertions, Test {
+contract OptionRewardTest is Assertions, Test {
     using SafeCast for int256;
     using SafeCast for uint256;
 
     PaymentSplitter paymentSplitter;
     PriceRepository priceRepository;
-    MiningPoolMock miningPool;
+    OptionRewardMock optionReward;
 
     UD60x18 fee;
     uint256 size;
@@ -93,15 +93,15 @@ contract MiningPoolTest is Assertions, Test {
         PriceRepositoryProxy proxy = new PriceRepositoryProxy(address(implementation), users.keeper);
         priceRepository = PriceRepository(address(proxy));
 
-        MiningPoolMock miningPoolImplementation = new MiningPoolMock(users.treasury, fee);
-        ProxyUpgradeableOwnable miningPoolProxy = new ProxyUpgradeableOwnable(address(miningPoolImplementation));
-        MiningPoolFactory miningPoolFactory = new MiningPoolFactory(address(miningPoolProxy));
+        OptionRewardMock optionRewardImplementation = new OptionRewardMock(users.treasury, fee);
+        ProxyUpgradeableOwnable optionRewardProxy = new ProxyUpgradeableOwnable(address(optionRewardImplementation));
+        OptionRewardFactory optionRewardFactory = new OptionRewardFactory(address(optionRewardProxy));
 
         data = DataInternal(ud(0.55e18), ud(1e18), ud(2e18), ud(0.80e18), 30 days, 30 days, 365 days);
         size = 1000000e18;
 
-        miningPool = MiningPoolMock(
-            miningPoolFactory.deployMiningPool(
+        optionReward = OptionRewardMock(
+            optionRewardFactory.deployOptionReward(
                 base,
                 quote,
                 users.underwriter,
@@ -147,21 +147,21 @@ contract MiningPoolTest is Assertions, Test {
         deal(base, users.underwriter, collateral);
 
         vm.startPrank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
-        miningPool.writeFrom(users.longReceiver, _size);
+        IERC20(base).approve(address(optionReward), collateral);
+        optionReward.writeFrom(users.longReceiver, _size);
         vm.stopPrank();
 
         UD60x18 strike = data.discount * data.spot;
-        longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
-        shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
+        longTokenId = optionReward.formatTokenId(IOptionReward.TokenType.LONG, maturity, strike);
+        shortTokenId = optionReward.formatTokenId(IOptionReward.TokenType.SHORT, maturity, strike);
 
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), size);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), size);
+        assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
+        assertEq(optionReward.balanceOf(users.underwriter, shortTokenId), size);
+        assertEq(optionReward.balanceOf(users.underwriter, longTokenId), 0);
 
         assertEq(IERC20(base).balanceOf(users.underwriter), 0);
-        assertEq(IERC20(base).balanceOf(address(miningPool)), collateral);
+        assertEq(IERC20(base).balanceOf(address(optionReward)), collateral);
     }
 
     function test_writeFrom_Success() public {
@@ -183,7 +183,7 @@ contract MiningPoolTest is Assertions, Test {
         deal(base, users.underwriter, collateral);
 
         vm.prank(users.underwriter);
-        IERC20(base).approve(address(miningPool), collateral);
+        IERC20(base).approve(address(optionReward), collateral);
 
         UD60x18 _size = ONE;
 
@@ -196,7 +196,7 @@ contract MiningPoolTest is Assertions, Test {
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        miningPool.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, _size);
 
         vm.warp(1682207999); // Apr-22-2023 23:59:59 PM +UTC
 
@@ -205,7 +205,7 @@ contract MiningPoolTest is Assertions, Test {
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        miningPool.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, _size);
 
         vm.warp(1682208000); // Apr-23-2023 00:00:00 PM +UTC
 
@@ -215,16 +215,16 @@ contract MiningPoolTest is Assertions, Test {
         emit WriteFrom(users.underwriter, users.longReceiver, _size, ud(0.55e18), expectedMaturity);
 
         vm.prank(users.underwriter);
-        miningPool.writeFrom(users.longReceiver, _size);
+        optionReward.writeFrom(users.longReceiver, _size);
     }
 
     function test_writeFrom_RevertIf_UnderwriterNotAuthorized() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IMiningPool.MiningPool__UnderwriterNotAuthorized.selector, users.longReceiver)
+            abi.encodeWithSelector(IOptionReward.OptionReward__UnderwriterNotAuthorized.selector, users.longReceiver)
         );
 
         vm.prank(users.longReceiver);
-        miningPool.writeFrom(users.longReceiver, ud(1000000e18));
+        optionReward.writeFrom(users.longReceiver, ud(1000000e18));
     }
 
     function _test_exercise_PhysicallySettled_Success() internal {
@@ -243,14 +243,14 @@ contract MiningPoolTest is Assertions, Test {
 
         assertEq(IERC20(quote).balanceOf(users.longReceiver), exerciseCost);
 
-        IERC20(quote).approve(address(miningPool), exerciseCost);
-        miningPool.exercise(longTokenId, _size);
+        IERC20(quote).approve(address(optionReward), exerciseCost);
+        optionReward.exercise(longTokenId, _size);
         vm.stopPrank();
 
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), 0);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
+        assertEq(optionReward.balanceOf(users.underwriter, shortTokenId), size);
+        assertEq(optionReward.balanceOf(users.underwriter, longTokenId), 0);
 
         assertEq(IERC20(quote).balanceOf(users.longReceiver), 0);
         assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
@@ -264,7 +264,7 @@ contract MiningPoolTest is Assertions, Test {
 
         assertEq(IERC20(base).balanceOf(users.longReceiver), collateral);
         assertEq(IERC20(base).balanceOf(users.underwriter), 0);
-        assertEq(IERC20(base).balanceOf(address(miningPool)), 0);
+        assertEq(IERC20(base).balanceOf(address(optionReward)), 0);
     }
 
     function test_exercise_PhysicallySettled_Success() public {
@@ -292,12 +292,12 @@ contract MiningPoolTest is Assertions, Test {
         }
 
         vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, ud(size));
 
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), 0);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), size);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
+        assertEq(optionReward.balanceOf(users.underwriter, shortTokenId), size);
+        assertEq(optionReward.balanceOf(users.underwriter, longTokenId), 0);
 
         assertEq(IERC20(quote).balanceOf(users.longReceiver), 0);
         assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
@@ -308,7 +308,7 @@ contract MiningPoolTest is Assertions, Test {
 
         assertEq(IERC20(base).balanceOf(users.longReceiver), exerciseValue);
         assertApproxEqAbs(IERC20(base).balanceOf(users.underwriter), collateral - exerciseValue, 1); // handles rounding error of 1 wei
-        assertApproxEqAbs(IERC20(base).balanceOf(address(miningPool)), 0, 1); // handles rounding error of 1 wei
+        assertApproxEqAbs(IERC20(base).balanceOf(address(optionReward)), 0, 1); // handles rounding error of 1 wei
     }
 
     function test_exercise_CashSettled_Success() public {
@@ -319,11 +319,11 @@ contract MiningPoolTest is Assertions, Test {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
-        uint256 shortTokenId = miningPool.formatTokenId(IMiningPool.TokenType.SHORT, maturity, strike);
+        uint256 shortTokenId = optionReward.formatTokenId(IOptionReward.TokenType.SHORT, maturity, strike);
 
-        vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotLong.selector);
+        vm.expectRevert(IOptionReward.OptionReward__TokenTypeNotLong.selector);
         vm.prank(users.longReceiver);
-        miningPool.exercise(shortTokenId, ud(1000000e18));
+        optionReward.exercise(shortTokenId, ud(1000000e18));
     }
 
     function test_exercise_RevertIf_TokenTypeNotLong() public {
@@ -334,12 +334,12 @@ contract MiningPoolTest is Assertions, Test {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
+        uint256 longTokenId = optionReward.formatTokenId(IOptionReward.TokenType.LONG, maturity, strike);
 
-        vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
+        vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__OptionNotExpired.selector, maturity));
         vm.warp(maturity - 1);
         vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, ud(1000000e18));
+        optionReward.exercise(longTokenId, ud(1000000e18));
     }
 
     function test_exercise_RevertIf_OptionNotExpired() public {
@@ -356,11 +356,11 @@ contract MiningPoolTest is Assertions, Test {
         setPriceAt(maturity, settlementOTM);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IMiningPool.MiningPool__OptionOutTheMoney.selector, settlementOTM, _strike)
+            abi.encodeWithSelector(IOptionReward.OptionReward__OptionOutTheMoney.selector, settlementOTM, _strike)
         );
 
         vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, ud(size));
     }
 
     function test_exercise_RevertIf_OptionOutTheMoney() public {
@@ -378,11 +378,11 @@ contract MiningPoolTest is Assertions, Test {
         vm.warp(lockupStart);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IMiningPool.MiningPool__LockupNotExpired.selector, lockupStart, lockupEnd)
+            abi.encodeWithSelector(IOptionReward.OptionReward__LockupNotExpired.selector, lockupStart, lockupEnd)
         );
 
         vm.prank(users.longReceiver);
-        miningPool.exercise(longTokenId, ud(size));
+        optionReward.exercise(longTokenId, ud(size));
     }
 
     function test_exercise_RevertIf_LockupNotExpired() public {
@@ -399,12 +399,12 @@ contract MiningPoolTest is Assertions, Test {
         setPriceAt(maturity, settlementOTM);
 
         vm.prank(users.underwriter);
-        miningPool.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, ud(size));
 
-        assertEq(miningPool.balanceOf(users.longReceiver, longTokenId), size);
-        assertEq(miningPool.balanceOf(users.longReceiver, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, shortTokenId), 0);
-        assertEq(miningPool.balanceOf(users.underwriter, longTokenId), 0);
+        assertEq(optionReward.balanceOf(users.longReceiver, longTokenId), size);
+        assertEq(optionReward.balanceOf(users.longReceiver, shortTokenId), 0);
+        assertEq(optionReward.balanceOf(users.underwriter, shortTokenId), 0);
+        assertEq(optionReward.balanceOf(users.underwriter, longTokenId), 0);
 
         assertEq(IERC20(quote).balanceOf(users.longReceiver), 0);
         assertEq(IERC20(quote).balanceOf(users.underwriter), 0);
@@ -414,7 +414,7 @@ contract MiningPoolTest is Assertions, Test {
 
         assertEq(IERC20(base).balanceOf(users.longReceiver), 0);
         assertEq(IERC20(base).balanceOf(users.underwriter), collateral);
-        assertEq(IERC20(base).balanceOf(address(miningPool)), 0);
+        assertEq(IERC20(base).balanceOf(address(optionReward)), 0);
     }
 
     function test_settle_Success() public {
@@ -425,12 +425,12 @@ contract MiningPoolTest is Assertions, Test {
         uint64 maturity = uint64(getMaturity(block.timestamp, data.expiryDuration));
 
         UD60x18 strike = data.discount * data.spot;
-        uint256 longTokenId = miningPool.formatTokenId(IMiningPool.TokenType.LONG, maturity, strike);
+        uint256 longTokenId = optionReward.formatTokenId(IOptionReward.TokenType.LONG, maturity, strike);
 
-        vm.expectRevert(IMiningPool.MiningPool__TokenTypeNotShort.selector);
+        vm.expectRevert(IOptionReward.OptionReward__TokenTypeNotShort.selector);
 
         vm.prank(users.underwriter);
-        miningPool.settle(longTokenId, ud(1000000e18));
+        optionReward.settle(longTokenId, ud(1000000e18));
     }
 
     function test_settle_RevertIf_TokenTypeNotShort() public {
@@ -439,9 +439,9 @@ contract MiningPoolTest is Assertions, Test {
 
     function _test_settle_RevertIf_OptionNotExpired() internal {
         (uint64 maturity, , , uint256 shortTokenId) = _test_writeFrom_Success();
-        vm.expectRevert(abi.encodeWithSelector(IMiningPool.MiningPool__OptionNotExpired.selector, maturity));
+        vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__OptionNotExpired.selector, maturity));
         vm.prank(users.underwriter);
-        miningPool.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, ud(size));
     }
 
     function test_settle_RevertIf_OptionNotExpired() public {
@@ -455,14 +455,14 @@ contract MiningPoolTest is Assertions, Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IMiningPool.MiningPool__OptionInTheMoney.selector,
+                IOptionReward.OptionReward__OptionInTheMoney.selector,
                 data.settlementITM,
                 data.discount * data.spot
             )
         );
 
         vm.prank(users.underwriter);
-        miningPool.settle(shortTokenId, ud(size));
+        optionReward.settle(shortTokenId, ud(size));
     }
 
     function test_settle_RevertIf_OptionInTheMoney() public {

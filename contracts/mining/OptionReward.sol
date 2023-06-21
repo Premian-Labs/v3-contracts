@@ -16,17 +16,17 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ZERO, ONE} from "../libraries/Constants.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 
-import {IMiningPool} from "./IMiningPool.sol";
+import {IOptionReward} from "./IOptionReward.sol";
 import {IPaymentSplitter} from "./IPaymentSplitter.sol";
 import {IPriceRepository} from "./IPriceRepository.sol";
-import {MiningPoolStorage} from "./MiningPoolStorage.sol";
+import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 
-contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, ReentrancyGuard {
-    using MiningPoolStorage for IERC20;
-    using MiningPoolStorage for int128;
-    using MiningPoolStorage for uint256;
-    using MiningPoolStorage for MiningPoolStorage.Layout;
-    using MiningPoolStorage for TokenType;
+contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionReward, ReentrancyGuard {
+    using OptionRewardStorage for IERC20;
+    using OptionRewardStorage for int128;
+    using OptionRewardStorage for uint256;
+    using OptionRewardStorage for OptionRewardStorage.Layout;
+    using OptionRewardStorage for TokenType;
     using SafeCast for uint256;
 
     address public immutable TREASURY;
@@ -37,10 +37,10 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         TREASURY_FEE = treasuryFee;
     }
 
-    /// @inheritdoc IMiningPool
+    /// @inheritdoc IOptionReward
     function writeFrom(address longReceiver, UD60x18 contractSize) external nonReentrant {
-        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
-        if (msg.sender != l.underwriter) revert MiningPool__UnderwriterNotAuthorized(msg.sender);
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        if (msg.sender != l.underwriter) revert OptionReward__UnderwriterNotAuthorized(msg.sender);
 
         IERC20(l.base).safeTransferFromUD60x18(l.underwriter, address(this), l.toTokenDecimals(contractSize, true));
 
@@ -57,12 +57,12 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit WriteFrom(l.underwriter, longReceiver, contractSize, strike, maturity);
     }
 
-    /// @inheritdoc IMiningPool
+    /// @inheritdoc IOptionReward
     function exercise(uint256 longTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = longTokenId.parseTokenId();
-        if (tokenType != TokenType.LONG) revert MiningPool__TokenTypeNotLong();
+        if (tokenType != TokenType.LONG) revert OptionReward__TokenTypeNotLong();
 
-        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         uint256 lockupStart = maturity + l.exerciseDuration;
         uint256 lockupEnd = lockupStart + l.lockupDuration;
@@ -73,7 +73,7 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
         UD60x18 strike = _strike.fromInt128ToUD60x18();
 
-        if (settlementPrice < strike) revert MiningPool__OptionOutTheMoney(settlementPrice, strike);
+        if (settlementPrice < strike) revert OptionReward__OptionOutTheMoney(settlementPrice, strike);
 
         // If the option is in-the-money during the exercise period, the position is physically settled.
         UD60x18 exerciseValue = contractSize;
@@ -107,18 +107,18 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
         emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
     }
 
-    /// @inheritdoc IMiningPool
+    /// @inheritdoc IOptionReward
     function settle(uint256 shortTokenId, UD60x18 contractSize) external nonReentrant {
         (TokenType tokenType, uint64 maturity, int128 _strike) = shortTokenId.parseTokenId();
-        if (tokenType != TokenType.SHORT) revert MiningPool__TokenTypeNotShort();
+        if (tokenType != TokenType.SHORT) revert OptionReward__TokenTypeNotShort();
 
         _revertIfOptionNotExpired(maturity);
 
-        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
         UD60x18 strike = _strike.fromInt128ToUD60x18();
 
-        if (settlementPrice >= strike) revert MiningPool__OptionInTheMoney(settlementPrice, strike);
+        if (settlementPrice >= strike) revert OptionReward__OptionInTheMoney(settlementPrice, strike);
 
         _burnUD60x18(l.underwriter, shortTokenId, contractSize);
         IERC20(l.base).safeTransferUD60x18(l.underwriter, l.toTokenDecimals(contractSize, true));
@@ -138,13 +138,13 @@ contract MiningPool is ERC1155Base, ERC1155Enumerable, ERC165Base, IMiningPool, 
 
     /// @notice Revert if option has not expired
     function _revertIfOptionNotExpired(uint64 maturity) internal view {
-        if (block.timestamp < maturity) revert MiningPool__OptionNotExpired(maturity);
+        if (block.timestamp < maturity) revert OptionReward__OptionNotExpired(maturity);
     }
 
     /// @notice Revert if lockup period has not expired
     function _revertIfLockupNotExpired(uint256 lockupStart, uint256 lockupEnd) internal view {
         if (block.timestamp >= lockupStart && block.timestamp < lockupEnd)
-            revert MiningPool__LockupNotExpired(lockupStart, lockupEnd);
+            revert OptionReward__LockupNotExpired(lockupStart, lockupEnd);
     }
 
     function _beforeTokenTransfer(

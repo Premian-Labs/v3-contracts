@@ -9,14 +9,14 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
 
-import {IMiningPool} from "./IMiningPool.sol";
+import {IOptionReward} from "./IOptionReward.sol";
 
-library MiningPoolStorage {
+library OptionRewardStorage {
     using SafeCast for int256;
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.MiningPool");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.OptionReward");
 
     struct Layout {
         uint8 baseDecimals;
@@ -48,7 +48,7 @@ library MiningPoolStorage {
 
     /// @notice Calculate ERC1155 token id for given option parameters
     function formatTokenId(
-        IMiningPool.TokenType tokenType,
+        IOptionReward.TokenType tokenType,
         uint64 maturity,
         UD60x18 strike
     ) internal pure returns (uint256 tokenId) {
@@ -61,7 +61,7 @@ library MiningPoolStorage {
     /// @notice Derive option maturity and strike price from ERC1155 token id
     function parseTokenId(
         uint256 tokenId
-    ) internal pure returns (IMiningPool.TokenType tokenType, uint64 maturity, int128 strike) {
+    ) internal pure returns (IOptionReward.TokenType tokenType, uint64 maturity, int128 strike) {
         assembly {
             tokenType := shr(248, tokenId)
             maturity := shr(128, tokenId)

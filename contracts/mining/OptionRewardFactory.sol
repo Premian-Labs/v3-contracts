@@ -4,16 +4,16 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {MiningPoolProxy} from "./MiningPoolProxy.sol";
+import {OptionRewardProxy} from "./OptionRewardProxy.sol";
 
-contract MiningPoolFactory {
+contract OptionRewardFactory {
     address private immutable PROXY;
 
     constructor(address proxy) {
         PROXY = proxy;
     }
 
-    function deployMiningPool(
+    function deployOptionReward(
         address base,
         address quote,
         address underwriter,
@@ -25,7 +25,7 @@ contract MiningPoolFactory {
         uint256 exerciseDuration,
         uint256 lockupDuration
     ) external returns (address) {
-        MiningPoolProxy miningPoolProxy = new MiningPoolProxy(
+        OptionRewardProxy miningPoolProxy = new OptionRewardProxy(
             PROXY,
             base,
             quote,

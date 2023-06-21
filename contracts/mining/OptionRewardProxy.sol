@@ -8,9 +8,9 @@ import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
 import {IProxyUpgradeableOwnable} from "../proxy/IProxyUpgradeableOwnable.sol";
-import {MiningPoolStorage} from "./MiningPoolStorage.sol";
+import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 
-contract MiningPoolProxy is Proxy {
+contract OptionRewardProxy is Proxy {
     address private immutable PROXY;
 
     constructor(
@@ -29,7 +29,7 @@ contract MiningPoolProxy is Proxy {
         PROXY = proxy;
         OwnableStorage.layout().owner = msg.sender;
 
-        MiningPoolStorage.Layout storage l = MiningPoolStorage.layout();
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         l.baseDecimals = IERC20Metadata(base).decimals();
         l.quoteDecimals = IERC20Metadata(quote).decimals();
