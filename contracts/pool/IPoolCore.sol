@@ -90,6 +90,13 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
+    /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral on behalf of another account.
+    ///         msg.sender must be approved through `UserSettings.setAuthorizedAddress` by the owner of the long/short contracts.
+    ///         NOTE: This function can be called post or prior to expiration.
+    /// @param owner The owner of the shorts/longs to annihilate
+    /// @param size The size to annihilate (18 decimals)
+    function annihilateFor(address owner, UD60x18 size) external;
+
     /// @notice Exercises all long options held by caller
     /// @return exerciseValue The exercise value as amount of collateral paid out (poolToken decimals)
     function exercise() external returns (uint256 exerciseValue);

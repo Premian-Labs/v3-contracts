@@ -39,4 +39,25 @@ contract UserSettings is IUserSettings, Multicall {
     function setAuthorizedCost(uint256 amount) external {
         UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
     }
+
+    /// @inheritdoc IUserSettings
+    function setAuthorizedAnnihilate(address operator, bool isAuthorized) external {
+        UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
+
+        if (isAuthorized) {
+            l.authorizedAnnihilate[msg.sender].add(operator);
+        } else {
+            l.authorizedAnnihilate[msg.sender].remove(operator);
+        }
+    }
+
+    /// @inheritdoc IUserSettings
+    function getAuthorizedAnnihilate(address user) external view returns (address[] memory) {
+        return UserSettingsStorage.layout().authorizedAnnihilate[user].toArray();
+    }
+
+    /// @inheritdoc IUserSettings
+    function isAuthorizedAnnihilate(address user, address operator) external view returns (bool) {
+        return UserSettingsStorage.layout().authorizedAnnihilate[user].contains(operator);
+    }
 }
