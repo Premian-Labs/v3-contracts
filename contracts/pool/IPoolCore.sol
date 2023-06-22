@@ -91,7 +91,7 @@ interface IPoolCore is IPoolInternal {
     function annihilate(UD60x18 size) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral on behalf of another account.
-    ///         msg.sender must be have an ERC1155 approval from the `owner` to call this function.
+    ///         msg.sender must be approved through `UserSettings.setAuthorizedAddress` by the owner of the long/short contracts.
     ///         NOTE: This function can be called post or prior to expiration.
     /// @param owner The owner of the shorts/longs to annihilate
     /// @param size The size to annihilate (18 decimals)
