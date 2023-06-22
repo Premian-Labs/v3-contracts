@@ -215,6 +215,61 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         assertEq(token.balanceOf(address(pool)), collateral + mintingFee);
     }
 
+    function test_trade_AnnihilateFor_ProcessTradeCorrectly() public {
+        setup();
+
+        IERC20 token = IERC20(getPoolToken());
+
+        // Deal out collateral to trader
+        uint256 initialCollateral = scaleDecimals(
+            contractsToCollateral(isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike)
+        );
+
+        deal(address(token), users.trader, initialCollateral);
+
+        vm.prank(users.trader);
+        token.approve(address(router), initialCollateral);
+
+        // Make trader underwrite 2 option contracts to receive 2 shorts
+        UD60x18 size = ud(2 ether);
+        uint256 fee = pool.takerFee(users.trader, size, 0, true);
+
+        vm.prank(users.trader);
+        pool.setApprovalForAll(users.lp, true);
+
+        vm.prank(users.lp);
+        pool.writeFrom(users.trader, users.lp, size, address(0));
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), ud(2 ether));
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), ud(0 ether));
+
+        // Trader buys long contracts from vault and annihilates shorts
+        UD60x18 tradeSize = ud(3 ether);
+        uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
+
+        vm.startPrank(users.trader);
+        token.approve(address(vault), totalPremium + totalPremium / 10);
+        userSettings.setAuthorizedAnnihilate(address(vault), true);
+
+        vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
+
+        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
+        uint256 collateral = scaleDecimals(isCallTest ? tradeSize : tradeSize * strike);
+        uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
+
+        // Check that long contracts have been transferred to trader
+        assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), ud(0 ether));
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), ud(1 ether));
+        // Check that short contracts have been transferred to vault
+        assertEq(pool.balanceOf(address(vault), PoolStorage.SHORT), tradeSize);
+        // Check that premium has been transferred to vault
+        assertEq(token.balanceOf(address(vault)), depositSize + totalPremium - collateral - mintingFee);
+        // Check that listing has been successfully added to vault
+        assertEq(vault.getPositionSize(strike, maturity), tradeSize);
+        // Check that collateral and minting fee have been transferred to pool
+        assertEq(token.balanceOf(address(pool)), collateral + fee + mintingFee);
+    }
+
     function test_trade_ProcessTradeCorrectly_WithReferral() public {
         setup();
 
