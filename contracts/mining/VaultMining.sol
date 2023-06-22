@@ -7,7 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
-import {WAD} from "../libraries/Constants.sol";
+import {WAD, ZERO} from "../libraries/Constants.sol";
 
 import {IVaultMining} from "./IVaultMining.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
@@ -31,13 +31,13 @@ contract VaultMining is IVaultMining, OwnableInternal {
         PREMIA_OPTION = premiaOption;
     }
 
+    /// @notice Add rewards to the contract
     function addRewards(uint256 amount) external onlyOwner {
         VaultMiningStorage.layout().rewardsAvailable += amount;
     }
 
     function getRewardsAvailable() external view returns (uint256) {
-        // ToDo : Implement
-        return 0;
+        return VaultMiningStorage.layout().rewardsAvailable;
     }
 
     /// @notice Get pending premia reward for a user on a pool
@@ -55,18 +55,25 @@ contract VaultMining is IVaultMining, OwnableInternal {
         UD60x18 accRewardsPerShare = _vault.accRewardsPerShare;
 
         if (block.timestamp > _vault.lastRewardTimestamp && TVL > 0 && _vault.votes > 0) {
-            // ToDo : Refactor
-            UD60x18 yearsElapsed = ud((block.timestamp - vault.lastRewardTimestamp) * WAD) / ud(365 days * WAD);
-            uint256 rewards = (yearsElapsed * l.premiaPerYear * _vault.votes) / l.totalVotes;
-
-            // If we are running out of rewards to distribute, distribute whats left
-            if (rewards > l.rewardsAvailable) {
-                rewards = l.rewardsAvailable;
-            }
-
-            accRewardsPerShare = accRewardsPerShare + (rewards / totalShares);
+            UD60x18 rewardsAmount = _calculateRewardsUpdate(l, _vault.lastRewardTimestamp, _vault.votes);
+            accRewardsPerShare = accRewardsPerShare + (rewardsAmount / totalShares);
         }
+
         return (userShares * accRewardsPerShare) - user.rewardDebt + user.reward;
+    }
+
+    function _calculateRewardsUpdate(
+        VaultMiningStorage.Layout storage l,
+        uint256 lastVaultRewardTimestamp,
+        uint256 vaultVotes
+    ) internal view returns (UD60x18 rewardAmount) {
+        UD60x18 yearsElapsed = ud((block.timestamp - lastVaultRewardTimestamp) * WAD) / ud(365 days * WAD);
+        rewardAmount = (yearsElapsed * l.rewardsPerYear * vaultVotes) / l.totalVotes;
+
+        // If we are running out of rewards to distribute, distribute whats left
+        if (rewardAmount > l.rewardsAvailable) {
+            rewardAmount = l.rewardsAvailable;
+        }
     }
 
     function getTotalVotes() external view returns (UD60x18) {
@@ -97,21 +104,13 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     function _updateVault(address vault, UD60x18 totalTVL, UD60x18 utilizationRate) internal {
-        VaultMiningStorage.Layout storage l = PremiaMiningStorage.layout();
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vault = l.vaultInfo[vault];
 
         if (block.timestamp <= vault.lastRewardTimestamp) return;
 
         if (totalTVL > ZERO && vault.votes > 0) {
-            // ToDo : Refactor
-            UD60x18 yearsElapsed = ud((block.timestamp - vault.lastRewardTimestamp) * WAD) / ud(365 days * WAD);
-            UD60x18 rewardAmount = (yearsElapsed * l.rewardsPerYear * vault.votes) / l.totalVotes;
-
-            // If we are running out of rewards to distribute, distribute whats left
-            if (rewardAmount > l.rewardsAvailable) {
-                rewardAmount = l.rewardsAvailable;
-            }
-
+            UD60x18 rewardAmount = _calculateRewardsUpdate(l, vault.lastRewardTimestamp, vault.votes);
             l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
             vault.accPremiaPerShare = vault.accRewardsPerShare + (rewardAmount / totalTVL);
         }
@@ -129,7 +128,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         uint256 totalTVL,
         uint256 utilizationRate
     ) internal {
-        VaultMiningStorage.Layout storage l = PremiaMiningStorage.layout();
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vault = l.vaultInfo[vault];
         UserInfo storage user = l.userInfo[vault][user];
 
