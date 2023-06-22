@@ -11,15 +11,11 @@ interface IReferral {
         PrimaryRebate3
     }
 
-    error Referral__NoRebatesToClaim();
     error Referral__PoolNotAuthorized();
 
     event ClaimRebate(address indexed referrer, address indexed token, uint256 amount);
-
     event SetPrimaryRebatePercent(RebateTier tier, UD60x18 oldPercent, UD60x18 newPercent);
-
     event SetRebateTier(address indexed referrer, RebateTier oldTier, RebateTier newTier);
-
     event SetSecondaryRebatePercent(UD60x18 oldPercent, UD60x18 newPercent);
 
     event Refer(
@@ -106,5 +102,6 @@ interface IReferral {
     ) external;
 
     /// @notice Claims the rebates for the msg.sender
-    function claimRebate() external;
+    /// @param tokens The tokens to claim
+    function claimRebate(address[] memory tokens) external;
 }
