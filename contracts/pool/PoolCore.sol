@@ -9,10 +9,6 @@ import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/R
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 
-import {PoolStorage} from "./PoolStorage.sol";
-import {IPoolInternal} from "./IPoolInternal.sol";
-import {PoolInternal} from "./PoolInternal.sol";
-
 import {ONE, ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
@@ -20,6 +16,7 @@ import {OptionMath} from "../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {IPoolCore} from "./IPoolCore.sol";
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
