@@ -9,6 +9,8 @@ interface IVaultMining {
 
     event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilizationRate);
 
+    event SetRewardsPerYear(UD60x18 rewardsPerYear);
+
     //
 
     struct VaultInfo {

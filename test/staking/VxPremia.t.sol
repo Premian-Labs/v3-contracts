@@ -6,10 +6,12 @@ import {Test} from "forge-std/Test.sol";
 
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 
+import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {VxPremiaStorage} from "contracts/staking/VxPremiaStorage.sol";
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
+import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
@@ -49,8 +51,11 @@ contract VxPremiaTest is Test {
 
         address poolListMock = address(new PoolListMock());
 
+        address vaultRegistryImpl = address(new VaultRegistry());
+        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
+
         address vxPremiaImpl = address(
-            new VxPremia(poolListMock, address(0), address(premia), address(usdc), address(0))
+            new VxPremia(poolListMock, address(0), address(premia), address(usdc), address(0), vaultRegistryProxy)
         );
 
         address vxPremiaProxy = address(new VxPremiaProxy(vxPremiaImpl));

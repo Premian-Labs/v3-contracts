@@ -8,20 +8,24 @@ import {VxPremiaStorage} from "./VxPremiaStorage.sol";
 import {IVxPremia} from "./IVxPremia.sol";
 
 import {IProxyManager} from "./IProxyManager.sol";
+import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 /// @author Premia
 /// @title A contract allowing you to use your locked Premia as voting power for mining weights
 contract VxPremia is IVxPremia, PremiaStaking {
     address private immutable PROXY_MANAGER;
+    address private immutable VAULT_REGISTRY;
 
     constructor(
         address proxyManager,
         address lzEndpoint,
         address premia,
         address rewardToken,
-        address exchangeHelper
+        address exchangeHelper,
+        address vaultRegistry
     ) PremiaStaking(lzEndpoint, premia, rewardToken, exchangeHelper) {
         PROXY_MANAGER = proxyManager;
+        VAULT_REGISTRY = vaultRegistry;
     }
 
     function _beforeUnstake(address user, uint256 amount) internal override {
@@ -122,9 +126,11 @@ contract VxPremia is IVxPremia, PremiaStaking {
             votingPowerUsed += vote.amount;
             if (votingPowerUsed > userVotingPower) revert VxPremia__NotEnoughVotingPower();
 
-            // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
-            if (vote.version != VxPremiaStorage.VoteVersion.V2 || vote.target.length != 21)
-                revert VxPremia__InvalidVoteTarget();
+            if (
+                vote.version > VxPremiaStorage.VoteVersion.VaultV3 ||
+                (vote.version == VxPremiaStorage.VoteVersion.V2 && vote.target.length != 21) || // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
+                (vote.version == VxPremiaStorage.VoteVersion.VaultV3 && vote.target.length != 20)
+            ) revert VxPremia__InvalidVoteTarget();
 
             // Check that the pool address is valid
             address contractAddress = address(
@@ -132,11 +138,15 @@ contract VxPremia is IVxPremia, PremiaStaking {
             );
 
             bool isValid = false;
-            for (uint256 j = 0; j < poolList.length; j++) {
-                if (contractAddress == poolList[j]) {
-                    isValid = true;
-                    break;
+            if (vote.version == VxPremiaStorage.VoteVersion.V2) {
+                for (uint256 j = 0; j < poolList.length; j++) {
+                    if (contractAddress == poolList[j]) {
+                        isValid = true;
+                        break;
+                    }
                 }
+            } else if (vote.version == VxPremiaStorage.VoteVersion.VaultV3) {
+                isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 
             if (isValid == false) revert VxPremia__InvalidPoolAddress();

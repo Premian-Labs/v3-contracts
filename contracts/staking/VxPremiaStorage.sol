@@ -6,7 +6,8 @@ library VxPremiaStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.staking.VxPremia");
 
     enum VoteVersion {
-        V2 // poolAddress : 20 bytes / isCallPool : 2 bytes
+        V2, // poolAddress : 20 bytes / isCallPool : 2 bytes
+        VaultV3 // vaultAddress : 20 bytes
     }
 
     struct Vote {

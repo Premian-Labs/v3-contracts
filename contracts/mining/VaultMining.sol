@@ -91,8 +91,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
     function setRewardsPerYear(UD60x18 rewardsPerYear) external {
         VaultMiningStorage.layout().rewardsPerYear = rewardsPerYear;
-
-        // ToDo : Emit event
+        emit SetRewardsPerYear(rewardsPerYear);
     }
 
     function claim() external {
