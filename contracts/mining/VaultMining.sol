@@ -11,6 +11,7 @@ import {WAD, ZERO} from "../libraries/Constants.sol";
 
 import {IVaultMining} from "./IVaultMining.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
+import {IVxPremia} from "../staking/IVxPremia.sol";
 
 contract VaultMining is IVaultMining, OwnableInternal {
     using VaultMiningStorage for VaultMiningStorage.Layout;
@@ -139,12 +140,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
         address vault,
         UD60x18 utilizationRate
     ) internal virtual {
-        // ToDo : Implement
-        //        uint256 votes = IVxPremia(VX_PREMIA).getVaultVotes(
-        //            VxPremiaStorage.VoteVersion.V2,
-        //            abi.encodePacked(vault, isCallvault)
-        //        );
-        //        _setVaultAllocPoints(l, IPremiaMining.vaultAllocPoints(vault, votes, utilizationRate));
+        uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encode(vault));
+        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilizationRate: utilizationRate}));
     }
 
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {

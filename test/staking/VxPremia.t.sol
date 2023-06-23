@@ -36,7 +36,7 @@ contract VxPremiaTest is Test {
     address internal pool1;
     address internal pool2;
 
-    event RemoveVote(address indexed voter, VxPremiaStorage.VoteVersion indexed version, bytes target, uint256 amount);
+    event RemoveVote(address indexed voter, IVxPremia.VoteVersion indexed version, bytes target, uint256 amount);
 
     function setUp() public {
         alice = vm.addr(1);
@@ -133,12 +133,12 @@ contract VxPremiaTest is Test {
         assertEq(userVotes[0].amount, 2e18);
         assertEq(userVotes[0].target, abi.encodePacked(pool2, false));
 
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool0, false)), 0);
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool0, true)), 0);
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool1, false)), 0);
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool1, true)), 0);
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool2, false)), 2e18);
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool2, true)), 0);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool0, false)), 0);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool0, true)), 0);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool1, false)), 0);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool1, true)), 0);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool2, false)), 2e18);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool2, true)), 0);
     }
 
     function test_castVotes_RevertIf_NotEnoughVotingPower() public {
@@ -211,11 +211,11 @@ contract VxPremiaTest is Test {
 
         vm.warp(block.timestamp + 366 days);
 
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool0, true)), 12.5e18);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool0, true)), 12.5e18);
 
         vxPremia.startWithdraw(5e18);
 
-        assertEq(vxPremia.getPoolVotes(VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool0, true)), 6.25e18);
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool0, true)), 6.25e18);
     }
 
     function test_RemoveAllVotes_IfUnstakingAll() public {
@@ -256,13 +256,13 @@ contract VxPremiaTest is Test {
         vm.warp(block.timestamp + 366 days);
 
         vm.expectEmit(true, true, true, true, address(vxPremia));
-        emit RemoveVote(alice, VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool1, true), 2.5e18);
+        emit RemoveVote(alice, IVxPremia.VoteVersion.V2, abi.encodePacked(pool1, true), 2.5e18);
         vxPremia.startWithdraw(4e18);
 
         vm.expectEmit(true, true, true, true, address(vxPremia));
-        emit RemoveVote(alice, VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool1, true), 0.5e18);
+        emit RemoveVote(alice, IVxPremia.VoteVersion.V2, abi.encodePacked(pool1, true), 0.5e18);
         vm.expectEmit(true, true, true, true, address(vxPremia));
-        emit RemoveVote(alice, VxPremiaStorage.VoteVersion.V2, abi.encodePacked(pool0, true), 4.5e18);
+        emit RemoveVote(alice, IVxPremia.VoteVersion.V2, abi.encodePacked(pool0, true), 4.5e18);
         vxPremia.startWithdraw(4e18);
     }
 

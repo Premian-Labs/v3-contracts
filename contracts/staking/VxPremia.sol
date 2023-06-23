@@ -92,7 +92,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function getPoolVotes(VxPremiaStorage.VoteVersion version, bytes calldata target) external view returns (uint256) {
+    function getPoolVotes(VoteVersion version, bytes calldata target) external view returns (uint256) {
         return VxPremiaStorage.layout().votes[version][target];
     }
 
@@ -127,9 +127,9 @@ contract VxPremia is IVxPremia, PremiaStaking {
             if (votingPowerUsed > userVotingPower) revert VxPremia__NotEnoughVotingPower();
 
             if (
-                vote.version > VxPremiaStorage.VoteVersion.VaultV3 ||
-                (vote.version == VxPremiaStorage.VoteVersion.V2 && vote.target.length != 21) || // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
-                (vote.version == VxPremiaStorage.VoteVersion.VaultV3 && vote.target.length != 20)
+                vote.version > VoteVersion.VaultV3 ||
+                (vote.version == VoteVersion.V2 && vote.target.length != 21) || // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
+                (vote.version == VoteVersion.VaultV3 && vote.target.length != 20)
             ) revert VxPremia__InvalidVoteTarget();
 
             // Check that the pool address is valid
@@ -138,14 +138,14 @@ contract VxPremia is IVxPremia, PremiaStaking {
             );
 
             bool isValid = false;
-            if (vote.version == VxPremiaStorage.VoteVersion.V2) {
+            if (vote.version == VoteVersion.V2) {
                 for (uint256 j = 0; j < poolList.length; j++) {
                     if (contractAddress == poolList[j]) {
                         isValid = true;
                         break;
                     }
                 }
-            } else if (vote.version == VxPremiaStorage.VoteVersion.VaultV3) {
+            } else if (vote.version == VoteVersion.VaultV3) {
                 isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 
