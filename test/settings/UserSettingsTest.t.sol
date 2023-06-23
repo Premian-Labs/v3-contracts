@@ -33,210 +33,212 @@ contract UserSettingsTest is Test, Assertions {
         settings = IUserSettings(address(userSettingsProxy));
     }
 
-    function _assertAllAuthorizationsFalse(address user, address operator) internal {
-        (IUserSettings.Authorization[] memory authorizations, bool[] memory authorized) = settings.getAuthorizations(
+    function _assertAllAuthorizationFalse(address user, address operator) internal {
+        (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
             user,
             operator
         );
 
-        assertEq(uint256(authorizations[0]), uint256(IUserSettings.Authorization.ANNIHILATE));
-        assertEq(uint256(authorizations[1]), uint256(IUserSettings.Authorization.EXERCISE));
-        assertEq(uint256(authorizations[2]), uint256(IUserSettings.Authorization.SETTLE));
-        assertEq(uint256(authorizations[3]), uint256(IUserSettings.Authorization.SETTLE_POSITION));
-        assertEq(uint256(authorizations[4]), uint256(IUserSettings.Authorization.WRITE_FROM));
+        assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
+        assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
+        assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
+        assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
+        assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
 
-        assertFalse(authorized[0]);
-        assertFalse(authorized[1]);
-        assertFalse(authorized[2]);
-        assertFalse(authorized[3]);
-        assertFalse(authorized[4]);
+        assertFalse(authorization[0]);
+        assertFalse(authorization[1]);
+        assertFalse(authorization[2]);
+        assertFalse(authorization[3]);
+        assertFalse(authorization[4]);
     }
 
-    function _disableAllAuthorizations(address user, address operator) internal {
-        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](5);
-        authorizations[0] = IUserSettings.Authorization.ANNIHILATE;
-        authorizations[1] = IUserSettings.Authorization.EXERCISE;
-        authorizations[2] = IUserSettings.Authorization.SETTLE;
-        authorizations[3] = IUserSettings.Authorization.SETTLE_POSITION;
-        authorizations[4] = IUserSettings.Authorization.WRITE_FROM;
+    function _disableAllAuthorization(address user, address operator) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](5);
+        actions[0] = IUserSettings.Action.ANNIHILATE;
+        actions[1] = IUserSettings.Action.EXERCISE;
+        actions[2] = IUserSettings.Action.SETTLE;
+        actions[3] = IUserSettings.Action.SETTLE_POSITION;
+        actions[4] = IUserSettings.Action.WRITE_FROM;
 
-        bool[] memory authorize = new bool[](5);
-        authorize[0] = false;
-        authorize[1] = false;
-        authorize[2] = false;
-        authorize[3] = false;
-        authorize[4] = false;
+        bool[] memory authorization = new bool[](5);
+        authorization[0] = false;
+        authorization[1] = false;
+        authorization[2] = false;
+        authorization[3] = false;
+        authorization[4] = false;
 
         vm.prank(user);
-        settings.setAuthorizations(operator, authorizations, authorize);
-        _assertAllAuthorizationsFalse(user, operator);
+        settings.setActionAuthorization(operator, actions, authorization);
+        _assertAllAuthorizationFalse(user, operator);
     }
 
-    function test_setAuthorizations_AuthorizationDefaultsToDisabled() public {
-        assertFalse(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.ANNIHILATE));
-        assertFalse(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.EXERCISE));
-        assertFalse(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.SETTLE));
-        assertFalse(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.SETTLE_POSITION));
-        assertFalse(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.WRITE_FROM));
+    function test_setActionAuthorization_AuthorizationDefaultsToDisabled() public {
+        assertFalse(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.ANNIHILATE));
+        assertFalse(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.EXERCISE));
+        assertFalse(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.SETTLE));
+        assertFalse(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.SETTLE_POSITION));
+        assertFalse(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.WRITE_FROM));
 
-        assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.ANNIHILATE));
-        assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.EXERCISE));
-        assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.SETTLE));
-        assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.SETTLE_POSITION));
-        assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.WRITE_FROM));
+        assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.ANNIHILATE));
+        assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.EXERCISE));
+        assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.SETTLE));
+        assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.SETTLE_POSITION));
+        assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.WRITE_FROM));
 
-        _assertAllAuthorizationsFalse(users.alice, users.operator);
-        _assertAllAuthorizationsFalse(users.bob, users.operator);
+        _assertAllAuthorizationFalse(users.alice, users.operator);
+        _assertAllAuthorizationFalse(users.bob, users.operator);
     }
 
-    function test_setAuthorizations_Success() public {
+    function test_setActionAuthorization_Success() public {
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](5);
-            authorizations[0] = IUserSettings.Authorization.ANNIHILATE;
-            authorizations[1] = IUserSettings.Authorization.SETTLE;
-            authorizations[2] = IUserSettings.Authorization.SETTLE_POSITION;
-            authorizations[3] = IUserSettings.Authorization.WRITE_FROM;
-            authorizations[4] = IUserSettings.Authorization.EXERCISE;
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](5);
+            actions[0] = IUserSettings.Action.ANNIHILATE;
+            actions[1] = IUserSettings.Action.SETTLE;
+            actions[2] = IUserSettings.Action.SETTLE_POSITION;
+            actions[3] = IUserSettings.Action.WRITE_FROM;
+            actions[4] = IUserSettings.Action.EXERCISE;
 
-            bool[] memory authorize = new bool[](5);
-            authorize[0] = true;
-            authorize[1] = true;
-            authorize[2] = true;
-            authorize[3] = true;
-            authorize[4] = true;
+            bool[] memory authorization = new bool[](5);
+            authorization[0] = true;
+            authorization[1] = true;
+            authorization[2] = true;
+            authorization[3] = true;
+            authorization[4] = true;
 
             vm.prank(users.alice);
-            settings.setAuthorizations(users.operator, authorizations, authorize);
+            settings.setActionAuthorization(users.operator, actions, authorization);
 
-            assertTrue(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.ANNIHILATE));
-            assertTrue(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.EXERCISE));
-            assertTrue(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.SETTLE));
-            assertTrue(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.SETTLE_POSITION));
-            assertTrue(settings.isAuthorized(users.alice, users.operator, IUserSettings.Authorization.WRITE_FROM));
+            assertTrue(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.ANNIHILATE));
+            assertTrue(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.EXERCISE));
+            assertTrue(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.SETTLE));
+            assertTrue(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.SETTLE_POSITION));
+            assertTrue(settings.isActionAuthorized(users.alice, users.operator, IUserSettings.Action.WRITE_FROM));
         }
 
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](2);
-            authorizations[0] = IUserSettings.Authorization.SETTLE;
-            authorizations[1] = IUserSettings.Authorization.EXERCISE;
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](2);
+            actions[0] = IUserSettings.Action.SETTLE;
+            actions[1] = IUserSettings.Action.EXERCISE;
 
-            bool[] memory authorize = new bool[](2);
-            authorize[0] = true;
-            authorize[1] = true;
+            bool[] memory authorization = new bool[](2);
+            authorization[0] = true;
+            authorization[1] = true;
 
             vm.prank(users.bob);
-            settings.setAuthorizations(users.operator, authorizations, authorize);
+            settings.setActionAuthorization(users.operator, actions, authorization);
 
-            assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.ANNIHILATE));
-            assertTrue(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.EXERCISE));
-            assertTrue(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.SETTLE));
-            assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.SETTLE_POSITION));
-            assertFalse(settings.isAuthorized(users.bob, users.operator, IUserSettings.Authorization.WRITE_FROM));
+            assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.ANNIHILATE));
+            assertTrue(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.EXERCISE));
+            assertTrue(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.SETTLE));
+            assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.SETTLE_POSITION));
+            assertFalse(settings.isActionAuthorized(users.bob, users.operator, IUserSettings.Action.WRITE_FROM));
         }
 
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](5);
-            authorizations[0] = IUserSettings.Authorization.WRITE_FROM;
-            authorizations[1] = IUserSettings.Authorization.SETTLE_POSITION;
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](5);
+            actions[0] = IUserSettings.Action.WRITE_FROM;
+            actions[1] = IUserSettings.Action.SETTLE_POSITION;
             // skips index 2
-            authorizations[3] = IUserSettings.Authorization.ANNIHILATE;
-            authorizations[4] = IUserSettings.Authorization.EXERCISE;
+            actions[3] = IUserSettings.Action.ANNIHILATE;
+            actions[4] = IUserSettings.Action.EXERCISE;
 
-            bool[] memory authorize = new bool[](5);
-            authorize[0] = false;
-            authorize[1] = true;
+            bool[] memory authorization = new bool[](5);
+            authorization[0] = false;
+            authorization[1] = true;
             // skips index 2
-            authorize[3] = false;
-            authorize[4] = true;
+            authorization[3] = false;
+            authorization[4] = true;
 
             vm.prank(users.alice);
-            settings.setAuthorizations(users.otherOperator, authorizations, authorize);
+            settings.setActionAuthorization(users.otherOperator, actions, authorization);
 
-            assertFalse(
-                settings.isAuthorized(users.alice, users.otherOperator, IUserSettings.Authorization.ANNIHILATE)
-            );
+            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.ANNIHILATE));
 
-            assertTrue(settings.isAuthorized(users.alice, users.otherOperator, IUserSettings.Authorization.EXERCISE));
-            assertFalse(settings.isAuthorized(users.alice, users.otherOperator, IUserSettings.Authorization.SETTLE));
+            assertTrue(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.EXERCISE));
+            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.SETTLE));
 
             assertTrue(
-                settings.isAuthorized(users.alice, users.otherOperator, IUserSettings.Authorization.SETTLE_POSITION)
+                settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.SETTLE_POSITION)
             );
 
-            assertFalse(
-                settings.isAuthorized(users.alice, users.otherOperator, IUserSettings.Authorization.WRITE_FROM)
+            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.WRITE_FROM));
+        }
+
+        {
+            (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
+                users.alice,
+                users.operator
             );
+
+            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
+            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
+            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
+            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
+            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
+
+            assertTrue(authorization[0]);
+            assertTrue(authorization[1]);
+            assertTrue(authorization[2]);
+            assertTrue(authorization[3]);
+            assertTrue(authorization[4]);
         }
 
         {
-            (IUserSettings.Authorization[] memory authorizations, bool[] memory authorized) = settings
-                .getAuthorizations(users.alice, users.operator);
+            (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
+                users.bob,
+                users.operator
+            );
 
-            assertEq(uint256(authorizations[0]), uint256(IUserSettings.Authorization.ANNIHILATE));
-            assertEq(uint256(authorizations[1]), uint256(IUserSettings.Authorization.EXERCISE));
-            assertEq(uint256(authorizations[2]), uint256(IUserSettings.Authorization.SETTLE));
-            assertEq(uint256(authorizations[3]), uint256(IUserSettings.Authorization.SETTLE_POSITION));
-            assertEq(uint256(authorizations[4]), uint256(IUserSettings.Authorization.WRITE_FROM));
+            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
+            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
+            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
+            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
+            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
 
-            assertTrue(authorized[0]);
-            assertTrue(authorized[1]);
-            assertTrue(authorized[2]);
-            assertTrue(authorized[3]);
-            assertTrue(authorized[4]);
+            assertFalse(authorization[0]);
+            assertTrue(authorization[1]);
+            assertTrue(authorization[2]);
+            assertFalse(authorization[3]);
+            assertFalse(authorization[4]);
         }
 
         {
-            (IUserSettings.Authorization[] memory authorizations, bool[] memory authorized) = settings
-                .getAuthorizations(users.bob, users.operator);
+            (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
+                users.alice,
+                users.otherOperator
+            );
 
-            assertEq(uint256(authorizations[0]), uint256(IUserSettings.Authorization.ANNIHILATE));
-            assertEq(uint256(authorizations[1]), uint256(IUserSettings.Authorization.EXERCISE));
-            assertEq(uint256(authorizations[2]), uint256(IUserSettings.Authorization.SETTLE));
-            assertEq(uint256(authorizations[3]), uint256(IUserSettings.Authorization.SETTLE_POSITION));
-            assertEq(uint256(authorizations[4]), uint256(IUserSettings.Authorization.WRITE_FROM));
+            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
+            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
+            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
+            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
+            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
 
-            assertFalse(authorized[0]);
-            assertTrue(authorized[1]);
-            assertTrue(authorized[2]);
-            assertFalse(authorized[3]);
-            assertFalse(authorized[4]);
+            assertFalse(authorization[0]);
+            assertTrue(authorization[1]);
+            assertFalse(authorization[2]);
+            assertTrue(authorization[3]);
+            assertFalse(authorization[4]);
         }
 
-        {
-            (IUserSettings.Authorization[] memory authorizations, bool[] memory authorized) = settings
-                .getAuthorizations(users.alice, users.otherOperator);
-
-            assertEq(uint256(authorizations[0]), uint256(IUserSettings.Authorization.ANNIHILATE));
-            assertEq(uint256(authorizations[1]), uint256(IUserSettings.Authorization.EXERCISE));
-            assertEq(uint256(authorizations[2]), uint256(IUserSettings.Authorization.SETTLE));
-            assertEq(uint256(authorizations[3]), uint256(IUserSettings.Authorization.SETTLE_POSITION));
-            assertEq(uint256(authorizations[4]), uint256(IUserSettings.Authorization.WRITE_FROM));
-
-            assertFalse(authorized[0]);
-            assertTrue(authorized[1]);
-            assertFalse(authorized[2]);
-            assertTrue(authorized[3]);
-            assertFalse(authorized[4]);
-        }
-
-        _disableAllAuthorizations(users.alice, users.operator);
-        _disableAllAuthorizations(users.bob, users.operator);
-        _disableAllAuthorizations(users.alice, users.otherOperator);
+        _disableAllAuthorization(users.alice, users.operator);
+        _disableAllAuthorization(users.bob, users.operator);
+        _disableAllAuthorization(users.alice, users.otherOperator);
     }
 
-    function test_setAuthorizations_RevertIf_InvalidArrayLength() public {
+    function test_setActionAuthorization_RevertIf_InvalidArrayLength() public {
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](1);
-            bool[] memory authorize = new bool[](0);
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+            bool[] memory authorization = new bool[](0);
             vm.expectRevert(IUserSettings.UserSettings__InvalidArrayLength.selector);
-            settings.setAuthorizations(users.operator, authorizations, authorize);
+            settings.setActionAuthorization(users.operator, actions, authorization);
         }
 
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](0);
-            bool[] memory authorize = new bool[](1);
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](0);
+            bool[] memory authorization = new bool[](1);
             vm.expectRevert(IUserSettings.UserSettings__InvalidArrayLength.selector);
-            settings.setAuthorizations(users.operator, authorizations, authorize);
+            settings.setActionAuthorization(users.operator, actions, authorization);
         }
     }
 

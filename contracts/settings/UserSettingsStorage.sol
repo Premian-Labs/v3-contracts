@@ -10,7 +10,8 @@ library UserSettingsStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.UserSettings");
 
     struct Layout {
-        mapping(address user => mapping(address operator => EnumerableSet.UintSet)) authorizations;
+        // A set of actions `operator` has been authorized to perform on behalf of `user`
+        mapping(address user => mapping(address operator => EnumerableSet.UintSet actions)) authorizedActions;
         mapping(address user => uint256 cost) authorizedCost;
     }
 

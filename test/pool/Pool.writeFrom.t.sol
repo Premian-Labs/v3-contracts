@@ -99,7 +99,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
 
-        setAuthorizations(users.lp, IUserSettings.Authorization.WRITE_FROM, true);
+        setActionAuthorization(users.lp, IUserSettings.Action.WRITE_FROM, true);
 
         vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, size, address(0));

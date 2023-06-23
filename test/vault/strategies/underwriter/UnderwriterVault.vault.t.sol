@@ -237,27 +237,27 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
 
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](2);
-            authorizations[0] = IUserSettings.Authorization.ANNIHILATE;
-            authorizations[1] = IUserSettings.Authorization.WRITE_FROM;
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](2);
+            actions[0] = IUserSettings.Action.ANNIHILATE;
+            actions[1] = IUserSettings.Action.WRITE_FROM;
 
-            bool[] memory authorize = new bool[](2);
-            authorize[0] = true;
-            authorize[1] = true;
+            bool[] memory authorization = new bool[](2);
+            authorization[0] = true;
+            authorization[1] = true;
 
             vm.prank(users.trader);
-            userSettings.setAuthorizations(address(vault), authorizations, authorize);
+            userSettings.setActionAuthorization(address(vault), actions, authorization);
         }
 
         {
-            IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](1);
-            authorizations[0] = IUserSettings.Authorization.WRITE_FROM;
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+            actions[0] = IUserSettings.Action.WRITE_FROM;
 
-            bool[] memory authorize = new bool[](1);
-            authorize[0] = true;
+            bool[] memory authorization = new bool[](1);
+            authorization[0] = true;
 
             vm.prank(users.trader);
-            userSettings.setAuthorizations(users.lp, authorizations, authorize);
+            userSettings.setActionAuthorization(users.lp, actions, authorization);
         }
 
         vm.prank(users.lp);

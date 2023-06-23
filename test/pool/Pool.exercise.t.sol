@@ -175,7 +175,7 @@ abstract contract PoolExerciseTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        setAuthorizations(users.trader, IUserSettings.Authorization.EXERCISE, true);
+        setActionAuthorization(users.trader, IUserSettings.Action.EXERCISE, true);
 
         UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost);

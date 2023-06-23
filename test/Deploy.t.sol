@@ -543,30 +543,30 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? tradeSize - exerciseValue : tradeSize * poolKey.strike - exerciseValue;
     }
 
-    function setAuthorizations(address user, IUserSettings.Authorization authorization, bool authorize) internal {
-        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](1);
-        authorizations[0] = authorization;
+    function setActionAuthorization(address user, IUserSettings.Action action, bool authorization) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = action;
 
-        bool[] memory _authorize = new bool[](1);
-        _authorize[0] = authorize;
+        bool[] memory _authorization = new bool[](1);
+        _authorization[0] = authorization;
 
         vm.prank(user);
-        userSettings.setAuthorizations(users.operator, authorizations, _authorize);
+        userSettings.setActionAuthorization(users.operator, actions, _authorization);
     }
 
     function enableExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
-        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](3);
-        authorizations[0] = IUserSettings.Authorization.EXERCISE;
-        authorizations[1] = IUserSettings.Authorization.SETTLE;
-        authorizations[2] = IUserSettings.Authorization.SETTLE_POSITION;
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](3);
+        actions[0] = IUserSettings.Action.EXERCISE;
+        actions[1] = IUserSettings.Action.SETTLE;
+        actions[2] = IUserSettings.Action.SETTLE_POSITION;
 
-        bool[] memory authorize = new bool[](3);
-        authorize[0] = true;
-        authorize[1] = true;
-        authorize[2] = true;
+        bool[] memory authorization = new bool[](3);
+        authorization[0] = true;
+        authorization[1] = true;
+        authorization[2] = true;
 
         vm.startPrank(user);
-        userSettings.setAuthorizations(users.operator, authorizations, authorize);
+        userSettings.setActionAuthorization(users.operator, actions, authorization);
         userSettings.setAuthorizedCost(authorizedCost);
         vm.stopPrank();
     }

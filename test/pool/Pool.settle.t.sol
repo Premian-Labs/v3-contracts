@@ -175,7 +175,7 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
         uint256 cost = collateral.unwrap() + 1 wei;
 
-        setAuthorizations(users.trader, IUserSettings.Authorization.SETTLE, true);
+        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
 
         {
             // if !isCall, convert collateral to WETH
@@ -215,7 +215,7 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        setAuthorizations(users.trader, IUserSettings.Authorization.SETTLE, true);
+        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
 
         UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost);

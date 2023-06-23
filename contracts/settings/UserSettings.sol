@@ -12,45 +12,41 @@ contract UserSettings is IUserSettings, Multicall {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IUserSettings
-    function isAuthorized(address user, address operator, Authorization authorization) external view returns (bool) {
-        return UserSettingsStorage.layout().authorizations[user][operator].contains(uint256(authorization));
+    function isActionAuthorized(address user, address operator, Action action) external view returns (bool) {
+        return UserSettingsStorage.layout().authorizedActions[user][operator].contains(uint256(action));
     }
 
     /// @inheritdoc IUserSettings
-    function getAuthorizations(
+    function getActionAuthorization(
         address user,
         address operator
-    ) external view returns (Authorization[] memory, bool[] memory) {
-        uint256 length = uint256(type(Authorization).max) + 1;
-        Authorization[] memory authorizations = new Authorization[](length);
-        bool[] memory authorized = new bool[](length);
+    ) external view returns (Action[] memory, bool[] memory) {
+        uint256 length = uint256(type(Action).max) + 1;
+        Action[] memory actions = new Action[](length);
+        bool[] memory authorization = new bool[](length);
 
         UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
         for (uint256 i = 0; i < length; i++) {
-            authorizations[i] = Authorization(i);
-            authorized[i] = l.authorizations[user][operator].contains(i);
+            actions[i] = Action(i);
+            authorization[i] = l.authorizedActions[user][operator].contains(i);
         }
 
-        return (authorizations, authorized);
+        return (actions, authorization);
     }
 
     /// @inheritdoc IUserSettings
-    function setAuthorizations(
-        address operator,
-        Authorization[] memory authorizations,
-        bool[] memory authorize
-    ) external {
-        if (authorizations.length != authorize.length) revert UserSettings__InvalidArrayLength();
+    function setActionAuthorization(address operator, Action[] memory actions, bool[] memory authorization) external {
+        if (actions.length != authorization.length) revert UserSettings__InvalidArrayLength();
 
         UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
-        EnumerableSet.UintSet storage _authorizations = l.authorizations[msg.sender][operator];
+        EnumerableSet.UintSet storage authorizedActions = l.authorizedActions[msg.sender][operator];
 
-        for (uint256 i = 0; i < authorizations.length; i++) {
-            uint256 authorization = uint256(authorizations[i]);
-            authorize[i] ? _authorizations.add(authorization) : _authorizations.remove(authorization);
+        for (uint256 i = 0; i < actions.length; i++) {
+            uint256 action = uint256(actions[i]);
+            authorization[i] ? authorizedActions.add(action) : authorizedActions.remove(action);
         }
 
-        emit SetAuthorizations(msg.sender, operator, authorizations, authorize);
+        emit ActionAuthorizationUpdated(msg.sender, operator, actions, authorization);
     }
 
     /// @inheritdoc IUserSettings
@@ -61,6 +57,6 @@ contract UserSettings is IUserSettings, Multicall {
     /// @inheritdoc IUserSettings
     function setAuthorizedCost(uint256 amount) external {
         UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
-        emit SetAuthorizedCost(msg.sender, amount);
+        emit AuthorizedCostUpdated(msg.sender, amount);
     }
 }

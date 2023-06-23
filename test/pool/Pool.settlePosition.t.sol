@@ -197,7 +197,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         uint256 cost = collateral + 1 wei;
 
-        setAuthorizations(posKey.operator, IUserSettings.Authorization.SETTLE_POSITION, true);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SETTLE_POSITION, true);
 
         {
             // if !isCall, convert collateral to WETH
@@ -237,7 +237,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        setAuthorizations(posKey.operator, IUserSettings.Authorization.SETTLE_POSITION, true);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SETTLE_POSITION, true);
 
         UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost);
@@ -267,17 +267,17 @@ abstract contract PoolSettlePositionTest is DeployTest {
         address user = vm.addr(10);
         address operator = vm.addr(11);
 
-        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](1);
-        authorizations[0] = IUserSettings.Authorization.SETTLE_POSITION;
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = IUserSettings.Action.SETTLE_POSITION;
 
-        bool[] memory authorize = new bool[](1);
-        authorize[0] = true;
+        bool[] memory authorization = new bool[](1);
+        authorization[0] = true;
 
         // attackerUser sets attackerAgent as their operator, and assigns a cost of
         // the entire pool value
         vm.startPrank(user);
 
-        userSettings.setAuthorizations(operator, authorizations, authorize);
+        userSettings.setActionAuthorization(operator, actions, authorization);
         userSettings.setAuthorizedCost(poolValue);
 
         vm.stopPrank();
