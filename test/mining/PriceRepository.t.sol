@@ -69,7 +69,9 @@ contract PriceRepositoryTest is Assertions, Test {
         uint256 timestamp = block.timestamp;
         vm.prank(users.keeper);
         priceRepository.setPriceAt(address(1), address(2), timestamp, ONE);
-        assertEq(priceRepository.getPrice(address(1), address(2)), ONE);
+        (UD60x18 price, uint256 _timestamp) = priceRepository.getPrice(address(1), address(2));
+        assertEq(price, ONE);
+        assertEq(timestamp, _timestamp);
     }
 
     function test_getPriceAt_Success() public {

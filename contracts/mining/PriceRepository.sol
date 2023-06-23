@@ -22,13 +22,16 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
         if (msg.sender != l.keeper) revert PriceRepository__KeeperNotAuthorized(l.keeper);
         l.latestPrice[base][quote] = price;
+        l.latestPriceTimestamp[base][quote] = timestamp;
         l.prices[base][quote][timestamp] = price;
         emit SetDailyOpenPrice(base, quote, timestamp, price);
     }
 
     /// @inheritdoc IPriceRepository
-    function getPrice(address base, address quote) external view returns (UD60x18 price) {
-        price = PriceRepositoryStorage.layout().latestPrice[base][quote];
+    function getPrice(address base, address quote) external view returns (UD60x18 price, uint256 timestamp) {
+        PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
+        price = l.latestPrice[base][quote];
+        timestamp = l.latestPriceTimestamp[base][quote];
     }
 
     /// @inheritdoc IPriceRepository

@@ -10,6 +10,7 @@ library PriceRepositoryStorage {
     struct Layout {
         address keeper;
         mapping(address base => mapping(address quote => UD60x18 price)) latestPrice;
+        mapping(address base => mapping(address quote => uint256 timestamp)) latestPriceTimestamp;
         mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) prices;
     }
 

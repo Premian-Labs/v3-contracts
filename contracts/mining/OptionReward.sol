@@ -32,6 +32,8 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
     address public immutable TREASURY;
     UD60x18 public immutable TREASURY_FEE;
 
+    uint256 public constant STALE_PRICE_THRESHOLD = 24 hours;
+
     constructor(address treasury, UD60x18 treasuryFee) {
         TREASURY = treasury;
         TREASURY_FEE = treasuryFee;
@@ -47,7 +49,9 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
         // Calculates the maturity starting from the 8AM UTC timestamp of the current day
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
 
-        UD60x18 price = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
+        (UD60x18 price, uint256 timestamp) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
+
+        _revertIfPriceIsStale(timestamp);
         _revertIfPriceIsZero(price);
 
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
@@ -140,6 +144,12 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
     /// @notice `_burn` wrapper, converts `UD60x18` to `uint256`
     function _burnUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _burn(account, tokenId, amount.unwrap());
+    }
+
+    /// @notice Revert if price is stale
+    function _revertIfPriceIsStale(uint256 timestamp) internal view {
+        if (block.timestamp - timestamp >= STALE_PRICE_THRESHOLD)
+            revert OptionReward__PriceIsStale(block.timestamp, timestamp);
     }
 
     /// @notice Revert if price is zero

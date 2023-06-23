@@ -9,7 +9,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {ONE} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
@@ -220,11 +220,36 @@ contract OptionRewardTest is Assertions, Test {
     function test_writeFrom_RevertIf_PriceIsZero() public {
         uint256 collateral = _toTokenDecimals(base, _size);
         deal(base, users.underwriter, collateral);
+        _setPriceAt(block.timestamp, ZERO);
+
         vm.startPrank(users.underwriter);
         IERC20(base).approve(address(optionReward), collateral);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         optionReward.writeFrom(users.longReceiver, _size);
         vm.stopPrank();
+    }
+
+    function test_writeFrom_RevertIf_PriceIsStale() public {
+        uint256 collateral = _toTokenDecimals(base, _size);
+        deal(base, users.underwriter, collateral);
+
+        vm.prank(users.underwriter);
+        IERC20(base).approve(address(optionReward), collateral);
+
+        uint256 updatedAt = block.timestamp - 24 hours + 1 seconds; // block.timestamp - timestamp = 86399
+        _setPriceAt(updatedAt, data.spot);
+
+        vm.prank(users.underwriter);
+        optionReward.writeFrom(users.longReceiver, ONE); // should succeed
+
+        vm.warp(block.timestamp + 1 seconds); // block.timestamp - timestamp = 86400
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionReward.OptionReward__PriceIsStale.selector, block.timestamp, updatedAt)
+        );
+
+        vm.prank(users.underwriter);
+        optionReward.writeFrom(users.longReceiver, ONE); // should revert
     }
 
     function test_writeFrom_RevertIf_UnderwriterNotAuthorized() public {
