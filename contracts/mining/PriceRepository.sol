@@ -24,7 +24,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         l.latestPrice[base][quote] = price;
         l.latestPriceTimestamp[base][quote] = timestamp;
         l.prices[base][quote][timestamp] = price;
-        emit SetDailyOpenPrice(base, quote, timestamp, price);
+        emit PriceUpdate(base, quote, timestamp, price);
     }
 
     /// @inheritdoc IPriceRepository
