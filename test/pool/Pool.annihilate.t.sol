@@ -12,6 +12,8 @@ import {Position} from "contracts/libraries/Position.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolAnnihilateTest is DeployTest {
@@ -68,10 +70,9 @@ abstract contract PoolAnnihilateTest is DeployTest {
         uint256 totalPremium = init();
         address poolToken = getPoolToken();
 
-        vm.prank(users.lp);
-        userSettings.setAuthorizedAnnihilate(users.agent, true);
+        setActionAuthorization(users.lp, IUserSettings.Action.ANNIHILATE, true);
 
-        vm.prank(users.agent);
+        vm.prank(users.operator);
         pool.annihilateFor(users.lp, annihilateSize);
 
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), tradeSize - annihilateSize, "lp short 2");
@@ -83,11 +84,19 @@ abstract contract PoolAnnihilateTest is DeployTest {
         );
     }
 
-    function test_annihilateFor_RevertIf_AgentNotApproved() public {
+    function test_annihilateFor_RevertIf_ActionNotAuthorized() public {
         init();
 
-        vm.prank(users.agent);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.agent));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.lp,
+                users.operator,
+                IUserSettings.Action.ANNIHILATE
+            )
+        );
+
+        vm.prank(users.operator);
         pool.annihilateFor(users.lp, annihilateSize);
     }
 }

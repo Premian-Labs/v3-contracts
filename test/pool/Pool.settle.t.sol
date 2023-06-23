@@ -7,8 +7,11 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
+
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {Position} from "contracts/libraries/Position.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -98,8 +101,8 @@ abstract contract PoolSettleTest is DeployTest {
         oracleAdapter.setQuote(settlementPrice.inv());
         oracleAdapter.setQuoteFrom(settlementPrice);
 
-        handleExerciseSettleAuthorization(users.trader, 0.1 ether);
-        handleExerciseSettleAuthorization(users.otherTrader, 0.1 ether);
+        enableExerciseSettleAuthorization(users.trader, 0.1 ether);
+        enableExerciseSettleAuthorization(users.otherTrader, 0.1 ether);
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
@@ -116,7 +119,7 @@ abstract contract PoolSettleTest is DeployTest {
         uint256 cost = scaleDecimals(ud(0.1 ether));
 
         vm.warp(poolKey.maturity);
-        vm.prank(users.agent);
+        vm.prank(users.operator);
 
         address[] memory holders = new address[](2);
         holders[0] = users.trader;
@@ -136,7 +139,7 @@ abstract contract PoolSettleTest is DeployTest {
             (trade.traderCollateral / 2) - exerciseValue - cost
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), (cost * 2));
+        assertEq(IERC20(trade.poolToken).balanceOf(users.operator), (cost * 2));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(address(pool)),
@@ -169,21 +172,18 @@ abstract contract PoolSettleTest is DeployTest {
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
         UD60x18 exerciseValue = getExerciseValue(false, trade.size, settlementPrice);
-
         UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
-
         uint256 cost = collateral.unwrap() + 1 wei;
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
+        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
 
-        vm.startPrank(users.trader);
-        userSettings.setAuthorizedAgents(agents);
+        {
+            // if !isCall, convert collateral to WETH
+            uint256 _cost = isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap();
+            vm.prank(users.trader);
+            userSettings.setAuthorizedCost(_cost);
+        }
 
-        // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
-
-        vm.stopPrank();
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(
@@ -194,21 +194,27 @@ abstract contract PoolSettleTest is DeployTest {
             )
         );
 
-        vm.prank(users.agent);
-
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
+        vm.prank(users.operator);
         pool.settleFor(holders, cost);
     }
 
-    function test_settleFor_RevertIf_AgentNotAuthorized() public {
-        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
-        vm.prank(users.agent);
-
+    function test_settleFor_RevertIf_ActionNotAuthorized() public {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.trader,
+                users.operator,
+                IUserSettings.Action.SETTLE
+            )
+        );
+
+        vm.prank(users.operator);
         pool.settleFor(holders, 0);
     }
 
@@ -217,11 +223,7 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.prank(users.trader);
-        userSettings.setAuthorizedAgents(agents);
+        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
 
         UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost);
@@ -230,7 +232,7 @@ abstract contract PoolSettleTest is DeployTest {
             abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
         );
 
-        vm.prank(users.agent);
+        vm.prank(users.operator);
 
         address[] memory holders = new address[](1);
         holders[0] = users.trader;

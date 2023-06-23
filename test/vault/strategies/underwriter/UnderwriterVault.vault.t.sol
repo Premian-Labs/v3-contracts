@@ -15,6 +15,8 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
 
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
+
 abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     UD60x18 spot = UD60x18.wrap(1000e18);
     UD60x18 strike = UD60x18.wrap(1100e18);
@@ -234,8 +236,29 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         UD60x18 size = ud(2 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
 
-        vm.prank(users.trader);
-        pool.setApprovalForAll(users.lp, true);
+        {
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](2);
+            actions[0] = IUserSettings.Action.ANNIHILATE;
+            actions[1] = IUserSettings.Action.WRITE_FROM;
+
+            bool[] memory authorization = new bool[](2);
+            authorization[0] = true;
+            authorization[1] = true;
+
+            vm.prank(users.trader);
+            userSettings.setActionAuthorization(address(vault), actions, authorization);
+        }
+
+        {
+            IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+            actions[0] = IUserSettings.Action.WRITE_FROM;
+
+            bool[] memory authorization = new bool[](1);
+            authorization[0] = true;
+
+            vm.prank(users.trader);
+            userSettings.setActionAuthorization(users.lp, actions, authorization);
+        }
 
         vm.prank(users.lp);
         pool.writeFrom(users.trader, users.lp, size, address(0));
@@ -249,8 +272,6 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         vm.startPrank(users.trader);
         token.approve(address(vault), totalPremium + totalPremium / 10);
-        userSettings.setAuthorizedAnnihilate(address(vault), true);
-
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
 
         uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);

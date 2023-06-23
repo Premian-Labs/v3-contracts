@@ -10,17 +10,16 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {PoolStorage} from "./PoolStorage.sol";
-import {IPoolInternal} from "./IPoolInternal.sol";
-import {PoolInternal} from "./PoolInternal.sol";
-
 import {ONE, ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
+import {IUserSettings} from "../settings/IUserSettings.sol";
+
 import {IPoolCore} from "./IPoolCore.sol";
+import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
 import {PoolInternal} from "./PoolInternal.sol";
 
@@ -206,7 +205,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.EXERCISE);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -235,7 +234,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.SETTLE);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -266,7 +265,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
-                _revertIfAgentNotAuthorized(p[i].operator, msg.sender);
+                _revertIfActionNotAuthorized(p[i].operator, IUserSettings.Action.SETTLE_POSITION);
                 _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
