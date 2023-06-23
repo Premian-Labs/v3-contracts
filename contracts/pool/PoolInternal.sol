@@ -579,7 +579,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Transfers collateral + fees from `underwriter` and sends long/short tokens to both parties
     function _writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) internal {
         if (
-            msg.sender != underwriter && ERC1155BaseStorage.layout().operatorApprovals[underwriter][msg.sender] == false
+            msg.sender != underwriter &&
+            !IUserSettings(SETTINGS).isAuthorized(underwriter, msg.sender, IUserSettings.Authorization.WRITE_FROM)
         ) revert Pool__OperatorNotAuthorized(msg.sender);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -978,8 +979,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         This function can be called post or prior to expiration.
     ///         ===========================================================
     function _annihilate(address owner, UD60x18 size) internal {
-        if (msg.sender != owner && IUserSettings(SETTINGS).isAuthorizedAnnihilate(owner, msg.sender) == false)
-            revert Pool__OperatorNotAuthorized(msg.sender);
+        if (
+            msg.sender != owner &&
+            !IUserSettings(SETTINGS).isAuthorized(owner, msg.sender, IUserSettings.Authorization.ANNIHILATE)
+        ) revert Pool__OperatorNotAuthorized(msg.sender);
 
         _revertIfZeroSize(size);
 
@@ -1128,7 +1131,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
     ///         automatic exercise (poolToken decimals)
     /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
@@ -1158,7 +1161,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -1188,7 +1191,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per position holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -2033,9 +2036,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (operator != msg.sender) revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    /// @notice Revert if `agent` is not authorized by `holder`
-    function _revertIfAgentNotAuthorized(address holder, address agent) internal view {
-        if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent)) revert Pool__AgentNotAuthorized();
+    /// @notice Revert if `operator` is not authorized by `holder` to call function `authorization`
+    function _revertIfOperatorNotAuthorized(address holder, IUserSettings.Authorization authorization) internal view {
+        if (!IUserSettings(SETTINGS).isAuthorized(holder, msg.sender, authorization))
+            revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
     /// @notice Revert if `cost` is not authorized by `holder`

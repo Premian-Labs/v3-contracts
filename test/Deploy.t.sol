@@ -92,7 +92,7 @@ contract DeployTest is Test, Assertions {
         address trader;
         address otherTrader;
         address referrer;
-        address agent;
+        address operator;
         address caller;
         address receiver;
         address underwriter;
@@ -126,7 +126,7 @@ contract DeployTest is Test, Assertions {
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
             referrer: vm.addr(5),
-            agent: vm.addr(6),
+            operator: vm.addr(6),
             caller: vm.addr(7),
             receiver: vm.addr(8),
             underwriter: vm.addr(9)
@@ -542,15 +542,31 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? tradeSize - exerciseValue : tradeSize * poolKey.strike - exerciseValue;
     }
 
-    function handleExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+    function setAuthorizations(address user, IUserSettings.Authorization authorization, bool authorize) internal {
+        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](1);
+        authorizations[0] = authorization;
+
+        bool[] memory _authorize = new bool[](1);
+        _authorize[0] = authorize;
+
+        vm.prank(user);
+        userSettings.setAuthorizations(users.operator, authorizations, _authorize);
+    }
+
+    function enableExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+        IUserSettings.Authorization[] memory authorizations = new IUserSettings.Authorization[](3);
+        authorizations[0] = IUserSettings.Authorization.EXERCISE;
+        authorizations[1] = IUserSettings.Authorization.SETTLE;
+        authorizations[2] = IUserSettings.Authorization.SETTLE_POSITION;
+
+        bool[] memory authorize = new bool[](3);
+        authorize[0] = true;
+        authorize[1] = true;
+        authorize[2] = true;
+
         vm.startPrank(user);
-
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        userSettings.setAuthorizedAgents(agents);
+        userSettings.setAuthorizations(users.operator, authorizations, authorize);
         userSettings.setAuthorizedCost(authorizedCost);
-
         vm.stopPrank();
     }
 }

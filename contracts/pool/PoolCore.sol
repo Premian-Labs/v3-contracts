@@ -15,6 +15,8 @@ import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
+import {IUserSettings} from "../settings/IUserSettings.sol";
+
 import {IPoolCore} from "./IPoolCore.sol";
 import {IPoolInternal} from "./IPoolInternal.sol";
 import {PoolStorage} from "./PoolStorage.sol";
@@ -201,7 +203,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfOperatorNotAuthorized(holders[i], IUserSettings.Authorization.EXERCISE);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -230,7 +232,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfAgentNotAuthorized(holders[i], msg.sender);
+                _revertIfOperatorNotAuthorized(holders[i], IUserSettings.Authorization.SETTLE);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -261,7 +263,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
-                _revertIfAgentNotAuthorized(p[i].operator, msg.sender);
+                _revertIfOperatorNotAuthorized(p[i].operator, IUserSettings.Authorization.SETTLE_POSITION);
                 _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
