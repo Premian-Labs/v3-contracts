@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {ONE, ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
@@ -24,6 +25,7 @@ import {PoolInternal} from "./PoolInternal.sol";
 
 contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using EnumerableSet for EnumerableSet.UintSet;
     using PoolStorage for PoolStorage.Layout;
     using Position for Position.Key;
     using SafeERC20 for IERC20;
@@ -295,5 +297,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper) {
         return _getStrandedArea(PoolStorage.layout());
+    }
+
+    /// @inheritdoc IPoolCore
+    function getTokenIds() external view returns (uint256[] memory) {
+        return PoolStorage.layout().tokenIds.toArray();
     }
 }

@@ -10,6 +10,7 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
@@ -67,6 +68,7 @@ library PoolStorage {
         mapping(address provider => mapping(bytes32 hash => UD60x18 amountFilled)) quoteRFQAmountFilled;
         // Set to true after maturity, to remove factory initialization discount
         bool initFeeDiscountRemoved;
+        EnumerableSet.UintSet tokenIds;
     }
 
     function layout() internal pure returns (Layout storage l) {
