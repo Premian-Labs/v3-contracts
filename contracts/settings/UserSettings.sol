@@ -21,14 +21,15 @@ contract UserSettings is IUserSettings, Multicall {
         address user,
         address operator
     ) external view returns (Action[] memory, bool[] memory) {
-        uint256 length = uint256(type(Action).max) + 1;
+        uint256 length = uint256(type(Action).max);
         Action[] memory actions = new Action[](length);
         bool[] memory authorization = new bool[](length);
 
         UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
         for (uint256 i = 0; i < length; i++) {
-            actions[i] = Action(i);
-            authorization[i] = l.authorizedActions[user][operator].contains(i);
+            uint256 action = i + 1; // skip enum 0
+            actions[i] = Action(action);
+            authorization[i] = l.authorizedActions[user][operator].contains(action);
         }
 
         return (actions, authorization);
