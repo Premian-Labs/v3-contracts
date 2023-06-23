@@ -33,17 +33,22 @@ contract UserSettingsTest is Test, Assertions {
         settings = IUserSettings(address(userSettingsProxy));
     }
 
+    function _assertActionsMatchExpected(IUserSettings.Action[] memory actions) internal {
+        assertEq(uint256(actions[0]), uint256(IUserSettings.Action.__));
+        assertEq(uint256(actions[1]), uint256(IUserSettings.Action.ANNIHILATE));
+        assertEq(uint256(actions[2]), uint256(IUserSettings.Action.EXERCISE));
+        assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE));
+        assertEq(uint256(actions[4]), uint256(IUserSettings.Action.SETTLE_POSITION));
+        assertEq(uint256(actions[5]), uint256(IUserSettings.Action.WRITE_FROM));
+    }
+
     function _assertAllAuthorizationFalse(address user, address operator) internal {
         (IUserSettings.Action[] memory actions, bool[] memory authorization) = settings.getActionAuthorization(
             user,
             operator
         );
 
-        assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
-        assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
-        assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
-        assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
-        assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
+        _assertActionsMatchExpected(actions);
 
         assertFalse(authorization[0]);
         assertFalse(authorization[1]);
@@ -138,26 +143,26 @@ contract UserSettingsTest is Test, Assertions {
             IUserSettings.Action[] memory actions = new IUserSettings.Action[](5);
             actions[0] = IUserSettings.Action.WRITE_FROM;
             actions[1] = IUserSettings.Action.SETTLE_POSITION;
-            // skips index 2
-            actions[3] = IUserSettings.Action.ANNIHILATE;
+            actions[2] = IUserSettings.Action.ANNIHILATE;
+            // skips index 3
             actions[4] = IUserSettings.Action.EXERCISE;
 
             bool[] memory authorization = new bool[](5);
             authorization[0] = false;
-            authorization[1] = true;
-            // skips index 2
-            authorization[3] = false;
+            authorization[1] = false;
+            authorization[2] = true;
+            // skips index 3
             authorization[4] = true;
 
             vm.prank(users.alice);
             settings.setActionAuthorization(users.otherOperator, actions, authorization);
 
-            assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.ANNIHILATE));
+            assertTrue(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.ANNIHILATE));
 
             assertTrue(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.EXERCISE));
             assertFalse(settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.SETTLE));
 
-            assertTrue(
+            assertFalse(
                 settings.isActionAuthorized(users.alice, users.otherOperator, IUserSettings.Action.SETTLE_POSITION)
             );
 
@@ -170,17 +175,14 @@ contract UserSettingsTest is Test, Assertions {
                 users.operator
             );
 
-            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
-            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
-            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
-            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
-            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
+            _assertActionsMatchExpected(actions);
 
-            assertTrue(authorization[0]);
+            assertFalse(authorization[0]);
             assertTrue(authorization[1]);
             assertTrue(authorization[2]);
             assertTrue(authorization[3]);
             assertTrue(authorization[4]);
+            assertTrue(authorization[5]);
         }
 
         {
@@ -189,17 +191,14 @@ contract UserSettingsTest is Test, Assertions {
                 users.operator
             );
 
-            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
-            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
-            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
-            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
-            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
+            _assertActionsMatchExpected(actions);
 
             assertFalse(authorization[0]);
-            assertTrue(authorization[1]);
+            assertFalse(authorization[1]);
             assertTrue(authorization[2]);
-            assertFalse(authorization[3]);
+            assertTrue(authorization[3]);
             assertFalse(authorization[4]);
+            assertFalse(authorization[5]);
         }
 
         {
@@ -208,17 +207,14 @@ contract UserSettingsTest is Test, Assertions {
                 users.otherOperator
             );
 
-            assertEq(uint256(actions[0]), uint256(IUserSettings.Action.ANNIHILATE));
-            assertEq(uint256(actions[1]), uint256(IUserSettings.Action.EXERCISE));
-            assertEq(uint256(actions[2]), uint256(IUserSettings.Action.SETTLE));
-            assertEq(uint256(actions[3]), uint256(IUserSettings.Action.SETTLE_POSITION));
-            assertEq(uint256(actions[4]), uint256(IUserSettings.Action.WRITE_FROM));
+            _assertActionsMatchExpected(actions);
 
             assertFalse(authorization[0]);
             assertTrue(authorization[1]);
-            assertFalse(authorization[2]);
-            assertTrue(authorization[3]);
+            assertTrue(authorization[2]);
+            assertFalse(authorization[3]);
             assertFalse(authorization[4]);
+            assertFalse(authorization[5]);
         }
 
         _disableAllAuthorization(users.alice, users.operator);

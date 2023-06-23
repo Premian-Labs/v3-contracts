@@ -7,6 +7,7 @@ import {IMulticall} from "@solidstate/contracts/utils/IMulticall.sol";
 interface IUserSettings is IMulticall {
     /// @notice Enumeration representing different actions which `user` may authorize an `operator` to perform
     enum Action {
+        __, // intentionally left blank to prevent 0 from being a valid action
         ANNIHILATE,
         EXERCISE,
         SETTLE,
