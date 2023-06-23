@@ -71,11 +71,16 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
-        uint256 lockupStart = maturity + l.exerciseDuration;
-        uint256 lockupEnd = lockupStart + l.lockupDuration;
+        bool afterLockupPeriod;
+        {
+            uint256 lockupStart = maturity + l.exerciseDuration;
+            uint256 lockupEnd = lockupStart + l.lockupDuration;
 
-        _revertIfOptionNotExpired(maturity);
-        _revertIfLockupNotExpired(lockupStart, lockupEnd);
+            _revertIfOptionNotExpired(maturity);
+            _revertIfLockupNotExpired(lockupStart, lockupEnd);
+
+            afterLockupPeriod = block.timestamp >= lockupEnd;
+        }
 
         UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
         _revertIfPriceIsZero(settlementPrice);
@@ -87,7 +92,7 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
         UD60x18 exerciseValue = contractSize;
         UD60x18 exerciseCost = l.toTokenDecimals(strike * contractSize, false);
 
-        if (block.timestamp >= lockupEnd) {
+        if (afterLockupPeriod) {
             // If the option is exercised after the lockup period, the option is cash settled with a penalty.
             UD60x18 intrinsicValue = settlementPrice - strike;
 
