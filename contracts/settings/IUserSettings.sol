@@ -5,23 +5,43 @@ pragma solidity >=0.8.19;
 import {IMulticall} from "@solidstate/contracts/utils/IMulticall.sol";
 
 interface IUserSettings is IMulticall {
-    /// @notice Returns true if the agent is authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor` on
-    ///         behalf of the user
-    /// @param user The user who has authorized the agent
-    /// @param agent The agent who is authorized by the user
-    /// @return True if the agent is authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor`
-    function isAuthorizedAgent(address user, address agent) external view returns (bool);
+    /// @notice Enumeration representing different functions which `operator` may or may not be authorized to perform
+    enum Authorization {
+        ANNIHILATE,
+        EXERCISE,
+        SETTLE,
+        SETTLE_POSITION,
+        WRITE_FROM
+    }
 
-    /// @notice Returns the addresses of agents authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor`
-    ///         on behalf of the user
-    /// @param user The user who has authorized agents
-    /// @return The addresses of authorized agents
-    function getAuthorizedAgents(address user) external view returns (address[] memory);
+    error UserSettings__InvalidArrayLength();
 
-    /// @notice Sets the addresses authorized to call `exerciseFor`, `settleFor`, or `settlePositionFor` on behalf of
-    ///         the user
-    /// @param agents The addresses of authorized agents
-    function setAuthorizedAgents(address[] memory agents) external;
+    /// @notice Returns true if `operator` is authorized to perform the function `authorization` for `user`
+    /// @param user The user who has authorization
+    /// @param operator The operator may or may not be granted authorization
+    /// @param authorization The function `operator` may or may not be authorized to perform
+    /// @return True if `operator` is authorized to perform the function `authorization` for `user`
+    function isAuthorized(address user, address operator, Authorization authorization) external view returns (bool);
+
+    /// @notice Returns the available functions `operator` may or may not be authorized to perform for `user`
+    /// @param user The user who has authorization
+    /// @param operator The operator may or may not be granted authorization
+    /// @return The functions `user` may enable or disable authorization for
+    /// @return The states of authorization for each function in `authorizations`
+    function getAuthorizations(
+        address user,
+        address operator
+    ) external view returns (Authorization[] memory, bool[] memory);
+
+    /// @notice Sets the authorization for `operator` to perform the functions in `authorizations` for caller
+    /// @param operator The operator may or may not be granted authorization
+    /// @param authorizations The functions caller may enable or disable authorization for
+    /// @param authorize The states of authorization to set for each function in `authorizations`
+    function setAuthorizations(
+        address operator,
+        Authorization[] memory authorizations,
+        bool[] memory authorize
+    ) external;
 
     /// @notice Returns the users authorized cost in the ERC20 Native token (WETH, WFTM, etc) used in conjunction with
     ///         `exerciseFor`, settleFor`, and `settlePositionFor`
@@ -32,19 +52,4 @@ interface IUserSettings is IMulticall {
     ///         `exerciseFor`, `settleFor`, and `settlePositionFor`
     /// @param amount The users authorized cost in the ERC20 Native token (WETH, WFTM, etc) (18 decimals)
     function setAuthorizedCost(uint256 amount) external;
-
-    /// @notice Sets whether the given operator is authorized or not to call `annihilateFor` on behalf of the user
-    /// @param operator The operator who is authorized or not
-    /// @param isAuthorized True if the operator is authorized, false otherwise
-    function setAuthorizedAnnihilate(address operator, bool isAuthorized) external;
-
-    /// @notice Returns the addresses of operators authorized to call `annihilateFor` on behalf of the user
-    /// @param user The user from which to get authorized operators
-    /// @return The addresses of authorized operators
-    function getAuthorizedAnnihilate(address user) external view returns (address[] memory);
-
-    /// @notice Returns true if the operator is authorized to call `annihilateFor` on behalf of the user
-    /// @param user The user for which to check if the operator is authorized
-    /// @param operator The operator to check if authorized
-    function isAuthorizedAnnihilate(address user, address operator) external view returns (bool);
 }
