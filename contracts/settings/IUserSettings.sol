@@ -38,12 +38,12 @@ interface IUserSettings is IMulticall {
     ////        `operator` has been granted authorization by `user` to perform the action on their behalf.
     /// @param user The user who grants authorization
     /// @param operator The operator who is granted authorization
-    /// @return All available actions a `user` may grant authorization to `operator` for
-    /// @return The authorization states of each `action`
+    /// @return actions All available actions a `user` may grant authorization to `operator` for
+    /// @return authorization The authorization states of each `action`
     function getActionAuthorization(
         address user,
         address operator
-    ) external view returns (Action[] memory, bool[] memory);
+    ) external view returns (Action[] memory actions, bool[] memory authorization);
 
     /// @notice Sets the authorization state for each action an `operator` may perform on behalf of `user`. `actions`
     ///         must be indexed in the same order as their corresponding `authorization` state.

@@ -20,10 +20,10 @@ contract UserSettings is IUserSettings, Multicall {
     function getActionAuthorization(
         address user,
         address operator
-    ) external view returns (Action[] memory, bool[] memory) {
+    ) external view returns (Action[] memory actions, bool[] memory authorization) {
         uint256 length = uint256(type(Action).max);
-        Action[] memory actions = new Action[](length);
-        bool[] memory authorization = new bool[](length);
+        actions = new Action[](length);
+        authorization = new bool[](length);
 
         UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
         for (uint256 i = 0; i < length; i++) {
