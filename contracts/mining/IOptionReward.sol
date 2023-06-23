@@ -29,17 +29,17 @@ interface IOptionReward is IERC1155Base, IERC1155Enumerable {
         UD60x18 exerciseCost,
         UD60x18 settlementPrice,
         UD60x18 strike,
-        uint64 maturity
+        uint256 maturity
     );
 
-    event Settle(address indexed user, UD60x18 contractSize, UD60x18 settlementPrice, UD60x18 strike, uint64 maturity);
+    event Settle(address indexed user, UD60x18 contractSize, UD60x18 settlementPrice, UD60x18 strike, uint256 maturity);
 
     event WriteFrom(
         address indexed underwriter,
         address indexed longReceiver,
         UD60x18 contractSize,
         UD60x18 strike,
-        uint64 maturity
+        uint256 maturity
     );
 
     /// @notice Underwrite an option by depositing collateral - only `underwriter` may call this function

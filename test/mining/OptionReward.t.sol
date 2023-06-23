@@ -174,7 +174,7 @@ contract OptionRewardTest is Assertions, Test {
         address indexed longReceiver,
         UD60x18 contractSize,
         UD60x18 strike,
-        uint64 maturity
+        uint256 maturity
     );
 
     function test_writeFrom_CorrectMaturity() public {
@@ -187,9 +187,9 @@ contract OptionRewardTest is Assertions, Test {
         IERC20(base).approve(address(optionReward), collateral);
 
         // block.timestamp = Apr-22-2023 09:30:23 AM +UTC
-        uint64 expiryDuration = uint64(30 days);
-        uint64 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
-        uint64 expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
+        uint256 expiryDuration = 30 days;
+        uint256 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
+        uint256 expectedMaturity = timestamp8AMUTC + expiryDuration; // May-22-2023 08:00:00 AM +UTC
 
         vm.expectEmit();
         emit WriteFrom(users.underwriter, users.longReceiver, ONE, ud(0.55e18), expectedMaturity);
@@ -206,7 +206,7 @@ contract OptionRewardTest is Assertions, Test {
         vm.prank(users.underwriter);
         optionReward.writeFrom(users.longReceiver, ONE);
 
-        vm.warp(1682208000); // Apr-23-2023 00:00:00 PM +UTC
+        vm.warp(1682208000); // Apr-23-2023 00:00:00 AM +UTC
 
         timestamp8AMUTC = 1682236800; // Apr-23-2023 08:00:00 AM +UTC
         expectedMaturity = timestamp8AMUTC + expiryDuration; // May-23-2023 08:00:00 AM +UTC
