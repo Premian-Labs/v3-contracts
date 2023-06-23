@@ -7,7 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 interface IVaultMining {
     event Claim(address indexed user, address indexed vault, UD60x18 rewardAmount);
 
-    event UpdateVaultVotes(address indexed vault, uint256 votes, UD60x18 vaultUtilizationRate);
+    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilizationRate);
 
     //
 

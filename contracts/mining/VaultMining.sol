@@ -16,14 +16,14 @@ contract VaultMining is IVaultMining, OwnableInternal {
     using VaultMiningStorage for VaultMiningStorage.Layout;
 
     /// @notice Address of the vault registry
-    address internal constant VAULT_REGISTRY;
+    address internal immutable VAULT_REGISTRY;
     /// @notice Address of the vxPremia token
-    address internal constant VX_PREMIA;
+    address internal immutable VX_PREMIA;
     /// @notice Address of the PREMIA physically settled options
-    address internal constant PREMIA_OPTION;
+    address internal immutable PREMIA_OPTION;
 
     /// @notice If utilization rate is less than this value, we use this value instead as a multiplier on allocation points
-    uint256 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
+    UD60x18 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
 
     constructor(address vaultRegistry, address vxPremia, address premiaOption) {
         VAULT_REGISTRY = vaultRegistry;
@@ -32,11 +32,12 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @notice Add rewards to the contract
-    function addRewards(uint256 amount) external onlyOwner {
-        VaultMiningStorage.layout().rewardsAvailable += amount;
+    function addRewards(UD60x18 amount) external onlyOwner {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+        l.rewardsAvailable = l.rewardsAvailable + amount;
     }
 
-    function getRewardsAvailable() external view returns (uint256) {
+    function getRewardsAvailable() external view returns (UD60x18) {
         return VaultMiningStorage.layout().rewardsAvailable;
     }
 
@@ -44,28 +45,28 @@ contract VaultMining is IVaultMining, OwnableInternal {
     /// @param vault Address of the vault
     /// @param user Address of the user
     /// @return Pending rewards for the given user, on the given vault
-    function pendingRewards(address vault, address user) external view returns (UD60x18) {
+    function getUserPendingRewards(address vault, address user) external view returns (UD60x18) {
         UD60x18 totalShares = ud(IERC20(vault).totalSupply());
         UD60x18 userShares = ud(IERC20(vault).balanceOf(user));
 
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage _vault = l.vaultInfo[vault];
 
-        UserInfo storage user = l.userInfo[vault][user];
+        UserInfo storage _user = l.userInfo[vault][user];
         UD60x18 accRewardsPerShare = _vault.accRewardsPerShare;
 
-        if (block.timestamp > _vault.lastRewardTimestamp && TVL > 0 && _vault.votes > 0) {
+        if (block.timestamp > _vault.lastRewardTimestamp && _vault.votes > ZERO && IERC20(vault).totalSupply() > 0) {
             UD60x18 rewardsAmount = _calculateRewardsUpdate(l, _vault.lastRewardTimestamp, _vault.votes);
             accRewardsPerShare = accRewardsPerShare + (rewardsAmount / totalShares);
         }
 
-        return (userShares * accRewardsPerShare) - user.rewardDebt + user.reward;
+        return (userShares * accRewardsPerShare) - _user.rewardDebt + _user.reward;
     }
 
     function _calculateRewardsUpdate(
         VaultMiningStorage.Layout storage l,
         uint256 lastVaultRewardTimestamp,
-        uint256 vaultVotes
+        UD60x18 vaultVotes
     ) internal view returns (UD60x18 rewardAmount) {
         UD60x18 yearsElapsed = ud((block.timestamp - lastVaultRewardTimestamp) * WAD) / ud(365 days * WAD);
         rewardAmount = (yearsElapsed * l.rewardsPerYear * vaultVotes) / l.totalVotes;
@@ -80,7 +81,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         return VaultMiningStorage.layout().totalVotes;
     }
 
-    function getVaultInfo(address vault) external view returns (VaultInfo) {
+    function getVaultInfo(address vault) external view returns (VaultInfo memory) {
         return VaultMiningStorage.layout().vaultInfo[vault];
     }
 
@@ -94,49 +95,45 @@ contract VaultMining is IVaultMining, OwnableInternal {
         // ToDo : Emit event
     }
 
-    function getUserPendingRewards() external view returns (uint256) {
-        // ToDo : Implement
-        return 0;
-    }
-
     function claim() external {
         // ToDo : Implement
     }
 
     function _updateVault(address vault, UD60x18 totalTVL, UD60x18 utilizationRate) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-        VaultInfo storage vault = l.vaultInfo[vault];
+        VaultInfo storage _vault = l.vaultInfo[vault];
 
-        if (block.timestamp <= vault.lastRewardTimestamp) return;
+        if (block.timestamp <= _vault.lastRewardTimestamp) return;
 
-        if (totalTVL > ZERO && vault.votes > 0) {
-            UD60x18 rewardAmount = _calculateRewardsUpdate(l, vault.lastRewardTimestamp, vault.votes);
+        if (totalTVL > ZERO && _vault.votes > ZERO) {
+            UD60x18 rewardAmount = _calculateRewardsUpdate(l, _vault.lastRewardTimestamp, _vault.votes);
             l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
-            vault.accPremiaPerShare = vault.accRewardsPerShare + (rewardAmount / totalTVL);
+            _vault.accRewardsPerShare = _vault.accRewardsPerShare + (rewardAmount / totalTVL);
         }
 
-        vault.lastRewardTimestamp = block.timestamp;
+        _vault.lastRewardTimestamp = block.timestamp;
 
         _updateVaultAllocation(l, vault, utilizationRate);
     }
 
-    function _allocatePending(
-        address user,
-        address vault,
-        uint256 userTVLOld,
-        uint256 userTVLNew,
-        uint256 totalTVL,
-        uint256 utilizationRate
-    ) internal {
-        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-        VaultInfo storage vault = l.vaultInfo[vault];
-        UserInfo storage user = l.userInfo[vault][user];
-
-        _updateVault(vault, totalTVL, utilizationRate);
-
-        user.reward += (userTVLOld * vault.accRewardsPerShare) - user.rewardDebt;
-        user.rewardDebt = userTVLOld * vault.accRewardsPerShare;
-    }
+    // ToDo : Update
+    //    function _allocatePending(
+    //        address user,
+    //        address vault,
+    //        uint256 userTVLOld,
+    //        uint256 userTVLNew,
+    //        uint256 totalTVL,
+    //        uint256 utilizationRate
+    //    ) internal {
+    //        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+    //        VaultInfo storage vault = l.vaultInfo[vault];
+    //        UserInfo storage user = l.userInfo[vault][user];
+    //
+    //        _updateVault(vault, totalTVL, utilizationRate);
+    //
+    //        user.reward += (userTVLOld * vault.accRewardsPerShare) - user.rewardDebt;
+    //        user.rewardDebt = userTVLOld * vault.accRewardsPerShare;
+    //    }
 
     function _updateVaultAllocation(
         VaultMiningStorage.Layout storage l,

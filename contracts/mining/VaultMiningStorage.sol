@@ -14,7 +14,7 @@ library VaultMiningStorage {
         UD60x18 rewardsPerYear;
         // Amount of rewards distributed per year
         UD60x18 rewardsAvailable;
-        mapping(address pool => IVaultMining.VaultInfo infos) poolInfo;
+        mapping(address pool => IVaultMining.VaultInfo infos) vaultInfo;
         mapping(address pool => mapping(address user => IVaultMining.UserInfo info)) userInfo;
         // Total votes across all pools
         UD60x18 totalVotes;
