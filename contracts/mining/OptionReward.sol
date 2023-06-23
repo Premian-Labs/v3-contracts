@@ -106,7 +106,7 @@ contract OptionReward is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionRewa
 
             uint256 rewardAmount = (exerciseCost - fee).unwrap();
             IERC20(l.quote).approve(l.paymentSplitter, rewardAmount);
-            IPaymentSplitter(l.paymentSplitter).addReward(rewardAmount);
+            IPaymentSplitter(l.paymentSplitter).pay(rewardAmount);
         }
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);

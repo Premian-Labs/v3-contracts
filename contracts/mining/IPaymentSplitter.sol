@@ -3,5 +3,5 @@
 pragma solidity >=0.8.19;
 
 interface IPaymentSplitter {
-    function addReward(uint256 amount) external;
+    function pay(uint256 amount) external;
 }

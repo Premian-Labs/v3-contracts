@@ -22,7 +22,7 @@ contract PaymentSplitter is IPaymentSplitter {
 
     /// @notice Distributes rewards to vxPREMIA staking contract - caller must approve `amount` before calling
     /// @param amount Amount of reward tokens to distribute
-    function addReward(uint256 amount) external {
+    function pay(uint256 amount) external {
         IERC20(TOKEN).safeTransferFrom(msg.sender, address(this), amount);
         IERC20(TOKEN).approve(VXPREMIA, amount);
         IVxPremia(VXPREMIA).addRewards(amount);
