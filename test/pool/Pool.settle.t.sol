@@ -201,12 +201,20 @@ abstract contract PoolSettleTest is DeployTest {
         pool.settleFor(holders, cost);
     }
 
-    function test_settleFor_RevertIf_OperatorNotAuthorized() public {
+    function test_settleFor_RevertIf_ActionNotAuthorized() public {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.trader,
+                users.operator,
+                IUserSettings.Action.SETTLE
+            )
+        );
+
         vm.prank(users.operator);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.operator));
         pool.settleFor(holders, 0);
     }
 

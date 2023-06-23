@@ -583,7 +583,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             msg.sender != underwriter &&
             !IUserSettings(SETTINGS).isActionAuthorized(underwriter, msg.sender, IUserSettings.Action.WRITE_FROM)
-        ) revert Pool__OperatorNotAuthorized(msg.sender);
+        ) revert Pool__ActionNotAuthorized(underwriter, msg.sender, IUserSettings.Action.WRITE_FROM);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -984,7 +984,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (
             msg.sender != owner &&
             !IUserSettings(SETTINGS).isActionAuthorized(owner, msg.sender, IUserSettings.Action.ANNIHILATE)
-        ) revert Pool__OperatorNotAuthorized(msg.sender);
+        ) revert Pool__ActionNotAuthorized(owner, msg.sender, IUserSettings.Action.ANNIHILATE);
 
         _revertIfZeroSize(size);
 
@@ -2038,10 +2038,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (operator != msg.sender) revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    /// @notice Revert if `operator` is not authorized by `holder` to call function `authorization`
-    function _revertIfOperatorNotAuthorized(address holder, IUserSettings.Action action) internal view {
+    /// @notice Revert if `operator` is not authorized by `holder` to call `action`
+    function _revertIfActionNotAuthorized(address holder, IUserSettings.Action action) internal view {
         if (!IUserSettings(SETTINGS).isActionAuthorized(holder, msg.sender, action))
-            revert Pool__OperatorNotAuthorized(msg.sender);
+            revert Pool__ActionNotAuthorized(holder, msg.sender, action);
     }
 
     /// @notice Revert if `cost` is not authorized by `holder`

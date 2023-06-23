@@ -223,12 +223,20 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePositionFor(p, cost);
     }
 
-    function test_settlePositionFor_RevertIf_OperatorNotAuthorized() public {
+    function test_settlePositionFor_RevertIf_ActionNotAuthorized() public {
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                posKey.operator,
+                users.operator,
+                IUserSettings.Action.SETTLE_POSITION
+            )
+        );
+
         vm.prank(users.operator);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.operator));
         pool.settlePositionFor(p, 0);
     }
 

@@ -161,12 +161,20 @@ abstract contract PoolExerciseTest is DeployTest {
         pool.exerciseFor(holders, cost);
     }
 
-    function test_exerciseFor_RevertIf_OperatorNotAuthorized() public {
+    function test_exerciseFor_RevertIf_ActionNotAuthorized() public {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.trader,
+                users.operator,
+                IUserSettings.Action.EXERCISE
+            )
+        );
+
         vm.prank(users.operator);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.operator));
         pool.exerciseFor(holders, 0);
     }
 

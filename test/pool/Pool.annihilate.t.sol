@@ -84,11 +84,19 @@ abstract contract PoolAnnihilateTest is DeployTest {
         );
     }
 
-    function test_annihilateFor_RevertIf_OperatorNotAuthorized() public {
+    function test_annihilateFor_RevertIf_ActionNotAuthorized() public {
         init();
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.lp,
+                users.operator,
+                IUserSettings.Action.ANNIHILATE
+            )
+        );
+
         vm.prank(users.operator);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.operator));
         pool.annihilateFor(users.lp, annihilateSize);
     }
 }

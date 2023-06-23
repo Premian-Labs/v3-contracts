@@ -140,8 +140,16 @@ abstract contract PoolWriteFromTest is DeployTest {
         pool.writeFrom(users.lp, users.trader, size, address(0));
     }
 
-    function test_writeFrom_RevertIf_OperatorNotAuthorized() public {
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.operator));
+    function test_writeFrom_RevertIf_ActionNotAuthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.lp,
+                users.operator,
+                IUserSettings.Action.WRITE_FROM
+            )
+        );
+
         vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, ud(500 ether), address(0));
     }
