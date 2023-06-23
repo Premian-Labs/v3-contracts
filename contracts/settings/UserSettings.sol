@@ -42,8 +42,9 @@ contract UserSettings is IUserSettings, Multicall {
         EnumerableSet.UintSet storage authorizedActions = l.authorizedActions[msg.sender][operator];
 
         for (uint256 i = 0; i < actions.length; i++) {
-            uint256 action = uint256(actions[i]);
-            authorization[i] ? authorizedActions.add(action) : authorizedActions.remove(action);
+            Action action = actions[i];
+            if (action == Action.__) revert UserSettings__InvalidAction();
+            authorization[i] ? authorizedActions.add(uint256(action)) : authorizedActions.remove(uint256(action));
         }
 
         emit ActionAuthorizationUpdated(msg.sender, operator, actions, authorization);

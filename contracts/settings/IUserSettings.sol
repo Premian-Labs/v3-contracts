@@ -15,6 +15,7 @@ interface IUserSettings is IMulticall {
         WRITE_FROM
     }
 
+    error UserSettings__InvalidAction();
     error UserSettings__InvalidArrayLength();
 
     event ActionAuthorizationUpdated(

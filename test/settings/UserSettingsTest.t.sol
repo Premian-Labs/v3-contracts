@@ -238,6 +238,17 @@ contract UserSettingsTest is Test, Assertions {
         }
     }
 
+    function test_setActionAuthorization_RevertIf_InvalidAction() public {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = IUserSettings.Action.__;
+
+        bool[] memory authorization = new bool[](1);
+        authorization[0] = true;
+
+        vm.expectRevert(IUserSettings.UserSettings__InvalidAction.selector);
+        settings.setActionAuthorization(users.operator, actions, authorization);
+    }
+
     function test_setAuthorizedCost_Success() public {
         uint256 amountAlice = 1e18;
         vm.prank(users.alice);
