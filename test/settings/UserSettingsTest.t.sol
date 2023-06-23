@@ -4,6 +4,8 @@ pragma solidity >=0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
@@ -238,5 +240,23 @@ contract UserSettingsTest is Test, Assertions {
         }
     }
 
-    function _test_setAuthorizedCost_Success() public {}
+    function test_setAuthorizedCost_Success() public {
+        uint256 amountAlice = 1e18;
+        vm.prank(users.alice);
+        settings.setAuthorizedCost(amountAlice);
+
+        uint256 amountBob = 10e18;
+        vm.prank(users.bob);
+        settings.setAuthorizedCost(amountBob);
+
+        assertEq(settings.getAuthorizedCost(users.alice), amountAlice);
+        assertEq(settings.getAuthorizedCost(users.bob), amountBob);
+
+        amountAlice = 100e18;
+        vm.prank(users.alice);
+        settings.setAuthorizedCost(amountAlice);
+
+        assertEq(settings.getAuthorizedCost(users.alice), amountAlice);
+        assertEq(settings.getAuthorizedCost(users.bob), amountBob);
+    }
 }
