@@ -16,6 +16,15 @@ interface IUserSettings is IMulticall {
 
     error UserSettings__InvalidArrayLength();
 
+    event SetAuthorizations(
+        address indexed user,
+        address indexed operator,
+        Authorization[] authorizations,
+        bool[] authorize
+    );
+
+    event SetAuthorizedCost(address indexed user, uint256 amount);
+
     /// @notice Returns true if `operator` is authorized to perform the function `authorization` for `user`
     /// @param user The user who has authorization
     /// @param operator The operator may or may not be granted authorization

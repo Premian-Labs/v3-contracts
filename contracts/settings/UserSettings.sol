@@ -49,6 +49,8 @@ contract UserSettings is IUserSettings, Multicall {
             uint256 authorization = uint256(authorizations[i]);
             authorize[i] ? _authorizations.add(authorization) : _authorizations.remove(authorization);
         }
+
+        emit SetAuthorizations(msg.sender, operator, authorizations, authorize);
     }
 
     /// @inheritdoc IUserSettings
@@ -59,5 +61,6 @@ contract UserSettings is IUserSettings, Multicall {
     /// @inheritdoc IUserSettings
     function setAuthorizedCost(uint256 amount) external {
         UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
+        emit SetAuthorizedCost(msg.sender, amount);
     }
 }
