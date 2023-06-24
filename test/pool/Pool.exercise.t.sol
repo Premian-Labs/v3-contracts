@@ -206,6 +206,7 @@ abstract contract PoolExerciseTest is DeployTest {
         oracleAdapter.setQuote(quote);
 
         setActionAuthorization(users.trader, IUserSettings.Action.Exercise, true);
+        UD60x18 authorizedCost = ud(0.1e18);
 
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
