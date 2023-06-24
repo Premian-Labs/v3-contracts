@@ -188,7 +188,7 @@ abstract contract PoolSettleTest is DeployTest {
                 IPoolInternal.Pool__ActionNotAuthorized.selector,
                 users.trader,
                 users.operator,
-                IUserSettings.Action.SETTLE
+                IUserSettings.Action.Settle
             )
         );
 
@@ -201,7 +201,7 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
+        setActionAuthorization(users.trader, IUserSettings.Action.Settle, true);
         UD60x18 cost = ud(0.1e18);
 
         address[] memory holders = new address[](1);

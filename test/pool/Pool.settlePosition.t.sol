@@ -212,7 +212,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
                 IPoolInternal.Pool__ActionNotAuthorized.selector,
                 posKey.operator,
                 users.operator,
-                IUserSettings.Action.SETTLE_POSITION
+                IUserSettings.Action.SettlePosition
             )
         );
 
@@ -225,7 +225,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        setActionAuthorization(posKey.operator, IUserSettings.Action.SETTLE_POSITION, true);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
         UD60x18 cost = ud(0.1e18);
 
         Position.Key[] memory p = new Position.Key[](1);
@@ -251,7 +251,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         address operator = vm.addr(11);
 
         IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
-        actions[0] = IUserSettings.Action.SETTLE_POSITION;
+        actions[0] = IUserSettings.Action.SettlePosition;
 
         bool[] memory authorization = new bool[](1);
         authorization[0] = true;

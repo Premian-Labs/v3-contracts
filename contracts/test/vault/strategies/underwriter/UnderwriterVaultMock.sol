@@ -496,7 +496,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         return _beforeWithdraw(receiver, assetAmount, shareAmount);
     }
 
-    function getLastManagementFeeTimestamp() external returns (uint256) {
+    function getLastManagementFeeTimestamp() external view returns (uint256) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return l.lastManagementFeeTimestamp;
     }
@@ -510,7 +510,7 @@ contract UnderwriterVaultMock is UnderwriterVault {
         _chargeManagementFees();
     }
 
-    function computeManagementFees() external returns (UD60x18) {
+    function computeManagementFees() external view returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
         return _computeManagementFee(l, _getBlockTimestamp());
     }
