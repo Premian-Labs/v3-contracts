@@ -45,7 +45,11 @@ contract UnderwriterVaultMock is UnderwriterVault {
         address router,
         address vxPremia,
         address poolDiamond
-    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia, poolDiamond) {}
+    ) UnderwriterVault(vaultRegistry, feeReceiver, oracle, factory, router, vxPremia, poolDiamond, address(0)) {}
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual override {
+        // Leave empty to disable liquidity mining
+    }
 
     function _getBlockTimestamp() internal view override returns (uint256) {
         return mockTimestamp == 0 ? block.timestamp : mockTimestamp;

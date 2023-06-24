@@ -50,4 +50,14 @@ interface IVaultMining {
         UD60x18 votes;
         UD60x18 vaultUtilisationRate;
     }
+
+    function updateUser(
+        address user,
+        address vault,
+        UD60x18 newUserShares,
+        UD60x18 newTotalShares,
+        UD60x18 utilisationRate
+    ) external;
+
+    function updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) external;
 }

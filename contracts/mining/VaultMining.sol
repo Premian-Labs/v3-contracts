@@ -106,7 +106,6 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
         UD60x18 size;
         for (uint256 i = 0; i < vaults.length; i++) {
-            IVault vault = IVault(vaults[i]);
             updateUser(msg.sender, vaults[i]);
 
             UD60x18 rewardAmount = l.userInfo[vaults[i]][msg.sender].reward;
@@ -120,11 +119,30 @@ contract VaultMining is IVaultMining, OwnableInternal {
         IOptionReward(OPTION_REWARD).writeFrom(msg.sender, size);
     }
 
-    function updateVault(address vault) public {
+    function updateUser(
+        address user,
+        address vault,
+        UD60x18 newUserShares,
+        UD60x18 newTotalShares,
+        UD60x18 utilisationRate
+    ) external {
+        _revertIfNotVault(msg.sender);
+        _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
+    }
+
+    function updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) external {
+        _revertIfNotVault(msg.sender);
+        _updateVault(vault, newTotalShares, utilisationRate);
+    }
+
+    function updateVault(address vault) external {
+        IVault _vault = IVault(vault);
+        _updateVault(vault, ud(IVault(vault).totalSupply()), IVault(vault).getUtilisation());
+    }
+
+    function _updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
-
-        UD60x18 utilisationRate = IVault(vault).getUtilisation();
 
         if (block.timestamp <= vInfo.lastRewardTimestamp) return;
 
@@ -135,18 +153,28 @@ contract VaultMining is IVaultMining, OwnableInternal {
         }
 
         vInfo.lastRewardTimestamp = block.timestamp;
-        vInfo.totalShares = ud(IVault(vault).totalSupply());
+        vInfo.totalShares = newTotalShares;
 
         _updateVaultAllocation(l, vault, utilisationRate);
     }
 
     function updateUser(address user, address vault) public {
+        IVault _vault = IVault(vault);
+        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
+    }
+
+    function _updateUser(
+        address user,
+        address vault,
+        UD60x18 newUserShares,
+        UD60x18 newTotalShares,
+        UD60x18 utilisationRate
+    ) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
-        UD60x18 newUserShares = ud(IVault(vault).balanceOf(user));
-        updateVault(vault);
+        _updateVault(vault, newTotalShares, utilisationRate);
 
         uInfo.reward = uInfo.reward + (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
         uInfo.rewardDebt = newUserShares * vInfo.accRewardsPerShare;
