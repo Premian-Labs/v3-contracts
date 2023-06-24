@@ -582,8 +582,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) internal {
         if (
             msg.sender != underwriter &&
-            !IUserSettings(SETTINGS).isActionAuthorized(underwriter, msg.sender, IUserSettings.Action.WRITE_FROM)
-        ) revert Pool__ActionNotAuthorized(underwriter, msg.sender, IUserSettings.Action.WRITE_FROM);
+            !IUserSettings(SETTINGS).isActionAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom)
+        ) revert Pool__ActionNotAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -983,8 +983,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _annihilate(address owner, UD60x18 size) internal {
         if (
             msg.sender != owner &&
-            !IUserSettings(SETTINGS).isActionAuthorized(owner, msg.sender, IUserSettings.Action.ANNIHILATE)
-        ) revert Pool__ActionNotAuthorized(owner, msg.sender, IUserSettings.Action.ANNIHILATE);
+            !IUserSettings(SETTINGS).isActionAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate)
+        ) revert Pool__ActionNotAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate);
 
         _revertIfZeroSize(size);
 

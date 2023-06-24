@@ -9,11 +9,11 @@ interface IUserSettings is IMulticall {
     /// @notice Enumeration representing different actions which `user` may authorize an `operator` to perform
     enum Action {
         __, // intentionally left blank to prevent 0 from being a valid action
-        ANNIHILATE,
-        EXERCISE,
-        SETTLE,
-        SETTLE_POSITION,
-        WRITE_FROM
+        Annihilate,
+        Exercise,
+        Settle,
+        SettlePosition,
+        WriteFrom
     }
 
     error UserSettings__InvalidAction();
