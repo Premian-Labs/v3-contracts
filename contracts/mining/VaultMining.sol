@@ -137,22 +137,23 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
     function updateVault(address vault) external {
         IVault _vault = IVault(vault);
-        _updateVault(vault, ud(IVault(vault).totalSupply()), IVault(vault).getUtilisation());
+        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
     }
 
     function _updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
-        if (block.timestamp <= vInfo.lastRewardTimestamp) return;
+        if (block.timestamp > vInfo.lastRewardTimestamp) {
+            if (vInfo.totalShares > ZERO && vInfo.votes > ZERO) {
+                UD60x18 rewardAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
+                l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
+                vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (rewardAmount / vInfo.totalShares);
+            }
 
-        if (vInfo.totalShares > ZERO && vInfo.votes > ZERO) {
-            UD60x18 rewardAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
-            l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
-            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (rewardAmount / vInfo.totalShares);
+            vInfo.lastRewardTimestamp = block.timestamp;
         }
 
-        vInfo.lastRewardTimestamp = block.timestamp;
         vInfo.totalShares = newTotalShares;
 
         _updateVaultAllocation(l, vault, utilisationRate);
