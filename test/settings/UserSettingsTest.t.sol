@@ -270,18 +270,18 @@ contract UserSettingsTest is Test, Assertions {
     }
 
     function test_setAuthorizedCost_Success() public {
-        uint256 amountAlice = 1e18;
+        UD60x18 amountAlice = ud(1e18);
         vm.prank(users.alice);
         settings.setAuthorizedCost(amountAlice);
 
-        uint256 amountBob = 10e18;
+        UD60x18 amountBob = ud(10e18);
         vm.prank(users.bob);
         settings.setAuthorizedCost(amountBob);
 
         assertEq(settings.getAuthorizedCost(users.alice), amountAlice);
         assertEq(settings.getAuthorizedCost(users.bob), amountBob);
 
-        amountAlice = 100e18;
+        amountAlice = ud(100e18);
         vm.prank(users.alice);
         settings.setAuthorizedCost(amountAlice);
 

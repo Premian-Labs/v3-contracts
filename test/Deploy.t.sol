@@ -500,11 +500,6 @@ contract DeployTest is Test, Assertions {
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
-    function scaleDecimalsTo(uint256 amount) internal view returns (uint256) {
-        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
-        return OptionMath.scaleDecimals(amount, decimals, 18);
-    }
-
     function scaleDecimalsTo(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
@@ -554,7 +549,7 @@ contract DeployTest is Test, Assertions {
         userSettings.setActionAuthorization(users.operator, actions, _authorization);
     }
 
-    function enableExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+    function enableExerciseSettleAuthorization(address user, UD60x18 authorizedCost) internal {
         IUserSettings.Action[] memory actions = new IUserSettings.Action[](3);
         actions[0] = IUserSettings.Action.EXERCISE;
         actions[1] = IUserSettings.Action.SETTLE;

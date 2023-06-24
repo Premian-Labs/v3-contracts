@@ -365,7 +365,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             users.trader,
             tradeSize,
             contractsToCollateral(tradeSize),
-            ud(scaleDecimalsTo(fee))
+            scaleDecimals(fee)
         );
 
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));

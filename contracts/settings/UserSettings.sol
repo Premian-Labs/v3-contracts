@@ -2,6 +2,7 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
@@ -52,12 +53,12 @@ contract UserSettings is IUserSettings, Multicall {
     }
 
     /// @inheritdoc IUserSettings
-    function getAuthorizedCost(address user) external view returns (uint256) {
+    function getAuthorizedCost(address user) external view returns (UD60x18) {
         return UserSettingsStorage.layout().authorizedCost[user];
     }
 
     /// @inheritdoc IUserSettings
-    function setAuthorizedCost(uint256 amount) external {
+    function setAuthorizedCost(UD60x18 amount) external {
         UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
         emit AuthorizedCostUpdated(msg.sender, amount);
     }

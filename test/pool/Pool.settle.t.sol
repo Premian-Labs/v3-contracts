@@ -2,10 +2,12 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ONE, TWO} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
@@ -30,31 +32,23 @@ abstract contract PoolSettleTest is DeployTest {
         deposit(depositSize);
 
         trade.initialCollateral = scaleDecimals(contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper));
-
         trade.size = ud(100 ether);
-
         trade.traderCollateral = scaleDecimals(contractsToCollateral(trade.size));
-
         (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, false);
 
         trade.poolToken = getPoolToken();
         trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
 
         vm.startPrank(users.trader);
-
         deal(trade.poolToken, users.trader, trade.traderCollateral);
         IERC20(trade.poolToken).approve(address(router), trade.traderCollateral);
-
         pool.trade(trade.size, false, trade.totalPremium - trade.totalPremium / 10, address(0));
-
         vm.stopPrank();
     }
 
     function _test_settle_Sell100Options(bool isITM) internal {
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
-
         uint256 protocolFees = pool.protocolFees();
-
         UD60x18 settlementPrice = getSettlementPrice(isITM);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
@@ -98,36 +92,33 @@ abstract contract PoolSettleTest is DeployTest {
 
     function _test_settleFor_Sell100Options(bool isITM) internal {
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setQuote(settlementPrice.inv());
+        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setQuote(quote);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
-        enableExerciseSettleAuthorization(users.trader, 0.1 ether);
-        enableExerciseSettleAuthorization(users.otherTrader, 0.1 ether);
+        UD60x18 authorizedCost = ud(0.1e18);
+        enableExerciseSettleAuthorization(users.trader, authorizedCost);
+        enableExerciseSettleAuthorization(users.otherTrader, authorizedCost);
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
         vm.startPrank(users.trader);
-
         pool.setApprovalForAll(users.otherTrader, true);
-
         pool.safeTransferFrom(users.trader, users.otherTrader, PoolStorage.SHORT, (trade.size / TWO).unwrap(), "");
-
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
-
-        uint256 cost = scaleDecimals(ud(0.1 ether));
-
         vm.warp(poolKey.maturity);
-        vm.prank(users.operator);
 
         address[] memory holders = new address[](2);
         holders[0] = users.trader;
         holders[1] = users.otherTrader;
 
-        pool.settleFor(holders, cost);
-
+        uint256 cost = scaleDecimals(authorizedCost);
         uint256 exerciseValue = scaleDecimals(getExerciseValue(isITM, trade.size / TWO, settlementPrice));
+
+        vm.prank(users.operator);
+        pool.settleFor(holders, cost);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
@@ -173,32 +164,19 @@ abstract contract PoolSettleTest is DeployTest {
 
         UD60x18 exerciseValue = getExerciseValue(false, trade.size, settlementPrice);
         UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
-        uint256 cost = collateral.unwrap() + 1 wei;
+        UD60x18 cost = collateral + ONE;
+        UD60x18 authorizedCost = isCallTest ? cost : cost * quote;
 
-        setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
-
-        {
-            // if !isCall, convert collateral to WETH
-            uint256 _cost = isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap();
-            vm.prank(users.trader);
-            userSettings.setAuthorizedCost(_cost);
-        }
-
+        enableExerciseSettleAuthorization(users.trader, authorizedCost);
         vm.warp(poolKey.maturity);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IPoolInternal.Pool__CostExceedsPayout.selector,
-                scaleDecimalsTo(cost),
-                collateral.unwrap()
-            )
-        );
 
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
+        uint256 _cost = scaleDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, collateral));
         vm.prank(users.operator);
-        pool.settleFor(holders, cost);
+        pool.settleFor(holders, _cost);
     }
 
     function test_settleFor_RevertIf_ActionNotAuthorized() public {
@@ -224,25 +202,19 @@ abstract contract PoolSettleTest is DeployTest {
         oracleAdapter.setQuote(quote);
 
         setActionAuthorization(users.trader, IUserSettings.Action.SETTLE, true);
-
-        UD60x18 _cost = ud(0.1 ether);
-        uint256 cost = scaleDecimals(_cost);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
-        );
-
-        vm.prank(users.operator);
+        UD60x18 cost = ud(0.1e18);
 
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        pool.settleFor(holders, cost);
+        uint256 _cost = scaleDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * quote, ZERO));
+        vm.prank(users.operator);
+        pool.settleFor(holders, _cost);
     }
 
     function test_getSettlementPrice_ReturnExpectedValue() public {
         assertEq(pool.getSettlementPrice(), 0);
-
         bool isITM = true;
         UD60x18 _settlementPrice = getSettlementPrice(isITM);
         _test_settle_Sell100Options(isITM);

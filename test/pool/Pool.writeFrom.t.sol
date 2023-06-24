@@ -134,7 +134,7 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         vm.expectEmit();
 
-        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), ud(scaleDecimalsTo(fee)));
+        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), scaleDecimals(fee));
 
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));

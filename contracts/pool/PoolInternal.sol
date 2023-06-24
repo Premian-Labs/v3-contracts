@@ -2045,17 +2045,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Revert if `cost` is not authorized by `holder`
-    function _revertIfCostNotAuthorized(address holder, UD60x18 cost) internal view {
+    function _revertIfCostNotAuthorized(address holder, UD60x18 costPerHolder) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
         address poolToken = l.getPoolToken();
 
         UD60x18 wrappedNativeQuote = poolToken == WRAPPED_NATIVE_TOKEN
             ? ONE
             : IOracleAdapter(l.oracleAdapter).quote(WRAPPED_NATIVE_TOKEN, poolToken);
 
-        UD60x18 costInWrappedNative = (cost * wrappedNativeQuote);
-        UD60x18 authorizedCost = UD60x18.wrap(IUserSettings(SETTINGS).getAuthorizedCost(holder));
+        UD60x18 costInWrappedNative = costPerHolder * wrappedNativeQuote;
+        UD60x18 authorizedCost = IUserSettings(SETTINGS).getAuthorizedCost(holder);
 
         if (costInWrappedNative > authorizedCost) revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
     }
