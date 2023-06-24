@@ -14,6 +14,8 @@ import {IVaultMining} from "./IVaultMining.sol";
 import {IOptionReward} from "./IOptionReward.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
+import {IVault} from "../vault/IVault.sol";
+import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 contract VaultMining is IVaultMining, OwnableInternal {
     using SafeERC20 for IERC20;
@@ -28,7 +30,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
     /// @notice Address of the PREMIA physically settled options
     address internal immutable OPTION_REWARD;
 
-    /// @notice If utilization rate is less than this value, we use this value instead as a multiplier on allocation points
+    /// @notice If utilisation rate is less than this value, we use this value instead as a multiplier on allocation points
     UD60x18 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
 
     constructor(address vaultRegistry, address premia, address vxPremia, address optionReward) {
@@ -54,21 +56,18 @@ contract VaultMining is IVaultMining, OwnableInternal {
     /// @param user Address of the user
     /// @return Pending rewards for the given user, on the given vault
     function getUserPendingRewards(address vault, address user) external view returns (UD60x18) {
-        UD60x18 totalShares = ud(IERC20(vault).totalSupply());
-        UD60x18 userShares = ud(IERC20(vault).balanceOf(user));
-
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-        VaultInfo storage _vault = l.vaultInfo[vault];
+        VaultInfo storage vInfo = l.vaultInfo[vault];
+        UserInfo storage uInfo = l.userInfo[vault][user];
 
-        UserInfo storage _user = l.userInfo[vault][user];
-        UD60x18 accRewardsPerShare = _vault.accRewardsPerShare;
+        UD60x18 accRewardsPerShare = vInfo.accRewardsPerShare;
 
-        if (block.timestamp > _vault.lastRewardTimestamp && _vault.votes > ZERO && IERC20(vault).totalSupply() > 0) {
-            UD60x18 rewardsAmount = _calculateRewardsUpdate(l, _vault.lastRewardTimestamp, _vault.votes);
-            accRewardsPerShare = accRewardsPerShare + (rewardsAmount / totalShares);
+        if (block.timestamp > vInfo.lastRewardTimestamp && vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
+            UD60x18 rewardsAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
+            accRewardsPerShare = accRewardsPerShare + (rewardsAmount / vInfo.totalShares);
         }
 
-        return (userShares * accRewardsPerShare) - _user.rewardDebt + _user.reward;
+        return (uInfo.shares * accRewardsPerShare) - uInfo.rewardDebt + uInfo.reward;
     }
 
     function _calculateRewardsUpdate(
@@ -107,7 +106,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
         UD60x18 size;
         for (uint256 i = 0; i < vaults.length; i++) {
-            // ToDo : Allocate pending rewards
+            IVault vault = IVault(vaults[i]);
+            updateUser(msg.sender, vaults[i]);
 
             UD60x18 rewardAmount = l.userInfo[vaults[i]][msg.sender].reward;
             size = size + rewardAmount;
@@ -120,57 +120,57 @@ contract VaultMining is IVaultMining, OwnableInternal {
         IOptionReward(OPTION_REWARD).writeFrom(msg.sender, size);
     }
 
-    function _updateVault(address vault, UD60x18 totalTVL, UD60x18 utilizationRate) internal {
+    function updateVault(address vault) public {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-        VaultInfo storage _vault = l.vaultInfo[vault];
+        VaultInfo storage vInfo = l.vaultInfo[vault];
 
-        if (block.timestamp <= _vault.lastRewardTimestamp) return;
+        UD60x18 utilisationRate = IVault(vault).getUtilisation();
 
-        if (totalTVL > ZERO && _vault.votes > ZERO) {
-            UD60x18 rewardAmount = _calculateRewardsUpdate(l, _vault.lastRewardTimestamp, _vault.votes);
+        if (block.timestamp <= vInfo.lastRewardTimestamp) return;
+
+        if (vInfo.totalShares > ZERO && vInfo.votes > ZERO) {
+            UD60x18 rewardAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
             l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
-            _vault.accRewardsPerShare = _vault.accRewardsPerShare + (rewardAmount / totalTVL);
+            vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (rewardAmount / vInfo.totalShares);
         }
 
-        _vault.lastRewardTimestamp = block.timestamp;
+        vInfo.lastRewardTimestamp = block.timestamp;
+        vInfo.totalShares = ud(IVault(vault).totalSupply());
 
-        _updateVaultAllocation(l, vault, utilizationRate);
+        _updateVaultAllocation(l, vault, utilisationRate);
     }
 
-    // ToDo : Update
-    //    function _allocatePending(
-    //        address user,
-    //        address vault,
-    //        uint256 userTVLOld,
-    //        uint256 userTVLNew,
-    //        uint256 totalTVL,
-    //        uint256 utilizationRate
-    //    ) internal {
-    //        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-    //        VaultInfo storage vault = l.vaultInfo[vault];
-    //        UserInfo storage user = l.userInfo[vault][user];
-    //
-    //        _updateVault(vault, totalTVL, utilizationRate);
-    //
-    //        user.reward += (userTVLOld * vault.accRewardsPerShare) - user.rewardDebt;
-    //        user.rewardDebt = userTVLOld * vault.accRewardsPerShare;
-    //    }
+    function updateUser(address user, address vault) public {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+        VaultInfo storage vInfo = l.vaultInfo[vault];
+        UserInfo storage uInfo = l.userInfo[vault][user];
+
+        UD60x18 newUserShares = ud(IVault(vault).balanceOf(user));
+        updateVault(vault);
+
+        uInfo.reward = uInfo.reward + (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
+        uInfo.rewardDebt = newUserShares * vInfo.accRewardsPerShare;
+
+        if (uInfo.shares != newUserShares) {
+            uInfo.shares = newUserShares;
+        }
+    }
 
     function _updateVaultAllocation(
         VaultMiningStorage.Layout storage l,
         address vault,
-        UD60x18 utilizationRate
+        UD60x18 utilisationRate
     ) internal virtual {
         uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encode(vault));
-        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilizationRate: utilizationRate}));
+        _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilisationRate: utilisationRate}));
     }
 
     function _setVaultVotes(VaultMiningStorage.Layout storage l, VaultVotes memory data) internal {
-        if (data.vaultUtilizationRate < MIN_POINTS_MULTIPLIER) {
-            data.vaultUtilizationRate = MIN_POINTS_MULTIPLIER;
+        if (data.vaultUtilisationRate < MIN_POINTS_MULTIPLIER) {
+            data.vaultUtilisationRate = MIN_POINTS_MULTIPLIER;
         }
 
-        UD60x18 adjustedVotes = data.votes * data.vaultUtilizationRate;
+        UD60x18 adjustedVotes = data.votes * data.vaultUtilisationRate;
 
         l.totalVotes = l.totalVotes - l.vaultInfo[data.vault].votes + adjustedVotes;
         l.vaultInfo[data.vault].votes = adjustedVotes;
@@ -181,6 +181,10 @@ contract VaultMining is IVaultMining, OwnableInternal {
         }
 
         // ToDo : Check if we wanna modify args
-        emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilizationRate);
+        emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilisationRate);
+    }
+
+    function _revertIfNotVault(address caller) internal view {
+        if (IVaultRegistry(VAULT_REGISTRY).isVault(caller) == false) revert VaultMining__NotVault(caller);
     }
 }

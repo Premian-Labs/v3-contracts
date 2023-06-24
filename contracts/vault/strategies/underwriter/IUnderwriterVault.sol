@@ -4,11 +4,10 @@ pragma solidity >=0.8.19;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {ISolidStateERC4626} from "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
 import {IVault} from "../../../vault/IVault.sol";
 
-interface IUnderwriterVault is ISolidStateERC4626, IVault {
+interface IUnderwriterVault is IVault {
     // Errors
     error Vault__UtilisationOutOfBounds();
 

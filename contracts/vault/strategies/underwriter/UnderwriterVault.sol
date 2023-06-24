@@ -42,7 +42,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
     address internal immutable ROUTER;
-    address internal immutable VXPREMIA;
+    address internal immutable VX_PREMIA;
     address internal immutable POOL_DIAMOND;
 
     constructor(
@@ -59,8 +59,13 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         IV_ORACLE = oracle;
         FACTORY = factory;
         ROUTER = router;
-        VXPREMIA = vxPremia;
+        VX_PREMIA = vxPremia;
         POOL_DIAMOND = poolDiamond;
+    }
+
+    function getUtilisation() external view returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.totalLockedAssets / l.totalAssets;
     }
 
     function updateSettings(bytes memory settings) external {

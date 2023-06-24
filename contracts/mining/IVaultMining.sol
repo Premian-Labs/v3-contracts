@@ -5,15 +5,19 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IVaultMining {
+    error VaultMining__NotVault(address caller);
+
     event Claim(address indexed user, address indexed vault, UD60x18 rewardAmount);
 
-    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilizationRate);
+    event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilisationRate);
 
     event SetRewardsPerYear(UD60x18 rewardsPerYear);
 
     //
 
     struct VaultInfo {
+        // Total shares for this vault
+        UD60x18 totalShares;
         // Amount of votes for this vault
         UD60x18 votes;
         // Last timestamp at which distribution occurred
@@ -44,6 +48,6 @@ interface IVaultMining {
     struct VaultVotes {
         address vault;
         UD60x18 votes;
-        UD60x18 vaultUtilizationRate;
+        UD60x18 vaultUtilisationRate;
     }
 }
