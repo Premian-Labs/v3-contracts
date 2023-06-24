@@ -289,7 +289,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
             t0 = block.timestamp + 7 days;
             volOracle.setVolatility(base, ud(1500e18), ud(1200e18), ud(19178082191780821), ud(0.51e18));
 
-            assertEq(vault.totalAssets(), scaleDecimals(deposit));
+            assertEq(vault.totalAssets(), scaleDecimalsFrom(deposit));
             assertEq(vault.totalSupply(), deposit);
 
             vault.increaseTotalLockedSpread(tls);

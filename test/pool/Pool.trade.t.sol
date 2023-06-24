@@ -60,8 +60,8 @@ abstract contract PoolTradeTest is DeployTest {
             UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(takerFee);
             UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
+            uint256 primaryRebate = scaleDecimalsFrom(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimalsFrom(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
@@ -107,7 +107,9 @@ abstract contract PoolTradeTest is DeployTest {
                 posKey.upper
             );
 
-            uint256 initialCollateral = scaleDecimals(poolKey.isCallPool ? depositSize : depositSize * poolKey.strike);
+            uint256 initialCollateral = scaleDecimalsFrom(
+                poolKey.isCallPool ? depositSize : depositSize * poolKey.strike
+            );
             deal(token, users.lp, initialCollateral);
             IERC20(token).approve(address(router), initialCollateral);
             pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, minMarketPrice, maxMarketPrice);
@@ -126,7 +128,9 @@ abstract contract PoolTradeTest is DeployTest {
                 posKey.upper
             );
 
-            uint256 initialCollateral = scaleDecimals(poolKey.isCallPool ? depositSize : depositSize * poolKey.strike);
+            uint256 initialCollateral = scaleDecimalsFrom(
+                poolKey.isCallPool ? depositSize : depositSize * poolKey.strike
+            );
             deal(token, users.lp, initialCollateral);
             IERC20(token).approve(address(router), initialCollateral);
             pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, minMarketPrice, maxMarketPrice);
@@ -150,7 +154,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
-        uint256 collateralScaled = scaleDecimals(contractsToCollateral(tradeSize));
+        uint256 collateralScaled = scaleDecimalsFrom(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
 
@@ -176,12 +180,12 @@ abstract contract PoolTradeTest is DeployTest {
         {
             UD60x18 _collateral = contractsToCollateral(UD60x18.wrap(depositSize));
 
-            initialCollateral = scaleDecimals(_collateral * posKey.lower.avg(posKey.upper));
+            initialCollateral = scaleDecimalsFrom(_collateral * posKey.lower.avg(posKey.upper));
         }
 
         UD60x18 tradeSize = UD60x18.wrap(500 ether);
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(tradeSize));
+        uint256 collateral = scaleDecimalsFrom(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, uint256 takerFee) = pool.getQuoteAMM(users.trader, tradeSize, false);
 
@@ -192,8 +196,8 @@ abstract contract PoolTradeTest is DeployTest {
             UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(takerFee);
             UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(takerFee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
+            uint256 primaryRebate = scaleDecimalsFrom(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimalsFrom(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
@@ -241,7 +245,7 @@ abstract contract PoolTradeTest is DeployTest {
         deposit(1000 ether);
 
         UD60x18 tradeSize = ud(500 ether);
-        uint256 collateralScaled = scaleDecimals(contractsToCollateral(tradeSize));
+        uint256 collateralScaled = scaleDecimalsFrom(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
 

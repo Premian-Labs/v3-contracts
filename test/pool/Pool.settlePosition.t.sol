@@ -60,7 +60,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals(trade.size * payoff);
+        uint256 collateral = scaleDecimalsFrom(trade.size * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
 
@@ -132,12 +132,12 @@ abstract contract PoolSettlePositionTest is DeployTest {
         p[0] = posKey;
         p[1] = posKey2;
 
-        uint256 cost = scaleDecimals(authorizedCost);
+        uint256 cost = scaleDecimalsFrom(authorizedCost);
         vm.prank(users.operator);
         pool.settlePositionFor(p, cost);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals((trade.size / TWO) * payoff);
+        uint256 collateral = scaleDecimalsFrom((trade.size / TWO) * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
         assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral * 2);
@@ -186,7 +186,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         UD60x18 payoff = getExerciseValue(false, ONE, settlementPrice);
         UD60x18 collateral = scaleDecimalsTo(
-            trade.initialCollateral + trade.totalPremium - scaleDecimals(trade.size * payoff) - pool.protocolFees()
+            trade.initialCollateral + trade.totalPremium - scaleDecimalsFrom(trade.size * payoff) - pool.protocolFees()
         );
 
         UD60x18 cost = collateral + ONE;
@@ -197,7 +197,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
-        uint256 _cost = scaleDecimals(cost);
+        uint256 _cost = scaleDecimalsFrom(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, collateral));
         vm.prank(users.operator);
         pool.settlePositionFor(p, _cost);
@@ -231,7 +231,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
-        uint256 _cost = scaleDecimals(cost);
+        uint256 _cost = scaleDecimalsFrom(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * quote, ZERO));
         vm.prank(users.operator);
         pool.settlePositionFor(p, _cost);

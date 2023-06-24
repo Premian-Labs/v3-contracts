@@ -199,9 +199,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         token.approve(address(vault), totalPremium + totalPremium / 10);
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
 
-        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
+        uint256 depositSize = scaleDecimalsFrom(isCallTest ? ud(5e18) : ud(5e18) * strike);
 
-        uint256 collateral = scaleDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
+        uint256 collateral = scaleDecimalsFrom(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
         uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
 
@@ -223,7 +223,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         IERC20 token = IERC20(getPoolToken());
 
         // Deal out collateral to trader
-        uint256 initialCollateral = scaleDecimals(
+        uint256 initialCollateral = scaleDecimalsFrom(
             contractsToCollateral(isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike)
         );
 
@@ -274,8 +274,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         token.approve(address(vault), totalPremium + totalPremium / 10);
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
 
-        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
-        uint256 collateral = scaleDecimals(isCallTest ? tradeSize : tradeSize * strike);
+        uint256 depositSize = scaleDecimalsFrom(isCallTest ? ud(5e18) : ud(5e18) * strike);
+        uint256 collateral = scaleDecimalsFrom(isCallTest ? tradeSize : tradeSize * strike);
         uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
 
         // Check that long contracts have been transferred to trader
@@ -306,8 +306,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         token.approve(address(vault), totalPremium + totalPremium / 10);
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, referrer);
 
-        uint256 depositSize = scaleDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
-        uint256 collateral = scaleDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
+        uint256 depositSize = scaleDecimalsFrom(isCallTest ? ud(5e18) : ud(5e18) * strike);
+        uint256 collateral = scaleDecimalsFrom(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
         uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
 

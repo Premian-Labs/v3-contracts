@@ -27,7 +27,7 @@ abstract contract PoolDepositTest is DeployTest {
 
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
         UD60x18 collateral = contractsToCollateral(depositSize);
-        uint256 collateralValue = scaleDecimals(collateral * avgPrice);
+        uint256 collateralValue = scaleDecimalsFrom(collateral * avgPrice);
 
         assertEq(pool.balanceOf(users.lp, tokenId()), depositSize);
         assertEq(pool.totalSupply(tokenId()), depositSize);
@@ -298,7 +298,7 @@ abstract contract PoolDepositTest is DeployTest {
         });
         // need to mint 1.0 short options
         IERC20 token = IERC20(getPoolToken());
-        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        uint256 initialCollateral = scaleDecimalsFrom(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
         deal(address(token), users.lp, initialCollateral);
         pool.exposed_mint(users.lp, PoolStorage.LONG, ud(1.5 ether));
         vm.startPrank(users.lp);
@@ -339,7 +339,7 @@ abstract contract PoolDepositTest is DeployTest {
         });
         // need to mint 1.0 short options
         IERC20 token = IERC20(getPoolToken());
-        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        uint256 initialCollateral = scaleDecimalsFrom(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
         deal(address(token), users.lp, initialCollateral);
         pool.exposed_mint(users.lp, PoolStorage.LONG, ud(1.5 ether));
         vm.startPrank(users.lp);
@@ -374,7 +374,7 @@ abstract contract PoolDepositTest is DeployTest {
         });
         // need to mint 1.0 short options
         pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
-        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        uint256 initialCollateral = scaleDecimalsFrom(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
         deal(getPoolToken(), users.lp, initialCollateral);
         IERC20 token = IERC20(getPoolToken());
         vm.startPrank(users.lp);
@@ -409,7 +409,7 @@ abstract contract PoolDepositTest is DeployTest {
         });
         // need to mint 1.0 short options
         pool.exposed_mint(users.lp, PoolStorage.SHORT, ud(1.5 ether));
-        uint256 initialCollateral = scaleDecimals(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
+        uint256 initialCollateral = scaleDecimalsFrom(isCallTest ? ud(depositSize) : ud(depositSize) * poolKey.strike);
         deal(getPoolToken(), users.lp, initialCollateral);
         IERC20 token = IERC20(getPoolToken());
         vm.startPrank(users.lp);

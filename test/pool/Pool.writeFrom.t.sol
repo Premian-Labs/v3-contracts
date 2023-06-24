@@ -20,7 +20,7 @@ abstract contract PoolWriteFromTest is DeployTest {
     function _mintForLP() internal returns (uint256) {
         IERC20 poolToken = IERC20(getPoolToken());
 
-        uint256 initialCollateral = scaleDecimals(
+        uint256 initialCollateral = scaleDecimalsFrom(
             contractsToCollateral(isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike)
         );
 
@@ -40,7 +40,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
+        uint256 collateral = scaleDecimalsFrom(contractsToCollateral(size)) + fee;
 
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -69,13 +69,13 @@ abstract contract PoolWriteFromTest is DeployTest {
             UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(fee);
             UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(fee);
 
-            uint256 primaryRebate = scaleDecimals(_primaryRebate);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
+            uint256 primaryRebate = scaleDecimalsFrom(_primaryRebate);
+            uint256 secondaryRebate = scaleDecimalsFrom(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size));
+        uint256 collateral = scaleDecimalsFrom(contractsToCollateral(size));
 
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -102,7 +102,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
+        uint256 collateral = scaleDecimalsFrom(contractsToCollateral(size)) + fee;
 
         IERC20 poolToken = IERC20(getPoolToken());
 

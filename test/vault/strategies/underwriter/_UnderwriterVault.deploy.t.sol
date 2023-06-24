@@ -157,7 +157,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
     function addDeposit(address user, UD60x18 amount) internal {
         IERC20 token = IERC20(getPoolToken());
-        uint256 assetAmount = scaleDecimals(amount);
+        uint256 assetAmount = scaleDecimalsFrom(amount);
 
         vm.startPrank(user);
 
@@ -169,7 +169,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
 
     function addMint(address user, UD60x18 amount) internal {
         IERC20 token = IERC20(getPoolToken());
-        uint256 assetAmount = scaleDecimals(amount);
+        uint256 assetAmount = scaleDecimalsFrom(amount);
 
         vm.startPrank(user);
 

@@ -16,7 +16,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
         for (uint256 i; i < cases.length; i++) {
             vault.setTotalAssets(cases[i]);
-            assertEq(vault.totalAssets(), scaleDecimals(cases[i]));
+            assertEq(vault.totalAssets(), scaleDecimalsFrom(cases[i]));
         }
     }
 
@@ -34,7 +34,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         for (uint256 i = 0; i < cases.length; i++) {
             uint256 totalSupply = cases[i][0].unwrap();
             UD60x18 totalAssets = cases[i][1];
-            uint256 assetAmount = scaleDecimals(cases[i][2]);
+            uint256 assetAmount = scaleDecimalsFrom(cases[i][2]);
             UD60x18 shareAmount = cases[i][3];
 
             vault.setTimestamp(startTime);
@@ -69,7 +69,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vault.setTimestamp(block.timestamp + 1 days);
         uint256 assetAmount = vault.maxWithdraw(users.receiver);
 
-        assertEq(assetAmount, scaleDecimals(ud(2.4e18)));
+        assertEq(assetAmount, scaleDecimalsFrom(ud(2.4e18)));
     }
 
     function test_maxWithdraw_ReturnMaxTransferableAssets() public {
@@ -82,7 +82,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vault.setTimestamp(block.timestamp + 1 days);
 
         uint256 assetAmount = vault.maxWithdraw(users.receiver);
-        assertEq(assetAmount, scaleDecimals(ud(1.999890410958904110e18)));
+        assertEq(assetAmount, scaleDecimalsFrom(ud(1.999890410958904110e18)));
 
         vm.revertTo(snapshot);
 
@@ -95,10 +95,10 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vault.setTimestamp(block.timestamp + 1 days);
 
         assetAmount = vault.maxWithdraw(users.receiver);
-        assertEq(assetAmount, scaleDecimals(ud(1.999890410958904110e18)));
+        assertEq(assetAmount, scaleDecimalsFrom(ud(1.999890410958904110e18)));
         vault.increaseTotalLockedAssets(ud(8.0e18));
         assetAmount = vault.maxWithdraw(users.receiver);
-        assertEq(assetAmount, scaleDecimals(ud(1.5 ether)));
+        assertEq(assetAmount, scaleDecimalsFrom(ud(1.5 ether)));
     }
 
     function test_maxWithdraw_ReturnAssetsReceiverOwns() public {
@@ -109,7 +109,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         vault.increaseTotalLockedSpread(ud(0.1e18));
         vault.increaseTotalLockedAssets(ud(0.5e18));
         uint256 assetAmount = vault.maxWithdraw(users.receiver);
-        assertEq(assetAmount, scaleDecimals(ud(1.977777777777777776e18)));
+        assertEq(assetAmount, scaleDecimalsFrom(ud(1.977777777777777776e18)));
     }
 
     function test_maxWithdraw_RevertIf_ZeroAddress() public {
@@ -136,23 +136,23 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
     function test_previewMint_ReturnExpectedValue() public {
         // previewMint should return amount of assets required to mint the amount of shares
         setMaturities();
-        assertEq(vault.previewMint(2.1e18), scaleDecimals(ud(2.1e18)));
+        assertEq(vault.previewMint(2.1e18), scaleDecimalsFrom(ud(2.1e18)));
 
         //
 
         addDeposit(users.receiver, ud(2e18));
         vault.increaseTotalLockedSpread(ud(0.2e18));
-        assertEq(vault.previewMint(4e18), scaleDecimals(ud(3.6e18)));
+        assertEq(vault.previewMint(4e18), scaleDecimalsFrom(ud(3.6e18)));
     }
 
     function test_convertToShares_MintedShareEqualDepositedAssets_IfNoSharesMinted() public {
-        assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 2e18);
+        assertEq(vault.convertToShares(scaleDecimalsFrom(ud(2e18))), 2e18);
     }
 
     function test_convertToShares_MintedSharesEqualsDepositedAssets_IfSupplyNonZero_AndPricePerShareIsOne() public {
         setMaturities();
         addDeposit(users.receiver, ud(8e18));
-        assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 2e18);
+        assertEq(vault.convertToShares(scaleDecimalsFrom(ud(2e18))), 2e18);
     }
 
     function test_convertToShares_MintedSharesEqualsDepositedAssets_AdjustedByPricePerShare_IfSupplyNonZero() public {
@@ -161,13 +161,13 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
 
         vault.increaseTotalLockedSpread(ud(1e18));
 
-        assertEq(vault.convertToShares(scaleDecimals(ud(2e18))), 4e18);
+        assertEq(vault.convertToShares(scaleDecimalsFrom(ud(2e18))), 4e18);
     }
 
     function test_convertToAssets_WithdrawnAssetsEqualsShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOne() public {
         setMaturities();
         addDeposit(users.receiver, ud(2e18));
-        assertEq(vault.convertToAssets(2e18), scaleDecimals(ud(2e18)));
+        assertEq(vault.convertToAssets(2e18), scaleDecimalsFrom(ud(2e18)));
     }
 
     function test_convertToAssets_WithdrawnAssetsEqualsHalfOfShareAmount_IfSupplyIsNonZero_AndPricePerShareIsOneHalf()
@@ -176,7 +176,7 @@ abstract contract UnderwriterVaultErc4626Test is UnderwriterVaultDeployTest {
         setMaturities();
         addDeposit(users.receiver, ud(2e18));
         vault.increaseTotalLockedSpread(ud(1e18));
-        assertEq(vault.convertToAssets(2e18), scaleDecimals(ud(1e18)));
+        assertEq(vault.convertToAssets(2e18), scaleDecimalsFrom(ud(1e18)));
     }
 
     function test_convertToAssets_RevertIf_SupplyIsZero() public {

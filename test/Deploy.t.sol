@@ -417,7 +417,7 @@ contract DeployTest is Test, Assertions {
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
-        initialCollateral = scaleDecimals(isCallTest ? depositSize : depositSize * strike);
+        initialCollateral = scaleDecimalsFrom(isCallTest ? depositSize : depositSize * strike);
 
         vm.startPrank(users.lp);
 
@@ -463,7 +463,7 @@ contract DeployTest is Test, Assertions {
 
         address poolToken = getPoolToken();
 
-        uint256 mintAmount = isBuy ? totalPremium : scaleDecimals(poolKey.strike);
+        uint256 mintAmount = isBuy ? totalPremium : scaleDecimalsFrom(poolKey.strike);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, mintAmount);
@@ -490,7 +490,7 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? amount : amount / poolKey.strike;
     }
 
-    function scaleDecimals(UD60x18 amount) internal view returns (uint256) {
+    function scaleDecimalsFrom(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }

@@ -16,7 +16,7 @@ import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwr
 abstract contract UnderwriterVaultStorageTest is UnderwriterVaultDeployTest {
     function test_convertAssetToUD60x18_ReturnExpectedValue() public {
         UD60x18 value = ud(11.2334e18);
-        uint256 valueScaled = scaleDecimals(value);
+        uint256 valueScaled = scaleDecimalsFrom(value);
 
         assertEq(vault.convertAssetToUD60x18(valueScaled), value);
     }
