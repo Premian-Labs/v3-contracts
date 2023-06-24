@@ -495,7 +495,7 @@ contract DeployTest is Test, Assertions {
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
 
-    function scaleDecimals(uint256 amount) internal view returns (UD60x18) {
+    function scaleDecimalsTo(uint256 amount) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }

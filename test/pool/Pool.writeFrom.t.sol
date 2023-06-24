@@ -66,10 +66,8 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-
-            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(fee);
-
-            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(fee);
+            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(fee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(fee);
 
             uint256 primaryRebate = scaleDecimals(_primaryRebate);
             uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -134,7 +132,7 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         vm.expectEmit();
 
-        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), scaleDecimals(fee));
+        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), scaleDecimalsTo(fee));
 
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));

@@ -88,22 +88,18 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
     function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
         mintAndApprove();
-
         quoteRFQ.isBuy = isBuy;
-
         address token = getPoolToken();
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
         uint256 premium = scaleDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
-
         uint256 protocolFee = pool.takerFee(users.trader, quoteRFQ.size, premium, false);
 
         (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(protocolFee);
-
-        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(protocolFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(protocolFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(protocolFee);
 
         uint256 primaryRebate = scaleDecimals(_primaryRebate);
         uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
@@ -113,7 +109,6 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
 
         uint256 collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
-
         uint256 initialCollateral = getInitialCollateral();
 
         if (isBuy) {

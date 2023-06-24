@@ -36,9 +36,9 @@ contract ReferralTest is DeployTest {
         poolKey.isCallPool = true;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
 
-        _tradingFee = scaleDecimals(tradingFee);
-        _primaryRebate = scaleDecimals(primaryRebate);
-        _secondaryRebate = scaleDecimals(secondaryRebate);
+        _tradingFee = scaleDecimalsTo(tradingFee);
+        _primaryRebate = scaleDecimalsTo(primaryRebate);
+        _secondaryRebate = scaleDecimalsTo(secondaryRebate);
         _totalRebate = _primaryRebate + _secondaryRebate;
     }
 
@@ -258,7 +258,7 @@ contract ReferralTest is DeployTest {
         (UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
             users.trader,
             users.referrer,
-            scaleDecimals(__tradingFee)
+            scaleDecimalsTo(__tradingFee)
         );
 
         UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
