@@ -238,8 +238,8 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         {
             IUserSettings.Action[] memory actions = new IUserSettings.Action[](2);
-            actions[0] = IUserSettings.Action.ANNIHILATE;
-            actions[1] = IUserSettings.Action.WRITE_FROM;
+            actions[0] = IUserSettings.Action.Annihilate;
+            actions[1] = IUserSettings.Action.WriteFrom;
 
             bool[] memory authorization = new bool[](2);
             authorization[0] = true;
@@ -251,7 +251,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         {
             IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
-            actions[0] = IUserSettings.Action.WRITE_FROM;
+            actions[0] = IUserSettings.Action.WriteFrom;
 
             bool[] memory authorization = new bool[](1);
             authorization[0] = true;

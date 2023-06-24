@@ -556,9 +556,9 @@ contract DeployTest is Test, Assertions {
 
     function enableExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
         IUserSettings.Action[] memory actions = new IUserSettings.Action[](3);
-        actions[0] = IUserSettings.Action.EXERCISE;
-        actions[1] = IUserSettings.Action.SETTLE;
-        actions[2] = IUserSettings.Action.SETTLE_POSITION;
+        actions[0] = IUserSettings.Action.Exercise;
+        actions[1] = IUserSettings.Action.Settle;
+        actions[2] = IUserSettings.Action.SettlePosition;
 
         bool[] memory authorization = new bool[](3);
         authorization[0] = true;

@@ -70,7 +70,7 @@ abstract contract PoolAnnihilateTest is DeployTest {
         uint256 totalPremium = init();
         address poolToken = getPoolToken();
 
-        setActionAuthorization(users.lp, IUserSettings.Action.ANNIHILATE, true);
+        setActionAuthorization(users.lp, IUserSettings.Action.Annihilate, true);
 
         vm.prank(users.operator);
         pool.annihilateFor(users.lp, annihilateSize);
@@ -92,7 +92,7 @@ abstract contract PoolAnnihilateTest is DeployTest {
                 IPoolInternal.Pool__ActionNotAuthorized.selector,
                 users.lp,
                 users.operator,
-                IUserSettings.Action.ANNIHILATE
+                IUserSettings.Action.Annihilate
             )
         );
 

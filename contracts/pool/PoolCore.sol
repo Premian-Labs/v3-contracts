@@ -205,7 +205,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.EXERCISE);
+                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.Exercise);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -234,7 +234,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
-                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.SETTLE);
+                _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.Settle);
                 _revertIfCostNotAuthorized(holders[i], _cost);
             }
 
@@ -265,7 +265,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
-                _revertIfActionNotAuthorized(p[i].operator, IUserSettings.Action.SETTLE_POSITION);
+                _revertIfActionNotAuthorized(p[i].operator, IUserSettings.Action.SettlePosition);
                 _revertIfCostNotAuthorized(p[i].operator, _cost);
             }
 
