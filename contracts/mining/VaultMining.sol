@@ -5,36 +5,43 @@ pragma solidity >=0.8.19;
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {WAD, ZERO} from "../libraries/Constants.sol";
 
 import {IVaultMining} from "./IVaultMining.sol";
+import {IOptionReward} from "./IOptionReward.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
 import {IVxPremia} from "../staking/IVxPremia.sol";
 
 contract VaultMining is IVaultMining, OwnableInternal {
+    using SafeERC20 for IERC20;
     using VaultMiningStorage for VaultMiningStorage.Layout;
 
     /// @notice Address of the vault registry
     address internal immutable VAULT_REGISTRY;
+    /// @notice Address of the PREMIA token
+    address internal immutable PREMIA;
     /// @notice Address of the vxPremia token
     address internal immutable VX_PREMIA;
     /// @notice Address of the PREMIA physically settled options
-    address internal immutable PREMIA_OPTION;
+    address internal immutable OPTION_REWARD;
 
     /// @notice If utilization rate is less than this value, we use this value instead as a multiplier on allocation points
     UD60x18 private constant MIN_POINTS_MULTIPLIER = UD60x18.wrap(0.25e18);
 
-    constructor(address vaultRegistry, address vxPremia, address premiaOption) {
+    constructor(address vaultRegistry, address premia, address vxPremia, address optionReward) {
         VAULT_REGISTRY = vaultRegistry;
+        PREMIA = premia;
         VX_PREMIA = vxPremia;
-        PREMIA_OPTION = premiaOption;
+        OPTION_REWARD = optionReward;
     }
 
     /// @notice Add rewards to the contract
-    function addRewards(UD60x18 amount) external onlyOwner {
+    function addRewards(UD60x18 amount) external {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+        IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount.unwrap());
         l.rewardsAvailable = l.rewardsAvailable + amount;
     }
 
@@ -95,8 +102,22 @@ contract VaultMining is IVaultMining, OwnableInternal {
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
-    function claim() external {
-        // ToDo : Implement
+    function claim(address[] memory vaults) external {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+
+        UD60x18 size;
+        for (uint256 i = 0; i < vaults.length; i++) {
+            // ToDo : Allocate pending rewards
+
+            UD60x18 rewardAmount = l.userInfo[vaults[i]][msg.sender].reward;
+            size = size + rewardAmount;
+            l.userInfo[vaults[i]][msg.sender].reward = ZERO;
+
+            emit Claim(msg.sender, vaults[i], rewardAmount);
+        }
+
+        IERC20(PREMIA).approve(OPTION_REWARD, size.unwrap());
+        IOptionReward(OPTION_REWARD).writeFrom(msg.sender, size);
     }
 
     function _updateVault(address vault, UD60x18 totalTVL, UD60x18 utilizationRate) internal {
