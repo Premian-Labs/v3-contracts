@@ -7,9 +7,12 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {Position} from "contracts/libraries/Position.sol";
+
 import {IPoolEvents} from "contracts/pool/IPoolEvents.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -96,10 +99,9 @@ abstract contract PoolWriteFromTest is DeployTest {
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
 
-        vm.prank(users.lp);
-        pool.setApprovalForAll(users.otherTrader, true);
+        setActionAuthorization(users.lp, IUserSettings.Action.WriteFrom, true);
 
-        vm.prank(users.otherTrader);
+        vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
         uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
@@ -138,9 +140,17 @@ abstract contract PoolWriteFromTest is DeployTest {
         pool.writeFrom(users.lp, users.trader, size, address(0));
     }
 
-    function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval() public {
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.otherTrader));
-        vm.prank(users.otherTrader);
+    function test_writeFrom_RevertIf_ActionNotAuthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.lp,
+                users.operator,
+                IUserSettings.Action.WriteFrom
+            )
+        );
+
+        vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, ud(500 ether), address(0));
     }
 

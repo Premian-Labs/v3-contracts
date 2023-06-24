@@ -2,13 +2,18 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -109,8 +114,8 @@ abstract contract PoolSettlePositionTest is DeployTest {
             orderType: Position.OrderType.CS
         });
 
-        handleExerciseSettleAuthorization(posKey.operator, 0.1 ether);
-        handleExerciseSettleAuthorization(posKey2.operator, 0.1 ether);
+        enableExerciseSettleAuthorization(posKey.operator, 0.1 ether);
+        enableExerciseSettleAuthorization(posKey2.operator, 0.1 ether);
 
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
@@ -125,7 +130,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         uint256 cost = scaleDecimals(ud(0.1 ether));
 
         vm.warp(poolKey.maturity);
-        vm.prank(users.agent);
+        vm.prank(users.operator);
 
         Position.Key[] memory p = new Position.Key[](2);
         p[0] = posKey;
@@ -140,7 +145,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral * 2);
 
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost * 2);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.operator), cost * 2);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
@@ -192,17 +197,15 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         uint256 cost = collateral + 1 wei;
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
 
-        vm.startPrank(posKey.operator);
+        {
+            // if !isCall, convert collateral to WETH
+            uint256 _cost = isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap();
+            vm.prank(posKey.operator);
+            userSettings.setAuthorizedCost(_cost);
+        }
 
-        userSettings.setAuthorizedAgents(agents);
-
-        // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
-
-        vm.stopPrank();
         vm.warp(poolKey.maturity);
 
         vm.expectRevert(
@@ -213,19 +216,27 @@ abstract contract PoolSettlePositionTest is DeployTest {
             )
         );
 
-        vm.prank(users.agent);
-
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
+        vm.prank(users.operator);
         pool.settlePositionFor(p, cost);
     }
 
-    function test_settlePositionFor_RevertIf_AgentNotAuthorized() public {
-        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
-        vm.prank(users.agent);
+    function test_settlePositionFor_RevertIf_ActionNotAuthorized() public {
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                posKey.operator,
+                users.operator,
+                IUserSettings.Action.SettlePosition
+            )
+        );
+
+        vm.prank(users.operator);
         pool.settlePositionFor(p, 0);
     }
 
@@ -234,11 +245,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.prank(posKey.operator);
-        userSettings.setAuthorizedAgents(agents);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
 
         UD60x18 _cost = ud(0.1 ether);
         uint256 cost = scaleDecimals(_cost);
@@ -247,7 +254,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
         );
 
-        vm.prank(users.agent);
+        vm.prank(users.operator);
 
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
@@ -266,16 +273,19 @@ abstract contract PoolSettlePositionTest is DeployTest {
         // an attacker sees the liquidity in the pool, and using two addresses will
         // conspire to drain the pool of its liquidity
         address user = vm.addr(10);
-        address agent = vm.addr(11);
+        address operator = vm.addr(11);
 
-        // attackerUser sets attackerAgent as their agent, and assigns a cost of
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = IUserSettings.Action.SettlePosition;
+
+        bool[] memory authorization = new bool[](1);
+        authorization[0] = true;
+
+        // attackerUser sets attackerAgent as their operator, and assigns a cost of
         // the entire pool value
         vm.startPrank(user);
 
-        address[] memory agents = new address[](1);
-        agents[0] = agent;
-
-        userSettings.setAuthorizedAgents(agents);
+        userSettings.setActionAuthorization(operator, actions, authorization);
         userSettings.setAuthorizedCost(poolValue);
 
         vm.stopPrank();
@@ -284,7 +294,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         // the tokens out of the pool
         Position.Key memory fakePosition1 = Position.Key({
             owner: user,
-            operator: agent,
+            operator: operator,
             lower: posKey.lower,
             upper: posKey.upper,
             orderType: Position.OrderType.LC
@@ -313,8 +323,8 @@ abstract contract PoolSettlePositionTest is DeployTest {
         uint256 cost = originalPoolBalance;
 
         // This call will short-circuit before closing the position due to the invalid `lower` values
-        // set above, but it will still pay the agent their fee (all the tokens in the pool)
-        vm.prank(agent);
+        // set above, but it will still pay the operator their fee (all the tokens in the pool)
+        vm.prank(operator);
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, isCallTest ? 200e18 : 200_000e18, 0)

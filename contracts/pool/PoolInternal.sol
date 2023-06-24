@@ -10,6 +10,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
@@ -36,6 +37,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using EnumerableSet for EnumerableSet.UintSet;
     using PoolStorage for IERC20;
     using PoolStorage for IERC20Router;
     using PoolStorage for PoolStorage.Layout;
@@ -579,8 +581,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Transfers collateral + fees from `underwriter` and sends long/short tokens to both parties
     function _writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) internal {
         if (
-            msg.sender != underwriter && ERC1155BaseStorage.layout().operatorApprovals[underwriter][msg.sender] == false
-        ) revert Pool__OperatorNotAuthorized(msg.sender);
+            msg.sender != underwriter &&
+            !IUserSettings(SETTINGS).isActionAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom)
+        ) revert Pool__ActionNotAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -978,6 +981,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         This function can be called post or prior to expiration.
     ///         ===========================================================
     function _annihilate(address owner, UD60x18 size) internal {
+        if (
+            msg.sender != owner &&
+            !IUserSettings(SETTINGS).isActionAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate)
+        ) revert Pool__ActionNotAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate);
+
         _revertIfZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -1125,7 +1133,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
     ///         automatic exercise (poolToken decimals)
     /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
@@ -1155,7 +1163,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -1185,7 +1193,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per position holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -2030,9 +2038,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (operator != msg.sender) revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    /// @notice Revert if `agent` is not authorized by `holder`
-    function _revertIfAgentNotAuthorized(address holder, address agent) internal view {
-        if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent)) revert Pool__AgentNotAuthorized();
+    /// @notice Revert if `operator` is not authorized by `holder` to call `action`
+    function _revertIfActionNotAuthorized(address holder, IUserSettings.Action action) internal view {
+        if (!IUserSettings(SETTINGS).isActionAuthorized(holder, msg.sender, action))
+            revert Pool__ActionNotAuthorized(holder, msg.sender, action);
     }
 
     /// @notice Revert if `cost` is not authorized by `holder`
@@ -2054,5 +2063,34 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Revert if `cost` exceeds `payout`
     function _revertIfCostExceedsPayout(UD60x18 cost, UD60x18 payout) internal pure {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        // We do not need to revert here if positions are transferred like in PoolBase, as ERC1155 transfers functions
+        // are not external in this diamond facet
+        for (uint256 i; i < ids.length; i++) {
+            uint256 id = ids[i];
+
+            if (amounts[i] == 0) continue;
+
+            if (from == address(0)) {
+                l.tokenIds.add(id);
+            }
+
+            if (to == address(0) && _totalSupply(id) == 0) {
+                l.tokenIds.remove(id);
+            }
+        }
     }
 }

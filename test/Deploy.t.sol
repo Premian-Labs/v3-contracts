@@ -92,7 +92,7 @@ contract DeployTest is Test, Assertions {
         address trader;
         address otherTrader;
         address referrer;
-        address agent;
+        address operator;
         address caller;
         address receiver;
         address underwriter;
@@ -126,7 +126,7 @@ contract DeployTest is Test, Assertions {
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
             referrer: vm.addr(5),
-            agent: vm.addr(6),
+            operator: vm.addr(6),
             caller: vm.addr(7),
             receiver: vm.addr(8),
             underwriter: vm.addr(9)
@@ -288,12 +288,14 @@ contract DeployTest is Test, Assertions {
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
+        poolCoreSelectors.push(poolCoreImpl.annihilateFor.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.exerciseFor.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
         poolCoreSelectors.push(poolCoreImpl.getSettlementPrice.selector);
+        poolCoreSelectors.push(poolCoreImpl.getTokenIds.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
         poolCoreSelectors.push(poolCoreImpl.settleFor.selector);
@@ -540,15 +542,31 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? tradeSize - exerciseValue : tradeSize * poolKey.strike - exerciseValue;
     }
 
-    function handleExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+    function setActionAuthorization(address user, IUserSettings.Action action, bool authorization) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = action;
+
+        bool[] memory _authorization = new bool[](1);
+        _authorization[0] = authorization;
+
+        vm.prank(user);
+        userSettings.setActionAuthorization(users.operator, actions, _authorization);
+    }
+
+    function enableExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](3);
+        actions[0] = IUserSettings.Action.Exercise;
+        actions[1] = IUserSettings.Action.Settle;
+        actions[2] = IUserSettings.Action.SettlePosition;
+
+        bool[] memory authorization = new bool[](3);
+        authorization[0] = true;
+        authorization[1] = true;
+        authorization[2] = true;
+
         vm.startPrank(user);
-
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        userSettings.setAuthorizedAgents(agents);
+        userSettings.setActionAuthorization(users.operator, actions, authorization);
         userSettings.setAuthorizedCost(authorizedCost);
-
         vm.stopPrank();
     }
 }
