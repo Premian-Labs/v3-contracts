@@ -251,7 +251,7 @@ contract VaultMiningTest is Test, Assertions {
         vaultA.burn(carol, 30e18);
 
         // 1k per day emission, but 3 pools didnt had update yet allocating pending rewards, so only 15k/4 already allocated
-        assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 1_000_000e18 - 15_000e18 / 4, delta);
+        assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 200_000e18 - 15_000e18 / 4, delta);
 
         // Alice should have: 833.3333333333333 + 5*2/7*250 + 1*2/6.5*250 = 1267.3992673992673
         assertApproxEqAbs(
