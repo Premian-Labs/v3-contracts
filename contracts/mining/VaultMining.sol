@@ -55,13 +55,12 @@ contract VaultMining is IVaultMining, OwnableInternal {
     /// @param vault Address of the vault
     /// @param user Address of the user
     /// @return Pending rewards for the given user, on the given vault
-    function getUserPendingRewards(address vault, address user) external view returns (UD60x18) {
+    function getPendingUserRewards(address user, address vault) external view returns (UD60x18) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
         UD60x18 accRewardsPerShare = vInfo.accRewardsPerShare;
-
         if (block.timestamp > vInfo.lastRewardTimestamp && vInfo.votes > ZERO && vInfo.totalShares > ZERO) {
             UD60x18 rewardsAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
             accRewardsPerShare = accRewardsPerShare + (rewardsAmount / vInfo.totalShares);
@@ -90,6 +89,10 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
     function getVaultInfo(address vault) external view returns (VaultInfo memory) {
         return VaultMiningStorage.layout().vaultInfo[vault];
+    }
+
+    function getUserInfo(address user, address vault) external view returns (UserInfo memory) {
+        return VaultMiningStorage.layout().userInfo[vault][user];
     }
 
     function getRewardsPerYear() external view returns (UD60x18) {
@@ -190,7 +193,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         address vault,
         UD60x18 utilisationRate
     ) internal virtual {
-        uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encode(vault));
+        uint256 votes = IVxPremia(VX_PREMIA).getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encodePacked(vault));
         _setVaultVotes(l, VaultVotes({vault: vault, votes: ud(votes), vaultUtilisationRate: utilisationRate}));
     }
 

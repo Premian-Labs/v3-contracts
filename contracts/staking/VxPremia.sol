@@ -115,7 +115,6 @@ contract VxPremia is IVxPremia, PremiaStaking {
         // Remove previous votes
         _resetUserVotes(l, userVotes, msg.sender);
 
-        // ToDo : This is a check for v2 pools. Update this to handle v3 pools voting
         address[] memory poolList = IProxyManager(PROXY_MANAGER).getPoolList();
 
         // Cast new votes

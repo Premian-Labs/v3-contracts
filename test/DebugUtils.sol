@@ -9,7 +9,7 @@ import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 library DebugUtils {
     using UintUtils for uint256;
 
-    function formatNumber(UD60x18 number) internal returns (string memory result) {
+    function formatNumber(UD60x18 number) internal pure returns (string memory result) {
         uint256 n = number.unwrap();
         uint256 integer = n / 1e18;
 
@@ -29,7 +29,7 @@ library DebugUtils {
         result = string(abi.encodePacked(result, (decimal).toString()));
     }
 
-    function formatNumber(SD59x18 number) internal returns (string memory result) {
+    function formatNumber(SD59x18 number) internal pure returns (string memory result) {
         bool isNegative = number.unwrap() < int256(0);
         uint256 n = isNegative ? uint256(-number.unwrap()) : uint256(number.unwrap());
 
