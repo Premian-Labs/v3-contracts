@@ -200,16 +200,16 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external nonReentrant returns (uint256[] memory exerciseValues) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        UD60x18 _costPerHolder = l.fromPoolTokenDecimals(costPerHolder);
         exerciseValues = new uint256[](holders.length);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
                 _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.Exercise);
-                _revertIfCostNotAuthorized(holders[i], _cost);
+                _revertIfCostNotAuthorized(holders[i], _costPerHolder);
             }
 
-            (uint256 exerciseValue, bool success) = _exercise(holders[i], _cost);
+            (uint256 exerciseValue, bool success) = _exercise(holders[i], _costPerHolder);
             if (!success) revert Pool__SettlementFailed();
             exerciseValues[i] = exerciseValue;
         }
@@ -229,16 +229,16 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external nonReentrant returns (uint256[] memory collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        UD60x18 _costPerHolder = l.fromPoolTokenDecimals(costPerHolder);
         collateral = new uint256[](holders.length);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
                 _revertIfActionNotAuthorized(holders[i], IUserSettings.Action.Settle);
-                _revertIfCostNotAuthorized(holders[i], _cost);
+                _revertIfCostNotAuthorized(holders[i], _costPerHolder);
             }
 
-            (uint256 _collateral, bool success) = _settle(holders[i], _cost);
+            (uint256 _collateral, bool success) = _settle(holders[i], _costPerHolder);
             if (!success) revert Pool__SettlementFailed();
             collateral[i] = _collateral;
         }
@@ -260,16 +260,20 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     ) external nonReentrant returns (uint256[] memory collateral) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
-        UD60x18 _cost = l.fromPoolTokenDecimals(costPerHolder);
+        UD60x18 _costPerHolder = l.fromPoolTokenDecimals(costPerHolder);
         collateral = new uint256[](p.length);
 
         for (uint256 i = 0; i < p.length; i++) {
             if (p[i].operator != msg.sender) {
                 _revertIfActionNotAuthorized(p[i].operator, IUserSettings.Action.SettlePosition);
-                _revertIfCostNotAuthorized(p[i].operator, _cost);
+                _revertIfCostNotAuthorized(p[i].operator, _costPerHolder);
             }
 
-            (uint256 _collateral, bool success) = _settlePosition(p[i].toKeyInternal(l.strike, l.isCallPool), _cost);
+            (uint256 _collateral, bool success) = _settlePosition(
+                p[i].toKeyInternal(l.strike, l.isCallPool),
+                _costPerHolder
+            );
+
             if (!success) revert Pool__SettlementFailed();
             collateral[i] = _collateral;
         }
