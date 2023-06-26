@@ -11,14 +11,17 @@ import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/bas
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDiamondReadable.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
+import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
+import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
 /// @title Upgradeable proxy with centrally controlled Pool implementation
-contract PoolProxy is Proxy, ERC165BaseInternal {
+contract PoolProxy is Proxy, ERC165BaseInternal, ReentrancyGuard {
+    using AddressUtils for address;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
 
@@ -64,6 +67,41 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
 
         _setSupportsInterface(type(IERC165).interfaceId, true);
         _setSupportsInterface(type(IERC1155).interfaceId, true);
+    }
+
+    fallback() external payable override {
+        bool locked = _lockReentrancyGuard(msg.data);
+
+        //
+
+        address implementation = _getImplementation();
+
+        if (!implementation.isContract()) revert Proxy__ImplementationIsNotContract();
+
+        bool result;
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+        }
+
+        //
+
+        if (locked) {
+            _unlockReentrancyGuard();
+        }
+
+        //
+
+        assembly {
+            switch result
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
     }
 
     function _getImplementation() internal view override returns (address) {
