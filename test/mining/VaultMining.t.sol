@@ -6,6 +6,8 @@ import "forge-std/console2.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
+import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
+
 import {Test} from "forge-std/Test.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
@@ -188,12 +190,6 @@ contract VaultMiningTest is Test, Assertions {
         vaultNotRegistered.mint(alice, 100e18);
     }
 
-    function test_updateVault_RevertIf_NotRegisteredVault() public {
-        vm.expectRevert(abi.encodeWithSelector(IVaultMining.VaultMining__NotVault.selector, bob));
-        vm.prank(bob);
-        vaultMining.updateVault(address(vaultA), ud(1000e18), ud(1e18));
-    }
-
     function test_updateUser_RevertIf_NotRegisteredVault() public {
         vm.expectRevert(abi.encodeWithSelector(IVaultMining.VaultMining__NotVault.selector, bob));
         vm.prank(bob);
@@ -317,5 +313,16 @@ contract VaultMiningTest is Test, Assertions {
 
         vm.warp(block.timestamp + ONE_DAY);
         assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(), 250e18, 1e6);
+    }
+
+    function test_setRewardsPerYear_UpdateRewardsPerYear() public {
+        vaultMining.setRewardsPerYear(ud(1000e18));
+        assertEq(vaultMining.getRewardsPerYear(), 1000e18);
+    }
+
+    function test_setRewardsPerYear_RevertIf_NotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vaultMining.setRewardsPerYear(ud(1000e18));
     }
 }

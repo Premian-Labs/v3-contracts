@@ -33,15 +33,12 @@ interface IVaultMining {
         UD60x18 reward;
         // Reward debt. See explanation below
         UD60x18 rewardDebt;
-        // We do some fancy math here. Basically, any point in time, the amount of rewards
-        // entitled to a user but is pending to be distributed is:
+        //   pending reward = (user.shares * vault.accPremiaPerShare) - user.rewardDebt
         //
-        //   pending reward = (user.amount * vault.accPremiaPerShare) - user.rewardDebt
-        //
-        // Whenever a user deposits or withdraws LP tokens to a vault. Here's what happens:
-        //   1. The vault's `accPremiaPerShare` (and `lastRewardBlock`) gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
+        // Whenever a user vault shares change. Here's what happens:
+        //   1. The vault's `accPremiaPerShare` (and `lastRewardTimestamp`) gets updated.
+        //   2. User allocated `reward` is updated
+        //   3. User's `shares` gets updated.
         //   4. User's `rewardDebt` gets updated.
     }
 
@@ -51,6 +48,38 @@ interface IVaultMining {
         UD60x18 vaultUtilisationRate;
     }
 
+    /// @notice Add rewards to the contract
+    function addRewards(UD60x18 amount) external;
+
+    /// @notice Return amount of rewards not yet allocated
+    function getRewardsAvailable() external view returns (UD60x18);
+
+    /// @notice Return amount of pending rewards (not yet claimed) for a user, on a specific vault
+    function getPendingUserRewards(address user, address vault) external view returns (UD60x18);
+
+    /// @notice Return the total amount of votes across all vaults (Used to calculate share of rewards allocation for each vault)
+    function getTotalVotes() external view returns (UD60x18);
+
+    /// @notice Return internal variables for a vault
+    function getVaultInfo(address vault) external view returns (VaultInfo memory);
+
+    /// @notice Return internal variables for a user, on a specific vault
+    function getUserInfo(address user, address vault) external view returns (UserInfo memory);
+
+    /// @notice Get the amount of rewards emitted per year
+    function getRewardsPerYear() external view returns (UD60x18);
+
+    /// @notice Claim rewards for a list of vaults
+    function claim(address[] memory vaults) external;
+
+    /// @notice Trigger an update for a user on a specific vault
+    /// This needs to be called by the vault, anytime the user's shares change
+    /// Can only be called by a vault registered on the VaultRegistry
+    /// @param user The user to update
+    /// @param vault The vault for which to update
+    /// @param newUserShares The new amount of shares for the user
+    /// @param newTotalShares The new amount of total shares for the vault
+    /// @param utilisationRate The new utilisation rate for the vault
     function updateUser(
         address user,
         address vault,
@@ -59,5 +88,9 @@ interface IVaultMining {
         UD60x18 utilisationRate
     ) external;
 
-    function updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) external;
+    /// @notice Trigger an update for a vault
+    function updateVault(address vault) external;
+
+    /// @notice Trigger an update for a user on a specific vault
+    function updateUser(address user, address vault) external;
 }

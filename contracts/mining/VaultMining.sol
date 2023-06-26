@@ -40,7 +40,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         OPTION_REWARD = optionReward;
     }
 
-    /// @notice Add rewards to the contract
+    /// @inheritdoc IVaultMining
     function addRewards(UD60x18 amount) external {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount.unwrap());
@@ -51,10 +51,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         return VaultMiningStorage.layout().rewardsAvailable;
     }
 
-    /// @notice Get pending premia reward for a user on a pool
-    /// @param vault Address of the vault
-    /// @param user Address of the user
-    /// @return Pending rewards for the given user, on the given vault
+    /// @inheritdoc IVaultMining
     function getPendingUserRewards(address user, address vault) external view returns (UD60x18) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
@@ -83,27 +80,32 @@ contract VaultMining is IVaultMining, OwnableInternal {
         }
     }
 
+    /// @inheritdoc IVaultMining
     function getTotalVotes() external view returns (UD60x18) {
         return VaultMiningStorage.layout().totalVotes;
     }
 
+    /// @inheritdoc IVaultMining
     function getVaultInfo(address vault) external view returns (VaultInfo memory) {
         return VaultMiningStorage.layout().vaultInfo[vault];
     }
 
+    /// @inheritdoc IVaultMining
     function getUserInfo(address user, address vault) external view returns (UserInfo memory) {
         return VaultMiningStorage.layout().userInfo[vault][user];
     }
 
+    /// @inheritdoc IVaultMining
     function getRewardsPerYear() external view returns (UD60x18) {
         return VaultMiningStorage.layout().rewardsPerYear;
     }
 
-    function setRewardsPerYear(UD60x18 rewardsPerYear) external {
+    function setRewardsPerYear(UD60x18 rewardsPerYear) external onlyOwner {
         VaultMiningStorage.layout().rewardsPerYear = rewardsPerYear;
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
+    /// @inheritdoc IVaultMining
     function claim(address[] memory vaults) external {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
@@ -122,6 +124,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         IOptionReward(OPTION_REWARD).writeFrom(msg.sender, size);
     }
 
+    /// @inheritdoc IVaultMining
     function updateUser(
         address user,
         address vault,
@@ -133,11 +136,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
     }
 
-    function updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) external {
-        _revertIfNotVault(msg.sender);
-        _updateVault(vault, newTotalShares, utilisationRate);
-    }
-
+    /// @inheritdoc IVaultMining
     function updateVault(address vault) external {
         IVault _vault = IVault(vault);
         _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
@@ -162,6 +161,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         _updateVaultAllocation(l, vault, utilisationRate);
     }
 
+    /// @inheritdoc IVaultMining
     function updateUser(address user, address vault) public {
         IVault _vault = IVault(vault);
         _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
@@ -212,7 +212,6 @@ contract VaultMining is IVaultMining, OwnableInternal {
             l.vaultInfo[data.vault].lastRewardTimestamp = block.timestamp;
         }
 
-        // ToDo : Check if we wanna modify args
         emit UpdateVaultVotes(data.vault, data.votes, data.vaultUtilisationRate);
     }
 
