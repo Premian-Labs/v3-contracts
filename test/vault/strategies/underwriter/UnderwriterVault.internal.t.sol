@@ -305,7 +305,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             vault.settle();
             uint256 delta = isCallTest ? 0.00001e18 : 0;
 
-            assertApproxEqAbs(scaleDecimalsTo(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
+            assertApproxEqAbs(fromTokenDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
             assertEq(vault.totalLockedAssets(), newLocked[i]);
             assertEq(vault.minMaturity(), minMaturity[i]);
             assertEq(vault.maxMaturity(), maxMaturity[i]);

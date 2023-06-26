@@ -185,7 +185,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
         UD60x18 payoff = getExerciseValue(false, ONE, settlementPrice);
-        UD60x18 collateral = scaleDecimalsTo(
+        UD60x18 collateral = fromTokenDecimals(
             trade.initialCollateral + trade.totalPremium - toTokenDecimals(trade.size * payoff) - pool.protocolFees()
         );
 

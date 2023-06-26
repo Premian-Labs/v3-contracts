@@ -497,13 +497,13 @@ contract DeployTest is Test, Assertions {
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals
-    function scaleDecimalsTo(uint256 amount) internal view returns (UD60x18) {
+    function fromTokenDecimals(uint256 amount) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals
-    function scaleDecimalsTo(UD60x18 amount) internal view returns (uint256) {
+    function fromTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
     }

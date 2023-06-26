@@ -57,8 +57,8 @@ abstract contract PoolTradeTest is DeployTest {
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(takerFee);
-            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(takerFee);
+            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(takerFee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(takerFee);
 
             uint256 primaryRebate = toTokenDecimals(_primaryRebate);
             uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
@@ -193,8 +193,8 @@ abstract contract PoolTradeTest is DeployTest {
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
-            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(takerFee);
-            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(takerFee);
+            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(takerFee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(takerFee);
 
             uint256 primaryRebate = toTokenDecimals(_primaryRebate);
             uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);

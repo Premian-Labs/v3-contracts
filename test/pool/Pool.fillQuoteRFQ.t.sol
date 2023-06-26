@@ -98,8 +98,8 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimalsTo(protocolFee);
-        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimalsTo(protocolFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(protocolFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(protocolFee);
 
         uint256 primaryRebate = toTokenDecimals(_primaryRebate);
         uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);

@@ -70,7 +70,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         assertApproxEqAbs(
-            scaleDecimalsTo(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
+            fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
             isCallTest ? 0.15828885563446596e18 : 469.9068335343156e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
@@ -82,7 +82,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         poolKey.strike = ud(1050e18);
 
         assertApproxEqAbs(
-            scaleDecimalsTo(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
+            fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
             isCallTest ? 0.20945141965280406e18 : 363.255965e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
@@ -365,7 +365,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
             users.trader,
             tradeSize,
             contractsToCollateral(tradeSize),
-            scaleDecimalsTo(fee)
+            fromTokenDecimals(fee)
         );
 
         vault.trade(poolKey, tradeSize, true, totalPremium + totalPremium / 10, address(0));
