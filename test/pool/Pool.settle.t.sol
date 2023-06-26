@@ -31,11 +31,9 @@ abstract contract PoolSettleTest is DeployTest {
         UD60x18 depositSize = ud(1000 ether);
         deposit(depositSize);
 
-        trade.initialCollateral = scaleDecimalsFrom(
-            contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper)
-        );
+        trade.initialCollateral = toTokenDecimals(contractsToCollateral(depositSize) * posKey.lower.avg(posKey.upper));
         trade.size = ud(100 ether);
-        trade.traderCollateral = scaleDecimalsFrom(contractsToCollateral(trade.size));
+        trade.traderCollateral = toTokenDecimals(contractsToCollateral(trade.size));
         (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, false);
 
         trade.poolToken = getPoolToken();
@@ -58,7 +56,7 @@ abstract contract PoolSettleTest is DeployTest {
         vm.prank(users.trader);
         pool.settle();
 
-        uint256 exerciseValue = scaleDecimalsFrom(getExerciseValue(isITM, trade.size, settlementPrice));
+        uint256 exerciseValue = toTokenDecimals(getExerciseValue(isITM, trade.size, settlementPrice));
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(users.trader),
@@ -116,8 +114,8 @@ abstract contract PoolSettleTest is DeployTest {
         holders[0] = users.trader;
         holders[1] = users.otherTrader;
 
-        uint256 cost = scaleDecimalsFrom(authorizedCost);
-        uint256 exerciseValue = scaleDecimalsFrom(getExerciseValue(isITM, trade.size / TWO, settlementPrice));
+        uint256 cost = toTokenDecimals(authorizedCost);
+        uint256 exerciseValue = toTokenDecimals(getExerciseValue(isITM, trade.size / TWO, settlementPrice));
 
         vm.prank(users.operator);
         pool.settleFor(holders, cost);
@@ -175,7 +173,7 @@ abstract contract PoolSettleTest is DeployTest {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        uint256 _cost = scaleDecimalsFrom(cost);
+        uint256 _cost = toTokenDecimals(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, collateral));
         vm.prank(users.operator);
         pool.settleFor(holders, _cost);
@@ -209,7 +207,7 @@ abstract contract PoolSettleTest is DeployTest {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        uint256 _cost = scaleDecimalsFrom(cost);
+        uint256 _cost = toTokenDecimals(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * quote, ZERO));
         vm.prank(users.operator);
         pool.settleFor(holders, _cost);

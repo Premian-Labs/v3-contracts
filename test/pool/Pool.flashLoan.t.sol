@@ -19,7 +19,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
     function calculateFee(uint256 amount) internal view returns (uint256) {
         UD60x18 fee = scaleDecimalsTo(amount) * FLASH_LOAN_FEE;
-        return scaleDecimalsFrom(fee);
+        return toTokenDecimals(fee);
     }
 
     function test_maxFlashLoan_ReturnCorrectMax() public {

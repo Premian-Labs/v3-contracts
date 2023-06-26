@@ -263,17 +263,17 @@ contract ReferralTest is DeployTest {
 
         UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
 
-        IERC20(token).approve(address(referral), scaleDecimalsFrom(__totalRebate));
+        IERC20(token).approve(address(referral), toTokenDecimals(__totalRebate));
 
         referral.useReferral(users.trader, users.referrer, token, __primaryRebate, __secondaryRebate);
 
         vm.stopPrank();
 
         assertEq(referral.getReferrer(users.trader), users.referrer);
-        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - scaleDecimalsFrom(__totalRebate));
-        assertEq(IERC20(token).balanceOf(address(referral)), scaleDecimalsFrom(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - toTokenDecimals(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(referral)), toTokenDecimals(__totalRebate));
 
-        return (token, scaleDecimalsFrom(__primaryRebate), scaleDecimalsFrom(__secondaryRebate));
+        return (token, toTokenDecimals(__primaryRebate), toTokenDecimals(__secondaryRebate));
     }
 
     function test_useReferral_Rebate_Primary_And_Secondary() public {
