@@ -11,6 +11,7 @@ import {VxPremiaStorage} from "contracts/staking/VxPremiaStorage.sol";
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
+import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
@@ -32,9 +33,12 @@ contract VxPremiaTest is Test {
     ERC20Mock internal premia;
     ERC20Mock internal usdc;
 
+    VaultRegistry internal vaultRegistry;
+
     address internal pool0;
     address internal pool1;
     address internal pool2;
+    address internal vault;
 
     event RemoveVote(address indexed voter, IVxPremia.VoteVersion indexed version, bytes target, uint256 amount);
 
@@ -45,6 +49,7 @@ contract VxPremiaTest is Test {
         pool0 = 0x000004354F938CF1aCC2414B68951ad7a8730fB6;
         pool1 = 0x100004354f938cf1acc2414B68951aD7A8730fb6;
         pool2 = 0x200004354F938cf1ACc2414b68951ad7A8730Fb6;
+        vault = 0x300004354F938cF1acC2414b68951AD7a8730fb6;
 
         premia = new ERC20Mock("PREMIA", 18);
         usdc = new ERC20Mock("USDC", 6);
@@ -53,6 +58,7 @@ contract VxPremiaTest is Test {
 
         address vaultRegistryImpl = address(new VaultRegistry());
         address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
+        vaultRegistry = VaultRegistry(vaultRegistryProxy);
 
         address vxPremiaImpl = address(
             new VxPremia(poolListMock, address(0), address(premia), address(usdc), address(0), vaultRegistryProxy)
@@ -139,6 +145,49 @@ contract VxPremiaTest is Test {
         assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool1, true)), 0);
         assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool2, false)), 2e18);
         assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.V2, abi.encodePacked(pool2, true)), 0);
+    }
+
+    function test_castVotes_RevertIf_VaultNotRegistered() public {
+        vm.startPrank(alice);
+        vxPremia.stake(10e18, 365 days);
+
+        VxPremiaStorage.Vote[] memory votes = new VxPremiaStorage.Vote[](3);
+        votes[0].amount = 1e18;
+        votes[0].target = abi.encodePacked(vault);
+        votes[0].version = IVxPremia.VoteVersion.VaultV3;
+
+        assertFalse(vaultRegistry.isVault(vault));
+        vm.expectRevert(IVxPremia.VxPremia__InvalidPoolAddress.selector);
+        vxPremia.castVotes(votes);
+    }
+
+    function test_castVotes_Success_VaultV3() public {
+        vaultRegistry.addVault(
+            vault,
+            address(0),
+            keccak256("VAULT"),
+            IVaultRegistry.TradeSide.Sell,
+            IVaultRegistry.OptionType.Call
+        );
+        vm.startPrank(alice);
+        vxPremia.stake(10e18, 365 days);
+
+        VxPremiaStorage.Vote[] memory votes = new VxPremiaStorage.Vote[](1);
+        votes[0].amount = 1e18;
+        votes[0].target = abi.encodePacked(vault);
+        votes[0].version = IVxPremia.VoteVersion.VaultV3;
+
+        assertTrue(vaultRegistry.isVault(vault));
+        vxPremia.castVotes(votes);
+
+        VxPremiaStorage.Vote[] memory userVotes = vxPremia.getUserVotes(alice);
+
+        assertEq(userVotes.length, 1);
+        assertEq(userVotes[0].amount, 1e18);
+        assertEq(userVotes[0].target, abi.encodePacked(vault));
+        assertEq(uint256(userVotes[0].version), uint256(IVxPremia.VoteVersion.VaultV3));
+
+        assertEq(vxPremia.getPoolVotes(IVxPremia.VoteVersion.VaultV3, abi.encodePacked(vault)), 1e18);
     }
 
     function test_castVotes_RevertIf_NotEnoughVotingPower() public {
