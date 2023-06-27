@@ -1,63 +1,35 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.8;
 
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {IReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/IReentrancyGuard.sol";
+import {ReentrancyGuardStorage} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuardStorage.sol";
 
-import {ReentrancyGuardStorage} from "./ReentrancyGuardStorage.sol";
-
-contract ReentrancyGuard is OwnableInternal {
-    using EnumerableSet for EnumerableSet.Bytes32Set;
-    using ReentrancyGuardStorage for ReentrancyGuardStorage.Layout;
-
-    error ReentrancyGuard__ReentrantCall();
-
+/**
+ * @title Utility contract for preventing reentrancy attacks
+ */
+abstract contract ReentrancyGuard is IReentrancyGuard {
     uint256 internal constant REENTRANCY_STATUS_LOCKED = 2;
     uint256 internal constant REENTRANCY_STATUS_UNLOCKED = 1;
 
-    modifier nonReentrant() {
-        bool locked = _lockReentrancyGuard(msg.data);
+    modifier nonReentrant() virtual {
+        if (ReentrancyGuardStorage.layout().status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
+        _lockReentrancyGuard();
         _;
-        if (locked) _unlockReentrancyGuard();
+        _unlockReentrancyGuard();
     }
 
-    function addReentrancyGuardSelectorsIgnored(bytes4[] memory selectorsIgnored) external onlyOwner {
-        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
-        for (uint256 i = 0; i < selectorsIgnored.length; i++) {
-            l.selectorsIgnored.add(bytes32(selectorsIgnored[i]));
-        }
+    /**
+     * @notice lock functions that use the nonReentrant modifier
+     */
+    function _lockReentrancyGuard() internal virtual {
+        ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_LOCKED;
     }
 
-    function removeReentrancyGuardSelectorsIgnored(bytes4[] memory selectorsIgnored) external onlyOwner {
-        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
-        for (uint256 i = 0; i < selectorsIgnored.length; i++) {
-            l.selectorsIgnored.remove(bytes32(selectorsIgnored[i]));
-        }
-    }
-
-    function setReentrancyGuardDisabled(bool disabled) external onlyOwner {
-        ReentrancyGuardStorage.layout().disabled = disabled;
-    }
-
-    function _lockReentrancyGuard(bytes memory msgData) internal returns (bool) {
-        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
-
-        if (l.reentrancyStatus == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
-        if (l.selectorsIgnored.contains(bytes32(_getFunctionSelector(msgData)))) return false;
-        if (l.disabled) return false;
-
-        l.reentrancyStatus = REENTRANCY_STATUS_LOCKED;
-        return true;
-    }
-
-    function _unlockReentrancyGuard() internal {
-        ReentrancyGuardStorage.layout().reentrancyStatus = REENTRANCY_STATUS_UNLOCKED;
-    }
-
-    function _getFunctionSelector(bytes memory msgData) internal pure returns (bytes4 selector) {
-        for (uint i = 0; i < 4; i++) {
-            selector |= bytes4(msgData[i] & 0xFF) >> (i * 8);
-        }
+    /**
+     * @notice unlock functions that use the nonReentrant modifier
+     */
+    function _unlockReentrancyGuard() internal virtual {
+        ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_UNLOCKED;
     }
 }

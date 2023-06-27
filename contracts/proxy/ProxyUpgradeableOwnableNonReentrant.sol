@@ -8,9 +8,9 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 
 import {ProxyUpgradeableOwnable} from "./ProxyUpgradeableOwnable.sol";
 
-import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
+import {ReentrancyGuardExtended} from "../utils/ReentrancyGuardExtended.sol";
 
-contract ProxyUpgradeableOwnableNonReentrant is ProxyUpgradeableOwnable, ReentrancyGuard {
+contract ProxyUpgradeableOwnableNonReentrant is ProxyUpgradeableOwnable, ReentrancyGuardExtended {
     using AddressUtils for address;
 
     constructor(address implementation) ProxyUpgradeableOwnable(implementation) {}

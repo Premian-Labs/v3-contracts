@@ -15,12 +15,12 @@ import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
-import {ReentrancyGuard} from "../utils/ReentrancyGuard.sol";
+import {ReentrancyGuardExtended} from "../utils/ReentrancyGuardExtended.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
 /// @title Upgradeable proxy with centrally controlled Pool implementation
-contract PoolProxy is Proxy, ERC165BaseInternal, ReentrancyGuard {
+contract PoolProxy is Proxy, ERC165BaseInternal, ReentrancyGuardExtended {
     using AddressUtils for address;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
