@@ -43,6 +43,10 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         isDeployed = true;
 
         if (pool == address(0)) {
+            _revertIfAddressInvalid(k);
+            _revertIfOptionStrikeInvalid(k.strike, k.oracleAdapter, k.base, k.quote);
+            _revertIfOptionMaturityInvalid(k.maturity);
+
             pool = _calculatePoolAddress(k);
             isDeployed = false;
         }
@@ -82,10 +86,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
 
     /// @inheritdoc IPoolFactory
     function deployPool(PoolKey calldata k) external payable returns (address poolAddress) {
-        if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
-
-        if (k.base == address(0) || k.quote == address(0) || k.oracleAdapter == address(0))
-            revert PoolFactory__ZeroAddress();
+        _revertIfAddressInvalid(k);
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
 
@@ -180,6 +181,13 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         return address(uint160(uint256(hash)));
     }
 
+    /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero
+    function _revertIfAddressInvalid(PoolKey memory k) internal view {
+        if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
+        if (k.base == address(0) || k.quote == address(0) || k.oracleAdapter == address(0))
+            revert PoolFactory__ZeroAddress();
+    }
+
     /// @notice Revert if the strike price is not a multiple of the strike interval
     function _revertIfOptionStrikeInvalid(
         UD60x18 strike,
@@ -188,17 +196,14 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         address quote
     ) internal view {
         if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
-
         UD60x18 spot = IOracleAdapter(oracleAdapter).quote(base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
-
         if (strike % strikeInterval != ZERO) revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
     }
 
     /// @notice Revert if the maturity is invalid
     function _revertIfOptionMaturityInvalid(uint256 maturity) internal view {
         if (maturity <= block.timestamp) revert PoolFactory__OptionExpired(maturity);
-
         if ((maturity % 24 hours) % 8 hours != 0) revert PoolFactory__OptionMaturityNot8UTC(maturity);
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
