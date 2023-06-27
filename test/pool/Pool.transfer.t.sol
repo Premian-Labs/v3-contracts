@@ -302,7 +302,7 @@ abstract contract PoolTransferTest is DeployTest {
 
         // Trade
         UD60x18 tradeSize = ud(500 ether);
-        uint256 collateralScaled = scaleDecimals(contractsToCollateral(tradeSize));
+        uint256 collateralScaled = toTokenDecimals(contractsToCollateral(tradeSize));
 
         (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
 

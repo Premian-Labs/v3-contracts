@@ -36,9 +36,9 @@ contract ReferralTest is DeployTest {
         poolKey.isCallPool = true;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
 
-        _tradingFee = scaleDecimals(tradingFee);
-        _primaryRebate = scaleDecimals(primaryRebate);
-        _secondaryRebate = scaleDecimals(secondaryRebate);
+        _tradingFee = fromTokenDecimals(tradingFee);
+        _primaryRebate = fromTokenDecimals(primaryRebate);
+        _secondaryRebate = fromTokenDecimals(secondaryRebate);
         _totalRebate = _primaryRebate + _secondaryRebate;
     }
 
@@ -258,22 +258,22 @@ contract ReferralTest is DeployTest {
         (UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
             users.trader,
             users.referrer,
-            scaleDecimals(__tradingFee)
+            fromTokenDecimals(__tradingFee)
         );
 
         UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
 
-        IERC20(token).approve(address(referral), scaleDecimals(__totalRebate));
+        IERC20(token).approve(address(referral), toTokenDecimals(__totalRebate));
 
         referral.useReferral(users.trader, users.referrer, token, __primaryRebate, __secondaryRebate);
 
         vm.stopPrank();
 
         assertEq(referral.getReferrer(users.trader), users.referrer);
-        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - scaleDecimals(__totalRebate));
-        assertEq(IERC20(token).balanceOf(address(referral)), scaleDecimals(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - toTokenDecimals(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(referral)), toTokenDecimals(__totalRebate));
 
-        return (token, scaleDecimals(__primaryRebate), scaleDecimals(__secondaryRebate));
+        return (token, toTokenDecimals(__primaryRebate), toTokenDecimals(__secondaryRebate));
     }
 
     function test_useReferral_Rebate_Primary_And_Secondary() public {

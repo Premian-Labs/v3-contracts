@@ -49,7 +49,7 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
             initialCollateral = initialCollateral * poolKey.strike;
         }
 
-        return scaleDecimals(initialCollateral);
+        return toTokenDecimals(initialCollateral);
     }
 
     function test_fillQuoteRFQ_Success_WithApproval() public {
@@ -61,11 +61,11 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        uint256 premium = scaleDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
+        uint256 premium = toTokenDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
 
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, address(0));
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
+        uint256 collateral = toTokenDecimals(contractsToCollateral(quoteRFQ.size));
 
         uint256 protocolFee = pool.takerFee(users.trader, quoteRFQ.size, premium, false);
 
@@ -88,32 +88,27 @@ abstract contract PoolFillQuoteRFQTest is DeployTest {
 
     function _test_fillQuoteRFQ_Success_WithReferral(bool isBuy) internal {
         mintAndApprove();
-
         quoteRFQ.isBuy = isBuy;
-
         address token = getPoolToken();
 
         IPoolInternal.Signature memory sig = signQuoteRFQ(quoteRFQ);
 
-        uint256 premium = scaleDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
-
+        uint256 premium = toTokenDecimals(contractsToCollateral(quoteRFQ.price * quoteRFQ.size));
         uint256 protocolFee = pool.takerFee(users.trader, quoteRFQ.size, premium, false);
 
         (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 
-        UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(protocolFee);
+        UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(protocolFee);
+        UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(protocolFee);
 
-        UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(protocolFee);
-
-        uint256 primaryRebate = scaleDecimals(_primaryRebate);
-        uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
+        uint256 primaryRebate = toTokenDecimals(_primaryRebate);
+        uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
         uint256 totalRebate = primaryRebate + secondaryRebate;
 
         vm.prank(users.trader);
         pool.fillQuoteRFQ(quoteRFQ, quoteRFQ.size, sig, users.referrer);
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(quoteRFQ.size));
-
+        uint256 collateral = toTokenDecimals(contractsToCollateral(quoteRFQ.size));
         uint256 initialCollateral = getInitialCollateral();
 
         if (isBuy) {

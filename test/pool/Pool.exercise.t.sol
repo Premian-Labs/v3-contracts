@@ -56,7 +56,7 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.prank(users.trader);
         pool.exercise();
 
-        uint256 exerciseValue = scaleDecimals(getExerciseValue(isITM, trade.size, settlementPrice));
+        uint256 exerciseValue = toTokenDecimals(getExerciseValue(isITM, trade.size, settlementPrice));
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), exerciseValue);
 
@@ -110,12 +110,12 @@ abstract contract PoolExerciseTest is DeployTest {
         holders[0] = users.trader;
         holders[1] = users.otherTrader;
 
-        uint256 cost = scaleDecimals(authorizedCost);
+        uint256 cost = toTokenDecimals(authorizedCost);
 
         vm.prank(users.operator);
         pool.exerciseFor(holders, cost);
 
-        uint256 exerciseValue = scaleDecimals(getExerciseValue(true, trade.size / TWO, settlementPrice));
+        uint256 exerciseValue = toTokenDecimals(getExerciseValue(true, trade.size / TWO, settlementPrice));
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), exerciseValue - cost);
         assertEq(IERC20(trade.poolToken).balanceOf(users.otherTrader), exerciseValue - cost);
@@ -153,7 +153,7 @@ abstract contract PoolExerciseTest is DeployTest {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        uint256 _cost = scaleDecimals(cost);
+        uint256 _cost = toTokenDecimals(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, ZERO));
         vm.prank(users.operator);
         pool.exerciseFor(holders, _cost);
@@ -177,7 +177,7 @@ abstract contract PoolExerciseTest is DeployTest {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        uint256 _cost = scaleDecimals(cost);
+        uint256 _cost = toTokenDecimals(cost);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, exerciseValue));
         vm.prank(users.operator);
         pool.exerciseFor(holders, _cost);
@@ -211,7 +211,7 @@ abstract contract PoolExerciseTest is DeployTest {
         address[] memory holders = new address[](1);
         holders[0] = users.trader;
 
-        uint256 cost = scaleDecimals(authorizedCost);
+        uint256 cost = toTokenDecimals(authorizedCost);
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, authorizedCost * quote, ZERO)
