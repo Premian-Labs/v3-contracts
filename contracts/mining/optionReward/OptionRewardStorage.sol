@@ -39,7 +39,8 @@ library OptionRewardStorage {
         uint256 exerciseDuration;
         // amount of time the lockup period lasts (in seconds)
         uint256 lockupDuration;
-        mapping(address user => mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount))) redeemed;
+        // Total amount of contracts for which the user can trade longs against % of intrinsic value after the lockupDuration
+        mapping(address user => mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount))) redeemableLongs;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -13,18 +13,18 @@ contract PaymentSplitter is IPaymentSplitter {
     using SafeERC20 for IERC20;
 
     address public immutable TOKEN;
-    address public immutable VXPREMIA;
+    address public immutable VX_PREMIA;
 
     constructor(address token, address vxPremia) {
         TOKEN = token;
-        VXPREMIA = vxPremia;
+        VX_PREMIA = vxPremia;
     }
 
     /// @notice Distributes rewards to vxPREMIA staking contract - caller must approve `amount` before calling
     /// @param amount Amount of reward tokens to distribute
     function pay(uint256 amount) external {
         IERC20(TOKEN).safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(TOKEN).approve(VXPREMIA, amount);
-        IVxPremia(VXPREMIA).addRewards(amount);
+        IERC20(TOKEN).approve(VX_PREMIA, amount);
+        IVxPremia(VX_PREMIA).addRewards(amount);
     }
 }

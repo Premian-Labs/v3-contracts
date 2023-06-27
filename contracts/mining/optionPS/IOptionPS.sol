@@ -25,7 +25,6 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 exerciseCost,
-        UD60x18 settlementPrice,
         UD60x18 strike,
         uint256 maturity
     );
@@ -68,11 +67,18 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @param strike the option strike price (18 decimals)
     /// @param maturity the option maturity timestamp
     /// @param contractSize number of long tokens to exercise (18 decimals)
-    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
+    /// @return exerciseValue the amount of tokens transferred to the caller
+    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external returns (uint256 exerciseValue);
 
     /// @notice Settles the short options held by the caller.
     /// @param strike the option strike price (18 decimals)
     /// @param maturity the option maturity timestamp
     /// @param contractSize number of short tokens to settle (18 decimals)
-    function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
+    /// @return baseAmount the amount of base tokens transferred to the caller
+    /// @return quoteAmount the amount of quote tokens transferred to the caller
+    function settle(
+        UD60x18 strike,
+        uint64 maturity,
+        UD60x18 contractSize
+    ) external returns (uint256 baseAmount, uint256 quoteAmount);
 }

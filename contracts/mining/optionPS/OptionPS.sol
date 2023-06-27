@@ -19,8 +19,6 @@ import {OptionMath} from "../../libraries/OptionMath.sol";
 import {IOptionPS} from "./IOptionPS.sol";
 import {OptionPSStorage} from "./OptionPSStorage.sol";
 
-import {IPriceRepository} from "../IPriceRepository.sol";
-
 contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, ReentrancyGuard {
     using OptionPSStorage for IERC20;
     using OptionPSStorage for int128;
@@ -58,11 +56,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         // Validate maturity
         if ((maturity % 24 hours) != 8 hours) revert OptionPS__OptionMaturityNot8UTC(maturity);
 
-        // Validate strike
-        (UD60x18 price, uint256 timestamp) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
-        _revertIfPriceIsStale(timestamp);
-
-        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(price);
+        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(strike);
         if (strike % strikeInterval != ZERO) revert OptionPS__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);
 
         IERC20(l.base).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(contractSize, true));
@@ -80,6 +74,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
     /// @inheritdoc IOptionPS
     function annihilate(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+        // ToDo : Prevent to call after exercise period
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
@@ -96,18 +91,18 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     }
 
     /// @inheritdoc IOptionPS
-    function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+    function exercise(
+        UD60x18 strike,
+        uint64 maturity,
+        UD60x18 contractSize
+    ) external nonReentrant returns (uint256 exerciseValue) {
         _revertIfOptionNotExpired(maturity);
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
-        UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
-        _revertIfPriceIsZero(settlementPrice);
-        if (settlementPrice < strike) revert OptionPS__OptionOutTheMoney(settlementPrice, strike);
-
-        UD60x18 exerciseValue = contractSize;
+        UD60x18 _exerciseValue = contractSize;
         UD60x18 exerciseCost = strike * contractSize;
 
         IERC20(l.quote).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost, false));
@@ -119,13 +114,18 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         l.totalExerciseCost[strike][maturity] = l.totalExerciseCost[strike][maturity] + (exerciseCost - fee);
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
-        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(exerciseValue, true));
+        exerciseValue = l.toTokenDecimals(_exerciseValue, true);
+        IERC20(l.base).safeTransfer(msg.sender, exerciseValue);
 
-        emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
+        emit Exercise(msg.sender, contractSize, _exerciseValue, exerciseCost, strike, maturity);
     }
 
     /// @inheritdoc IOptionPS
-    function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+    function settle(
+        UD60x18 strike,
+        uint64 maturity,
+        UD60x18 contractSize
+    ) external nonReentrant returns (uint256 baseAmount, uint256 quoteAmount) {
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         _revertIfExercisePeriodNotEnded(maturity + uint64(l.exerciseDuration));
 
@@ -138,8 +138,11 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         UD60x18 exerciseShare = l.totalExerciseCost[strike][maturity] * (contractSize / totalUnderwritten);
 
         _burnUD60x18(msg.sender, shortTokenId, contractSize);
-        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, true));
-        IERC20(l.quote).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, false));
+
+        baseAmount = l.toTokenDecimals(contractSize, true);
+        quoteAmount = l.toTokenDecimals(contractSize, false);
+        IERC20(l.base).safeTransfer(msg.sender, baseAmount);
+        IERC20(l.quote).safeTransfer(msg.sender, quoteAmount);
 
         emit Settle(msg.sender, contractSize, strike, maturity, collateralLeft, exerciseShare);
     }
@@ -154,12 +157,6 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _burn(account, tokenId, amount.unwrap());
     }
 
-    /// @notice Revert if price is stale
-    function _revertIfPriceIsStale(uint256 timestamp) internal view {
-        if (block.timestamp - timestamp >= STALE_PRICE_THRESHOLD)
-            revert OptionPS__PriceIsStale(block.timestamp, timestamp);
-    }
-
     /// @notice Revert if price is zero
     function _revertIfPriceIsZero(UD60x18 price) internal pure {
         if (price == ZERO) revert OptionPS__PriceIsZero();
@@ -172,7 +169,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
     /// @notice Revert if exercise period has not ended
     function _revertIfExercisePeriodNotEnded(uint64 maturity) internal view {
-        if (block.timestamp < maturity) revert OptionPS__ExercisePeriodNotEnded(maturity);
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+        if (block.timestamp < maturity + l.exerciseDuration) revert OptionPS__ExercisePeriodNotEnded(maturity);
     }
 
     function _beforeTokenTransfer(

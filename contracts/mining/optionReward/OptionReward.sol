@@ -29,14 +29,16 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable TREASURY;
-    UD60x18 public immutable TREASURY_FEE;
+    address internal constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
+    address public immutable FEE_RECEIVER;
+    UD60x18 public immutable FEE;
 
     uint256 public constant STALE_PRICE_THRESHOLD = 24 hours;
 
-    constructor(address treasury, UD60x18 treasuryFee) {
-        TREASURY = treasury;
-        TREASURY_FEE = treasuryFee;
+    constructor(address feeReceiver, UD60x18 fee) {
+        FEE_RECEIVER = feeReceiver;
+        FEE = fee;
     }
 
     function underwrite(UD60x18 contractSize) external nonReentrant {
@@ -57,28 +59,49 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         // ToDo : Check this
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
 
+        l.redeemableLongs[msg.sender][strike][maturity] =
+            l.redeemableLongs[msg.sender][strike][maturity] +
+            contractSize;
         l.option.underwrite(strike, maturity, msg.sender, contractSize);
 
         // ToDo : Add event
     }
 
-    /// @notice Give up the right to exercise the option, and receive a percentage of the intrinsic value of the option,
-    /// unlocked after the lockup period
-    function redeem(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
-        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+    /// @notice Claim rewards from longs "redeemed" after the lockup period
+    function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+        _revertIfLockPeriodNotEnded(maturity);
 
         uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
-        l.option.safeTransferFrom(msg.sender, address(this), longTokenId, contractSize.unwrap(), "");
-        l.option.annihilate(strike, maturity, contractSize);
 
-        l.redeemed[msg.sender][strike][maturity] = l.redeemed[msg.sender][strike][maturity] + contractSize;
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        // Burn the longs of the users
+        l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
+
+        UD60x18 redeemableLongs = l.redeemableLongs[msg.sender][strike][maturity];
+
+        if (contractSize > redeemableLongs)
+            revert OptionReward__NotEnoughRedeemableLongs(redeemableLongs, contractSize);
+        l.redeemableLongs[msg.sender][strike][maturity] = redeemableLongs - contractSize;
 
         // ToDo : Add event
     }
 
-    /// @notice Claim rewards from longs "redeemed" after the lockup period
-    function claimRewards(UD60x18 strike, uint64 maturity) external nonReentrant {
-        // ToDo : Implement
+    function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+
+        (uint256 baseAmount, uint256 quoteAmount) = l.option.settle(strike, maturity, contractSize);
+
+        UD60x18 _baseAmount = l.fromTokenDecimals(baseAmount, true);
+        UD60x18 _quoteAmount = l.fromTokenDecimals(quoteAmount, false);
+
+        uint256 fee = l.toTokenDecimals(_quoteAmount * FEE, false);
+        IERC20(l.quote).safeTransfer(FEE_RECEIVER, fee);
+        IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - fee);
+        IPaymentSplitter(l.paymentSplitter).pay(quoteAmount - fee);
+
+        // ToDo : Transfer Premia not needed back to LM
+
+        // ToDo : Add event
     }
 
     /// @notice Revert if price is stale
@@ -90,5 +113,12 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     /// @notice Revert if price is zero
     function _revertIfPriceIsZero(UD60x18 price) internal pure {
         if (price == ZERO) revert OptionReward__PriceIsZero();
+    }
+
+    /// @notice Revert if exercise period has not ended
+    function _revertIfLockPeriodNotEnded(uint64 maturity) internal view {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        if (block.timestamp < maturity + l.lockupDuration)
+            revert OptionReward__LockupNotExpired(maturity + l.lockupDuration);
     }
 }
