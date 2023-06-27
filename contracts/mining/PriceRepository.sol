@@ -18,7 +18,6 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
     function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
         if (!l.whitelistedRelayers.contains(msg.sender)) revert PriceRepository__NotAuthorized(msg.sender);
-        l.latestPrice[base][quote] = price;
         l.latestPriceTimestamp[base][quote] = timestamp;
         l.prices[base][quote][timestamp] = price;
         emit PriceUpdate(base, quote, timestamp, price);
@@ -27,8 +26,8 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
     /// @inheritdoc IPriceRepository
     function getPrice(address base, address quote) external view returns (UD60x18 price, uint256 timestamp) {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
-        price = l.latestPrice[base][quote];
         timestamp = l.latestPriceTimestamp[base][quote];
+        price = l.prices[base][quote][timestamp];
     }
 
     /// @inheritdoc IPriceRepository
