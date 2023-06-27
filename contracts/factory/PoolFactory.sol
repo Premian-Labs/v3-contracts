@@ -182,7 +182,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero
-    function _revertIfAddressInvalid(PoolKey memory k) internal view {
+    function _revertIfAddressInvalid(PoolKey memory k) internal pure {
         if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
         if (k.base == address(0) || k.quote == address(0) || k.oracleAdapter == address(0))
             revert PoolFactory__ZeroAddress();
