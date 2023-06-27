@@ -7,16 +7,16 @@ import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorag
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
-import {IProxyUpgradeableOwnable} from "../../proxy/IProxyUpgradeableOwnable.sol";
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 contract OptionRewardProxy is Proxy {
-    address private immutable PROXY;
+    IProxyManager private immutable MANAGER;
 
     constructor(
-        address proxy,
+        IProxyManager manager,
         IOptionPS option,
         address priceRepository,
         address paymentSplitter,
@@ -26,7 +26,7 @@ contract OptionRewardProxy is Proxy {
         uint256 exerciseDuration,
         uint256 lockupDuration
     ) {
-        PROXY = proxy;
+        MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
@@ -55,7 +55,7 @@ contract OptionRewardProxy is Proxy {
     }
 
     function _getImplementation() internal view override returns (address) {
-        return IProxyUpgradeableOwnable(PROXY).getImplementation();
+        return MANAGER.getManagedProxyImplementation();
     }
 
     receive() external payable {}

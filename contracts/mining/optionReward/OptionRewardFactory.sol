@@ -6,15 +6,12 @@ import {IOptionRewardFactory} from "./IOptionRewardFactory.sol";
 import {OptionRewardProxy} from "./OptionRewardProxy.sol";
 import {OptionRewardFactoryStorage} from "./OptionRewardFactoryStorage.sol";
 
-contract OptionRewardFactory is IOptionRewardFactory {
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
+import {ProxyManager} from "../../proxy/ProxyManager.sol";
+
+contract OptionRewardFactory is IOptionRewardFactory, ProxyManager {
     using OptionRewardFactoryStorage for OptionRewardArgs;
     using OptionRewardFactoryStorage for OptionRewardFactoryStorage.Layout;
-
-    address private immutable PROXY;
-
-    constructor(address proxy) {
-        PROXY = proxy;
-    }
 
     function isProxyDeployed(address proxy) external view returns (bool) {
         return OptionRewardFactoryStorage.layout().isProxyDeployed[proxy];
@@ -29,7 +26,7 @@ contract OptionRewardFactory is IOptionRewardFactory {
     function deployProxy(OptionRewardArgs calldata args) external returns (address proxy) {
         proxy = address(
             new OptionRewardProxy(
-                PROXY,
+                IProxyManager(address(this)),
                 args.option,
                 args.priceRepository,
                 args.paymentSplitter,

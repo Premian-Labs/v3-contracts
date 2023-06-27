@@ -10,21 +10,22 @@ import {ERC165BaseInternal} from "@solidstate/contracts/introspection/ERC165/bas
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
-import {IProxyUpgradeableOwnable} from "../../proxy/IProxyUpgradeableOwnable.sol";
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionPSStorage} from "./OptionPSStorage.sol";
+import {OptionPSFactory} from "./OptionPsFactory.sol";
 
 contract OptionPSProxy is Proxy, ERC165BaseInternal {
-    address private immutable PROXY;
+    IProxyManager private immutable MANAGER;
 
     constructor(
-        address proxy,
+        IProxyManager manager,
         address base,
         address quote,
         bool isCall,
         address priceRepository,
         uint256 exerciseDuration
     ) {
-        PROXY = proxy;
+        MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
@@ -44,7 +45,7 @@ contract OptionPSProxy is Proxy, ERC165BaseInternal {
     }
 
     function _getImplementation() internal view override returns (address) {
-        return IProxyUpgradeableOwnable(PROXY).getImplementation();
+        return MANAGER.getManagedProxyImplementation();
     }
 
     receive() external payable {}

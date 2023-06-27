@@ -5,8 +5,9 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
 
-interface IOptionPSFactory {
+interface IOptionPSFactory is IProxyManager {
     event ProxyDeployed(
         address indexed base,
         address indexed quote,

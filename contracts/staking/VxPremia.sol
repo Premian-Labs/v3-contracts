@@ -7,7 +7,7 @@ import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
 import {VxPremiaStorage} from "./VxPremiaStorage.sol";
 import {IVxPremia} from "./IVxPremia.sol";
 
-import {IProxyManager} from "./IProxyManager.sol";
+import {IPoolV2ProxyManager} from "./IPoolV2ProxyManager.sol";
 
 /// @author Premia
 /// @title A contract allowing you to use your locked Premia as voting power for mining weights
@@ -112,7 +112,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
         _resetUserVotes(l, userVotes, msg.sender);
 
         // ToDo : This is a check for v2 pools. Update this to handle v3 pools voting
-        address[] memory poolList = IProxyManager(PROXY_MANAGER).getPoolList();
+        address[] memory poolList = IPoolV2ProxyManager(PROXY_MANAGER).getPoolList();
 
         // Cast new votes
         uint256 votingPowerUsed = 0;

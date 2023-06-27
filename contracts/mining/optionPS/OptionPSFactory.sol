@@ -2,19 +2,17 @@
 
 pragma solidity >=0.8.19;
 
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+
 import {IOptionPSFactory} from "./IOptionPSFactory.sol";
 import {OptionPSProxy} from "./OptionPSProxy.sol";
 import {OptionPSFactoryStorage} from "./OptionPSFactoryStorage.sol";
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
+import {ProxyManager} from "../../proxy/ProxyManager.sol";
 
-contract OptionPSFactory is IOptionPSFactory {
+contract OptionPSFactory is IOptionPSFactory, ProxyManager {
     using OptionPSFactoryStorage for OptionPSArgs;
     using OptionPSFactoryStorage for OptionPSFactoryStorage.Layout;
-
-    address private immutable PROXY;
-
-    constructor(address proxy) {
-        PROXY = proxy;
-    }
 
     function isProxyDeployed(address proxy) external view returns (bool) {
         return OptionPSFactoryStorage.layout().isProxyDeployed[proxy];
@@ -28,7 +26,14 @@ contract OptionPSFactory is IOptionPSFactory {
 
     function deployProxy(OptionPSArgs calldata args) external returns (address proxy) {
         proxy = address(
-            new OptionPSProxy(PROXY, args.base, args.quote, args.isCall, args.priceRepository, args.exerciseDuration)
+            new OptionPSProxy(
+                IProxyManager(address(this)),
+                args.base,
+                args.quote,
+                args.isCall,
+                args.priceRepository,
+                args.exerciseDuration
+            )
         );
 
         OptionPSFactoryStorage.Layout storage l = OptionPSFactoryStorage.layout();
