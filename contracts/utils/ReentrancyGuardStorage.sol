@@ -11,9 +11,6 @@ library ReentrancyGuardStorage {
 
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.ReentrancyGuard");
 
-    uint256 internal constant REENTRANCY_STATUS_LOCKED = 2;
-    uint256 internal constant REENTRANCY_STATUS_UNLOCKED = 1;
-
     struct Layout {
         bool disabled;
         uint256 reentrancyStatus;

@@ -3,9 +3,9 @@
 pragma solidity >=0.8.19;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
-import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {SafeOwnable} from "@solidstate/contracts/access/ownable/SafeOwnable.sol";
 
+import {Proxy} from "./Proxy.sol";
 import {ProxyUpgradeableOwnableStorage} from "./ProxyUpgradeableOwnableStorage.sol";
 
 contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
