@@ -82,7 +82,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         poolKey.strike = ud(1100e18);
 
         assertApproxEqAbs(
-            scaleDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
+            fromTokenDecimals(vault.getQuote(poolKey, ud(3e18), true, address(0))).unwrap(),
             isCallTest ? 0.158288659375834262e18 : 469.906637e18,
             isCallTest ? 0.000001e18 : 0.01e18
         );
