@@ -7,7 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IVaultMining} from "./IVaultMining.sol";
 
 library VaultMiningStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.LiquidityMining");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.VaultMining");
 
     struct Layout {
         // Total rewards left to distribute
