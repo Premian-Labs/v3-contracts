@@ -10,16 +10,16 @@ import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC11
 import {ERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155EnumerableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
-import {ZERO, ONE} from "../libraries/Constants.sol";
-import {OptionMath} from "../libraries/OptionMath.sol";
+import {ZERO, ONE} from "../../libraries/Constants.sol";
+import {OptionMath} from "../../libraries/OptionMath.sol";
 
 import {IOptionPhysicallySettled} from "./IOptionPhysicallySettled.sol";
-import {IPaymentSplitter} from "./IPaymentSplitter.sol";
-import {IPriceRepository} from "./IPriceRepository.sol";
 import {OptionPhysicallySettledStorage} from "./OptionPhysicallySettledStorage.sol";
+
+import {IPriceRepository} from "../IPriceRepository.sol";
 
 contract OptionPhysicallySettled is
     ERC1155Base,
@@ -33,16 +33,23 @@ contract OptionPhysicallySettled is
     using OptionPhysicallySettledStorage for uint256;
     using OptionPhysicallySettledStorage for OptionPhysicallySettledStorage.Layout;
     using OptionPhysicallySettledStorage for TokenType;
-    using SafeCast for uint256;
+    using SafeERC20 for IERC20;
 
     address public immutable TREASURY;
     UD60x18 public immutable TREASURY_FEE;
 
+    // We use 25 hours instead of 24h,
+    // so that there is a 1h window for the price to be updated before `underwrite` reverts
     uint256 public constant STALE_PRICE_THRESHOLD = 25 hours;
 
     constructor(address treasury, UD60x18 treasuryFee) {
         TREASURY = treasury;
         TREASURY_FEE = treasuryFee;
+    }
+
+    function getSettings() external view returns (address base, address quote, bool isCall) {
+        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        return (l.base, l.quote, l.isCall);
     }
 
     /// @inheritdoc IOptionPhysicallySettled
@@ -65,7 +72,7 @@ contract OptionPhysicallySettled is
         if (strike % strikeInterval != ZERO)
             revert OptionPhysicallySettled__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);
 
-        IERC20(l.base).safeTransferFromUD60x18(msg.sender, address(this), l.toTokenDecimals(contractSize, true));
+        IERC20(l.base).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(contractSize, true));
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
@@ -90,7 +97,7 @@ contract OptionPhysicallySettled is
         _burnUD60x18(msg.sender, longTokenId, contractSize);
         _burnUD60x18(msg.sender, shortTokenId, contractSize);
 
-        IERC20(l.base).safeTransferUD60x18(msg.sender, contractSize);
+        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, true));
 
         emit Annihilate(msg.sender, contractSize, strike, maturity);
     }
@@ -108,18 +115,18 @@ contract OptionPhysicallySettled is
         if (settlementPrice < strike) revert OptionPhysicallySettled__OptionOutTheMoney(settlementPrice, strike);
 
         UD60x18 exerciseValue = contractSize;
-        UD60x18 exerciseCost = l.toTokenDecimals(strike * contractSize, false);
+        UD60x18 exerciseCost = strike * contractSize;
 
-        IERC20(l.quote).safeTransferFromUD60x18(msg.sender, address(this), exerciseCost);
+        IERC20(l.quote).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost, false));
 
         UD60x18 fee = exerciseCost * TREASURY_FEE;
-        IERC20(l.quote).safeTransferUD60x18(TREASURY, fee);
+        IERC20(l.quote).safeTransfer(TREASURY, l.toTokenDecimals(fee, false));
 
         l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
         l.totalExerciseCost[strike][maturity] = l.totalExerciseCost[strike][maturity] + (exerciseCost - fee);
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
-        IERC20(l.base).safeTransferUD60x18(msg.sender, l.toTokenDecimals(exerciseValue, true));
+        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(exerciseValue, true));
 
         emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
     }
@@ -138,8 +145,8 @@ contract OptionPhysicallySettled is
         UD60x18 exerciseShare = l.totalExerciseCost[strike][maturity] * (contractSize / totalUnderwritten);
 
         _burnUD60x18(msg.sender, shortTokenId, contractSize);
-        IERC20(l.base).safeTransferUD60x18(msg.sender, l.toTokenDecimals(contractSize, true));
-        IERC20(l.quote).safeTransferUD60x18(msg.sender, l.toTokenDecimals(contractSize, true));
+        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, true));
+        IERC20(l.quote).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, false));
 
         emit Settle(msg.sender, contractSize, strike, maturity, collateralLeft, exerciseShare);
     }
@@ -184,5 +191,7 @@ contract OptionPhysicallySettled is
         bytes memory data
     ) internal virtual override(ERC1155BaseInternal, ERC1155EnumerableInternal) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        // ToDo : Track token ids
     }
 }

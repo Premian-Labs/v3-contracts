@@ -24,9 +24,7 @@ library OptionRewardFactoryStorage {
         return
             keccak256(
                 abi.encode(
-                    args.base,
-                    args.quote,
-                    args.underwriter,
+                    args.option,
                     args.priceRepository,
                     args.paymentSplitter,
                     args.discount,

@@ -31,9 +31,7 @@ contract OptionRewardFactory is IOptionRewardFactory {
         proxy = address(
             new OptionRewardProxy(
                 PROXY,
-                args.base,
-                args.quote,
-                args.underwriter,
+                args.option,
                 args.priceRepository,
                 args.paymentSplitter,
                 args.discount,
@@ -51,9 +49,7 @@ contract OptionRewardFactory is IOptionRewardFactory {
         l.isProxyDeployed[proxy] = true;
 
         emit ProxyDeployed(
-            args.base,
-            args.quote,
-            args.underwriter,
+            args.option,
             args.priceRepository,
             args.paymentSplitter,
             args.discount,

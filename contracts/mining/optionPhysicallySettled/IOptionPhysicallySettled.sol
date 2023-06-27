@@ -49,6 +49,8 @@ interface IOptionPhysicallySettled is IERC1155Base, IERC1155Enumerable {
 
     event Annihilate(address indexed annihilator, UD60x18 contractSize, UD60x18 strike, uint256 maturity);
 
+    function getSettings() external view returns (address base, address quote, bool isCall);
+
     /// @notice Underwrite an option by depositing collateral
     /// @param strike the option strike price (18 decimals)
     /// @param longReceiver the address that will receive the long tokens
