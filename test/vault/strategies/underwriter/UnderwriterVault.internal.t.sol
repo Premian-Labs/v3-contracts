@@ -90,7 +90,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.setTimestamp(startTime + 1 days);
         vm.expectEmit();
-        emit PerformanceFeePaid(feeReceiver, scaleDecimals(spread * ud(0.05e18)));
+        emit PerformanceFeePaid(feeReceiver, toTokenDecimals(spread * ud(0.05e18)));
         vault.afterBuy(strike, t0, size, spread, premium);
 
         // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there
@@ -106,7 +106,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread * ud(0.95e18));
         // totalAssets should be incremented by the premiums collected and the spread
         uint256 totalAssets = vault.totalAssets();
-        assertEq(totalAssets, scaleDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));
+        assertEq(totalAssets, toTokenDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));
         // last trade timestamp should be updated
         assertEq(vault.getLastTradeTimestamp(), startTime + 1 days);
         // total locked assets should be incremented by the notional value of the option
@@ -126,7 +126,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         UD60x18 deposit = isCallTest ? ud(10e18) : ud(10000e18);
 
         addDeposit(users.caller, deposit);
-        assertEq(vault.totalAssets(), scaleDecimals(deposit));
+        assertEq(vault.totalAssets(), toTokenDecimals(deposit));
 
         UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
 
@@ -169,14 +169,14 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         assertEq(vault.totalLockedAssets(), lockedAssets);
 
         UD60x18 assetsAfterMint = isCallTest ? ud(9.982e18) : ud(9976e18);
-        assertEq(vault.totalAssets(), scaleDecimals(assetsAfterMint));
+        assertEq(vault.totalAssets(), toTokenDecimals(assetsAfterMint));
 
         vm.warp(t0);
         vault.settleMaturity(t0);
 
         assertApproxEqAbs(
             vault.totalAssets(),
-            scaleDecimals(isCallTest ? ud(9.3153333e18) : ud(8976e18)),
+            toTokenDecimals(isCallTest ? ud(9.3153333e18) : ud(8976e18)),
             0.0000001e18
         );
 
@@ -305,7 +305,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             vault.settle();
             uint256 delta = isCallTest ? 0.00001e18 : 0;
 
-            assertApproxEqAbs(scaleDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
+            assertApproxEqAbs(fromTokenDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
             assertEq(vault.totalLockedAssets(), newLocked[i]);
             assertEq(vault.minMaturity(), minMaturity[i]);
             assertEq(vault.maxMaturity(), maxMaturity[i]);

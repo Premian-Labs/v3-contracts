@@ -417,7 +417,7 @@ contract DeployTest is Test, Assertions {
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
-        initialCollateral = scaleDecimals(isCallTest ? depositSize : depositSize * strike);
+        initialCollateral = toTokenDecimals(isCallTest ? depositSize : depositSize * strike);
 
         vm.startPrank(users.lp);
 
@@ -463,7 +463,7 @@ contract DeployTest is Test, Assertions {
 
         address poolToken = getPoolToken();
 
-        uint256 mintAmount = isBuy ? totalPremium : scaleDecimals(poolKey.strike);
+        uint256 mintAmount = isBuy ? totalPremium : toTokenDecimals(poolKey.strike);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, mintAmount);
@@ -490,17 +490,20 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? amount : amount / poolKey.strike;
     }
 
-    function scaleDecimals(UD60x18 amount) internal view returns (uint256) {
+    /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
+    function toTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
 
-    function scaleDecimals(uint256 amount) internal view returns (UD60x18) {
+    /// @notice Adjust decimals of a value with token decimals to 18 decimals
+    function fromTokenDecimals(uint256 amount) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
-    function scaleDecimalsTo(UD60x18 amount) internal view returns (uint256) {
+    /// @notice Adjust decimals of a value with token decimals to 18 decimals
+    function fromTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
     }

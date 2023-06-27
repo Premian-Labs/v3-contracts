@@ -35,7 +35,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         UD60x18 normalizedPremium = collateralToContracts(deNormalizedPremium);
 
-        uint256 premium = scaleDecimals(isPremiumNormalized ? normalizedPremium : deNormalizedPremium);
+        uint256 premium = toTokenDecimals(isPremiumNormalized ? normalizedPremium : deNormalizedPremium);
 
         UD60x18 fee;
 
@@ -54,7 +54,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         uint256 protocolFee = pool.takerFee(users.trader, size, premium, isPremiumNormalized);
 
-        uint256 expectedFee = scaleDecimals(contractsToCollateral(fee));
+        uint256 expectedFee = toTokenDecimals(contractsToCollateral(fee));
 
         assertEq(protocolFee, expectedFee, "protocol fee should equal expected");
     }
