@@ -10,14 +10,14 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 import {IProxyUpgradeableOwnable} from "../../proxy/IProxyUpgradeableOwnable.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IOptionReward} from "./IOptionReward.sol";
-import {IOptionPhysicallySettled} from "../optionPhysicallySettled/IOptionPhysicallySettled.sol";
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 contract OptionRewardProxy is Proxy {
     address private immutable PROXY;
 
     constructor(
         address proxy,
-        IOptionPhysicallySettled option,
+        IOptionPS option,
         address priceRepository,
         address paymentSplitter,
         UD60x18 discount,

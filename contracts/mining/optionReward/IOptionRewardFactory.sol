@@ -4,22 +4,23 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IOptionPhysicallySettled} from "../optionPhysicallySettled/IOptionPhysicallySettled.sol";
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 interface IOptionRewardFactory {
     event ProxyDeployed(
-        IOptionPhysicallySettled option,
+        IOptionPS indexed option,
         address priceRepository,
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
         uint256 expiryDuration,
         uint256 exerciseDuration,
-        uint256 lockupDuration
+        uint256 lockupDuration,
+        address proxy
     );
 
     struct OptionRewardArgs {
-        IOptionPhysicallySettled option;
+        IOptionPS option;
         address priceRepository;
         address paymentSplitter;
         UD60x18 discount;

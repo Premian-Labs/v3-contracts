@@ -6,19 +6,19 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IERC1155Base} from "@solidstate/contracts/token/ERC1155/base/IERC1155Base.sol";
 import {IERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/IERC1155Enumerable.sol";
 
-interface IOptionPhysicallySettled is IERC1155Base, IERC1155Enumerable {
+interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     enum TokenType {
         LONG,
         SHORT
     }
 
-    error OptionPhysicallySettled__ExercisePeriodNotEnded(uint256 maturity);
-    error OptionPhysicallySettled__OptionMaturityNot8UTC(uint256 maturity);
-    error OptionPhysicallySettled__OptionNotExpired(uint256 maturity);
-    error OptionPhysicallySettled__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
-    error OptionPhysicallySettled__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
-    error OptionPhysicallySettled__PriceIsZero();
-    error OptionPhysicallySettled__StrikeNotMultipleOfStrikeInterval(UD60x18 strike, UD60x18 strikeInterval);
+    error OptionPS__ExercisePeriodNotEnded(uint256 maturity);
+    error OptionPS__OptionMaturityNot8UTC(uint256 maturity);
+    error OptionPS__OptionNotExpired(uint256 maturity);
+    error OptionPS__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
+    error OptionPS__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
+    error OptionPS__PriceIsZero();
+    error OptionPS__StrikeNotMultipleOfStrikeInterval(UD60x18 strike, UD60x18 strikeInterval);
 
     event Exercise(
         address indexed user,

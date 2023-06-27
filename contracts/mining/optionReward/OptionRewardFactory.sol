@@ -21,9 +21,8 @@ contract OptionRewardFactory is IOptionRewardFactory {
     }
 
     function getProxyAddress(OptionRewardArgs calldata args) external view returns (address proxy, bool) {
-        bytes32 key = args.encodeOptionRewardKey();
         OptionRewardFactoryStorage.Layout storage l = OptionRewardFactoryStorage.layout();
-        proxy = l.proxyByKey[key];
+        proxy = l.proxyByKey[args.keyHash()];
         return (proxy, l.isProxyDeployed[proxy]);
     }
 
@@ -44,8 +43,7 @@ contract OptionRewardFactory is IOptionRewardFactory {
 
         OptionRewardFactoryStorage.Layout storage l = OptionRewardFactoryStorage.layout();
 
-        bytes32 key = args.encodeOptionRewardKey();
-        l.proxyByKey[key] = proxy;
+        l.proxyByKey[args.keyHash()] = proxy;
         l.isProxyDeployed[proxy] = true;
 
         emit ProxyDeployed(
@@ -56,7 +54,8 @@ contract OptionRewardFactory is IOptionRewardFactory {
             args.penalty,
             args.expiryDuration,
             args.exerciseDuration,
-            args.lockupDuration
+            args.lockupDuration,
+            proxy
         );
     }
 }

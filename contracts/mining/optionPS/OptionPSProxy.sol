@@ -11,9 +11,9 @@ import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
 import {IProxyUpgradeableOwnable} from "../../proxy/IProxyUpgradeableOwnable.sol";
-import {OptionPhysicallySettledStorage} from "./OptionPhysicallySettledStorage.sol";
+import {OptionPSStorage} from "./OptionPSStorage.sol";
 
-contract OptionPhysicallySettledProxy is Proxy, ERC165BaseInternal {
+contract OptionPSProxy is Proxy, ERC165BaseInternal {
     address private immutable PROXY;
 
     constructor(
@@ -27,7 +27,7 @@ contract OptionPhysicallySettledProxy is Proxy, ERC165BaseInternal {
         PROXY = proxy;
         OwnableStorage.layout().owner = msg.sender;
 
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         l.isCall = isCall;
         l.baseDecimals = IERC20Metadata(base).decimals();

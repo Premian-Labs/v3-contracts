@@ -11,8 +11,8 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
-import {IOptionPhysicallySettled} from "../optionPhysicallySettled/IOptionPhysicallySettled.sol";
-import {OptionPhysicallySettledStorage} from "../optionPhysicallySettled/OptionPhysicallySettledStorage.sol";
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
 
@@ -25,7 +25,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     using OptionRewardStorage for int128;
     using OptionRewardStorage for uint256;
     using OptionRewardStorage for OptionRewardStorage.Layout;
-    using OptionPhysicallySettledStorage for IOptionPhysicallySettled.TokenType;
+    using OptionPSStorage for IOptionPS.TokenType;
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
@@ -67,7 +67,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     function redeem(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
-        uint256 longTokenId = IOptionPhysicallySettled.TokenType.LONG.formatTokenId(maturity, strike);
+        uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
         l.option.safeTransferFrom(msg.sender, address(this), longTokenId, contractSize.unwrap(), "");
         l.option.annihilate(strike, maturity, contractSize);
 

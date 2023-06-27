@@ -10,7 +10,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
-import {IOptionPhysicallySettled} from "../optionPhysicallySettled/IOptionPhysicallySettled.sol";
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 library OptionRewardStorage {
     using SafeCast for int256;
@@ -20,7 +20,7 @@ library OptionRewardStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.OptionReward");
 
     struct Layout {
-        IOptionPhysicallySettled option;
+        IOptionPS option;
         uint8 baseDecimals;
         uint8 quoteDecimals;
         address base;

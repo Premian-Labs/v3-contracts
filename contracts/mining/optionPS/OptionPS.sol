@@ -16,23 +16,17 @@ import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/R
 import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
-import {IOptionPhysicallySettled} from "./IOptionPhysicallySettled.sol";
-import {OptionPhysicallySettledStorage} from "./OptionPhysicallySettledStorage.sol";
+import {IOptionPS} from "./IOptionPS.sol";
+import {OptionPSStorage} from "./OptionPSStorage.sol";
 
 import {IPriceRepository} from "../IPriceRepository.sol";
 
-contract OptionPhysicallySettled is
-    ERC1155Base,
-    ERC1155Enumerable,
-    ERC165Base,
-    IOptionPhysicallySettled,
-    ReentrancyGuard
-{
-    using OptionPhysicallySettledStorage for IERC20;
-    using OptionPhysicallySettledStorage for int128;
-    using OptionPhysicallySettledStorage for uint256;
-    using OptionPhysicallySettledStorage for OptionPhysicallySettledStorage.Layout;
-    using OptionPhysicallySettledStorage for TokenType;
+contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, ReentrancyGuard {
+    using OptionPSStorage for IERC20;
+    using OptionPSStorage for int128;
+    using OptionPSStorage for uint256;
+    using OptionPSStorage for OptionPSStorage.Layout;
+    using OptionPSStorage for TokenType;
     using SafeERC20 for IERC20;
 
     address public immutable TREASURY;
@@ -48,29 +42,28 @@ contract OptionPhysicallySettled is
     }
 
     function getSettings() external view returns (address base, address quote, bool isCall) {
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         return (l.base, l.quote, l.isCall);
     }
 
-    /// @inheritdoc IOptionPhysicallySettled
+    /// @inheritdoc IOptionPS
     function underwrite(
         UD60x18 strike,
         uint64 maturity,
         address longReceiver,
         UD60x18 contractSize
     ) external nonReentrant {
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         // Validate maturity
-        if ((maturity % 24 hours) != 8 hours) revert OptionPhysicallySettled__OptionMaturityNot8UTC(maturity);
+        if ((maturity % 24 hours) != 8 hours) revert OptionPS__OptionMaturityNot8UTC(maturity);
 
         // Validate strike
         (UD60x18 price, uint256 timestamp) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
         _revertIfPriceIsStale(timestamp);
 
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(price);
-        if (strike % strikeInterval != ZERO)
-            revert OptionPhysicallySettled__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);
+        if (strike % strikeInterval != ZERO) revert OptionPS__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);
 
         IERC20(l.base).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(contractSize, true));
 
@@ -85,9 +78,9 @@ contract OptionPhysicallySettled is
         emit Underwrite(msg.sender, longReceiver, contractSize, strike, maturity);
     }
 
-    /// @inheritdoc IOptionPhysicallySettled
+    /// @inheritdoc IOptionPS
     function annihilate(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
@@ -102,17 +95,17 @@ contract OptionPhysicallySettled is
         emit Annihilate(msg.sender, contractSize, strike, maturity);
     }
 
-    /// @inheritdoc IOptionPhysicallySettled
+    /// @inheritdoc IOptionPS
     function exercise(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         _revertIfOptionNotExpired(maturity);
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
 
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         UD60x18 settlementPrice = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
         _revertIfPriceIsZero(settlementPrice);
-        if (settlementPrice < strike) revert OptionPhysicallySettled__OptionOutTheMoney(settlementPrice, strike);
+        if (settlementPrice < strike) revert OptionPS__OptionOutTheMoney(settlementPrice, strike);
 
         UD60x18 exerciseValue = contractSize;
         UD60x18 exerciseCost = strike * contractSize;
@@ -131,9 +124,9 @@ contract OptionPhysicallySettled is
         emit Exercise(msg.sender, contractSize, exerciseValue, exerciseCost, settlementPrice, strike, maturity);
     }
 
-    /// @inheritdoc IOptionPhysicallySettled
+    /// @inheritdoc IOptionPS
     function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
-        OptionPhysicallySettledStorage.Layout storage l = OptionPhysicallySettledStorage.layout();
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         _revertIfExercisePeriodNotEnded(maturity + uint64(l.exerciseDuration));
 
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
@@ -164,22 +157,22 @@ contract OptionPhysicallySettled is
     /// @notice Revert if price is stale
     function _revertIfPriceIsStale(uint256 timestamp) internal view {
         if (block.timestamp - timestamp >= STALE_PRICE_THRESHOLD)
-            revert OptionPhysicallySettled__PriceIsStale(block.timestamp, timestamp);
+            revert OptionPS__PriceIsStale(block.timestamp, timestamp);
     }
 
     /// @notice Revert if price is zero
     function _revertIfPriceIsZero(UD60x18 price) internal pure {
-        if (price == ZERO) revert OptionPhysicallySettled__PriceIsZero();
+        if (price == ZERO) revert OptionPS__PriceIsZero();
     }
 
     /// @notice Revert if option has not expired
     function _revertIfOptionNotExpired(uint64 maturity) internal view {
-        if (block.timestamp < maturity) revert OptionPhysicallySettled__OptionNotExpired(maturity);
+        if (block.timestamp < maturity) revert OptionPS__OptionNotExpired(maturity);
     }
 
     /// @notice Revert if exercise period has not ended
     function _revertIfExercisePeriodNotEnded(uint64 maturity) internal view {
-        if (block.timestamp < maturity) revert OptionPhysicallySettled__ExercisePeriodNotEnded(maturity);
+        if (block.timestamp < maturity) revert OptionPS__ExercisePeriodNotEnded(maturity);
     }
 
     function _beforeTokenTransfer(
