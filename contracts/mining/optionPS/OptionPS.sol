@@ -74,7 +74,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
 
-        emit Underwrite(msg.sender, longReceiver, contractSize, strike, maturity);
+        emit Underwrite(msg.sender, longReceiver, strike, maturity, contractSize);
     }
 
     /// @inheritdoc IOptionPS
@@ -93,7 +93,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         address underlying = l.getUnderlying();
         IERC20(underlying).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, underlying));
 
-        emit Annihilate(msg.sender, contractSize, strike, maturity);
+        emit Annihilate(msg.sender, strike, maturity, contractSize);
     }
 
     /// @inheritdoc IOptionPS
@@ -113,9 +113,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         address underlying = l.getUnderlying();
         address numeraire = l.getNumeraire();
 
-        IERC20(numeraire).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost, numeraire));
-
         UD60x18 fee = exerciseCost * FEE;
+        IERC20(numeraire).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost + fee, numeraire));
         IERC20(numeraire).safeTransfer(FEE_RECEIVER, l.toTokenDecimals(fee, numeraire));
 
         l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
@@ -125,7 +124,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         exerciseValue = l.toTokenDecimals(_exerciseValue, underlying);
         IERC20(underlying).safeTransfer(msg.sender, exerciseValue);
 
-        emit Exercise(msg.sender, contractSize, _exerciseValue, exerciseCost, strike, maturity);
+        emit Exercise(msg.sender, strike, maturity, contractSize, _exerciseValue, exerciseCost, fee);
     }
 
     /// @inheritdoc IOptionPS
@@ -136,26 +135,34 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     ) external nonReentrant returns (uint256 underlyingAmount, uint256 numeraireAmount) {
         _revertIfExercisePeriodNotEnded(maturity);
 
-        uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
+        {
+            uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
+            _burnUD60x18(msg.sender, shortTokenId, contractSize);
+        }
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
-        UD60x18 totalUnderwritten = l.totalUnderwritten[strike][maturity];
 
-        UD60x18 percentageExercised = l.totalExercised[strike][maturity] / totalUnderwritten;
-        UD60x18 collateralLeft = contractSize * (ONE - percentageExercised);
-        UD60x18 exerciseShare = l.totalExerciseCost[strike][maturity] * (contractSize / totalUnderwritten);
+        UD60x18 underlyingLeft;
+        UD60x18 exerciseShare;
 
-        _burnUD60x18(msg.sender, shortTokenId, contractSize);
+        {
+            UD60x18 totalUnderwritten = l.totalUnderwritten[strike][maturity];
+            UD60x18 percentageExercised = l.totalExercised[strike][maturity] / totalUnderwritten;
+            underlyingLeft = contractSize * (ONE - percentageExercised);
+            exerciseShare = l.totalExerciseCost[strike][maturity] * (contractSize / totalUnderwritten);
+        }
 
-        address underlying = l.getUnderlying();
-        address numeraire = l.getNumeraire();
+        {
+            address underlying = l.getUnderlying();
+            address numeraire = l.getNumeraire();
 
-        underlyingAmount = l.toTokenDecimals(contractSize, underlying);
-        numeraireAmount = l.toTokenDecimals(contractSize, numeraire);
-        IERC20(underlying).safeTransfer(msg.sender, underlyingAmount);
-        IERC20(numeraire).safeTransfer(msg.sender, numeraireAmount);
+            underlyingAmount = l.toTokenDecimals(underlyingLeft, underlying);
+            numeraireAmount = l.toTokenDecimals(exerciseShare, numeraire);
+            IERC20(underlying).safeTransfer(msg.sender, underlyingAmount);
+            IERC20(numeraire).safeTransfer(msg.sender, numeraireAmount);
+        }
 
-        emit Settle(msg.sender, contractSize, strike, maturity, collateralLeft, exerciseShare);
+        emit Settle(msg.sender, contractSize, strike, maturity, underlyingLeft, exerciseShare);
     }
 
     /// @inheritdoc IOptionPS

@@ -23,11 +23,12 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
 
     event Exercise(
         address indexed user,
+        UD60x18 strike,
+        uint256 maturity,
         UD60x18 contractSize,
         UD60x18 exerciseValue,
         UD60x18 exerciseCost,
-        UD60x18 strike,
-        uint256 maturity
+        UD60x18 exerciseFee
     );
 
     event Settle(
@@ -35,19 +36,19 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
         UD60x18 contractSize,
         UD60x18 strike,
         uint256 maturity,
-        UD60x18 collateralLeft,
-        UD60x18 exerciseShare
+        UD60x18 underlyingAmount,
+        UD60x18 numeraireAmount
     );
 
     event Underwrite(
         address indexed underwriter,
         address indexed longReceiver,
-        UD60x18 contractSize,
         UD60x18 strike,
-        uint256 maturity
+        uint256 maturity,
+        UD60x18 contractSize
     );
 
-    event Annihilate(address indexed annihilator, UD60x18 contractSize, UD60x18 strike, uint256 maturity);
+    event Annihilate(address indexed annihilator, UD60x18 strike, uint256 maturity, UD60x18 contractSize);
 
     /// @notice Returns the pair infos for this option
     function getSettings() external view returns (address base, address quote, bool isCall);
