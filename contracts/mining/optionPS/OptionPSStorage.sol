@@ -29,8 +29,6 @@ library OptionPSStorage {
         mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18)) totalUnderwritten;
         // Amount of contracts exercised for this strike/maturity
         mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount)) totalExercised;
-        // Total exercise cost paid by long holders to short holders for this strike/maturity (Excluding treasury fee)
-        mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount)) totalExerciseCost;
         EnumerableSet.UintSet tokenIds;
     }
 
@@ -64,11 +62,11 @@ library OptionPSStorage {
         }
     }
 
-    function getUnderlying(Layout storage l) internal view returns (address) {
+    function getCollateral(Layout storage l) internal view returns (address) {
         return l.isCall ? l.base : l.quote;
     }
 
-    function getNumeraire(Layout storage l) internal view returns (address) {
+    function getExerciseToken(Layout storage l) internal view returns (address) {
         return l.isCall ? l.quote : l.base;
     }
 
@@ -87,5 +85,10 @@ library OptionPSStorage {
     /// @notice Converts `UD60x18` to `int128`
     function fromUD60x18ToInt128(UD60x18 u) internal pure returns (int128) {
         return u.unwrap().toInt256().toInt128();
+    }
+
+    /// @notice Converts contract size to collateral amount
+    function fromContractSize(Layout storage l, UD60x18 contractSize, UD60x18 strike) internal view returns (UD60x18) {
+        return l.isCall ? contractSize : contractSize * strike;
     }
 }

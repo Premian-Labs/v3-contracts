@@ -36,8 +36,8 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
         UD60x18 contractSize,
         UD60x18 strike,
         uint256 maturity,
-        UD60x18 underlyingAmount,
-        UD60x18 numeraireAmount
+        UD60x18 collateralAmount,
+        UD60x18 exerciseTokenAmount
     );
 
     event Underwrite(
@@ -80,13 +80,13 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @param strike the option strike price (18 decimals)
     /// @param maturity the option maturity timestamp
     /// @param contractSize number of short tokens to settle (18 decimals)
-    /// @return underlyingAmount the amount of underlying transferred to the caller (base for calls, quote for puts)
-    /// @return numeraireAmount the amount of numeraire transferred to the caller (quote for calls, base for puts)
+    /// @return collateralAmount the amount of collateral transferred to the caller (base for calls, quote for puts)
+    /// @return exerciseTokenAmount the amount of exerciseToken transferred to the caller (quote for calls, base for puts)
     function settle(
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
-    ) external returns (uint256 underlyingAmount, uint256 numeraireAmount);
+    ) external returns (uint256 collateralAmount, uint256 exerciseTokenAmount);
 
     /// @notice Returns the list of existing tokenIds with non zero balance
     /// @return tokenIds The list of existing tokenIds
