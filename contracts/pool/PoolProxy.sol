@@ -69,41 +69,6 @@ contract PoolProxy is Proxy, ERC165BaseInternal, ReentrancyGuardExtended {
         _setSupportsInterface(type(IERC1155).interfaceId, true);
     }
 
-    fallback() external payable override {
-        bool locked = _lockReentrancyGuard(msg.data);
-
-        //
-
-        address implementation = _getImplementation();
-
-        if (!implementation.isContract()) revert Proxy__ImplementationIsNotContract();
-
-        bool result;
-        assembly {
-            calldatacopy(0, 0, calldatasize())
-            result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
-            returndatacopy(0, 0, returndatasize())
-        }
-
-        //
-
-        if (locked) {
-            _unlockReentrancyGuard();
-        }
-
-        //
-
-        assembly {
-            switch result
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
-    }
-
     function _getImplementation() internal view override returns (address) {
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
     }
