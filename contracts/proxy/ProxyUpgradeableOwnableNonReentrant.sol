@@ -15,8 +15,8 @@ contract ProxyUpgradeableOwnableNonReentrant is ProxyUpgradeableOwnable, Reentra
 
     constructor(address implementation) ProxyUpgradeableOwnable(implementation) {}
 
-    function _delegateCalls() internal override nonReentrant {
-        super._delegateCalls();
+    function _handleDelegateCalls() internal override nonReentrant returns (bool result, bytes memory data) {
+        return super._handleDelegateCalls();
     }
 
     function _transferOwnership(address account) internal virtual override(SafeOwnable, OwnableInternal) {

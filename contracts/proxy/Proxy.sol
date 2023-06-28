@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.8;
+pragma solidity ^0.8.19;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {IProxy} from "@solidstate/contracts/proxy/IProxy.sol";
@@ -12,30 +12,26 @@ abstract contract Proxy is IProxy {
     using AddressUtils for address;
 
     fallback() external payable virtual {
-        _delegateCalls();
+        (bool result, bytes memory data) = _handleDelegateCalls();
+
+        assembly {
+            let size := mload(data)
+            switch result
+            case 0 {
+                revert(add(32, data), size)
+            }
+            default {
+                return(add(32, data), size)
+            }
+        }
     }
 
     /// @notice delegate all calls to implementation contract
     /// @dev reverts if implementation address contains no code, for compatibility with metamorphic contracts
-    /// @dev memory location in use by assembly may be unsafe in other contexts
-    function _delegateCalls() internal virtual {
+    function _handleDelegateCalls() internal virtual returns (bool result, bytes memory data) {
         address implementation = _getImplementation();
-
         if (!implementation.isContract()) revert Proxy__ImplementationIsNotContract();
-
-        assembly {
-            calldatacopy(0, 0, calldatasize())
-            let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
-            returndatacopy(0, 0, returndatasize())
-
-            switch result
-            case 0 {
-                revert(0, returndatasize())
-            }
-            default {
-                return(0, returndatasize())
-            }
-        }
+        (result, data) = implementation.delegatecall(msg.data);
     }
 
     ///  @notice get logic implementation address
