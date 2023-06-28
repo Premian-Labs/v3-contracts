@@ -7,10 +7,11 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 //import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {ReentrancyGuardStorage} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuardStorage.sol";
 
+import {IReentrancyGuardExtended} from "./IReentrancyGuardExtended.sol";
 import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 import {ReentrancyGuardExtendedStorage} from "./ReentrancyGuardExtendedStorage.sol";
 
-contract ReentrancyGuardExtended is OwnableInternal, ReentrancyGuard {
+contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.Bytes32Set;
     using ReentrancyGuardStorage for ReentrancyGuardStorage.Layout;
     using ReentrancyGuardExtendedStorage for ReentrancyGuardExtendedStorage.Layout;
@@ -28,6 +29,7 @@ contract ReentrancyGuardExtended is OwnableInternal, ReentrancyGuard {
         ReentrancyGuardExtendedStorage.Layout storage l = ReentrancyGuardExtendedStorage.layout();
         for (uint256 i = 0; i < selectorsIgnored.length; i++) {
             l.selectorsIgnored.add(bytes32(selectorsIgnored[i]));
+            emit AddReentrancyGuardSelectorIgnored(selectorsIgnored[i]);
         }
     }
 
@@ -35,11 +37,13 @@ contract ReentrancyGuardExtended is OwnableInternal, ReentrancyGuard {
         ReentrancyGuardExtendedStorage.Layout storage l = ReentrancyGuardExtendedStorage.layout();
         for (uint256 i = 0; i < selectorsIgnored.length; i++) {
             l.selectorsIgnored.remove(bytes32(selectorsIgnored[i]));
+            emit RemoveReentrancyGuardSelectorIgnored(selectorsIgnored[i]);
         }
     }
 
     function setReentrancyGuardDisabled(bool disabled) external onlyOwner {
         ReentrancyGuardExtendedStorage.layout().disabled = disabled;
+        emit SetReentrancyGuardDisabled(disabled);
     }
 
     function staticCallCheck() external {

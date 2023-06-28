@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.8;
+pragma solidity ^0.8.19;
 
 import {IReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/IReentrancyGuard.sol";
 import {ReentrancyGuardStorage} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuardStorage.sol";
