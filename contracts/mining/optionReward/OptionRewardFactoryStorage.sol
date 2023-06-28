@@ -29,8 +29,6 @@ library OptionRewardFactoryStorage {
                     args.paymentSplitter,
                     args.discount,
                     args.penalty,
-                    args.expiryDuration,
-                    args.exerciseDuration,
                     args.lockupDuration
                 )
             );

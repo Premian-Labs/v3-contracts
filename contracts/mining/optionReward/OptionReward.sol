@@ -43,15 +43,15 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     }
 
     /// @inheritdoc IOptionReward
-    function claimOption(UD60x18 contractSize) external nonReentrant {
+    function underwrite(address longReceiver, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         uint256 collateral = l.toTokenDecimals(contractSize, true);
-        IERC20(l.base).safeTransferFrom(l.underwriter, address(this), collateral);
+        IERC20(l.base).safeTransferFrom(msg.sender, address(this), collateral);
         IERC20(l.base).approve(address(l.option), collateral);
 
         // Calculates the maturity starting from the 8AM UTC timestamp of the current day
-        uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.expiryDuration).toUint64();
+        uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
 
         (UD60x18 price, uint256 timestamp) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
 
@@ -64,7 +64,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             l.redeemableLongs[msg.sender][strike][maturity] +
             contractSize;
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
-        l.option.underwrite(strike, maturity, msg.sender, contractSize);
+        l.option.underwrite(strike, maturity, longReceiver, contractSize);
 
         emit OptionClaimed(msg.sender, contractSize);
     }

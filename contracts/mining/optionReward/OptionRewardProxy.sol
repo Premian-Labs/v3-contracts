@@ -22,8 +22,7 @@ contract OptionRewardProxy is Proxy {
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
-        uint256 expiryDuration, // TODO;
-        uint256 exerciseDuration,
+        uint256 optionDuration,
         uint256 lockupDuration
     ) {
         MANAGER = manager;
@@ -33,7 +32,6 @@ contract OptionRewardProxy is Proxy {
 
         l.option = option;
 
-        // ToDo : Validate option contract
         (address base, address quote, bool isCall) = option.getSettings();
         if (!isCall) revert IOptionReward.OptionReward__NotCallOption(address(option));
 
@@ -43,14 +41,12 @@ contract OptionRewardProxy is Proxy {
         l.baseDecimals = IERC20Metadata(base).decimals();
         l.quoteDecimals = IERC20Metadata(quote).decimals();
 
+        l.optionDuration = optionDuration;
         l.priceRepository = priceRepository;
         l.paymentSplitter = paymentSplitter;
 
         l.discount = discount;
         l.penalty = penalty;
-
-        l.expiryDuration = expiryDuration;
-        l.exerciseDuration = exerciseDuration;
         l.lockupDuration = lockupDuration;
     }
 

@@ -14,8 +14,7 @@ interface IOptionRewardFactory is IProxyManager {
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
-        uint256 expiryDuration,
-        uint256 exerciseDuration,
+        uint256 optionDuration,
         uint256 lockupDuration,
         address proxy
     );
@@ -26,8 +25,7 @@ interface IOptionRewardFactory is IProxyManager {
         address paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;
-        uint256 expiryDuration;
-        uint256 exerciseDuration;
+        uint256 optionDuration;
         uint256 lockupDuration;
     }
 

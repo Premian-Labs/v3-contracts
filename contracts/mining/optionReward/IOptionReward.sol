@@ -47,7 +47,7 @@ interface IOptionReward {
     }
 
     /// @notice ToDo
-    function claimOption(UD60x18 contractSize) external;
+    function underwrite(address longReceiver, UD60x18 contractSize) external;
 
     /// @notice ToDo
     function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
