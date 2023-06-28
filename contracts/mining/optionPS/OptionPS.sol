@@ -146,6 +146,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         uint64 maturity,
         UD60x18 contractSize
     ) external nonReentrant returns (uint256 collateralAmount, uint256 exerciseTokenAmount) {
+        _revertIfOptionNotExpired(maturity);
         _revertIfExercisePeriodNotEnded(maturity);
 
         {

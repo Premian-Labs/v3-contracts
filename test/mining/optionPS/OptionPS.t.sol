@@ -274,7 +274,56 @@ contract OptionPSTest is Assertions, Test {
     }
 
     function test_settle_Success() public {
-        // ToDo
+        vm.prank(underwriter);
+        option.underwrite(strike, maturity, longReceiver, ud(1e18));
+
+        vm.prank(otherUnderwriter);
+        option.underwrite(strike, maturity, longReceiver, ud(3e18));
+
+        vm.warp(maturity + 1);
+        vm.prank(longReceiver);
+        option.exercise(strike, maturity, ud(3e18));
+
+        uint256 fee = (30e6 * 0.003e18) / 1e18;
+
+        vm.warp(maturity + exercisePeriod + 1);
+
+        vm.prank(underwriter);
+        option.settle(strike, maturity, ud(1e18));
+
+        vm.prank(otherUnderwriter);
+        option.settle(strike, maturity, ud(3e18));
+
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), 1e18);
+        assertEq(option.totalSupply(_longTokenId()), 1e18);
+        assertEq(option.totalSupply(_shortTokenId()), 0);
+
+        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18 + 0.25e18); // initial - 1 + 1/4
+        assertEq(base.balanceOf(otherUnderwriter), initialBaseBalance - 3e18 + 0.75e18); // initial - 3 + 3/4
+        assertEq(base.balanceOf(longReceiver), initialBaseBalance + 3e18); // initial + 3
+
+        assertEq(quote.balanceOf(underwriter), initialQuoteBalance + 7.5e6); // initial + 30 * 1/4
+        assertEq(quote.balanceOf(otherUnderwriter), initialQuoteBalance + 22.5e6); // initial + 30 * 3/4
+        assertEq(quote.balanceOf(longReceiver), initialQuoteBalance - 30e6 - fee); // initial - 30 - fee
+
+        assertEq(quote.balanceOf(feeReceiver), fee);
+    }
+
+    function test_settle_RevertIf_OptionNotExpired() public {
+        vm.expectRevert(abi.encodeWithSelector(IOptionPS.OptionPS__OptionNotExpired.selector, maturity));
+        option.settle(strike, maturity, ud(1e18));
+    }
+
+    function test_settle_RevertIf_ExercisePeriodNotEnded() public {
+        vm.warp(maturity + 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionPS.OptionPS__ExercisePeriodNotEnded.selector,
+                maturity,
+                maturity + exercisePeriod
+            )
+        );
+        option.settle(strike, maturity, ud(1e18));
     }
 
     function test_getTokenIds_ReturnExpectedValue() public {
