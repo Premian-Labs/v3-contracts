@@ -24,9 +24,6 @@ library OptionPSStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        address priceRepository;
-        // amount of time the exercise period lasts (in seconds)
-        uint256 exerciseDuration;
         // Total options underwritten for this strike/maturity (Annihilating options decreases this total amount, but exercise does not)
         mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18)) totalUnderwritten;
         // Amount of contracts exercised for this strike/maturity

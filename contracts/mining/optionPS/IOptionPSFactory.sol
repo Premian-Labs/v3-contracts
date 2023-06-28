@@ -8,21 +8,12 @@ import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 
 interface IOptionPSFactory is IProxyManager {
-    event ProxyDeployed(
-        address indexed base,
-        address indexed quote,
-        bool isCall,
-        address priceRepository,
-        uint256 exerciseDuration,
-        address proxy
-    );
+    event ProxyDeployed(address indexed base, address indexed quote, bool isCall, address proxy);
 
     struct OptionPSArgs {
         address base;
         address quote;
         bool isCall;
-        address priceRepository;
-        uint256 exerciseDuration;
     }
 
     function isProxyDeployed(address proxy) external view returns (bool);

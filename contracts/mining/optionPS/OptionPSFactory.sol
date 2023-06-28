@@ -25,22 +25,13 @@ contract OptionPSFactory is IOptionPSFactory, ProxyManager {
     }
 
     function deployProxy(OptionPSArgs calldata args) external returns (address proxy) {
-        proxy = address(
-            new OptionPSProxy(
-                IProxyManager(address(this)),
-                args.base,
-                args.quote,
-                args.isCall,
-                args.priceRepository,
-                args.exerciseDuration
-            )
-        );
+        proxy = address(new OptionPSProxy(IProxyManager(address(this)), args.base, args.quote, args.isCall));
 
         OptionPSFactoryStorage.Layout storage l = OptionPSFactoryStorage.layout();
 
         l.proxyByKey[args.keyHash()] = proxy;
         l.isProxyDeployed[proxy] = true;
 
-        emit ProxyDeployed(args.base, args.quote, args.isCall, args.priceRepository, args.exerciseDuration, proxy);
+        emit ProxyDeployed(args.base, args.quote, args.isCall, proxy);
     }
 }

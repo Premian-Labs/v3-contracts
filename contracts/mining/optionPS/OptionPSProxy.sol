@@ -17,14 +17,7 @@ import {OptionPSFactory} from "./OptionPsFactory.sol";
 contract OptionPSProxy is Proxy, ERC165BaseInternal {
     IProxyManager private immutable MANAGER;
 
-    constructor(
-        IProxyManager manager,
-        address base,
-        address quote,
-        bool isCall,
-        address priceRepository,
-        uint256 exerciseDuration
-    ) {
+    constructor(IProxyManager manager, address base, address quote, bool isCall) {
         MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
 
@@ -36,9 +29,6 @@ contract OptionPSProxy is Proxy, ERC165BaseInternal {
 
         l.base = base;
         l.quote = quote;
-
-        l.priceRepository = priceRepository;
-        l.exerciseDuration = exerciseDuration;
 
         _setSupportsInterface(type(IERC165).interfaceId, true);
         _setSupportsInterface(type(IERC1155).interfaceId, true);

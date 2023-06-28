@@ -99,6 +99,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - fee);
         IPaymentSplitter(l.paymentSplitter).pay(quoteAmount - fee);
 
+        (UD60x18 price, ) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
+
         // ToDo : Transfer Premia not needed back to LM
 
         // ToDo : Add event
