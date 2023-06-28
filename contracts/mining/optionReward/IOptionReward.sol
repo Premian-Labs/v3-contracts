@@ -17,7 +17,7 @@ interface IOptionReward {
     error OptionReward__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
     error OptionReward__PriceIsZero();
 
-    event OptionClaimed(address indexed user, UD60x18 contractSize);
+    event Underwrite(address indexed user, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
     event RewardsClaimed(
         address indexed user,
         UD60x18 strike,

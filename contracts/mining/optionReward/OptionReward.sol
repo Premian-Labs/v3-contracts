@@ -66,7 +66,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
         l.option.underwrite(strike, maturity, longReceiver, contractSize);
 
-        emit OptionClaimed(msg.sender, contractSize);
+        emit Underwrite(msg.sender, strike, maturity, contractSize);
     }
 
     /// @inheritdoc IOptionReward
