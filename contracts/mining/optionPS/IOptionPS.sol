@@ -51,6 +51,8 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
 
     function getSettings() external view returns (address base, address quote, bool isCall);
 
+    function getExerciseDuration() external pure returns (uint256);
+
     /// @notice Underwrite an option by depositing collateral
     /// @param strike the option strike price (18 decimals)
     /// @param longReceiver the address that will receive the long tokens

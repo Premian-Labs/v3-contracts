@@ -56,7 +56,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         _revertIfPriceIsStale(timestamp);
         _revertIfPriceIsZero(price);
 
-        // ToDo : Check this
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
 
         l.redeemableLongs[msg.sender][strike][maturity] =
@@ -88,6 +87,10 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
     function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        _revertIfExercisePeriodNotEnded(l, maturity);
+
+        UD60x18 price = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
+        _revertIfPriceIsZero(price);
 
         (uint256 baseAmount, uint256 quoteAmount) = l.option.settle(strike, maturity, contractSize);
 
@@ -98,8 +101,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         IERC20(l.quote).safeTransfer(FEE_RECEIVER, fee);
         IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - fee);
         IPaymentSplitter(l.paymentSplitter).pay(quoteAmount - fee);
-
-        (UD60x18 price, ) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
 
         // ToDo : Transfer Premia not needed back to LM
 
@@ -122,5 +123,11 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         if (block.timestamp < maturity + l.lockupDuration)
             revert OptionReward__LockupNotExpired(maturity + l.lockupDuration);
+    }
+
+    /// @notice Revert if exercise period has not ended
+    function _revertIfExercisePeriodNotEnded(OptionRewardStorage.Layout storage l, uint64 maturity) internal view {
+        uint256 target = maturity + l.option.getExerciseDuration();
+        if (block.timestamp < target) revert OptionReward__ExercisePeriodNotEnded(maturity, target);
     }
 }

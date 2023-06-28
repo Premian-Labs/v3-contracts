@@ -42,6 +42,10 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         return (l.base, l.quote, l.isCall);
     }
 
+    function getExerciseDuration() external pure returns (uint256) {
+        return EXERCISE_DURATION;
+    }
+
     /// @inheritdoc IOptionPS
     function underwrite(
         UD60x18 strike,

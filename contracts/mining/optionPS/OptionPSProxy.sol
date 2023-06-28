@@ -12,7 +12,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionPSStorage} from "./OptionPSStorage.sol";
-import {OptionPSFactory} from "./OptionPsFactory.sol";
+import {OptionPSFactory} from "./OptionPSFactory.sol";
 
 contract OptionPSProxy is Proxy, ERC165BaseInternal {
     IProxyManager private immutable MANAGER;
