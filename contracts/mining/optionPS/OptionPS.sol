@@ -12,6 +12,7 @@ import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enu
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
@@ -20,6 +21,7 @@ import {IOptionPS} from "./IOptionPS.sol";
 import {OptionPSStorage} from "./OptionPSStorage.sol";
 
 contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, ReentrancyGuard {
+    using EnumerableSet for EnumerableSet.UintSet;
     using OptionPSStorage for IERC20;
     using OptionPSStorage for int128;
     using OptionPSStorage for uint256;
@@ -148,6 +150,11 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         emit Settle(msg.sender, contractSize, strike, maturity, collateralLeft, exerciseShare);
     }
 
+    /// @inheritdoc IOptionPS
+    function getTokenIds() external view returns (uint256[] memory) {
+        return OptionPSStorage.layout().tokenIds.toArray();
+    }
+
     /// @notice `_mint` wrapper, converts `UD60x18` to `uint256`
     function _mintUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _mint(account, tokenId, amount.unwrap(), "");
@@ -184,6 +191,20 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     ) internal virtual override(ERC1155BaseInternal, ERC1155EnumerableInternal) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        // ToDo : Track token ids
+        OptionPSStorage.Layout storage l = OptionPSStorage.layout();
+
+        for (uint256 i; i < ids.length; i++) {
+            uint256 id = ids[i];
+
+            if (amounts[i] == 0) continue;
+
+            if (from == address(0)) {
+                l.tokenIds.add(id);
+            }
+
+            if (to == address(0) && _totalSupply(id) == 0) {
+                l.tokenIds.remove(id);
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
@@ -30,6 +31,7 @@ library OptionPSStorage {
         mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount)) totalExercised;
         // Total exercise cost paid by long holders to short holders for this strike/maturity (Excluding treasury fee)
         mapping(UD60x18 strike => mapping(uint64 maturity => UD60x18 amount)) totalExerciseCost;
+        EnumerableSet.UintSet tokenIds;
     }
 
     function layout() internal pure returns (Layout storage l) {

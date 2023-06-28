@@ -46,10 +46,13 @@ interface IOptionReward {
         uint256 fee;
     }
 
+    /// @notice ToDo
     function claimOption(UD60x18 contractSize) external;
 
+    /// @notice ToDo
     function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external;
 
+    /// @notice ToDo
     function settle(UD60x18 strike, uint64 maturity) external;
 
     /// @notice Returns the amount of base tokens allocated for `claimRewards`

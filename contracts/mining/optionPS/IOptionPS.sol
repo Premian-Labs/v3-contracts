@@ -84,4 +84,8 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
         uint64 maturity,
         UD60x18 contractSize
     ) external returns (uint256 baseAmount, uint256 quoteAmount);
+
+    /// @notice Returns the list of existing tokenIds with non zero balance
+    /// @return tokenIds The list of existing tokenIds
+    function getTokenIds() external view returns (uint256[] memory);
 }

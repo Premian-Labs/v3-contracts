@@ -42,6 +42,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         FEE = fee;
     }
 
+    /// @inheritdoc IOptionReward
     function claimOption(UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
@@ -68,7 +69,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         emit OptionClaimed(msg.sender, contractSize);
     }
 
-    /// @notice Claim rewards from longs "redeemed" after the lockup period
+    /// @inheritdoc IOptionReward
     function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         _revertIfLockPeriodNotEnded(maturity);
 
@@ -93,6 +94,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         emit RewardsClaimed(msg.sender, strike, maturity, contractSize, baseAmount);
     }
 
+    /// @inheritdoc IOptionReward
     function settle(UD60x18 strike, uint64 maturity) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         _revertIfExercisePeriodNotEnded(l, maturity);
@@ -154,6 +156,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         );
     }
 
+    /// @inheritdoc IOptionReward
     function getTotalBaseAllocated() external view returns (uint256) {
         return OptionRewardStorage.layout().totalBaseAllocated;
     }
