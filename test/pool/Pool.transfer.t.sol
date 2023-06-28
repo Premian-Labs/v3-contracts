@@ -289,4 +289,65 @@ abstract contract PoolTransferTest is DeployTest {
         pool.transferPosition(posKey, users.trader, users.trader, ud(size));
         vm.stopPrank();
     }
+
+    function test_getTokenIds_ReturnExpectedValue() public {
+        uint256[] memory tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 0);
+
+        deposit(1000 ether);
+
+        tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 1);
+        assertEq(tokenIds[0], tokenId());
+
+        // Trade
+        UD60x18 tradeSize = ud(500 ether);
+        uint256 collateralScaled = toTokenDecimals(contractsToCollateral(tradeSize));
+
+        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, tradeSize, false);
+
+        address poolToken = getPoolToken();
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, collateralScaled);
+        IERC20(poolToken).approve(address(router), collateralScaled);
+
+        pool.trade(tradeSize, false, totalPremium - totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        //
+
+        vm.prank(users.trader);
+        pool.safeTransferFrom(users.trader, users.lp, PoolStorage.SHORT, 500e18, "");
+
+        tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 3);
+        assertEq(tokenIds[0], tokenId());
+        assertEq(tokenIds[1], PoolStorage.SHORT);
+        assertEq(tokenIds[2], PoolStorage.LONG);
+
+        vm.warp(block.timestamp + 60);
+
+        vm.prank(users.lp);
+        pool.withdraw(posKey, ud(1000 ether), ud(0), ud(1e18));
+
+        tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 2);
+        assertEq(tokenIds[0], PoolStorage.LONG);
+        assertEq(tokenIds[1], PoolStorage.SHORT);
+
+        vm.prank(users.lp);
+        pool.annihilate(ud(200e18));
+
+        tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 2);
+        assertEq(tokenIds[0], PoolStorage.LONG);
+        assertEq(tokenIds[1], PoolStorage.SHORT);
+
+        vm.prank(users.lp);
+        pool.annihilate(ud(300e18));
+
+        tokenIds = pool.getTokenIds();
+        assertEq(tokenIds.length, 0);
+    }
 }

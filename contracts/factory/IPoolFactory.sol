@@ -41,7 +41,8 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return Whether the given address is a pool
     function isPool(address contractAddress) external view returns (bool);
 
-    /// @notice Returns the address of a pool, and whether it has been deployed
+    /// @notice Returns the address of a valid pool, and whether it has been deployed. If the pool configuration is invalid
+    ///         the transaction will revert.
     /// @param k The pool key
     /// @return pool The pool address
     /// @return isDeployed Whether the pool has been deployed

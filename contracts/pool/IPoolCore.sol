@@ -90,6 +90,13 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
+    /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral on behalf of another account.
+    ///         msg.sender must be approved through `UserSettings.setAuthorizedAddress` by the owner of the long/short contracts.
+    ///         NOTE: This function can be called post or prior to expiration.
+    /// @param owner The owner of the shorts/longs to annihilate
+    /// @param size The size to annihilate (18 decimals)
+    function annihilateFor(address owner, UD60x18 size) external;
+
     /// @notice Exercises all long options held by caller
     /// @return exerciseValue The exercise value as amount of collateral paid out (poolToken decimals)
     function exercise() external returns (uint256 exerciseValue);
@@ -98,7 +105,7 @@ interface IPoolCore is IPoolInternal {
     ///         the proceeds of the exercised options. Only authorized agents may execute this function on behalf of the
     ///         option holder.
     /// @param holders The holders of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (poolToken decimals)
     /// @return The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic
     ///         exercise (poolToken decimals)
     function exerciseFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
@@ -108,10 +115,10 @@ interface IPoolCore is IPoolInternal {
     function settle() external returns (uint256 collateral);
 
     /// @notice Batch settles all short options held by each `holder`, caller is reimbursed with the cost deducted from
-    ///         the proceeds of the settled options. Only authorized agents may execute this function on behalf of the
+    ///         the proceeds of the settled options. Only authorized operators may execute this function on behalf of the
     ///         option holder.
     /// @param holders The holders of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (poolToken decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (poolToken decimals)
     /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic
     ///         settlement (poolToken decimals)
     function settleFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
@@ -122,10 +129,10 @@ interface IPoolCore is IPoolInternal {
     function settlePosition(Position.Key calldata p) external returns (uint256 collateral);
 
     /// @notice Batch reconciles each `position` to account for settlement payouts post-expiration. Caller is reimbursed
-    ///         with the cost deducted from the proceeds of the settled position. Only authorized agents may execute
+    ///         with the cost deducted from the proceeds of the settled position. Only authorized operators may execute
     ///         this function on behalf of the option holder.
     /// @param p The position keys
-    /// @param costPerHolder The cost charged by the authorized agent, per position holder (poolToken decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per position holder (poolToken decimals)
     /// @return The amount of collateral left after settlement per holder, ignoring costs applied during automatic
     ///         settlement (poolToken decimals)
     function settlePositionFor(Position.Key[] calldata p, uint256 costPerHolder) external returns (uint256[] memory);
@@ -147,4 +154,8 @@ interface IPoolCore is IPoolInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function getStrandedArea() external view returns (UD60x18 lower, UD60x18 upper);
+
+    /// @notice Returns the list of existing tokenIds with non zero balance
+    /// @return tokenIds The list of existing tokenIds
+    function getTokenIds() external view returns (uint256[] memory);
 }
