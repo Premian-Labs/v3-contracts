@@ -39,7 +39,7 @@ import {IOptionPS} from "contracts/mining/optionPS/IOptionPS.sol";
 import {OptionPS} from "contracts/mining/optionPS/OptionPS.sol";
 import {OptionPSStorage} from "contracts/mining/optionPS/OptionPSStorage.sol";
 
-contract OptionPSTest is Assertions, Test {
+abstract contract OptionPSTest is Assertions, Test {
     uint256 internal constant exercisePeriod = 7 days;
 
     PriceRepository internal priceRepository;
@@ -62,7 +62,7 @@ contract OptionPSTest is Assertions, Test {
     uint256 internal initialBaseBalance;
     uint256 internal initialQuoteBalance;
 
-    function setUp() public {
+    function setUp() public virtual {
         strike = ud(10e18);
         maturity = uint64(8 hours);
         initialBaseBalance = 100e18;
@@ -86,14 +86,9 @@ contract OptionPSTest is Assertions, Test {
 
         base = new ERC20Mock("WETH", 18);
         quote = new ERC20Mock("USDC", 6);
-        isCall = true;
+    }
 
-        option = OptionPS(
-            optionPSFactory.deployProxy(
-                IOptionPSFactory.OptionPSArgs({base: address(base), quote: address(quote), isCall: isCall})
-            )
-        );
-
+    function _mintTokensAndApprove() internal {
         address[3] memory users = [underwriter, otherUnderwriter, longReceiver];
 
         for (uint256 i = 0; i < users.length; i++) {
@@ -132,8 +127,10 @@ contract OptionPSTest is Assertions, Test {
         vm.startPrank(underwriter);
 
         option.underwrite(strike, maturity, longReceiver, ud(1e18));
-        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18);
-        assertEq(base.balanceOf(address(option)), 1e18);
+        assertEq(base.balanceOf(underwriter), isCall ? initialBaseBalance - 1e18 : initialBaseBalance);
+        assertEq(base.balanceOf(address(option)), isCall ? 1e18 : 0);
+        assertEq(quote.balanceOf(underwriter), isCall ? initialQuoteBalance : initialQuoteBalance - 10e6);
+        assertEq(quote.balanceOf(address(option)), isCall ? 0 : 10e6);
         assertEq(option.balanceOf(underwriter, _shortTokenId()), 1e18);
         assertEq(option.balanceOf(longReceiver, _longTokenId()), 1e18);
     }
@@ -190,14 +187,18 @@ contract OptionPSTest is Assertions, Test {
         vm.startPrank(underwriter);
 
         option.underwrite(strike, maturity, underwriter, ud(1e18));
-        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18);
-        assertEq(base.balanceOf(address(option)), 1e18);
+        assertEq(base.balanceOf(underwriter), isCall ? initialBaseBalance - 1e18 : initialBaseBalance);
+        assertEq(base.balanceOf(address(option)), isCall ? 1e18 : 0);
+        assertEq(quote.balanceOf(underwriter), isCall ? initialQuoteBalance : initialQuoteBalance - 10e6);
+        assertEq(quote.balanceOf(address(option)), isCall ? 0 : 10e6);
         assertEq(option.balanceOf(underwriter, _shortTokenId()), 1e18);
         assertEq(option.balanceOf(underwriter, _longTokenId()), 1e18);
 
         option.annihilate(strike, maturity, ud(0.3e18));
-        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18 + 0.3e18);
-        assertEq(base.balanceOf(address(option)), 1e18 - 0.3e18);
+        assertEq(base.balanceOf(underwriter), isCall ? initialBaseBalance - 1e18 + 0.3e18 : initialBaseBalance);
+        assertEq(base.balanceOf(address(option)), isCall ? 1e18 - 0.3e18 : 0);
+        assertEq(quote.balanceOf(underwriter), isCall ? initialQuoteBalance : initialQuoteBalance - 10e6 + 3e6);
+        assertEq(quote.balanceOf(address(option)), isCall ? 0 : 10e6 - 3e6);
         assertEq(option.balanceOf(underwriter, _shortTokenId()), 1e18 - 0.3e18);
         assertEq(option.balanceOf(underwriter, _longTokenId()), 1e18 - 0.3e18);
     }
@@ -242,18 +243,22 @@ contract OptionPSTest is Assertions, Test {
         vm.warp(maturity + 1);
 
         assertEq(quote.balanceOf(feeReceiver), 0);
-        uint256 fee = (3e6 * 0.003e18) / 1e18;
+        uint256 fee = isCall ? (3e6 * 0.003e18) / 1e18 : (0.3e18 * 0.003e18) / 1e18;
 
         vm.prank(longReceiver);
         option.exercise(strike, maturity, ud(0.3e18));
 
-        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18);
-        assertEq(base.balanceOf(longReceiver), initialBaseBalance + 0.3e18);
-        assertEq(quote.balanceOf(underwriter), initialQuoteBalance);
-        assertEq(quote.balanceOf(longReceiver), initialQuoteBalance - 3e6 - fee);
-        assertEq(base.balanceOf(address(option)), 0.7e18);
-        assertEq(quote.balanceOf(address(option)), 3e6);
-        assertEq(quote.balanceOf(feeReceiver), fee);
+        assertEq(base.balanceOf(underwriter), isCall ? initialBaseBalance - 1e18 : initialBaseBalance);
+        assertEq(
+            base.balanceOf(longReceiver),
+            isCall ? initialBaseBalance + 0.3e18 : initialBaseBalance - 0.3e18 - fee
+        );
+        assertEq(quote.balanceOf(underwriter), isCall ? initialQuoteBalance : initialQuoteBalance - 10e6);
+        assertEq(quote.balanceOf(longReceiver), isCall ? initialQuoteBalance - 3e6 - fee : initialQuoteBalance + 3e6);
+        assertEq(base.balanceOf(address(option)), isCall ? 0.7e18 : 0.3e18);
+        assertEq(quote.balanceOf(address(option)), isCall ? 3e6 : 7e6);
+        assertEq(quote.balanceOf(feeReceiver), isCall ? fee : 0);
+        assertEq(base.balanceOf(feeReceiver), isCall ? 0 : fee);
     }
 
     function test_exercise_RevertIf_OptionNotExpired() public {
@@ -284,7 +289,7 @@ contract OptionPSTest is Assertions, Test {
         vm.prank(longReceiver);
         option.exercise(strike, maturity, ud(3e18));
 
-        uint256 fee = (30e6 * 0.003e18) / 1e18;
+        uint256 fee = isCall ? (30e6 * 0.003e18) / 1e18 : (3e18 * 0.003e18) / 1e18;
 
         vm.warp(maturity + exercisePeriod + 1);
 
@@ -298,15 +303,28 @@ contract OptionPSTest is Assertions, Test {
         assertEq(option.totalSupply(_longTokenId()), 1e18);
         assertEq(option.totalSupply(_shortTokenId()), 0);
 
-        assertEq(base.balanceOf(underwriter), initialBaseBalance - 1e18 + 0.25e18); // initial - 1 + 1/4
-        assertEq(base.balanceOf(otherUnderwriter), initialBaseBalance - 3e18 + 0.75e18); // initial - 3 + 3/4
-        assertEq(base.balanceOf(longReceiver), initialBaseBalance + 3e18); // initial + 3
+        assertEq(
+            base.balanceOf(underwriter),
+            isCall ? initialBaseBalance - 1e18 + 0.25e18 : initialBaseBalance + (3e18 / 4)
+        ); // CALL : initial - 1 + 1 * 1/4 | PUT : initial + 3 * 1/4
+        assertEq(
+            base.balanceOf(otherUnderwriter),
+            isCall ? initialBaseBalance - 3e18 + 0.75e18 : initialBaseBalance + ((3e18 * 3) / 4)
+        ); // CALL : initial - 3 + 1 * 3/4 | PUT : initial + 3 * 3/4
+        assertEq(base.balanceOf(longReceiver), isCall ? initialBaseBalance + 3e18 : initialBaseBalance - 3e18 - fee); // CALL : initial + 3 | PUT : initial  - 0.3 - fee
 
-        assertEq(quote.balanceOf(underwriter), initialQuoteBalance + 7.5e6); // initial + 30 * 1/4
-        assertEq(quote.balanceOf(otherUnderwriter), initialQuoteBalance + 22.5e6); // initial + 30 * 3/4
-        assertEq(quote.balanceOf(longReceiver), initialQuoteBalance - 30e6 - fee); // initial - 30 - fee
+        assertEq(
+            quote.balanceOf(underwriter),
+            isCall ? initialQuoteBalance + 30e6 / 4 : initialQuoteBalance - 10e6 + 10e6 / 4
+        ); // CALL : initial + 30 * 1/4 | PUT : initial - 10 + 10 * 1/4
+        assertEq(
+            quote.balanceOf(otherUnderwriter),
+            isCall ? initialQuoteBalance + (30e6 * 3) / 4 : initialQuoteBalance - 30e6 + (10e6 * 3) / 4
+        ); // initial + 30 * 3/4 | PUT : initial - 30 + 10 * 3/4
+        assertEq(quote.balanceOf(longReceiver), isCall ? initialQuoteBalance - 30e6 - fee : initialQuoteBalance + 30e6); // initial - 30 - fee | PUT : initial  + 30
 
-        assertEq(quote.balanceOf(feeReceiver), fee);
+        assertEq(base.balanceOf(feeReceiver), isCall ? 0 : fee);
+        assertEq(quote.balanceOf(feeReceiver), isCall ? fee : 0);
     }
 
     function test_settle_RevertIf_OptionNotExpired() public {
