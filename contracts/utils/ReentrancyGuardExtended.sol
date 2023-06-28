@@ -42,13 +42,22 @@ contract ReentrancyGuardExtended is OwnableInternal, ReentrancyGuard {
         ReentrancyGuardExtendedStorage.layout().disabled = disabled;
     }
 
+    function staticCallCheck() external {
+        emit ReentrancyStaticCallCheck();
+    }
+
+    function _isStaticCall() internal returns (bool) {
+        try this.staticCallCheck() {
+            return false;
+        } catch {
+            return true;
+        }
+    }
+
     function _lockReentrancyGuard(bytes memory msgData) internal virtual returns (bool) {
         ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
         if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
-
-        ReentrancyGuardExtendedStorage.Layout storage le = ReentrancyGuardExtendedStorage.layout();
-        if (le.selectorsIgnored.contains(bytes32(_getFunctionSelector(msgData)))) return false;
-        if (le.disabled) return false;
+        if (_isStaticCall()) return false;
 
         l.status = REENTRANCY_STATUS_LOCKED;
         return true;
