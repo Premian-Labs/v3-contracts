@@ -10,6 +10,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
+import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
@@ -41,7 +42,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         FEE = fee;
     }
 
-    function underwrite(UD60x18 contractSize) external nonReentrant {
+    function claimOption(UD60x18 contractSize) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         uint256 collateral = l.toTokenDecimals(contractSize, true);
@@ -61,9 +62,10 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.redeemableLongs[msg.sender][strike][maturity] =
             l.redeemableLongs[msg.sender][strike][maturity] +
             contractSize;
+        l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
         l.option.underwrite(strike, maturity, msg.sender, contractSize);
 
-        // ToDo : Add event
+        emit OptionClaimed(msg.sender, contractSize);
     }
 
     /// @notice Claim rewards from longs "redeemed" after the lockup period
@@ -73,38 +75,87 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
-        // Burn the longs of the users
-        l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
 
         UD60x18 redeemableLongs = l.redeemableLongs[msg.sender][strike][maturity];
-
         if (contractSize > redeemableLongs)
             revert OptionReward__NotEnoughRedeemableLongs(redeemableLongs, contractSize);
+
+        // Burn the longs of the users
+        l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
         l.redeemableLongs[msg.sender][strike][maturity] = redeemableLongs - contractSize;
 
-        // ToDo : Add event
+        UD60x18 baseAmount = l.intrinsicValuePerContract[strike][maturity] * contractSize;
+        uint256 _baseAmount = l.toTokenDecimals(baseAmount, true);
+        l.totalBaseAllocated -= _baseAmount;
+
+        IERC20(l.base).safeTransfer(msg.sender, _baseAmount);
+
+        emit RewardsClaimed(msg.sender, strike, maturity, contractSize, baseAmount);
     }
 
-    function settle(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+    function settle(UD60x18 strike, uint64 maturity) external nonReentrant {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         _revertIfExercisePeriodNotEnded(l, maturity);
 
-        UD60x18 price = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
-        _revertIfPriceIsZero(price);
+        SettleVarsInternal memory vars;
 
-        (uint256 baseAmount, uint256 quoteAmount) = l.option.settle(strike, maturity, contractSize);
+        {
+            UD60x18 price = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
+            _revertIfPriceIsZero(price);
+            vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
+            l.intrinsicValuePerContract[strike][maturity] = vars.intrinsicValuePerContract;
+        }
 
-        UD60x18 _baseAmount = l.fromTokenDecimals(baseAmount, true);
-        UD60x18 _quoteAmount = l.fromTokenDecimals(quoteAmount, false);
+        // We rely on `totalUnderwritten` rather than short balance, so that `settle` cant be call multiple times for
+        // a same strike/maturity, by transferring shorts to it after a `settle` call
+        vars.totalUnderwritten = l.totalUnderwritten[strike][maturity];
+        if (vars.totalUnderwritten == ZERO) revert OptionReward__InvalidSettlement();
+        l.totalUnderwritten[strike][maturity] = ZERO;
 
-        uint256 fee = l.toTokenDecimals(_quoteAmount * FEE, false);
-        IERC20(l.quote).safeTransfer(FEE_RECEIVER, fee);
-        IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - fee);
-        IPaymentSplitter(l.paymentSplitter).pay(quoteAmount - fee);
+        {
+            uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
+            UD60x18 longTotalSupply = ud(l.option.totalSupply(longTokenId));
 
-        // ToDo : Transfer Premia not needed back to LM
+            // Calculate the max amount of contracts for which the `claimRewards` can be called after the lockup period
+            vars.maxRedeemableLongs = PRBMathExtra.min(vars.totalUnderwritten, longTotalSupply);
+        }
 
-        // ToDo : Add event
+        (, uint256 quoteAmount) = l.option.settle(strike, maturity, vars.totalUnderwritten);
+
+        vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * FEE, false);
+        IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
+        IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - vars.fee);
+
+        vars.baseAmountReserved = vars.maxRedeemableLongs * vars.intrinsicValuePerContract * (ONE - l.penalty);
+
+        l.totalBaseAllocated = l.totalBaseAllocated + l.toTokenDecimals(vars.baseAmountReserved, true);
+
+        uint256 baseAmountToPay;
+        {
+            uint256 baseBalance = IERC20(l.base).balanceOf(address(this));
+            if (baseBalance > l.totalBaseAllocated) {
+                baseAmountToPay = baseBalance - l.totalBaseAllocated;
+            }
+        }
+
+        IPaymentSplitter(l.paymentSplitter).pay(baseAmountToPay, quoteAmount - vars.fee);
+
+        emit Settled(
+            strike,
+            maturity,
+            vars.totalUnderwritten,
+            vars.intrinsicValuePerContract,
+            vars.maxRedeemableLongs,
+            l.fromTokenDecimals(baseAmountToPay, true),
+            ud(0),
+            l.fromTokenDecimals(quoteAmount - vars.fee, false),
+            l.fromTokenDecimals(vars.fee, false),
+            vars.baseAmountReserved
+        );
+    }
+
+    function getTotalBaseAllocated() external view returns (uint256) {
+        return OptionRewardStorage.layout().totalBaseAllocated;
     }
 
     /// @notice Revert if price is stale
