@@ -4,7 +4,6 @@ pragma solidity >=0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
-//import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {ReentrancyGuardStorage} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuardStorage.sol";
 
 import {IReentrancyGuardExtended} from "./IReentrancyGuardExtended.sol";
@@ -13,11 +12,6 @@ import {ReentrancyGuardExtendedStorage} from "./ReentrancyGuardExtendedStorage.s
 
 contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.Bytes32Set;
-    using ReentrancyGuardStorage for ReentrancyGuardStorage.Layout;
-    using ReentrancyGuardExtendedStorage for ReentrancyGuardExtendedStorage.Layout;
-
-    // TODO: getter for disabled
-    // TODO: getter for selectorsIgnored
 
     modifier nonReentrant() override {
         bool locked = _lockReentrancyGuard(msg.data);
@@ -59,6 +53,10 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
     }
 
     function _lockReentrancyGuard(bytes memory msgData) internal virtual returns (bool) {
+        ReentrancyGuardExtendedStorage.Layout storage le = ReentrancyGuardExtendedStorage.layout();
+        if (le.disabled) return false;
+        if (le.selectorsIgnored.contains(bytes32(_getFunctionSelector(msgData)))) return false;
+
         ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
         if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
         if (_isStaticCall()) return false;
