@@ -64,15 +64,23 @@ library OptionPSStorage {
         }
     }
 
+    function getUnderlying(Layout storage l) internal view returns (address) {
+        return l.isCall ? l.base : l.quote;
+    }
+
+    function getNumeraire(Layout storage l) internal view returns (address) {
+        return l.isCall ? l.quote : l.base;
+    }
+
     /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
-    function toTokenDecimals(Layout storage l, UD60x18 value, bool isBase) internal view returns (uint256) {
-        uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
+    function toTokenDecimals(Layout storage l, UD60x18 value, address token) internal view returns (uint256) {
+        uint8 decimals = token == l.base ? l.baseDecimals : l.quoteDecimals;
         return OptionMath.scaleDecimals(value.unwrap(), 18, decimals);
     }
 
     /// @notice Adjust decimals of a value with token decimals to 18 decimals
-    function fromTokenDecimals(Layout storage l, uint256 value, bool isBase) internal view returns (UD60x18) {
-        uint8 decimals = isBase ? l.baseDecimals : l.quoteDecimals;
+    function fromTokenDecimals(Layout storage l, uint256 value, address token) internal view returns (UD60x18) {
+        uint8 decimals = token == l.base ? l.baseDecimals : l.quoteDecimals;
         return ud(OptionMath.scaleDecimals(value, decimals, 18));
     }
 

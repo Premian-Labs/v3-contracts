@@ -49,8 +49,10 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
 
     event Annihilate(address indexed annihilator, UD60x18 contractSize, UD60x18 strike, uint256 maturity);
 
+    /// @notice Returns the pair infos for this option
     function getSettings() external view returns (address base, address quote, bool isCall);
 
+    /// @notice Returns the length of time in seconds during which long holders can exercise their options after maturity
     function getExerciseDuration() external pure returns (uint256);
 
     /// @notice Underwrite an option by depositing collateral
@@ -77,13 +79,13 @@ interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     /// @param strike the option strike price (18 decimals)
     /// @param maturity the option maturity timestamp
     /// @param contractSize number of short tokens to settle (18 decimals)
-    /// @return baseAmount the amount of base tokens transferred to the caller
-    /// @return quoteAmount the amount of quote tokens transferred to the caller
+    /// @return underlyingAmount the amount of underlying transferred to the caller (base for calls, quote for puts)
+    /// @return numeraireAmount the amount of numeraire transferred to the caller (quote for calls, base for puts)
     function settle(
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
-    ) external returns (uint256 baseAmount, uint256 quoteAmount);
+    ) external returns (uint256 underlyingAmount, uint256 numeraireAmount);
 
     /// @notice Returns the list of existing tokenIds with non zero balance
     /// @return tokenIds The list of existing tokenIds

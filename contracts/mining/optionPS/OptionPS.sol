@@ -63,7 +63,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(strike);
         if (strike % strikeInterval != ZERO) revert OptionPS__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);
 
-        IERC20(l.base).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(contractSize, true));
+        address underlying = l.getUnderlying();
+        IERC20(underlying).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(contractSize, underlying));
 
         uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
@@ -89,7 +90,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _burnUD60x18(msg.sender, longTokenId, contractSize);
         _burnUD60x18(msg.sender, shortTokenId, contractSize);
 
-        IERC20(l.base).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, true));
+        address underlying = l.getUnderlying();
+        IERC20(underlying).safeTransfer(msg.sender, l.toTokenDecimals(contractSize, underlying));
 
         emit Annihilate(msg.sender, contractSize, strike, maturity);
     }
@@ -108,17 +110,20 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         UD60x18 exerciseCost = strike * contractSize;
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
-        IERC20(l.quote).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost, false));
+        address underlying = l.getUnderlying();
+        address numeraire = l.getNumeraire();
+
+        IERC20(numeraire).safeTransferFrom(msg.sender, address(this), l.toTokenDecimals(exerciseCost, numeraire));
 
         UD60x18 fee = exerciseCost * FEE;
-        IERC20(l.quote).safeTransfer(FEE_RECEIVER, l.toTokenDecimals(fee, false));
+        IERC20(numeraire).safeTransfer(FEE_RECEIVER, l.toTokenDecimals(fee, numeraire));
 
         l.totalExercised[strike][maturity] = l.totalExercised[strike][maturity] + contractSize;
         l.totalExerciseCost[strike][maturity] = l.totalExerciseCost[strike][maturity] + (exerciseCost - fee);
 
         _burnUD60x18(msg.sender, longTokenId, contractSize);
-        exerciseValue = l.toTokenDecimals(_exerciseValue, true);
-        IERC20(l.base).safeTransfer(msg.sender, exerciseValue);
+        exerciseValue = l.toTokenDecimals(_exerciseValue, underlying);
+        IERC20(underlying).safeTransfer(msg.sender, exerciseValue);
 
         emit Exercise(msg.sender, contractSize, _exerciseValue, exerciseCost, strike, maturity);
     }
@@ -128,7 +133,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         UD60x18 strike,
         uint64 maturity,
         UD60x18 contractSize
-    ) external nonReentrant returns (uint256 baseAmount, uint256 quoteAmount) {
+    ) external nonReentrant returns (uint256 underlyingAmount, uint256 numeraireAmount) {
         _revertIfExercisePeriodNotEnded(maturity);
 
         uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
@@ -142,10 +147,13 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
 
         _burnUD60x18(msg.sender, shortTokenId, contractSize);
 
-        baseAmount = l.toTokenDecimals(contractSize, true);
-        quoteAmount = l.toTokenDecimals(contractSize, false);
-        IERC20(l.base).safeTransfer(msg.sender, baseAmount);
-        IERC20(l.quote).safeTransfer(msg.sender, quoteAmount);
+        address underlying = l.getUnderlying();
+        address numeraire = l.getNumeraire();
+
+        underlyingAmount = l.toTokenDecimals(contractSize, underlying);
+        numeraireAmount = l.toTokenDecimals(contractSize, numeraire);
+        IERC20(underlying).safeTransfer(msg.sender, underlyingAmount);
+        IERC20(numeraire).safeTransfer(msg.sender, numeraireAmount);
 
         emit Settle(msg.sender, contractSize, strike, maturity, collateralLeft, exerciseShare);
     }
