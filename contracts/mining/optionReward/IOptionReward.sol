@@ -17,7 +17,7 @@ interface IOptionReward {
     error OptionReward__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
     error OptionReward__PriceIsZero();
 
-    event Underwrite(address indexed user, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
+    event Underwrite(address indexed longReceiver, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
     event RewardsClaimed(
         address indexed user,
         UD60x18 strike,
@@ -40,6 +40,7 @@ interface IOptionReward {
 
     struct SettleVarsInternal {
         UD60x18 intrinsicValuePerContract;
+        UD60x18 rewardPerContract;
         UD60x18 totalUnderwritten;
         UD60x18 maxRedeemableLongs;
         UD60x18 baseAmountReserved;
@@ -55,6 +56,6 @@ interface IOptionReward {
     /// @notice ToDo
     function settle(UD60x18 strike, uint64 maturity) external;
 
-    /// @notice Returns the amount of base tokens allocated for `claimRewards`
-    function getTotalBaseAllocated() external view returns (uint256);
+    /// @notice Returns the amount of base tokens reserved for `claimRewards`
+    function getTotalBaseReserved() external view returns (uint256);
 }

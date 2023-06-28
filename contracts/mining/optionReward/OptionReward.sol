@@ -60,13 +60,13 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
 
-        l.redeemableLongs[msg.sender][strike][maturity] =
-            l.redeemableLongs[msg.sender][strike][maturity] +
+        l.redeemableLongs[longReceiver][strike][maturity] =
+            l.redeemableLongs[longReceiver][strike][maturity] +
             contractSize;
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] + contractSize;
         l.option.underwrite(strike, maturity, longReceiver, contractSize);
 
-        emit Underwrite(msg.sender, strike, maturity, contractSize);
+        emit Underwrite(longReceiver, strike, maturity, contractSize);
     }
 
     /// @inheritdoc IOptionReward
@@ -85,9 +85,9 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
         l.redeemableLongs[msg.sender][strike][maturity] = redeemableLongs - contractSize;
 
-        UD60x18 baseAmount = l.intrinsicValuePerContract[strike][maturity] * contractSize;
+        UD60x18 baseAmount = l.rewardPerContract[strike][maturity] * contractSize;
         uint256 _baseAmount = l.toTokenDecimals(baseAmount, true);
-        l.totalBaseAllocated -= _baseAmount;
+        l.totalBaseReserved -= _baseAmount;
 
         IERC20(l.base).safeTransfer(msg.sender, _baseAmount);
 
@@ -105,7 +105,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             UD60x18 price = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
             _revertIfPriceIsZero(price);
             vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
-            l.intrinsicValuePerContract[strike][maturity] = vars.intrinsicValuePerContract;
+            vars.rewardPerContract = vars.intrinsicValuePerContract * (ONE - l.penalty);
+            l.rewardPerContract[strike][maturity] = vars.intrinsicValuePerContract * (ONE - l.penalty);
         }
 
         // We rely on `totalUnderwritten` rather than short balance, so that `settle` cant be call multiple times for
@@ -128,17 +129,30 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
         IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - vars.fee);
 
-        vars.baseAmountReserved = vars.maxRedeemableLongs * vars.intrinsicValuePerContract * (ONE - l.penalty);
-
-        l.totalBaseAllocated = l.totalBaseAllocated + l.toTokenDecimals(vars.baseAmountReserved, true);
+        // There is a possible scenario where, if other underwriters have underwritten the same strike/maturity,
+        // directly on optionPS, and most of the long holders who purchased from other holder exercised, that settlement
+        // would not return enough `base` tokens to cover the required amount that needs to be reserved,
+        // and will return excess `quote` tokens instead.
+        //
+        // Though, this should be unlikely to happen in most case, as we are only reserving a percentage of the
+        // intrinsic value of the option.
+        // If this happens though, some excess `base` tokens from future settlements will be used to fill the
+        // missing reserve amount.
+        // As there is a lockup duration before tokens can be claimed, this should not be an issue, as there should be
+        // more than enough time for any missing amount to be covered through excess `base` of future settlements.
+        // Though if there was still for some reason a shortage of `base` tokens, we could transfer some `base` tokens
+        // from liquidity mining fund to cover the missing amount.
+        vars.baseAmountReserved = vars.maxRedeemableLongs * vars.rewardPerContract;
+        l.totalBaseReserved = l.totalBaseReserved + l.toTokenDecimals(vars.baseAmountReserved, true);
 
         uint256 baseAmountToPay;
         {
             uint256 baseBalance = IERC20(l.base).balanceOf(address(this));
-            if (baseBalance > l.totalBaseAllocated) {
-                baseAmountToPay = baseBalance - l.totalBaseAllocated;
+            if (baseBalance > l.totalBaseReserved) {
+                baseAmountToPay = baseBalance - l.totalBaseReserved;
             }
         }
+        IERC20(l.base).approve(l.paymentSplitter, baseAmountToPay);
 
         IPaymentSplitter(l.paymentSplitter).pay(baseAmountToPay, quoteAmount - vars.fee);
 
@@ -157,8 +171,8 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     }
 
     /// @inheritdoc IOptionReward
-    function getTotalBaseAllocated() external view returns (uint256) {
-        return OptionRewardStorage.layout().totalBaseAllocated;
+    function getTotalBaseReserved() external view returns (uint256) {
+        return OptionRewardStorage.layout().totalBaseReserved;
     }
 
     /// @notice Revert if price is stale

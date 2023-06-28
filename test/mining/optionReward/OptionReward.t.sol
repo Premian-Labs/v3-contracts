@@ -2,6 +2,10 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
+import {IERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/IERC1155BaseInternal.sol";
+
 import {Test} from "forge-std/Test.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
@@ -74,11 +78,13 @@ contract OptionRewardTest is Assertions, Test {
     uint256 internal size;
 
     uint64 internal maturity;
+    UD60x18 internal strike;
 
     address internal underwriter;
     address internal otherUnderwriter;
     address internal longReceiver;
-    address internal feeReceiver;
+    address internal feeReceiverOption;
+    address internal feeReceiverOptionReward;
     address internal relayer;
 
     uint256 internal initialBaseBalance;
@@ -88,12 +94,14 @@ contract OptionRewardTest is Assertions, Test {
         maturity = uint64(optionDuration + 8 hours);
         initialBaseBalance = 100e18;
         initialQuoteBalance = 1000e6;
+        strike = spot * discount;
 
         underwriter = vm.addr(1);
         otherUnderwriter = vm.addr(2);
         longReceiver = vm.addr(3);
-        feeReceiver = vm.addr(4);
-        relayer = vm.addr(5);
+        feeReceiverOption = vm.addr(4);
+        feeReceiverOptionReward = vm.addr(5);
+        relayer = vm.addr(6);
 
         address priceRepositoryImpl = address(new PriceRepository());
         address priceRepositoryProxy = address(new ProxyUpgradeableOwnable(priceRepositoryImpl));
@@ -103,13 +111,13 @@ contract OptionRewardTest is Assertions, Test {
         address optionPSFactoryProxy = address(new ProxyUpgradeableOwnable(optionPSFactoryImpl));
         optionPSFactory = OptionPSFactory(optionPSFactoryProxy);
 
-        address optionPSImpl = address(new OptionPS(feeReceiver));
+        address optionPSImpl = address(new OptionPS(feeReceiverOption));
         optionPSFactory.setManagedProxyImplementation(optionPSImpl);
 
         base = new ERC20Mock("PREMIA", 18);
         quote = new ERC20Mock("USDC", 6);
 
-        size = 1000000e18;
+        size = 100e18;
         _size = ud(size);
 
         address vxPremiaImpl = address(new VxPremia(address(0), address(0), address(base), address(quote), address(0)));
@@ -128,7 +136,7 @@ contract OptionRewardTest is Assertions, Test {
         relayers[0] = relayer;
         priceRepository.addWhitelistedRelayers(relayers);
 
-        OptionReward optionRewardImplementation = new OptionReward(feeReceiver, fee);
+        OptionReward optionRewardImplementation = new OptionReward(feeReceiverOptionReward, fee);
         address optionRewardFactoryImpl = address(new OptionRewardFactory());
         ProxyUpgradeableOwnable optionRewardFactoryProxy = new ProxyUpgradeableOwnable(optionRewardFactoryImpl);
         OptionRewardFactory optionRewardFactory = OptionRewardFactory(address(optionRewardFactoryProxy));
@@ -155,6 +163,40 @@ contract OptionRewardTest is Assertions, Test {
         assertTrue(optionRewardFactory.isProxyDeployed(address(optionReward)));
         (address _optionReward, ) = optionRewardFactory.getProxyAddress(args);
         assertEq(address(optionReward), _optionReward);
+
+        address[3] memory users = [underwriter, otherUnderwriter, longReceiver];
+
+        for (uint256 i = 0; i < users.length; i++) {
+            vm.startPrank(users[i]);
+
+            base.mint(users[i], initialBaseBalance);
+            base.approve(address(option), initialBaseBalance);
+            base.approve(address(optionReward), initialBaseBalance);
+
+            quote.mint(users[i], initialQuoteBalance);
+            quote.approve(address(option), initialQuoteBalance);
+            quote.approve(address(option), initialQuoteBalance);
+
+            vm.stopPrank();
+        }
+    }
+
+    function _toTokenDecimals(UD60x18 value, bool isBase) internal pure returns (uint256) {
+        uint8 decimals = isBase ? 18 : 6;
+        return OptionMath.scaleDecimals(value.unwrap(), 18, decimals);
+    }
+
+    function _fromTokenDecimals(uint256 value, bool isBase) internal pure returns (UD60x18) {
+        uint8 decimals = isBase ? 18 : 6;
+        return ud(OptionMath.scaleDecimals(value, decimals, 18));
+    }
+
+    function _longTokenId() internal view returns (uint256) {
+        return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Long, maturity, ud(0.55e18));
+    }
+
+    function _shortTokenId() internal view returns (uint256) {
+        return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, ud(0.55e18));
     }
 
     function _setPriceAt(uint256 timestamp, UD60x18 price) internal {
@@ -162,57 +204,31 @@ contract OptionRewardTest is Assertions, Test {
         priceRepository.setPriceAt(address(base), address(quote), timestamp, price);
     }
 
-    function _toTokenDecimals(address token, UD60x18 amount) internal view returns (uint256) {
-        uint8 decimals = IERC20Metadata(token).decimals();
-        return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
-    }
-
-    function _test_underwrite_Success() internal returns (uint256 collateral) {
-        //
-
+    function test_underwrite_Success() public {
         _setPriceAt(block.timestamp, spot);
 
-        collateral = _toTokenDecimals(address(base), _size);
-        base.mint(underwriter, collateral);
-
-        vm.startPrank(underwriter);
-        base.approve(address(optionReward), collateral);
+        vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
-        vm.stopPrank();
-    }
 
-    function test_underwrite_Success() public {
-        uint256 collateral = _test_underwrite_Success();
-
-        UD60x18 strike = discount * spot;
-        uint256 longTokenId = OptionPSStorage.formatTokenId(IOptionPS.TokenType.Long, maturity, strike);
-        uint256 shortTokenId = OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, strike);
-
-        assertEq(option.balanceOf(longReceiver, longTokenId), size);
-        assertEq(option.balanceOf(longReceiver, shortTokenId), 0);
-        assertEq(option.balanceOf(address(optionReward), shortTokenId), size);
-        assertEq(option.balanceOf(address(optionReward), longTokenId), 0);
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), size);
+        assertEq(option.balanceOf(longReceiver, _shortTokenId()), 0);
+        assertEq(option.balanceOf(address(optionReward), _shortTokenId()), size);
+        assertEq(option.balanceOf(address(optionReward), _longTokenId()), 0);
 
         assertEq(base.balanceOf(underwriter), 0);
-        assertEq(base.balanceOf(address(option)), collateral);
+        assertEq(base.balanceOf(address(option)), size);
     }
 
-    event Underwrite(address indexed user, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
+    event Underwrite(address indexed longReceiver, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
 
     function test_underwrite_CorrectMaturity() public {
-        uint256 collateral = _toTokenDecimals(address(base), ud(100e18));
-        base.mint(underwriter, collateral);
-
-        vm.prank(underwriter);
-        base.approve(address(optionReward), collateral);
-
         vm.warp(1682155823); // Apr-22-2023 09:30:23 AM +UTC
         _setPriceAt(block.timestamp, ONE);
         uint256 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
         uint256 expectedMaturity = timestamp8AMUTC + 30 days; // May-22-2023 08:00:00 AM +UTC
 
         vm.expectEmit();
-        emit Underwrite(underwriter, ud(0.55e18), uint64(expectedMaturity), ONE);
+        emit Underwrite(longReceiver, ud(0.55e18), uint64(expectedMaturity), ONE);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, ONE);
@@ -221,7 +237,7 @@ contract OptionRewardTest is Assertions, Test {
 
         expectedMaturity = timestamp8AMUTC + optionDuration; // May-22-2023 08:00:00 AM +UTC
         vm.expectEmit();
-        emit Underwrite(underwriter, ud(0.55e18), uint64(expectedMaturity), ONE);
+        emit Underwrite(longReceiver, ud(0.55e18), uint64(expectedMaturity), ONE);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, ONE);
@@ -231,38 +247,29 @@ contract OptionRewardTest is Assertions, Test {
         timestamp8AMUTC = 1682236800; // Apr-23-2023 08:00:00 AM +UTC
         expectedMaturity = timestamp8AMUTC + optionDuration; // May-23-2023 08:00:00 AM +UTC
         vm.expectEmit();
-        emit Underwrite(underwriter, ud(0.55e18), uint64(expectedMaturity), ONE);
+        emit Underwrite(longReceiver, ud(0.55e18), uint64(expectedMaturity), ONE);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, ONE);
     }
 
     function test_underwrite_RevertIf_PriceIsZero() public {
-        uint256 collateral = _toTokenDecimals(address(base), _size);
-        base.mint(underwriter, collateral);
         _setPriceAt(block.timestamp, ZERO);
 
-        vm.startPrank(underwriter);
-        base.approve(address(optionReward), collateral);
+        vm.prank(underwriter);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         optionReward.underwrite(longReceiver, _size);
     }
 
     function test_underwrite_RevertIf_PriceIsStale() public {
-        uint256 collateral = _toTokenDecimals(address(base), _size);
-        base.mint(underwriter, collateral);
-
-        vm.prank(underwriter);
-        base.approve(address(optionReward), collateral);
-
         vm.warp(60 days);
-        uint256 updatedAt = block.timestamp - 24 hours + 1 seconds;
+        uint256 updatedAt = block.timestamp - 24 hours + 1;
         _setPriceAt(updatedAt, spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, ONE); // should succeed
 
-        vm.warp(block.timestamp + 1 seconds); // block.timestamp - timestamp = 86400
+        vm.warp(block.timestamp + 1); // block.timestamp - timestamp = 86400
 
         vm.expectRevert(
             abi.encodeWithSelector(IOptionReward.OptionReward__PriceIsStale.selector, block.timestamp, updatedAt)
@@ -270,5 +277,200 @@ contract OptionRewardTest is Assertions, Test {
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, ONE); // should revert
+    }
+
+    function test_settle_Success() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + 1);
+        vm.prank(longReceiver);
+        UD60x18 exerciseSize = _size / ud(4e18);
+        option.exercise(strike, maturity, exerciseSize);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        UD60x18 exerciseCost = (strike * _size) / ud(4e18);
+
+        UD60x18 intrinsicValue = spot - strike;
+        UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size - exerciseSize);
+
+        assertEq(base.balanceOf(address(mining)), (_size - exerciseSize) - baseReserved);
+        assertEq(base.balanceOf(address(optionReward)), baseReserved);
+        assertEq(base.balanceOf(longReceiver), initialBaseBalance + exerciseSize.unwrap());
+        assertEq(quote.balanceOf(address(vxPremia)), _toTokenDecimals(exerciseCost * (ONE - fee), false));
+        assertEq(quote.balanceOf(feeReceiverOptionReward), _toTokenDecimals(exerciseCost * fee, false));
+
+        assertEq(base.balanceOf(address(option)), 0);
+        assertEq(quote.balanceOf(address(option)), 0);
+
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), _size - exerciseSize);
+        assertEq(option.totalSupply(_shortTokenId()), 0);
+    }
+
+    function test_settle_RevertIf_SettlementAlreadyDone() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        vm.expectRevert(IOptionReward.OptionReward__InvalidSettlement.selector);
+        optionReward.settle(strike, maturity);
+    }
+
+    function test_settle_RevertIf_ExercisePeriodNotEnded() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod - 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionReward.OptionReward__ExercisePeriodNotEnded.selector,
+                maturity,
+                maturity + exercisePeriod
+            )
+        );
+        optionReward.settle(strike, maturity);
+    }
+
+    function test_settle_RevertIf_PriceIsZero() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
+        optionReward.settle(strike, maturity);
+    }
+
+    function test_claimRewards_Success() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + 1);
+        vm.prank(longReceiver);
+        UD60x18 exerciseSize = _size / ud(4e18);
+        option.exercise(strike, maturity, exerciseSize);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        UD60x18 intrinsicValue = spot - strike;
+        UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size - exerciseSize);
+
+        vm.warp(maturity + lockupDuration + 1);
+
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), _size - exerciseSize);
+        vm.startPrank(longReceiver);
+        option.setApprovalForAll(address(optionReward), true);
+        optionReward.claimRewards(strike, maturity, _size - exerciseSize);
+        assertEq(option.balanceOf(longReceiver, _longTokenId()), 0);
+
+        assertEq(base.balanceOf(longReceiver), ud(initialBaseBalance) + exerciseSize + baseReserved);
+        assertEq(optionReward.getTotalBaseReserved(), 0);
+    }
+
+    function test_claimRewards_RevertIf_LockPeriodNotEnded() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        vm.warp(maturity + lockupDuration - 1);
+
+        vm.startPrank(longReceiver);
+        option.setApprovalForAll(address(optionReward), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionReward.OptionReward__LockupNotExpired.selector, maturity + lockupDuration)
+        );
+        optionReward.claimRewards(strike, maturity, _size);
+    }
+
+    function test_claimRewards_RevertIf_NoErc1155Approval() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        vm.warp(maturity + lockupDuration + 1);
+
+        vm.startPrank(longReceiver);
+        vm.expectRevert(IERC1155BaseInternal.ERC1155Base__NotOwnerOrApproved.selector);
+        optionReward.claimRewards(strike, maturity, _size);
+    }
+
+    function test_claimRewards_RevertIf_NotEnoughRedeemableLongs() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        vm.warp(maturity + lockupDuration + 1);
+
+        vm.prank(longReceiver);
+        option.safeTransferFrom(longReceiver, otherUnderwriter, _longTokenId(), size, "");
+
+        vm.startPrank(otherUnderwriter);
+        option.setApprovalForAll(address(optionReward), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionReward.OptionReward__NotEnoughRedeemableLongs.selector, 0, _size)
+        );
+        optionReward.claimRewards(strike, maturity, _size);
+    }
+
+    function test_getTotalBaseReserved_ReturnExpectedValue() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + 1);
+        vm.prank(longReceiver);
+        UD60x18 exerciseSize = _size / ud(4e18);
+        option.exercise(strike, maturity, exerciseSize);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        UD60x18 intrinsicValue = spot - strike;
+        UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size - exerciseSize);
+
+        assertEq(optionReward.getTotalBaseReserved(), baseReserved);
     }
 }

@@ -29,12 +29,16 @@ contract PaymentSplitter is IPaymentSplitter {
     /// @param premiaAmount Amount of PREMIA to send back to mining contract
     /// @param usdcAmount Amount of USDC to send to vxPREMIA staking contract
     function pay(uint256 premiaAmount, uint256 usdcAmount) external {
-        USDC.safeTransferFrom(msg.sender, address(this), usdcAmount);
-        USDC.approve(address(VX_PREMIA), usdcAmount);
-        VX_PREMIA.addRewards(usdcAmount);
+        if (premiaAmount > 0) {
+            PREMIA.safeTransferFrom(msg.sender, address(this), premiaAmount);
+            PREMIA.approve(address(MINING), premiaAmount);
+            MINING.addRewards(premiaAmount);
+        }
 
-        PREMIA.safeTransferFrom(msg.sender, address(this), premiaAmount);
-        PREMIA.approve(address(MINING), premiaAmount);
-        MINING.addRewards(premiaAmount);
+        if (usdcAmount > 0) {
+            USDC.safeTransferFrom(msg.sender, address(this), usdcAmount);
+            USDC.approve(address(VX_PREMIA), usdcAmount);
+            VX_PREMIA.addRewards(usdcAmount);
+        }
     }
 }
