@@ -7,6 +7,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
+import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
 import {ZERO} from "contracts/libraries/OptionMath.sol";
 
@@ -35,9 +36,9 @@ contract ReferralTest is DeployTest {
         poolKey.isCallPool = true;
         pool = IPoolMock(factory.deployPool{value: 1 ether}(poolKey));
 
-        _tradingFee = scaleDecimals(tradingFee);
-        _primaryRebate = scaleDecimals(primaryRebate);
-        _secondaryRebate = scaleDecimals(secondaryRebate);
+        _tradingFee = fromTokenDecimals(tradingFee);
+        _primaryRebate = fromTokenDecimals(primaryRebate);
+        _secondaryRebate = fromTokenDecimals(secondaryRebate);
         _totalRebate = _primaryRebate + _secondaryRebate;
     }
 
@@ -257,22 +258,22 @@ contract ReferralTest is DeployTest {
         (UD60x18 __primaryRebate, UD60x18 __secondaryRebate) = referral.getRebateAmounts(
             users.trader,
             users.referrer,
-            scaleDecimals(__tradingFee)
+            fromTokenDecimals(__tradingFee)
         );
 
         UD60x18 __totalRebate = __primaryRebate + __secondaryRebate;
 
-        IERC20(token).approve(address(referral), scaleDecimals(__totalRebate));
+        IERC20(token).approve(address(referral), toTokenDecimals(__totalRebate));
 
         referral.useReferral(users.trader, users.referrer, token, __primaryRebate, __secondaryRebate);
 
         vm.stopPrank();
 
         assertEq(referral.getReferrer(users.trader), users.referrer);
-        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - scaleDecimals(__totalRebate));
-        assertEq(IERC20(token).balanceOf(address(referral)), scaleDecimals(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(pool)), __tradingFee - toTokenDecimals(__totalRebate));
+        assertEq(IERC20(token).balanceOf(address(referral)), toTokenDecimals(__totalRebate));
 
-        return (token, scaleDecimals(__primaryRebate), scaleDecimals(__secondaryRebate));
+        return (token, toTokenDecimals(__primaryRebate), toTokenDecimals(__secondaryRebate));
     }
 
     function test_useReferral_Rebate_Primary_And_Secondary() public {
@@ -300,14 +301,29 @@ contract ReferralTest is DeployTest {
             uint256 secondaryRebate1
         ) = _test_useReferral_Rebate_Primary_And_Secondary(100e18);
 
-        vm.prank(users.referrer);
-        referral.claimRebate();
+        ERC20Mock mockToken = new ERC20Mock("MOCK", 18);
+        uint256 mockTokenBalance = 1000e18;
+        mockToken.mint(address(referral), mockTokenBalance);
 
-        vm.prank(secondaryReferrer);
-        referral.claimRebate();
+        {
+            address[] memory tokens = new address[](3);
+            tokens[0] = address(mockToken);
+            tokens[1] = token0;
+            tokens[2] = token1;
 
+            vm.prank(users.referrer);
+            referral.claimRebate(tokens);
+
+            vm.prank(secondaryReferrer);
+            referral.claimRebate(tokens);
+        }
+
+        assertEq(mockToken.balanceOf(address(referral)), mockTokenBalance);
         assertEq(IERC20(token0).balanceOf(address(referral)), 0);
         assertEq(IERC20(token1).balanceOf(address(referral)), 0);
+
+        assertEq(mockToken.balanceOf(users.referrer), 0);
+        assertEq(mockToken.balanceOf(secondaryReferrer), 0);
 
         assertEq(IERC20(token0).balanceOf(users.referrer), primaryRebate0);
         assertEq(IERC20(token0).balanceOf(secondaryReferrer), secondaryRebate0);
@@ -315,19 +331,16 @@ contract ReferralTest is DeployTest {
         assertEq(IERC20(token1).balanceOf(users.referrer), primaryRebate1);
         assertEq(IERC20(token1).balanceOf(secondaryReferrer), secondaryRebate1);
 
-        (address[] memory tokens, uint256[] memory rebates) = referral.getRebates(users.referrer);
+        {
+            (address[] memory tokens, uint256[] memory rebates) = referral.getRebates(users.referrer);
 
-        assertEq(tokens.length, 0);
-        assertEq(rebates.length, 0);
+            assertEq(tokens.length, 0);
+            assertEq(rebates.length, 0);
 
-        (tokens, rebates) = referral.getRebates(secondaryReferrer);
+            (tokens, rebates) = referral.getRebates(secondaryReferrer);
 
-        assertEq(tokens.length, 0);
-        assertEq(rebates.length, 0);
-    }
-
-    function test_claimRebate_RevertIf_No_Rebate() public {
-        vm.expectRevert(IReferral.Referral__NoRebatesToClaim.selector);
-        referral.claimRebate();
+            assertEq(tokens.length, 0);
+            assertEq(rebates.length, 0);
+        }
     }
 }

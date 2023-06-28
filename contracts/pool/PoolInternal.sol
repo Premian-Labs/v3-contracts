@@ -10,6 +10,7 @@ import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ECDSA} from "@solidstate/contracts/cryptography/ECDSA.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
@@ -36,6 +37,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using SafeERC20 for IERC20;
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
+    using EnumerableSet for EnumerableSet.UintSet;
     using PoolStorage for IERC20;
     using PoolStorage for IERC20Router;
     using PoolStorage for PoolStorage.Layout;
@@ -212,7 +214,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
         Position.Data storage pData
-    ) internal view returns (UD60x18 claimableFees, UD60x18 feeRate) {
+    ) internal view returns (UD60x18 claimableFees, SD59x18 feeRate) {
         Tick memory lowerTick = _getTick(p.lower);
         Tick memory upperTick = _getTick(p.upper);
 
@@ -229,15 +231,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Returns the amount of fees an LP can claim for a position (without claiming)
     function _calculateClaimableFees(
-        UD60x18 feeRate,
-        UD60x18 lastFeeRate,
+        SD59x18 feeRate,
+        SD59x18 lastFeeRate,
         UD60x18 liquidityPerTick
     ) internal pure returns (UD60x18) {
-        return (feeRate - lastFeeRate) * liquidityPerTick;
+        return (feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick;
     }
 
     /// @notice Updates the amount of fees an LP can claim for a position (without claiming)
-    function _updateClaimableFees(Position.Data storage pData, UD60x18 feeRate, UD60x18 liquidityPerTick) internal {
+    function _updateClaimableFees(Position.Data storage pData, SD59x18 feeRate, UD60x18 liquidityPerTick) internal {
         pData.claimableFees =
             pData.claimableFees +
             _calculateClaimableFees(feeRate, pData.lastFeeRate, liquidityPerTick);
@@ -252,7 +254,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Position.KeyInternal memory p,
         Position.Data storage pData
     ) internal {
-        (UD60x18 claimableFees, UD60x18 feeRate) = _pendingClaimableFees(l, p, pData);
+        (UD60x18 claimableFees, SD59x18 feeRate) = _pendingClaimableFees(l, p, pData);
 
         pData.claimableFees = pData.claimableFees + claimableFees;
         pData.lastFeeRate = feeRate;
@@ -386,7 +388,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 size,
         uint256 tokenId
     ) internal {
-        UD60x18 feeRate;
+        SD59x18 feeRate;
         {
             // If ticks dont exist they are created and inserted into the linked list
             Tick memory lowerTick = _getOrCreateTick(p.lower, belowLower);
@@ -395,24 +397,32 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
         }
 
-        UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
-        UD60x18 liquidityPerTick;
+        {
+            UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
+            UD60x18 liquidityPerTick;
 
-        if (initialSize > ZERO) {
-            liquidityPerTick = p.liquidityPerTick(initialSize);
+            if (initialSize > ZERO) {
+                liquidityPerTick = p.liquidityPerTick(initialSize);
 
-            _updateClaimableFees(pData, feeRate, liquidityPerTick);
-        } else {
-            pData.lastFeeRate = feeRate;
+                _updateClaimableFees(pData, feeRate, liquidityPerTick);
+            } else {
+                pData.lastFeeRate = feeRate;
+            }
+
+            _mint(p.owner, tokenId, size);
+
+            SD59x18 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD59x18() -
+                liquidityPerTick.intoSD59x18();
+
+            // Adjust tick deltas
+            _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
         }
 
-        _mint(p.owner, tokenId, size);
-
-        SD59x18 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD59x18() -
-            liquidityPerTick.intoSD59x18();
-
-        // Adjust tick deltas
-        _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
+        // Safeguard, should never happen
+        if (
+            feeRate !=
+            _rangeFeeRate(l, p.lower, p.upper, l.ticks[p.lower].externalFeeRate, l.ticks[p.upper].externalFeeRate)
+        ) revert Pool__InvalidTickUpdate();
     }
 
     /// @notice Withdraws a `position` (combination of owner/operator, price range, bid/ask collateral, and long/short
@@ -461,7 +471,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             // Initialize variables before position update
             vars.liquidityPerTick = p.liquidityPerTick(vars.initialSize);
-            UD60x18 feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
+            SD59x18 feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
 
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, vars.liquidityPerTick);
@@ -477,9 +487,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 collateralToTransfer = collateralToTransfer + feesClaimed;
 
                 pData.claimableFees = ZERO;
-                pData.lastFeeRate = ZERO;
+                pData.lastFeeRate = iZERO;
 
-                emit ClaimFees(p.owner, vars.tokenId, feesClaimed, ZERO);
+                emit ClaimFees(p.owner, vars.tokenId, feesClaimed, iZERO);
             }
 
             delta = p.calculatePositionUpdate(vars.initialSize, -size.intoSD59x18(), l.marketPrice);
@@ -571,8 +581,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Transfers collateral + fees from `underwriter` and sends long/short tokens to both parties
     function _writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) internal {
         if (
-            msg.sender != underwriter && ERC1155BaseStorage.layout().operatorApprovals[underwriter][msg.sender] == false
-        ) revert Pool__OperatorNotAuthorized(msg.sender);
+            msg.sender != underwriter &&
+            !IUserSettings(SETTINGS).isActionAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom)
+        ) revert Pool__ActionNotAuthorized(underwriter, msg.sender, IUserSettings.Action.WriteFrom);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -970,6 +981,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///         This function can be called post or prior to expiration.
     ///         ===========================================================
     function _annihilate(address owner, UD60x18 size) internal {
+        if (
+            msg.sender != owner &&
+            !IUserSettings(SETTINGS).isActionAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate)
+        ) revert Pool__ActionNotAuthorized(owner, msg.sender, IUserSettings.Action.Annihilate);
+
         _revertIfZeroSize(size);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
@@ -1117,7 +1133,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Exercises all long options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
     ///         automatic exercise (poolToken decimals)
     /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
@@ -1147,7 +1163,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Settles all short options held by an `owner`
     /// @param holder The holder of the contracts
-    /// @param costPerHolder The cost charged by the authorized agent, per option holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -1177,7 +1193,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Reconciles a user's `position` to account for settlement payouts post-expiration.
     /// @param p The position key
-    /// @param costPerHolder The cost charged by the authorized agent, per position holder (18 decimals)
+    /// @param costPerHolder The cost charged by the authorized operator, per position holder (18 decimals)
     /// @return collateral The amount of collateral resulting from the settlement, ignoring costs applied during
     ///         automatic settlement (poolToken decimals)
     /// @return success Whether the settlement was successful or not. This will be false if size to settle was zero
@@ -1206,7 +1222,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             // Update claimable fees
-            UD60x18 feeRate = _rangeFeeRate(
+            SD59x18 feeRate = _rangeFeeRate(
                 l,
                 p.lower,
                 p.upper,
@@ -1250,7 +1266,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         pData.claimableFees = ZERO;
-        pData.lastFeeRate = ZERO;
+        pData.lastFeeRate = iZERO;
 
         _revertIfCostExceedsPayout(costPerHolder, vars.collateral);
 
@@ -1680,7 +1696,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 upper,
         UD60x18 lowerTickExternalFeeRate,
         UD60x18 upperTickExternalFeeRate
-    ) internal view returns (UD60x18) {
+    ) internal view returns (SD59x18) {
         UD60x18 aboveFeeRate = l.currentTick >= upper
             ? l.globalFeeRate - upperTickExternalFeeRate
             : upperTickExternalFeeRate;
@@ -1689,7 +1705,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             ? lowerTickExternalFeeRate
             : l.globalFeeRate - lowerTickExternalFeeRate;
 
-        return l.globalFeeRate - aboveFeeRate - belowFeeRate;
+        return l.globalFeeRate.intoSD59x18() - aboveFeeRate.intoSD59x18() - belowFeeRate.intoSD59x18();
     }
 
     /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
@@ -2022,23 +2038,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (operator != msg.sender) revert Pool__OperatorNotAuthorized(msg.sender);
     }
 
-    /// @notice Revert if `agent` is not authorized by `holder`
-    function _revertIfAgentNotAuthorized(address holder, address agent) internal view {
-        if (!IUserSettings(SETTINGS).isAuthorizedAgent(holder, agent)) revert Pool__AgentNotAuthorized();
+    /// @notice Revert if `operator` is not authorized by `holder` to call `action`
+    function _revertIfActionNotAuthorized(address holder, IUserSettings.Action action) internal view {
+        if (!IUserSettings(SETTINGS).isActionAuthorized(holder, msg.sender, action))
+            revert Pool__ActionNotAuthorized(holder, msg.sender, action);
     }
 
     /// @notice Revert if `cost` is not authorized by `holder`
-    function _revertIfCostNotAuthorized(address holder, UD60x18 cost) internal view {
+    function _revertIfCostNotAuthorized(address holder, UD60x18 costPerHolder) internal view {
         PoolStorage.Layout storage l = PoolStorage.layout();
-
         address poolToken = l.getPoolToken();
 
         UD60x18 wrappedNativeQuote = poolToken == WRAPPED_NATIVE_TOKEN
             ? ONE
             : IOracleAdapter(l.oracleAdapter).quote(WRAPPED_NATIVE_TOKEN, poolToken);
 
-        UD60x18 costInWrappedNative = (cost * wrappedNativeQuote);
-        UD60x18 authorizedCost = UD60x18.wrap(IUserSettings(SETTINGS).getAuthorizedCost(holder));
+        UD60x18 costInWrappedNative = costPerHolder * wrappedNativeQuote;
+        UD60x18 authorizedCost = IUserSettings(SETTINGS).getAuthorizedCost(holder);
 
         if (costInWrappedNative > authorizedCost) revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);
     }
@@ -2046,5 +2062,34 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Revert if `cost` exceeds `payout`
     function _revertIfCostExceedsPayout(UD60x18 cost, UD60x18 payout) internal pure {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
+    }
+
+    function _beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) internal virtual override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        // We do not need to revert here if positions are transferred like in PoolBase, as ERC1155 transfers functions
+        // are not external in this diamond facet
+        for (uint256 i; i < ids.length; i++) {
+            uint256 id = ids[i];
+
+            if (amounts[i] == 0) continue;
+
+            if (from == address(0)) {
+                l.tokenIds.add(id);
+            }
+
+            if (to == address(0) && _totalSupply(id) == 0) {
+                l.tokenIds.remove(id);
+            }
+        }
     }
 }

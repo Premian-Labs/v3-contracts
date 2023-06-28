@@ -34,6 +34,8 @@ contract PoolBase is IPoolBase, ERC1155Base, ERC1155Enumerable, ERC165Base, Mult
     ) internal virtual override(ERC1155BaseInternal, ERC1155EnumerableInternal) {
         super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
+        // We do not need to update PoolStorage.Layout.tokenIds here as in PoolInternal._beforeTokenTransfer,
+        // as no call to `_mint` or `_burn` can be made from this facet, and transfers to address(0) would revert
         for (uint256 i; i < ids.length; i++) {
             if (ids[i] > PoolStorage.LONG) revert Pool__UseTransferPositionToTransferLPTokens();
         }

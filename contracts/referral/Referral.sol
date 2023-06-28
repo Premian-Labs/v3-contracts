@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -15,7 +16,7 @@ import {IPoolFactory} from "../factory/PoolFactory.sol";
 import {IReferral} from "./IReferral.sol";
 import {ReferralStorage} from "./ReferralStorage.sol";
 
-contract Referral is IReferral, OwnableInternal {
+contract Referral is IReferral, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using ReferralStorage for address;
@@ -97,9 +98,7 @@ contract Referral is IReferral, OwnableInternal {
     /// @inheritdoc IReferral
     function setPrimaryRebatePercent(UD60x18 percent, RebateTier tier) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
-
         emit SetPrimaryRebatePercent(tier, l.primaryRebatePercents[uint8(tier)], percent);
-
         l.primaryRebatePercents[uint8(tier)] = percent;
     }
 
@@ -123,41 +122,46 @@ contract Referral is IReferral, OwnableInternal {
         referrer = _trySetReferrer(user, referrer);
         if (referrer == address(0)) return;
 
-        IERC20(token).safeTransferFrom(
-            msg.sender,
-            address(this),
-            token.toTokenDecimals(primaryRebate + secondaryRebate)
-        );
+        UD60x18 totalRebate = primaryRebate + secondaryRebate;
+        if (totalRebate == ZERO) return;
+
+        IERC20(token).safeTransferFrom(msg.sender, address(this), token.toTokenDecimals(totalRebate));
 
         ReferralStorage.Layout storage l = ReferralStorage.layout();
         address secondaryReferrer = l.referrals[referrer];
-
-        if (secondaryRebate > ZERO) {
-            l.rebates[secondaryReferrer][token] += token.toTokenDecimals(secondaryRebate);
-            if (!l.rebateTokens[secondaryReferrer].contains(token)) l.rebateTokens[secondaryReferrer].add(token);
-        }
-
-        l.rebates[referrer][token] += token.toTokenDecimals(primaryRebate);
-        if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
+        _tryUpdateRebate(l, secondaryReferrer, token, secondaryRebate);
+        _tryUpdateRebate(l, referrer, token, primaryRebate);
 
         (UD60x18 primaryRebatePercent, ) = getRebatePercents(referrer);
         emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, primaryRebate, secondaryRebate);
     }
 
     /// @inheritdoc IReferral
-    function claimRebate() external {
+    function claimRebate(address[] memory tokens) external nonReentrant {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
-        (address[] memory tokens, uint256[] memory rebates) = getRebates(msg.sender);
-
-        if (tokens.length == 0) revert Referral__NoRebatesToClaim();
-
         for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 rebate = l.rebates[msg.sender][tokens[i]];
+            if (rebate == 0) continue;
+
             l.rebates[msg.sender][tokens[i]] = 0;
             l.rebateTokens[msg.sender].remove(tokens[i]);
 
-            IERC20(tokens[i]).safeTransfer(msg.sender, rebates[i]);
-            emit ClaimRebate(msg.sender, tokens[i], rebates[i]);
+            IERC20(tokens[i]).safeTransfer(msg.sender, rebate);
+            emit ClaimRebate(msg.sender, tokens[i], rebate);
+        }
+    }
+
+    /// @notice Updates the `referrer` rebate balance and rebate tokens, if `amount` is greater than zero
+    function _tryUpdateRebate(
+        ReferralStorage.Layout storage l,
+        address referrer,
+        address token,
+        UD60x18 amount
+    ) internal {
+        if (amount > ZERO) {
+            l.rebates[referrer][token] += token.toTokenDecimals(amount);
+            if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
         }
     }
 

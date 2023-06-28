@@ -2,13 +2,18 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ONE, TWO} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -55,7 +60,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals(trade.size * payoff);
+        uint256 collateral = toTokenDecimals(trade.size * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
 
@@ -98,7 +103,8 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
     function _test_settlePositionFor_Buy100Options(bool isITM) internal {
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setQuote(settlementPrice.inv());
+        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setQuote(quote);
         oracleAdapter.setQuoteFrom(settlementPrice);
 
         Position.Key memory posKey2 = Position.Key({
@@ -109,38 +115,33 @@ abstract contract PoolSettlePositionTest is DeployTest {
             orderType: Position.OrderType.CS
         });
 
-        handleExerciseSettleAuthorization(posKey.operator, 0.1 ether);
-        handleExerciseSettleAuthorization(posKey2.operator, 0.1 ether);
+        UD60x18 authorizedCost = ud(0.1e18);
+        enableExerciseSettleAuthorization(posKey.operator, authorizedCost);
+        enableExerciseSettleAuthorization(posKey2.operator, authorizedCost);
 
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
         vm.startPrank(posKey.operator);
-
         pool.transferPosition(posKey, users.otherLP, users.otherLP, ud(pool.balanceOf(posKey.operator, tokenId()) / 2));
-
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
-
-        uint256 cost = scaleDecimals(ud(0.1 ether));
-
         vm.warp(poolKey.maturity);
-        vm.prank(users.agent);
 
         Position.Key[] memory p = new Position.Key[](2);
         p[0] = posKey;
         p[1] = posKey2;
 
+        uint256 cost = toTokenDecimals(authorizedCost);
+        vm.prank(users.operator);
         pool.settlePositionFor(p, cost);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals((trade.size / TWO) * payoff);
+        uint256 collateral = toTokenDecimals((trade.size / TWO) * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
-
         assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral * 2);
-
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost * 2);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.operator), cost * 2);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
@@ -184,48 +185,38 @@ abstract contract PoolSettlePositionTest is DeployTest {
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
         UD60x18 payoff = getExerciseValue(false, ONE, settlementPrice);
+        UD60x18 collateral = fromTokenDecimals(
+            trade.initialCollateral + trade.totalPremium - toTokenDecimals(trade.size * payoff) - pool.protocolFees()
+        );
 
-        uint256 collateral = trade.initialCollateral +
-            trade.totalPremium -
-            scaleDecimals(trade.size * payoff) -
-            pool.protocolFees();
+        UD60x18 cost = collateral + ONE;
+        enableExerciseSettleAuthorization(posKey.operator, isCallTest ? cost : cost * quote);
 
-        uint256 cost = collateral + 1 wei;
-
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.startPrank(posKey.operator);
-
-        userSettings.setAuthorizedAgents(agents);
-
-        // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
-
-        vm.stopPrank();
         vm.warp(poolKey.maturity);
+
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = posKey;
+
+        uint256 _cost = toTokenDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, collateral));
+        vm.prank(users.operator);
+        pool.settlePositionFor(p, _cost);
+    }
+
+    function test_settlePositionFor_RevertIf_ActionNotAuthorized() public {
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = posKey;
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__CostExceedsPayout.selector,
-                scaleDecimalsTo(cost),
-                scaleDecimalsTo(collateral)
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                posKey.operator,
+                users.operator,
+                IUserSettings.Action.SettlePosition
             )
         );
 
-        vm.prank(users.agent);
-
-        Position.Key[] memory p = new Position.Key[](1);
-        p[0] = posKey;
-
-        pool.settlePositionFor(p, cost);
-    }
-
-    function test_settlePositionFor_RevertIf_AgentNotAuthorized() public {
-        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
-        vm.prank(users.agent);
-        Position.Key[] memory p = new Position.Key[](1);
-        p[0] = posKey;
+        vm.prank(users.operator);
         pool.settlePositionFor(p, 0);
     }
 
@@ -234,31 +225,22 @@ abstract contract PoolSettlePositionTest is DeployTest {
         UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
         oracleAdapter.setQuote(quote);
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.prank(posKey.operator);
-        userSettings.setAuthorizedAgents(agents);
-
-        UD60x18 _cost = ud(0.1 ether);
-        uint256 cost = scaleDecimals(_cost);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
-        );
-
-        vm.prank(users.agent);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
+        UD60x18 cost = ud(0.1e18);
 
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
 
-        pool.settlePositionFor(p, cost);
+        uint256 _cost = toTokenDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * quote, ZERO));
+        vm.prank(users.operator);
+        pool.settlePositionFor(p, _cost);
     }
 
     function test_settlePositionFor_RevertIf_CostNotCovered() public {
         // This test is a PoC for an issue discovered in the audit which is now fixed
 
-        uint256 poolValue = 1000 ether;
+        UD60x18 poolValue = ud(1000 ether);
         // as an LP, deposit ether into a pool
         // deposit is a helper function that handles this for us
         deposit(poolValue);
@@ -266,16 +248,19 @@ abstract contract PoolSettlePositionTest is DeployTest {
         // an attacker sees the liquidity in the pool, and using two addresses will
         // conspire to drain the pool of its liquidity
         address user = vm.addr(10);
-        address agent = vm.addr(11);
+        address operator = vm.addr(11);
 
-        // attackerUser sets attackerAgent as their agent, and assigns a cost of
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = IUserSettings.Action.SettlePosition;
+
+        bool[] memory authorization = new bool[](1);
+        authorization[0] = true;
+
+        // attackerUser sets attackerAgent as their operator, and assigns a cost of
         // the entire pool value
         vm.startPrank(user);
 
-        address[] memory agents = new address[](1);
-        agents[0] = agent;
-
-        userSettings.setAuthorizedAgents(agents);
+        userSettings.setActionAuthorization(operator, actions, authorization);
         userSettings.setAuthorizedCost(poolValue);
 
         vm.stopPrank();
@@ -284,7 +269,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         // the tokens out of the pool
         Position.Key memory fakePosition1 = Position.Key({
             owner: user,
-            operator: agent,
+            operator: operator,
             lower: posKey.lower,
             upper: posKey.upper,
             orderType: Position.OrderType.LC
@@ -313,12 +298,17 @@ abstract contract PoolSettlePositionTest is DeployTest {
         uint256 cost = originalPoolBalance;
 
         // This call will short-circuit before closing the position due to the invalid `lower` values
-        // set above, but it will still pay the agent their fee (all the tokens in the pool)
-        vm.prank(agent);
+        // set above, but it will still pay the operator their fee (all the tokens in the pool)
+        vm.prank(operator);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, isCallTest ? 200e18 : 200_000e18, 0)
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__CostExceedsPayout.selector,
+                isCallTest ? ud(200e18) : ud(200_000e18),
+                ZERO
+            )
         );
+
         pool.settlePositionFor(p, cost);
     }
 }

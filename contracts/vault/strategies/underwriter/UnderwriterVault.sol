@@ -4,6 +4,7 @@ pragma solidity >=0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
+import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
@@ -779,6 +780,14 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         // Handle the premiums and spread capture generated
         _afterBuy(l, poolKey.strike, poolKey.maturity, size, quote.spread, quote.premium);
 
+        // Annihilate shorts and longs for user
+        UD60x18 shorts = ud(IERC1155(quote.pool).balanceOf(msg.sender, 0));
+        UD60x18 longs = ud(IERC1155(quote.pool).balanceOf(msg.sender, 1));
+        UD60x18 annihilateSize = PRBMathExtra.min(shorts, longs);
+        if (annihilateSize > ZERO) {
+            IPool(quote.pool).annihilateFor(msg.sender, annihilateSize);
+        }
+
         // Emit trade event
         emit Trade(msg.sender, quote.pool, size, true, totalPremium, quote.mintingFee, ZERO, quote.spread);
 
@@ -878,9 +887,10 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     function _claimFees(UnderwriterVaultStorage.Layout storage l) internal {
         uint256 claimedFees = l.convertAssetFromUD60x18(l.protocolFees);
 
+        if (claimedFees == 0) return;
+
         l.protocolFees = ZERO;
         IERC20(_asset()).safeTransfer(FEE_RECEIVER, claimedFees);
-
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 }
