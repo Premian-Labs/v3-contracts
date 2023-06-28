@@ -73,7 +73,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         _revertIfLockPeriodNotEnded(maturity);
 
-        uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
+        uint256 longTokenId = IOptionPS.TokenType.Long.formatTokenId(maturity, strike);
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
@@ -115,7 +115,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.totalUnderwritten[strike][maturity] = ZERO;
 
         {
-            uint256 longTokenId = IOptionPS.TokenType.LONG.formatTokenId(maturity, strike);
+            uint256 longTokenId = IOptionPS.TokenType.Long.formatTokenId(maturity, strike);
             UD60x18 longTotalSupply = ud(l.option.totalSupply(longTokenId));
 
             // Calculate the max amount of contracts for which the `claimRewards` can be called after the lockup period

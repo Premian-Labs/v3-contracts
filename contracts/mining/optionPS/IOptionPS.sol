@@ -8,17 +8,15 @@ import {IERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable
 
 interface IOptionPS is IERC1155Base, IERC1155Enumerable {
     enum TokenType {
-        LONG,
-        SHORT
+        Long,
+        Short
     }
 
     error OptionPS__ExercisePeriodEnded(uint256 maturity, uint256 exercisePeriodEnd);
     error OptionPS__ExercisePeriodNotEnded(uint256 maturity, uint256 exercisePeriodEnd);
     error OptionPS__OptionMaturityNot8UTC(uint256 maturity);
+    error OptionPS__OptionExpired(uint256 maturity);
     error OptionPS__OptionNotExpired(uint256 maturity);
-    error OptionPS__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
-    error OptionPS__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
-    error OptionPS__PriceIsZero();
     error OptionPS__StrikeNotMultipleOfStrikeInterval(UD60x18 strike, UD60x18 strikeInterval);
 
     event Exercise(

@@ -55,6 +55,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         address longReceiver,
         UD60x18 contractSize
     ) external nonReentrant {
+        _revertIfOptionExpired(maturity);
+
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         // Validate maturity
@@ -70,8 +72,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
             l.toTokenDecimals(l.isCall ? contractSize : contractSize * strike, collateral)
         );
 
-        uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
-        uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
+        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
+        uint256 shortTokenId = TokenType.Short.formatTokenId(maturity, strike);
 
         _mintUD60x18(longReceiver, longTokenId, contractSize);
         _mintUD60x18(msg.sender, shortTokenId, contractSize);
@@ -85,8 +87,8 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     function annihilate(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
         _revertIfExercisePeriodEnded(maturity);
 
-        uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
-        uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
+        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
+        uint256 shortTokenId = TokenType.Short.formatTokenId(maturity, strike);
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
         l.totalUnderwritten[strike][maturity] = l.totalUnderwritten[strike][maturity] - contractSize;
@@ -110,9 +112,10 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         UD60x18 contractSize
     ) external nonReentrant returns (uint256 exerciseValue) {
         _revertIfOptionNotExpired(maturity);
+        _revertIfExercisePeriodEnded(maturity);
 
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
-        uint256 longTokenId = TokenType.LONG.formatTokenId(maturity, strike);
+        uint256 longTokenId = TokenType.Long.formatTokenId(maturity, strike);
 
         UD60x18 _exerciseValue = l.isCall ? contractSize : contractSize * strike;
         UD60x18 exerciseCost = l.isCall ? contractSize * strike : contractSize;
@@ -146,7 +149,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _revertIfExercisePeriodNotEnded(maturity);
 
         {
-            uint256 shortTokenId = TokenType.SHORT.formatTokenId(maturity, strike);
+            uint256 shortTokenId = TokenType.Short.formatTokenId(maturity, strike);
             _burnUD60x18(msg.sender, shortTokenId, contractSize);
         }
 
@@ -188,6 +191,10 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
     /// @notice `_burn` wrapper, converts `UD60x18` to `uint256`
     function _burnUD60x18(address account, uint256 tokenId, UD60x18 amount) internal {
         _burn(account, tokenId, amount.unwrap());
+    }
+
+    function _revertIfOptionExpired(uint64 maturity) internal view {
+        if (block.timestamp >= maturity) revert OptionPS__OptionExpired(maturity);
     }
 
     /// @notice Revert if option has not expired

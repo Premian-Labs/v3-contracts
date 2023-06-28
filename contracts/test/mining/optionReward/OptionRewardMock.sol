@@ -3,9 +3,9 @@
 pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IOptionReward} from "../../mining/optionReward/IOptionReward.sol";
-import {OptionReward} from "../../mining/optionReward/OptionReward.sol";
-import {OptionRewardStorage} from "../../mining/optionReward/OptionRewardStorage.sol";
+import {IOptionReward} from "../../../mining/optionReward/IOptionReward.sol";
+import {OptionReward} from "../../../mining/optionReward/OptionReward.sol";
+import {OptionRewardStorage} from "../../../mining/optionReward/OptionRewardStorage.sol";
 
 contract OptionRewardMock is OptionReward {
     constructor(address treasury, UD60x18 treasuryFee) OptionReward(treasury, treasuryFee) {}
