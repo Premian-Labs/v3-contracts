@@ -2,38 +2,16 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
-
 import {Test} from "forge-std/Test.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
-import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
-import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 import {IERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/IERC1155BaseInternal.sol";
 
-import {ZERO, ONE} from "contracts/libraries/Constants.sol";
-import {OptionMath} from "contracts/libraries/OptionMath.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
-import {IOptionReward} from "contracts/mining/optionReward/OptionReward.sol";
-import {IOptionRewardFactory} from "contracts/mining/optionReward/IOptionRewardFactory.sol";
-import {OptionRewardMock} from "contracts/test/mining/optionReward/OptionRewardMock.sol";
-import {OptionRewardStorage} from "contracts/mining/optionReward/OptionRewardStorage.sol";
-import {OptionRewardFactory} from "contracts/mining/optionReward/OptionRewardFactory.sol";
-
-import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
 import {PriceRepository} from "contracts/mining/PriceRepository.sol";
 
-import {PaymentSplitter} from "contracts/mining/PaymentSplitter.sol";
-
-import {IVxPremia} from "contracts/staking/IVxPremia.sol";
-import {VxPremia} from "contracts/staking/VxPremia.sol";
-import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
-
 import {Assertions} from "../../Assertions.sol";
-import {IOptionPSFactory} from "contracts/mining/optionPS/IOptionPSFactory.sol";
 import {OptionPSFactory} from "contracts/mining/optionPS/OptionPSFactory.sol";
 import {IOptionPS} from "contracts/mining/optionPS/IOptionPS.sol";
 import {OptionPS} from "contracts/mining/optionPS/OptionPS.sol";
@@ -162,10 +140,10 @@ abstract contract OptionPSTest is Assertions, Test {
     function test_underwrite_RevertIf_StrikeInvalid() public {
         // prettier-ignore
         UD60x18[2][7] memory values = [
-            [ud(1.11e18),      ud(0.1e18)],
-            [ud(7.4e18),       ud(0.5e18)],
-            [ud(10.5e18),      ud(1e18)],
-            [ud(45.5e18),      ud(1e18)],
+            [ud(1.11e18),    ud(0.1e18)],
+            [ud(7.4e18),     ud(0.5e18)],
+            [ud(10.5e18),    ud(1e18)],
+            [ud(45.5e18),    ud(1e18)],
             [ud(54e18),      ud(5e18)],
             [ud(99e18),      ud(5e18)],
             [ud(101e18),     ud(10e18)]
