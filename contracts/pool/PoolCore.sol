@@ -189,19 +189,20 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
-    function exercise() external nonReentrant returns (uint256 exerciseValue) {
-        (exerciseValue, ) = _exercise(msg.sender, ZERO);
+    function exercise() external nonReentrant returns (uint256 exerciseValue, uint256 exerciseFee) {
+        (exerciseValue, exerciseFee, ) = _exercise(msg.sender, ZERO);
     }
 
     /// @inheritdoc IPoolCore
     function exerciseFor(
         address[] calldata holders,
         uint256 costPerHolder
-    ) external nonReentrant returns (uint256[] memory exerciseValues) {
+    ) external nonReentrant returns (uint256[] memory exerciseValues, uint256[] memory exerciseFees) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         UD60x18 _costPerHolder = l.fromPoolTokenDecimals(costPerHolder);
         exerciseValues = new uint256[](holders.length);
+        exerciseFees = new uint256[](holders.length);
 
         for (uint256 i = 0; i < holders.length; i++) {
             if (holders[i] != msg.sender) {
@@ -209,9 +210,10 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _revertIfCostNotAuthorized(holders[i], _costPerHolder);
             }
 
-            (uint256 exerciseValue, bool success) = _exercise(holders[i], _costPerHolder);
+            (uint256 exerciseValue, uint256 exerciseFee, bool success) = _exercise(holders[i], _costPerHolder);
             if (!success) revert Pool__SettlementFailed();
             exerciseValues[i] = exerciseValue;
+            exerciseFees[i] = exerciseFee;
         }
 
         IERC20(l.getPoolToken()).safeTransfer(msg.sender, holders.length * costPerHolder);
