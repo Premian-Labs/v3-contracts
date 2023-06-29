@@ -7,7 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 
 import {ZERO} from "../libraries/Constants.sol";
-import {IVaultMining} from "../mining/IVaultMining.sol";
+import {IVaultMining} from "../mining/vaultMining/IVaultMining.sol";
 import {IVault} from "./IVault.sol";
 
 abstract contract Vault is IVault, SolidStateERC4626 {

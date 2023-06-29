@@ -22,7 +22,7 @@ import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
 import {IVxPremia} from "../../../staking/IVxPremia.sol";
-import {IVaultMining} from "../../../mining/IVaultMining.sol";
+import {IVaultMining} from "../../../mining/vaultMining/IVaultMining.sol";
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {Vault} from "../../Vault.sol";

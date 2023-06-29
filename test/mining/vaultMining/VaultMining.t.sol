@@ -11,9 +11,9 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 import {Test} from "forge-std/Test.sol";
 
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
-import {IVaultMining} from "contracts/mining/IVaultMining.sol";
-import {VaultMining} from "contracts/mining/VaultMining.sol";
-import {VaultMiningProxy} from "contracts/mining/VaultMiningProxy.sol";
+import {IVaultMining} from "contracts/mining/vaultMining/IVaultMining.sol";
+import {VaultMining} from "contracts/mining/vaultMining/VaultMining.sol";
+import {VaultMiningProxy} from "contracts/mining/vaultMining/VaultMiningProxy.sol";
 import {IVxPremia} from "contracts/staking/IVxPremia.sol";
 import {VxPremia} from "contracts/staking/VxPremia.sol";
 import {VxPremiaProxy} from "contracts/staking/VxPremiaProxy.sol";
@@ -24,8 +24,8 @@ import {VaultMock} from "contracts/test/vault/VaultMock.sol";
 import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
 import {OptionRewardMock} from "contracts/test/mining/OptionRewardMock.sol";
 
-import {Assertions} from "../Assertions.sol";
-import {DebugUtils} from "../DebugUtils.sol";
+import {Assertions} from "../../Assertions.sol";
+import {DebugUtils} from "../../DebugUtils.sol";
 
 contract ProxyManagerMock {
     function getPoolList() external pure returns (address[] memory poolList) {

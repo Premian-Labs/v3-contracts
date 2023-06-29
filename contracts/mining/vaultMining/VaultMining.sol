@@ -8,14 +8,14 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
-import {WAD, ZERO} from "../libraries/Constants.sol";
+import {WAD, ZERO} from "../../libraries/Constants.sol";
 
 import {IVaultMining} from "./IVaultMining.sol";
-import {IOptionReward} from "./IOptionReward.sol";
+import {IOptionReward} from "../IOptionReward.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
-import {IVxPremia} from "../staking/IVxPremia.sol";
-import {IVault} from "../vault/IVault.sol";
-import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
+import {IVxPremia} from "../../staking/IVxPremia.sol";
+import {IVault} from "../../vault/IVault.sol";
+import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
 
 contract VaultMining is IVaultMining, OwnableInternal {
     using SafeERC20 for IERC20;
