@@ -32,7 +32,7 @@ abstract contract Proxy is IProxy {
         (result, data) = implementation.delegatecall(msg.data);
     }
 
-    ///  @notice get logic implementation address
+    /// @notice get logic implementation address
     /// @return implementation address
     function _getImplementation() internal virtual returns (address);
 }
