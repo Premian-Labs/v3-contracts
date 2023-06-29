@@ -86,9 +86,4 @@ library OptionPSStorage {
     function fromUD60x18ToInt128(UD60x18 u) internal pure returns (int128) {
         return u.unwrap().toInt256().toInt128();
     }
-
-    /// @notice Converts contract size to collateral amount
-    function fromContractSize(Layout storage l, UD60x18 contractSize, UD60x18 strike) internal view returns (UD60x18) {
-        return l.isCall ? contractSize : contractSize * strike;
-    }
 }
