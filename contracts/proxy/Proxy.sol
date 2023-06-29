@@ -5,9 +5,7 @@ pragma solidity ^0.8.19;
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {IProxy} from "@solidstate/contracts/proxy/IProxy.sol";
 
-/**
- * @title Base proxy contract
- */
+/// @title Base proxy contract
 abstract contract Proxy is IProxy {
     using AddressUtils for address;
 
