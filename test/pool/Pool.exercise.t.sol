@@ -253,4 +253,15 @@ abstract contract PoolExerciseTest is DeployTest {
         vm.prank(users.operator);
         pool.exerciseFor(holders, cost);
     }
+
+    function test_exerciseFee_ReturnExpectedValue() public {
+        UD60x18 size = ud(10e18);
+        UD60x18 intrinsicValue = contractsToCollateral(ud(0.2e18) * size);
+        UD60x18 exerciseFee = pool.exerciseFee(address(0), size, intrinsicValue, poolKey.strike, isCallTest);
+        assertEq(exerciseFee, contractsToCollateral(ud(0.03e18))); // 0.03% of notional
+
+        intrinsicValue = contractsToCollateral(ud(0.02e18) * size);
+        exerciseFee = pool.exerciseFee(address(0), size, intrinsicValue, poolKey.strike, isCallTest);
+        assertEq(exerciseFee, contractsToCollateral(ud(0.025e18))); // 12.5%  of intrinsicValue
+    }
 }

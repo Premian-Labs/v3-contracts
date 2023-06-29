@@ -131,7 +131,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// value of options exercised, or a percentage of the notional value.
     /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
-    /// @param intrinsicValue Total intrinsic value of all the contracts exercised (18 decimals)
+    /// @param intrinsicValue Total intrinsic value of all the contracts exercised, denormalized (18 decimals)
     /// @param strike The strike of the option (18 decimals)
     /// @param isCallPool Whether the pool is a call pool or not
     /// @return The taker fee for an option trade denormalized (18 decimals)
