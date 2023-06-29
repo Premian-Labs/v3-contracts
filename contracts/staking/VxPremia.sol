@@ -144,7 +144,9 @@ contract VxPremia is IVxPremia, PremiaStaking {
                         break;
                     }
                 }
-            } else if (vote.version == VoteVersion.VaultV3) {
+            } else if (vote.version == VoteVersion.VaultV3 && VAULT_REGISTRY != address(0)) {
+                // Chains other than Arbitrum dont have VAULT_REGISTRY
+
                 isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 
