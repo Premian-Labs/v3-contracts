@@ -326,6 +326,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
         unstakeReward = _calculateReward(l.accUnstakeRewardPerShare, power, u.unstakeRewardDebt);
     }
 
+    /// @inheritdoc IPremiaStaking
     function harvest() external {
         uint256 amount = _harvest(msg.sender);
         IERC20(REWARD_TOKEN).safeTransfer(msg.sender, amount);
@@ -541,10 +542,12 @@ contract PremiaStaking is IPremiaStaking, OFT {
         return PremiaStakingStorage.layout().userInfo[user];
     }
 
+    /// @inheritdoc IPremiaStaking
     function getPendingWithdrawals() external view returns (uint256) {
         return PremiaStakingStorage.layout().pendingWithdrawal;
     }
 
+    /// @inheritdoc IPremiaStaking
     function getPendingWithdrawal(
         address user
     ) external view returns (uint256 amount, uint256 startDate, uint256 unlockDate) {

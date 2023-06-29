@@ -70,6 +70,9 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @return amount of tokens pending to be distributed as rewards
     function getPendingRewards() external view returns (uint256);
 
+    /// @notice Return the total amount of premia pending withdrawal
+    function getPendingWithdrawals() external view returns (uint256);
+
     /// @notice get pending withdrawal data of a user
     /// @return amount pending withdrawal amount
     /// @return startDate start timestamp of withdrawal
