@@ -94,6 +94,7 @@ async function main() {
     addresses.ERC20Router,
     addresses.VxPremiaProxy,
     addresses.PremiaDiamond,
+    addresses.VaultMiningProxy,
   );
   await underwriterVaultImpl.deployed();
 

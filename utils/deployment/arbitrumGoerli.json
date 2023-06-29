@@ -41,5 +41,9 @@
   "VaultRegistryProxy": "0x80196c9D4094B36f3e142C80C4Fd12247f79ef2D",
   "VolatilityOracleImplementation": "0x8f634992E7811AA2330703659cAe8073544aE2f5",
   "VolatilityOracleProxy": "0xBE464F3a7eFE0c97Ef905CFB1162CAffff1761f3",
-  "UnderwriterVaultImplementation": "0x68Fd6236Ca48FE6CFC46c628681Afe94865C376E"
+  "UnderwriterVaultImplementation": "0x68Fd6236Ca48FE6CFC46c628681Afe94865C376E",
+  "VaultMiningImplementation": "",
+  "VaultMiningProxy": "",
+  "OptionRewardImplementation": "",
+  "OptionRewardProxy": ""
 }

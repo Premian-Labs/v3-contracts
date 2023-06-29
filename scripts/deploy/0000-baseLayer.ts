@@ -1,14 +1,14 @@
 import {
-  ProxyUpgradeableOwnable__factory,
   ChainlinkAdapter__factory,
+  ProxyUpgradeableOwnable__factory,
   UniswapV3Adapter__factory,
   UniswapV3AdapterProxy__factory,
   UniswapV3ChainlinkAdapter__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import {
-  goerliFeeds,
   arbitrumGoerliFeeds,
+  goerliFeeds,
   UNISWAP_V3_FACTORY,
 } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';

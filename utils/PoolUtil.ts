@@ -1,29 +1,29 @@
 import { diamondCut } from '../scripts/utils/diamond';
 import {
+  ERC20Mock__factory,
+  ERC20Router,
+  ERC20Router__factory,
+  ExchangeHelper__factory,
+  InitFeeCalculator__factory,
+  IReferral,
+  IReferral__factory,
   PoolBase__factory,
   PoolCore__factory,
+  PoolCoreMock__factory,
+  PoolDepositWithdraw__factory,
   PoolFactory,
   PoolFactory__factory,
   PoolFactoryProxy__factory,
-  PoolCoreMock__factory,
-  PoolDepositWithdraw__factory,
+  PoolTrade__factory,
   Premia,
   Premia__factory,
-  PoolTrade__factory,
-  ERC20Router__factory,
-  ERC20Router,
-  InitFeeCalculator__factory,
   ProxyUpgradeableOwnable__factory,
-  UserSettings__factory,
-  ERC20Mock__factory,
-  VxPremia__factory,
-  VxPremiaProxy__factory,
-  ExchangeHelper__factory,
-  IReferral,
-  IReferral__factory,
   Referral__factory,
   ReferralProxy__factory,
+  UserSettings__factory,
   VaultRegistry__factory,
+  VxPremia__factory,
+  VxPremiaProxy__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -284,38 +284,6 @@ export class PoolUtil {
 
     if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
 
-    // VxPremia
-    if (!vxPremiaAddress) {
-      const premia = await new ERC20Mock__factory(deployer).deploy(
-        'PREMIA',
-        18,
-      );
-
-      if (log) console.log(`Premia : ${exchangeHelper.address}`);
-
-      const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
-        constants.AddressZero,
-        constants.AddressZero,
-        premia.address,
-        tokens.USDC.address,
-        exchangeHelper.address,
-      );
-
-      await vxPremiaImpl.deployed();
-
-      if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
-
-      const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
-        vxPremiaImpl.address,
-      );
-
-      await vxPremiaProxy.deployed();
-
-      if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
-
-      vxPremiaAddress = vxPremiaProxy.address;
-    }
-
     // Vault Registry
     if (!vaultRegistry) {
       const vaultRegistryImpl = await new VaultRegistry__factory(
@@ -336,6 +304,39 @@ export class PoolUtil {
         console.log(`VaultRegistryProxy : ${vaultRegistryProxy.address}`);
 
       vaultRegistry = vaultRegistryProxy.address;
+    }
+
+    // VxPremia
+    if (!vxPremiaAddress) {
+      const premia = await new ERC20Mock__factory(deployer).deploy(
+        'PREMIA',
+        18,
+      );
+
+      if (log) console.log(`Premia : ${exchangeHelper.address}`);
+
+      const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+        constants.AddressZero,
+        constants.AddressZero,
+        premia.address,
+        tokens.USDC.address,
+        exchangeHelper.address,
+        vaultRegistry,
+      );
+
+      await vxPremiaImpl.deployed();
+
+      if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
+
+      const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
+        vxPremiaImpl.address,
+      );
+
+      await vxPremiaProxy.deployed();
+
+      if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
+
+      vxPremiaAddress = vxPremiaProxy.address;
     }
 
     const referralImpl = await new Referral__factory(deployer).deploy(

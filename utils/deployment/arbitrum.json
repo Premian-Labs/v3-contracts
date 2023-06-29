@@ -36,5 +36,9 @@
   "VaultRegistryProxy": "",
   "VolatilityOracleImplementation": "",
   "VolatilityOracleProxy": "",
-  "UnderwriterVaultImplementation": ""
+  "UnderwriterVaultImplementation": "",
+  "VaultMiningImplementation": "",
+  "VaultMiningProxy": "",
+  "OptionRewardImplementation": "",
+  "OptionRewardProxy": ""
 }
