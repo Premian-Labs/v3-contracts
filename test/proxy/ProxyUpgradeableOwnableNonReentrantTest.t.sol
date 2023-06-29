@@ -43,10 +43,22 @@ contract Target {
         x = y;
         return x;
     }
+
+    function callToCrossContractCall(OtherTarget otherTarget) external returns (uint) {
+        x = 9;
+        return otherTarget.crossContractCall(this);
+    }
+}
+
+contract OtherTarget {
+    function crossContractCall(Target target) external returns (uint) {
+        return target.nonReentrantCall();
+    }
 }
 
 contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
     Target target;
+    OtherTarget otherTarget;
     ProxyUpgradeableOwnableNonReentrantMock proxy;
 
     address owner;
@@ -56,6 +68,7 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         vm.startPrank(owner);
         proxy = new ProxyUpgradeableOwnableNonReentrantMock(address(new Target()));
         target = Target(address(proxy));
+        otherTarget = new OtherTarget();
         vm.stopPrank();
     }
 
@@ -74,6 +87,18 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
     function test_nonReentrant_ForceUnlock_Success() public {
         vm.prank(owner);
         proxy.__unlockReentrancyGuard();
+        assertEq(target.x(), 0);
+        assertEq(target.nonReentrantCall(), 1);
+    }
+
+    function test_nonReentrant_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
+        assertEq(target.x(), 0);
+        assertEq(target.nonReentrantCall(), 1);
+    }
+
+    function test_nonReentrant_IgnoredNonReentrantCallSelector_Success() public {
+        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
         assertEq(target.x(), 0);
         assertEq(target.nonReentrantCall(), 1);
     }
@@ -135,9 +160,15 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         target.callToNonReentrantCall();
     }
 
-    function test_callToNonReentrantCall_IgnoredNonReentrantCallSelector_Success() public {
+    function test_callToNonReentrantCall_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
         assertEq(target.x(), 0);
+        assertEq(target.callToNonReentrantCall(), 1);
+    }
+
+    function test_callToNonReentrantCall_IgnoredNonReentrantCallSelector_Success() public {
         test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
+        assertEq(target.x(), 0);
         assertEq(target.callToNonReentrantCall(), 1);
     }
 
@@ -155,6 +186,16 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
     function test_nonReentrantStaticcall_ForceUnlock_Success() public {
         vm.prank(owner);
         proxy.__unlockReentrancyGuard();
+        assertEq(target.nonReentrantStaticcall(), 0);
+    }
+
+    function test_nonReentrantStaticcall_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
+        assertEq(target.nonReentrantStaticcall(), 0);
+    }
+
+    function test_nonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
+        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
         assertEq(target.nonReentrantStaticcall(), 0);
     }
 
@@ -176,6 +217,16 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         assertEq(target.staticcallToNonReentrantStaticcall(), 0);
     }
 
+    function test_staticcallToNonReentrantStaticcall_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
+        assertEq(target.staticcallToNonReentrantStaticcall(), 0);
+    }
+
+    function test_staticcallToNonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
+        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
+        assertEq(target.staticcallToNonReentrantStaticcall(), 0);
+    }
+
     function test_callToNonReentrantStaticcall_Revert() public {
         vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
         target.callToNonReentrantStaticcall();
@@ -193,6 +244,49 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         proxy.__unlockReentrancyGuard();
         vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
         target.callToNonReentrantStaticcall();
+    }
+
+    function test_callToNonReentrantStaticcall_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
+        assertEq(target.x(), 0);
+        assertEq(target.callToNonReentrantStaticcall(), 10);
+    }
+
+    function test_callToNonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
+        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
+        assertEq(target.x(), 0);
+        assertEq(target.callToNonReentrantStaticcall(), 10);
+    }
+
+    function test_callToCrossContractCall_Revert() public {
+        vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
+        target.callToCrossContractCall(otherTarget);
+    }
+
+    function test_callToCrossContractCall_ForceLock_Revert() public {
+        vm.prank(owner);
+        proxy.__lockReentrancyGuard();
+        vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
+        target.callToCrossContractCall(otherTarget);
+    }
+
+    function test_callToCrossContractCall_ForceUnlock_Revert() public {
+        vm.prank(owner);
+        proxy.__unlockReentrancyGuard();
+        vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
+        target.callToCrossContractCall(otherTarget);
+    }
+
+    function test_callToCrossContractCall_ReentrancyGuardDisabled_Success() public {
+        test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
+        assertEq(target.x(), 0);
+        assertEq(target.callToCrossContractCall(otherTarget), 10);
+    }
+
+    function test_callToCrossContractCall_IgnoredNonReentrantCallSelector_Success() public {
+        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
+        assertEq(target.x(), 0);
+        assertEq(target.callToCrossContractCall(otherTarget), 10);
     }
 
     function test_callToNonReentrantStaticcall_IgnoreNonReentrantStaticcallSelector_Success() public {
