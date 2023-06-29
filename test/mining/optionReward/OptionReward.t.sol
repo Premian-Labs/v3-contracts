@@ -60,8 +60,10 @@ contract OptionRewardTest is Assertions, Test {
     UD60x18 internal constant penalty = UD60x18.wrap(0.75e18);
     uint256 internal constant optionDuration = 30 days;
     uint256 internal constant lockupDuration = 365 days;
-    UD60x18 internal constant spot = UD60x18.wrap(1e18);
+    uint256 internal constant claimDuration = 365 days;
     UD60x18 internal constant fee = UD60x18.wrap(0.1e18);
+
+    UD60x18 internal spot;
 
     PaymentSplitter internal paymentSplitter;
     PriceRepository internal priceRepository;
@@ -83,6 +85,7 @@ contract OptionRewardTest is Assertions, Test {
     address internal underwriter;
     address internal otherUnderwriter;
     address internal longReceiver;
+    address internal otherLongReceiver;
     address internal feeReceiverOption;
     address internal feeReceiverOptionReward;
     address internal relayer;
@@ -94,14 +97,16 @@ contract OptionRewardTest is Assertions, Test {
         maturity = uint64(optionDuration + 8 hours);
         initialBaseBalance = 100e18;
         initialQuoteBalance = 1000e6;
+        spot = ud(1e18);
         strike = spot * discount;
 
         underwriter = vm.addr(1);
         otherUnderwriter = vm.addr(2);
         longReceiver = vm.addr(3);
-        feeReceiverOption = vm.addr(4);
-        feeReceiverOptionReward = vm.addr(5);
-        relayer = vm.addr(6);
+        otherLongReceiver = vm.addr(4);
+        feeReceiverOption = vm.addr(5);
+        feeReceiverOptionReward = vm.addr(6);
+        relayer = vm.addr(7);
 
         address priceRepositoryImpl = address(new PriceRepository());
         address priceRepositoryProxy = address(new ProxyUpgradeableOwnable(priceRepositoryImpl));
@@ -155,7 +160,8 @@ contract OptionRewardTest is Assertions, Test {
             discount: discount,
             penalty: penalty,
             optionDuration: optionDuration,
-            lockupDuration: lockupDuration
+            lockupDuration: lockupDuration,
+            claimDuration: claimDuration
         });
 
         optionReward = OptionReward(optionRewardFactory.deployProxy(args));
@@ -164,7 +170,7 @@ contract OptionRewardTest is Assertions, Test {
         (address _optionReward, ) = optionRewardFactory.getProxyAddress(args);
         assertEq(address(optionReward), _optionReward);
 
-        address[3] memory users = [underwriter, otherUnderwriter, longReceiver];
+        address[4] memory users = [underwriter, otherUnderwriter, longReceiver, otherLongReceiver];
 
         for (uint256 i = 0; i < users.length; i++) {
             vm.startPrank(users[i]);
@@ -297,7 +303,7 @@ contract OptionRewardTest is Assertions, Test {
 
         UD60x18 exerciseCost = (strike * _size) / ud(4e18);
 
-        UD60x18 intrinsicValue = spot - strike;
+        UD60x18 intrinsicValue = (spot - strike) / spot;
         UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size - exerciseSize);
 
         assertEq(base.balanceOf(address(mining)), (_size - exerciseSize) - baseReserved);
@@ -311,6 +317,47 @@ contract OptionRewardTest is Assertions, Test {
 
         assertEq(option.balanceOf(longReceiver, _longTokenId()), _size - exerciseSize);
         assertEq(option.totalSupply(_shortTokenId()), 0);
+    }
+
+    function test_settle_ReserveExcessBaseFromNextSettlement_WhenPartialBaseReserve() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size / ud(10e18));
+
+        vm.prank(otherUnderwriter);
+        option.underwrite(strike, maturity, otherLongReceiver, _size);
+
+        spot = spot * ud(10e18);
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + 1);
+        vm.prank(otherLongReceiver);
+        option.exercise(strike, maturity, _size);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        UD60x18 intrinsicValue = (spot - strike) / spot;
+        UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size / ud(10e18));
+
+        assertEq(optionReward.getTotalBaseReserved(), baseReserved, "a");
+        assertLt(base.balanceOf(address(optionReward)), baseReserved.unwrap()); // There is not enough `base` tokens compared to the expected reserved amount
+
+        spot = spot / ud(10e18);
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size / ud(2e18));
+
+        maturity = 5817600;
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        assertEq(base.balanceOf(address(optionReward)), optionReward.getTotalBaseReserved()); // We use excess base tokens from this settlement to fill the missing reserve amount
     }
 
     function test_settle_RevertIf_SettlementAlreadyDone() public {
@@ -382,7 +429,7 @@ contract OptionRewardTest is Assertions, Test {
         assertEq(option.balanceOf(longReceiver, _longTokenId()), _size - exerciseSize);
         vm.startPrank(longReceiver);
         option.setApprovalForAll(address(optionReward), true);
-        optionReward.claimRewards(strike, maturity, _size - exerciseSize);
+        optionReward.claimRewards(strike, maturity);
         assertEq(option.balanceOf(longReceiver, _longTokenId()), 0);
 
         assertEq(base.balanceOf(longReceiver), ud(initialBaseBalance) + exerciseSize + baseReserved);
@@ -407,7 +454,31 @@ contract OptionRewardTest is Assertions, Test {
         vm.expectRevert(
             abi.encodeWithSelector(IOptionReward.OptionReward__LockupNotExpired.selector, maturity + lockupDuration)
         );
-        optionReward.claimRewards(strike, maturity, _size);
+        optionReward.claimRewards(strike, maturity);
+    }
+
+    function test_claimRewards_RevertIf_ClaimPeriodEnded() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        vm.warp(maturity + lockupDuration + claimDuration + 1);
+
+        vm.startPrank(longReceiver);
+        option.setApprovalForAll(address(optionReward), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOptionReward.OptionReward__ClaimPeriodEnded.selector,
+                maturity + lockupDuration + claimDuration
+            )
+        );
+        optionReward.claimRewards(strike, maturity);
     }
 
     function test_claimRewards_RevertIf_NoErc1155Approval() public {
@@ -425,7 +496,7 @@ contract OptionRewardTest is Assertions, Test {
 
         vm.startPrank(longReceiver);
         vm.expectRevert(IERC1155BaseInternal.ERC1155Base__NotOwnerOrApproved.selector);
-        optionReward.claimRewards(strike, maturity, _size);
+        optionReward.claimRewards(strike, maturity);
     }
 
     function test_claimRewards_RevertIf_NotEnoughRedeemableLongs() public {
@@ -442,14 +513,12 @@ contract OptionRewardTest is Assertions, Test {
         vm.warp(maturity + lockupDuration + 1);
 
         vm.prank(longReceiver);
-        option.safeTransferFrom(longReceiver, otherUnderwriter, _longTokenId(), size, "");
+        option.safeTransferFrom(longReceiver, otherLongReceiver, _longTokenId(), size, "");
 
-        vm.startPrank(otherUnderwriter);
+        vm.startPrank(otherLongReceiver);
         option.setApprovalForAll(address(optionReward), true);
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionReward.OptionReward__NotEnoughRedeemableLongs.selector, 0, _size)
-        );
-        optionReward.claimRewards(strike, maturity, _size);
+        vm.expectRevert(IOptionReward.OptionReward__NoRedeemableLongs.selector);
+        optionReward.claimRewards(strike, maturity);
     }
 
     function test_getTotalBaseReserved_ReturnExpectedValue() public {

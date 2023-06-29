@@ -23,7 +23,8 @@ contract OptionRewardProxy is Proxy {
         UD60x18 discount,
         UD60x18 penalty,
         uint256 optionDuration,
-        uint256 lockupDuration
+        uint256 lockupDuration,
+        uint256 claimDuration
     ) {
         MANAGER = manager;
         OwnableStorage.layout().owner = msg.sender;
@@ -48,6 +49,7 @@ contract OptionRewardProxy is Proxy {
         l.discount = discount;
         l.penalty = penalty;
         l.lockupDuration = lockupDuration;
+        l.claimDuration = claimDuration;
     }
 
     function _getImplementation() internal view override returns (address) {

@@ -70,28 +70,52 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     }
 
     /// @inheritdoc IOptionReward
-    function claimRewards(UD60x18 strike, uint64 maturity, UD60x18 contractSize) external nonReentrant {
+    function claimRewards(UD60x18 strike, uint64 maturity) external nonReentrant returns (uint256 baseAmount) {
         _revertIfLockPeriodNotEnded(maturity);
+        _revertIfClaimPeriodEnded(maturity);
 
         uint256 longTokenId = IOptionPS.TokenType.Long.formatTokenId(maturity, strike);
 
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         UD60x18 redeemableLongs = l.redeemableLongs[msg.sender][strike][maturity];
-        if (contractSize > redeemableLongs)
-            revert OptionReward__NotEnoughRedeemableLongs(redeemableLongs, contractSize);
+
+        if (redeemableLongs == ZERO) revert OptionReward__NoRedeemableLongs();
+
+        UD60x18 contractSize = ud(l.option.balanceOf(msg.sender, longTokenId));
+        if (contractSize > redeemableLongs) {
+            contractSize = redeemableLongs;
+        }
 
         // Burn the longs of the users
         l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
         l.redeemableLongs[msg.sender][strike][maturity] = redeemableLongs - contractSize;
 
-        UD60x18 baseAmount = l.rewardPerContract[strike][maturity] * contractSize;
-        uint256 _baseAmount = l.toTokenDecimals(baseAmount, true);
-        l.totalBaseReserved -= _baseAmount;
+        UD60x18 _baseAmount = l.rewardPerContract[strike][maturity] * contractSize;
+        baseAmount = l.toTokenDecimals(_baseAmount, true);
+        l.totalBaseReserved -= baseAmount;
+        l.baseReserved[strike][maturity] -= baseAmount;
 
-        IERC20(l.base).safeTransfer(msg.sender, _baseAmount);
+        IERC20(l.base).safeTransfer(msg.sender, baseAmount);
 
-        emit RewardsClaimed(msg.sender, strike, maturity, contractSize, baseAmount);
+        emit RewardsClaimed(msg.sender, strike, maturity, contractSize, _baseAmount);
+    }
+
+    /// @inheritdoc IOptionReward
+    function releaseRewardsNotClaimed(UD60x18 strike, uint64 maturity) external nonReentrant {
+        _revertIfClaimPeriodNotEnded(maturity);
+
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        uint256 baseReserved = l.baseReserved[strike][maturity];
+
+        if (baseReserved == 0) revert OptionReward__NoBaseReserved(strike, maturity);
+
+        delete l.baseReserved[strike][maturity];
+
+        IERC20(l.base).approve(l.paymentSplitter, baseReserved);
+        IPaymentSplitter(l.paymentSplitter).pay(baseReserved, 0);
+
+        emit RewardsNotClaimedReleased(strike, maturity, l.fromTokenDecimals(baseReserved, true));
     }
 
     /// @inheritdoc IOptionReward
@@ -144,6 +168,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         // from liquidity mining fund to cover the missing amount.
         vars.baseAmountReserved = vars.maxRedeemableLongs * vars.rewardPerContract;
         l.totalBaseReserved = l.totalBaseReserved + l.toTokenDecimals(vars.baseAmountReserved, true);
+        l.baseReserved[strike][maturity] = l.toTokenDecimals(vars.baseAmountReserved, true);
 
         uint256 baseAmountToPay;
         {
@@ -175,6 +200,11 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         return OptionRewardStorage.layout().totalBaseReserved;
     }
 
+    /// @inheritdoc IOptionReward
+    function getRedeemableLongs(address user, UD60x18 strike, uint64 maturity) external view returns (UD60x18) {
+        return OptionRewardStorage.layout().redeemableLongs[user][strike][maturity];
+    }
+
     /// @notice Revert if price is stale
     function _revertIfPriceIsStale(uint256 timestamp) internal view {
         if (block.timestamp - timestamp >= STALE_PRICE_THRESHOLD)
@@ -191,6 +221,20 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
         if (block.timestamp < maturity + l.lockupDuration)
             revert OptionReward__LockupNotExpired(maturity + l.lockupDuration);
+    }
+
+    /// @notice Revert if exercise period has not ended
+    function _revertIfClaimPeriodEnded(uint64 maturity) internal view {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        if (block.timestamp > maturity + l.lockupDuration + l.claimDuration)
+            revert OptionReward__ClaimPeriodEnded(maturity + l.lockupDuration + l.claimDuration);
+    }
+
+    /// @notice Revert if exercise period has not ended
+    function _revertIfClaimPeriodNotEnded(uint64 maturity) internal view {
+        OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
+        if (block.timestamp < maturity + l.lockupDuration + l.claimDuration)
+            revert OptionReward__ClaimPeriodNotEnded(maturity + l.lockupDuration + l.claimDuration);
     }
 
     /// @notice Revert if exercise period has not ended

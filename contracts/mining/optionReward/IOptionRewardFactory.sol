@@ -16,6 +16,7 @@ interface IOptionRewardFactory is IProxyManager {
         UD60x18 penalty,
         uint256 optionDuration,
         uint256 lockupDuration,
+        uint256 claimDuration,
         address proxy
     );
 
@@ -27,6 +28,7 @@ interface IOptionRewardFactory is IProxyManager {
         UD60x18 penalty;
         uint256 optionDuration;
         uint256 lockupDuration;
+        uint256 claimDuration;
     }
 
     function isProxyDeployed(address proxy) external view returns (bool);

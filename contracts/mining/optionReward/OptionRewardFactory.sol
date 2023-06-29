@@ -33,7 +33,8 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager {
                 args.discount,
                 args.penalty,
                 args.optionDuration,
-                args.lockupDuration
+                args.lockupDuration,
+                args.claimDuration
             )
         );
 
@@ -50,6 +51,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager {
             args.penalty,
             args.optionDuration,
             args.lockupDuration,
+            args.claimDuration,
             proxy
         );
     }
