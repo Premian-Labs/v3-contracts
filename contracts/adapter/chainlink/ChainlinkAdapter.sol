@@ -382,46 +382,56 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
         (uint16 phaseId, uint64 nextAggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
-        int256 previousPrice = price;
-        uint256 previousUpdatedAt = updatedAt;
+        int256 leftPrice;
+        uint256 leftUpdatedAt;
+        int256 rightPrice = price;
+        uint256 rightUpdatedAt = updatedAt;
 
         // if the last observation is after the target skip loop
         bool skip;
         if (target >= updatedAt) skip = true;
 
-        uint64 lowestAggregatorRoundId = 0;
-        uint64 highestAggregatorRoundId = nextAggregatorRoundId;
+        {
+            uint64 lowestAggregatorRoundId = 0;
+            uint64 highestAggregatorRoundId = nextAggregatorRoundId;
 
-        // perform binary search to find the roundId that is closest to the target
-        while (!skip && lowestAggregatorRoundId <= highestAggregatorRoundId) {
-            nextAggregatorRoundId = lowestAggregatorRoundId + (highestAggregatorRoundId - lowestAggregatorRoundId) / 2;
-            roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, nextAggregatorRoundId);
-            (, price, , updatedAt, ) = _getRoundData(feed, roundId);
+            // perform binary search to find the roundId that is closest to the target
+            while (!skip && lowestAggregatorRoundId <= highestAggregatorRoundId) {
+                nextAggregatorRoundId =
+                    lowestAggregatorRoundId +
+                    (highestAggregatorRoundId - lowestAggregatorRoundId) /
+                    2;
+                roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, nextAggregatorRoundId);
+                (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
-            if (target == updatedAt) break;
+                if (target == updatedAt) {
+                    skip = true;
+                    break;
+                }
 
-            uint256 currentUpdateDistance;
-            if (target > updatedAt) {
-                currentUpdateDistance = target - updatedAt;
-                lowestAggregatorRoundId = nextAggregatorRoundId + 1;
+                if (target > updatedAt) {
+                    lowestAggregatorRoundId = nextAggregatorRoundId + 1;
+                    leftPrice = price;
+                    leftUpdatedAt = updatedAt;
+                } else {
+                    rightPrice = price;
+                    rightUpdatedAt = updatedAt;
+
+                    if (nextAggregatorRoundId == 0) break;
+
+                    highestAggregatorRoundId = nextAggregatorRoundId - 1;
+                }
+            }
+        }
+
+        if (!skip) {
+            if (target - leftUpdatedAt < rightUpdatedAt - target) {
+                price = leftPrice;
+                updatedAt = leftUpdatedAt;
             } else {
-                if (nextAggregatorRoundId == 0) break;
-                currentUpdateDistance = updatedAt - target;
-                highestAggregatorRoundId = nextAggregatorRoundId - 1;
+                price = rightPrice;
+                updatedAt = rightUpdatedAt;
             }
-
-            uint256 previousUpdateDistance = (previousUpdatedAt > target)
-                ? previousUpdatedAt - target
-                : target - previousUpdatedAt;
-
-            if (previousUpdateDistance < currentUpdateDistance) {
-                price = previousPrice;
-                updatedAt = previousUpdatedAt;
-                break;
-            }
-
-            previousPrice = price;
-            previousUpdatedAt = updatedAt;
         }
 
         _revertIfPriceAfterTargetStale(target, updatedAt);
