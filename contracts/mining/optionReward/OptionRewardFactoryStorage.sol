@@ -29,7 +29,9 @@ library OptionRewardFactoryStorage {
                     args.paymentSplitter,
                     args.discount,
                     args.penalty,
-                    args.lockupDuration
+                    args.optionDuration,
+                    args.lockupDuration,
+                    args.claimDuration
                 )
             );
     }
