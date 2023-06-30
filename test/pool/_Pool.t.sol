@@ -6,7 +6,7 @@ import {PoolAnnihilateTest} from "./Pool.annihilate.t.sol";
 import {PoolClaimTest} from "./Pool.claim.t.sol";
 import {PoolDepositTest} from "./Pool.deposit.t.sol";
 import {PoolExerciseTest} from "./Pool.exercise.t.sol";
-import {PoolFillQuoteRFQTest} from "./Pool.fillQuoteRFQ.t.sol";
+import {PoolFillQuoteOBTest} from "./Pool.fillQuoteOB.t.sol";
 import {PoolFlashLoanTest} from "./Pool.flashLoan.t.sol";
 import {PoolGetQuoteAMMTest} from "./Pool.getQuoteAMM.t.sol";
 import {PoolSettleTest} from "./Pool.settle.t.sol";
@@ -24,7 +24,7 @@ abstract contract PoolTest is
     PoolClaimTest,
     PoolDepositTest,
     PoolExerciseTest,
-    PoolFillQuoteRFQTest,
+    PoolFillQuoteOBTest,
     PoolFlashLoanTest,
     PoolGetQuoteAMMTest,
     PoolSettleTest,

@@ -51,8 +51,8 @@ interface IPoolEvents {
 
     event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
-    event FillQuoteRFQ(
-        bytes32 indexed quoteRFQHash,
+    event FillQuoteOB(
+        bytes32 indexed quoteOBHash,
         address indexed user,
         address indexed provider,
         UD60x18 contractSize,
@@ -124,7 +124,7 @@ interface IPoolEvents {
 
     event TransferPosition(address indexed owner, address indexed receiver, uint256 srcTokenId, uint256 destTokenId);
 
-    event CancelQuoteRFQ(address indexed provider, bytes32 quoteRFQHash);
+    event CancelQuoteOB(address indexed provider, bytes32 quoteOBHash);
 
     event FlashLoan(address indexed initiator, address indexed receiver, UD60x18 amount, UD60x18 fee);
 }
