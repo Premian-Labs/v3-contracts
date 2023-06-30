@@ -72,7 +72,7 @@ interface IPoolInternal is IPosition, IPricing {
     struct QuoteOB {
         // The provider of the OB quote
         address provider;
-        // The taker of the RQF quote (address(0) if OB quote should be usable by anyone)
+        // The taker of the OB quote (address(0) if OB quote should be usable by anyone)
         address taker;
         // The normalized option price (18 decimals)
         UD60x18 price;
