@@ -79,7 +79,7 @@ export async function calculateQuoteOBHash(
   quoteOB: QuoteOB,
   poolAddress: string,
 ) {
-  const FILL_QUOTE_RFQ_TYPE_HASH = keccak256(
+  const FILL_QUOTE_OB_TYPE_HASH = keccak256(
     toUtf8Bytes(
       'FillQuoteOB(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
@@ -124,7 +124,7 @@ export async function calculateQuoteOBHash(
         'uint256',
       ],
       [
-        FILL_QUOTE_RFQ_TYPE_HASH,
+        FILL_QUOTE_OB_TYPE_HASH,
         quoteOB.provider,
         quoteOB.taker,
         quoteOB.price,

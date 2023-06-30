@@ -204,14 +204,14 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
         pool.fillQuoteOB(quoteOB, quoteOB.size, sig, address(0));
     }
 
-    function test_cancelQuotesRFQ_Success() public {
+    function test_cancelQuotesOB_Success() public {
         IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
 
         bytes32[] memory quoteOBHashes = new bytes32[](1);
         quoteOBHashes[0] = pool.quoteOBHash(quoteOB);
 
         vm.prank(users.lp);
-        pool.cancelQuotesRFQ(quoteOBHashes);
+        pool.cancelQuotesOB(quoteOBHashes);
 
         vm.expectRevert(IPoolInternal.Pool__QuoteOBCancelled.selector);
         vm.prank(users.trader);

@@ -70,9 +70,9 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct QuoteOB {
-        // The provider of the RFQ quote
+        // The provider of the OB quote
         address provider;
-        // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
+        // The taker of the RQF quote (address(0) if OB quote should be usable by anyone)
         address taker;
         // The normalized option price (18 decimals)
         UD60x18 price;
@@ -80,9 +80,9 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 size;
         // Whether provider is buying or selling
         bool isBuy;
-        // Timestamp until which the RFQ quote is valid
+        // Timestamp until which the OB quote is valid
         uint256 deadline;
-        // Salt to make RFQ quote unique
+        // Salt to make OB quote unique
         uint256 salt;
     }
 
@@ -170,11 +170,11 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct FillQuoteOBArgsInternal {
-        // The user filling the RFQ quote
+        // The user filling the OB quote
         address user;
-        // The referrer of the user filling the RFQ quote
+        // The referrer of the user filling the OB quote
         address referrer;
-        // The size to fill from the RFQ quote (18 decimals)
+        // The size to fill from the OB quote (18 decimals)
         UD60x18 size;
         // secp256k1 'r', 's', and 'v' value
         Signature signature;

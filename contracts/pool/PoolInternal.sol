@@ -67,7 +67,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     // Number of seconds required to pass before a deposit can be withdrawn (To prevent flash loans and JIT)
     uint256 internal constant WITHDRAWAL_DELAY = 60;
 
-    bytes32 internal constant FILL_QUOTE_RFQ_TYPE_HASH =
+    bytes32 internal constant FILL_QUOTE_OB_TYPE_HASH =
         keccak256(
             "FillQuoteOB(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)"
         );
@@ -853,7 +853,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
     }
 
-    /// @notice Calculates the RFQ quote premium and fee
+    /// @notice Calculates the OB quote premium and fee
     function _calculateQuoteOBPremiumAndFee(
         PoolStorage.Layout storage l,
         address taker,
@@ -891,11 +891,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return r;
     }
 
-    /// @notice Functionality to support the RFQ / OTC system. An LP can create a RFQ quote for which he will do an OTC
+    /// @notice Functionality to support the OB / OTC system. An LP can create a OB quote for which he will do an OTC
     ///         trade through the exchange. Takers can buy from / sell to the LP then partially or fully while having
     ///         the price guaranteed.
     /// @param args The fillQuoteOB parameters
-    /// @param quoteOB The RFQ quote given by the provider
+    /// @param quoteOB The OB quote given by the provider
     /// @return premiumTaker The premium paid by the taker (poolToken decimals)
     /// @return deltaTaker The net collateral / longs / shorts change for taker of the trade.
     function _fillQuoteOB(
@@ -1787,11 +1787,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (price % Pricing.MIN_TICK_DISTANCE != ZERO) revert Pool__TickWidthInvalid(price);
     }
 
-    /// @notice Returns the encoded RFQ quote hash
+    /// @notice Returns the encoded OB quote hash
     function _quoteOBHash(IPoolInternal.QuoteOB memory quoteOB) internal view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
-                FILL_QUOTE_RFQ_TYPE_HASH,
+                FILL_QUOTE_OB_TYPE_HASH,
                 quoteOB.provider,
                 quoteOB.taker,
                 quoteOB.price,
@@ -1914,7 +1914,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__AboveMaxSlippage(marketPrice.unwrap(), minMarketPrice.unwrap(), maxMarketPrice.unwrap());
     }
 
-    /// @notice Returns true if RFQ quote and RFQ quote balance are valid
+    /// @notice Returns true if OB quote and OB quote balance are valid
     function _areQuoteOBAndBalanceValid(
         PoolStorage.Layout storage l,
         FillQuoteOBArgsInternal memory args,
@@ -1928,7 +1928,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return _isQuoteOBBalanceValid(l, args, quoteOB);
     }
 
-    /// @notice Revert if RFQ quote is invalid
+    /// @notice Revert if OB quote is invalid
     function _revertIfQuoteOBInvalid(
         PoolStorage.Layout storage l,
         FillQuoteOBArgsInternal memory args,
@@ -1938,7 +1938,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _isQuoteOBValid(l, args, quoteOB, quoteOBHash, true);
     }
 
-    /// @notice Returns true if RFQ quote is valid
+    /// @notice Returns true if OB quote is valid
     function _isQuoteOBValid(
         PoolStorage.Layout storage l,
         FillQuoteOBArgsInternal memory args,
@@ -1982,7 +1982,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         return (true, InvalidQuoteOBError.None);
     }
 
-    /// @notice Returns true if RFQ quote balance is valid
+    /// @notice Returns true if OB quote balance is valid
     function _isQuoteOBBalanceValid(
         PoolStorage.Layout storage l,
         FillQuoteOBArgsInternal memory args,

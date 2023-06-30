@@ -66,7 +66,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolTrade
-    function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
+    function cancelQuotesOB(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
             l.quoteOBAmountFilled[msg.sender][hashes[i]] = ud(type(uint256).max);

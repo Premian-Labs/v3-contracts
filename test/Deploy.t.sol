@@ -325,7 +325,7 @@ contract DeployTest is Test, Assertions {
         poolDepositWithdrawSelectors.push(poolDepositWithdrawImpl.getNearestTicksBelow.selector);
 
         // PoolTrade
-        poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.cancelQuotesOB.selector);
         poolTradeSelectors.push(poolTradeImpl.fillQuoteOB.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
