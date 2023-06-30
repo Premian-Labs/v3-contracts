@@ -39,6 +39,7 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         }
     }
 
+    /// @inheritdoc IReentrancyGuardExtended
     function removeReentrancyGuardSelectorsIgnored(bytes4[] memory selectorsIgnored) external onlyOwner {
         ReentrancyGuardExtendedStorage.Layout storage l = ReentrancyGuardExtendedStorage.layout();
         for (uint256 i = 0; i < selectorsIgnored.length; i++) {
@@ -47,23 +48,29 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         }
     }
 
+    /// @inheritdoc IReentrancyGuardExtended
     function setReentrancyGuardDisabled(bool disabled) external onlyOwner {
         ReentrancyGuardExtendedStorage.layout().disabled = disabled;
         emit SetReentrancyGuardDisabled(disabled);
     }
 
-    function staticCallCheck() external {
+    /// @notice Triggers a static-call check
+    /// @dev For internal use only
+    function __staticCallCheck() external {
         emit ReentrancyStaticCallCheck();
     }
 
+    /// @notice Initiates an external call to `this` to determine if the current call is static
     function _isStaticCall() internal returns (bool) {
-        try this.staticCallCheck() {
+        try this.__staticCallCheck() {
             return false;
         } catch {
             return true;
         }
     }
 
+    /// @notice Sets the reentrancy guard status to locked and returns true if the guard is not locked, overridden, nor
+    ///         is the call static
     function _lockReentrancyGuard(bytes memory msgData) internal virtual returns (bool) {
         ReentrancyGuardExtendedStorage.Layout storage le = ReentrancyGuardExtendedStorage.layout();
         if (le.disabled) return false;
@@ -77,10 +84,12 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         return true;
     }
 
+    /// @notice Sets the reentrancy guard status to unlocked
     function _unlockReentrancyGuard() internal virtual override {
         ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_UNLOCKED;
     }
 
+    /// @notice Returns the derived function selector from the provided `msgData`
     function _getFunctionSelector(bytes memory msgData) private pure returns (bytes4 selector) {
         for (uint i = 0; i < 4; i++) {
             selector |= bytes4(msgData[i] & 0xFF) >> (i * 8);
