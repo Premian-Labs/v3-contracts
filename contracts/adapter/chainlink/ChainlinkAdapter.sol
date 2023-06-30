@@ -2,6 +2,10 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
+//
+
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -380,42 +384,28 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address feed = _feed(tokenIn, tokenOut);
 
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
-
-        (uint16 phaseId, uint64 aggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
-
-        int256 previousPrice = price;
-        uint256 previousUpdatedAt = updatedAt;
+        (uint16 phaseId, uint64 nextAggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
         // if the last observation is after the target skip loop
-        if (target >= updatedAt) aggregatorRoundId = 0;
+        bool skip;
+        if (target >= updatedAt) skip = true;
 
-        // ===========================================================
-        // This loop will attempt to find the price closest to the target time, however, if
-        // target - updatedAt >= PRICE_STALE_THRESHOLD the price is considered stale.
-        // If the price is stale, there are two possible outcomes:
-        //  - If price is stale and block.timestamp - target < MAX_DELAY, the call will revert.
-        //  - If price is stale and block.timestamp - target >= MAX_DELAY, price closest to target time is returned.
-        // ===========================================================
+        uint64 lowestAggregatorRoundId = 0;
+        uint64 highestAggregatorRoundId = nextAggregatorRoundId;
 
-        while (aggregatorRoundId > 0) {
-            roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, --aggregatorRoundId);
-
+        // perform binary search to find the roundId that is closest to the target
+        while (!skip && lowestAggregatorRoundId <= highestAggregatorRoundId) {
+            nextAggregatorRoundId = lowestAggregatorRoundId + (highestAggregatorRoundId - lowestAggregatorRoundId) / 2;
+            roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, nextAggregatorRoundId);
             (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
-            if (target >= updatedAt) {
-                uint256 previousUpdateDistance = previousUpdatedAt - target;
-                uint256 currentUpdateDistance = target - updatedAt;
-
-                if (previousUpdateDistance < currentUpdateDistance) {
-                    price = previousPrice;
-                    updatedAt = previousUpdatedAt;
-                }
-
-                break;
+            if (target == updatedAt) break;
+            if (target > updatedAt) {
+                lowestAggregatorRoundId = nextAggregatorRoundId + 1;
+            } else {
+                if (nextAggregatorRoundId == 0) break;
+                highestAggregatorRoundId = nextAggregatorRoundId - 1;
             }
-
-            previousPrice = price;
-            previousUpdatedAt = updatedAt;
         }
 
         _revertIfPriceAfterTargetStale(target, updatedAt);
