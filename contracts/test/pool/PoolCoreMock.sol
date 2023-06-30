@@ -41,8 +41,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
     }
 
-    function quoteRFQHash(QuoteRFQ memory quoteRFQ) external view returns (bytes32) {
-        return _quoteRFQHash(quoteRFQ);
+    function quoteOBHash(QuoteOB memory quoteOB) external view returns (bytes32) {
+        return _quoteOBHash(quoteOB);
     }
 
     function parseTokenId(

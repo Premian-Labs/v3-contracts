@@ -80,7 +80,7 @@ contract DeployTest is Test, Assertions {
 
     Position.Key posKey;
 
-    IPoolInternal.QuoteRFQ quoteRFQ;
+    IPoolInternal.QuoteOB quoteOB;
 
     Users users;
 
@@ -147,7 +147,7 @@ contract DeployTest is Test, Assertions {
             isCallPool: true
         });
 
-        quoteRFQ = IPoolInternal.QuoteRFQ({
+        quoteOB = IPoolInternal.QuoteOB({
             provider: users.lp,
             taker: address(0),
             price: ud(0.1 ether),
@@ -282,7 +282,7 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.getLongRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getShortRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
-        poolCoreMockSelectors.push(poolCoreMockImpl.quoteRFQHash.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.quoteOBHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
@@ -326,13 +326,13 @@ contract DeployTest is Test, Assertions {
 
         // PoolTrade
         poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteOB.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
-        poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
-        poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
+        poolTradeSelectors.push(poolTradeImpl.getQuoteOBFilledAmount.selector);
+        poolTradeSelectors.push(poolTradeImpl.isQuoteOBValid.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
 
         IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);

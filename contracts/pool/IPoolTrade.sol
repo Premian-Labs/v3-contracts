@@ -26,14 +26,14 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     ///         An LP can create a RFQ quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
-    /// @param quoteRFQ The RFQ quote given by the provider
+    /// @param quoteOB The RFQ quote given by the provider
     /// @param size The size to fill from the RFQ quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
     /// @param referrer The referrer of the user filling the RFQ quote
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    function fillQuoteRFQ(
-        QuoteRFQ calldata quoteRFQ,
+    function fillQuoteOB(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata signature,
         address referrer
@@ -64,18 +64,18 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
     function cancelQuotesRFQ(bytes32[] calldata hashes) external;
 
     /// @notice Returns whether or not an RFQ quote is valid, given a fill size
-    /// @param quoteRFQ The RFQ quote to check
+    /// @param quoteOB The RFQ quote to check
     /// @param size Size to fill from the RFQ quote (18 decimals)
     /// @param sig secp256k1 Signature
-    function isQuoteRFQValid(
-        QuoteRFQ calldata quoteRFQ,
+    function isQuoteOBValid(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
-    ) external view returns (bool, InvalidQuoteRFQError);
+    ) external view returns (bool, InvalidQuoteOBError);
 
     /// @notice Returns the size already filled for a given RFQ quote
     /// @param provider Provider of the RFQ quote
-    /// @param quoteRFQHash Hash of the RFQ quote
+    /// @param quoteOBHash Hash of the RFQ quote
     /// @return The size already filled (18 decimals)
-    function getQuoteRFQFilledAmount(address provider, bytes32 quoteRFQHash) external view returns (UD60x18);
+    function getQuoteOBFilledAmount(address provider, bytes32 quoteOBHash) external view returns (UD60x18);
 }

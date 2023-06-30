@@ -26,8 +26,8 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
     error Pool__InvalidMonth(uint256 month);
-    error Pool__InvalidQuoteRFQSignature();
-    error Pool__InvalidQuoteRFQTaker();
+    error Pool__InvalidQuoteOBSignature();
+    error Pool__InvalidQuoteOBTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
     error Pool__InvalidReconciliation(uint256 crossings);
     error Pool__InvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 depositSize);
@@ -43,9 +43,9 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__OutOfBoundsPrice(UD60x18 price);
     error Pool__PositionDoesNotExist(address owner, uint256 tokenId);
     error Pool__PositionCantHoldLongAndShort(UD60x18 longs, UD60x18 shorts);
-    error Pool__QuoteRFQCancelled();
-    error Pool__QuoteRFQExpired();
-    error Pool__QuoteRFQOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteRFQSize);
+    error Pool__QuoteOBCancelled();
+    error Pool__QuoteOBExpired();
+    error Pool__QuoteOBOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteOBSize);
     error Pool__SettlementFailed();
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
@@ -69,7 +69,7 @@ interface IPoolInternal is IPosition, IPricing {
         UD60x18 shortRate;
     }
 
-    struct QuoteRFQ {
+    struct QuoteOB {
         // The provider of the RFQ quote
         address provider;
         // The taker of the RQF quote (address(0) if RFQ quote should be usable by anyone)
@@ -86,14 +86,14 @@ interface IPoolInternal is IPosition, IPricing {
         uint256 salt;
     }
 
-    enum InvalidQuoteRFQError {
+    enum InvalidQuoteOBError {
         None,
-        QuoteRFQExpired,
-        QuoteRFQCancelled,
-        QuoteRFQOverfilled,
+        QuoteOBExpired,
+        QuoteOBCancelled,
+        QuoteOBOverfilled,
         OutOfBoundsPrice,
-        InvalidQuoteRFQTaker,
-        InvalidQuoteRFQSignature,
+        InvalidQuoteOBTaker,
+        InvalidQuoteOBSignature,
         InvalidAssetUpdate,
         InsufficientCollateralAllowance,
         InsufficientCollateralBalance,
@@ -169,7 +169,7 @@ interface IPoolInternal is IPosition, IPricing {
         bytes32 s;
     }
 
-    struct FillQuoteRFQArgsInternal {
+    struct FillQuoteOBArgsInternal {
         // The user filling the RFQ quote
         address user;
         // The referrer of the user filling the RFQ quote
