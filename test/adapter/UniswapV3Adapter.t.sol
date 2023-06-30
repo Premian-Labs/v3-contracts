@@ -143,7 +143,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
         adapter.upsertPair(WETH, WBTC);
     }
 
-    function test_quote_ReturnQuoteForPair() public {
+    function test_getPrice_ReturnQuoteForPair() public {
         // Expected values exported from Defilama
         UD60x18[19] memory expected = [
             ud(70927436248222092), // WETH BTC
@@ -171,41 +171,41 @@ contract UniswapV3AdapterTest is Test, Assertions {
             Pool memory p = pools[i];
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+            UD60x18 price = adapter.getPrice(p.tokenIn, p.tokenOut);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
 
-    function test_quote_RevertIf_PairNotSupported() public {
+    function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
         );
-        adapter.quote(WETH, address(0));
+        adapter.getPrice(WETH, address(0));
     }
 
-    function test_quote_RevertIf_PairNotAdded_AndCardinalityMustBeIncreased() public {
+    function test_getPrice_RevertIf_PairNotAdded_AndCardinalityMustBeIncreased() public {
         adapter.setCardinalityPerMinute(200);
         vm.expectRevert(
             abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__ObservationCardinalityTooLow.selector, 1, 2000)
         );
-        adapter.quote(WETH, DAI);
+        adapter.getPrice(WETH, DAI);
     }
 
-    function test_quote_FindPath_IfPairNotAdded() public {
+    function test_getPrice_FindPath_IfPairNotAdded() public {
         // must increase cardinality to 40 for pool
         IUniswapV3Pool(0xD8dEC118e1215F02e10DB846DCbBfE27d477aC19).increaseObservationCardinalityNext(
             TARGET_CARDINALITY
         );
 
-        assertGt(adapter.quote(WETH, DAI).unwrap(), 0);
+        assertGt(adapter.getPrice(WETH, DAI).unwrap(), 0);
     }
 
-    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenNoPoolsCached() public {
+    function test_getPrice_SkipUninitializedPools_AndProvideQuote_WhenNoPoolsCached() public {
         address tokenIn = WETH;
         address tokenOut = MKR;
 
@@ -218,18 +218,18 @@ contract UniswapV3AdapterTest is Test, Assertions {
         );
 
         IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(tokenIn, tokenOut, 100);
-        assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
+        assertGt(adapter.getPrice(tokenIn, tokenOut).unwrap(), 0);
     }
 
-    function test_quote_SkipUninitializedPools_AndProvideQuote_WhenPoolsAreCached() public {
+    function test_getPrice_SkipUninitializedPools_AndProvideQuote_WhenPoolsAreCached() public {
         address tokenIn = WETH;
         address tokenOut = MKR;
 
         adapter.upsertPair(tokenIn, tokenOut);
-        assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
+        assertGt(adapter.getPrice(tokenIn, tokenOut).unwrap(), 0);
 
         IUniswapV3Factory(UNISWAP_V3_FACTORY).createPool(tokenIn, tokenOut, 100);
-        assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
+        assertGt(adapter.getPrice(tokenIn, tokenOut).unwrap(), 0);
 
         IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db).initialize(4295128740);
 
@@ -240,28 +240,28 @@ contract UniswapV3AdapterTest is Test, Assertions {
                 TARGET_CARDINALITY
             )
         );
-        adapter.quote(tokenIn, tokenOut);
+        adapter.getPrice(tokenIn, tokenOut);
 
         IUniswapV3Pool(0xd9d92C02a8fd1DdB731381f1351DACA19928E0db).increaseObservationCardinalityNext(
             TARGET_CARDINALITY
         );
 
         vm.warp(block.timestamp + 600);
-        assertGt(adapter.quote(tokenIn, tokenOut).unwrap(), 0);
+        assertGt(adapter.getPrice(tokenIn, tokenOut).unwrap(), 0);
     }
 
-    function test_quote_ReturnQuote_UsingCorrectDenomination() public {
+    function test_getPrice_ReturnQuote_UsingCorrectDenomination() public {
         address tokenIn = WETH; // 18 decimals
         address tokenOut = DAI; // 18 decimals
 
         adapter.upsertPair(tokenIn, tokenOut);
 
-        UD60x18 quote = adapter.quote(tokenIn, tokenOut);
-        UD60x18 invertedQuote = adapter.quote(tokenOut, tokenIn);
+        UD60x18 price = adapter.getPrice(tokenIn, tokenOut);
+        UD60x18 invertedQuote = adapter.getPrice(tokenOut, tokenIn);
         assertApproxEqAbs(
-            quote.unwrap(),
+            price.unwrap(),
             (ud(1e18) / invertedQuote).unwrap(),
-            quote.unwrap() / 10000 // 0.01% tolerance
+            price.unwrap() / 10000 // 0.01% tolerance
         );
 
         //
@@ -271,13 +271,13 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         adapter.upsertPair(tokenIn, tokenOut);
 
-        quote = adapter.quote(tokenIn, tokenOut);
-        invertedQuote = adapter.quote(tokenOut, tokenIn);
+        price = adapter.getPrice(tokenIn, tokenOut);
+        invertedQuote = adapter.getPrice(tokenOut, tokenIn);
 
         assertApproxEqAbs(
-            quote.unwrap(),
+            price.unwrap(),
             (ud(1e18) / invertedQuote).unwrap(),
-            quote.unwrap() / 10000 // 0.01% tolerance
+            price.unwrap() / 10000 // 0.01% tolerance
         );
 
         //
@@ -287,17 +287,17 @@ contract UniswapV3AdapterTest is Test, Assertions {
 
         adapter.upsertPair(tokenIn, tokenOut);
 
-        quote = adapter.quote(tokenIn, tokenOut);
-        invertedQuote = adapter.quote(tokenOut, tokenIn);
+        price = adapter.getPrice(tokenIn, tokenOut);
+        invertedQuote = adapter.getPrice(tokenOut, tokenIn);
 
         assertApproxEqAbs(
-            quote.unwrap(),
+            price.unwrap(),
             (ud(1e18) / invertedQuote).unwrap(),
-            quote.unwrap() / 10000 // 0.01% tolerance
+            price.unwrap() / 10000 // 0.01% tolerance
         );
     }
 
-    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+    function test_getPriceAt_ReturnQuoteForPairFromTarget() public {
         // Expected values exported from Defilama
         UD60x18[19] memory expected = [
             ud(70759868720940824), // WETH BTC
@@ -325,17 +325,17 @@ contract UniswapV3AdapterTest is Test, Assertions {
             Pool memory p = pools[i];
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+            UD60x18 price = adapter.getPriceAt(p.tokenIn, p.tokenOut, target);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
 
-    function test_quoteFrom_RevertIf_OldestObservationLessThanTwapPeriod() public {
+    function test_getPriceAt_RevertIf_OldestObservationLessThanTwapPeriod() public {
         mainnetFork = vm.createFork(rpcUrl, 16597040);
         vm.selectFork(mainnetFork);
         _deployAdapter();
@@ -345,7 +345,7 @@ contract UniswapV3AdapterTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IUniswapV3Adapter.UniswapV3Adapter__InsufficientObservationPeriod.selector, 480, 600)
         );
-        adapter.quoteFrom(UNI, AAVE, target);
+        adapter.getPriceAt(UNI, AAVE, target);
     }
 
     function test_poolsForPair_ReturnPoolsForPair() public {

@@ -1,5 +1,5 @@
 import { signData } from './rpc';
-import { QuoteRFQ } from './types';
+import { QuoteOB } from './types';
 import { Provider } from '@ethersproject/providers';
 import {
   defaultAbiCoder,
@@ -8,7 +8,7 @@ import {
   toUtf8Bytes,
 } from 'ethers/lib/utils';
 
-interface QuoteRFQMessage {
+interface QuoteOBMessage {
   provider: string;
   taker: string;
   price: string;
@@ -32,10 +32,10 @@ const EIP712Domain = [
   { name: 'verifyingContract', type: 'address' },
 ];
 
-export async function signQuoteRFQ(
+export async function signQuoteOB(
   w3Provider: Provider,
   poolAddress: string,
-  quoteRFQ: QuoteRFQ,
+  quoteOB: QuoteOB,
 ) {
   const domain: Domain = {
     name: 'Premia',
@@ -44,18 +44,18 @@ export async function signQuoteRFQ(
     verifyingContract: poolAddress,
   };
 
-  const message: QuoteRFQMessage = {
-    ...quoteRFQ,
-    price: quoteRFQ.price.toString(),
-    size: quoteRFQ.size.toString(),
-    deadline: quoteRFQ.deadline.toString(),
-    salt: quoteRFQ.salt.toString(),
+  const message: QuoteOBMessage = {
+    ...quoteOB,
+    price: quoteOB.price.toString(),
+    size: quoteOB.size.toString(),
+    deadline: quoteOB.deadline.toString(),
+    salt: quoteOB.salt.toString(),
   };
 
   const typedData = {
     types: {
       EIP712Domain,
-      FillQuoteRFQ: [
+      FillQuoteOB: [
         { name: 'provider', type: 'address' },
         { name: 'taker', type: 'address' },
         { name: 'price', type: 'uint256' },
@@ -65,23 +65,23 @@ export async function signQuoteRFQ(
         { name: 'salt', type: 'uint256' },
       ],
     },
-    primaryType: 'FillQuoteRFQ',
+    primaryType: 'FillQuoteOB',
     domain,
     message,
   };
-  const sig = await signData(w3Provider, quoteRFQ.provider, typedData);
+  const sig = await signData(w3Provider, quoteOB.provider, typedData);
 
   return { ...sig, ...message };
 }
 
-export async function calculateQuoteRFQHash(
+export async function calculateQuoteOBHash(
   w3Provider: Provider,
-  quoteRFQ: QuoteRFQ,
+  quoteOB: QuoteOB,
   poolAddress: string,
 ) {
-  const FILL_QUOTE_RFQ_TYPE_HASH = keccak256(
+  const FILL_QUOTE_OB_TYPE_HASH = keccak256(
     toUtf8Bytes(
-      'FillQuoteRFQ(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
+      'FillQuoteOB(address provider,address taker,uint256 price,uint256 size,bool isBuy,uint256 deadline,uint256 salt)',
     ),
   );
 
@@ -124,14 +124,14 @@ export async function calculateQuoteRFQHash(
         'uint256',
       ],
       [
-        FILL_QUOTE_RFQ_TYPE_HASH,
-        quoteRFQ.provider,
-        quoteRFQ.taker,
-        quoteRFQ.price,
-        quoteRFQ.size,
-        quoteRFQ.isBuy,
-        quoteRFQ.deadline,
-        quoteRFQ.salt,
+        FILL_QUOTE_OB_TYPE_HASH,
+        quoteOB.provider,
+        quoteOB.taker,
+        quoteOB.price,
+        quoteOB.size,
+        quoteOB.isBuy,
+        quoteOB.deadline,
+        quoteOB.salt,
       ],
     ),
   );

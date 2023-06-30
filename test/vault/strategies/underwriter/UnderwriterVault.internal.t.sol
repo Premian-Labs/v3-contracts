@@ -158,7 +158,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         poolKey.strike = strike1;
         factory.deployPool{value: 1 ether}(poolKey);
 
-        oracleAdapter.setQuoteFrom(t0, ud(1500e18));
+        oracleAdapter.setPriceAt(t0, ud(1500e18));
 
         vm.startPrank(users.caller);
         vault.mintFromPool(strike1, t0, size);
@@ -232,9 +232,9 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         infos[2].sizes[1] = ud(3e18);
         infos[2].sizes[2] = ud(1e18);
 
-        oracleAdapter.setQuoteFrom(t0, ud(1500e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1500e18));
-        oracleAdapter.setQuoteFrom(t2, ud(1500e18));
+        oracleAdapter.setPriceAt(t0, ud(1500e18));
+        oracleAdapter.setPriceAt(t1, ud(1500e18));
+        oracleAdapter.setPriceAt(t2, ud(1500e18));
 
         addDeposit(users.caller, totalAssets);
         vault.setListingsAndSizes(infos);

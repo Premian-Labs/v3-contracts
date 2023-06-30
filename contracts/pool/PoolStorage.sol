@@ -64,8 +64,8 @@ library PoolStorage {
         // Settlement price of option
         UD60x18 settlementPrice;
         mapping(bytes32 key => Position.Data) positions;
-        // Size of RFQ quotes already filled
-        mapping(address provider => mapping(bytes32 hash => UD60x18 amountFilled)) quoteRFQAmountFilled;
+        // Size of OB quotes already filled
+        mapping(address provider => mapping(bytes32 hash => UD60x18 amountFilled)) quoteOBAmountFilled;
         // Set to true after maturity, to remove factory initialization discount
         bool initFeeDiscountRemoved;
         EnumerableSet.UintSet tokenIds;
@@ -124,7 +124,7 @@ library PoolStorage {
 
     function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
         if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(l.base, l.quote, l.maturity);
+            l.settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
         }
 
         return l.settlementPrice;

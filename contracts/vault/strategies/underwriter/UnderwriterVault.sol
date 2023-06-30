@@ -86,7 +86,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     /// @return The spot price at the current time
     function _getSpotPrice() internal view virtual returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote);
+        return IOracleAdapter(l.oracleAdapter).getPrice(l.base, l.quote);
     }
 
     /// @notice Gets the spot price at the given timestamp
@@ -96,7 +96,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UnderwriterVaultStorage.Layout storage l,
         uint256 timestamp
     ) internal view returns (UD60x18) {
-        return IOracleAdapter(l.oracleAdapter).quoteFrom(l.base, l.quote, timestamp);
+        return IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, timestamp);
     }
 
     /// @notice Gets the total liabilities value of the basket of expired

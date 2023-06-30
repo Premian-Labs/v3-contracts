@@ -222,7 +222,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.feed(EUL, DAI), address(0));
     }
 
-    function test_quote_ReturnQuoteForPair() public {
+    function test_getPrice_ReturnPriceForPair() public {
         // Expected values exported from Defilama
         UD60x18[39] memory expected = [
             ud(1551253958184865268777), // WETH CHAINLINK_USD
@@ -273,10 +273,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
             _addWBTCUSD(p.path);
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+            UD60x18 price = adapter.getPrice(p.tokenIn, p.tokenOut);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 3) / 100 // 3% tolerance
             );
@@ -286,7 +286,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_quote_Return1e18ForPairWithSameFeed() public {
+    function test_getPrice_Return1e18ForPairWithSameFeed() public {
         // tokenIn > tokenOut, tokenIn == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
         address testWETH = address(new ERC20Mock("testWETH", 18));
 
@@ -299,20 +299,20 @@ contract ChainlinkAdapterTest is Test, Assertions {
         );
 
         adapter.batchRegisterFeedMappings(feedMapping);
-        assertEq(adapter.quote(WETH, testWETH), ud(1e18));
-        assertEq(adapter.quote(testWETH, WETH), ud(1e18));
+        assertEq(adapter.getPrice(WETH, testWETH), ud(1e18));
+        assertEq(adapter.getPrice(testWETH, WETH), ud(1e18));
     }
 
-    function test_quote_ReturnQuoteUsingCorrectDenomination() public {
+    function test_getPrice_ReturnPriceUsingCorrectDenomination() public {
         address tokenIn = WETH;
         address tokenOut = DAI;
 
         adapter.upsertPair(tokenIn, tokenOut);
 
-        UD60x18 quote = adapter.quote(tokenIn, tokenOut);
-        UD60x18 invertedQuote = adapter.quote(tokenOut, tokenIn);
+        UD60x18 price = adapter.getPrice(tokenIn, tokenOut);
+        UD60x18 invertedPrice = adapter.getPrice(tokenOut, tokenIn);
 
-        assertEq(quote, ud(1e18) / invertedQuote);
+        assertEq(price, ud(1e18) / invertedPrice);
 
         //
 
@@ -321,29 +321,29 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         adapter.upsertPair(tokenIn, tokenOut);
 
-        quote = adapter.quote(tokenIn, tokenOut);
-        invertedQuote = adapter.quote(tokenOut, tokenIn);
+        price = adapter.getPrice(tokenIn, tokenOut);
+        invertedPrice = adapter.getPrice(tokenOut, tokenIn);
 
-        assertEq(quote, ud(1e18) / invertedQuote);
+        assertEq(price, ud(1e18) / invertedPrice);
     }
 
-    function test_quote_ReturnCorrectQuote_IfPathExistsButNotCached() public {
-        UD60x18 quoteBeforeUpsert = adapter.quote(WETH, DAI);
+    function test_getPrice_ReturnCorrectPrice_IfPathExistsButNotCached() public {
+        UD60x18 priceBeforeUpsert = adapter.getPrice(WETH, DAI);
 
         adapter.upsertPair(WETH, DAI);
-        UD60x18 quote = adapter.quote(WETH, DAI);
+        UD60x18 price = adapter.getPrice(WETH, DAI);
 
-        assertEq(quote, quoteBeforeUpsert);
+        assertEq(price, priceBeforeUpsert);
     }
 
-    function test_quote_RevertIf_PairNotSupported() public {
+    function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
         );
-        adapter.quote(WETH, address(0));
+        adapter.getPrice(WETH, address(0));
     }
 
-    function test_quote_CatchRevert() public {
+    function test_getPrice_CatchRevert() public {
         (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
 
         int256[] memory prices = new int256[](1);
@@ -355,7 +355,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         stub.setup(ChainlinkOraclePriceStub.FailureMode.LastRoundDataRevertWithReason, prices, timestamps);
 
         vm.expectRevert("reverted with reason");
-        adapter.quote(stubCoin, CHAINLINK_USD);
+        adapter.getPrice(stubCoin, CHAINLINK_USD);
 
         //
 
@@ -364,10 +364,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__LatestRoundDataCallReverted.selector, "")
         );
-        adapter.quote(stubCoin, CHAINLINK_USD);
+        adapter.getPrice(stubCoin, CHAINLINK_USD);
     }
 
-    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+    function test_getPriceAt_ReturnPriceForPairFromTarget() public {
         // Expected values exported from Defilama
         UD60x18[39] memory expected = [
             ud(1552329999999999927240), // WETH CHAINLINK_USD
@@ -418,10 +418,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
             _addWBTCUSD(p.path);
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+            UD60x18 price = adapter.getPriceAt(p.tokenIn, p.tokenOut, target);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 3) / 100 // 3% tolerance
             );
@@ -431,7 +431,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_quoteFrom_Return1e18ForPairWithSameFeed() public {
+    function test_getPriceAt_Return1e18ForPairWithSameFeed() public {
         // tokenIn > tokenOut, tokenIn == 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
         address testWETH = address(new ERC20Mock("testWETH", 18));
 
@@ -444,11 +444,11 @@ contract ChainlinkAdapterTest is Test, Assertions {
         );
 
         adapter.batchRegisterFeedMappings(feedMapping);
-        assertEq(adapter.quoteFrom(WETH, testWETH, target), ud(1e18));
-        assertEq(adapter.quoteFrom(testWETH, WETH, target), ud(1e18));
+        assertEq(adapter.getPriceAt(WETH, testWETH, target), ud(1e18));
+        assertEq(adapter.getPriceAt(testWETH, WETH, target), ud(1e18));
     }
 
-    function test_quoteFrom_CatchRevert() public {
+    function test_getPriceAt_CatchRevert() public {
         (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
@@ -466,7 +466,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         stub.setup(ChainlinkOraclePriceStub.FailureMode.GetRoundDataRevertWithReason, prices, timestamps);
 
         vm.expectRevert("reverted with reason");
-        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
 
         //
 
@@ -475,17 +475,17 @@ contract ChainlinkAdapterTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__GetRoundDataCallReverted.selector, "")
         );
-        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
     }
 
-    function test_quoteFrom_RevertIf_TargetIsZero() public {
+    function test_getPriceAt_RevertIf_TargetIsZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__InvalidTarget.selector, 0, block.timestamp)
         );
-        adapter.quoteFrom(WETH, DAI, 0);
+        adapter.getPriceAt(WETH, DAI, 0);
     }
 
-    function test_quoteFrom_RevertIf_TargetGtBlockTimestamp() public {
+    function test_getPriceAt_RevertIf_TargetGtBlockTimestamp() public {
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOracleAdapter.OracleAdapter__InvalidTarget.selector,
@@ -493,10 +493,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
                 block.timestamp
             )
         );
-        adapter.quoteFrom(WETH, DAI, block.timestamp + 1);
+        adapter.getPriceAt(WETH, DAI, block.timestamp + 1);
     }
 
-    function test_quoteFrom_WhenStalePrice_ReturnStalePrice_IfCall12HoursAfterTarget() public {
+    function test_getPriceAt_WhenStalePrice_ReturnStalePrice_IfCall12HoursAfterTarget() public {
         (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
 
         int256[] memory prices = new int256[](1);
@@ -510,10 +510,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
         vm.warp(target + 43200);
         int256 stalePrice = stub.price(0);
 
-        assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(stalePrice) * 1e10));
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(stalePrice) * 1e10));
     }
 
-    function test_quoteFrom_WhenStalePrice_RevertIf_CallWithin12HoursOfTarget() public {
+    function test_getPriceAt_WhenStalePrice_RevertIf_CallWithin12HoursOfTarget() public {
         (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
 
         int256[] memory prices = new int256[](1);
@@ -532,10 +532,10 @@ contract ChainlinkAdapterTest is Test, Assertions {
                 block.timestamp
             )
         );
-        adapter.quoteFrom(stubCoin, CHAINLINK_USD, target);
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
     }
 
-    function _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget() public {
+    function _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget() public {
         (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
 
         {
@@ -547,7 +547,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(0);
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
         //
@@ -566,7 +566,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(0);
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
         //
@@ -587,7 +587,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(0);
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
         //
@@ -608,7 +608,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(1);
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
         //
@@ -625,7 +625,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(1);
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
         //
@@ -649,17 +649,17 @@ contract ChainlinkAdapterTest is Test, Assertions {
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(3);
             // checks that the smallest time delta is returned after one time delta improvement
-            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
     }
 
-    function test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget_IfCallWithin12HoursOfTarget() public {
-        _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget();
+    function test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget_IfCallWithin12HoursOfTarget() public {
+        _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget();
     }
 
-    function test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget_IfCall12HoursAfterTarget() public {
+    function test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget_IfCall12HoursAfterTarget() public {
         vm.warp(target + 43200);
-        _test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget();
+        _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget();
     }
 
     function test_describePricingPath_Success() public {
