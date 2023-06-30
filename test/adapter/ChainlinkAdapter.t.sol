@@ -618,10 +618,34 @@ contract ChainlinkAdapterTest is Test, Assertions {
         timestamps[0] = target - 100;
         timestamps[1] = target - 50;
 
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            freshPrice = stub.price(1);
+            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
 
-        freshPrice = stub.price(1);
-        assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        //
+
+        {
+            int256[] memory prices = new int256[](5);
+            uint256[] memory timestamps = new uint256[](5);
+
+            prices[0] = 50000000000;
+            prices[1] = 100000000000;
+            prices[2] = 200000000000;
+            prices[3] = 300000000000;
+            prices[4] = 400000000000;
+
+            timestamps[0] = target - 500;
+            timestamps[1] = target - 100;
+            timestamps[2] = target - 50; // first improvement
+            timestamps[3] = target; // second improvement (closest)
+            timestamps[4] = target + 500;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            freshPrice = stub.price(3);
+            // checks that the smallest time delta is returned after one time delta improvement
+            assertEq(adapter.quoteFrom(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
     }
 
     function test_quoteFrom_WhenFreshPrice_ReturnClosestPriceToTarget_IfCallWithin12HoursOfTarget() public {
