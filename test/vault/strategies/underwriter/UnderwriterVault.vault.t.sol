@@ -31,7 +31,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-        oracleAdapter.setQuote(spot);
+        oracleAdapter.setPrice(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
         volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
         volOracle.setVolatility(base, spot, ud(1100e18), ud(19178082191780821), ud(1.54e18));
@@ -147,7 +147,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-        oracleAdapter.setQuote(spot);
+        oracleAdapter.setPrice(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
         volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
 
@@ -173,7 +173,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-        oracleAdapter.setQuote(spot);
+        oracleAdapter.setPrice(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;
@@ -495,7 +495,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-        oracleAdapter.setQuote(spot);
+        oracleAdapter.setPrice(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
         volOracle.setVolatility(base, spot, strike, ud(134246575342465753), ud(1.54e18));
 
@@ -521,7 +521,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 lastTradeTimestamp = timestamp - 3 hours;
         vault.setLastTradeTimestamp(lastTradeTimestamp);
 
-        oracleAdapter.setQuote(spot);
+        oracleAdapter.setPrice(spot);
         volOracle.setVolatility(base, spot, strike, ud(19178082191780821), ud(1.54e18));
 
         UD60x18 depositSize = isCallTest ? ud(5e18) : ud(5e18) * strike;

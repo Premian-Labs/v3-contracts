@@ -162,7 +162,7 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
         adapter.upsertPair(DAI, address(1));
     }
 
-    function test_quote_ReturnQuoteForPair() public {
+    function test_getPrice_ReturnQuoteForPair() public {
         // Expected values exported from Defilama
         UD60x18[16] memory expected = [
             ud(21875331315600487869233), // WETH USDC
@@ -187,37 +187,37 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
             Pool memory p = pools[i];
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quote(p.tokenIn, p.tokenOut);
+            UD60x18 price = adapter.getPrice(p.tokenIn, p.tokenOut);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
 
-    function test_quote_RevertIf_TokenIsWrappedNativeToken() public {
+    function test_getPrice_RevertIf_TokenIsWrappedNativeToken() public {
         vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
-        adapter.quote(WETH, DAI);
+        adapter.getPrice(WETH, DAI);
 
         vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
-        adapter.quote(DAI, WETH);
+        adapter.getPrice(DAI, WETH);
     }
 
-    function test_quote_RevertIf_PairCannotBeSupported() public {
+    function test_getPrice_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
-        adapter.quote(address(1), DAI);
+        adapter.getPrice(address(1), DAI);
 
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WETH, address(1))
         );
-        adapter.quote(DAI, address(1));
+        adapter.getPrice(DAI, address(1));
     }
 
-    function test_quoteFrom_ReturnQuoteForPairFromTarget() public {
+    function test_getPriceAt_ReturnQuoteForPairFromTarget() public {
         // Expected values exported from Defilama
         UD60x18[16] memory expected = [
             ud(21894211576846308162203), // WETH USDC
@@ -242,40 +242,40 @@ contract UniswapV3ChainlinkAdapterTest is Test, Assertions {
             Pool memory p = pools[i];
             adapter.upsertPair(p.tokenIn, p.tokenOut);
 
-            UD60x18 quote = adapter.quoteFrom(p.tokenIn, p.tokenOut, target);
+            UD60x18 price = adapter.getPriceAt(p.tokenIn, p.tokenOut, target);
 
             assertApproxEqAbs(
-                quote.unwrap(),
+                price.unwrap(),
                 expected[i].unwrap(),
                 (expected[i].unwrap() * 2) / 100 // 2% tolerance
             );
         }
     }
 
-    function test_quoteFrom_RevertIf_TokenIsWrappedNativeToken() public {
+    function test_getPriceAt_RevertIf_TokenIsWrappedNativeToken() public {
         vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
-        adapter.quoteFrom(WETH, DAI, target);
+        adapter.getPriceAt(WETH, DAI, target);
 
         vm.expectRevert(IUniswapV3ChainlinkAdapter.UniswapV3ChainlinkAdapter__TokenCannotBeWrappedNative.selector);
-        adapter.quoteFrom(DAI, WETH, target);
+        adapter.getPriceAt(DAI, WETH, target);
     }
 
-    function test_quoteFrom_RevertIf_PairCannotBeSupported() public {
+    function test_getPriceAt_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
-        adapter.quoteFrom(address(1), DAI, target);
+        adapter.getPriceAt(address(1), DAI, target);
 
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WETH, address(1))
         );
-        adapter.quoteFrom(DAI, address(1), target);
+        adapter.getPriceAt(DAI, address(1), target);
     }
 
-    function test_quoteFrom_RevertIf_TargetIsZero() public {
+    function test_getPriceAt_RevertIf_TargetIsZero() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__InvalidTarget.selector, 0, block.timestamp)
         );
-        adapter.quoteFrom(EUL, DAI, 0);
+        adapter.getPriceAt(EUL, DAI, 0);
     }
 }

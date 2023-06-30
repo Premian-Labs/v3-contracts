@@ -2049,11 +2049,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         address poolToken = l.getPoolToken();
 
-        UD60x18 wrappedNativeQuote = poolToken == WRAPPED_NATIVE_TOKEN
+        UD60x18 wrappedNativePoolTokenSpotPrice = poolToken == WRAPPED_NATIVE_TOKEN
             ? ONE
-            : IOracleAdapter(l.oracleAdapter).quote(WRAPPED_NATIVE_TOKEN, poolToken);
+            : IOracleAdapter(l.oracleAdapter).getPrice(WRAPPED_NATIVE_TOKEN, poolToken);
 
-        UD60x18 costInWrappedNative = costPerHolder * wrappedNativeQuote;
+        UD60x18 costInWrappedNative = costPerHolder * wrappedNativePoolTokenSpotPrice;
         UD60x18 authorizedCost = IUserSettings(SETTINGS).getAuthorizedCost(holder);
 
         if (costInWrappedNative > authorizedCost) revert Pool__CostNotAuthorized(costInWrappedNative, authorizedCost);

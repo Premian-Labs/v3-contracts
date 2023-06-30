@@ -51,10 +51,10 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
     }
 
     function setupOracleAdapterMock() internal {
-        oracleAdapter.setQuoteFrom(t0, ud(1000e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1400e18));
-        oracleAdapter.setQuoteFrom(t2, ud(1600e18));
-        oracleAdapter.setQuoteFrom(t3, ud(1000e18));
+        oracleAdapter.setPriceAt(t0, ud(1000e18));
+        oracleAdapter.setPriceAt(t1, ud(1400e18));
+        oracleAdapter.setPriceAt(t2, ud(1600e18));
+        oracleAdapter.setPriceAt(t3, ud(1000e18));
     }
 
     function test_getTotalLiabilitiesExpired_ReturnExpectedValue() public {
@@ -319,8 +319,8 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
     }
 
     function test_getSettlementPrice_ReturnExpectedValue() public {
-        oracleAdapter.setQuoteFrom(t0, ud(1000e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1400e18));
+        oracleAdapter.setPriceAt(t0, ud(1000e18));
+        oracleAdapter.setPriceAt(t1, ud(1400e18));
 
         assertEq(vault.getSettlementPrice(t0), ud(1000e18));
         assertEq(vault.getSettlementPrice(t1), ud(1400e18));

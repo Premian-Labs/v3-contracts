@@ -196,7 +196,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
         address quote
     ) internal view {
         if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
-        UD60x18 spot = IOracleAdapter(oracleAdapter).quote(base, quote);
+        UD60x18 spot = IOracleAdapter(oracleAdapter).getPrice(base, quote);
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
         if (strike % strikeInterval != ZERO) revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
     }
