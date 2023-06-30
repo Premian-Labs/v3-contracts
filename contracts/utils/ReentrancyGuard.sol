@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity ^0.8.19;
+pragma solidity >=0.8.19;
 
 import {IReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/IReentrancyGuard.sol";
 import {ReentrancyGuardStorage} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuardStorage.sol";
@@ -17,12 +17,12 @@ abstract contract ReentrancyGuard is IReentrancyGuard {
         _unlockReentrancyGuard();
     }
 
-     /// @notice lock functions that use the nonReentrant modifier
+    /// @notice lock functions that use the nonReentrant modifier
     function _lockReentrancyGuard() internal virtual {
         ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_LOCKED;
     }
 
-     /// @notice unlock functions that use the nonReentrant modifier
+    /// @notice unlock functions that use the nonReentrant modifier
     function _unlockReentrancyGuard() internal virtual {
         ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_UNLOCKED;
     }
