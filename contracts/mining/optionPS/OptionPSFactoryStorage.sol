@@ -19,7 +19,7 @@ library OptionPSFactoryStorage {
         }
     }
 
-    /// @notice Returns the encoded option reward key using `args`
+    /// @notice Returns the encoded option physically settled key using `args`
     function keyHash(IOptionPSFactory.OptionPSArgs memory args) internal pure returns (bytes32) {
         return keccak256(abi.encode(args.base, args.quote, args.isCall));
     }

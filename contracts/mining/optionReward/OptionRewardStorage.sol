@@ -34,8 +34,6 @@ library OptionRewardStorage {
         UD60x18 penalty;
         // amount of time the underwritten options should last (in seconds)
         uint256 optionDuration;
-        // amount of time the exercise period lasts (in seconds)
-        uint256 exerciseDuration;
         // amount of time the lockup period lasts (in seconds)
         uint256 lockupDuration;
         // amount of time during which rewards can be claimed after the lockup period
