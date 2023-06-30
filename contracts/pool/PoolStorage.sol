@@ -124,7 +124,7 @@ library PoolStorage {
 
     function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
         if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).quoteFrom(l.base, l.quote, l.maturity);
+            l.settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
         }
 
         return l.settlementPrice;

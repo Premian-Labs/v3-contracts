@@ -57,22 +57,22 @@ contract UniswapV3ChainlinkAdapter is IUniswapV3ChainlinkAdapter, OracleAdapter 
     }
 
     /// @inheritdoc IOracleAdapter
-    function quote(address tokenIn, address tokenOut) external view returns (UD60x18) {
+    function getPrice(address tokenIn, address tokenOut) external view returns (UD60x18) {
         _revertIfWrappedNative(tokenIn);
         _revertIfWrappedNative(tokenOut);
-        return _quoteFrom(tokenIn, tokenOut, 0);
+        return _getPriceAt(tokenIn, tokenOut, 0);
     }
 
     /// @inheritdoc IOracleAdapter
-    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18) {
+    function getPriceAt(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18) {
         _revertIfWrappedNative(tokenIn);
         _revertIfWrappedNative(tokenOut);
         _revertIfTargetInvalid(target);
-        return _quoteFrom(tokenIn, tokenOut, target);
+        return _getPriceAt(tokenIn, tokenOut, target);
     }
 
     /// @notice Returns a composite quote price by combining the `tokenIn`/ETH and ETH/`tokenOut` prices
-    function _quoteFrom(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
+    function _getPriceAt(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
         {
             (, bool hasPath) = UNISWAP_ADAPTER.isPairSupported(tokenIn, WRAPPED_NATIVE);
             if (!hasPath) revert OracleAdapter__PairCannotBeSupported(tokenIn, WRAPPED_NATIVE);
@@ -84,11 +84,13 @@ contract UniswapV3ChainlinkAdapter is IUniswapV3ChainlinkAdapter, OracleAdapter 
         }
 
         if (target == 0) {
-            return UNISWAP_ADAPTER.quote(tokenIn, WRAPPED_NATIVE) * CHAINLINK_ADAPTER.quote(WRAPPED_NATIVE, tokenOut);
+            return
+                UNISWAP_ADAPTER.getPrice(tokenIn, WRAPPED_NATIVE) *
+                CHAINLINK_ADAPTER.getPrice(WRAPPED_NATIVE, tokenOut);
         } else {
             return
-                UNISWAP_ADAPTER.quoteFrom(tokenIn, WRAPPED_NATIVE, target) *
-                CHAINLINK_ADAPTER.quoteFrom(WRAPPED_NATIVE, tokenOut, target);
+                UNISWAP_ADAPTER.getPriceAt(tokenIn, WRAPPED_NATIVE, target) *
+                CHAINLINK_ADAPTER.getPriceAt(WRAPPED_NATIVE, tokenOut, target);
         }
     }
 

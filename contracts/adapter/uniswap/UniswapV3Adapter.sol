@@ -77,20 +77,20 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
 
     /// @inheritdoc IOracleAdapter
     /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
-    function quote(address tokenIn, address tokenOut) external view returns (UD60x18) {
-        return _quoteFrom(tokenIn, tokenOut, 0);
+    function getPrice(address tokenIn, address tokenOut) external view returns (UD60x18) {
+        return _getPriceAt(tokenIn, tokenOut, 0);
     }
 
     /// @inheritdoc IOracleAdapter
     /// @dev Will revert if the cardinality of an unsupported deployed pool is too low.
-    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18) {
+    function getPriceAt(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18) {
         _revertIfTargetInvalid(target);
-        return _quoteFrom(tokenIn, tokenOut, target);
+        return _getPriceAt(tokenIn, tokenOut, target);
     }
 
     /// @notice Returns a time-weighted average price quote based on the weighted arithmetic mean tick of the `tokenIn`,
     ///         `tokenOut` UniswapV3 pools.
-    function _quoteFrom(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
+    function _getPriceAt(address tokenIn, address tokenOut, uint256 target) internal view returns (UD60x18) {
         UniswapV3AdapterStorage.Layout storage l = UniswapV3AdapterStorage.layout();
 
         address[] memory pools = _poolsForPair(tokenIn, tokenOut);

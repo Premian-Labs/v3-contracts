@@ -48,7 +48,7 @@ interface IUniswapV3Adapter is IOracleAdapter {
     /// @notice When a pair is added to the oracle adapter, we will prepare all deployed pools for the pair. It could
     ///         happen that pools are added for the pair at a later stage, and we can't be sure if those pools will be
     ///         configured correctly. In this case, if a pool has an insufficient observation cardinality, `quote` and
-    ///         `quoteFrom` will revert. This function returns this list of pools known to be prepared.
+    ///         `getPriceAt` will revert. This function returns this list of pools known to be prepared.
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens
     /// @return The list of pools that will be used for quoting

@@ -50,7 +50,7 @@ abstract contract PoolSettleTest is DeployTest {
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
         uint256 protocolFees = pool.protocolFees();
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         vm.warp(poolKey.maturity);
         vm.prank(users.trader);
@@ -92,9 +92,9 @@ abstract contract PoolSettleTest is DeployTest {
 
     function _test_settleFor_Sell100Options(bool isITM) internal {
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setQuote(quote);
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         UD60x18 authorizedCost = ud(0.1e18);
         enableExerciseSettleAuthorization(users.trader, authorizedCost);
@@ -156,16 +156,16 @@ abstract contract PoolSettleTest is DeployTest {
 
     function test_settleFor_RevertIf_TotalCostExceedsCollateralValue() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setQuote(quote);
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         TradeInternal memory trade = _test_settle_trade_Sell100Options();
 
         UD60x18 exerciseValue = getExerciseValue(false, trade.size, settlementPrice);
         UD60x18 collateral = getCollateralValue(trade.size, exerciseValue);
         UD60x18 cost = collateral + ONE;
-        UD60x18 authorizedCost = isCallTest ? cost : cost * quote;
+        UD60x18 authorizedCost = isCallTest ? cost : cost * price;
 
         enableExerciseSettleAuthorization(users.trader, authorizedCost);
         vm.warp(poolKey.maturity);
@@ -198,8 +198,8 @@ abstract contract PoolSettleTest is DeployTest {
 
     function test_settleFor_RevertIf_CostNotAuthorized() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setQuote(quote);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
 
         setActionAuthorization(users.trader, IUserSettings.Action.Settle, true);
         UD60x18 cost = ud(0.1e18);
@@ -208,7 +208,7 @@ abstract contract PoolSettleTest is DeployTest {
         holders[0] = users.trader;
 
         uint256 _cost = toTokenDecimals(cost);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * quote, ZERO));
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * price, ZERO));
         vm.prank(users.operator);
         pool.settleFor(holders, _cost);
     }
