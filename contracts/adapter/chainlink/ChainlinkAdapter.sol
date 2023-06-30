@@ -2,10 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
-
-//
-
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -386,6 +382,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
         (uint16 phaseId, uint64 nextAggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
+        int256 previousPrice = price;
+        uint256 previousUpdatedAt = updatedAt;
+
         // if the last observation is after the target skip loop
         bool skip;
         if (target >= updatedAt) skip = true;
@@ -400,12 +399,29 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             (, price, , updatedAt, ) = _getRoundData(feed, roundId);
 
             if (target == updatedAt) break;
+
+            uint256 currentUpdateDistance;
             if (target > updatedAt) {
+                currentUpdateDistance = target - updatedAt;
                 lowestAggregatorRoundId = nextAggregatorRoundId + 1;
             } else {
                 if (nextAggregatorRoundId == 0) break;
+                currentUpdateDistance = updatedAt - target;
                 highestAggregatorRoundId = nextAggregatorRoundId - 1;
             }
+
+            uint256 previousUpdateDistance = (previousUpdatedAt > target)
+                ? previousUpdatedAt - target
+                : target - previousUpdatedAt;
+
+            if (previousUpdateDistance < currentUpdateDistance) {
+                price = previousPrice;
+                updatedAt = previousUpdatedAt;
+                break;
+            }
+
+            previousPrice = price;
+            previousUpdatedAt = updatedAt;
         }
 
         _revertIfPriceAfterTargetStale(target, updatedAt);
