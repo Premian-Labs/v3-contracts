@@ -19,6 +19,18 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         if (locked) _unlockReentrancyGuard();
     }
 
+    /// @inheritdoc IReentrancyGuardExtended
+    function getReentrancyGuardSelectorsIgnored() external view returns (bytes4[] memory selectorsIgnored) {
+        bytes32[] memory _selectorsIgnored = ReentrancyGuardExtendedStorage.layout().selectorsIgnored.toArray();
+        uint256 length = _selectorsIgnored.length;
+        selectorsIgnored = new bytes4[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            selectorsIgnored[i] = bytes4(_selectorsIgnored[i]);
+        }
+    }
+
+    /// @inheritdoc IReentrancyGuardExtended
     function addReentrancyGuardSelectorsIgnored(bytes4[] memory selectorsIgnored) external onlyOwner {
         ReentrancyGuardExtendedStorage.Layout storage l = ReentrancyGuardExtendedStorage.layout();
         for (uint256 i = 0; i < selectorsIgnored.length; i++) {

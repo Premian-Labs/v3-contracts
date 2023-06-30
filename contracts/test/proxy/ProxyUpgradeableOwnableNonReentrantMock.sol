@@ -28,14 +28,4 @@ contract ProxyUpgradeableOwnableNonReentrantMock is ProxyUpgradeableOwnableNonRe
     function isReentrancyGuardDisabled() external view returns (bool) {
         return ReentrancyGuardExtendedStorage.layout().disabled;
     }
-
-    function getReentrancyGuardSelectorsIgnored() external view returns (bytes4[] memory selectorsIgnored) {
-        bytes32[] memory _selectorsIgnored = ReentrancyGuardExtendedStorage.layout().selectorsIgnored.toArray();
-        uint256 length = _selectorsIgnored.length;
-        selectorsIgnored = new bytes4[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            selectorsIgnored[i] = bytes4(_selectorsIgnored[i]);
-        }
-    }
 }
