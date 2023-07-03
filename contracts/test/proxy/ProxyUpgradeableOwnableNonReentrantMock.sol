@@ -26,6 +26,6 @@ contract ProxyUpgradeableOwnableNonReentrantMock is ProxyUpgradeableOwnableNonRe
     }
 
     function isReentrancyGuardDisabled() external view returns (bool) {
-        return ReentrancyGuardExtendedStorage.layout().disabled;
+        return _isReentrancyGuardDisabled();
     }
 }

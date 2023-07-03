@@ -48,6 +48,11 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         }
     }
 
+    /// @notice Returns true if the reentrancy guard is disabled, false otherwise
+    function _isReentrancyGuardDisabled() internal view virtual returns (bool) {
+        return ReentrancyGuardExtendedStorage.layout().disabled;
+    }
+
     /// @inheritdoc IReentrancyGuardExtended
     function setReentrancyGuardDisabled(bool disabled) external onlyOwner {
         ReentrancyGuardExtendedStorage.layout().disabled = disabled;
