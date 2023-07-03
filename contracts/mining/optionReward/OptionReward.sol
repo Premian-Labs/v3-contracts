@@ -111,6 +111,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
 
         if (baseReserved == 0) revert OptionReward__NoBaseReserved(strike, maturity);
 
+        l.totalBaseReserved -= baseReserved;
         delete l.baseReserved[strike][maturity];
 
         IERC20(l.base).approve(l.paymentSplitter, baseReserved);

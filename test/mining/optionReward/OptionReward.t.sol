@@ -560,4 +560,38 @@ contract OptionRewardTest is Assertions, Test {
 
         assertEq(optionReward.getTotalBaseReserved(), baseReserved);
     }
+
+    function test_releaseRewardsNotClaimed_Success() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + 1);
+        vm.prank(longReceiver);
+        UD60x18 exerciseSize = _size / ud(4e18);
+        option.exercise(strike, maturity, exerciseSize);
+
+        vm.warp(maturity + exercisePeriod + 1);
+        optionReward.settle(strike, maturity);
+
+        UD60x18 intrinsicValue = spot - strike;
+        UD60x18 baseReserved = intrinsicValue * (ONE - penalty) * (_size - exerciseSize);
+
+        vm.warp(maturity + lockupDuration + claimDuration + 1);
+
+        uint256 balance = base.balanceOf(address(mining));
+        optionReward.releaseRewardsNotClaimed(strike, maturity);
+
+        assertEq(optionReward.getTotalBaseReserved(), 0);
+        assertEq(base.balanceOf(address(mining)), balance + baseReserved.unwrap());
+    }
+
+    function test_releaseRewardsNotClaimed_RevertIf_NoBaseReserved() public {
+        vm.warp(maturity + lockupDuration + claimDuration + 1);
+        vm.expectRevert(abi.encodeWithSelector(IOptionReward.OptionReward__NoBaseReserved.selector, strike, maturity));
+        optionReward.releaseRewardsNotClaimed(strike, maturity);
+    }
 }
