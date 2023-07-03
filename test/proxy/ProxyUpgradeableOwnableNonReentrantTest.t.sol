@@ -265,8 +265,8 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
     function test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_ForceLock_Success() public {
         test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
         vm.prank(owner);
-        proxy.__lockReentrancyGuard(); // setting lock should fail
-        assertFalse(proxy.isReentrancyGuardLocked());
+        proxy.__lockReentrancyGuard();
+        assertTrue(proxy.isReentrancyGuardLocked());
     }
 
     function test__lockReentrancyGuard_ForceLock_Revert() public {

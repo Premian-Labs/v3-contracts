@@ -11,9 +11,16 @@ import {ReentrancyGuardExtendedStorage} from "./ReentrancyGuardExtendedStorage.s
 
 contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, ReentrancyGuard {
     modifier nonReentrant() virtual override {
-        bool locked = _lockReentrancyGuard(msg.data);
+        bool setReentrancyGuard = true;
+        if (_isReentrancyGuardDisabled()) setReentrancyGuard = false;
+
+        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
+        if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
+        if (_isStaticCall()) setReentrancyGuard = false;
+
+        if (setReentrancyGuard) _lockReentrancyGuard();
         _;
-        if (locked) _unlockReentrancyGuard();
+        if (setReentrancyGuard) _unlockReentrancyGuard();
     }
 
     /// @notice Returns true if the reentrancy guard is disabled, false otherwise
@@ -40,18 +47,5 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         } catch {
             return true;
         }
-    }
-
-    /// @notice Sets the reentrancy guard status to locked and returns true if the guard is not locked, disabled, nor
-    ///         is the call static
-    function _lockReentrancyGuard(bytes memory msgData) internal virtual returns (bool) {
-        if (_isReentrancyGuardDisabled()) return false;
-
-        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
-        if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
-        if (_isStaticCall()) return false;
-
-        l.status = REENTRANCY_STATUS_LOCKED;
-        return true;
     }
 }

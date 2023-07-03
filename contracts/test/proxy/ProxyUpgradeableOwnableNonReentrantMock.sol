@@ -14,7 +14,7 @@ contract ProxyUpgradeableOwnableNonReentrantMock is ProxyUpgradeableOwnableNonRe
     constructor(address implementation) ProxyUpgradeableOwnableNonReentrant(implementation) {}
 
     function __lockReentrancyGuard() external {
-        _lockReentrancyGuard(msg.data);
+        _lockReentrancyGuard();
     }
 
     function __unlockReentrancyGuard() external {
