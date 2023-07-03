@@ -74,14 +74,15 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         _revertIfLockPeriodNotEnded(maturity);
         _revertIfClaimPeriodEnded(maturity);
 
-        uint256 longTokenId = IOptionPS.TokenType.Long.formatTokenId(maturity, strike);
-
         OptionRewardStorage.Layout storage l = OptionRewardStorage.layout();
 
         UD60x18 redeemableLongs = l.redeemableLongs[msg.sender][strike][maturity];
-
         if (redeemableLongs == ZERO) revert OptionReward__NoRedeemableLongs();
 
+        UD60x18 rewardPerContract = l.rewardPerContract[strike][maturity];
+        if (rewardPerContract == ZERO) revert OptionReward__ZeroRewardPerContract(strike, maturity);
+
+        uint256 longTokenId = IOptionPS.TokenType.Long.formatTokenId(maturity, strike);
         UD60x18 contractSize = ud(l.option.balanceOf(msg.sender, longTokenId));
         if (contractSize > redeemableLongs) {
             contractSize = redeemableLongs;
@@ -91,7 +92,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.option.safeTransferFrom(msg.sender, BURN_ADDRESS, longTokenId, contractSize.unwrap(), "");
         l.redeemableLongs[msg.sender][strike][maturity] = redeemableLongs - contractSize;
 
-        UD60x18 _baseAmount = l.rewardPerContract[strike][maturity] * contractSize;
+        UD60x18 _baseAmount = rewardPerContract * contractSize;
         baseAmount = l.toTokenDecimals(_baseAmount, true);
         l.totalBaseReserved -= baseAmount;
         l.baseReserved[strike][maturity] -= baseAmount;
@@ -130,7 +131,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
             _revertIfPriceIsZero(price);
             vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
             vars.rewardPerContract = vars.intrinsicValuePerContract * (ONE - l.penalty);
-            l.rewardPerContract[strike][maturity] = vars.intrinsicValuePerContract * (ONE - l.penalty);
+            l.rewardPerContract[strike][maturity] = vars.rewardPerContract;
         }
 
         // We rely on `totalUnderwritten` rather than short balance, so that `settle` cant be call multiple times for

@@ -19,6 +19,7 @@ interface IOptionReward {
     error OptionReward__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
     error OptionReward__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
     error OptionReward__PriceIsZero();
+    error OptionReward__ZeroRewardPerContract(UD60x18 strike, uint256 maturity);
 
     event Underwrite(address indexed longReceiver, UD60x18 strike, uint64 maturity, UD60x18 contractSize);
     event RewardsClaimed(

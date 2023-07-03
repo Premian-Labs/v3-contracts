@@ -521,6 +521,24 @@ contract OptionRewardTest is Assertions, Test {
         optionReward.claimRewards(strike, maturity);
     }
 
+    function test_claimRewards_RevertIf_ZeroRewardPerContract() public {
+        _setPriceAt(block.timestamp, spot);
+
+        vm.prank(underwriter);
+        optionReward.underwrite(longReceiver, _size);
+
+        _setPriceAt(maturity, spot);
+
+        vm.warp(maturity + lockupDuration + 1);
+
+        vm.startPrank(longReceiver);
+        option.setApprovalForAll(address(optionReward), true);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOptionReward.OptionReward__ZeroRewardPerContract.selector, strike, maturity)
+        );
+        optionReward.claimRewards(strike, maturity);
+    }
+
     function test_getTotalBaseReserved_ReturnExpectedValue() public {
         _setPriceAt(block.timestamp, spot);
 
