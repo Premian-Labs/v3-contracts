@@ -10,7 +10,7 @@ import {ReentrancyGuard} from "./ReentrancyGuard.sol";
 import {ReentrancyGuardExtendedStorage} from "./ReentrancyGuardExtendedStorage.sol";
 
 contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, ReentrancyGuard {
-    modifier nonReentrant() override {
+    modifier nonReentrant() virtual override {
         bool locked = _lockReentrancyGuard(msg.data);
         _;
         if (locked) _unlockReentrancyGuard();
