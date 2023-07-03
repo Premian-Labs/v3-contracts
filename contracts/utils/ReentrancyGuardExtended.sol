@@ -54,9 +54,4 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
         l.status = REENTRANCY_STATUS_LOCKED;
         return true;
     }
-
-    /// @notice Sets the reentrancy guard status to unlocked
-    function _unlockReentrancyGuard() internal virtual override {
-        ReentrancyGuardStorage.layout().status = REENTRANCY_STATUS_UNLOCKED;
-    }
 }
