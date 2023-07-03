@@ -97,12 +97,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         assertEq(target.nonReentrantCall(), 1);
     }
 
-    function test_nonReentrant_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
-        assertEq(target.x(), 0);
-        assertEq(target.nonReentrantCall(), 1);
-    }
-
     function test_reentrantCall_Revert() public {
         vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
         target.reentrantCall();
@@ -126,19 +120,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
         assertEq(target.x(), 0);
         assertEq(target.reentrantCall(), 5);
-    }
-
-    function test_reentrantCall_IgnoreReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.reentrantCall.selector);
-        assertEq(target.x(), 0);
-        assertEq(target.reentrantCall(), 5);
-    }
-
-    function test_reentrantCall_ReentrantCallSelectorIgnored_ForceLock_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_ReentrantCallSelectorIgnored_ForceLock_Success();
-        // assertEq(target.x(), 0); // state of `x` cannot be checked when lock is enabled
-        assertEq(target.reentrantCall(), 5);
-        proxy.__unlockReentrancyGuard();
     }
 
     function test_callToNonReentrantCall_Revert() public {
@@ -166,12 +147,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         assertEq(target.callToNonReentrantCall(), 1);
     }
 
-    function test_callToNonReentrantCall_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
-        assertEq(target.x(), 0);
-        assertEq(target.callToNonReentrantCall(), 1);
-    }
-
     function test_nonReentrantStaticcall_Success() public {
         assertEq(target.nonReentrantStaticcall(), 0);
     }
@@ -191,11 +166,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
 
     function test_nonReentrantStaticcall_ReentrancyGuardDisabled_Success() public {
         test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
-        assertEq(target.nonReentrantStaticcall(), 0);
-    }
-
-    function test_nonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
         assertEq(target.nonReentrantStaticcall(), 0);
     }
 
@@ -222,11 +192,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         assertEq(target.staticcallToNonReentrantStaticcall(), 0);
     }
 
-    function test_staticcallToNonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
-        assertEq(target.staticcallToNonReentrantStaticcall(), 0);
-    }
-
     function test_callToNonReentrantStaticcall_Revert() public {
         vm.expectRevert(IReentrancyGuard.ReentrancyGuard__ReentrantCall.selector);
         target.callToNonReentrantStaticcall();
@@ -248,12 +213,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
 
     function test_callToNonReentrantStaticcall_ReentrancyGuardDisabled_Success() public {
         test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success();
-        assertEq(target.x(), 0);
-        assertEq(target.callToNonReentrantStaticcall(), 10);
-    }
-
-    function test_callToNonReentrantStaticcall_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
         assertEq(target.x(), 0);
         assertEq(target.callToNonReentrantStaticcall(), 10);
     }
@@ -283,17 +242,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         assertEq(target.callToCrossContractCall(otherTarget), 10);
     }
 
-    function test_callToCrossContractCall_IgnoredNonReentrantCallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantCall.selector);
-        assertEq(target.x(), 0);
-        assertEq(target.callToCrossContractCall(otherTarget), 10);
-    }
-
-    function test_callToNonReentrantStaticcall_IgnoreNonReentrantStaticcallSelector_Success() public {
-        test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(target.nonReentrantStaticcall.selector);
-        assertEq(target.callToNonReentrantStaticcall(), 10);
-    }
-
     function test_setReentrancyGuardDisabled_ReentrancyGuardDisabled_Success() public {
         vm.prank(owner);
         proxy.setReentrancyGuardDisabled(true);
@@ -319,98 +267,6 @@ contract ProxyUpgradeableOwnableNonReentrantTest is Test, Assertions {
         vm.prank(owner);
         proxy.__lockReentrancyGuard(); // setting lock should fail
         assertFalse(proxy.isReentrancyGuardLocked());
-    }
-
-    function test_addReentrancyGuardSelectorsIgnored_SelectorIgnored_Success(bytes4 selector) public {
-        bytes4[] memory selectorsIgnored = new bytes4[](1);
-
-        if (selector == bytes4(0)) {
-            selectorsIgnored[0] = target.reentrantCall.selector;
-        } else {
-            selectorsIgnored[0] = selector;
-        }
-
-        vm.prank(owner);
-        proxy.addReentrancyGuardSelectorsIgnored(selectorsIgnored);
-        bytes4[] memory _selectorsIgnored = proxy.getReentrancyGuardSelectorsIgnored();
-        assertEq(_selectorsIgnored.length, 1);
-        assertEq(selectorsIgnored[0], _selectorsIgnored[0]);
-    }
-
-    function test_addReentrancyGuardSelectorsIgnored_ReentrantCallSelectorIgnored_ForceLock_Success() public {
-        bytes4[] memory selectorsIgnored = new bytes4[](1);
-        selectorsIgnored[0] = target.reentrantCall.selector;
-        vm.startPrank(owner);
-        proxy.addReentrancyGuardSelectorsIgnored(selectorsIgnored);
-        proxy.__lockReentrancyGuard();
-        vm.stopPrank();
-        assertTrue(proxy.isReentrancyGuardLocked());
-        bytes4[] memory _selectorsIgnored = proxy.getReentrancyGuardSelectorsIgnored();
-        assertEq(_selectorsIgnored.length, 1);
-        assertEq(selectorsIgnored[0], _selectorsIgnored[0]);
-    }
-
-    function test_addReentrancyGuardSelectorsIgnored_RevertIf_Not_Owner() public {
-        bytes4[] memory selectorsIgnored = new bytes4[](1);
-        selectorsIgnored[0] = target.reentrantCall.selector;
-        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        proxy.addReentrancyGuardSelectorsIgnored(selectorsIgnored);
-    }
-
-    function test_removeReentrancyGuardSelectorsIgnored_NonReentrantTestSelectorIgnored_Success() public {
-        {
-            bytes4[] memory selectorsIgnored = new bytes4[](3);
-            selectorsIgnored[0] = target.nonReentrantCall.selector;
-            selectorsIgnored[1] = target.reentrantCall.selector;
-            selectorsIgnored[2] = target.callToNonReentrantStaticcall.selector;
-
-            vm.prank(owner);
-            proxy.addReentrancyGuardSelectorsIgnored(selectorsIgnored);
-        }
-
-        {
-            bytes4[] memory selectorsIgnored = proxy.getReentrancyGuardSelectorsIgnored();
-            assertEq(selectorsIgnored.length, 3);
-            assertEq(selectorsIgnored[0], target.nonReentrantCall.selector);
-            assertEq(selectorsIgnored[1], target.reentrantCall.selector);
-            assertEq(selectorsIgnored[2], target.callToNonReentrantStaticcall.selector);
-        }
-
-        {
-            bytes4[] memory selectorsIgnored = new bytes4[](1);
-            selectorsIgnored[0] = target.reentrantCall.selector;
-
-            vm.prank(owner);
-            proxy.removeReentrancyGuardSelectorsIgnored(selectorsIgnored);
-        }
-
-        {
-            bytes4[] memory selectorsIgnored = proxy.getReentrancyGuardSelectorsIgnored();
-            assertEq(selectorsIgnored.length, 2);
-            assertEq(selectorsIgnored[0], target.nonReentrantCall.selector);
-            assertEq(selectorsIgnored[1], target.callToNonReentrantStaticcall.selector);
-        }
-
-        {
-            bytes4[] memory selectorsIgnored = new bytes4[](2);
-            selectorsIgnored[0] = target.nonReentrantCall.selector;
-            selectorsIgnored[1] = target.callToNonReentrantStaticcall.selector;
-
-            vm.prank(owner);
-            proxy.removeReentrancyGuardSelectorsIgnored(selectorsIgnored);
-        }
-
-        {
-            bytes4[] memory selectorsIgnored = proxy.getReentrancyGuardSelectorsIgnored();
-            assertEq(selectorsIgnored.length, 0);
-        }
-    }
-
-    function test_removeReentrancyGuardSelectorsIgnored_RevertIf_Not_Owner() public {
-        bytes4[] memory selectorsIgnored = new bytes4[](1);
-        selectorsIgnored[0] = target.reentrantCall.selector;
-        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        proxy.removeReentrancyGuardSelectorsIgnored(selectorsIgnored);
     }
 
     function test__lockReentrancyGuard_ForceLock_Revert() public {
