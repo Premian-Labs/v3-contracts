@@ -29,7 +29,7 @@ contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, R
     }
 
     /// @inheritdoc IReentrancyGuardExtended
-    function setReentrancyGuardDisabled(bool disabled) external onlyOwner {
+    function setReentrancyGuardDisabled(bool disabled) external virtual onlyOwner {
         ReentrancyGuardExtendedStorage.layout().disabled = disabled;
         emit SetReentrancyGuardDisabled(disabled);
     }
