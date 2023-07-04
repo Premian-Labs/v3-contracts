@@ -9,6 +9,7 @@ import {IProxy} from "@solidstate/contracts/proxy/IProxy.sol";
 abstract contract Proxy is IProxy {
     using AddressUtils for address;
 
+    // solhint-disable-next-line no-complex-fallback
     fallback() external payable virtual {
         (bool result, bytes memory data) = _handleDelegateCalls();
 
