@@ -104,7 +104,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
-    address public constant feeReceiver = address(123456789);
+    address public constant FEE_RECEIVER = address(123456789);
 
     receive() external payable {}
 
@@ -169,7 +169,7 @@ contract DeployTest is Test, Assertions {
             address(initFeeCalculatorProxy)
         );
 
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), feeReceiver);
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), FEE_RECEIVER);
 
         flashLoanMock = new FlashLoanMock();
 
@@ -211,7 +211,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -222,7 +222,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -233,7 +233,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -244,7 +244,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
