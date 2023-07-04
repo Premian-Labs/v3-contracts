@@ -2,6 +2,7 @@
 
 pragma solidity >=0.8.19;
 
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IMulticall} from "@solidstate/contracts/utils/IMulticall.sol";
 
 interface IUserSettings is IMulticall {
@@ -25,7 +26,7 @@ interface IUserSettings is IMulticall {
         bool[] authorization
     );
 
-    event AuthorizedCostUpdated(address indexed user, uint256 amount);
+    event AuthorizedCostUpdated(address indexed user, UD60x18 amount);
 
     /// @notice Returns true if `operator` is authorized to perform `action` for `user`
     /// @param user The user who grants authorization
@@ -35,7 +36,8 @@ interface IUserSettings is IMulticall {
     function isActionAuthorized(address user, address operator, Action action) external view returns (bool);
 
     /// @notice Returns the actions and their corresponding authorization states. If the state of an action is true,
-    ////        `operator` has been granted authorization by `user` to perform the action on their behalf.
+    ////        `operator` has been granted authorization by `user` to perform the action on their behalf. Note, the 0th
+    ///         indexed enum in Action is omitted from `actions`.
     /// @param user The user who grants authorization
     /// @param operator The operator who is granted authorization
     /// @return actions All available actions a `user` may grant authorization to `operator` for
@@ -55,10 +57,10 @@ interface IUserSettings is IMulticall {
     /// @notice Returns the users authorized cost in the ERC20 Native token (WETH, WFTM, etc) used in conjunction with
     ///         `exerciseFor`, settleFor`, and `settlePositionFor`
     /// @return The users authorized cost in the ERC20 Native token (WETH, WFTM, etc) (18 decimals)
-    function getAuthorizedCost(address user) external view returns (uint256);
+    function getAuthorizedCost(address user) external view returns (UD60x18);
 
     /// @notice Sets the users authorized cost in the ERC20 Native token (WETH, WFTM, etc) used in conjunction with
     ///         `exerciseFor`, `settleFor`, and `settlePositionFor`
     /// @param amount The users authorized cost in the ERC20 Native token (WETH, WFTM, etc) (18 decimals)
-    function setAuthorizedCost(uint256 amount) external;
+    function setAuthorizedCost(UD60x18 amount) external;
 }

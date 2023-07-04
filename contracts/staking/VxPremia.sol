@@ -7,7 +7,7 @@ import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
 import {VxPremiaStorage} from "./VxPremiaStorage.sol";
 import {IVxPremia} from "./IVxPremia.sol";
 
-import {IProxyManager} from "./IProxyManager.sol";
+import {IPoolV2ProxyManager} from "./IPoolV2ProxyManager.sol";
 import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 /// @author Premia
@@ -119,7 +119,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
 
         address[] memory poolList;
         if (PROXY_MANAGER_V2 != address(0)) {
-            poolList = IProxyManager(PROXY_MANAGER_V2).getPoolList();
+            poolList = IPoolV2ProxyManager(PROXY_MANAGER_V2).getPoolList();
         }
 
         // Cast new votes

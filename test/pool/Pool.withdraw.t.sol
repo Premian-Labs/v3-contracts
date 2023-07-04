@@ -22,7 +22,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         uint256 initialCollateral = deposit(depositSize);
         vm.warp(block.timestamp + 60);
 
-        uint256 depositCollateralValue = scaleDecimals(contractsToCollateral(ud(200 ether)));
+        uint256 depositCollateralValue = toTokenDecimals(contractsToCollateral(ud(200 ether)));
 
         address poolToken = getPoolToken();
 
@@ -31,7 +31,7 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         UD60x18 withdrawSize = ud(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
-        uint256 withdrawCollateralValue = scaleDecimals(contractsToCollateral(withdrawSize * avgPrice));
+        uint256 withdrawCollateralValue = toTokenDecimals(contractsToCollateral(withdrawSize * avgPrice));
 
         vm.prank(users.lp);
         pool.withdraw(posKey, withdrawSize, ZERO, ONE);
@@ -72,8 +72,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         // collateral removed = 0.75 * collateral remaining = 0.75 * 0.75 = 0.5625
         // new balance = 0.5625 + 0.02109375 = 0.58359375
         uint256 expectedBalance = isCallTest
-            ? scaleDecimals(ud(0.58359375 ether))
-            : scaleDecimals(ud(0.58359375 ether) * poolKey.strike);
+            ? toTokenDecimals(ud(0.58359375 ether))
+            : toTokenDecimals(ud(0.58359375 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
     }
 
@@ -86,8 +86,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         uint256 tradeSize = 0.25 ether;
         trade(tradeSize, true, depositSize, true);
         uint256 expectedBalanceAfterDeposit = isCallTest
-            ? scaleDecimals(ud(0.15 ether))
-            : scaleDecimals(ud(0.15 ether) * poolKey.strike);
+            ? toTokenDecimals(ud(0.15 ether))
+            : toTokenDecimals(ud(0.15 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
         assertEq(pool.marketPrice(), 0.125 ether);
@@ -108,8 +108,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         // collateral in position = 0.75  - 0.15 + 0.028125 = 0.628125
         // new balance = 0.15 + 0.75 * 0.628125 = 0.62109375
         uint256 expectedBalance = isCallTest
-            ? scaleDecimals(ud(0.62109375 ether))
-            : scaleDecimals(ud(0.62109375 ether) * poolKey.strike);
+            ? toTokenDecimals(ud(0.62109375 ether))
+            : toTokenDecimals(ud(0.62109375 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
     }
 
@@ -122,8 +122,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         uint256 tradeSize = 0.25 ether;
         trade(tradeSize, false, depositSize);
         uint256 expectedBalanceAfterDeposit = isCallTest
-            ? scaleDecimals(ud(0.85 ether))
-            : scaleDecimals(ud(0.85 ether) * poolKey.strike);
+            ? toTokenDecimals(ud(0.85 ether))
+            : toTokenDecimals(ud(0.85 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
         assertEq(pool.marketPrice(), 0.175 ether);
@@ -143,8 +143,8 @@ abstract contract PoolWithdrawTest is DeployTest {
         // collateral in position = (0.175^2 - 0.1^2) / (2 * (0.1)) = 0.103125
         // new balance = 0.85 + 0.75 * 0.103125 = 0.92734375
         uint256 expectedBalance = isCallTest
-            ? scaleDecimals(ud(0.92734375 ether))
-            : scaleDecimals(ud(0.92734375 ether) * poolKey.strike);
+            ? toTokenDecimals(ud(0.92734375 ether))
+            : toTokenDecimals(ud(0.92734375 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
     }
 
