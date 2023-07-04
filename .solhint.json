@@ -8,6 +8,7 @@
     "var-name-mixedcase": "off",
     "func-name-mixedcase": "off",
     "use-forbidden-name": "off",
-    "no-inline-assembly": "off"
+    "no-inline-assembly": "off",
+    "avoid-low-level-calls": "off"
   }
 }
