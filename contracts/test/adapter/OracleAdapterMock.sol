@@ -4,8 +4,6 @@ pragma solidity >=0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
-import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-
 import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
 contract OracleAdapterMock {

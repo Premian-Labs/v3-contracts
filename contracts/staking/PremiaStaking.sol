@@ -10,7 +10,7 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
-import {WAD} from "../libraries/Constants.sol";
+import {ONE, WAD} from "../libraries/Constants.sol";
 import {IExchangeHelper} from "../utils/IExchangeHelper.sol";
 import {IPremiaStaking} from "./IPremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -18,8 +18,6 @@ import {OFT} from "../layerZero/token/oft/OFT.sol";
 import {OFTCore} from "../layerZero/token/oft/OFTCore.sol";
 import {IOFTCore} from "../layerZero/token/oft/IOFTCore.sol";
 import {BytesLib} from "../layerZero/util/BytesLib.sol";
-
-import {ONE} from "../libraries/Constants.sol";
 
 contract PremiaStaking is IPremiaStaking, OFT {
     using SafeERC20 for IERC20;

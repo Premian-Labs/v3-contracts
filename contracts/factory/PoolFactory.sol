@@ -13,7 +13,7 @@ import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ZERO, ONE} from "../libraries/Constants.sol";
+import {ZERO} from "../libraries/Constants.sol";
 
 contract PoolFactory is IPoolFactory, OwnableInternal {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
