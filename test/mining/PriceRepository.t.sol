@@ -9,7 +9,7 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 import {ONE} from "contracts/libraries/Constants.sol";
 import {PriceRepository} from "contracts/mining/PriceRepository.sol";
 import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
-import {PriceRepositoryProxy} from "contracts/mining/PriceRepositoryProxy.sol";
+import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 
 import {Assertions} from "../Assertions.sol";
 
@@ -36,18 +36,42 @@ contract PriceRepositoryTest is Assertions, Test {
         users = Users({user: vm.addr(1), keeper: vm.addr(2), pool: vm.addr(3)});
 
         PriceRepository implementation = new PriceRepository();
-        PriceRepositoryProxy proxy = new PriceRepositoryProxy(address(implementation), users.keeper);
+        ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
         priceRepository = PriceRepository(address(proxy));
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.keeper;
+        priceRepository.addWhitelistedRelayers(relayers);
     }
 
-    function test_setKeeper_Success() public {
-        priceRepository.setKeeper(address(0));
+    function test_addWhitelistedRelayers_Success() public {
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.keeper;
+        priceRepository.addWhitelistedRelayers(relayers);
     }
 
-    function test_setKeeper_RevertIf_NotOwner() public {
+    function test_addWhitelistedRelayers_RevertIf_NotOwner() public {
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.keeper;
+
         vm.prank(users.keeper);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        priceRepository.setKeeper(address(0));
+        priceRepository.addWhitelistedRelayers(relayers);
+    }
+
+    function test_removeWhitelistedRelayers_Success() public {
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.keeper;
+        priceRepository.removeWhitelistedRelayers(relayers);
+    }
+
+    function test_removeWhitelistedRelayers_RevertIf_NotOwner() public {
+        address[] memory relayers = new address[](1);
+        relayers[0] = users.keeper;
+
+        vm.prank(users.keeper);
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        priceRepository.removeWhitelistedRelayers(relayers);
     }
 
     function test_setPriceAt_Success() public {
@@ -58,9 +82,7 @@ contract PriceRepositoryTest is Assertions, Test {
     function test_setPriceAt_RevertIf_KeeperNotAuthorized() public {
         vm.prank(users.user);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IPriceRepository.PriceRepository__KeeperNotAuthorized.selector, users.keeper)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IPriceRepository.PriceRepository__NotAuthorized.selector, users.user));
 
         priceRepository.setPriceAt(address(1), address(2), block.timestamp, ONE);
     }

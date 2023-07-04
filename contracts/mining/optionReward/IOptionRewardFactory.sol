@@ -4,31 +4,31 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-interface IOptionRewardFactory {
+import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {IProxyManager} from "../../proxy/IProxyManager.sol";
+
+interface IOptionRewardFactory is IProxyManager {
     event ProxyDeployed(
-        address base,
-        address quote,
-        address underwriter,
+        IOptionPS indexed option,
         address priceRepository,
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
-        uint256 expiryDuration,
-        uint256 exerciseDuration,
-        uint256 lockupDuration
+        uint256 optionDuration,
+        uint256 lockupDuration,
+        uint256 claimDuration,
+        address proxy
     );
 
     struct OptionRewardArgs {
-        address base;
-        address quote;
-        address underwriter;
+        IOptionPS option;
         address priceRepository;
         address paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;
-        uint256 expiryDuration;
-        uint256 exerciseDuration;
+        uint256 optionDuration;
         uint256 lockupDuration;
+        uint256 claimDuration;
     }
 
     function isProxyDeployed(address proxy) external view returns (bool);

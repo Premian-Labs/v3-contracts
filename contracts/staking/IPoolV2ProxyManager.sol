@@ -2,6 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-interface IProxyManager {
+interface IPoolV2ProxyManager {
     function getPoolList() external view returns (address[] memory);
 }
