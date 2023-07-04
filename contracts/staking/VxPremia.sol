@@ -13,7 +13,9 @@ import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 /// @author Premia
 /// @title A contract allowing you to use your locked Premia as voting power for mining weights
 contract VxPremia is IVxPremia, PremiaStaking {
-    address private immutable PROXY_MANAGER;
+    /// @notice The proxy manager contract used to deploy PremiaV2 pools
+    address private immutable PROXY_MANAGER_V2;
+    /// @notice The vault registry contract for PremiaV3 vaults
     address private immutable VAULT_REGISTRY;
 
     constructor(
@@ -24,7 +26,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
         address exchangeHelper,
         address vaultRegistry
     ) PremiaStaking(lzEndpoint, premia, rewardToken, exchangeHelper) {
-        PROXY_MANAGER = proxyManager;
+        PROXY_MANAGER_V2 = proxyManager;
         VAULT_REGISTRY = vaultRegistry;
     }
 
@@ -115,7 +117,10 @@ contract VxPremia is IVxPremia, PremiaStaking {
         // Remove previous votes
         _resetUserVotes(l, userVotes, msg.sender);
 
-        address[] memory poolList = IProxyManager(PROXY_MANAGER).getPoolList();
+        address[] memory poolList;
+        if (PROXY_MANAGER_V2 != address(0)) {
+            poolList = IProxyManager(PROXY_MANAGER_V2).getPoolList();
+        }
 
         // Cast new votes
         uint256 votingPowerUsed = 0;
@@ -137,7 +142,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
             );
 
             bool isValid = false;
-            if (vote.version == VoteVersion.V2) {
+            if (vote.version == VoteVersion.V2 && PROXY_MANAGER_V2 != address(0)) {
                 for (uint256 j = 0; j < poolList.length; j++) {
                     if (contractAddress == poolList[j]) {
                         isValid = true;
@@ -146,7 +151,6 @@ contract VxPremia is IVxPremia, PremiaStaking {
                 }
             } else if (vote.version == VoteVersion.VaultV3 && VAULT_REGISTRY != address(0)) {
                 // Chains other than Arbitrum dont have VAULT_REGISTRY
-
                 isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 

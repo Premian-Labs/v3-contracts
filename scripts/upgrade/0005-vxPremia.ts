@@ -45,10 +45,7 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = VxPremiaProxy__factory.connect(
-    addresses.VxPremiaImplementation,
-    deployer,
-  );
+  proxy = VxPremiaProxy__factory.connect(addresses.VxPremiaProxy, deployer);
 
   //////////////////////////
 
