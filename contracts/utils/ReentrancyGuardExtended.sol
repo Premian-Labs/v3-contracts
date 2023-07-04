@@ -11,16 +11,17 @@ import {ReentrancyGuardExtendedStorage} from "./ReentrancyGuardExtendedStorage.s
 
 contract ReentrancyGuardExtended is IReentrancyGuardExtended, OwnableInternal, ReentrancyGuard {
     modifier nonReentrant() virtual override {
-        bool setReentrancyGuard = true;
-        if (_isReentrancyGuardDisabled()) setReentrancyGuard = false;
+        bool isDisabled = _isReentrancyGuardDisabled();
 
-        ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
-        if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
-        if (_isStaticCall()) setReentrancyGuard = false;
-
-        if (setReentrancyGuard) _lockReentrancyGuard();
+        bool isStaticCall;
+        if (!isDisabled) {
+            ReentrancyGuardStorage.Layout storage l = ReentrancyGuardStorage.layout();
+            if (l.status == REENTRANCY_STATUS_LOCKED) revert ReentrancyGuard__ReentrantCall();
+            isStaticCall = _isStaticCall();
+            if (!isStaticCall) _lockReentrancyGuard();
+        }
         _;
-        if (setReentrancyGuard) _unlockReentrancyGuard();
+        if (!isDisabled && !isStaticCall) _unlockReentrancyGuard();
     }
 
     /// @notice Returns true if the reentrancy guard is disabled, false otherwise
