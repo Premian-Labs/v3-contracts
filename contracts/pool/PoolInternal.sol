@@ -63,6 +63,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
+    UD60x18 internal constant EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
+    UD60x18 internal constant MAX_EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of intrinsic value
 
     // Number of seconds required to pass before a deposit can be withdrawn (To prevent flash loans and JIT)
     uint256 internal constant WITHDRAWAL_DELAY = 60;
@@ -123,6 +125,32 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (discount > ZERO) fee = (ONE - discount) * fee;
 
         return Position.contractsToCollateral(fee, strike, isCallPool);
+    }
+
+    /// @notice Calculates the fee for an exercise. It is the minimum between a percentage of the intrinsic
+    /// value of options exercised, or a percentage of the notional value.
+    /// @param taker The taker of a trade
+    /// @param size The size of a trade (number of contracts) (18 decimals)
+    /// @param intrinsicValue Total intrinsic value of all the contracts exercised, denormalized (18 decimals)
+    /// @param strike The strike of the option (18 decimals)
+    /// @param isCallPool Whether the pool is a call pool or not
+    /// @return The fee to exercise an option, denormalized (18 decimals)
+    function _exerciseFee(
+        address taker,
+        UD60x18 size,
+        UD60x18 intrinsicValue,
+        UD60x18 strike,
+        bool isCallPool
+    ) internal view returns (UD60x18) {
+        UD60x18 notionalFee = Position.contractsToCollateral(size, strike, isCallPool) * EXERCISE_FEE_PERCENTAGE;
+        UD60x18 intrinsicValueFee = intrinsicValue * MAX_EXERCISE_FEE_PERCENTAGE;
+
+        UD60x18 fee = PRBMathExtra.min(notionalFee, intrinsicValueFee);
+
+        UD60x18 discount;
+        if (taker != address(0)) discount = ud(IVxPremia(VXPREMIA).getDiscount(taker));
+        if (discount > ZERO) fee = (ONE - discount) * fee;
+        return fee;
     }
 
     /// @notice Gives a quote for a trade
@@ -1119,7 +1147,6 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (UD60x18 size, UD60x18 exerciseValue, UD60x18 collateral) {
         _revertIfOptionNotExpired(l);
         _removeInitFeeDiscount(l);
-        if (l.protocolFees > ZERO) _claimProtocolFees();
 
         uint256 tokenId = isLong ? PoolStorage.LONG : PoolStorage.SHORT;
         size = _balanceOfUD60x18(holder, tokenId);
@@ -1136,19 +1163,29 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @param costPerHolder The cost charged by the authorized operator, per option holder (18 decimals)
     /// @return exerciseValue The amount of collateral resulting from the exercise, ignoring costs applied during
     ///         automatic exercise (poolToken decimals)
+    /// @return exerciseFee The amount of fees paid to the protocol during exercise (18 decimals)
     /// @return success Whether the exercise was successful or not. This will be false if size to exercise size was zero
-    function _exercise(address holder, UD60x18 costPerHolder) internal returns (uint256 exerciseValue, bool success) {
+    function _exercise(
+        address holder,
+        UD60x18 costPerHolder
+    ) internal returns (uint256 exerciseValue, uint256 exerciseFee, bool success) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         (UD60x18 size, UD60x18 _exerciseValue, ) = _beforeExerciseOrSettle(l, true, holder);
+        UD60x18 fee = _exerciseFee(holder, size, _exerciseValue, l.strike, l.isCallPool);
 
+        l.protocolFees = l.protocolFees + fee;
+        _exerciseValue = _exerciseValue - fee;
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
 
-        if (size == ZERO) return (0, false);
+        if (l.protocolFees > ZERO) _claimProtocolFees();
 
+        if (size == ZERO) return (0, 0, false);
+
+        exerciseFee = l.toPoolTokenDecimals(fee);
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
-        emit Exercise(msg.sender, holder, size, _exerciseValue, l.settlementPrice, ZERO, costPerHolder);
+        emit Exercise(msg.sender, holder, size, _exerciseValue, l.settlementPrice, fee, costPerHolder);
 
         if (costPerHolder > ZERO) {
             _exerciseValue = _exerciseValue - costPerHolder;
@@ -1173,6 +1210,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         (UD60x18 size, UD60x18 exerciseValue, UD60x18 _collateral) = _beforeExerciseOrSettle(l, false, holder);
 
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
+
+        if (l.protocolFees > ZERO) _claimProtocolFees();
 
         if (size == ZERO) return (0, false);
 

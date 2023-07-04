@@ -98,17 +98,22 @@ interface IPoolCore is IPoolInternal {
     function annihilateFor(address owner, UD60x18 size) external;
 
     /// @notice Exercises all long options held by caller
-    /// @return exerciseValue The exercise value as amount of collateral paid out (poolToken decimals)
-    function exercise() external returns (uint256 exerciseValue);
+    /// @return exerciseValue The exercise value as amount of collateral paid out to long holder (poolToken decimals)
+    /// @return exerciseFee The fee paid to protocol (poolToken decimals)
+    function exercise() external returns (uint256 exerciseValue, uint256 exerciseFee);
 
     /// @notice Batch exercises all long options held by each `holder`, caller is reimbursed with the cost deducted from
     ///         the proceeds of the exercised options. Only authorized agents may execute this function on behalf of the
     ///         option holder.
     /// @param holders The holders of the contracts
     /// @param costPerHolder The cost charged by the authorized operator, per option holder (poolToken decimals)
-    /// @return The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic
-    ///         exercise (poolToken decimals)
-    function exerciseFor(address[] calldata holders, uint256 costPerHolder) external returns (uint256[] memory);
+    /// @return exerciseValues The exercise value as amount of collateral paid out per holder, ignoring costs applied during automatic
+    ///         exercise, but excluding protocol fees from amount (poolToken decimals)
+    /// @return exerciseFees The fees paid to protocol (poolToken decimals)
+    function exerciseFor(
+        address[] calldata holders,
+        uint256 costPerHolder
+    ) external returns (uint256[] memory exerciseValues, uint256[] memory exerciseFees);
 
     /// @notice Settles all short options held by caller
     /// @return collateral The amount of collateral left after settlement (poolToken decimals)

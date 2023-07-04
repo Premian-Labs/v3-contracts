@@ -285,6 +285,7 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.quoteOBHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
 
         // PoolCore

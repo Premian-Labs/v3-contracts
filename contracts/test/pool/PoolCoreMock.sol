@@ -55,6 +55,16 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return PoolStorage.parseTokenId(tokenId);
     }
 
+    function exerciseFee(
+        address taker,
+        UD60x18 size,
+        UD60x18 intrinsicValue,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18) {
+        return _exerciseFee(taker, size, intrinsicValue, strike, isCallPool);
+    }
+
     function protocolFees() external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.toPoolTokenDecimals(l.protocolFees);
