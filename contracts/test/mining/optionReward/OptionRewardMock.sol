@@ -15,7 +15,7 @@ contract OptionRewardMock is ERC1155Base, ERC165Base {
         BASE = base;
     }
 
-    function writeFrom(address longReceiver, UD60x18 contractSize) external {
+    function underwrite(address longReceiver, UD60x18 contractSize) external {
         IERC20(BASE).transferFrom(msg.sender, address(this), contractSize.unwrap());
         _mint(longReceiver, 0, contractSize.unwrap(), "");
     }

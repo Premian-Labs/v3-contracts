@@ -22,7 +22,7 @@ import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {IVaultRegistry} from "contracts/vault/IVaultRegistry.sol";
 import {VaultMock} from "contracts/test/vault/VaultMock.sol";
 import {VaultRegistry} from "contracts/vault/VaultRegistry.sol";
-import {OptionRewardMock} from "contracts/test/mining/OptionRewardMock.sol";
+import {OptionRewardMock} from "../../../contracts/test/mining/optionReward/OptionRewardMock.sol";
 
 import {Assertions} from "../../Assertions.sol";
 import {DebugUtils} from "../../DebugUtils.sol";

@@ -10,8 +10,9 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 
 import {WAD, ZERO} from "../../libraries/Constants.sol";
 
+import {IOptionReward} from "../optionReward/IOptionReward.sol";
+
 import {IVaultMining} from "./IVaultMining.sol";
-import {IOptionReward} from "../IOptionReward.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
 import {IVxPremia} from "../../staking/IVxPremia.sol";
 import {IVault} from "../../vault/IVault.sol";
@@ -121,7 +122,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         }
 
         IERC20(PREMIA).approve(OPTION_REWARD, size.unwrap());
-        IOptionReward(OPTION_REWARD).writeFrom(msg.sender, size);
+        IOptionReward(OPTION_REWARD).underwrite(msg.sender, size);
     }
 
     /// @inheritdoc IVaultMining
