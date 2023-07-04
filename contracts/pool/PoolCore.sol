@@ -13,7 +13,6 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {ONE, ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
-import {OptionMath} from "../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";

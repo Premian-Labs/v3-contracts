@@ -37,7 +37,7 @@ abstract contract PoolSettleTest is DeployTest {
         (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, false);
 
         trade.poolToken = getPoolToken();
-        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(FEE_RECEIVER);
 
         vm.startPrank(users.trader);
         deal(trade.poolToken, users.trader, trade.traderCollateral);
@@ -68,7 +68,7 @@ abstract contract PoolSettleTest is DeployTest {
             trade.initialCollateral + exerciseValue - trade.totalPremium - protocolFees
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
+        assertEq(IERC20(trade.poolToken).balanceOf(FEE_RECEIVER) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 
@@ -137,7 +137,7 @@ abstract contract PoolSettleTest is DeployTest {
             trade.initialCollateral + (exerciseValue * 2) - trade.totalPremium - protocolFees
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
+        assertEq(IERC20(trade.poolToken).balanceOf(FEE_RECEIVER) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.protocolFees(), 0);
 

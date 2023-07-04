@@ -15,7 +15,6 @@ import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
 import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "../Tokens.sol";
 
-import {ChainlinkAdapter} from "./ChainlinkAdapter.sol";
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 

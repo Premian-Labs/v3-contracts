@@ -50,7 +50,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         //
         vm.expectEmit();
         UD60x18 feeInShares = isCallTest ? ud(0.050505050505050505e18) : ud(0.050505050505050505e20);
-        emit ManagementFeePaid(feeReceiver, feeInShares.unwrap());
+        emit ManagementFeePaid(FEE_RECEIVER, feeInShares.unwrap());
         // test exposed function
         vault.chargeManagementFees();
         assertEq(vault.getLastManagementFeeTimestamp(), timestamp1);
@@ -58,7 +58,7 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         assertEq(vault.getProtocolFees(), ud(1e18)); // protocol fees should not be incremented
         assertEq(vault.totalSupply(), isCallTest ? ud(5.050505050505050505e18) : ud(5.050505050505050505e20));
         assertEq(vault.getPricePerShare(), ud(0.99e18));
-        assertEq(vault.balanceOf(feeReceiver), feeInShares);
+        assertEq(vault.balanceOf(FEE_RECEIVER), feeInShares);
     }
 
     function _test_deposit_ChargeManagementFees() public {
@@ -248,10 +248,10 @@ abstract contract UnderwriterVaultFeesTest is UnderwriterVaultDeployTest {
         deal(poolToken, address(vault), toTokenDecimals(protocolFees));
         vault.increaseTotalAssets(protocolFees);
 
-        deal(poolToken, feeReceiver, toTokenDecimals(balanceOfFeeReceiver));
+        deal(poolToken, FEE_RECEIVER, toTokenDecimals(balanceOfFeeReceiver));
         vm.expectEmit();
-        emit ClaimProtocolFees(feeReceiver, toTokenDecimals(protocolFees));
+        emit ClaimProtocolFees(FEE_RECEIVER, toTokenDecimals(protocolFees));
         vault.claimFees();
-        assertEq(IERC20(poolToken).balanceOf(feeReceiver), toTokenDecimals(balanceOfFeeReceiver + protocolFees));
+        assertEq(IERC20(poolToken).balanceOf(FEE_RECEIVER), toTokenDecimals(balanceOfFeeReceiver + protocolFees));
     }
 }

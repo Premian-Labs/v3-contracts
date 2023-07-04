@@ -5,7 +5,6 @@ pragma solidity >=0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
-import {Position} from "../libraries/Position.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {IPricing} from "./IPricing.sol";
