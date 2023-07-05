@@ -6,7 +6,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iNINE, iTEN} from "./Constants.sol";
+import {ZERO, ONE_HALF, ONE, TWO, FIVE, ONE_THOUSAND, iZERO, iONE, iTWO, iFOUR, iNINE, iTEN} from "./Constants.sol";
 
 library OptionMath {
     struct BlackScholesPriceVarsInternal {

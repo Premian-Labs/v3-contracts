@@ -90,7 +90,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.setTimestamp(startTime + 1 days);
         vm.expectEmit();
-        emit PerformanceFeePaid(feeReceiver, toTokenDecimals(spread * ud(0.05e18)));
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
         vault.afterBuy(strike, t0, size, spread, premium);
 
         // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there

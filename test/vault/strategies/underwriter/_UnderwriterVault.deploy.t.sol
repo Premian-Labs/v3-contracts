@@ -87,7 +87,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         address vaultImpl = address(
             new UnderwriterVaultMock(
                 address(vaultRegistry),
-                feeReceiver,
+                FEE_RECEIVER,
                 address(volOracle),
                 address(factory),
                 address(router),

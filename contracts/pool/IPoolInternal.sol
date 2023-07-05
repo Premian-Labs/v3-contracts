@@ -7,7 +7,6 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
-import {Position} from "../libraries/Position.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";
 

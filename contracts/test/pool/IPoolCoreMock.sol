@@ -28,6 +28,14 @@ interface IPoolCoreMock {
         pure
         returns (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType);
 
+    function exerciseFee(
+        address taker,
+        UD60x18 size,
+        UD60x18 intrinsicValue,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18);
+
     function protocolFees() external view returns (uint256);
 
     function exposed_cross(bool isBuy) external;
