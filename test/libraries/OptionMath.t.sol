@@ -351,10 +351,8 @@ contract OptionMathTest is Test, Assertions {
         assertEq(OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)), oneWeek);
     }
 
-    /**
-     * forge-config: default.fuzz.runs = 10000
-     * forge-config: default.fuzz.max-test-rejects = 500
-     */
+    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.max-test-rejects = 500
     function testFuzz_calculateStrikeInterval_ReturnExpectedValue(
         uint256 inputE1,
         uint256 inputE18,

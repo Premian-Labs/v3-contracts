@@ -221,19 +221,11 @@ library OptionMath {
         if (spot < MIN_INPUT_PRICE || spot > MAX_INPUT_PRICE)
             revert OptionMath__OutOfBoundsPrice(MIN_INPUT_PRICE, MAX_INPUT_PRICE, spot);
 
-        SD59x18 o = zCount(spot);
-        SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * (-iONE) - iONE));
-        UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
+        uint256 _spot = spot.unwrap();
+        uint256 nbDigits = countDigits(_spot);
+        uint256 multiplier = (_spot >= 5 * 10 ** nbDigits) ? 5 : 1;
 
-        UD60x18 y;
-        if (iONE_HALF > x) {
-            // NOTE: `x` may be below `0.5e18` due to rounding errors, in which case, we correct it. This has been
-            // observed when `5e15 >= spot`.
-            if (ud(5e15) >= spot && iERROR_MARGIN > iONE_HALF - x) y = FIVE * f;
-            else y = ONE * f;
-        } else y = FIVE * f;
-
-        return ONE_THOUSAND > spot ? y : y.ceil();
+        return ud(multiplier * 10 ** (nbDigits - 1));
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
@@ -288,15 +280,12 @@ library OptionMath {
     }
 
     /// @notice Counts the number of digits in the given input
-    function zCount(UD60x18 input) internal pure returns (SD59x18) {
-        uint256 _input = input.unwrap();
-        int256 z = -18;
-
-        while (_input >= 10) {
-            _input /= 10;
-            z++;
+    function countDigits(uint256 input) internal pure returns (uint256 count) {
+        while (input >= 10) {
+            input /= 10;
+            count++;
         }
 
-        return sd(z * int256(1e18));
+        return count;
     }
 }
