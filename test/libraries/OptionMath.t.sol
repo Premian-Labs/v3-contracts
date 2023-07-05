@@ -8,6 +8,8 @@ import {Test} from "forge-std/Test.sol";
 
 import {Assertions} from "../Assertions.sol";
 
+import {ZERO} from "contracts/libraries/Constants.sol";
+
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 contract OptionMathTest is Test, Assertions {
@@ -349,69 +351,111 @@ contract OptionMathTest is Test, Assertions {
         assertEq(OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)), oneWeek);
     }
 
-    function test_calculateStrikeInterval_ReturnExpectedValue() public {
-        // prettier-ignore
-        UD60x18[2][56] memory values = [
-            [ud(1e18),       ud(0.1e18)],
-            [ud(2e18),       ud(0.1e18)],
-            [ud(3e18),       ud(0.1e18)],
-            [ud(4e18),       ud(0.1e18)],
-            [ud(5e18),       ud(0.5e18)],
-            [ud(6e18),       ud(0.5e18)],
-            [ud(7e18),       ud(0.5e18)],
-            [ud(9e18),       ud(0.5e18)],
-            [ud(10e18),      ud(1e18)],
-            [ud(11e18),      ud(1e18)],
-            [ud(33e18),      ud(1e18)],
-            [ud(49e18),      ud(1e18)],
-            [ud(50e18),      ud(5e18)],
-            [ud(51e18),      ud(5e18)],
-            [ud(74e18),      ud(5e18)],
-            [ud(99e18),      ud(5e18)],
-            [ud(100e18),     ud(10e18)],
-            [ud(101e18),     ud(10e18)],
-            [ud(434e18),     ud(10e18)],
-            [ud(499e18),     ud(10e18)],
-            [ud(500e18),     ud(50e18)],
-            [ud(501e18),     ud(50e18)],
-            [ud(871e18),     ud(50e18)],
-            [ud(999e18),     ud(50e18)],
-            [ud(1000e18),    ud(100e18)],
-            [ud(1001e18),    ud(100e18)],
-            [ud(4356e18),    ud(100e18)],
-            [ud(4999e18),    ud(100e18)],
-            [ud(5000e18),    ud(500e18)],
-            [ud(5001e18),    ud(500e18)],
-            [ud(5643e18),    ud(500e18)],
-            [ud(9999e18),    ud(500e18)],
-            [ud(10000e18),   ud(1000e18)],
-            [ud(10001e18),   ud(1000e18)],
-            [ud(35321e18),   ud(1000e18)],
-            [ud(49999e18),   ud(1000e18)],
-            [ud(50000e18),   ud(5000e18)],
-            [ud(50001e18),   ud(5000e18)],
-            [ud(64312e18),   ud(5000e18)],
-            [ud(99999e18),   ud(5000e18)],
-            [ud(100000e18),  ud(10000e18)],
-            [ud(100001e18),  ud(10000e18)],
-            [ud(256110e18),  ud(10000e18)],
-            [ud(499999e18),  ud(10000e18)],
-            [ud(500000e18),  ud(50000e18)],
-            [ud(500001e18),  ud(50000e18)],
-            [ud(862841e18),  ud(50000e18)],
-            [ud(999999e18),  ud(50000e18)],
-            [ud(1000000e18), ud(100000e18)],
-            [ud(1000001e18), ud(100000e18)],
-            [ud(4321854e18), ud(100000e18)],
-            [ud(4999999e18), ud(100000e18)],
-            [ud(5000000e18), ud(500000e18)],
-            [ud(5000001e18), ud(500000e18)],
-            [ud(9418355e18), ud(500000e18)],
-            [ud(9999999e18), ud(500000e18)]
-        ];
-
-        for (uint256 i = 0; i < values.length; i++) {
-            assertEq(OptionMath.calculateStrikeInterval(values[i][0]), values[i][1]);
+    /**
+     * forge-config: default.fuzz.runs = 10000
+     * forge-config: default.fuzz.max-test-rejects = 500
+     */
+    function testFuzz_calculateStrikeInterval_ReturnExpectedValue(
+        uint256 inputE1,
+        uint256 inputE18,
+        uint256 inputE34
+    ) public {
+        {
+            inputE1 = bound(inputE1, 1e1, 1e2 - 1);
+            UD60x18 interval = inputE1 >= 5e1 ? ud(5) : ud(1);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE1)), interval);
         }
+
+        {
+            inputE18 = bound(inputE18, 1e18, 1e19 - 1);
+            UD60x18 interval = inputE18 >= 5e18 ? ud(5e17) : ud(1e17);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE18)), interval);
+        }
+
+        {
+            inputE34 = bound(inputE34, 1e33, 1e34 - 1);
+            UD60x18 interval = inputE34 >= 5e33 ? ud(5e32) : ud(1e32);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE34)), interval);
+        }
+    }
+
+    function test_calculateStrikeInterval_ReturnExpectedValue_BoundaryConditions_ONE() public {
+        uint256 boundary;
+        for (uint256 i = 1; i <= 34; i++) {
+            // tests boundary of 99 -> 100 -> 101, 999 -> 1000 -> 1001, 9999 -> 10000 -> 10001, etc
+            boundary = 10 ** i;
+
+            UD60x18 lower = ud(boundary - 1);
+            UD60x18 upper = ud(boundary + 1);
+
+            UD60x18 lowerInterval = i > 1 ? ud(5 * 10 ** (i - 2)) : ZERO;
+            UD60x18 upperInterval = ud(10 ** (i - 1));
+
+            if (i > 1) assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+            assertEq(OptionMath.calculateStrikeInterval(ud(boundary)), upperInterval);
+            if (i < 34) assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+
+            for (uint256 j = 1; j < i; j++) {
+                lower = ud(boundary - (10 ** j) - 1);
+                upper = ud(boundary + 10 ** j);
+
+                if (i > 1) assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+                if (i < 34) assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+            }
+        }
+    }
+
+    function test_calculateStrikeInterval_ReturnExpectedValue_BoundaryConditions_FIVE() public {
+        uint256 boundary;
+        for (uint256 i = 1; i < 34; i++) {
+            // tests boundary of 49 -> 50 -> 51, 499 -> 500 -> 501, 4999 -> 5000 -> 5001, etc
+            boundary = 5 * 10 ** i;
+
+            UD60x18 lower = ud(boundary - 1);
+            UD60x18 upper = ud(boundary + 1);
+
+            UD60x18 lowerInterval = ud(10 ** (i - 1));
+            UD60x18 upperInterval = ud(5 * 10 ** (i - 1));
+
+            assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+            assertEq(OptionMath.calculateStrikeInterval(ud(boundary)), upperInterval);
+            assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+
+            for (uint256 j = 1; j < i; j++) {
+                lower = ud(boundary - (10 ** j) - 1);
+                upper = ud(boundary + 10 ** j);
+
+                assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+                assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+            }
+        }
+    }
+
+    function test_calculateStrikeInterval_RevertIf_OutOfPriceBounds_Lower() public {
+        UD60x18 price = UD60x18.wrap(9);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OptionMath.OptionMath__OutOfBoundsPrice.selector,
+                UD60x18.wrap(1e1),
+                UD60x18.wrap(1e34),
+                price
+            )
+        );
+
+        OptionMath.calculateStrikeInterval(price);
+    }
+
+    function test_calculateStrikeInterval_RevertIf_OutOfPriceBounds_Upper() public {
+        UD60x18 price = UD60x18.wrap(10000000000000000000000000000000001);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OptionMath.OptionMath__OutOfBoundsPrice.selector,
+                UD60x18.wrap(1e1),
+                UD60x18.wrap(1e34),
+                price
+            )
+        );
+
+        OptionMath.calculateStrikeInterval(price);
     }
 }

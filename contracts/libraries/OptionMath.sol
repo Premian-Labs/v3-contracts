@@ -4,7 +4,7 @@ pragma solidity >=0.8.19;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18} from "@prb/math/SD59x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, FIVE, TEN, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iEIGHT, iNINE, iTEN} from "./Constants.sol";
 
@@ -28,7 +28,12 @@ library OptionMath {
     SD59x18 internal constant S2 = SD59x18.wrap(0.44334159e18);
     int256 internal constant SQRT_2PI = 2_506628274631000502;
 
+    UD60x18 internal constant MIN_INPUT_PRICE = UD60x18.wrap(1e1);
+    UD60x18 internal constant MAX_INPUT_PRICE = UD60x18.wrap(1e34);
+    SD59x18 internal constant iERROR_MARGIN = SD59x18.wrap(1e2);
+
     error OptionMath__NonPositiveVol();
+    error OptionMath__OutOfBoundsPrice(UD60x18 min, UD60x18 max, UD60x18 price);
     error OptionMath__Underflow();
 
     /// @notice Helper function to evaluate used to compute the normal CDF approximation
@@ -213,11 +218,22 @@ library OptionMath {
     /// @param spot The spot price of the base asset (18 decimals)
     /// @return The strike interval (18 decimals)
     function calculateStrikeInterval(UD60x18 spot) internal pure returns (UD60x18) {
-        SD59x18 o = spot.intoSD59x18().log10().floor();
+        if (spot < MIN_INPUT_PRICE || spot > MAX_INPUT_PRICE)
+            revert OptionMath__OutOfBoundsPrice(MIN_INPUT_PRICE, MAX_INPUT_PRICE, spot);
+
+        SD59x18 o = zCount(spot);
         SD59x18 x = spot.intoSD59x18() * (iTEN.pow(o * (-iONE) - iONE));
         UD60x18 f = iTEN.pow(o - iONE).intoUD60x18();
-        UD60x18 y = x.intoUD60x18() < ONE_HALF ? ONE * f : FIVE * f;
-        return spot < ONE_THOUSAND ? y : y.ceil();
+
+        UD60x18 y;
+        if (iONE_HALF > x) {
+            // NOTE: `x` may be below `0.5e18` due to rounding errors, in which case, we correct it. This has been
+            // observed when `5e15 >= spot`.
+            if (ud(5e15) >= spot && iERROR_MARGIN > iONE_HALF - x) y = FIVE * f;
+            else y = ONE * f;
+        } else y = FIVE * f;
+
+        return ONE_THOUSAND > spot ? y : y.ceil();
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
@@ -269,5 +285,18 @@ library OptionMath {
         if (targetDecimals > inputDecimals) return value * int256(10 ** (targetDecimals - inputDecimals));
 
         return value / int256(10 ** (inputDecimals - targetDecimals));
+    }
+
+    /// @notice Counts the number of digits in the given input
+    function zCount(UD60x18 input) internal pure returns (SD59x18) {
+        uint256 _input = input.unwrap();
+        int256 z = -18;
+
+        while (_input >= 10) {
+            _input /= 10;
+            z++;
+        }
+
+        return sd(z * int256(1e18));
     }
 }
