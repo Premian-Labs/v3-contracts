@@ -185,6 +185,13 @@ library OptionMath {
         return (scaledPrice * _strike).intoUD60x18();
     }
 
+    /// @notice Returns true if the maturity time is 8AM UTC
+    /// @param maturity The maturity timestamp of the option
+    /// @return True if the maturity time is 8AM UTC, false otherwise
+    function is8AMUTC(uint256 maturity) internal pure returns (bool) {
+        return maturity % 24 hours == 8 hours;
+    }
+
     /// @notice Returns true if the maturity day is Friday
     /// @param maturity The maturity timestamp of the option
     /// @return True if the maturity day is Friday, false otherwise
