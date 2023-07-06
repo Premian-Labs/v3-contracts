@@ -322,7 +322,17 @@ contract OptionMathTest is Test, Assertions {
     }
 
     function test_isLastFriday_ReturnFalse_IfNotLastWeekOfMonth() public {
-        uint32[6] memory timestamps = [1675324800, 1675411200, 1675670400, 1676016000, 1676620800, 1676707200];
+        uint32[9] memory timestamps = [
+            1675324800,
+            1675411200,
+            1675670400,
+            1676016000,
+            1676620800,
+            1676707200,
+            1679644800,
+            1695408787,
+            1716576787
+        ];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             assertFalse(OptionMath.isLastFriday(timestamps[i]));

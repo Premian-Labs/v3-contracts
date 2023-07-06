@@ -205,7 +205,7 @@ library OptionMath {
     function isLastFriday(uint256 maturity) internal pure returns (bool) {
         uint256 dayOfMonth = DateTime.getDay(maturity);
         uint256 lastDayOfMonth = DateTime.getDaysInMonth(maturity);
-        if (lastDayOfMonth - dayOfMonth > 7) return false;
+        if (lastDayOfMonth - dayOfMonth >= 7) return false;
         return isFriday(maturity);
     }
 
