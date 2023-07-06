@@ -220,16 +220,16 @@ library OptionMath {
         return maturity - block.timestamp;
     }
 
-    /// @notice Calculates the strike interval for the given spot price
-    /// @param spot The spot price of the base asset (18 decimals)
+    /// @notice Calculates the strike interval for `strike`
+    /// @param strike The price to calculate strike interval for (18 decimals)
     /// @return The strike interval (18 decimals)
-    function calculateStrikeInterval(UD60x18 spot) internal pure returns (UD60x18) {
-        if (spot < MIN_INPUT_PRICE || spot > MAX_INPUT_PRICE)
-            revert OptionMath__OutOfBoundsPrice(MIN_INPUT_PRICE, MAX_INPUT_PRICE, spot);
+    function calculateStrikeInterval(UD60x18 strike) internal pure returns (UD60x18) {
+        if (strike < MIN_INPUT_PRICE || strike > MAX_INPUT_PRICE)
+            revert OptionMath__OutOfBoundsPrice(MIN_INPUT_PRICE, MAX_INPUT_PRICE, strike);
 
-        uint256 _spot = spot.unwrap();
-        uint256 nbDigits = countDigits(_spot);
-        uint256 multiplier = (_spot >= 5 * 10 ** nbDigits) ? 5 : 1;
+        uint256 _strike = strike.unwrap();
+        uint256 nbDigits = countDigits(_strike);
+        uint256 multiplier = (_strike >= 5 * 10 ** nbDigits) ? 5 : 1;
 
         return ud(multiplier * 10 ** (nbDigits - 1));
     }
