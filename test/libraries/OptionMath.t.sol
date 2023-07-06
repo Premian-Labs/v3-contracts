@@ -281,6 +281,21 @@ contract OptionMathTest is Test, Assertions {
         _test_optionDelta_ReturnExpectedValue(false);
     }
 
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_is8AMUTC_ReturnFalse_IfNot8AMUTC(uint256 input) public {
+        input = bound(input, 1672531200, 2335219199);
+        vm.assume(input % 24 hours != 8 hours);
+        assertFalse(OptionMath.is8AMUTC(input));
+    }
+
+    /// forge-config: default.fuzz.runs = 50
+    /// forge-config: default.fuzz.max-test-rejects = 65536
+    function testFuzz_is8AMUTC_ReturnTrue_If8AMUTC(uint256 input) public {
+        input = bound(input, 1672531200, 2335219199);
+        vm.assume(input % 24 hours == 8 hours);
+        assertTrue(OptionMath.is8AMUTC(input));
+    }
+
     function test_isFriday_ReturnFalse_IfNotFriday() public {
         uint32[8] memory timestamps = [
             1674460800,

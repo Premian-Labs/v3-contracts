@@ -5,7 +5,6 @@ on:
   pull_request:
 
 env:
-  FOUNDRY_PROFILE: ci
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:

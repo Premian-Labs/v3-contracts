@@ -121,6 +121,20 @@ contract PoolFactoryTest is DeployTest {
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
         );
         factory.deployPool{value: 1 ether}(poolKey);
+
+        poolKey.maturity = 1688572800;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
+        );
+        factory.deployPool{value: 1 ether}(poolKey);
+
+        poolKey.maturity = 1688601600;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
+        );
+        factory.deployPool{value: 1 ether}(poolKey);
     }
 
     function test_deployPool_RevertIf_MaturityWeeklyNotFriday() public {
