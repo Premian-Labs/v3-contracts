@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+
+pragma solidity >=0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -13,13 +14,14 @@ contract DualMiningProxy is ProxyUpgradeableOwnable {
     constructor(
         address implementation,
         address rewardToken,
-        UD60x18 rewardsPerYear
+        UD60x18 rewardsPerYear,
+        uint256 startTimestamp
     ) ProxyUpgradeableOwnable(implementation) {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
         l.rewardsPerYear = rewardsPerYear;
         l.rewardToken = rewardToken;
         l.rewardTokenDecimals = IERC20Metadata(rewardToken).decimals();
-        l.lastRewardTimestamp = block.timestamp;
+        l.lastRewardTimestamp = startTimestamp;
     }
 }

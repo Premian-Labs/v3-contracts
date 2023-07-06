@@ -7,9 +7,8 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 interface IDualMining {
     error DualMining__NotAuthorized(address caller);
 
-    event SetRewardsPerYear(UD60x18 rewardsPerYear);
-
     struct UserInfo {
+        uint256 lastUpdateTimestamp;
         // `accParentTotalRewards` value at last user update
         UD60x18 lastAccParentTotalRewards;
         // `accTotalRewards` value at last user update

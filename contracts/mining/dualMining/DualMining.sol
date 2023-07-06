@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+
+pragma solidity >=0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -30,17 +31,13 @@ contract DualMining is IDualMining, OwnableInternal {
         l.rewardsAvailable = l.rewardsAvailable + amount;
     }
 
-    function setRewardsPerYear(UD60x18 rewardsPerYear) external onlyOwner {
-        DualMiningStorage.layout().rewardsPerYear = rewardsPerYear;
-        emit SetRewardsPerYear(rewardsPerYear);
-    }
-
     /// @inheritdoc IDualMining
     function updatePool() external {
         _updatePool(DualMiningStorage.layout());
     }
 
     function _updatePool(DualMiningStorage.Layout storage l) internal {
+        if (l.startTimestamp < block.timestamp) return;
         if (block.timestamp <= l.lastRewardTimestamp) return;
 
         UD60x18 rewardAmount = _calculateRewardsUpdate(l);
@@ -57,9 +54,16 @@ contract DualMining is IDualMining, OwnableInternal {
         if (msg.sender != VAULT_MINING) revert DualMining__NotAuthorized(msg.sender);
 
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
-        _updatePool(l);
+        if (l.startTimestamp < block.timestamp) return;
 
         IDualMining.UserInfo storage uInfo = l.userInfo[user];
+
+        if (uInfo.lastUpdateTimestamp < l.startTimestamp) {
+            uInfo.lastUpdateTimestamp = block.timestamp;
+            return;
+        }
+
+        _updatePool(l);
 
         UD60x18 accTotalRewards = l.accTotalRewards + poolRewards;
         l.accTotalRewards = accTotalRewards;

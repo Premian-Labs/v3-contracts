@@ -10,6 +10,9 @@ library DualMiningStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.DualMining");
 
     struct Layout {
+        // Timestamp at which reward distribution starts
+        // Users will start to accumulate rewards after their first user update past this timestamp
+        uint256 startTimestamp;
         // Amount of rewards distributed per year
         UD60x18 rewardsPerYear;
         // Total rewards left to distribute

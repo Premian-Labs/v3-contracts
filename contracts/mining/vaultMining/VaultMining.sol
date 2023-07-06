@@ -134,7 +134,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
         UD60x18 utilisationRate
     ) external {
         _revertIfNotVault(msg.sender);
-        _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
+        _updateVault(vault, newTotalShares, utilisationRate);
+        _updateUser(user, vault, newUserShares);
     }
 
     /// @inheritdoc IVaultMining
@@ -163,23 +164,26 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function updateUser(address user, address vault) public {
+    function updateUsers(address[] memory users, address vault) external {
         IVault _vault = IVault(vault);
-        _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
+        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+
+        for (uint256 i = 0; i < users.length; i++) {
+            _updateUser(users[i], vault, ud(_vault.balanceOf(users[i])));
+        }
     }
 
-    function _updateUser(
-        address user,
-        address vault,
-        UD60x18 newUserShares,
-        UD60x18 newTotalShares,
-        UD60x18 utilisationRate
-    ) internal {
+    /// @inheritdoc IVaultMining
+    function updateUser(address user, address vault) public {
+        IVault _vault = IVault(vault);
+        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+        _updateUser(user, vault, ud(_vault.balanceOf(user)));
+    }
+
+    function _updateUser(address user, address vault, UD60x18 newUserShares) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
-
-        _updateVault(vault, newTotalShares, utilisationRate);
 
         uInfo.reward = uInfo.reward + (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
         uInfo.rewardDebt = newUserShares * vInfo.accRewardsPerShare;
