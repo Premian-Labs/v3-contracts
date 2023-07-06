@@ -204,7 +204,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     /// @notice Revert if the maturity is invalid
     function _revertIfOptionMaturityInvalid(uint256 maturity) internal view {
         if (maturity <= block.timestamp) revert PoolFactory__OptionExpired(maturity);
-        if ((maturity % 24 hours) % 8 hours != 0) revert PoolFactory__OptionMaturityNot8UTC(maturity);
+        if (!OptionMath.is8AMUTC(maturity)) revert PoolFactory__OptionMaturityNot8UTC(maturity);
 
         uint256 ttm = OptionMath.calculateTimeToMaturity(maturity);
 
