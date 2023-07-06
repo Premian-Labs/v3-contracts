@@ -226,9 +226,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         vars.lastSpreadUnlockUpdate = timestamp;
     }
 
+    /// @dev _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places,
+    ///      therefore no further scaling has to be applied
     function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
-        // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
-        // therefore no further scaling has to be applied
         return ud(_balanceOf(owner));
     }
 

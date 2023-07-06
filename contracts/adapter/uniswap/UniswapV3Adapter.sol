@@ -268,7 +268,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
         uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(pool);
 
         if (range[0] > oldestObservation) {
-            // ===========================================================
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             // When the oldest observation is before the range start, restart range
             // from oldest observation
             //
@@ -277,7 +277,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
             //   |--|--|--|--|--|--|--o--|--|--|///////////|--|
             //            ^           ^
             //        rangeStart   rangeEnd
-            // ===========================================================
+            // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             if (oldestObservation < period)
                 revert UniswapV3Adapter__InsufficientObservationPeriod(oldestObservation, period);

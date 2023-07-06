@@ -27,10 +27,10 @@ interface IPoolCore is IPoolInternal {
     ) external view returns (uint256);
 
     /// @notice Calculates the fee for a trade based on the `size` and `premiumNormalized` of the trade.
-    ///         WARNING : It is recommended to use `takerFee` instead of this function. This function is a lower level
-    ///                   function here to be used when a pool has not yet be deployed, by calling it from the diamond
-    ///                   contract directly rather than a pool proxy. If using it from the pool,
-    ///                   you should pass the same value as the pool for `strike` and `isCallPool` in order to get the accurate takerFee
+    /// @dev WARNING: It is recommended to use `takerFee` instead of this function. This function is a lower level
+    ///      function here to be used when a pool has not yet be deployed, by calling it from the diamond contract
+    ///      directly rather than a pool proxy. If using it from the pool, you should pass the same value as the pool
+    ///      for `strike` and `isCallPool` in order to get the accurate takerFee
     /// @param taker The taker of a trade
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
@@ -86,13 +86,13 @@ interface IPoolCore is IPoolInternal {
     function writeFrom(address underwriter, address longReceiver, UD60x18 size, address referrer) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral.
-    ///         NOTE: This function can be called post or prior to expiration.
+    /// @dev This function can be called post or prior to expiration.
     /// @param size The size to annihilate (18 decimals)
     function annihilate(UD60x18 size) external;
 
     /// @notice Annihilate a pair of long + short option contracts to unlock the stored collateral on behalf of another account.
     ///         msg.sender must be approved through `UserSettings.setAuthorizedAddress` by the owner of the long/short contracts.
-    ///         NOTE: This function can be called post or prior to expiration.
+    /// @dev This function can be called post or prior to expiration.
     /// @param owner The owner of the shorts/longs to annihilate
     /// @param size The size to annihilate (18 decimals)
     function annihilateFor(address owner, UD60x18 size) external;

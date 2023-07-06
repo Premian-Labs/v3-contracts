@@ -72,7 +72,7 @@ interface IPoolDepositWithdraw is IPoolInternal {
     ) external returns (Position.Delta memory delta);
 
     /// @notice Get nearest ticks below `lower` and `upper`.
-    ///         NOTE : If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
+    /// @dev If no tick between `lower` and `upper`, then the nearest tick below `upper`, will be `lower`
     /// @param lower The lower bound of the range (18 decimals)
     /// @param upper The upper bound of the range (18 decimals)
     /// @return nearestBelowLower The nearest tick below `lower` (18 decimals)

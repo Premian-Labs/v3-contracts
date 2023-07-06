@@ -12,11 +12,8 @@ import {IPricing} from "./IPricing.sol";
 import {ZERO, ONE} from "./Constants.sol";
 
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
-///         ===========================================================
-///         WARNING:
-///         This library should not be used for computations that span multiple ticks. Instead, the user should use the
-///         functions of this library to simplify computations for more complex price calculations.
-///         ===========================================================
+/// @dev WARNING: This library should not be used for computations that span multiple ticks. Instead, the user should
+///      use the functions of this library to simplify computations for more complex price calculations.
 library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
@@ -51,7 +48,7 @@ library Pricing {
 
     /// @notice Find the number of ticks of an active tick range. Used to compute the aggregate, bid or ask liquidity
     ///         either of the pool or the range order.
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ///         min_tick_distance = 0.01
     ///         lower = 0.01
     ///         upper = 0.03
@@ -61,7 +58,7 @@ library Pricing {
     ///          |xxxxxxxxxxxxxxxxxx|xxxxxxxxxxxxxxxxxx|
     ///
     ///         Then there are two active ticks, 0.01 and 0.02, within the active tick range.
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) internal pure returns (UD60x18) {
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
