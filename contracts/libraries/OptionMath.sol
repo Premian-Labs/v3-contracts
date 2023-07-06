@@ -4,9 +4,9 @@ pragma solidity >=0.8.19;
 
 import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahsDateTimeLibrary.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18, sd} from "@prb/math/SD59x18.sol";
+import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, FIVE, ONE_THOUSAND, iZERO, iONE_HALF, iONE, iTWO, iFOUR, iNINE, iTEN} from "./Constants.sol";
+import {ZERO, TWO, iZERO, iONE, iTWO, iFOUR, iNINE} from "./Constants.sol";
 
 library OptionMath {
     struct BlackScholesPriceVarsInternal {
@@ -30,7 +30,6 @@ library OptionMath {
 
     UD60x18 internal constant MIN_INPUT_PRICE = UD60x18.wrap(1e1);
     UD60x18 internal constant MAX_INPUT_PRICE = UD60x18.wrap(1e34);
-    SD59x18 internal constant iERROR_MARGIN = SD59x18.wrap(1e2);
 
     error OptionMath__NonPositiveVol();
     error OptionMath__OutOfBoundsPrice(UD60x18 min, UD60x18 max, UD60x18 price);
