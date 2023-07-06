@@ -10,9 +10,9 @@ library VaultMiningStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.VaultMining");
 
     struct Layout {
-        // Total rewards left to distribute
-        UD60x18 rewardsPerYear;
         // Amount of rewards distributed per year
+        UD60x18 rewardsPerYear;
+        // Total rewards left to distribute
         UD60x18 rewardsAvailable;
         mapping(address pool => IVaultMining.VaultInfo infos) vaultInfo;
         mapping(address pool => mapping(address user => IVaultMining.UserInfo info)) userInfo;
