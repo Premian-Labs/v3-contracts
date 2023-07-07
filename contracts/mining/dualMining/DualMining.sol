@@ -76,7 +76,7 @@ contract DualMining is IDualMining, OwnableInternal {
 
         UD60x18 userRewardPercentage = (userRewards - toSubtract) /
             (parentAccTotalRewards - uInfo.lastParentAccTotalRewards);
-        uInfo.parentAccTotalRewards = parentAccTotalRewards;
+        uInfo.lastParentAccTotalRewards = parentAccTotalRewards;
 
         UD60x18 userReward = (l.accTotalRewards - uInfo.lastAccTotalRewards) * userRewardPercentage;
         uInfo.reward = uInfo.reward + userReward;

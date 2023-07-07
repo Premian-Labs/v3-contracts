@@ -23,8 +23,14 @@ interface IDualMining {
     /// @notice Trigger an update for this mining pool
     function updatePool() external;
 
-    /// @notice Trigger an update for a specific user
-    function updateUser(address user, UD60x18 poolRewards, UD60x18 userRewards) external;
+    /// @notice Trigger an update for a specific user. Can only be called by `VAULT_MINING` contract
+    function updateUser(
+        address user,
+        UD60x18 oldShares,
+        UD60x18 oldRewardDebt,
+        UD60x18 poolRewards,
+        UD60x18 userRewards
+    ) external;
 
     /// @notice Claim rewards
     function claim() external;
