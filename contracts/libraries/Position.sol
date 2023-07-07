@@ -117,7 +117,7 @@ library Position {
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right.
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ///         Usage:
     ///         CS order: f(x) defines the amount of shorts of a CS order holding one unit of liquidity.
     ///         LC order: (1 - f(x)) defines the amount of longs of a LC order holding one unit of liquidity.
@@ -126,7 +126,7 @@ library Position {
     ///         case 1. f(x) = 0                                for x < lower
     ///         case 2. f(x) = (x - lower) / (upper - lower)    for lower <= x <= upper
     ///         case 3. f(x) = 1                                for x > upper
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     function pieceWiseLinear(KeyInternal memory self, UD60x18 price) internal pure returns (UD60x18) {
         revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
@@ -136,7 +136,7 @@ library Position {
     }
 
     /// @notice Returns the amount of 'bid-side' collateral associated to a range order with one unit of liquidity.
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ///         Usage:
     ///         CS order: bid-side collateral defines the premiums generated from selling options.
     ///         LC order: bid-side collateral defines the collateral used to pay for buying long options.
@@ -145,7 +145,7 @@ library Position {
     ///         case 1. f(x) = 0                                            for x < lower
     ///         case 2. f(x) = (price**2 - lower) / [2 * (upper - lower)]   for lower <= x <= upper
     ///         case 3. f(x) = (upper + lower) / 2                          for x > upper
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     function pieceWiseQuadratic(KeyInternal memory self, UD60x18 price) internal pure returns (UD60x18) {
         revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
@@ -171,10 +171,7 @@ library Position {
     }
 
     /// @notice Converts `_contracts` to the amount of collateral normalized to 18 decimals
-    ///         ===========================================================
-    ///         WARNING:
-    ///         Decimals needs to be scaled before using this amount for collateral transfers
-    ///         ===========================================================
+    /// @dev WARNING: Decimals needs to be scaled before using this amount for collateral transfers
     /// @param strike The strike price (18 decimals)
     function contractsToCollateral(UD60x18 _contracts, UD60x18 strike, bool isCall) internal pure returns (UD60x18) {
         return isCall ? _contracts : _contracts * strike;
@@ -190,12 +187,12 @@ library Position {
 
     /// @notice Returns the bid collateral (18 decimals) either used to buy back options or revenue/ income generated
     ///         from underwriting / selling options.
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ///         For a <= p <= b we have:
     ///
     ///         bid(p; a, b) = [ (p - a) / (b - a) ] * [ (a + p)  / 2 ]
     ///                      = (p^2 - a^2) / [2 * (b - a)]
-    ///         ===========================================================
+    ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @param self The internal position key
     /// @param size The contract amount (18 decimals)
     /// @param price The current market price (18 decimals)

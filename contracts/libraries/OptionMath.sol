@@ -56,8 +56,8 @@ library OptionMath {
     }
 
     /// @notice Normal Distribution Probability Density Function.
-    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with µ = 0 and
-    ///      σ = 1.
+    /// @dev Equal to `Z(x) = (1 / σ√2π)e^( (-(x - µ)^2) / 2σ^2 )`. Only computes pdf of a distribution with `µ = 0` and
+    ///      `σ = 1`.
     /// @custom:error Maximum error of 1.2e-7.
     /// @custom:source https://mathworld.wolfram.com/ProbabilityDensityFunction.html.
     /// @param x Number to get PDF for (18 decimals)
@@ -76,7 +76,7 @@ library OptionMath {
         }
     }
 
-    /// @notice Implementation of the ReLu function f(x)=(x)^+ to compute call / put payoffs
+    /// @notice Implementation of the ReLu function `f(x)=(x)^+` to compute call / put payoffs
     /// @param x Input value (18 decimals)
     /// @return result Output of the relu function (18 decimals)
     function relu(SD59x18 x) internal pure returns (UD60x18) {
@@ -86,8 +86,8 @@ library OptionMath {
         return ZERO;
     }
 
-    /// @notice Returns the terms d1 and d2 from the Black-Scholes formula that are used
-    ///         to compute the price of a call / put option.
+    /// @notice Returns the terms `d1` and `d2` from the Black-Scholes formula that are used to compute the price of a
+    ///         call / put option.
     /// @param spot The spot price. (18 decimals)
     /// @param strike The strike price of the option. (18 decimals)
     /// @param timeToMaturity The time until the option expires. (18 decimals)

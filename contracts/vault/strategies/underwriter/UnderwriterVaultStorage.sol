@@ -17,9 +17,9 @@ library UnderwriterVaultStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.UnderwriterVaultStorage");
 
     struct Layout {
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Vault Specification
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // ERC20 token address for the base asset
         address base;
         // ERC20 token address for the quote asset
@@ -32,16 +32,16 @@ library UnderwriterVaultStorage {
         address oracleAdapter;
         // Whether the vault is underwriting calls or puts
         bool isCall;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Vault Accounting
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // The total assets held in the vault from deposits
         UD60x18 totalAssets;
         // The total assets that have been locked up as collateral for underwritten options.
         UD60x18 totalLockedAssets;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Trading Parameters
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Minimum days until maturity which can be underwritten by the vault, default 3
         UD60x18 minDTE;
         // Maximum days until maturity which can be underwritten by the vault, default 30
@@ -50,17 +50,17 @@ library UnderwriterVaultStorage {
         UD60x18 minDelta;
         // Maximum option delta which can be underwritten by the vault, default 0.7
         UD60x18 maxDelta;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // C-Level Parameters
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         UD60x18 minCLevel; // 1
         UD60x18 maxCLevel; // 1.2
         UD60x18 alphaCLevel; // 3
         UD60x18 hourlyDecayDiscount; // 0.005
         uint256 lastTradeTimestamp;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Data structures for information on listings
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // The minimum maturity over all unsettled options
         uint256 minMaturity;
         // The maximum maturity over all unsettled options
@@ -71,9 +71,9 @@ library UnderwriterVaultStorage {
         mapping(uint256 => EnumerableSet.Bytes32Set) maturityToStrikes;
         // (maturity, strike) => number of short contracts
         mapping(uint256 => mapping(UD60x18 => UD60x18)) positionSizes;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Dispersing Profit Variables
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Tracks the total profits/spreads that are locked such that we can deduct it from the total assets
         UD60x18 totalLockedSpread;
         // Tracks the rate at which ask spreads are dispersed
@@ -83,9 +83,9 @@ library UnderwriterVaultStorage {
         // Tracks the unlockingRate for maturities that need to be deducted upon crossing
         // maturity => spreadUnlockingRate
         mapping(uint256 => UD60x18) spreadUnlockingTicks;
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         // Management/Performance Fee Variables
-        // ====================================================================
+        // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         UD60x18 managementFeeRate;
         UD60x18 performanceFeeRate;
         UD60x18 protocolFees;
