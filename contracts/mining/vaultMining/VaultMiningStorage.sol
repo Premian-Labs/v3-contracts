@@ -4,6 +4,8 @@ pragma solidity >=0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+
 import {IVaultMining} from "./IVaultMining.sol";
 
 library VaultMiningStorage {
@@ -18,6 +20,8 @@ library VaultMiningStorage {
         mapping(address pool => mapping(address user => IVaultMining.UserInfo info)) userInfo;
         // Total votes across all pools
         UD60x18 totalVotes;
+        // Dual mining pools
+        mapping(address pool => EnumerableSet.AddressSet) dualMining;
     }
 
     function layout() internal pure returns (Layout storage l) {

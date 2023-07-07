@@ -10,8 +10,7 @@ library DualMiningStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.DualMining");
 
     struct Layout {
-        // Timestamp at which reward distribution starts
-        // Users will start to accumulate rewards after their first user update past this timestamp
+        // Timestamp at which reward distribution started
         uint256 startTimestamp;
         // Amount of rewards distributed per year
         UD60x18 rewardsPerYear;
@@ -21,9 +20,10 @@ library DualMiningStorage {
         address rewardToken;
         uint8 rewardTokenDecimals;
         // Total accumulated rewards allocated to this pool by parent mining contract (In reward token of parent mining contract)
-        UD60x18 accParentTotalRewards;
+        UD60x18 parentAccTotalRewards;
         // Total accumulated rewards allocated to this pool (In reward token of this mining contract)
         UD60x18 accTotalRewards;
+        UD60x18 initialParentAccRewardsPerShare;
         uint256 lastRewardTimestamp;
         mapping(address user => IDualMining.UserInfo info) userInfo;
     }

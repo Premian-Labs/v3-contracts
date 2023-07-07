@@ -7,6 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {WAD, ZERO} from "../../libraries/Constants.sol";
 
@@ -21,6 +22,7 @@ import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
 contract VaultMining is IVaultMining, OwnableInternal {
     using SafeERC20 for IERC20;
     using VaultMiningStorage for VaultMiningStorage.Layout;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice Address of the vault registry
     address internal immutable VAULT_REGISTRY;
@@ -106,6 +108,21 @@ contract VaultMining is IVaultMining, OwnableInternal {
         emit SetRewardsPerYear(rewardsPerYear);
     }
 
+    function addDualMiningPool(address vault, address dualMining) external onlyOwner {
+        VaultMiningStorage.layout().dualMining[vault].add(dualMining);
+        emit AddDualMiningPool(vault, dualMining);
+    }
+
+    function removeDualMiningPool(address vault, address dualMining) external onlyOwner {
+        VaultMiningStorage.layout().dualMining[vault].remove(dualMining);
+        emit RemoveDualMiningPool(vault, dualMining);
+    }
+
+    /// @inheritdoc IVaultMining
+    function getDualMiningPools(address vault) external view returns (address[] memory) {
+        return VaultMiningStorage.layout().dualMining[vault].toArray();
+    }
+
     /// @inheritdoc IVaultMining
     function claim(address[] memory vaults) external {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
@@ -161,16 +178,6 @@ contract VaultMining is IVaultMining, OwnableInternal {
         vInfo.totalShares = newTotalShares;
 
         _updateVaultAllocation(l, vault, utilisationRate);
-    }
-
-    /// @inheritdoc IVaultMining
-    function updateUsers(address[] memory users, address vault) external {
-        IVault _vault = IVault(vault);
-        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
-
-        for (uint256 i = 0; i < users.length; i++) {
-            _updateUser(users[i], vault, ud(_vault.balanceOf(users[i])));
-        }
     }
 
     /// @inheritdoc IVaultMining

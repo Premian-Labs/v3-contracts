@@ -13,6 +13,9 @@ interface IVaultMining {
 
     event SetRewardsPerYear(UD60x18 rewardsPerYear);
 
+    event AddDualMiningPool(address indexed vault, address dualMiningPool);
+    event RemoveDualMiningPool(address indexed vault, address dualMiningPool);
+
     //
 
     struct VaultInfo {
@@ -69,6 +72,9 @@ interface IVaultMining {
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
 
+    /// @notice Return list of dual mining pools for a given vault
+    function getDualMiningPools(address vault) external view returns (address[] memory);
+
     /// @notice Claim rewards for a list of vaults
     function claim(address[] memory vaults) external;
 
@@ -93,7 +99,4 @@ interface IVaultMining {
 
     /// @notice Trigger an update for a user on a specific vault
     function updateUser(address user, address vault) external;
-
-    /// @notice Trigger an update for a list of users on a specific vault
-    function updateUsers(address[] memory users, address vault) external;
 }

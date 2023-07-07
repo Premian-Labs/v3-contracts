@@ -10,7 +10,7 @@ interface IDualMining {
     struct UserInfo {
         uint256 lastUpdateTimestamp;
         // `accParentTotalRewards` value at last user update
-        UD60x18 lastAccParentTotalRewards;
+        UD60x18 lastParentAccTotalRewards;
         // `accTotalRewards` value at last user update
         UD60x18 lastAccTotalRewards;
         // Total allocated unclaimed rewards

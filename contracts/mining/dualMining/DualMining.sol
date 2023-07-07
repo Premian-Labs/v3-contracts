@@ -50,7 +50,13 @@ contract DualMining is IDualMining, OwnableInternal {
     }
 
     /// @inheritdoc IDualMining
-    function updateUser(address user, UD60x18 poolRewards, UD60x18 userRewards) external {
+    function updateUser(
+        address user,
+        UD60x18 oldShares,
+        UD60x18 oldRewardDebt,
+        UD60x18 poolRewards,
+        UD60x18 userRewards
+    ) external {
         if (msg.sender != VAULT_MINING) revert DualMining__NotAuthorized(msg.sender);
 
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
@@ -58,22 +64,23 @@ contract DualMining is IDualMining, OwnableInternal {
 
         IDualMining.UserInfo storage uInfo = l.userInfo[user];
 
+        UD60x18 toSubtract;
         if (uInfo.lastUpdateTimestamp < l.startTimestamp) {
-            uInfo.lastUpdateTimestamp = block.timestamp;
-            return;
+            toSubtract = oldShares * l.initialParentAccRewardsPerShare - oldRewardDebt;
         }
 
         _updatePool(l);
 
-        UD60x18 accTotalRewards = l.accTotalRewards + poolRewards;
-        l.accTotalRewards = accTotalRewards;
+        UD60x18 parentAccTotalRewards = l.parentAccTotalRewards + poolRewards;
+        l.parentAccTotalRewards = parentAccTotalRewards;
 
-        UD60x18 userRewardPercentage = userRewards / (accTotalRewards - uInfo.lastAccTotalRewards);
-        uInfo.lastAccTotalRewards = accTotalRewards;
+        UD60x18 userRewardPercentage = (userRewards - toSubtract) /
+            (parentAccTotalRewards - uInfo.lastParentAccTotalRewards);
+        uInfo.parentAccTotalRewards = parentAccTotalRewards;
 
-        UD60x18 userReward = (l.accParentTotalRewards - uInfo.lastAccParentTotalRewards) * userRewardPercentage;
+        UD60x18 userReward = (l.accTotalRewards - uInfo.lastAccTotalRewards) * userRewardPercentage;
         uInfo.reward = uInfo.reward + userReward;
-        uInfo.lastAccParentTotalRewards = l.accParentTotalRewards;
+        uInfo.lastAccTotalRewards = l.accTotalRewards;
 
         // ToDo : Event
     }

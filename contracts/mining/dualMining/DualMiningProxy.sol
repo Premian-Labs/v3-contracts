@@ -14,14 +14,14 @@ contract DualMiningProxy is ProxyUpgradeableOwnable {
     constructor(
         address implementation,
         address rewardToken,
-        UD60x18 rewardsPerYear,
-        uint256 startTimestamp
+        UD60x18 rewardsPerYear
     ) ProxyUpgradeableOwnable(implementation) {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
         l.rewardsPerYear = rewardsPerYear;
         l.rewardToken = rewardToken;
         l.rewardTokenDecimals = IERC20Metadata(rewardToken).decimals();
-        l.lastRewardTimestamp = startTimestamp;
+        l.startTimestamp = block.timestamp;
+        l.lastRewardTimestamp = block.timestamp;
     }
 }
