@@ -68,8 +68,8 @@ contract OptionMathMock {
         return OptionMath.calculateTimeToMaturity(maturity);
     }
 
-    function calculateStrikeInterval(UD60x18 spot) external pure returns (UD60x18) {
-        return OptionMath.calculateStrikeInterval(spot);
+    function calculateStrikeInterval(UD60x18 strike) external pure returns (UD60x18) {
+        return OptionMath.calculateStrikeInterval(strike);
     }
 
     function logMoneyness(UD60x18 spot, UD60x18 strike) external pure returns (UD60x18) {
