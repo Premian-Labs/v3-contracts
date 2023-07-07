@@ -44,7 +44,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
 
         if (pool == address(0)) {
             _revertIfAddressInvalid(k);
-            _revertIfOptionStrikeInvalid(k.strike, k.oracleAdapter, k.base, k.quote);
+            _revertIfOptionStrikeInvalid(k.strike);
             _revertIfOptionMaturityInvalid(k.maturity);
 
             pool = _calculatePoolAddress(k);
@@ -90,7 +90,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
 
-        _revertIfOptionStrikeInvalid(k.strike, k.oracleAdapter, k.base, k.quote);
+        _revertIfOptionStrikeInvalid(k.strike);
         _revertIfOptionMaturityInvalid(k.maturity);
 
         bytes32 poolKey = k.poolKey();
@@ -189,15 +189,9 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @notice Revert if the strike price is not a multiple of the strike interval
-    function _revertIfOptionStrikeInvalid(
-        UD60x18 strike,
-        address oracleAdapter,
-        address base,
-        address quote
-    ) internal view {
+    function _revertIfOptionStrikeInvalid(UD60x18 strike) internal pure {
         if (strike == ZERO) revert PoolFactory__OptionStrikeEqualsZero();
-        UD60x18 spot = IOracleAdapter(oracleAdapter).getPrice(base, quote);
-        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(spot);
+        UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(strike);
         if (strike % strikeInterval != ZERO) revert PoolFactory__OptionStrikeInvalid(strike, strikeInterval);
     }
 
