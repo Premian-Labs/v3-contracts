@@ -111,9 +111,12 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     function addDualMiningPool(address vault, address dualMining) external onlyOwner {
-        updateVault(vault);
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
-        VaultMiningStorage.layout().dualMining[vault].add(dualMining);
+        updateVault(vault);
+        IDualMining(dualMining).init(l.vaultInfo[vault].accRewardsPerShare);
+        l.dualMining[vault].add(dualMining);
+
         emit AddDualMiningPool(vault, dualMining);
     }
 
@@ -123,7 +126,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function getDualMiningPools(address vault) external view returns (address[] memory) {
+    function getDualMiningPools(address vault) public view returns (address[] memory) {
         return VaultMiningStorage.layout().dualMining[vault].toArray();
     }
 
@@ -155,25 +158,36 @@ contract VaultMining is IVaultMining, OwnableInternal {
         UD60x18 utilisationRate
     ) external {
         _revertIfNotVault(msg.sender);
-        _updateVault(vault, newTotalShares, utilisationRate);
-        _updateUser(user, vault, newUserShares);
+        UD60x18 vaultRewards = _updateVault(vault, newTotalShares, utilisationRate);
+        _updateUser(user, vault, newUserShares, vaultRewards);
     }
 
     /// @inheritdoc IVaultMining
     function updateVault(address vault) public {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+
         IVault _vault = IVault(vault);
-        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+
+        address[] memory dualMiningPools = getDualMiningPools(vault);
+        for (uint256 i = 0; i < dualMiningPools.length; i++) {
+            IDualMining(dualMiningPools[i]).updatePool(vaultRewards, l.vaultInfo[vault].accRewardsPerShare);
+        }
     }
 
-    function _updateVault(address vault, UD60x18 newTotalShares, UD60x18 utilisationRate) internal {
+    function _updateVault(
+        address vault,
+        UD60x18 newTotalShares,
+        UD60x18 utilisationRate
+    ) internal returns (UD60x18 vaultRewards) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
         if (block.timestamp > vInfo.lastRewardTimestamp) {
             if (vInfo.totalShares > ZERO && vInfo.votes > ZERO) {
-                UD60x18 rewardAmount = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
-                l.rewardsAvailable = l.rewardsAvailable - rewardAmount;
-                vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (rewardAmount / vInfo.totalShares);
+                vaultRewards = _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
+                l.rewardsAvailable = l.rewardsAvailable - vaultRewards;
+                vInfo.accRewardsPerShare = vInfo.accRewardsPerShare + (vaultRewards / vInfo.totalShares);
             }
 
             vInfo.lastRewardTimestamp = block.timestamp;
@@ -187,16 +201,30 @@ contract VaultMining is IVaultMining, OwnableInternal {
     /// @inheritdoc IVaultMining
     function updateUser(address user, address vault) public {
         IVault _vault = IVault(vault);
-        _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
-        _updateUser(user, vault, ud(_vault.balanceOf(user)));
+        UD60x18 vaultRewards = _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
+        _updateUser(user, vault, ud(_vault.balanceOf(user)), vaultRewards);
     }
 
-    function _updateUser(address user, address vault, UD60x18 newUserShares) internal {
+    function _updateUser(address user, address vault, UD60x18 newUserShares, UD60x18 vaultRewards) internal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
         UserInfo storage uInfo = l.userInfo[vault][user];
 
-        uInfo.reward = uInfo.reward + (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
+        UD60x18 userRewards = (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
+
+        address[] memory dualMiningPools = getDualMiningPools(vault);
+        for (uint256 i = 0; i < dualMiningPools.length; i++) {
+            IDualMining(dualMiningPools[i]).updateUser(
+                user,
+                uInfo.shares,
+                uInfo.rewardDebt,
+                vaultRewards,
+                userRewards,
+                vInfo.accRewardsPerShare
+            );
+        }
+
+        uInfo.reward = uInfo.reward + userRewards;
         uInfo.rewardDebt = newUserShares * vInfo.accRewardsPerShare;
 
         if (uInfo.shares != newUserShares) {
