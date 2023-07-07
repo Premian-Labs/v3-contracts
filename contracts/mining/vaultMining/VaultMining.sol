@@ -15,6 +15,8 @@ import {IOptionReward} from "../optionReward/IOptionReward.sol";
 
 import {IVaultMining} from "./IVaultMining.sol";
 import {VaultMiningStorage} from "./VaultMiningStorage.sol";
+
+import {IDualMining} from "../dualMining/IDualMining.sol";
 import {IVxPremia} from "../../staking/IVxPremia.sol";
 import {IVault} from "../../vault/IVault.sol";
 import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
@@ -109,6 +111,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     function addDualMiningPool(address vault, address dualMining) external onlyOwner {
+        updateVault(vault);
+
         VaultMiningStorage.layout().dualMining[vault].add(dualMining);
         emit AddDualMiningPool(vault, dualMining);
     }
@@ -156,7 +160,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function updateVault(address vault) external {
+    function updateVault(address vault) public {
         IVault _vault = IVault(vault);
         _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
     }

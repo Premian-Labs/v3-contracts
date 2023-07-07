@@ -21,7 +21,5 @@ contract DualMiningProxy is ProxyUpgradeableOwnable {
         l.rewardsPerYear = rewardsPerYear;
         l.rewardToken = rewardToken;
         l.rewardTokenDecimals = IERC20Metadata(rewardToken).decimals();
-        l.startTimestamp = block.timestamp;
-        l.lastRewardTimestamp = block.timestamp;
     }
 }

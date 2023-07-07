@@ -18,13 +18,19 @@ library DualMiningStorage {
         UD60x18 rewardsAvailable;
         // Token used to pay rewards
         address rewardToken;
+        // Decimals of rewardToken
         uint8 rewardTokenDecimals;
         // Total accumulated rewards allocated to this pool by parent mining contract (In reward token of parent mining contract)
         UD60x18 parentAccTotalRewards;
         // Total accumulated rewards allocated to this pool (In reward token of this mining contract)
         UD60x18 accTotalRewards;
+        // `accRewardsPerShare` value of parent mining contract at initialization
         UD60x18 initialParentAccRewardsPerShare;
+        // `accRewardsPerShare` value of parent mining contract when rewards ran out
+        UD60x18 finalParentAccRewardsPerShare;
+        // Last timestamp at which rewards have been updated
         uint256 lastRewardTimestamp;
+        // User infos
         mapping(address user => IDualMining.UserInfo info) userInfo;
     }
 
