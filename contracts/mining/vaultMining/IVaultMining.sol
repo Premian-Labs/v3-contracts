@@ -91,6 +91,9 @@ interface IVaultMining {
     /// @notice Trigger an update for a vault
     function updateVault(address vault) external;
 
+    /// @notice Trigger an update for all vaults
+    function updateVaults() external;
+
     /// @notice Trigger an update for a user on a specific vault
     function updateUser(address user, address vault) external;
 }
