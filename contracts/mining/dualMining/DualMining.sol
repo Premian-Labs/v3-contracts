@@ -20,7 +20,7 @@ contract DualMining is IDualMining, OwnableInternal {
     using DualMiningStorage for DualMiningStorage.Layout;
     using SafeERC20 for IERC20;
 
-    address internal VAULT_MINING;
+    address internal immutable VAULT_MINING;
 
     constructor(address vaultMining) {
         VAULT_MINING = vaultMining;
@@ -37,6 +37,8 @@ contract DualMining is IDualMining, OwnableInternal {
         l.initialParentAccRewardsPerShare = initialParentAccRewardsPerShare;
         l.startTimestamp = block.timestamp;
         l.lastRewardTimestamp = block.timestamp;
+
+        emit Initialized(msg.sender, initialParentAccRewardsPerShare, block.timestamp);
     }
 
     /// @inheritdoc IDualMining
@@ -47,6 +49,11 @@ contract DualMining is IDualMining, OwnableInternal {
 
         IERC20(l.rewardToken).safeTransferFrom(msg.sender, address(this), amount.unwrap());
         l.rewardsAvailable = l.rewardsAvailable + amount;
+    }
+
+    /// @inheritdoc IDualMining
+    function getRewardsAvailable() external view returns (UD60x18) {
+        return DualMiningStorage.layout().rewardsAvailable;
     }
 
     /// @inheritdoc IDualMining

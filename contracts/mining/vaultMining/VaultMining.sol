@@ -52,6 +52,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         l.rewardsAvailable = l.rewardsAvailable + amount;
     }
 
+    /// @inheritdoc IVaultMining
     function getRewardsAvailable() external view returns (UD60x18) {
         return VaultMiningStorage.layout().rewardsAvailable;
     }

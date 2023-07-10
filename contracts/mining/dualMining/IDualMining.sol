@@ -11,6 +11,7 @@ interface IDualMining {
     error DualMining__NotInitialized();
     error DualMining__MiningEnded();
 
+    event Initialized(address indexed caller, UD60x18 initialParentAccRewardsPerShare, uint256 timestamp);
     event Claim(address indexed user, UD60x18 rewardAmount);
     event MiningEnded(UD60x18 finalParentAccRewardsPerShare);
 
@@ -29,6 +30,9 @@ interface IDualMining {
 
     /// @notice Add rewards to the contract
     function addRewards(UD60x18 amount) external;
+
+    /// @notice Return amount of rewards not yet allocated
+    function getRewardsAvailable() external view returns (UD60x18);
 
     /// @notice Trigger an update for this mining pool. Can only be called by `VAULT_MINING` contract
     function updatePool(UD60x18 poolRewards, UD60x18 accRewardsPerShare) external;
