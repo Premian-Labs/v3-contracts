@@ -102,6 +102,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     function setRewardsPerYear(UD60x18 rewardsPerYear) external onlyOwner {
+        updateVaults();
+
         VaultMiningStorage.layout().rewardsPerYear = rewardsPerYear;
         emit SetRewardsPerYear(rewardsPerYear);
     }
@@ -125,6 +127,15 @@ contract VaultMining is IVaultMining, OwnableInternal {
         IOptionReward(OPTION_REWARD).underwrite(msg.sender, size);
     }
 
+    function updateVaults() public {
+        IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
+
+        for (uint256 i = 0; i < vaults.length; i++) {
+            IVault vault = IVault(vaults[i].vault);
+            _updateVault(vaults[i].vault, ud(vault.totalSupply()), vault.getUtilisation());
+        }
+    }
+
     /// @inheritdoc IVaultMining
     function updateUser(
         address user,
@@ -134,11 +145,14 @@ contract VaultMining is IVaultMining, OwnableInternal {
         UD60x18 utilisationRate
     ) external {
         _revertIfNotVault(msg.sender);
+        _revertIfNotVault(vault);
         _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
     }
 
     /// @inheritdoc IVaultMining
     function updateVault(address vault) external {
+        _revertIfNotVault(vault);
+
         IVault _vault = IVault(vault);
         _updateVault(vault, ud(_vault.totalSupply()), _vault.getUtilisation());
     }
@@ -164,6 +178,8 @@ contract VaultMining is IVaultMining, OwnableInternal {
 
     /// @inheritdoc IVaultMining
     function updateUser(address user, address vault) public {
+        _revertIfNotVault(vault);
+
         IVault _vault = IVault(vault);
         _updateUser(user, vault, ud(_vault.balanceOf(user)), ud(_vault.totalSupply()), _vault.getUtilisation());
     }
