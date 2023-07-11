@@ -29,6 +29,8 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
 
     /// @inheritdoc IPoolFactoryDeployer
     function calculatePoolAddress(IPoolFactory.PoolKey calldata k) external view returns (address) {
+        _revertIfNotPoolFactory(msg.sender);
+
         bytes memory args = _encodePoolProxyArgs(k);
 
         bytes32 hash = keccak256(
