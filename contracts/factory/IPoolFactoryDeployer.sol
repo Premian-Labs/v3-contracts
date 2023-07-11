@@ -15,5 +15,5 @@ interface IPoolFactoryDeployer {
     function deployPool(IPoolFactory.PoolKey calldata k) external returns (address poolAddress);
 
     /// @notice Calculate the deterministic address deployment of a pool
-    function calculatePoolAddress(IPoolFactory.PoolKey memory k) external view returns (address);
+    function calculatePoolAddress(IPoolFactory.PoolKey calldata k) external view returns (address);
 }

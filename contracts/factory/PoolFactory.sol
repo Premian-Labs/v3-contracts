@@ -148,7 +148,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     // @inheritdoc IPoolFactory
-    function initializationFee(IPoolFactory.PoolKey memory k) public view returns (UD60x18) {
+    function initializationFee(IPoolFactory.PoolKey calldata k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
         uint256 discountFactor = l.maturityCount[k.maturityKey()] + l.strikeCount[k.strikeKey()];
@@ -173,7 +173,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero
-    function _revertIfAddressInvalid(PoolKey memory k) internal pure {
+    function _revertIfAddressInvalid(PoolKey calldata k) internal pure {
         if (k.base == k.quote) revert PoolFactory__IdenticalAddresses();
         if (k.base == address(0) || k.quote == address(0) || k.oracleAdapter == address(0))
             revert PoolFactory__ZeroAddress();

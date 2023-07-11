@@ -28,7 +28,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
     }
 
     /// @inheritdoc IPoolFactoryDeployer
-    function calculatePoolAddress(IPoolFactory.PoolKey memory k) external view returns (address) {
+    function calculatePoolAddress(IPoolFactory.PoolKey calldata k) external view returns (address) {
         bytes memory args = _encodePoolProxyArgs(k);
 
         bytes32 hash = keccak256(
@@ -46,7 +46,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
     }
 
     /// @notice Returns the encoded arguments for the pool proxy using pool key `k`
-    function _encodePoolProxyArgs(IPoolFactory.PoolKey memory k) internal view returns (bytes memory) {
+    function _encodePoolProxyArgs(IPoolFactory.PoolKey calldata k) internal view returns (bytes memory) {
         return abi.encode(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool);
     }
 
