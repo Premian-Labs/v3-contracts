@@ -90,11 +90,20 @@ contract DualMiningTest is VaultMiningSetup {
     }
 
     function test_addRewards_RevertIf_MiningEnded() public {
-        // ToDo
-    }
+        _addRewards();
+        vm.prank(admin);
+        vaultMining.addDualMiningPool(address(vaultA), address(dualMining));
 
-    function test_updatePool_Success() public {
-        // ToDo
+        vaultA.mint(alice, 10e18);
+        vm.warp(10000 * ONE_DAY);
+        vaultA.mint(alice, 10e18);
+
+        vm.startPrank(alice);
+        rewardToken.mint(alice, 100_000e18);
+        rewardToken.approve(address(dualMining), 100_000e18);
+
+        vm.expectRevert(IDualMining.DualMining__MiningEnded.selector);
+        dualMining.addRewards(ud(100_000e18));
     }
 
     function test_updatePool_RevertIf_NotVaultMining() public {
@@ -109,10 +118,6 @@ contract DualMiningTest is VaultMiningSetup {
         dualMining.updatePool(ud(1e18), ud(1e18));
     }
 
-    function test_updateUser_Success() public {
-        // ToDo
-    }
-
     function test_updateUser_RevertIf_NotVaultMining() public {
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IDualMining.DualMining__NotAuthorized.selector, alice));
@@ -123,10 +128,6 @@ contract DualMiningTest is VaultMiningSetup {
         vm.prank(address(vaultMining));
         vm.expectRevert(IDualMining.DualMining__NotInitialized.selector);
         dualMining.updateUser(alice, ud(1e18), ud(1e18), ud(1e18), ud(1e18), ud(1e18));
-    }
-
-    function test_claim_Success() public {
-        // ToDo
     }
 
     function test_claim_RevertIf_NotInitialized() public {
@@ -205,5 +206,29 @@ contract DualMiningTest is VaultMiningSetup {
         assertApproxEqAbs(rewardToken.balanceOf(alice), 126.73992673992673e18, delta);
         assertApproxEqAbs(rewardToken.balanceOf(bob), 116.48351648351647e18, delta);
         assertApproxEqAbs(rewardToken.balanceOf(carol), 131.77655677655678e18, delta);
+    }
+
+    function test_dualMining_StopDistributingRewards_IfRewardsRunOut() public {
+        _addRewards();
+        vm.prank(admin);
+        vaultMining.addDualMiningPool(address(vaultA), address(dualMining));
+
+        uint256 ts = block.timestamp;
+
+        vaultA.mint(alice, 10e18);
+        vm.warp(ts + 10000 * ONE_DAY);
+        assertEq(dualMining.getPendingUserRewards(alice), 100_000e18);
+
+        // Trigger update
+        vaultA.mint(alice, 10e18);
+        assertEq(rewardToken.balanceOf(address(dualMining)), 100_000e18);
+        vm.prank(alice);
+        dualMining.claim();
+        assertEq(dualMining.getPendingUserRewards(alice), 0);
+        assertEq(rewardToken.balanceOf(alice), 100_000e18);
+        assertEq(rewardToken.balanceOf(address(dualMining)), 0);
+
+        vm.warp(block.timestamp + ONE_DAY);
+        assertEq(dualMining.getPendingUserRewards(alice), 0);
     }
 }

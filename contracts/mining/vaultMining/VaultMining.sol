@@ -62,7 +62,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];
 
-        return _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.totalShares);
+        return _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.votes);
     }
 
     /// @inheritdoc IVaultMining

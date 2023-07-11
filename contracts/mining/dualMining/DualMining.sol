@@ -152,6 +152,7 @@ contract DualMining is IDualMining, OwnableInternal {
         return toSubtract;
     }
 
+    /// ToDo : Make it called by vaultMining
     /// @inheritdoc IDualMining
     function claim() external {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
@@ -183,7 +184,7 @@ contract DualMining is IDualMining, OwnableInternal {
             accTotalRewards = accTotalRewards + _calculateRewardsUpdate(l);
         }
 
-        UD60x18 parentAccTotalRewardsSinceLastUpdate = l.parentAccTotalRewards - uInfo.lastParentAccTotalRewards;
+        UD60x18 parentAccTotalRewardsSinceLastUpdate = parentAccTotalRewards - uInfo.lastParentAccTotalRewards;
 
         // Calculate user pending rewards not yet allocated
         if (parentAccTotalRewardsSinceLastUpdate > ZERO) {
