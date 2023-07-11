@@ -58,6 +58,14 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
+    function getPendingVaultRewards(address vault) external view returns (UD60x18) {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+        VaultInfo storage vInfo = l.vaultInfo[vault];
+
+        return _calculateRewardsUpdate(l, vInfo.lastRewardTimestamp, vInfo.totalShares);
+    }
+
+    /// @inheritdoc IVaultMining
     function getPendingUserRewards(address user, address vault) external view returns (UD60x18) {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         VaultInfo storage vInfo = l.vaultInfo[vault];

@@ -49,4 +49,10 @@ interface IDualMining {
 
     /// @notice Claim rewards
     function claim() external;
+
+    /// @notice Return amount of pending rewards (not yet claimed) for the given user
+    function getPendingUserRewards(address user) external view returns (UD60x18);
+
+    /// @notice Return internal variables for the given user
+    function getUserInfo(address user) external view returns (UserInfo memory);
 }

@@ -57,6 +57,9 @@ interface IVaultMining {
     /// @notice Return amount of rewards not yet allocated
     function getRewardsAvailable() external view returns (UD60x18);
 
+    /// @notice Return amount of pending rewards (not yet allocated) for a specific vault
+    function getPendingVaultRewards(address vault) external view returns (UD60x18);
+
     /// @notice Return amount of pending rewards (not yet claimed) for a user, on a specific vault
     function getPendingUserRewards(address user, address vault) external view returns (UD60x18);
 

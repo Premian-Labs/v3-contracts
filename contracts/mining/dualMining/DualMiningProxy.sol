@@ -13,11 +13,13 @@ import {DualMiningStorage} from "./DualMiningStorage.sol";
 contract DualMiningProxy is ProxyUpgradeableOwnable {
     constructor(
         address implementation,
+        address vault,
         address rewardToken,
         UD60x18 rewardsPerYear
     ) ProxyUpgradeableOwnable(implementation) {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
+        l.vault = vault;
         l.rewardsPerYear = rewardsPerYear;
         l.rewardToken = rewardToken;
         l.rewardTokenDecimals = IERC20Metadata(rewardToken).decimals();
