@@ -18,8 +18,8 @@ import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {InitFeeCalculator} from "contracts/factory/InitFeeCalculator.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
+import {PoolFactoryDeployer} from "contracts/factory/PoolFactoryDeployer.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
@@ -48,6 +48,7 @@ import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
 import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
+import {Placeholder} from "contracts/utils/Placeholder.sol";
 
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
@@ -80,7 +81,7 @@ contract DeployTest is Test, Assertions {
 
     Position.Key posKey;
 
-    IPoolInternal.QuoteRFQ quoteRFQ;
+    IPoolInternal.QuoteOB quoteOB;
 
     Users users;
 
@@ -104,7 +105,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
-    address public constant feeReceiver = address(123456789);
+    address public constant FEE_RECEIVER = address(123456789);
 
     receive() external payable {}
 
@@ -147,7 +148,7 @@ contract DeployTest is Test, Assertions {
             isCallPool: true
         });
 
-        quoteRFQ = IPoolInternal.QuoteRFQ({
+        quoteOB = IPoolInternal.QuoteOB({
             provider: users.lp,
             taker: address(0),
             price: ud(0.1 ether),
@@ -159,17 +160,17 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(address(base), address(oracleAdapter));
+        Placeholder placeholder = new Placeholder();
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(placeholder), ud(0.1 ether), FEE_RECEIVER);
 
-        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(address(initFeeCalculatorImpl));
-
+        PoolFactoryDeployer poolFactoryDeployer = new PoolFactoryDeployer(address(diamond), address(factoryProxy));
         PoolFactory factoryImpl = new PoolFactory(
             address(diamond),
             address(oracleAdapter),
-            address(initFeeCalculatorProxy)
+            address(base),
+            address(poolFactoryDeployer)
         );
-
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), feeReceiver);
+        factoryProxy.setImplementation(address(factoryImpl));
 
         flashLoanMock = new FlashLoanMock();
 
@@ -211,7 +212,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -222,7 +223,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -233,7 +234,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -244,7 +245,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -282,9 +283,10 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.getLongRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getShortRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
-        poolCoreMockSelectors.push(poolCoreMockImpl.quoteRFQHash.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.quoteOBHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
 
         // PoolCore
@@ -325,14 +327,14 @@ contract DeployTest is Test, Assertions {
         poolDepositWithdrawSelectors.push(poolDepositWithdrawImpl.getNearestTicksBelow.selector);
 
         // PoolTrade
-        poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.cancelQuotesOB.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteOB.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
-        poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
-        poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
+        poolTradeSelectors.push(poolTradeImpl.getQuoteOBFilledAmount.selector);
+        poolTradeSelectors.push(poolTradeImpl.isQuoteOBValid.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
 
         IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);

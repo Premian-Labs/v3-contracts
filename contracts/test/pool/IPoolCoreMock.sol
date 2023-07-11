@@ -19,7 +19,7 @@ interface IPoolCoreMock {
         Position.OrderType orderType
     ) external pure returns (uint256 tokenId);
 
-    function quoteRFQHash(IPoolInternal.QuoteRFQ memory quoteRFQ) external view returns (bytes32);
+    function quoteOBHash(IPoolInternal.QuoteOB memory quoteOB) external view returns (bytes32);
 
     function parseTokenId(
         uint256 tokenId
@@ -27,6 +27,14 @@ interface IPoolCoreMock {
         external
         pure
         returns (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType);
+
+    function exerciseFee(
+        address taker,
+        UD60x18 size,
+        UD60x18 intrinsicValue,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18);
 
     function protocolFees() external view returns (uint256);
 

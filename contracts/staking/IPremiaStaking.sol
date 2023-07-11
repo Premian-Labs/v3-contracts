@@ -70,6 +70,9 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @return amount of tokens pending to be distributed as rewards
     function getPendingRewards() external view returns (uint256);
 
+    /// @notice Return the total amount of premia pending withdrawal
+    function getPendingWithdrawals() external view returns (uint256);
+
     /// @notice get pending withdrawal data of a user
     /// @return amount pending withdrawal amount
     /// @return startDate start timestamp of withdrawal
@@ -153,13 +156,13 @@ interface IPremiaStaking is IERC2612, IOFT {
     /// @notice Get stake levels
     /// @return Stake levels
     ///         Ex : 25e16 = -25%
-    function getStakeLevels() external returns (StakeLevel[] memory);
+    function getStakeLevels() external pure returns (StakeLevel[] memory);
 
     /// @notice Get stake period multiplier
     /// @param period The duration (in seconds) for which tokens are locked
     /// @return The multiplier for this staking period
     ///         Ex : 2e18 = x2
-    function getStakePeriodMultiplier(uint256 period) external returns (uint256);
+    function getStakePeriodMultiplier(uint256 period) external pure returns (uint256);
 
     /// @notice Get staking infos of a user
     /// @param user The user address for which to get staking infos

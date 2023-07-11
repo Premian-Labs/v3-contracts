@@ -50,7 +50,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
             deal(quote, users[i], 1_000_000e6);
         }
 
-        oracleAdapter.setQuote(ud(1500e18));
+        oracleAdapter.setPrice(ud(1500e18));
 
         volOracle = new VolatilityOracleMock();
         volOracle.setRiskFreeRate(ud(0.01e18));
@@ -87,7 +87,7 @@ contract UnderwriterVaultDeployTest is DeployTest {
         address vaultImpl = address(
             new UnderwriterVaultMock(
                 address(vaultRegistry),
-                feeReceiver,
+                FEE_RECEIVER,
                 address(volOracle),
                 address(factory),
                 address(router),

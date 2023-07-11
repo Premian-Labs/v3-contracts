@@ -113,7 +113,7 @@ abstract contract PoolClaimTest is DeployTest {
 
         assertEq(poolToken.balanceOf(posKey.operator), initialCollateral - collateral + claimableFees);
         assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - claimableFees - protocolFees);
-        assertEq(poolToken.balanceOf(feeReceiver), protocolFees);
+        assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
 
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);

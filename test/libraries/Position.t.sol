@@ -11,14 +11,17 @@ import {Assertions} from "../Assertions.sol";
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {IPosition} from "contracts/libraries/IPosition.sol";
+import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
 
 contract PositionTest is Test, Assertions {
     using Position for Position.KeyInternal;
 
-    Position.KeyInternal key;
-    address user;
+    PositionMock internal position;
+    Position.KeyInternal internal key;
+    address internal user;
 
     function setUp() public {
+        position = new PositionMock();
         user = address(123);
         key = Position.KeyInternal({
             owner: user,
@@ -74,7 +77,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        key.pieceWiseLinear(ZERO);
+        position.pieceWiseLinear(key, ZERO);
 
         //
 
@@ -82,7 +85,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        key.pieceWiseLinear(ZERO);
+        position.pieceWiseLinear(key, ZERO);
     }
 
     function test_pieceWiseQuadratic_Return0_IfLowerGreaterOrEqualPrice() public {
@@ -107,7 +110,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        key.pieceWiseQuadratic(ZERO);
+        position.pieceWiseQuadratic(key, ZERO);
 
         //
 
@@ -115,7 +118,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        key.pieceWiseQuadratic(ZERO);
+        position.pieceWiseQuadratic(key, ZERO);
     }
 
     function _test_collateralToContracts_ReturnExpectedValue(bool isCall) internal {

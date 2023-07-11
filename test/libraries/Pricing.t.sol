@@ -10,13 +10,16 @@ import {Assertions} from "../Assertions.sol";
 
 import {Pricing} from "contracts/libraries/Pricing.sol";
 import {IPricing} from "contracts/libraries/IPricing.sol";
+import {PricingMock} from "contracts/test/libraries/PricingMock.sol";
 
 contract PricingTest is Test, Assertions {
     using Pricing for Pricing.Args;
 
-    Pricing.Args args;
+    PricingMock internal pricing;
+    Pricing.Args internal args;
 
     function setUp() public {
+        pricing = new PricingMock();
         args = Pricing.Args({
             liquidityRate: ud(1e18),
             marketPrice: ud(0.25e18),
@@ -41,7 +44,7 @@ contract PricingTest is Test, Assertions {
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
-        Pricing.proportion(lower, upper, ud(0));
+        pricing.proportion(lower, upper, ud(0));
     }
 
     function test_proportion_RevertIf_LowerGtMarketPrice() public {
@@ -51,7 +54,7 @@ contract PricingTest is Test, Assertions {
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
-        Pricing.proportion(lower, upper, marketPrice);
+        pricing.proportion(lower, upper, marketPrice);
     }
 
     function test_proportion_RevertIf_MarketPriceGtUpper() public {
@@ -61,7 +64,7 @@ contract PricingTest is Test, Assertions {
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
-        Pricing.proportion(lower, upper, marketPrice);
+        pricing.proportion(lower, upper, marketPrice);
     }
 
     // prettier-ignore
@@ -77,14 +80,14 @@ contract PricingTest is Test, Assertions {
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
-        Pricing.amountOfTicksBetween(lower, upper);
+        pricing.amountOfTicksBetween(lower, upper);
 
         lower = ud(0.1e18);
         upper = ud(0.1e18);
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__UpperNotGreaterThanLower.selector, lower, upper));
 
-        Pricing.amountOfTicksBetween(lower, upper);
+        pricing.amountOfTicksBetween(lower, upper);
     }
 
     function test_liquidity_ReturnExpectedValue() public {
@@ -272,11 +275,11 @@ contract PricingTest is Test, Assertions {
 
         UD60x18 liq = args.liquidity();
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        args.price(liq * ud(2e18));
+        pricing.price(args, liq * ud(2e18));
 
         args.isBuy = false;
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        args.price(liq * ud(2e18));
+        pricing.price(args, liq * ud(2e18));
     }
 
     function test_nextPrice_ReturnUpperTick_ForBuyOrder_IfLiqIsZero() public {
@@ -407,10 +410,10 @@ contract PricingTest is Test, Assertions {
 
         UD60x18 liq = args.liquidity();
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        args.nextPrice(liq * ud(2e18));
+        pricing.nextPrice(args, liq * ud(2e18));
 
         args.isBuy = false;
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        args.nextPrice(liq * ud(2e18));
+        pricing.nextPrice(args, liq * ud(2e18));
     }
 }

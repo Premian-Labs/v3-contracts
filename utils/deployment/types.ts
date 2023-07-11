@@ -9,11 +9,10 @@ export interface ContractAddresses {
   UniswapV3AdapterProxy: string;
   UniswapV3ChainlinkAdapterImplementation: string;
   UniswapV3ChainlinkAdapterProxy: string;
-  InitFeeCalculatorImplementation: string;
-  InitFeeCalculatorProxy: string;
   PremiaDiamond: string;
   PoolFactoryImplementation: string;
   PoolFactoryProxy: string;
+  PoolFactoryDeployer: string;
   UserSettingsImplementation: string;
   UserSettingsProxy: string;
   ExchangeHelper: string;

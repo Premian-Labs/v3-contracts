@@ -2,8 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
-
 interface IVaultRegistry {
     // Enumerations
     enum TradeSide {
