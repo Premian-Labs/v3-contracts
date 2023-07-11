@@ -50,7 +50,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @inheritdoc IOracleAdapter
-    function upsertPair(address tokenA, address tokenB) external {
+    function upsertPair(address tokenA, address tokenB) external nonReentrant {
         (address mappedTokenA, address mappedTokenB) = _mapToDenominationAndSort(tokenA, tokenB);
 
         PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);

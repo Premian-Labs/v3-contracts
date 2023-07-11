@@ -56,7 +56,7 @@ contract UniswapV3Adapter is IUniswapV3Adapter, OracleAdapter, OwnableInternal {
     }
 
     /// @inheritdoc IOracleAdapter
-    function upsertPair(address tokenA, address tokenB) external {
+    function upsertPair(address tokenA, address tokenB) external nonReentrant {
         address[] memory pools = _getAllPoolsForPair(tokenA, tokenB);
 
         if (pools.length == 0) revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);

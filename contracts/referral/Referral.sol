@@ -116,7 +116,7 @@ contract Referral is IReferral, OwnableInternal, ReentrancyGuard {
         address token,
         UD60x18 primaryRebate,
         UD60x18 secondaryRebate
-    ) external {
+    ) external nonReentrant {
         _revertIfPoolNotAuthorized();
 
         referrer = _trySetReferrer(user, referrer);

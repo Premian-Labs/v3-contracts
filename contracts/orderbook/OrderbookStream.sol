@@ -2,9 +2,11 @@
 
 pragma solidity >=0.8.19;
 
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
-contract OrderbookStream {
+contract OrderbookStream is ReentrancyGuard {
     struct Signature {
         bytes32 r;
         bytes32 s;
@@ -50,7 +52,7 @@ contract OrderbookStream {
     );
 
     /// @notice Emits PublishQuote event for `quote`
-    function add(Quote[] calldata quote) external {
+    function add(Quote[] calldata quote) external nonReentrant {
         for (uint256 i = 0; i < quote.length; i++) {
             emit PublishQuote(
                 quote[i].poolKey,

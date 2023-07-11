@@ -5,6 +5,7 @@ pragma solidity >=0.8.19;
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -17,7 +18,7 @@ import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO, ONE} from "../libraries/Constants.sol";
 
-contract PoolFactory is IPoolFactory, OwnableInternal {
+contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
     using PoolFactoryStorage for PoolKey;
     using PoolStorage for PoolStorage.Layout;
@@ -78,7 +79,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @inheritdoc IPoolFactory
-    function deployPool(PoolKey calldata k) external payable returns (address poolAddress) {
+    function deployPool(PoolKey calldata k) external payable nonReentrant returns (address poolAddress) {
         _revertIfAddressInvalid(k);
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
@@ -138,7 +139,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     }
 
     /// @inheritdoc IPoolFactory
-    function removeDiscount(PoolKey calldata k) external {
+    function removeDiscount(PoolKey calldata k) external nonReentrant {
         if (block.timestamp < k.maturity) revert PoolFactory__PoolNotExpired();
 
         if (PoolFactoryStorage.layout().pools[k.poolKey()] != msg.sender) revert PoolFactory__NotAuthorized();
