@@ -9,6 +9,7 @@ import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInter
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IPoolFactory} from "./IPoolFactory.sol";
+import {IPoolFactoryDeployer} from "./IPoolFactoryDeployer.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
@@ -26,11 +27,15 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     address internal immutable CHAINLINK_ADAPTER;
     // Wrapped native token address (eg WETH, WFTM, etc)
     address internal immutable WRAPPED_NATIVE_TOKEN;
+    // Address of the contract handling the proxy deployment.
+    // This is in a separate contract so that we can upgrade this contract without having deterministic address calculation change
+    address internal immutable POOL_FACTORY_DEPLOYER;
 
-    constructor(address diamond, address chainlinkAdapter, address wrappedNativeToken) {
+    constructor(address diamond, address chainlinkAdapter, address wrappedNativeToken, address poolFactoryDeployer) {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
         WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
+        POOL_FACTORY_DEPLOYER = poolFactoryDeployer;
     }
 
     /// @inheritdoc IPoolFactory
@@ -48,7 +53,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
             _revertIfOptionStrikeInvalid(k.strike);
             _revertIfOptionMaturityInvalid(k.maturity);
 
-            pool = _calculatePoolAddress(k);
+            pool = IPoolFactoryDeployer(POOL_FACTORY_DEPLOYER).calculatePoolAddress(k);
             isDeployed = false;
         }
     }
@@ -97,11 +102,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
             }
         }
 
-        bytes32 salt = keccak256(_encodePoolProxyArgs(k));
-
-        poolAddress = address(
-            new PoolProxy{salt: salt}(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool)
-        );
+        poolAddress = IPoolFactoryDeployer(POOL_FACTORY_DEPLOYER).deployPool(k);
 
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.pools[poolKey] = poolAddress;
@@ -169,29 +170,6 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     //         This is used to convert the initializationFee from USD to native token
     function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
         return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
-    }
-
-    /// @notice Returns the encoded arguments for the pool proxy using pool key `k`
-    function _encodePoolProxyArgs(PoolKey memory k) internal view returns (bytes memory) {
-        return abi.encode(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool);
-    }
-
-    /// @notice Calculates the pool address using the pool key `k`
-    function _calculatePoolAddress(PoolKey memory k) internal view returns (address) {
-        bytes memory args = _encodePoolProxyArgs(k);
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                bytes1(0xff), // 0
-                address(this), // address of factory contract
-                keccak256(args), // salt
-                // The contract bytecode
-                keccak256(abi.encodePacked(type(PoolProxy).creationCode, args))
-            )
-        );
-
-        // Cast last 20 bytes of hash to address
-        return address(uint160(uint256(hash)));
     }
 
     /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero
