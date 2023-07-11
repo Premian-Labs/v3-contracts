@@ -132,8 +132,19 @@ contract DualMiningTest is VaultMiningSetup {
 
     function test_claim_RevertIf_NotInitialized() public {
         vm.expectRevert(IDualMining.DualMining__NotInitialized.selector);
+
+        vm.prank(address(vaultMining));
+        dualMining.claim(alice);
+    }
+
+    function test_claim_RevertIf_NotVaultMining() public {
+        _addRewards();
+        vm.prank(admin);
+        vaultMining.addDualMiningPool(address(vaultA), address(dualMining));
+
         vm.prank(alice);
-        dualMining.claim();
+        vm.expectRevert(abi.encodeWithSelector(IDualMining.DualMining__NotAuthorized.selector, alice));
+        dualMining.claim(alice);
     }
 
     // This test follows `test_vaultMining_DistributeRewardsCorrectly` in `VaultMining.t.sol`
@@ -194,14 +205,17 @@ contract DualMiningTest is VaultMiningSetup {
         // Carol should have: 2*3/6*25 + 5*3/7*25 + 1*3/6.5*25 + 1*3/4.5*25 + 1*25 = 131.77655677655678
         assertApproxEqAbs(dualMining.getPendingUserRewards(carol).unwrap(), 131.77655677655678e18, delta);
 
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
         vm.prank(alice);
-        dualMining.claim();
+        vaultMining.claim(vaultList);
 
         vm.prank(bob);
-        dualMining.claim();
+        vaultMining.claim(vaultList);
 
         vm.prank(carol);
-        dualMining.claim();
+        vaultMining.claim(vaultList);
 
         assertApproxEqAbs(rewardToken.balanceOf(alice), 126.73992673992673e18, delta);
         assertApproxEqAbs(rewardToken.balanceOf(bob), 116.48351648351647e18, delta);
@@ -219,11 +233,13 @@ contract DualMiningTest is VaultMiningSetup {
         vm.warp(ts + 10000 * ONE_DAY);
         assertEq(dualMining.getPendingUserRewards(alice), 100_000e18);
 
-        // Trigger update
-        vaultA.mint(alice, 10e18);
         assertEq(rewardToken.balanceOf(address(dualMining)), 100_000e18);
+
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
         vm.prank(alice);
-        dualMining.claim();
+        vaultMining.claim(vaultList);
         assertEq(dualMining.getPendingUserRewards(alice), 0);
         assertEq(rewardToken.balanceOf(alice), 100_000e18);
         assertEq(rewardToken.balanceOf(address(dualMining)), 0);

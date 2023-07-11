@@ -152,6 +152,11 @@ contract VaultMining is IVaultMining, OwnableInternal {
             l.userInfo[vaults[i]][msg.sender].reward = ZERO;
 
             emit Claim(msg.sender, vaults[i], rewardAmount);
+
+            address[] memory dualMiningPools = getDualMiningPools(vaults[i]);
+            for (uint256 j = 0; j < dualMiningPools.length; j++) {
+                IDualMining(dualMiningPools[j]).claim(msg.sender);
+            }
         }
 
         IERC20(PREMIA).approve(OPTION_REWARD, size.unwrap());

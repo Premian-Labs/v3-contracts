@@ -152,17 +152,20 @@ contract DualMining is IDualMining, OwnableInternal {
         return toSubtract;
     }
 
-    /// ToDo : Make it called by vaultMining
     /// @inheritdoc IDualMining
-    function claim() external {
+    function claim(address user) external {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
         _revertIfNotInitialized(l);
+        _revertIfNotVaultMining(msg.sender);
 
-        UD60x18 reward = l.userInfo[msg.sender].reward;
-        l.userInfo[msg.sender].reward = ZERO;
+        UD60x18 reward = l.userInfo[user].reward;
+        l.userInfo[user].reward = ZERO;
 
         uint256 rewardAmount = OptionMath.scaleDecimals(reward.unwrap(), 18, l.rewardTokenDecimals);
-        IERC20(l.rewardToken).safeTransfer(msg.sender, rewardAmount);
+
+        if (rewardAmount == 0) return;
+
+        IERC20(l.rewardToken).safeTransfer(user, rewardAmount);
 
         emit Claim(msg.sender, reward);
     }
