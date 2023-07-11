@@ -48,11 +48,6 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return isDeployed Whether the pool has been deployed
     function getPoolAddress(PoolKey calldata k) external view returns (address pool, bool isDeployed);
 
-    /// @notice Returns the fee required to initialize a pool
-    /// @param k The pool key
-    /// @return The fee required to initialize this pool (18 decimals)
-    function initializationFee(PoolKey calldata k) external view returns (UD60x18);
-
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage (18 decimals)
     function setDiscountPerPool(UD60x18 discountPerPool) external;
@@ -69,4 +64,9 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @notice Removes the discount caused by an existing pool, can only be called by the pool after maturity
     /// @param k The pool key
     function removeDiscount(PoolKey calldata k) external;
+
+    /// @notice Calculates the initialization fee for a pool
+    /// @param k The pool key
+    /// @return The initialization fee (18 decimals)
+    function initializationFee(PoolKey calldata k) external view returns (UD60x18);
 }
