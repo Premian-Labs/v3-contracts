@@ -11,8 +11,15 @@ import {Assertions} from "../Assertions.sol";
 import {ZERO} from "contracts/libraries/Constants.sol";
 
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
+import {OptionMathMock} from "contracts/test/libraries/OptionMathMock.sol";
 
 contract OptionMathTest is Test, Assertions {
+    OptionMathMock internal optionMath;
+
+    function setUp() public {
+        optionMath = new OptionMathMock();
+    }
+
     // Normal CDF approximation helper
     function test_helperNormal_ReturnExpectedValue() public {
         // prettier-ignore
@@ -465,7 +472,7 @@ contract OptionMathTest is Test, Assertions {
             )
         );
 
-        OptionMath.calculateStrikeInterval(price);
+        optionMath.calculateStrikeInterval(price);
     }
 
     function test_calculateStrikeInterval_RevertIf_OutOfPriceBounds_Upper() public {
@@ -479,6 +486,6 @@ contract OptionMathTest is Test, Assertions {
             )
         );
 
-        OptionMath.calculateStrikeInterval(price);
+        optionMath.calculateStrikeInterval(price);
     }
 }
