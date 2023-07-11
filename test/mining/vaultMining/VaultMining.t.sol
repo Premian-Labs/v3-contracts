@@ -176,6 +176,7 @@ contract VaultMiningTest is VaultMiningSetup {
     }
 
     function test_setRewardsPerYear_UpdateRewardsPerYear() public {
+        vm.prank(admin);
         vaultMining.setRewardsPerYear(ud(1000e18));
         assertEq(vaultMining.getRewardsPerYear(), 1000e18);
     }
