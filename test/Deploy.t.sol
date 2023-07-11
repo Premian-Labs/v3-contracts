@@ -18,8 +18,8 @@ import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {InitFeeCalculator} from "contracts/factory/InitFeeCalculator.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
+import {PoolFactoryDeployer} from "contracts/factory/PoolFactoryDeployer.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
@@ -48,6 +48,7 @@ import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
 import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
+import {Placeholder} from "contracts/utils/Placeholder.sol";
 
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
@@ -159,17 +160,17 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(address(base), address(oracleAdapter));
+        Placeholder placeholder = new Placeholder();
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(placeholder), ud(0.1 ether), FEE_RECEIVER);
 
-        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(address(initFeeCalculatorImpl));
-
+        PoolFactoryDeployer poolFactoryDeployer = new PoolFactoryDeployer(address(diamond), address(factoryProxy));
         PoolFactory factoryImpl = new PoolFactory(
             address(diamond),
             address(oracleAdapter),
-            address(initFeeCalculatorProxy)
+            address(base),
+            address(poolFactoryDeployer)
         );
-
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), FEE_RECEIVER);
+        factoryProxy.setImplementation(address(factoryImpl));
 
         flashLoanMock = new FlashLoanMock();
 

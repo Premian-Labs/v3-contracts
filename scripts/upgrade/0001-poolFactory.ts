@@ -40,7 +40,6 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  initFeeCalculator = addresses.InitFeeCalculatorProxy;
   premiaDiamond = addresses.PremiaDiamond;
   chainlinkAdapter = addresses.ChainlinkAdapterProxy;
   proxy = PoolFactoryProxy__factory.connect(
@@ -53,7 +52,8 @@ async function main() {
   const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
     premiaDiamond,
     chainlinkAdapter,
-    initFeeCalculator,
+    addresses.tokens.WETH,
+    addresses.PoolFactoryDeployer,
   );
   await poolFactoryImpl.deployed();
   console.log(`PoolFactory impl : ${poolFactoryImpl.address}`);
