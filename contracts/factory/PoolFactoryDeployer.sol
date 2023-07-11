@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: UNLICENSED
+
+pragma solidity >=0.8.19;
+
+import {UD60x18} from "@prb/math/UD60x18.sol";
+
+import {PoolProxy} from "../pool/PoolProxy.sol";
+import {IPoolFactoryDeployer} from "./IPoolFactoryDeployer.sol";
+import {IPoolFactory} from "./IPoolFactory.sol";
+
+contract PoolFactoryDeployer is IPoolFactoryDeployer {
+    address public immutable DIAMOND;
+    address public immutable POOL_FACTORY;
+
+    constructor(address diamond, address poolFactory) {
+        DIAMOND = diamond;
+        POOL_FACTORY = poolFactory;
+    }
+
+    /// @inheritdoc IPoolFactoryDeployer
+    function deployPool(IPoolFactory.PoolKey calldata k) external returns (address poolAddress) {
+        _revertIfNotPoolFactory(msg.sender);
+
+        bytes32 salt = keccak256(_encodePoolProxyArgs(k));
+        poolAddress = address(
+            new PoolProxy{salt: salt}(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool)
+        );
+    }
+
+    /// @inheritdoc IPoolFactoryDeployer
+    function calculatePoolAddress(IPoolFactory.PoolKey memory k) external view returns (address) {
+        bytes memory args = _encodePoolProxyArgs(k);
+
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff), // 0
+                address(this), // address of factory contract
+                keccak256(args), // salt
+                // The contract bytecode
+                keccak256(abi.encodePacked(type(PoolProxy).creationCode, args))
+            )
+        );
+
+        // Cast last 20 bytes of hash to address
+        return address(uint160(uint256(hash)));
+    }
+
+    /// @notice Returns the encoded arguments for the pool proxy using pool key `k`
+    function _encodePoolProxyArgs(IPoolFactory.PoolKey memory k) internal view returns (bytes memory) {
+        return abi.encode(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool);
+    }
+
+    function _revertIfNotPoolFactory(address caller) internal {
+        if (caller != POOL_FACTORY) revert PoolFactoryDeployer__NotPoolFactory(caller);
+    }
+}
