@@ -41,8 +41,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return PoolStorage.formatTokenId(operator, lower, upper, orderType);
     }
 
-    function quoteRFQHash(QuoteRFQ memory quoteRFQ) external view returns (bytes32) {
-        return _quoteRFQHash(quoteRFQ);
+    function quoteOBHash(QuoteOB memory quoteOB) external view returns (bytes32) {
+        return _quoteOBHash(quoteOB);
     }
 
     function parseTokenId(
@@ -53,6 +53,16 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         returns (uint8 version, address operator, UD60x18 lower, UD60x18 upper, Position.OrderType orderType)
     {
         return PoolStorage.parseTokenId(tokenId);
+    }
+
+    function exerciseFee(
+        address taker,
+        UD60x18 size,
+        UD60x18 intrinsicValue,
+        UD60x18 strike,
+        bool isCallPool
+    ) external view returns (UD60x18) {
+        return _exerciseFee(taker, size, intrinsicValue, strike, isCallPool);
     }
 
     function protocolFees() external view returns (uint256) {

@@ -48,7 +48,7 @@ export interface PoolKey {
   isCallPool: boolean;
 }
 
-export interface QuoteRFQ {
+export interface QuoteOB {
   provider: string;
   taker: string;
   price: BigNumber;

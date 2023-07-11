@@ -7,11 +7,9 @@ import {ERC1155Base} from "@solidstate/contracts/token/ERC1155/base/ERC1155Base.
 import {ERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseInternal.sol";
 import {ERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155EnumerableInternal.sol";
-import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {PoolName} from "../libraries/PoolName.sol";
-import {Position} from "../libraries/Position.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 import {IPoolBase} from "./IPoolBase.sol";
