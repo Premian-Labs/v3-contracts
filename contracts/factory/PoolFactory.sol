@@ -2,18 +2,19 @@
 
 pragma solidity >=0.8.19;
 
+import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
-import {IInitFeeCalculator} from "./IInitFeeCalculator.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
 import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ZERO} from "../libraries/Constants.sol";
+import {ZERO, ONE} from "../libraries/Constants.sol";
 
 contract PoolFactory is IPoolFactory, OwnableInternal {
     using PoolFactoryStorage for PoolFactoryStorage.Layout;
@@ -23,13 +24,13 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     address internal immutable DIAMOND;
     // Chainlink price oracle for the WrappedNative/USD pair
     address internal immutable CHAINLINK_ADAPTER;
-    // Contract handling the calculation of initialization fee
-    address internal immutable INIT_FEE_CALCULATOR;
+    // Wrapped native token address (eg WETH, WFTM, etc)
+    address internal immutable WRAPPED_NATIVE_TOKEN;
 
-    constructor(address diamond, address chainlinkAdapter, address initFeeCalculator) {
+    constructor(address diamond, address chainlinkAdapter, address wrappedNativeToken) {
         DIAMOND = diamond;
         CHAINLINK_ADAPTER = chainlinkAdapter;
-        INIT_FEE_CALCULATOR = initFeeCalculator;
+        WRAPPED_NATIVE_TOKEN = wrappedNativeToken;
     }
 
     /// @inheritdoc IPoolFactory
@@ -55,19 +56,6 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
     /// @notice Returns the address of a pool using the encoded `poolKey`
     function _getPoolAddress(bytes32 poolKey) internal view returns (address) {
         return PoolFactoryStorage.layout().pools[poolKey];
-    }
-
-    // @inheritdoc IPoolFactory
-    function initializationFee(PoolKey calldata k) public view returns (UD60x18) {
-        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
-
-        return
-            IInitFeeCalculator(INIT_FEE_CALCULATOR).initializationFee(
-                k,
-                l.discountPerPool,
-                l.maturityCount[k.maturityKey()],
-                l.strikeCount[k.strikeKey()]
-            );
     }
 
     /// @inheritdoc IPoolFactory
@@ -156,6 +144,31 @@ contract PoolFactory is IPoolFactory, OwnableInternal {
 
         PoolFactoryStorage.layout().strikeCount[k.strikeKey()] -= 1;
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
+    }
+
+    // @inheritdoc IPoolFactory
+    function initializationFee(IPoolFactory.PoolKey memory k) public view returns (UD60x18) {
+        PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
+
+        uint256 discountFactor = l.maturityCount[k.maturityKey()] + l.strikeCount[k.strikeKey()];
+        UD60x18 discount = (ONE - l.discountPerPool).intoSD59x18().powu(discountFactor).intoUD60x18();
+
+        UD60x18 spot = _getSpotPrice(k.oracleAdapter, k.base, k.quote);
+        UD60x18 fee = OptionMath.initializationFee(spot, k.strike, k.maturity);
+
+        return (fee * discount) / _getWrappedNativeUSDSpotPrice();
+    }
+
+    // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
+    //         This is used in the calculation of the initializationFee
+    function _getSpotPrice(address oracleAdapter, address base, address quote) internal view returns (UD60x18) {
+        return IOracleAdapter(oracleAdapter).getPrice(base, quote);
+    }
+
+    // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
+    //         This is used to convert the initializationFee from USD to native token
+    function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
+        return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
     }
 
     /// @notice Returns the encoded arguments for the pool proxy using pool key `k`

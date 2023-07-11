@@ -50,7 +50,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
         return abi.encode(DIAMOND, k.base, k.quote, k.oracleAdapter, k.strike, k.maturity, k.isCallPool);
     }
 
-    function _revertIfNotPoolFactory(address caller) internal {
+    function _revertIfNotPoolFactory(address caller) internal view {
         if (caller != POOL_FACTORY) revert PoolFactoryDeployer__NotPoolFactory(caller);
     }
 }

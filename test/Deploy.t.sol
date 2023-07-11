@@ -18,7 +18,6 @@ import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {InitFeeCalculator} from "contracts/factory/InitFeeCalculator.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
@@ -159,15 +158,7 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(address(base), address(oracleAdapter));
-
-        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(address(initFeeCalculatorImpl));
-
-        PoolFactory factoryImpl = new PoolFactory(
-            address(diamond),
-            address(oracleAdapter),
-            address(initFeeCalculatorProxy)
-        );
+        PoolFactory factoryImpl = new PoolFactory(address(diamond), address(oracleAdapter), address(base));
 
         PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), FEE_RECEIVER);
 
