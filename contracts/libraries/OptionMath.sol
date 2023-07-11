@@ -234,15 +234,15 @@ library OptionMath {
         return ud(multiplier * 10 ** (nbDigits - 1));
     }
 
-    /// @notice Rounds `price` using the calculated strike interval
-    /// @param price The price to round (18 decimals)
+    /// @notice Rounds `strike` using the calculated strike interval
+    /// @param strike The price to round (18 decimals)
     /// @return The rounded strike price (18 decimals)
-    function roundToStrikeInterval(UD60x18 price) internal pure returns (UD60x18) {
-        uint256 strike = price.div(ONE).unwrap();
-        uint256 interval = calculateStrikeInterval(price).div(ONE).unwrap();
-        uint256 lower = interval * (strike / interval);
-        uint256 upper = interval * ((strike / interval) + 1);
-        return (strike - lower < upper - strike) ? ud(lower) : ud(upper);
+    function roundToStrikeInterval(UD60x18 strike) internal pure returns (UD60x18) {
+        uint256 _strike = strike.div(ONE).unwrap();
+        uint256 interval = calculateStrikeInterval(strike).div(ONE).unwrap();
+        uint256 lower = interval * (_strike / interval);
+        uint256 upper = interval * ((_strike / interval) + 1);
+        return (_strike - lower < upper - _strike) ? ud(lower) : ud(upper);
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
