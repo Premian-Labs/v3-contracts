@@ -7,6 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {DualMiningStorage} from "./DualMiningStorage.sol";
 import {IDualMining} from "./IDualMining.sol";
@@ -16,7 +17,7 @@ import {IVaultMining} from "../vaultMining/IVaultMining.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {WAD, ZERO} from "../../libraries/Constants.sol";
 
-contract DualMining is IDualMining, OwnableInternal {
+contract DualMining is IDualMining, OwnableInternal, ReentrancyGuard {
     using DualMiningStorage for DualMiningStorage.Layout;
     using SafeERC20 for IERC20;
 
@@ -27,7 +28,7 @@ contract DualMining is IDualMining, OwnableInternal {
     }
 
     /// @inheritdoc IDualMining
-    function init(UD60x18 initialParentAccRewardsPerShare) external {
+    function init(UD60x18 initialParentAccRewardsPerShare) external nonReentrant {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
         _revertIfNoMiningRewards(l);
@@ -42,7 +43,7 @@ contract DualMining is IDualMining, OwnableInternal {
     }
 
     /// @inheritdoc IDualMining
-    function addRewards(UD60x18 amount) external {
+    function addRewards(UD60x18 amount) external nonReentrant {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
         _revertIfMiningEnded(l);
@@ -57,7 +58,7 @@ contract DualMining is IDualMining, OwnableInternal {
     }
 
     /// @inheritdoc IDualMining
-    function updatePool(UD60x18 poolRewards, UD60x18 accRewardsPerShare) external {
+    function updatePool(UD60x18 poolRewards, UD60x18 accRewardsPerShare) external nonReentrant {
         _revertIfNotVaultMining(msg.sender);
 
         _updatePool(DualMiningStorage.layout(), poolRewards, accRewardsPerShare);
@@ -99,7 +100,7 @@ contract DualMining is IDualMining, OwnableInternal {
         UD60x18 parentPoolRewards,
         UD60x18 parentUserRewards,
         UD60x18 accRewardsPerShare
-    ) external {
+    ) external nonReentrant {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
 
         _revertIfNotVaultMining(msg.sender);
@@ -153,7 +154,7 @@ contract DualMining is IDualMining, OwnableInternal {
     }
 
     /// @inheritdoc IDualMining
-    function claim(address user) external {
+    function claim(address user) external nonReentrant {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
         _revertIfNotInitialized(l);
         _revertIfNotVaultMining(msg.sender);
