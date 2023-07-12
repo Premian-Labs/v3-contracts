@@ -7,6 +7,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {WAD, ZERO} from "../../libraries/Constants.sol";
 
@@ -18,7 +19,7 @@ import {IVxPremia} from "../../staking/IVxPremia.sol";
 import {IVault} from "../../vault/IVault.sol";
 import {IVaultRegistry} from "../../vault/IVaultRegistry.sol";
 
-contract VaultMining is IVaultMining, OwnableInternal {
+contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using VaultMiningStorage for VaultMiningStorage.Layout;
 
@@ -42,7 +43,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function addRewards(UD60x18 amount) external {
+    function addRewards(UD60x18 amount) external nonReentrant {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount.unwrap());
         l.rewardsAvailable = l.rewardsAvailable + amount;
@@ -109,12 +110,12 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function claim(address[] memory vaults) external {
+    function claim(address[] memory vaults) external nonReentrant {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
         UD60x18 size;
         for (uint256 i = 0; i < vaults.length; i++) {
-            updateUser(msg.sender, vaults[i]);
+            _updateUser(msg.sender, vaults[i]);
 
             UD60x18 rewardAmount = l.userInfo[vaults[i]][msg.sender].reward;
             size = size + rewardAmount;
@@ -127,7 +128,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
         IOptionReward(OPTION_REWARD).underwrite(msg.sender, size);
     }
 
-    function updateVaults() public {
+    function updateVaults() public nonReentrant {
         IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
 
         for (uint256 i = 0; i < vaults.length; i++) {
@@ -143,14 +144,14 @@ contract VaultMining is IVaultMining, OwnableInternal {
         UD60x18 newUserShares,
         UD60x18 newTotalShares,
         UD60x18 utilisationRate
-    ) external {
+    ) external nonReentrant {
         _revertIfNotVault(msg.sender);
         _revertIfNotVault(vault);
         _updateUser(user, vault, newUserShares, newTotalShares, utilisationRate);
     }
 
     /// @inheritdoc IVaultMining
-    function updateVault(address vault) external {
+    function updateVault(address vault) external nonReentrant {
         _revertIfNotVault(vault);
 
         IVault _vault = IVault(vault);
@@ -177,7 +178,11 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function updateUser(address user, address vault) public {
+    function updateUser(address user, address vault) external nonReentrant {
+        _updateUser(user, vault);
+    }
+
+    function _updateUser(address user, address vault) internal {
         _revertIfNotVault(vault);
 
         IVault _vault = IVault(vault);
