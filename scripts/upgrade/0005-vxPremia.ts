@@ -55,6 +55,7 @@ async function main() {
     addresses.tokens.PREMIA,
     addresses.tokens.USDC,
     addresses.ExchangeHelper,
+    addresses.VaultRegistryProxy,
   );
   await vxPremiaImpl.deployed();
   console.log(`VxPremia implementation : ${vxPremiaImpl.address}`);

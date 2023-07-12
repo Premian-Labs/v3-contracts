@@ -301,6 +301,7 @@ export class PoolUtil {
         premia.address,
         tokens.USDC.address,
         exchangeHelper.address,
+        vaultRegistry ?? constants.AddressZero,
       );
 
       await vxPremiaImpl.deployed();
