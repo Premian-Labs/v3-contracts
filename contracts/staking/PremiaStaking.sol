@@ -6,6 +6,7 @@ import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {IERC2612} from "@solidstate/contracts/token/ERC20/permit/IERC2612.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -19,7 +20,7 @@ import {OFTCore} from "../layerZero/token/oft/OFTCore.sol";
 import {IOFTCore} from "../layerZero/token/oft/IOFTCore.sol";
 import {BytesLib} from "../layerZero/util/BytesLib.sol";
 
-contract PremiaStaking is IPremiaStaking, OFT {
+contract PremiaStaking is IPremiaStaking, OFT, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using AddressUtils for address;
     using BytesLib for bytes;
@@ -184,7 +185,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function addRewards(uint256 amount) external {
+    function addRewards(uint256 amount) external nonReentrant {
         _updateRewards();
 
         IERC20(REWARD_TOKEN).safeTransferFrom(msg.sender, address(this), amount);
@@ -227,7 +228,14 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function stakeWithPermit(uint256 amount, uint64 period, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function stakeWithPermit(
+        uint256 amount,
+        uint64 period,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external nonReentrant {
         IERC2612(PREMIA).permit(msg.sender, address(this), amount, deadline, v, r, s);
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -235,13 +243,13 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function stake(uint256 amount, uint64 period) external {
+    function stake(uint256 amount, uint64 period) external nonReentrant {
         IERC20(PREMIA).safeTransferFrom(msg.sender, address(this), amount);
         _stake(msg.sender, amount, period);
     }
 
     /// @inheritdoc IPremiaStaking
-    function updateLock(uint64 period) external {
+    function updateLock(uint64 period) external nonReentrant {
         if (period > MAX_PERIOD) revert PremiaStaking__ExcessiveStakePeriod();
 
         _updateRewards();
@@ -269,7 +277,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function harvestAndStake(IPremiaStaking.SwapArgs calldata s, uint64 stakePeriod) external {
+    function harvestAndStake(IPremiaStaking.SwapArgs calldata s, uint64 stakePeriod) external nonReentrant {
         uint256 amountRewardToken = _harvest(msg.sender);
 
         if (amountRewardToken == 0) return;
@@ -325,7 +333,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function harvest() external {
+    function harvest() external nonReentrant {
         uint256 amount = _harvest(msg.sender);
         IERC20(REWARD_TOKEN).safeTransfer(msg.sender, amount);
     }
@@ -367,7 +375,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     function _beforeUnstake(address user, uint256 amount) internal virtual {}
 
     /// @inheritdoc IPremiaStaking
-    function earlyUnstake(uint256 amount) external {
+    function earlyUnstake(uint256 amount) external nonReentrant {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
 
         _startWithdraw(l, l.userInfo[msg.sender], amount, (ud(amount) * ud(getEarlyUnstakeFee(msg.sender))).unwrap());
@@ -397,7 +405,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function startWithdraw(uint256 amount) external {
+    function startWithdraw(uint256 amount) external nonReentrant {
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();
         PremiaStakingStorage.UserInfo storage u = l.userInfo[msg.sender];
 
@@ -443,7 +451,7 @@ contract PremiaStaking is IPremiaStaking, OFT {
     }
 
     /// @inheritdoc IPremiaStaking
-    function withdraw() external {
+    function withdraw() external nonReentrant {
         _updateRewards();
 
         PremiaStakingStorage.Layout storage l = PremiaStakingStorage.layout();

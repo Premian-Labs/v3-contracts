@@ -4,13 +4,14 @@ pragma solidity >=0.8.19;
 
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IExchangeHelper} from "./IExchangeHelper.sol";
 
 /// @title Premia Exchange Helper
 /// @dev deployed standalone and referenced by ExchangeProxy
 /// @dev do NOT set additional approval to this contract!
-contract ExchangeHelper is IExchangeHelper {
+contract ExchangeHelper is IExchangeHelper, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @inheritdoc IExchangeHelper
@@ -22,7 +23,7 @@ contract ExchangeHelper is IExchangeHelper {
         address allowanceTarget,
         bytes calldata data,
         address refundAddress
-    ) external returns (uint256 amountOut, uint256 sourceLeft) {
+    ) external nonReentrant returns (uint256 amountOut, uint256 sourceLeft) {
         IERC20(sourceToken).approve(allowanceTarget, sourceTokenAmount);
 
         (bool success, ) = callee.call(data);

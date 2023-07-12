@@ -7,6 +7,7 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
@@ -19,7 +20,7 @@ import {ZERO, iZERO, iONE, iTWO} from "../libraries/Constants.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
-contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
+contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
@@ -94,7 +95,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] calldata psi,
         bytes32[] calldata rho,
         UD60x18 riskFreeRate
-    ) external {
+    ) external nonReentrant {
         if (
             tokens.length != tau.length ||
             tokens.length != theta.length ||
