@@ -51,6 +51,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.add(accounts[i]);
+            emit AddWhitelistedRelayer(accounts[i]);
         }
     }
 
@@ -60,6 +61,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.remove(accounts[i]);
+            emit RemoveWhitelistedRelayer(accounts[i]);
         }
     }
 
