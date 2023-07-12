@@ -88,19 +88,14 @@ contract PoolFactoryTest is DeployTest {
     }
 
     function test_deployPool_RevertIf_PriceNotWithinStrikeInterval() public {
-        uint256[4] memory strike = [uint256(99990 ether), uint256(1050 ether), uint256(950 ether), uint256(11 ether)];
-
-        uint256 strikeInterval = 100 ether;
+        uint256[4] memory strike = [uint256(99999 ether), uint256(1050 ether), uint256(960 ether), uint256(11.1 ether)];
+        uint256[4] memory interval = [uint256(5000 ether), uint256(100 ether), uint256(50 ether), uint256(1 ether)];
 
         for (uint256 i; i < strike.length; i++) {
             poolKey.strike = ud(strike[i]);
 
             vm.expectRevert(
-                abi.encodeWithSelector(
-                    IPoolFactory.PoolFactory__OptionStrikeInvalid.selector,
-                    strike[i],
-                    strikeInterval
-                )
+                abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionStrikeInvalid.selector, strike[i], interval[i])
             );
 
             factory.deployPool{value: 1 ether}(poolKey);
@@ -116,6 +111,20 @@ contract PoolFactoryTest is DeployTest {
 
     function test_deployPool_RevertIf_MaturityNot8UTC() public {
         poolKey.maturity = 1679768950;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
+        );
+        factory.deployPool{value: 1 ether}(poolKey);
+
+        poolKey.maturity = 1688572800;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)
+        );
+        factory.deployPool{value: 1 ether}(poolKey);
+
+        poolKey.maturity = 1688601600;
 
         vm.expectRevert(
             abi.encodeWithSelector(IPoolFactory.PoolFactory__OptionMaturityNot8UTC.selector, poolKey.maturity)

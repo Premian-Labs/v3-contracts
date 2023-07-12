@@ -8,7 +8,7 @@ library UniswapV3AdapterStorage {
     struct Layout {
         // Assumes that the UniswapV3 pool will have at least one observation per block (but no more than one
         // observation per second, see note below) for the TWAP period to ensure that no observations are missed.
-        // target_cardinality = period * cardinality_per_minute / 60
+        // target_cardinality = (period * cardinality_per_minute) / 60
         uint16 targetCardinality;
         // TWAP period (in seconds)
         uint32 period;

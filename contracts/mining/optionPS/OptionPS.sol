@@ -60,7 +60,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         OptionPSStorage.Layout storage l = OptionPSStorage.layout();
 
         // Validate maturity
-        if ((maturity % 24 hours) != 8 hours) revert OptionPS__OptionMaturityNot8UTC(maturity);
+        if (!OptionMath.is8AMUTC(maturity)) revert OptionPS__OptionMaturityNot8UTC(maturity);
 
         UD60x18 strikeInterval = OptionMath.calculateStrikeInterval(strike);
         if (strike % strikeInterval != ZERO) revert OptionPS__StrikeNotMultipleOfStrikeInterval(strike, strikeInterval);

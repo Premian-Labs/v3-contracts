@@ -6,7 +6,6 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {ERC20BaseInternal} from "@solidstate/contracts/token/ERC20/base/ERC20BaseInternal.sol";
 import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
@@ -21,7 +20,6 @@ import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
-import {IVxPremia} from "../../../staking/IVxPremia.sol";
 import {IVaultMining} from "../../../mining/vaultMining/IVaultMining.sol";
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
@@ -94,7 +92,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     /// @return The spot price at the current time
     function _getSpotPrice() internal view virtual returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return IOracleAdapter(l.oracleAdapter).quote(l.base, l.quote);
+        return IOracleAdapter(l.oracleAdapter).getPrice(l.base, l.quote);
     }
 
     /// @notice Gets the spot price at the given timestamp
@@ -104,7 +102,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         UnderwriterVaultStorage.Layout storage l,
         uint256 timestamp
     ) internal view returns (UD60x18) {
-        return IOracleAdapter(l.oracleAdapter).quoteFrom(l.base, l.quote, timestamp);
+        return IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, timestamp);
     }
 
     /// @notice Gets the total liabilities value of the basket of expired
@@ -236,9 +234,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         vars.lastSpreadUnlockUpdate = timestamp;
     }
 
+    /// @dev _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places,
+    ///      therefore no further scaling has to be applied
     function _balanceOfUD60x18(address owner) internal view returns (UD60x18) {
-        // NOTE: _balanceOf returns the balance of the ERC20 share token which is always in 18 decimal places.
-        // therefore no further scaling has to be applied
         return ud(_balanceOf(owner));
     }
 

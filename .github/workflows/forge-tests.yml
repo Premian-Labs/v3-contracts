@@ -5,7 +5,6 @@ on:
   pull_request:
 
 env:
-  FOUNDRY_PROFILE: ci
   API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
 
 jobs:
@@ -28,7 +27,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: v1.0.0
 
       - name: Run Forge build
         run: |
