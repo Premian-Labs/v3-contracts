@@ -14,6 +14,8 @@ library DualMiningStorage {
         address vault;
         // Timestamp at which reward distribution started
         uint256 startTimestamp;
+        // Timestamp at which reward distribution ended
+        uint256 endTimestamp;
         // Amount of rewards distributed per year
         UD60x18 rewardsPerYear;
         // Total rewards left to distribute

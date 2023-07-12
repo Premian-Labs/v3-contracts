@@ -7,6 +7,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 interface IDualMining {
     error DualMining__AlreadyInitialized();
     error DualMining__NoMiningRewards();
+    error DualMining__NoShareSupply();
     error DualMining__NotAuthorized(address caller);
     error DualMining__NotInitialized();
     error DualMining__MiningEnded();
@@ -48,7 +49,7 @@ interface IDualMining {
     ) external;
 
     /// @notice Claim rewards. Can only be called by `VAULT_MINING` contract
-    /// @dev The claim is done through `VAULT_MINING`, as we need to trigger updates through `VAULT_MINING` before being able to claim the rewards anyway.
+    /// @dev =The claim is done through `VAULT_MINING`, as we need to trigger updates through `VAULT_MINING` before being able to claim the rewards anyway.
     /// @param user The user for which to claim
     function claim(address user) external;
 

@@ -35,9 +35,9 @@ contract DualMiningTest is VaultMiningSetup {
 
     function _addRewards() internal {
         vm.startPrank(alice);
-        rewardToken.mint(alice, 100_000e18);
-        rewardToken.approve(address(dualMining), 100_000e18);
-        dualMining.addRewards(ud(100_000e18));
+        rewardToken.mint(alice, 1_000e18);
+        rewardToken.approve(address(dualMining), 1_000e18);
+        dualMining.addRewards(ud(1_000e18));
         vm.stopPrank();
     }
 
@@ -86,7 +86,7 @@ contract DualMiningTest is VaultMiningSetup {
 
     function test_addRewards_Success() public {
         _addRewards();
-        assertEq(dualMining.getRewardsAvailable(), 100_000e18);
+        assertEq(dualMining.getRewardsAvailable(), 1_000e18);
     }
 
     function test_addRewards_RevertIf_MiningEnded() public {
@@ -99,11 +99,11 @@ contract DualMiningTest is VaultMiningSetup {
         vaultA.mint(alice, 10e18);
 
         vm.startPrank(alice);
-        rewardToken.mint(alice, 100_000e18);
-        rewardToken.approve(address(dualMining), 100_000e18);
+        rewardToken.mint(alice, 1_000e18);
+        rewardToken.approve(address(dualMining), 1_000e18);
 
         vm.expectRevert(IDualMining.DualMining__MiningEnded.selector);
-        dualMining.addRewards(ud(100_000e18));
+        dualMining.addRewards(ud(1_000e18));
     }
 
     function test_updatePool_RevertIf_NotVaultMining() public {
@@ -194,7 +194,7 @@ contract DualMiningTest is VaultMiningSetup {
         vaultA.burn(carol, 30e18);
 
         // 25 per day emission
-        assertApproxEqAbs(dualMining.getRewardsAvailable().unwrap(), 100_000e18 - (16 * 25e18), delta);
+        assertApproxEqAbs(dualMining.getRewardsAvailable().unwrap(), 1_000e18 - (16 * 25e18), delta);
 
         // Alice should have: 83.33333333333333 + 5*2/7*25 + 1*2/6.5*25 = 126.73992673992673
         assertApproxEqAbs(dualMining.getPendingUserRewards(alice).unwrap(), 126.73992673992673e18, delta);
@@ -231,9 +231,9 @@ contract DualMiningTest is VaultMiningSetup {
 
         vaultA.mint(alice, 10e18);
         vm.warp(ts + 10000 * ONE_DAY);
-        assertEq(dualMining.getPendingUserRewards(alice), 100_000e18);
+        assertEq(dualMining.getPendingUserRewards(alice), 1_000e18);
 
-        assertEq(rewardToken.balanceOf(address(dualMining)), 100_000e18);
+        assertEq(rewardToken.balanceOf(address(dualMining)), 1_000e18);
 
         address[] memory vaultList = new address[](1);
         vaultList[0] = address(vaultA);
@@ -241,10 +241,128 @@ contract DualMiningTest is VaultMiningSetup {
         vm.prank(alice);
         vaultMining.claim(vaultList);
         assertEq(dualMining.getPendingUserRewards(alice), 0);
-        assertEq(rewardToken.balanceOf(alice), 100_000e18);
+        assertEq(rewardToken.balanceOf(alice), 1_000e18);
         assertEq(rewardToken.balanceOf(address(dualMining)), 0);
 
         vm.warp(block.timestamp + ONE_DAY);
         assertEq(dualMining.getPendingUserRewards(alice), 0);
+    }
+
+    // This tests that when first update is triggered for a user, we dont count the accumulated rewards in parent contract,
+    // from last user update until start of dualMining.
+    function test_dualMining_ProperlySubtract_OnFirstUserUpdate() public {
+        // Precision used in assertions
+        uint256 delta = 1e6;
+
+        uint256 ts = block.timestamp;
+
+        vaultA.mint(alice, 10e18);
+        vm.warp(ts + 2 * ONE_DAY);
+
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(), 500e18, delta);
+
+        vaultA.mint(bob, 20e18);
+        vm.warp(ts + 3 * ONE_DAY);
+
+        // 500 + (1 * 250 / 3) = 583.3333333333334
+        assertApproxEqAbs(
+            vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(),
+            583.3333333333334e18,
+            delta
+        );
+        // 2 * 250 / 3 = 166.66666666666666
+        assertApproxEqAbs(
+            vaultMining.getPendingUserRewards(bob, address(vaultA)).unwrap(),
+            166.66666666666666e18,
+            delta
+        );
+
+        _addRewards();
+        vm.prank(admin);
+        vaultMining.addDualMiningPool(address(vaultA), address(dualMining));
+
+        assertEq(dualMining.getPendingUserRewards(alice).unwrap(), 0);
+        assertEq(dualMining.getPendingUserRewards(bob).unwrap(), 0);
+
+        vm.warp(ts + 4 * ONE_DAY);
+        vaultA.mint(carol, 30e18);
+
+        // 1 * 25 / 3 = 8.333333333333334
+        assertApproxEqAbs(dualMining.getPendingUserRewards(alice).unwrap(), 8.333333333333334e18, delta);
+        // 2 * 25 / 3 = 16.666666666666668
+        assertApproxEqAbs(dualMining.getPendingUserRewards(bob).unwrap(), 16.666666666666668e18, delta);
+        assertApproxEqAbs(dualMining.getPendingUserRewards(carol).unwrap(), 0, delta);
+
+        vm.warp(ts + 6 * ONE_DAY);
+
+        // 8.333333333333334 + 2 * (1 * 25 / 6) = 16.666666666666668
+        assertApproxEqAbs(dualMining.getPendingUserRewards(alice).unwrap(), 16.666666666666668e18, delta);
+        // 16.666666666666668 + 2 * (2 * 25 / 6) = 33.333333333333336
+        assertApproxEqAbs(dualMining.getPendingUserRewards(bob).unwrap(), 33.333333333333336e18, delta);
+        // 2 * (3 * 25 / 6) = 25
+        assertApproxEqAbs(dualMining.getPendingUserRewards(carol).unwrap(), 25e18, delta);
+    }
+
+    // This tests that when last update is triggered for a user, we dont count the accumulated rewards in parent contract,
+    // from end of dualMining until now
+    function test_dualMining_ProperlySubtract_OnLastUserUpdate() public {
+        // Precision used in assertions
+        uint256 delta = 1e6;
+
+        uint256 ts = block.timestamp;
+
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
+        _addRewards();
+        vm.prank(admin);
+        vaultMining.addDualMiningPool(address(vaultA), address(dualMining));
+
+        vaultA.mint(alice, 10e18);
+        vaultA.mint(bob, 20e18);
+        vaultA.mint(carol, 30e18);
+
+        vm.warp(ts + 10 * ONE_DAY);
+        vm.prank(alice);
+        vaultMining.claim(vaultList);
+
+        vm.warp(ts + 20 * ONE_DAY);
+        vm.prank(bob);
+        vaultMining.claim(vaultList);
+
+        vm.warp(ts + 100 * ONE_DAY);
+
+        vm.prank(alice);
+        vaultMining.claim(vaultList);
+
+        vm.warp(ts + 300 * ONE_DAY);
+
+        assertApproxEqAbs(
+            rewardToken.balanceOf(alice) + dualMining.getPendingUserRewards(alice).unwrap(),
+            (1 * 1_000e18) / uint256(6),
+            delta
+        );
+        assertApproxEqAbs(
+            rewardToken.balanceOf(bob) + dualMining.getPendingUserRewards(bob).unwrap(),
+            (2 * 1_000e18) / uint256(6),
+            delta
+        );
+        assertApproxEqAbs(dualMining.getPendingUserRewards(carol).unwrap(), (3 * 1_000e18) / uint256(6), delta);
+
+        vm.prank(alice);
+        vaultMining.claim(vaultList);
+
+        vm.prank(bob);
+        vaultMining.claim(vaultList);
+
+        vm.prank(carol);
+        vaultMining.claim(vaultList);
+
+        assertApproxEqAbs(rewardToken.balanceOf(address(dualMining)), 0, delta);
+        assertEq(dualMining.getRewardsAvailable().unwrap(), 0);
+
+        assertApproxEqAbs(rewardToken.balanceOf(alice), (1 * 1_000e18) / uint256(6), delta, "alice");
+        assertApproxEqAbs(rewardToken.balanceOf(bob), (2 * 1_000e18) / uint256(6), delta, "bob");
+        assertApproxEqAbs(rewardToken.balanceOf(carol), (3 * 1_000e18) / uint256(6), delta, "carol");
     }
 }

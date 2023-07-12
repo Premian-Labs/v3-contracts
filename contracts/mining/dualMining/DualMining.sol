@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
@@ -86,6 +88,7 @@ contract DualMining is IDualMining, OwnableInternal {
         // Reward distribution ended
         if (l.rewardsAvailable == ZERO) {
             l.finalParentAccRewardsPerShare = accRewardsPerShare;
+            l.endTimestamp = block.timestamp;
             emit MiningEnded(accRewardsPerShare);
         }
     }
@@ -107,11 +110,9 @@ contract DualMining is IDualMining, OwnableInternal {
         IDualMining.UserInfo storage uInfo = l.userInfo[user];
 
         // Mining is ended and user already had final update, so we can return
-        if (
-            l.finalParentAccRewardsPerShare > ZERO && uInfo.lastParentAccTotalRewards != l.finalParentAccRewardsPerShare
-        ) return;
+        if (l.finalParentAccRewardsPerShare > ZERO && uInfo.lastUpdateTimestamp >= l.endTimestamp) return;
 
-        UD60x18 toSubtract = _calculateUserRewardToSubtract(l, uInfo, oldShares, oldRewardDebt);
+        UD60x18 toSubtract = _calculateUserRewardToSubtract(l, uInfo, oldShares, oldRewardDebt, accRewardsPerShare);
         _updatePool(l, parentPoolRewards, accRewardsPerShare);
 
         UD60x18 parentAccTotalRewardsSinceLastUpdate = l.parentAccTotalRewards - uInfo.lastParentAccTotalRewards;
@@ -132,7 +133,8 @@ contract DualMining is IDualMining, OwnableInternal {
         DualMiningStorage.Layout storage l,
         IDualMining.UserInfo storage uInfo,
         UD60x18 oldShares,
-        UD60x18 oldRewardDebt
+        UD60x18 oldRewardDebt,
+        UD60x18 accRewardsPerShare
     ) internal view returns (UD60x18) {
         UD60x18 toSubtract;
         if (uInfo.lastUpdateTimestamp < l.startTimestamp) {
@@ -141,12 +143,12 @@ contract DualMining is IDualMining, OwnableInternal {
             toSubtract = oldShares * l.initialParentAccRewardsPerShare - oldRewardDebt;
         }
 
-        if (
-            l.finalParentAccRewardsPerShare > ZERO && uInfo.lastParentAccTotalRewards != l.finalParentAccRewardsPerShare
-        ) {
+        if (l.finalParentAccRewardsPerShare > ZERO && block.timestamp > l.endTimestamp) {
             // This calculates the amount of rewards the user mined in parent contract,
-            // from end of mining in this contract until now
-            toSubtract = toSubtract + (oldShares * l.finalParentAccRewardsPerShare) - oldRewardDebt;
+            // from end of mining in this contract until now.
+            // NOTE : We do not need to subtract `oldRewardDebt` from this,
+            //        as we multiply `oldShares` by the increase in rewards per share since end of dualMining rewards
+            toSubtract = toSubtract + (oldShares * (accRewardsPerShare - l.finalParentAccRewardsPerShare));
         }
 
         return toSubtract;
@@ -173,21 +175,43 @@ contract DualMining is IDualMining, OwnableInternal {
     /// @inheritdoc IDualMining
     function getPendingUserRewards(address user) external view returns (UD60x18) {
         DualMiningStorage.Layout storage l = DualMiningStorage.layout();
+        IVaultMining.VaultInfo memory vInfoParent = IVaultMining(VAULT_MINING).getVaultInfo(l.vault);
         IVaultMining.UserInfo memory uInfoParent = IVaultMining(VAULT_MINING).getUserInfo(user, l.vault);
         IDualMining.UserInfo storage uInfo = l.userInfo[user];
+        UD60x18 pendingVaultRewards = IVaultMining(VAULT_MINING).getPendingVaultRewards(l.vault);
 
-        UD60x18 userReward = uInfo.reward;
-        UD60x18 toSubtract = _calculateUserRewardToSubtract(l, uInfo, uInfoParent.shares, uInfoParent.rewardDebt);
+        // Safeguard, this should never happen,
+        // as `IVaultMining(VAULT_MINING).getPendingVaultRewards` should return 0 if no share supply
+        if (pendingVaultRewards > ZERO && vInfoParent.totalShares == ZERO) revert DualMining__NoShareSupply();
+
+        UD60x18 toSubtract;
+        {
+            UD60x18 parentAccRewardsPerShare = vInfoParent.accRewardsPerShare;
+            if (pendingVaultRewards > ZERO) {
+                // We adjust the accRewardsPerShare as if update of parent happened
+                parentAccRewardsPerShare = parentAccRewardsPerShare + (pendingVaultRewards / vInfoParent.totalShares);
+            }
+
+            toSubtract = _calculateUserRewardToSubtract(
+                l,
+                uInfo,
+                uInfoParent.shares,
+                uInfoParent.rewardDebt,
+                parentAccRewardsPerShare
+            );
+        }
 
         // Calculate pending rewards not yet allocated globally
         UD60x18 accTotalRewards = l.accTotalRewards;
         UD60x18 parentAccTotalRewards = l.parentAccTotalRewards;
         if (block.timestamp > l.lastRewardTimestamp && l.finalParentAccRewardsPerShare == ZERO) {
-            parentAccTotalRewards = parentAccTotalRewards + IVaultMining(VAULT_MINING).getPendingVaultRewards(l.vault);
+            parentAccTotalRewards = parentAccTotalRewards + pendingVaultRewards;
             accTotalRewards = accTotalRewards + _calculateRewardsUpdate(l);
         }
 
         UD60x18 parentAccTotalRewardsSinceLastUpdate = parentAccTotalRewards - uInfo.lastParentAccTotalRewards;
+
+        UD60x18 userReward = uInfo.reward;
 
         // Calculate user pending rewards not yet allocated
         if (parentAccTotalRewardsSinceLastUpdate > ZERO) {
