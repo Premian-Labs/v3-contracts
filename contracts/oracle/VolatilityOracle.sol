@@ -67,16 +67,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
     /// @inheritdoc IVolatilityOracle
     function getWhitelistedRelayers() external view returns (address[] memory) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        uint256 length = l.whitelistedRelayers.length();
-        address[] memory result = new address[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            result[i] = l.whitelistedRelayers.at(i);
-        }
-
-        return result;
+        return VolatilityOracleStorage.layout().whitelistedRelayers.toArray();
     }
 
     /// @inheritdoc IVolatilityOracle
