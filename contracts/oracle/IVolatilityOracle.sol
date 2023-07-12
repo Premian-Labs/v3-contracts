@@ -16,6 +16,7 @@ interface IVolatilityOracle {
 
     event AddWhitelistedRelayer(address indexed account);
     event RemoveWhitelistedRelayer(address indexed account);
+    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist

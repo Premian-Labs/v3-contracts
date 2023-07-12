@@ -30,8 +30,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
     uint256 private constant DECIMALS = 12;
 
-    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
-
     struct Params {
         SD59x18[5] tau;
         SD59x18[5] theta;
