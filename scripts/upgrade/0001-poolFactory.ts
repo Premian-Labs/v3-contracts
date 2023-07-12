@@ -18,7 +18,6 @@ async function main() {
 
   let addresses: ContractAddresses;
   let addressesPath: string;
-  let initFeeCalculator: string;
   let premiaDiamond: string;
   let chainlinkAdapter: string;
   let proxy: PoolFactoryProxy;
