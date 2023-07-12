@@ -2,6 +2,8 @@
 
 pragma solidity >=0.8.19;
 
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
+
 import {IOptionRewardFactory} from "./IOptionRewardFactory.sol";
 import {OptionRewardProxy} from "./OptionRewardProxy.sol";
 import {OptionRewardFactoryStorage} from "./OptionRewardFactoryStorage.sol";
@@ -9,7 +11,7 @@ import {OptionRewardFactoryStorage} from "./OptionRewardFactoryStorage.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {ProxyManager} from "../../proxy/ProxyManager.sol";
 
-contract OptionRewardFactory is IOptionRewardFactory, ProxyManager {
+contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGuard {
     using OptionRewardFactoryStorage for OptionRewardArgs;
     using OptionRewardFactoryStorage for OptionRewardFactoryStorage.Layout;
 
@@ -23,7 +25,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager {
         return (proxy, l.isProxyDeployed[proxy]);
     }
 
-    function deployProxy(OptionRewardArgs calldata args) external returns (address proxy) {
+    function deployProxy(OptionRewardArgs calldata args) external nonReentrant returns (address proxy) {
         proxy = address(
             new OptionRewardProxy(
                 IProxyManager(address(this)),
