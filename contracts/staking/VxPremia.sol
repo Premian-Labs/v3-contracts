@@ -98,7 +98,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function castVotes(VxPremiaStorage.Vote[] calldata votes) external {
+    function castVotes(VxPremiaStorage.Vote[] calldata votes) external nonReentrant {
         VxPremiaStorage.Layout storage l = VxPremiaStorage.layout();
 
         uint256 userVotingPower = _calculateUserPower(

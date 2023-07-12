@@ -37,7 +37,7 @@ contract UniswapV3ChainlinkAdapter is IUniswapV3ChainlinkAdapter, OracleAdapter 
     }
 
     /// @inheritdoc IOracleAdapter
-    function upsertPair(address tokenA, address tokenB) external {
+    function upsertPair(address tokenA, address tokenB) external nonReentrant {
         _revertIfWrappedNative(tokenA);
         _revertIfWrappedNative(tokenB);
 
