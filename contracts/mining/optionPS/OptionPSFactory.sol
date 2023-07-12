@@ -3,6 +3,7 @@
 pragma solidity >=0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IOptionPSFactory} from "./IOptionPSFactory.sol";
 import {OptionPSProxy} from "./OptionPSProxy.sol";
@@ -10,7 +11,7 @@ import {OptionPSFactoryStorage} from "./OptionPSFactoryStorage.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {ProxyManager} from "../../proxy/ProxyManager.sol";
 
-contract OptionPSFactory is IOptionPSFactory, ProxyManager {
+contract OptionPSFactory is IOptionPSFactory, ProxyManager, ReentrancyGuard {
     using OptionPSFactoryStorage for OptionPSArgs;
     using OptionPSFactoryStorage for OptionPSFactoryStorage.Layout;
 
@@ -24,7 +25,7 @@ contract OptionPSFactory is IOptionPSFactory, ProxyManager {
         return (proxy, l.isProxyDeployed[proxy]);
     }
 
-    function deployProxy(OptionPSArgs calldata args) external returns (address proxy) {
+    function deployProxy(OptionPSArgs calldata args) external nonReentrant returns (address proxy) {
         proxy = address(new OptionPSProxy(IProxyManager(address(this)), args.base, args.quote, args.isCall));
 
         OptionPSFactoryStorage.Layout storage l = OptionPSFactoryStorage.layout();
