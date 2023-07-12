@@ -297,12 +297,26 @@ contract OptionMathTest is Test, Assertions {
         assertFalse(OptionMath.is8AMUTC(input));
     }
 
-    /// forge-config: default.fuzz.runs = 50
-    /// forge-config: default.fuzz.max-test-rejects = 65536
-    function testFuzz_is8AMUTC_ReturnTrue_If8AMUTC(uint256 input) public {
-        input = bound(input, 1672531200, 2335219199);
-        vm.assume(input % 24 hours == 8 hours);
-        assertTrue(OptionMath.is8AMUTC(input));
+    function test_is8AMUTC_ReturnTrue_If8AMUTC() public {
+        // prettier-ignore
+        uint32[100] memory timestamps = [
+            1874217600,1856851200,1807430400,2283321600,1730707200,1685520000,1706515200,2185084800,1797580800,
+            2115532800,2008051200,1853222400,2003472000,1732003200,2048572800,1679904000,2051596800,1819612800,
+            2048659200,1725091200,1722067200,1911801600,1839398400,2116396800,1895990400,2110348800,1962086400,
+            1723449600,2100240000,2254377600,1774857600,1812787200,2053929600,2174544000,2194243200,1679990400,
+            1874995200,2252995200,2096611200,2186985600,1692950400,1777276800,2126160000,2172556800,1771142400,
+            2052633600,2231481600,2321769600,2123654400,1952668800,2152684800,2111731200,2302761600,2201846400,
+            1952582400,2280211200,2180764800,1675324800,2319523200,1840262400,2051078400,1887868800,1794124800,
+            1796371200,2282544000,1871193600,1681545600,2306131200,2139120000,1762675200,2232345600,2289456000,
+            1749456000,1707206400,2106374400,2323497600,1954828800,2322979200,1789459200,1905062400,2314944000,
+            2037945600,2134540800,2260598400,2326262400,2287209600,1695283200,2142316800,1762416000,1795766400,
+            2144304000,2073801600,1836806400,2150956800,1943424000,1902297600,2230704000,1810195200,2061878400,
+            2008137600
+        ];
+
+        for (uint256 i = 0; i < timestamps.length; i++) {
+            assertTrue(OptionMath.is8AMUTC(timestamps[i]));
+        }
     }
 
     function test_isFriday_ReturnFalse_IfNotFriday() public {
@@ -367,7 +381,20 @@ contract OptionMathTest is Test, Assertions {
     }
 
     function test_isLastFriday_ReturnTrue_IfLastWeekOfMonthAndFriday() public {
-        uint32[3] memory timestamps = [1677225600, 1695970800, 1703836800];
+        uint32[12] memory timestamps = [
+            1674777600,
+            1677196800,
+            1680220800,
+            1682640000,
+            1685059200,
+            1688083200,
+            1690502400,
+            1692921600,
+            1695945600,
+            1698364800,
+            1700784000,
+            1703808000
+        ];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             assertTrue(OptionMath.isLastFriday(timestamps[i]));
