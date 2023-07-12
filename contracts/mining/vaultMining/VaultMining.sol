@@ -191,7 +191,7 @@ contract VaultMining is IVaultMining, OwnableInternal {
     }
 
     /// @inheritdoc IVaultMining
-    function updateVault(address vault) external {
+    function updateVault(address vault) public {
         _revertIfNotVault(vault);
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
