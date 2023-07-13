@@ -119,6 +119,62 @@ abstract contract PoolClaimTest is DeployTest {
         assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
     }
 
+    function test_claim_OperatorClaimFees() public {
+        uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
+        assertEq(tokenIds.length, 0);
+
+        posKey.operator = users.otherLP;
+
+        uint256 tradeSize = 1 ether;
+        (uint256 initialCollateral, uint256 totalPremium) = trade(tradeSize, true);
+
+        uint256 claimableFees = pool.getClaimableFees(posKey);
+        uint256 protocolFees = pool.protocolFees();
+        IERC20 poolToken = IERC20(getPoolToken());
+
+        vm.prank(users.lp);
+        pool.claim(posKey);
+
+        vm.prank(users.otherLP);
+        pool.claim(posKey);
+
+        uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
+
+        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
+        assertEq(poolToken.balanceOf(users.otherLP), claimableFees);
+        assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - claimableFees - protocolFees);
+        assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
+    }
+
+    function test_claim_FeesNotClaimed() public {
+        uint256 tradeSize = 1 ether;
+        (uint256 initialCollateral, uint256 totalPremium) = trade(tradeSize, true);
+
+        uint256 claimableFees = pool.getClaimableFees(posKey);
+        uint256 protocolFees = pool.protocolFees();
+        IERC20 poolToken = IERC20(getPoolToken());
+
+        uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
+        assertEq(tokenIds.length, 0);
+
+        vm.prank(users.otherLP);
+        posKey.operator = users.otherLP; // otherLP creates a fake position
+        pool.claim(posKey);
+
+        uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
+
+        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
+        assertEq(poolToken.balanceOf(users.otherLP), 0);
+        assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - protocolFees);
+        assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
+
+        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
+        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
+    }
+
     function test_claim_ClaimFees_2() public {
         _setupPoolHistory();
 
