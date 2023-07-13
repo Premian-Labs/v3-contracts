@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 /// @title Premia Exchange Helper
 /// @dev deployed standalone and referenced by internal functions
