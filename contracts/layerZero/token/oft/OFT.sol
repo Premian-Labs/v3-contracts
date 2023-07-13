@@ -23,7 +23,7 @@ contract OFT is OFTCore, SolidStateERC20, IOFT {
 
         if (from != spender) {
             unchecked {
-                mapping(address => uint256) storage allowances = ERC20BaseStorage.layout().allowances[spender];
+                mapping(address => uint256) storage allowances = ERC20BaseStorage.layout().allowances[from];
 
                 uint256 allowance = allowances[spender];
                 if (amount > allowance) revert OFT_InsufficientAllowance();
