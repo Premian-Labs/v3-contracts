@@ -9,7 +9,7 @@ import {PoolStorage} from "../pool/PoolStorage.sol";
 
 import {IPricing} from "./IPricing.sol";
 
-import {ZERO, ONE} from "./Constants.sol";
+import {ZERO, ONE, EXTRA_PRECISION} from "./Constants.sol";
 
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
 /// @dev WARNING: This library should not be used for computations that span multiple ticks. Instead, the user should
@@ -72,7 +72,7 @@ library Pricing {
 
     /// @notice Returns the liquidity between `args.lower` and `args.upper`
     function liquidity(Args memory args) internal pure returns (UD60x18) {
-        return (args.liquidityRate * amountOfTicksBetween(args)) / ud(1e24);
+        return (args.liquidityRate * amountOfTicksBetween(args)) / EXTRA_PRECISION;
     }
 
     /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`

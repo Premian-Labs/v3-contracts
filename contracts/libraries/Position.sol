@@ -7,7 +7,7 @@ import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {iZERO, ZERO, ONE, TWO} from "./Constants.sol";
+import {iZERO, ZERO, ONE, TWO, EXTRA_PRECISION} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 
@@ -182,7 +182,7 @@ library Position {
     function liquidityPerTick(KeyInternal memory self, UD60x18 size) internal pure returns (UD60x18) {
         UD60x18 amountOfTicks = Pricing.amountOfTicksBetween(self.lower, self.upper);
 
-        return (size * ud(1e24)) / amountOfTicks;
+        return (size * EXTRA_PRECISION) / amountOfTicks;
     }
 
     /// @notice Returns the bid collateral (18 decimals) either used to buy back options or revenue/ income generated

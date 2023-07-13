@@ -10,6 +10,7 @@ import {Assertions} from "../Assertions.sol";
 
 import {Pricing} from "contracts/libraries/Pricing.sol";
 import {IPricing} from "contracts/libraries/IPricing.sol";
+import {EXTRA_PRECISION} from "contracts/libraries/Constants.sol";
 import {PricingMock} from "contracts/test/libraries/PricingMock.sol";
 
 contract PricingTest is Test, Assertions {
@@ -108,7 +109,7 @@ contract PricingTest is Test, Assertions {
                         isBuy: true
                     })
                 ),
-                expected[i][3] / ud(1e24)
+                expected[i][3] / EXTRA_PRECISION
             );
         }
     }

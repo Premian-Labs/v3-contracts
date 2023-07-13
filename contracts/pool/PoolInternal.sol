@@ -25,7 +25,7 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
-import {iZERO, ZERO, ONE, TWO, FIVE} from "../libraries/Constants.sol";
+import {iZERO, ZERO, ONE, TWO, FIVE, EXTRA_PRECISION} from "../libraries/Constants.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
@@ -262,7 +262,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         SD59x18 lastFeeRate,
         UD60x18 liquidityPerTick
     ) internal pure returns (UD60x18) {
-        return ((feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick) / ud(1e24);
+        return ((feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick) / EXTRA_PRECISION;
     }
 
     /// @notice Updates the amount of fees an LP can claim for a position (without claiming)
@@ -746,11 +746,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
         if (args.isBuy) {
-            if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta / ud(1e24));
-            if (vars.longDelta > ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta / ud(1e24));
+            if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta / EXTRA_PRECISION);
+            if (vars.longDelta > ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta / EXTRA_PRECISION);
         } else {
-            if (vars.longDelta > ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta / ud(1e24));
-            if (vars.shortDelta > ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta / ud(1e24));
+            if (vars.longDelta > ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta / EXTRA_PRECISION);
+            if (vars.shortDelta > ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta / EXTRA_PRECISION);
         }
 
         emit Trade(
@@ -1648,7 +1648,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Updates the global fee rate
     function _updateGlobalFeeRate(PoolStorage.Layout storage l, UD60x18 makerRebate) internal {
         if (l.liquidityRate == ZERO) return;
-        l.globalFeeRate = l.globalFeeRate + ((makerRebate * ud(1e24)) / l.liquidityRate);
+        l.globalFeeRate = l.globalFeeRate + ((makerRebate * EXTRA_PRECISION) / l.liquidityRate);
     }
 
     /// @notice Crosses the active tick either to the left if the LT is selling

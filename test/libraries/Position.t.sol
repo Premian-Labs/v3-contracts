@@ -8,7 +8,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {Assertions} from "../Assertions.sol";
 
-import {ZERO, ONE} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE, EXTRA_PRECISION} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {IPosition} from "contracts/libraries/IPosition.sol";
 import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
@@ -200,15 +200,15 @@ contract PositionTest is Test, Assertions {
 
         size = ud(250e18);
         result = ud(0.5e18);
-        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
+        assertEq(key.liquidityPerTick(size) / EXTRA_PRECISION, result);
 
         size = ud(500e18);
         result = ud(1e18);
-        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
+        assertEq(key.liquidityPerTick(size) / EXTRA_PRECISION, result);
 
         size = ud(1000e18);
         result = ud(2e18);
-        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
+        assertEq(key.liquidityPerTick(size) / EXTRA_PRECISION, result);
     }
 
     function _test_bid_ReturnExpectedValue_Call(bool isCall) internal {

@@ -6,7 +6,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE_HALF, ONE, TWO, THREE, EXTRA_PRECISION} from "contracts/libraries/Constants.sol";
 import {Pricing} from "contracts/libraries/Pricing.sol";
 import {Position} from "contracts/libraries/Position.sol";
 
@@ -869,7 +869,7 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, ZERO);
-        assertEq(ticks[1].longRate, ud(5 ether) * ud(1e24));
+        assertEq(ticks[1].longRate, ud(5 ether) * EXTRA_PRECISION);
         assertEq(ticks[2].longRate, ZERO);
         assertEq(ticks[3].longRate, ZERO);
 
@@ -892,8 +892,8 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[4].price, Pricing.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, ZERO);
-        assertEq(ticks[1].longRate, ud(5 ether) * ud(1e24));
-        assertEq(ticks[2].longRate, ud(15 ether) * ud(1e24));
+        assertEq(ticks[1].longRate, ud(5 ether) * EXTRA_PRECISION);
+        assertEq(ticks[2].longRate, ud(15 ether) * EXTRA_PRECISION);
         assertEq(ticks[3].longRate, ZERO);
         assertEq(ticks[4].longRate, ZERO);
     }
@@ -938,11 +938,11 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[2].price, customPosKey1.upper);
         assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].longRate, ud(50 ether) * ud(1e24));
+        assertEq(ticks[0].longRate, ud(50 ether) * EXTRA_PRECISION);
         assertEq(ticks[1].longRate, ZERO);
         assertEq(ticks[2].longRate, ZERO);
         assertEq(ticks[0].shortRate, ZERO);
-        assertEq(ticks[1].shortRate, ud(2.5 ether) * ud(1e24));
+        assertEq(ticks[1].shortRate, ud(2.5 ether) * EXTRA_PRECISION);
         assertEq(ticks[2].shortRate, ZERO);
         assertEq(ticks[3].shortRate, ZERO);
     }
@@ -998,7 +998,7 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(ticks[5].price, customPosKey3.upper);
         assertEq(ticks[6].price, Pricing.MAX_TICK_PRICE);
 
-        assertEq(ticks[0].longRate, ud(40 ether) * ud(1e24));
+        assertEq(ticks[0].longRate, ud(40 ether) * EXTRA_PRECISION);
         assertEq(ticks[0].shortRate, ZERO);
         // lr (0.002 - 0.2)
         assertEq(ticks[1].longRate, ud(0 ether));
@@ -1006,15 +1006,15 @@ abstract contract PoolDepositTest is DeployTest {
         // lr (0.2 and 0.4)
         // 10 / 200 + (100 / 400) = 0.3
         // total liquidity is numTicks * liqRate = 200 * 0.3 = 60
-        assertEq(ticks[2].longRate, ud(0.3 ether) * ud(1e24));
+        assertEq(ticks[2].longRate, ud(0.3 ether) * EXTRA_PRECISION);
         assertEq(ticks[2].shortRate, ZERO);
         // lr (0.4 and 0.6)
         // total liquidity is numTicks * liqRate = 200 * 0.25 = 50
-        assertEq(ticks[3].longRate, ud(0.25 ether) * ud(1e24));
+        assertEq(ticks[3].longRate, ud(0.25 ether) * EXTRA_PRECISION);
         assertEq(ticks[3].shortRate, ZERO);
         // lr (0.6 and 0.8)
         assertEq(ticks[4].longRate, ZERO);
-        assertEq(ticks[4].shortRate, ud(0.05 ether) * ud(1e24));
+        assertEq(ticks[4].shortRate, ud(0.05 ether) * EXTRA_PRECISION);
         // lr (0.8 and 1.0)
         assertEq(ticks[5].longRate, ZERO);
         assertEq(ticks[5].shortRate, ZERO);
