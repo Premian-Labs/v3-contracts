@@ -2,7 +2,8 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
@@ -102,11 +103,15 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.liquidityRate;
+        return l.liquidityRate / ud(1e24);
     }
 
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory) {
-        return _getTick(price);
+        IPoolInternal.Tick memory tick = _getTick(price);
+        tick.delta = tick.delta / sd(1e24);
+        tick.shortDelta = tick.shortDelta / sd(1e24);
+        tick.longDelta = tick.longDelta / sd(1e24);
+        return tick;
     }
 
     function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool) {
@@ -115,12 +120,12 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function getLongRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.longRate;
+        return l.longRate / ud(1e24);
     }
 
     function getShortRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.shortRate;
+        return l.shortRate / ud(1e24);
     }
 
     function mint(address account, uint256 id, UD60x18 amount) external {

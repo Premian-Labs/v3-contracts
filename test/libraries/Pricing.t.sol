@@ -108,7 +108,7 @@ contract PricingTest is Test, Assertions {
                         isBuy: true
                     })
                 ),
-                expected[i][3]
+                expected[i][3] * ud(1e24)
             );
         }
     }

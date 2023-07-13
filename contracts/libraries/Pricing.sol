@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
@@ -72,7 +72,7 @@ library Pricing {
 
     /// @notice Returns the liquidity between `args.lower` and `args.upper`
     function liquidity(Args memory args) internal pure returns (UD60x18) {
-        return args.liquidityRate * amountOfTicksBetween(args);
+        return (args.liquidityRate * amountOfTicksBetween(args)) / ud(1e24);
     }
 
     /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`

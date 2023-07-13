@@ -746,11 +746,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
         if (args.isBuy) {
-            if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta);
-            if (vars.longDelta > ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta);
+            if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta / ud(1e24));
+            if (vars.longDelta > ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta / ud(1e24));
         } else {
-            if (vars.longDelta > ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta);
-            if (vars.shortDelta > ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta);
+            if (vars.longDelta > ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta / ud(1e24));
+            if (vars.shortDelta > ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta / ud(1e24));
         }
 
         emit Trade(
