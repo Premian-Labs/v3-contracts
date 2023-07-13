@@ -186,14 +186,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             UD60x18 nextPrice;
             // Compute next price
             if (vars.liquidity == ZERO || tradeSize == vars.maxSize) {
-                nextPrice = isBuy ? pricing.upper : pricing.lower;
+                nextPrice = (isBuy ? pricing.upper : pricing.lower) * EXTRA_PRECISION;
             } else {
-                UD60x18 priceDelta = ((pricing.upper - pricing.lower) * tradeSize) / vars.liquidity;
+                UD60x18 priceDelta = (((pricing.upper - pricing.lower) * tradeSize) * EXTRA_PRECISION) / vars.liquidity;
                 nextPrice = isBuy ? pricing.marketPrice + priceDelta : pricing.marketPrice - priceDelta;
             }
 
             if (tradeSize > ZERO) {
-                UD60x18 premium = pricing.marketPrice.avg(nextPrice) * tradeSize;
+                UD60x18 premium = (pricing.marketPrice.avg(nextPrice) * tradeSize) / EXTRA_PRECISION;
 
                 UD60x18 takerFee = _takerFee(taker, size, premium, true, l.strike, l.isCallPool);
 
@@ -363,7 +363,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.marketPrice = _getStrandedMarketPriceUpdate(p, isBidIfStrandedMarketPrice);
         }
 
-        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice, args.minMarketPrice, args.maxMarketPrice);
+        _revertIfDepositWithdrawalAboveMaxSlippage(
+            l.marketPrice / EXTRA_PRECISION,
+            args.minMarketPrice,
+            args.maxMarketPrice
+        );
         _revertIfZeroSize(args.size);
         _revertIfOptionExpired(l);
 
@@ -442,7 +446,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 liquidityPerTick.intoSD59x18();
 
             // Adjust tick deltas
-            _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
+            _updateTicks(
+                p.lower,
+                p.upper,
+                l.marketPrice / EXTRA_PRECISION,
+                tickDelta,
+                initialSize == ZERO,
+                false,
+                p.orderType
+            );
         }
 
         // Safeguard, should never happen
@@ -472,7 +484,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionExpired(l);
 
-        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice, minMarketPrice, maxMarketPrice);
+        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice / EXTRA_PRECISION, minMarketPrice, maxMarketPrice);
         _revertIfZeroSize(size);
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
@@ -546,7 +558,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _updateTicks(
             p.lower,
             p.upper,
-            l.marketPrice,
+            l.marketPrice / EXTRA_PRECISION,
             vars.tickDelta, // Adjust tick deltas (reverse of deposit)
             false,
             vars.isFullWithdrawal,
@@ -668,14 +680,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     if (vars.tradeSize != vars.maxSize) {
                         nextMarketPrice = pricing.nextPrice(vars.tradeSize);
                     } else {
-                        nextMarketPrice = args.isBuy ? pricing.upper : pricing.lower;
+                        nextMarketPrice = (args.isBuy ? pricing.upper : pricing.lower) * EXTRA_PRECISION;
                     }
 
                     UD60x18 premium;
 
                     {
                         UD60x18 quoteAMMPrice = l.marketPrice.avg(nextMarketPrice);
-                        premium = quoteAMMPrice * vars.tradeSize;
+                        premium = (quoteAMMPrice * vars.tradeSize) / EXTRA_PRECISION;
                     }
 
                     UD60x18 takerFee = _takerFee(args.user, vars.tradeSize, premium, true, l.strike, l.isCallPool);
@@ -712,8 +724,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
                 UD60x18 dist = (l.marketPrice.intoSD59x18() - vars.oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
 
-                vars.shortDelta = vars.shortDelta + l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
-                vars.longDelta = vars.longDelta + l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
+                vars.shortDelta =
+                    vars.shortDelta +
+                    (l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE)) /
+                    EXTRA_PRECISION;
+                vars.longDelta =
+                    vars.longDelta +
+                    (l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE)) /
+                    EXTRA_PRECISION;
 
                 if (vars.maxSize >= remaining) {
                     remaining = ZERO;
@@ -1758,7 +1776,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (
             -l.ticks[right].delta > iZERO &&
             l.liquidityRate == (-l.ticks[right].delta).intoUD60x18() &&
-            right == l.marketPrice &&
+            right == l.marketPrice / EXTRA_PRECISION &&
             l.tickIndex.next(right) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1776,7 +1794,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (
             -l.ticks[current].delta > iZERO &&
             l.liquidityRate == (-l.ticks[current].delta).intoUD60x18() &&
-            current == l.marketPrice &&
+            current == l.marketPrice / EXTRA_PRECISION &&
             l.tickIndex.prev(current) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1808,7 +1826,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the
     ///         bid (ask) order.
     function _getStrandedMarketPriceUpdate(Position.KeyInternal memory p, bool isBid) internal pure returns (UD60x18) {
-        return isBid ? p.upper : p.lower;
+        return (isBid ? p.upper : p.lower) * EXTRA_PRECISION;
     }
 
     /// @notice Revert if the tick width is invalid

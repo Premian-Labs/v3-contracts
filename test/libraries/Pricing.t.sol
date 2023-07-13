@@ -22,8 +22,8 @@ contract PricingTest is Test, Assertions {
     function setUp() public {
         pricing = new PricingMock();
         args = Pricing.Args({
-            liquidityRate: ud(1e18),
-            marketPrice: ud(0.25e18),
+            liquidityRate: ud(1e18) * EXTRA_PRECISION,
+            marketPrice: ud(0.25e18) * EXTRA_PRECISION,
             lower: ud(0.25e18),
             upper: ud(0.75e18),
             isBuy: true
@@ -34,9 +34,9 @@ contract PricingTest is Test, Assertions {
         UD60x18 lower = ud(0.25e18);
         UD60x18 upper = ud(0.75e18);
 
-        assertEq(Pricing.proportion(lower, upper, ud(0.25e18)), ud(0));
-        assertEq(Pricing.proportion(lower, upper, ud(0.75e18)), ud(1e18));
-        assertEq(Pricing.proportion(lower, upper, ud(0.5e18)), ud(0.5e18));
+        assertEq(Pricing.proportion(lower, upper, ud(0.25e18) * EXTRA_PRECISION), ud(0) * EXTRA_PRECISION);
+        assertEq(Pricing.proportion(lower, upper, ud(0.75e18) * EXTRA_PRECISION), ud(1e18) * EXTRA_PRECISION);
+        assertEq(Pricing.proportion(lower, upper, ud(0.5e18) * EXTRA_PRECISION), ud(0.5e18) * EXTRA_PRECISION);
     }
 
     function test_proportion_RevertIf_LowerGteUpper() public {
@@ -51,7 +51,7 @@ contract PricingTest is Test, Assertions {
     function test_proportion_RevertIf_LowerGtMarketPrice() public {
         UD60x18 lower = ud(0.25e18);
         UD60x18 upper = ud(0.75e18);
-        UD60x18 marketPrice = ud(0.2e18);
+        UD60x18 marketPrice = ud(0.2e18) * EXTRA_PRECISION;
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
@@ -61,7 +61,7 @@ contract PricingTest is Test, Assertions {
     function test_proportion_RevertIf_MarketPriceGtUpper() public {
         UD60x18 lower = ud(0.25e18);
         UD60x18 upper = ud(0.75e18);
-        UD60x18 marketPrice = ud(0.8e18);
+        UD60x18 marketPrice = ud(0.8e18) * EXTRA_PRECISION;
 
         vm.expectRevert(abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice));
 
@@ -102,14 +102,14 @@ contract PricingTest is Test, Assertions {
             assertEq(
                 Pricing.liquidity(
                     Pricing.Args({
-                        liquidityRate: expected[i][0],
+                        liquidityRate: expected[i][0] * EXTRA_PRECISION,
                         marketPrice: ud(0),
                         lower: expected[i][1],
                         upper: expected[i][2],
                         isBuy: true
                     })
                 ),
-                expected[i][3] / EXTRA_PRECISION
+                expected[i][3]
             );
         }
     }
@@ -118,60 +118,60 @@ contract PricingTest is Test, Assertions {
         args.isBuy = false;
         assertEq(args.bidLiquidity(), ud(0));
 
-        args.marketPrice = args.lower.avg(args.upper);
+        args.marketPrice = args.lower.avg(args.upper) * EXTRA_PRECISION;
         assertEq(args.bidLiquidity(), args.liquidity() / ud(2e18));
 
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
         assertEq(args.bidLiquidity(), args.liquidity());
     }
 
     function test_askLiquidity_ReturnExpectedValue() public {
         assertEq(args.askLiquidity(), args.liquidity());
 
-        args.marketPrice = args.lower.avg(args.upper);
+        args.marketPrice = args.lower.avg(args.upper) * EXTRA_PRECISION;
         assertEq(args.askLiquidity(), args.liquidity() / ud(2e18));
 
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
         assertEq(args.askLiquidity(), ud(0));
     }
 
     function test_maxTradeSize_ReturnExpectedValue_ForBuyOrder() public {
-        args.marketPrice = args.upper;
+        args.marketPrice = args.upper * EXTRA_PRECISION;
         assertEq(args.maxTradeSize(), args.askLiquidity());
     }
 
     function test_maxTradeSize_ReturnExpectedValue_ForSellOrder() public {
-        args.marketPrice = args.upper;
+        args.marketPrice = args.upper * EXTRA_PRECISION;
         args.isBuy = false;
         assertEq(args.maxTradeSize(), args.bidLiquidity());
     }
 
     function test_price_ReturnUpperTick_ForBuyOrder_IfLiqIsZero() public {
         args.liquidityRate = ud(0);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
         args.isBuy = true;
-        assertEq(args.price(ud(1e18)), args.upper);
+        assertEq(args.price(ud(1e18)), args.upper * EXTRA_PRECISION);
     }
 
     function test_price_ReturnLowerTick_ForSellOrder_IfLiqIsZero() public {
         args.liquidityRate = ud(0);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
         args.isBuy = false;
-        assertEq(args.price(ud(1e18)), args.lower);
+        assertEq(args.price(ud(1e18)), args.lower * EXTRA_PRECISION);
     }
 
     function test_price_ReturnPrice_IfTradeSizeIsZero() public {
         args.liquidityRate = ud(1e18);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
         args.isBuy = true;
-        assertEq(args.price(ud(0)), args.lower);
+        assertEq(args.price(ud(0)), args.lower * EXTRA_PRECISION);
 
         args.isBuy = false;
-        assertEq(args.price(ud(0)), args.upper);
+        assertEq(args.price(ud(0)), args.upper * EXTRA_PRECISION);
     }
 
     function test_price_ReturnPrice_ForBuyOrder_IfLiqGtZero_AndTradeSizeGtZero() public {
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
         args.isBuy = true;
 
         UD60x18 liq = args.liquidity();
@@ -185,10 +185,10 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, ud(0));
         assertEq(bidLiq, liq);
 
-        assertEq(args.price(askLiq), args.lower);
-        assertEq(args.price(bidLiq), args.upper);
+        assertEq(args.price(askLiq), args.lower * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), args.upper * EXTRA_PRECISION);
 
-        args.marketPrice = args.lower;
+        args.marketPrice = args.lower * EXTRA_PRECISION;
         liq = args.liquidity();
         askLiq = args.askLiquidity();
         bidLiq = args.bidLiquidity();
@@ -200,11 +200,11 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq);
         assertEq(bidLiq, ud(0));
 
-        assertEq(args.price(askLiq), args.upper);
-        assertEq(args.price(bidLiq), args.lower);
+        assertEq(args.price(askLiq), args.upper * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), args.lower * EXTRA_PRECISION);
 
         UD60x18 avg = args.lower.avg(args.upper);
-        args.marketPrice = avg;
+        args.marketPrice = avg * EXTRA_PRECISION;
         liq = args.liquidity();
         askLiq = args.askLiquidity();
         bidLiq = args.bidLiquidity();
@@ -216,12 +216,12 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq / ud(2e18));
         assertEq(bidLiq, liq / ud(2e18));
 
-        assertEq(args.price(askLiq), avg);
-        assertEq(args.price(bidLiq), avg);
+        assertEq(args.price(askLiq), avg * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), avg * EXTRA_PRECISION);
     }
 
     function test_price_ReturnPrice_ForSellOrder_IfLiqGtZero_AndTradeSizeGtZero() public {
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
         args.isBuy = false;
 
         UD60x18 liq = args.liquidity();
@@ -235,10 +235,10 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, ud(0));
         assertEq(bidLiq, liq);
 
-        assertEq(args.price(askLiq), args.upper);
-        assertEq(args.price(bidLiq), args.lower);
+        assertEq(args.price(askLiq), args.upper * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), args.lower * EXTRA_PRECISION);
 
-        args.marketPrice = args.lower;
+        args.marketPrice = args.lower * EXTRA_PRECISION;
         liq = args.liquidity();
         askLiq = args.askLiquidity();
         bidLiq = args.bidLiquidity();
@@ -250,11 +250,11 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq);
         assertEq(bidLiq, ud(0));
 
-        assertEq(args.price(askLiq), args.lower);
-        assertEq(args.price(bidLiq), args.upper);
+        assertEq(args.price(askLiq), args.lower * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), args.upper * EXTRA_PRECISION);
 
         UD60x18 avg = args.lower.avg(args.upper);
-        args.marketPrice = avg;
+        args.marketPrice = avg * EXTRA_PRECISION;
         liq = args.liquidity();
         askLiq = args.askLiquidity();
         bidLiq = args.bidLiquidity();
@@ -266,13 +266,13 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq / ud(2e18));
         assertEq(bidLiq, liq / ud(2e18));
 
-        assertEq(args.price(askLiq), avg);
-        assertEq(args.price(bidLiq), avg);
+        assertEq(args.price(askLiq), avg * EXTRA_PRECISION);
+        assertEq(args.price(bidLiq), avg * EXTRA_PRECISION);
     }
 
     // prettier-ignore
     function test_price_RevertIf_PriceOutOfRange() public {
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
 
         UD60x18 liq = args.liquidity();
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
@@ -285,21 +285,21 @@ contract PricingTest is Test, Assertions {
 
     function test_nextPrice_ReturnUpperTick_ForBuyOrder_IfLiqIsZero() public {
         args.liquidityRate = ud(0);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
         args.isBuy = true;
-        assertEq(args.nextPrice(ud(1e18)), args.upper);
+        assertEq(args.nextPrice(ud(1e18)), args.upper * EXTRA_PRECISION);
     }
 
     function test_nextPrice_ReturnLowerTick_ForSellOrder_IfLiqIsZero() public {
         args.liquidityRate = ud(0);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
         args.isBuy = false;
-        assertEq(args.nextPrice(ud(1e18)), args.lower);
+        assertEq(args.nextPrice(ud(1e18)), args.lower * EXTRA_PRECISION);
     }
 
     function test_nextPrice_ReturnPrice_IfTradeSizeIsZero() public {
         args.liquidityRate = ud(1e18);
-        args.marketPrice = ud(0.5e18);
+        args.marketPrice = ud(0.5e18) * EXTRA_PRECISION;
 
         args.isBuy = true;
         assertEq(args.nextPrice(ud(0)), args.marketPrice);
@@ -322,15 +322,15 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq);
         assertEq(bidLiq, ud(0));
 
-        assertEq(args.nextPrice(askLiq), args.upper);
+        assertEq(args.nextPrice(askLiq), args.upper * EXTRA_PRECISION);
 
-        UD60x18 avg = args.lower.avg(args.upper); // 0.5e18
+        UD60x18 avg = args.lower.avg(args.upper) * EXTRA_PRECISION; // 0.5e18
         assertEq(args.nextPrice(askLiq / ud(2e18)), avg);
 
-        avg = args.lower.avg(avg); // 0.375e18
+        avg = (args.lower * EXTRA_PRECISION).avg(avg); // 0.375e18
         assertEq(args.nextPrice(askLiq / ud(4e18)), avg);
 
-        avg = args.lower.avg(args.upper); // 0.5e18
+        avg = args.lower.avg(args.upper) * EXTRA_PRECISION; // 0.5e18
         args.marketPrice = avg;
 
         liq = args.liquidity();
@@ -344,10 +344,10 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq / ud(2e18));
         assertEq(bidLiq, liq / ud(2e18));
 
-        assertEq(args.nextPrice(askLiq), args.upper);
-        assertEq(args.nextPrice(bidLiq), args.upper);
+        assertEq(args.nextPrice(askLiq), args.upper * EXTRA_PRECISION);
+        assertEq(args.nextPrice(bidLiq), args.upper * EXTRA_PRECISION);
 
-        avg = args.marketPrice.avg(args.upper); // 0.625e18
+        avg = args.marketPrice.avg(args.upper * EXTRA_PRECISION); // 0.625e18
         assertEq(args.nextPrice(askLiq / ud(2e18)), avg);
         assertEq(args.nextPrice(bidLiq / ud(2e18)), avg);
 
@@ -357,7 +357,7 @@ contract PricingTest is Test, Assertions {
     }
 
     function test_nextPrice_ReturnNextPrice_ForSellOrder_IfLiquidityGtZero_AndTradeSizeGtZero() public {
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
         args.isBuy = false;
 
         UD60x18 liq = args.liquidity();
@@ -371,15 +371,15 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, ud(0));
         assertEq(bidLiq, liq);
 
-        assertEq(args.nextPrice(bidLiq), args.lower);
+        assertEq(args.nextPrice(bidLiq), args.lower * EXTRA_PRECISION);
 
-        UD60x18 avg = args.lower.avg(args.upper); // 0.5e18
+        UD60x18 avg = args.lower.avg(args.upper) * EXTRA_PRECISION; // 0.5e18
         assertEq(args.nextPrice(bidLiq / ud(2e18)), avg);
 
-        avg = args.upper.avg(avg); // 0.625e18
+        avg = (args.upper * EXTRA_PRECISION).avg(avg); // 0.625e18
         assertEq(args.nextPrice(bidLiq / ud(4e18)), avg);
 
-        avg = args.lower.avg(args.upper); // 0.5e18
+        avg = args.lower.avg(args.upper) * EXTRA_PRECISION; // 0.5e18
         args.marketPrice = avg;
 
         liq = args.liquidity();
@@ -393,10 +393,10 @@ contract PricingTest is Test, Assertions {
         assertEq(askLiq, liq / ud(2e18));
         assertEq(bidLiq, liq / ud(2e18));
 
-        assertEq(args.nextPrice(askLiq), args.lower);
-        assertEq(args.nextPrice(bidLiq), args.lower);
+        assertEq(args.nextPrice(askLiq), args.lower * EXTRA_PRECISION);
+        assertEq(args.nextPrice(bidLiq), args.lower * EXTRA_PRECISION);
 
-        avg = args.marketPrice.avg(args.lower); // 0.375e18
+        avg = args.marketPrice.avg(args.lower * EXTRA_PRECISION); // 0.375e18
         assertEq(args.nextPrice(askLiq / ud(2e18)), avg);
         assertEq(args.nextPrice(bidLiq / ud(2e18)), avg);
 
@@ -407,14 +407,14 @@ contract PricingTest is Test, Assertions {
 
     // prettier-ignore
     function test_nextPrice_RevertIf_PriceOutOfRange() public {
-        args.marketPrice = ud(0.75e18);
+        args.marketPrice = ud(0.75e18) * EXTRA_PRECISION;
 
         UD60x18 liq = args.liquidity();
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        pricing.nextPrice(args, liq * ud(2e18));
+        pricing.nextPrice(args, liq * ud(2e18) * EXTRA_PRECISION);
 
         args.isBuy = false;
         vm.expectRevert(IPricing.Pricing__PriceCannotBeComputedWithinTickRange.selector);
-        pricing.nextPrice(args, liq * ud(2e18));
+        pricing.nextPrice(args, liq * ud(2e18) * EXTRA_PRECISION);
     }
 }

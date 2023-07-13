@@ -33,11 +33,12 @@ library Pricing {
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
     function proportion(UD60x18 lower, UD60x18 upper, UD60x18 marketPrice) internal pure returns (UD60x18) {
+        UD60x18 marketPriceNoExtraPrecision = marketPrice / EXTRA_PRECISION;
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
-        if (lower > marketPrice || marketPrice > upper)
+        if (lower > marketPriceNoExtraPrecision || marketPriceNoExtraPrecision > upper)
             revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPrice);
 
-        return (marketPrice - lower) / (upper - lower);
+        return (marketPrice - lower * EXTRA_PRECISION) / (upper - lower);
     }
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
@@ -77,12 +78,36 @@ library Pricing {
 
     /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`
     function bidLiquidity(Args memory args) internal pure returns (UD60x18) {
-        return proportion(args) * liquidity(args);
+        UD60x18 result = proportion(args) * liquidity(args);
+
+        bool roundUp = false;
+        if (result - ((result / EXTRA_PRECISION) * EXTRA_PRECISION) > ud(EXTRA_PRECISION.unwrap() / 2e18)) {
+            roundUp = true;
+        }
+
+        result = result / EXTRA_PRECISION;
+        if (roundUp) {
+            result = result + ud(1);
+        }
+
+        return result;
     }
 
     /// @notice Returns the ask-side liquidity between `args.lower` and `args.upper`
     function askLiquidity(Args memory args) internal pure returns (UD60x18) {
-        return (ONE - proportion(args)) * liquidity(args);
+        UD60x18 result = ((ONE * EXTRA_PRECISION - proportion(args)) * liquidity(args));
+
+        bool roundUp = false;
+        if (result - ((result / EXTRA_PRECISION) * EXTRA_PRECISION) > ud(EXTRA_PRECISION.unwrap() / 2e18)) {
+            roundUp = true;
+        }
+
+        result = result / EXTRA_PRECISION;
+        if (roundUp) {
+            result = result + ud(1);
+        }
+
+        return result;
     }
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
@@ -94,17 +119,17 @@ library Pricing {
     ///         contracts
     function price(Args memory args, UD60x18 tradeSize) internal pure returns (UD60x18) {
         UD60x18 liq = liquidity(args);
-        if (liq == ZERO) return args.isBuy ? args.upper : args.lower;
+        if (liq == ZERO) return (args.isBuy ? args.upper : args.lower) * EXTRA_PRECISION;
 
         UD60x18 _proportion;
-        if (tradeSize > ZERO) _proportion = tradeSize / liq;
+        if (tradeSize > ZERO) _proportion = (tradeSize * EXTRA_PRECISION) / liq;
 
-        if (_proportion > ONE) revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
+        if (_proportion / EXTRA_PRECISION > ONE) revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             args.isBuy
-                ? args.lower + (args.upper - args.lower) * _proportion
-                : args.upper - (args.upper - args.lower) * _proportion;
+                ? (args.lower * EXTRA_PRECISION) + (args.upper - args.lower) * _proportion
+                : (args.upper * EXTRA_PRECISION) - (args.upper - args.lower) * _proportion;
     }
 
     /// @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts

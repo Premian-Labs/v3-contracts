@@ -130,9 +130,12 @@ library Position {
     function pieceWiseLinear(KeyInternal memory self, UD60x18 price) internal pure returns (UD60x18) {
         revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
-        if (price <= self.lower) return ZERO;
-        else if (self.lower < price && price < self.upper) return Pricing.proportion(self.lower, self.upper, price);
-        else return ONE;
+        UD60x18 priceNoExtraPrecision = price / EXTRA_PRECISION;
+
+        if (priceNoExtraPrecision <= self.lower) return ZERO;
+        else if (self.lower < priceNoExtraPrecision && priceNoExtraPrecision < self.upper)
+            return Pricing.proportion(self.lower, self.upper, price);
+        else return ONE * EXTRA_PRECISION;
     }
 
     /// @notice Returns the amount of 'bid-side' collateral associated to a range order with one unit of liquidity.
@@ -149,11 +152,13 @@ library Position {
     function pieceWiseQuadratic(KeyInternal memory self, UD60x18 price) internal pure returns (UD60x18) {
         revertIfLowerGreaterOrEqualUpper(self.lower, self.upper);
 
+        UD60x18 priceNoExtraPrecision = price / EXTRA_PRECISION;
+
         UD60x18 a;
-        if (price <= self.lower) {
+        if (priceNoExtraPrecision <= self.lower) {
             return ZERO;
-        } else if (self.lower < price && price < self.upper) {
-            a = price;
+        } else if (self.lower < priceNoExtraPrecision && priceNoExtraPrecision < self.upper) {
+            a = priceNoExtraPrecision; // ToDo : Should we keep precision increase ?
         } else {
             a = self.upper;
         }
@@ -161,7 +166,7 @@ library Position {
         UD60x18 numerator = (a * a - self.lower * self.lower);
         UD60x18 denominator = TWO * (self.upper - self.lower);
 
-        return numerator / denominator;
+        return (numerator / denominator) * EXTRA_PRECISION;
     }
 
     /// @notice Converts `_collateral` to the amount of contracts normalized to 18 decimals
@@ -197,7 +202,8 @@ library Position {
     /// @param size The contract amount (18 decimals)
     /// @param price The current market price (18 decimals)
     function bid(KeyInternal memory self, UD60x18 size, UD60x18 price) internal pure returns (UD60x18) {
-        return contractsToCollateral(pieceWiseQuadratic(self, price) * size, self.strike, self.isCall);
+        return
+            contractsToCollateral(pieceWiseQuadratic(self, price) * size, self.strike, self.isCall) / EXTRA_PRECISION;
     }
 
     /// @notice Returns the total collateral (18 decimals) held by the position key `self`. Note that here we do not
@@ -212,10 +218,12 @@ library Position {
         UD60x18 nu = pieceWiseLinear(self, price);
 
         if (self.orderType.isShort()) {
-            _collateral = contractsToCollateral((ONE - nu) * size, self.strike, self.isCall);
+            _collateral =
+                contractsToCollateral(((ONE * EXTRA_PRECISION - nu) * size), self.strike, self.isCall) /
+                EXTRA_PRECISION;
 
             if (self.orderType == OrderType.CSUP) {
-                _collateral = _collateral - (self.bid(size, self.upper) - self.bid(size, price));
+                _collateral = _collateral - (self.bid(size, self.upper * EXTRA_PRECISION) - self.bid(size, price));
             } else {
                 _collateral = _collateral + self.bid(size, price);
             }
@@ -233,10 +241,10 @@ library Position {
         UD60x18 nu = pieceWiseLinear(self, price);
 
         if (self.orderType.isLong()) {
-            return (ONE - nu) * size;
+            return ((ONE * EXTRA_PRECISION - nu) * size) / EXTRA_PRECISION;
         }
 
-        return nu * size;
+        return (nu * size) / EXTRA_PRECISION;
     }
 
     /// @notice Returns the number of long contracts (18 decimals) held in position `self` at current price

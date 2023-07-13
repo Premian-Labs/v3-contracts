@@ -14,6 +14,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
+import {EXTRA_PRECISION} from "../libraries/Constants.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
@@ -59,7 +60,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.tickIndex.push(Pricing.MAX_TICK_PRICE);
 
             l.currentTick = Pricing.MIN_TICK_PRICE;
-            l.marketPrice = Pricing.MIN_TICK_PRICE;
+            l.marketPrice = Pricing.MIN_TICK_PRICE * EXTRA_PRECISION;
         }
 
         _setSupportsInterface(type(IERC165).interfaceId, true);

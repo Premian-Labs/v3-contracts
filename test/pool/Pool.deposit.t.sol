@@ -2,6 +2,9 @@
 
 pragma solidity >=0.8.19;
 
+import "forge-std/console2.sol";
+import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -18,6 +21,70 @@ import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolDepositTest is DeployTest {
+    using UintUtils for uint256;
+
+    function __trade(uint256 size, bool isBuy) internal {
+        vm.prank(users.trader);
+        pool.trade(ud(size), isBuy, isBuy ? 10000e18 : 0, users.otherTrader);
+    }
+
+    function formatNumber(UD60x18 number) internal returns (string memory result) {
+        uint256 n = number.unwrap();
+        uint256 integer = n / 1e18;
+
+        result = string(abi.encodePacked((integer).toString(), "."));
+
+        uint256 decimal = n - integer * 1e18;
+
+        uint256 decimalTemp = decimal * 10;
+
+        if (decimalTemp > 0) {
+            while (decimalTemp < 1e18) {
+                result = string(abi.encodePacked(result, "0"));
+                decimalTemp *= 10;
+            }
+        }
+
+        result = string(abi.encodePacked(result, (decimal).toString()));
+    }
+
+    function test_debug_deposit2() public {
+        deal(getPoolToken(), users.trader, 100000000e18);
+        vm.prank(users.trader);
+        IERC20(getPoolToken()).approve(address(router), 100000000e18);
+
+        pool.mint(users.lp, PoolStorage.LONG, ud(1000e18));
+        pool.mint(users.lp, PoolStorage.SHORT, ud(1000e18));
+
+        posKey.lower = ud(0.001e18);
+        posKey.upper = ud(0.801e18);
+        posKey.orderType = Position.OrderType.CS;
+        deposit(1e18);
+
+        posKey.lower = ud(0.051e18);
+        posKey.upper = ud(0.551e18);
+        posKey.orderType = Position.OrderType.CS;
+        deposit(1e18);
+
+        posKey.lower = ud(0.01e18);
+        posKey.upper = ud(0.03e18);
+        posKey.orderType = Position.OrderType.LC;
+        deposit(1e18);
+
+        console2.log("A", pool.marketPrice().unwrap());
+        console2.log("A", pool.getLiquidityRate().unwrap());
+        __trade(1e18, true);
+        console2.log("B", pool.marketPrice().unwrap());
+        console2.log("B", pool.getLiquidityRate().unwrap());
+        __trade(1e18, false);
+        console2.log("C", pool.marketPrice().unwrap());
+        console2.log("C", pool.getLiquidityRate().unwrap());
+        __trade(1e18, true);
+        console2.log("D", pool.marketPrice().unwrap());
+        __trade(1e18, false);
+        console2.log("E", pool.marketPrice().unwrap());
+    }
+
     function test_deposit_1000_LC_WithToken() public {
         poolKey.isCallPool = isCallTest;
 
@@ -33,7 +100,7 @@ abstract contract PoolDepositTest is DeployTest {
         assertEq(pool.totalSupply(tokenId()), depositSize);
         assertEq(token.balanceOf(address(pool)), collateralValue);
         assertEq(token.balanceOf(users.lp), initialCollateral - collateralValue);
-        assertEq(pool.marketPrice(), posKey.upper);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, posKey.upper);
     }
 
     function test_deposit_CS_BelowMarketPrice() public {
@@ -65,7 +132,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, isCallTest ? ud(0.8445 ether) : ud(0.8445e9));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.2 ether);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 0.01 ether);
         assertEq(pool.getLongRate(), 0.01 ether);
@@ -101,7 +168,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, isCallTest ? ud(0.85 ether) : ud(0.85e9));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.2 ether);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 0.01 ether);
         assertEq(pool.getLongRate(), 0.01 ether);
@@ -138,7 +205,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, balanceBefore);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.1 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.1 ether);
         assertEq(pool.getCurrentTick(), 0.001 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 0.0 ether);
         assertEq(pool.getLongRate(), 0.0 ether);
@@ -170,7 +237,7 @@ abstract contract PoolDepositTest is DeployTest {
         IERC20 token = IERC20(getPoolToken());
         assertEq(token.balanceOf(users.lp), isCallTest ? 0.2625 ether : 262.500000e6);
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.0 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.2 ether);
         // market price 0.2 -> current 0.1 -> next 0.15
         // reconcile -> cross 0.15
         assertEq(pool.getCurrentTick(), 0.15 ether);
@@ -204,7 +271,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.25 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.175 ether);
         // market price 0.175 -> current 0.1 -> next 0.15
         // reconcile -> cross 0.15
         assertEq(pool.getCurrentTick(), 0.15 ether);
@@ -237,7 +304,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.0 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.2 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.2 ether);
         // market price 0.2 -> current 0.1 -> next 0.15
         // reconcile -> cross 0.15
         assertEq(pool.getCurrentTick(), 0.15 ether);
@@ -271,7 +338,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(1.25 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.175 ether);
         // market price 0.175 -> current 0.1 -> next 0.15
         // reconcile -> cross 0.15
         assertEq(pool.getCurrentTick(), 0.15 ether);
@@ -311,7 +378,7 @@ abstract contract PoolDepositTest is DeployTest {
         vm.stopPrank();
         assertEq(token.balanceOf(users.lp), isCallTest ? (1 ether - 0.0625 ether) : (1e9 - 0.0625e9));
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(1.0 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.15 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.15 ether);
         // market price 0.15 -> current 0.01 -> next 0.1
         // reconcile -> cross 0.1
         assertEq(pool.getCurrentTick(), 0.1 ether);
@@ -351,7 +418,7 @@ abstract contract PoolDepositTest is DeployTest {
         pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, ud(depositSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(1.25 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.175 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.175 ether);
         // market price 0.175 -> current 0.15
         // reconcile -> no crossing
         assertEq(pool.getCurrentTick(), 0.15 ether);
@@ -389,7 +456,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, isCallTest ? ud(0.9945 ether) : ud(0.9945e9));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.006 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.006 ether);
         assertEq(pool.getCurrentTick(), 0.005 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 1 ether);
         assertEq(pool.getLongRate(), 0.0 ether);
@@ -424,7 +491,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, isCallTest ? ud(1 ether) : ud(1e9));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.006 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.006 ether);
         assertEq(pool.getCurrentTick(), 0.005 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 1 ether);
         assertEq(pool.getLongRate(), 0.0 ether);
@@ -456,7 +523,7 @@ abstract contract PoolDepositTest is DeployTest {
         uint256 balanceAfter = token.balanceOf(users.lp);
         assertEq(balanceAfter, balanceBefore);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.5 ether));
-        assertEq(pool.marketPrice().unwrap(), 0.3 ether);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.3 ether);
         assertEq(pool.getCurrentTick(), 0.001 ether);
         assertEq(pool.getLiquidityRate().unwrap(), 0.0 ether);
         assertEq(pool.getLongRate(), 0.0 ether);
@@ -474,7 +541,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.0 ether));
         assertEq(pool.getCurrentTick(), ud(0.001 ether));
-        assertEq(pool.marketPrice(), ud(0.25 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.25 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.25 ether));
         assertEq(tick0.delta.unwrap(), 0.002 ether);
         assertEq(tick0.shortDelta.unwrap(), 0.002 ether);
@@ -494,7 +561,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.25 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.25 ether));
         assertEq(tick0.delta.unwrap(), -0.002 ether);
         assertEq(tick0.longDelta.unwrap(), -0.002 ether);
@@ -515,7 +582,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.25 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.01 ether));
         assertEq(tick0.delta.unwrap(), -0.025 ether);
         assertEq(tick0.longDelta.unwrap(), -0.025 ether);
@@ -536,7 +603,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.25 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.005 ether);
         assertEq(tick0.longDelta.unwrap(), -0.005 ether);
@@ -558,7 +625,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.5 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.006 ether);
         assertEq(tick0.longDelta.unwrap(), -0.006 ether);
@@ -580,7 +647,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.5 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.005 ether);
         assertEq(tick0.longDelta.unwrap(), -0.005 ether);
@@ -602,7 +669,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.0045 ether));
         assertEq(pool.getCurrentTick(), ud(0.35 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.0025 ether);
         assertEq(tick0.longDelta.unwrap(), -0.0025 ether);
@@ -624,7 +691,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.002 ether));
         assertEq(pool.getCurrentTick(), ud(0.25 ether));
-        assertEq(pool.marketPrice(), ud(0.75 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.75 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), 0.018 ether);
         assertEq(tick0.shortDelta.unwrap(), 0.02 ether);
@@ -646,7 +713,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.0 ether));
         assertEq(pool.getCurrentTick(), ud(0.75 ether));
-        assertEq(pool.marketPrice(), ud(0.78 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.78 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), 0.05 ether);
         assertEq(tick0.shortDelta.unwrap(), 0.05 ether);
@@ -668,7 +735,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.025 ether));
         assertEq(pool.getCurrentTick(), ud(0.01 ether));
-        assertEq(pool.marketPrice(), ud(0.05 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.05 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.025 ether);
         assertEq(tick0.longDelta.unwrap(), -0.025 ether);
@@ -690,7 +757,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.005 ether));
         assertEq(pool.getCurrentTick(), ud(0.05 ether));
-        assertEq(pool.marketPrice(), ud(0.25 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.25 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), -0.005 ether);
         assertEq(tick0.longDelta.unwrap(), -0.005 ether);
@@ -712,7 +779,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.0 ether));
         assertEq(pool.getCurrentTick(), ud(0.001 ether));
-        assertEq(pool.marketPrice(), ud(0.25 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.25 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), 0.006 ether);
         assertEq(tick0.shortDelta.unwrap(), 0.006 ether);
@@ -734,7 +801,7 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(customPosKey0, ud(1 ether));
         assertEq(pool.getLiquidityRate(), ud(0.0 ether));
         assertEq(pool.getCurrentTick(), ud(0.001 ether));
-        assertEq(pool.marketPrice(), ud(0.25 ether));
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, ud(0.25 ether));
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(customPosKey0.lower);
         assertEq(tick0.delta.unwrap(), 0.005 ether);
         assertEq(tick0.shortDelta.unwrap(), 0.005 ether);
@@ -755,7 +822,7 @@ abstract contract PoolDepositTest is DeployTest {
     function test_deposit_RevertIf_MarketPriceOutOfMinMax() public {
         poolKey.isCallPool = isCallTest;
         deposit(1000 ether);
-        assertEq(pool.marketPrice(), posKey.upper);
+        assertEq(pool.marketPrice() / EXTRA_PRECISION, posKey.upper);
 
         vm.startPrank(users.lp);
 
