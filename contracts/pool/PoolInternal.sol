@@ -262,7 +262,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         SD59x18 lastFeeRate,
         UD60x18 liquidityPerTick
     ) internal pure returns (UD60x18) {
-        return (feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick;
+        return ((feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick) / ud(1e24);
     }
 
     /// @notice Updates the amount of fees an LP can claim for a position (without claiming)
@@ -1648,7 +1648,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Updates the global fee rate
     function _updateGlobalFeeRate(PoolStorage.Layout storage l, UD60x18 makerRebate) internal {
         if (l.liquidityRate == ZERO) return;
-        l.globalFeeRate = l.globalFeeRate + (makerRebate / l.liquidityRate);
+        l.globalFeeRate = l.globalFeeRate + ((makerRebate * ud(1e24)) / l.liquidityRate);
     }
 
     /// @notice Crosses the active tick either to the left if the LT is selling

@@ -200,15 +200,15 @@ contract PositionTest is Test, Assertions {
 
         size = ud(250e18);
         result = ud(0.5e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
 
         size = ud(500e18);
         result = ud(1e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
 
         size = ud(1000e18);
         result = ud(2e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size) / ud(1e24), result);
     }
 
     function _test_bid_ReturnExpectedValue_Call(bool isCall) internal {
