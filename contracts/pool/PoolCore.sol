@@ -156,6 +156,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function claim(Position.Key calldata p) external nonReentrant returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
+        _revertIfOperatorNotAuthorized(p.operator);
         return _claim(p.toKeyInternal(l.strike, l.isCallPool));
     }
 
