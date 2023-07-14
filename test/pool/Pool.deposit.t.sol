@@ -582,15 +582,15 @@ abstract contract PoolDepositTest is DeployTest {
             orderType: Position.OrderType.LC
         });
         deposit(customPosKey0, ud(1 ether));
-        assertEq(pool.getLiquidityRate(), 0.002e18);
+        assertEq(pool.getLiquidityRate(), 0.002e28);
         assertEq(pool.getCurrentTick(), ud(0.25 ether));
         assertEq(pool.marketPrice(), 0.75e18);
         IPoolInternal.Tick memory tick0 = pool.exposed_getTick(ud(0.01 ether));
-        assertEq(tick0.delta.unwrap(), -0.025 ether);
-        assertEq(tick0.longDelta.unwrap(), -0.025 ether);
+        assertEq(tick0.delta, -0.025e28);
+        assertEq(tick0.longDelta, -0.025e28);
         IPoolInternal.Tick memory tick1 = pool.exposed_getTick(ud(0.05 ether));
-        assertEq(tick1.delta.unwrap(), 0.025 ether);
-        assertEq(tick1.longDelta.unwrap(), 0.025 ether);
+        assertEq(tick1.delta, 0.025e28);
+        assertEq(tick1.longDelta, 0.025e28);
     }
 
     function test_deposit_Case2() public {

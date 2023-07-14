@@ -14,6 +14,9 @@ uint256 constant uMAX_UD50x28 = 115792089237316195423570985008687907853269984665
 uint256 constant uUNIT = 1e28;
 UD50x28 constant UNIT = UD50x28.wrap(uUNIT);
 
+// Scaling factor = 10 ** (28 - 18)
+uint256 constant SCALING_FACTOR = 1e10;
+
 error UD50x28_IntoSD49x28_Overflow(UD50x28 x);
 
 /// @notice Wraps a uint256 number into the UD60x18 value type.
@@ -42,7 +45,7 @@ function intoSD49x28(UD50x28 x) pure returns (SD49x28 result) {
 }
 
 function intoUD60x18(UD50x28 x) pure returns (UD60x18 result) {
-    result = UD60x18.wrap(x.unwrap() / uUNIT);
+    result = UD60x18.wrap(x.unwrap() / SCALING_FACTOR);
 }
 
 /// @notice Implements the checked addition operation (+) in the UD50x28 type.

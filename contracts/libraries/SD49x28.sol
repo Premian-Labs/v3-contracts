@@ -17,6 +17,9 @@ int256 constant uMIN_SD49x28 = -578960446186580977117854925043439539266349923328
 int256 constant uUNIT = 1e28;
 SD49x28 constant UNIT = SD49x28.wrap(uUNIT);
 
+// Scaling factor = 10 ** (28 - 18)
+int256 constant SCALING_FACTOR = 1e10;
+
 error SD49x28_Mul_InputTooSmall();
 error SD49x28_Mul_Overflow(SD49x28 x, SD49x28 y);
 
@@ -57,7 +60,7 @@ function intoUD60x18(SD49x28 x) pure returns (UD60x18 result) {
 }
 
 function intoSD59x18(SD49x28 x) pure returns (SD59x18 result) {
-    result = SD59x18.wrap(x.unwrap() / uUNIT);
+    result = SD59x18.wrap(x.unwrap() / SCALING_FACTOR);
 }
 
 /// @notice Implements the checked addition operation (+) in the SD49x28 type.
