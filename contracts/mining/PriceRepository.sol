@@ -41,7 +41,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             if (l.whitelistedRelayers.add(accounts[i])) {
-                emit AddRelayer(accounts[i]);
+                emit AddWhitelistedRelayer(accounts[i]);
             }
         }
     }
@@ -52,7 +52,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             if (l.whitelistedRelayers.remove(accounts[i])) {
-                emit RemoveRelayer(accounts[i]);
+                emit RemoveWhitelistedRelayer(accounts[i]);
             }
         }
     }

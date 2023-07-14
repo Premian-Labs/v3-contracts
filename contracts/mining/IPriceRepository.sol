@@ -7,8 +7,8 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 interface IPriceRepository {
     error PriceRepository__NotAuthorized(address account);
 
-    event AddRelayer(address indexed relayer);
-    event RemoveRelayer(address indexed relayer);
+    event AddWhitelistedRelayer(address indexed account);
+    event RemoveWhitelistedRelayer(address indexed account);
     event PriceUpdate(address indexed base, address indexed quote, uint256 timestamp, UD60x18 price);
 
     /// @notice Returns the most recent price update, if zero, a price has not been recorded
