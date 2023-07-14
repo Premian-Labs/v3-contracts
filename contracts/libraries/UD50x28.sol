@@ -7,14 +7,13 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 type UD50x28 is uint256;
 
-uint256 constant SCALING_FACTOR = 1e28;
 uint256 constant uMAX_UD50x28 = 11579208923731619542357098500868790785326998466564_0564039457584007913129639935;
 
 /// @dev The unit number, which gives the decimal precision of UD50x28.
 uint256 constant uUNIT = 1e28;
 UD50x28 constant UNIT = UD50x28.wrap(uUNIT);
 
-error UD50x28_IntoUD50x28_Overflow(UD60x18 x);
+error UD60x18_IntoUD50x28_Overflow(UD60x18 x);
 
 /// @notice Wraps a uint256 number into the UD60x18 value type.
 function wrap(uint256 x) pure returns (UD50x28 result) {
@@ -30,14 +29,14 @@ function ud50x28(uint256 x) pure returns (UD50x28 result) {
     result = UD50x28.wrap(x);
 }
 
-function ud50x28(UD60x18 x) pure returns (UD50x28 result) {
-    uint256 xUint = x.unwrap() * SCALING_FACTOR;
-    if (xUint > uMAX_UD50x28) revert UD50x28_IntoUD50x28_Overflow(x);
+function intoUD50x28(UD60x18 x) pure returns (UD50x28 result) {
+    uint256 xUint = x.unwrap() * uUNIT;
+    if (xUint > uMAX_UD50x28) revert UD60x18_IntoUD50x28_Overflow(x);
     result = wrap(xUint);
 }
 
 function intoUD60x18(UD50x28 x) pure returns (UD60x18 result) {
-    result = UD60x18.wrap(x.unwrap() / SCALING_FACTOR);
+    result = UD60x18.wrap(x.unwrap() / uUNIT);
 }
 
 /// @notice Implements the checked addition operation (+) in the UD50x28 type.
@@ -140,6 +139,36 @@ function xor(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
     result = wrap(x.unwrap() ^ y.unwrap());
 }
 
+/// @notice Calculates the arithmetic average of x and y using the following formula:
+///
+/// $$
+/// avg(x, y) = (x & y) + ((xUint ^ yUint) / 2)
+/// $$
+//
+/// In English, this is what this formula does:
+///
+/// 1. AND x and y.
+/// 2. Calculate half of XOR x and y.
+/// 3. Add the two results together.
+///
+/// This technique is known as SWAR, which stands for "SIMD within a register". You can read more about it here:
+/// https://devblogs.microsoft.com/oldnewthing/20220207-00/?p=106223
+///
+/// @dev Notes:
+/// - The result is rounded down.
+///
+/// @param x The first operand as a UD50x28 number.
+/// @param y The second operand as a UD50x28 number.
+/// @return result The arithmetic average as a UD60x18 number.
+/// @custom:smtchecker abstract-function-nondet
+function avg(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
+    uint256 xUint = x.unwrap();
+    uint256 yUint = y.unwrap();
+    unchecked {
+        result = wrap((xUint & yUint) + ((xUint ^ yUint) >> 1));
+    }
+}
+
 /// @notice Divides two UD50x28 numbers, returning a new UD50x28 number.
 ///
 /// @dev Uses {Common.mulDiv} to enable overflow-safe multiplication and division.
@@ -182,6 +211,8 @@ function mul(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
 // The global "using for" directive makes the functions in this library callable on the UD50x28 type.
 using {
     unwrap,
+    intoUD60x18,
+    avg,
     add,
     and,
     eq,
