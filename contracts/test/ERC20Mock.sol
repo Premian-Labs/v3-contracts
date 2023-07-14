@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.19;
 
 import {SolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";

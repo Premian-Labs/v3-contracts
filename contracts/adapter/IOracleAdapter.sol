@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";

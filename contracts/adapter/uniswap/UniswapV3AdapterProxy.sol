@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
 import {ProxyUpgradeableOwnable} from "../../proxy/ProxyUpgradeableOwnable.sol";

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
 library VxPremiaStorage {
