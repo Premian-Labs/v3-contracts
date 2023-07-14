@@ -6,6 +6,7 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
@@ -106,7 +107,7 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 protocolFees = pool.protocolFees();
         IERC20 poolToken = IERC20(getPoolToken());
 
-        vm.prank(users.lp);
+        vm.prank(posKey.operator);
         pool.claim(posKey);
 
         uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
@@ -132,16 +133,13 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 protocolFees = pool.protocolFees();
         IERC20 poolToken = IERC20(getPoolToken());
 
-        vm.prank(users.lp);
-        pool.claim(posKey);
-
-        vm.prank(users.otherLP);
+        vm.prank(posKey.operator);
         pool.claim(posKey);
 
         uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
 
-        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
-        assertEq(poolToken.balanceOf(users.otherLP), claimableFees);
+        assertEq(poolToken.balanceOf(posKey.owner), initialCollateral - collateral);
+        assertEq(poolToken.balanceOf(posKey.operator), claimableFees);
         assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - claimableFees - protocolFees);
         assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
 
@@ -153,7 +151,6 @@ abstract contract PoolClaimTest is DeployTest {
         uint256 tradeSize = 1 ether;
         (uint256 initialCollateral, uint256 totalPremium) = trade(tradeSize, true);
 
-        uint256 claimableFees = pool.getClaimableFees(posKey);
         uint256 protocolFees = pool.protocolFees();
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -166,7 +163,7 @@ abstract contract PoolClaimTest is DeployTest {
 
         uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
 
-        assertEq(poolToken.balanceOf(users.lp), initialCollateral - collateral);
+        assertEq(poolToken.balanceOf(posKey.owner), initialCollateral - collateral);
         assertEq(poolToken.balanceOf(users.otherLP), 0);
         assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - protocolFees);
         assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
@@ -184,13 +181,12 @@ abstract contract PoolClaimTest is DeployTest {
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
-
             if (tokenId == 0 || tokenId == 1) continue;
 
             (, , UD60x18 lower, UD60x18 upper, Position.OrderType orderType) = PoolStorage.parseTokenId(tokenId);
-
             Position.Key memory key = Position.Key(users.lp, users.lp, lower, upper, orderType);
 
+            vm.prank(key.operator);
             totalClaimableFees += pool.claim(key);
         }
 
@@ -229,5 +225,19 @@ abstract contract PoolClaimTest is DeployTest {
         }
 
         assertApproxEqAbs(totalClaimableFees, pool.protocolFees(), 10);
+    }
+
+    function test_claim_RevertIf_OperatorNotAuthorized() public {
+        uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
+        assertEq(tokenIds.length, 0);
+
+        posKey.operator = users.otherLP;
+
+        uint256 tradeSize = 1 ether;
+        trade(tradeSize, true);
+
+        vm.prank(posKey.owner);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, posKey.owner));
+        pool.claim(posKey);
     }
 }
