@@ -3,6 +3,7 @@
 pragma solidity ^0.8.19;
 
 import {mulDiv} from "@prb/math/Common.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {UD50x28} from "./UD50x28.sol";
@@ -16,7 +17,6 @@ int256 constant uMIN_SD49x28 = -578960446186580977117854925043439539266349923328
 int256 constant uUNIT = 1e28;
 SD49x28 constant UNIT = SD49x28.wrap(uUNIT);
 
-error SD49x28_IntoSD59x18_Overflow(SD59x18 x);
 error SD49x28_Mul_InputTooSmall();
 error SD49x28_Mul_Overflow(SD49x28 x, SD49x28 y);
 
@@ -52,10 +52,8 @@ function intoUD50x28(SD49x28 x) pure returns (UD50x28 result) {
     result = UD50x28.wrap(uint256(xInt));
 }
 
-function intoSD49x28(SD59x18 x) pure returns (SD49x28 result) {
-    int256 xUint = x.unwrap() * uUNIT;
-    if (xUint > uMAX_SD49x28) revert SD49x28_IntoSD59x18_Overflow(x);
-    result = wrap(xUint);
+function intoUD60x18(SD49x28 x) pure returns (UD60x18 result) {
+    return intoUD50x28(x).intoUD60x18();
 }
 
 function intoSD59x18(SD49x28 x) pure returns (SD59x18 result) {
@@ -321,6 +319,7 @@ using {
     unwrap,
     intoSD59x18,
     intoUD50x28,
+    intoUD60x18,
     abs,
     avg,
     add,

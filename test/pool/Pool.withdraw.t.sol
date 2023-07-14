@@ -8,8 +8,9 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ZERO, ONE_HALF, ONE, TWO, THREE, EXTRA_PRECISION} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -19,6 +20,8 @@ import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
+    using PRBMathExtra for UD60x18;
+
     function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
@@ -57,7 +60,7 @@ abstract contract PoolWithdrawTest is DeployTest {
         trade(tradeSize, true, depositSize, false);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), 0 ether);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
 
         vm.startPrank(users.lp);
@@ -94,7 +97,7 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.15 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
@@ -130,7 +133,7 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.85 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice() / EXTRA_PRECISION, 0.175 ether);
+        assertEq(pool.marketPrice(), 0.175e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
@@ -174,7 +177,7 @@ abstract contract PoolWithdrawTest is DeployTest {
     function test_withdraw_RevertIf_MarketPriceOutOfMinMax() public {
         deposit(1000 ether);
 
-        assertEq(pool.marketPrice() / EXTRA_PRECISION, posKey.upper);
+        assertEq(pool.marketPrice(), posKey.upper);
 
         vm.startPrank(users.lp);
 

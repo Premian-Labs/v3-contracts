@@ -14,7 +14,6 @@ uint256 constant uMAX_UD50x28 = 115792089237316195423570985008687907853269984665
 uint256 constant uUNIT = 1e28;
 UD50x28 constant UNIT = UD50x28.wrap(uUNIT);
 
-error UD60x18_IntoUD50x28_Overflow(UD60x18 x);
 error UD50x28_IntoSD49x28_Overflow(UD50x28 x);
 
 /// @notice Wraps a uint256 number into the UD60x18 value type.
@@ -40,12 +39,6 @@ function intoSD49x28(UD50x28 x) pure returns (SD49x28 result) {
         revert UD50x28_IntoSD49x28_Overflow(x);
     }
     result = SD49x28.wrap(int256(xUint));
-}
-
-function intoUD50x28(UD60x18 x) pure returns (UD50x28 result) {
-    uint256 xUint = x.unwrap() * uUNIT;
-    if (xUint > uMAX_UD50x28) revert UD60x18_IntoUD50x28_Overflow(x);
-    result = wrap(xUint);
 }
 
 function intoUD60x18(UD50x28 x) pure returns (UD60x18 result) {

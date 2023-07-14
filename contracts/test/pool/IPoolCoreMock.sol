@@ -6,6 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
+import {UD50x28} from "../../libraries/UD50x28.sol";
 
 import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
@@ -45,7 +46,7 @@ interface IPoolCoreMock {
     function exposed_getStrandedMarketPriceUpdate(
         Position.KeyInternal memory p,
         bool isBid
-    ) external pure returns (UD60x18);
+    ) external pure returns (UD50x28);
 
     function exposed_isMarketPriceStranded(Position.KeyInternal memory p, bool isBid) external view returns (bool);
 
@@ -53,11 +54,11 @@ interface IPoolCoreMock {
 
     function getCurrentTick() external view returns (UD60x18);
 
-    function getLiquidityRate() external view returns (UD60x18);
+    function getLiquidityRate() external view returns (UD50x28);
 
-    function getLongRate() external view returns (UD60x18);
+    function getLongRate() external view returns (UD50x28);
 
-    function getShortRate() external view returns (UD60x18);
+    function getShortRate() external view returns (UD50x28);
 
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory);
 

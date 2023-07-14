@@ -494,7 +494,7 @@ contract Assertions is StdAssertions {
         assertEq(castedA, b, err);
     }
 
-    function assertEq(uint256[] memory a, SD59x18[] memory b) internal {
+    function assertEq(uint256[] memory a, SD49x28[] memory b) internal {
         uint256[] memory castedB;
         assembly {
             castedB := b
@@ -502,7 +502,7 @@ contract Assertions is StdAssertions {
         assertEq(a, b);
     }
 
-    function assertEq(uint256[] memory a, SD59x18[] memory b, string memory err) internal {
+    function assertEq(uint256[] memory a, SD49x28[] memory b, string memory err) internal {
         uint256[] memory castedB;
         assembly {
             castedB := b

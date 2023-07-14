@@ -16,6 +16,7 @@ import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writ
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
+import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
@@ -151,7 +152,7 @@ contract DeployTest is Test, Assertions {
         quoteOB = IPoolInternal.QuoteOB({
             provider: users.lp,
             taker: address(0),
-            price: ud(0.1 ether),
+            price: ud(0.1e18),
             size: ud(10 ether),
             isBuy: false,
             deadline: block.timestamp + 1 hours,
