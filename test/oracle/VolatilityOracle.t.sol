@@ -19,6 +19,10 @@ import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.s
 contract VolatilityOracleTest is Test, Assertions {
     VolatilityOracleMock oracle;
     address relayer;
+    address alice;
+    address bob;
+    address charles;
+
     address token = address(1);
 
     bytes32 constant paramsFormatted = 0x00004e39fe17a216e3e08d84627da56b60f41e819453f79b02b4cb97c837c2a8;
@@ -45,6 +49,9 @@ contract VolatilityOracleTest is Test, Assertions {
         oracle = VolatilityOracleMock(address(proxy));
 
         relayer = vm.addr(10);
+        alice = vm.addr(11);
+        bob = vm.addr(12);
+        charles = vm.addr(13);
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -73,6 +80,72 @@ contract VolatilityOracleTest is Test, Assertions {
 
         vm.prank(relayer);
         oracle.updateParams(tokens, tauHex, thetaHex, psiHex, rhoHex, ud(0.01e18));
+    }
+
+    function _addWhitelistedRelayers() internal {
+        {
+            address[] memory relayers = new address[](3);
+            relayers[0] = alice;
+            relayers[1] = bob;
+            relayers[2] = charles;
+            oracle.addWhitelistedRelayers(relayers);
+        }
+    }
+
+    function test_addWhitelistedRelayers_Success() public {
+        _addWhitelistedRelayers();
+
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 4);
+            assertEq(relayers[0], relayer);
+            assertEq(relayers[1], alice);
+            assertEq(relayers[2], bob);
+            assertEq(relayers[3], charles);
+        }
+    }
+
+    function test_removeWhitelistedRelayers_Success() public {
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 1);
+            assertEq(relayers[0], relayer);
+            oracle.removeWhitelistedRelayers(relayers);
+        }
+
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 0);
+        }
+
+        _addWhitelistedRelayers();
+
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 3);
+            assertEq(relayers[0], alice);
+            assertEq(relayers[1], bob);
+            assertEq(relayers[2], charles);
+        }
+
+        {
+            address[] memory relayers = new address[](2);
+            relayers[0] = charles;
+            relayers[1] = alice;
+            oracle.removeWhitelistedRelayers(relayers);
+        }
+
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 1);
+            assertEq(relayers[0], bob);
+            oracle.removeWhitelistedRelayers(relayers);
+        }
+
+        {
+            address[] memory relayers = oracle.getWhitelistedRelayers();
+            assertEq(relayers.length, 0);
+        }
     }
 
     function test_formatParams_CorrectlyFormatParameters() public {

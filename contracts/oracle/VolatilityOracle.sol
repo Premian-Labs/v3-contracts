@@ -30,8 +30,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
     uint256 private constant DECIMALS = 12;
 
-    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
-
     struct Params {
         SD59x18[5] tau;
         SD59x18[5] theta;
@@ -51,6 +49,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.add(accounts[i]);
+            emit AddWhitelistedRelayer(accounts[i]);
         }
     }
 
@@ -60,21 +59,13 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.remove(accounts[i]);
+            emit RemoveWhitelistedRelayer(accounts[i]);
         }
     }
 
     /// @inheritdoc IVolatilityOracle
     function getWhitelistedRelayers() external view returns (address[] memory) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        uint256 length = l.whitelistedRelayers.length();
-        address[] memory result = new address[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            result[i] = l.whitelistedRelayers.at(i);
-        }
-
-        return result;
+        return VolatilityOracleStorage.layout().whitelistedRelayers.toArray();
     }
 
     /// @inheritdoc IVolatilityOracle
