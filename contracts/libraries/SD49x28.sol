@@ -5,6 +5,8 @@ pragma solidity ^0.8.19;
 import {mulDiv} from "@prb/math/Common.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
+import {UD50x28} from "./UD50x28.sol";
+
 type SD49x28 is int256;
 
 int256 constant uMAX_SD49x28 = 5789604461865809771178549250434395392663499233282_0282019728792003956564819967;
@@ -21,6 +23,10 @@ error SD49x28_Mul_Overflow(SD49x28 x, SD49x28 y);
 error SD49x28_Div_InputTooSmall();
 error SD49x28_Div_Overflow(SD49x28 x, SD49x28 y);
 
+error SD49x28_IntoUD50x28_Underflow(SD49x28 x);
+
+error SD49x28_Abs_MinSD49x28();
+
 /// @notice Wraps a int256 number into the SD49x28 value type.
 function wrap(int256 x) pure returns (SD49x28 result) {
     result = SD49x28.wrap(x);
@@ -33,6 +39,17 @@ function unwrap(SD49x28 x) pure returns (int256 result) {
 
 function sd49x28(int256 x) pure returns (SD49x28 result) {
     result = SD49x28.wrap(x);
+}
+
+/// @notice Casts an SD49x28 number into UD50x28.
+/// @dev Requirements:
+/// - x must be positive.
+function intoUD50x28(SD49x28 x) pure returns (UD50x28 result) {
+    int256 xInt = SD49x28.unwrap(x);
+    if (xInt < 0) {
+        revert SD49x28_IntoUD50x28_Underflow(x);
+    }
+    result = UD50x28.wrap(uint256(xInt));
 }
 
 function intoSD49x28(SD59x18 x) pure returns (SD49x28 result) {
@@ -154,6 +171,22 @@ function uncheckedUnary(SD49x28 x) pure returns (SD49x28 result) {
 /// @notice Implements the XOR (^) bitwise operation in the SD49x28 type.
 function xor(SD49x28 x, SD49x28 y) pure returns (SD49x28 result) {
     result = wrap(x.unwrap() ^ y.unwrap());
+}
+
+/// @notice Calculates the absolute value of x.
+///
+/// @dev Requirements:
+/// - x must be greater than `MIN_SD49x28`.
+///
+/// @param x The SD49x28 number for which to calculate the absolute value.
+/// @param result The absolute value of x as an SD49x28 number.
+/// @custom:smtchecker abstract-function-nondet
+function abs(SD49x28 x) pure returns (SD49x28 result) {
+    int256 xInt = x.unwrap();
+    if (xInt == uMIN_SD49x28) {
+        revert SD49x28_Abs_MinSD49x28();
+    }
+    result = xInt < 0 ? wrap(-xInt) : x;
 }
 
 /// @notice Calculates the arithmetic average of x and y.
@@ -287,6 +320,8 @@ function mul(SD49x28 x, SD49x28 y) pure returns (SD49x28 result) {
 using {
     unwrap,
     intoSD59x18,
+    intoUD50x28,
+    abs,
     avg,
     add,
     and,
@@ -324,5 +359,6 @@ using {
     neq as !=,
     not as ~,
     sub as -,
+    unary as -,
     xor as ^
 } for SD49x28 global;

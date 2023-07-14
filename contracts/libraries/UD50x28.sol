@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 
 import {mulDiv} from "@prb/math/Common.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
+import {SD49x28, uMAX_SD49x28} from "./SD49x28.sol";
 
 type UD50x28 is uint256;
 
@@ -14,6 +15,7 @@ uint256 constant uUNIT = 1e28;
 UD50x28 constant UNIT = UD50x28.wrap(uUNIT);
 
 error UD60x18_IntoUD50x28_Overflow(UD60x18 x);
+error UD50x28_IntoSD49x28_Overflow(UD50x28 x);
 
 /// @notice Wraps a uint256 number into the UD60x18 value type.
 function wrap(uint256 x) pure returns (UD50x28 result) {
@@ -27,6 +29,17 @@ function unwrap(UD50x28 x) pure returns (uint256 result) {
 
 function ud50x28(uint256 x) pure returns (UD50x28 result) {
     result = UD50x28.wrap(x);
+}
+
+/// @notice Casts a UD50x28 number into SD49x28.
+/// @dev Requirements:
+/// - x must be less than or equal to `uMAX_SD49x28`.
+function intoSD49x28(UD50x28 x) pure returns (SD49x28 result) {
+    uint256 xUint = UD50x28.unwrap(x);
+    if (xUint > uint256(uMAX_SD49x28)) {
+        revert UD50x28_IntoSD49x28_Overflow(x);
+    }
+    result = SD49x28.wrap(int256(xUint));
 }
 
 function intoUD50x28(UD60x18 x) pure returns (UD50x28 result) {
@@ -212,6 +225,7 @@ function mul(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
 using {
     unwrap,
     intoUD60x18,
+    intoSD49x28,
     avg,
     add,
     and,
