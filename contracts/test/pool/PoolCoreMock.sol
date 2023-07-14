@@ -7,7 +7,8 @@ import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
-import {EXTRA_PRECISION, iEXTRA_PRECISION} from "../../libraries/Constants.sol";
+import {iEXTRA_PRECISION} from "../../libraries/Constants.sol";
+import {UD50x28} from "../../libraries/UD50x28.sol";
 
 import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
@@ -16,6 +17,7 @@ import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
 contract PoolCoreMock is IPoolCoreMock, PoolInternal {
+    using UD50x28 for UD60x18;
     using PoolStorage for PoolStorage.Layout;
 
     constructor(
@@ -104,7 +106,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function getLiquidityRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.liquidityRate / EXTRA_PRECISION;
+        return l.liquidityRate.intoUD60x18();
     }
 
     function exposed_getTick(UD60x18 price) external view returns (IPoolInternal.Tick memory) {
@@ -121,12 +123,12 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function getLongRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.longRate / EXTRA_PRECISION;
+        return l.longRate.intoUD60x18();
     }
 
     function getShortRate() external view returns (UD60x18) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        return l.shortRate / EXTRA_PRECISION;
+        return l.shortRate.intoUD60x18();
     }
 
     function mint(address account, uint256 id, UD60x18 amount) external {

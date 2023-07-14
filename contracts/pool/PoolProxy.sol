@@ -14,7 +14,7 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
-import {EXTRA_PRECISION} from "../libraries/Constants.sol";
+import {UD50x28} from "../../libraries/UD50x28.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
@@ -22,6 +22,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolProxy is Proxy, ERC165BaseInternal {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
+    using UD50x28 for UD60x18;
 
     address private immutable DIAMOND;
 
@@ -60,7 +61,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
             l.tickIndex.push(Pricing.MAX_TICK_PRICE);
 
             l.currentTick = Pricing.MIN_TICK_PRICE;
-            l.marketPrice = Pricing.MIN_TICK_PRICE * EXTRA_PRECISION;
+            l.marketPrice = Pricing.MIN_TICK_PRICE.intoUD50x28();
         }
 
         _setSupportsInterface(type(IERC165).interfaceId, true);

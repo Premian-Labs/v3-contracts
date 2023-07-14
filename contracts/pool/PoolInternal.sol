@@ -26,6 +26,7 @@ import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {iZERO, ZERO, ONE, TWO, FIVE, EXTRA_PRECISION} from "../libraries/Constants.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
@@ -364,7 +365,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         _revertIfDepositWithdrawalAboveMaxSlippage(
-            l.marketPrice / EXTRA_PRECISION,
+            l.marketPrice.intoUD60x18(),
             args.minMarketPrice,
             args.maxMarketPrice
         );
@@ -449,7 +450,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _updateTicks(
                 p.lower,
                 p.upper,
-                l.marketPrice / EXTRA_PRECISION,
+                l.marketPrice.intoUD60x18(),
                 tickDelta,
                 initialSize == ZERO,
                 false,
@@ -484,7 +485,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionExpired(l);
 
-        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice / EXTRA_PRECISION, minMarketPrice, maxMarketPrice);
+        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice.intoUD60x18(), minMarketPrice, maxMarketPrice);
         _revertIfZeroSize(size);
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
@@ -558,7 +559,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _updateTicks(
             p.lower,
             p.upper,
-            l.marketPrice / EXTRA_PRECISION,
+            l.marketPrice.intoUD60x18(),
             vars.tickDelta, // Adjust tick deltas (reverse of deposit)
             false,
             vars.isFullWithdrawal,
@@ -1776,7 +1777,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (
             -l.ticks[right].delta > iZERO &&
             l.liquidityRate == (-l.ticks[right].delta).intoUD60x18() &&
-            right == l.marketPrice / EXTRA_PRECISION &&
+            right == l.marketPrice.intoUD60x18() &&
             l.tickIndex.next(right) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1794,7 +1795,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         } else if (
             -l.ticks[current].delta > iZERO &&
             l.liquidityRate == (-l.ticks[current].delta).intoUD60x18() &&
-            current == l.marketPrice / EXTRA_PRECISION &&
+            current == l.marketPrice.intoUD60x18() &&
             l.tickIndex.prev(current) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1825,8 +1826,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the
     ///         bid (ask) order.
-    function _getStrandedMarketPriceUpdate(Position.KeyInternal memory p, bool isBid) internal pure returns (UD60x18) {
-        return (isBid ? p.upper : p.lower) * EXTRA_PRECISION;
+    function _getStrandedMarketPriceUpdate(Position.KeyInternal memory p, bool isBid) internal pure returns (UD50x28) {
+        return (isBid ? p.upper : p.lower).intoUD50x28();
     }
 
     /// @notice Revert if the tick width is invalid
