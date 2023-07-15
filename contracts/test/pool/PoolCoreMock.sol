@@ -14,9 +14,11 @@ import {PoolStorage} from "../../pool/PoolStorage.sol";
 import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
+    using PoolStorage for IERC20;
 
     constructor(
         address factory,
@@ -127,5 +129,15 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function mint(address account, uint256 id, UD60x18 amount) external {
         _mint(account, id, amount.unwrap(), "");
+    }
+
+    function safeTransferIgnoreDustUD60x18(address to, UD60x18 value) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(to, value);
+    }
+
+    function safeTransferIgnoreDust(address to, uint256 value) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(to, value);
     }
 }

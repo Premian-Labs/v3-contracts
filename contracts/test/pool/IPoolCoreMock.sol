@@ -65,4 +65,8 @@ interface IPoolCoreMock {
     function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool);
 
     function mint(address account, uint256 id, UD60x18 amount) external;
+
+    function safeTransferIgnoreDust(address to, uint256 value) external;
+
+    function safeTransferIgnoreDustUD60x18(address to, UD60x18 value) external;
 }

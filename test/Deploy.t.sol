@@ -289,6 +289,8 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDust.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDustUD60x18.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);

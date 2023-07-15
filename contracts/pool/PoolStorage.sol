@@ -184,12 +184,20 @@ library PoolStorage {
     }
 
     /// @notice Converts `value` to pool token decimals and transfers `token`
-    function safeTransfer(IERC20 token, address to, UD60x18 value) internal {
-        token.safeTransfer(to, PoolStorage.layout().toPoolTokenDecimals(value));
-    }
-
-    /// @notice Converts `value` to pool token decimals and transfers `token`
     function safeTransferFrom(IERC20Router router, address token, address from, address to, UD60x18 value) internal {
         router.safeTransferFrom(token, from, to, PoolStorage.layout().toPoolTokenDecimals(value));
+    }
+
+    function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
+        if (balance < value) value = balance;
+        token.safeTransfer(to, value);
+    }
+
+    function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 value = toPoolTokenDecimals(l, value);
+        safeTransferIgnoreDust(token, to, value);
     }
 }
