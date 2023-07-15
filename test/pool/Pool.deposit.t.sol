@@ -2,7 +2,6 @@
 
 pragma solidity >=0.8.19;
 
-import "forge-std/console2.sol";
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -73,18 +72,10 @@ abstract contract PoolDepositTest is DeployTest {
         posKey.orderType = Position.OrderType.LC;
         deposit(1e18);
 
-        console2.log("A", pool.marketPrice().unwrap());
-        console2.log("A", pool.getLiquidityRate().unwrap());
         __trade(1e18, true);
-        console2.log("B", pool.marketPrice().unwrap());
-        console2.log("B", pool.getLiquidityRate().unwrap());
         __trade(1e18, false);
-        console2.log("C", pool.marketPrice().unwrap());
-        console2.log("C", pool.getLiquidityRate().unwrap());
         __trade(1e18, true);
-        console2.log("D", pool.marketPrice().unwrap());
         __trade(1e18, false);
-        console2.log("E", pool.marketPrice().unwrap());
     }
 
     function test_deposit_1000_LC_WithToken() public {

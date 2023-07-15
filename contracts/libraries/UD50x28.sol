@@ -19,12 +19,12 @@ uint256 constant SCALING_FACTOR = 1e10;
 
 error UD50x28_IntoSD49x28_Overflow(UD50x28 x);
 
-/// @notice Wraps a uint256 number into the UD60x18 value type.
+/// @notice Wraps a uint256 number into the UD50x28 value type.
 function wrap(uint256 x) pure returns (UD50x28 result) {
     result = UD50x28.wrap(x);
 }
 
-/// @notice Unwraps a UD60x18 number into uint256.
+/// @notice Unwraps a UD50x28 number into uint256.
 function unwrap(UD50x28 x) pure returns (uint256 result) {
     result = UD50x28.unwrap(x);
 }
@@ -168,7 +168,7 @@ function xor(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
 ///
 /// @param x The first operand as a UD50x28 number.
 /// @param y The second operand as a UD50x28 number.
-/// @return result The arithmetic average as a UD60x18 number.
+/// @return result The arithmetic average as a UD50x28 number.
 /// @custom:smtchecker abstract-function-nondet
 function avg(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
     uint256 xUint = x.unwrap();
@@ -196,7 +196,7 @@ function div(UD50x28 x, UD50x28 y) pure returns (UD50x28 result) {
     result = UD50x28.wrap(mulDiv(x.unwrap(), uUNIT, y.unwrap()));
 }
 
-/// @notice Multiplies two UD60x18 numbers together, returning a new UD60x18 number.
+/// @notice Multiplies two UD50x28 numbers together, returning a new UD50x28 number.
 ///
 /// @dev Uses {Common.mulDiv} to enable overflow-safe multiplication and division.
 ///
