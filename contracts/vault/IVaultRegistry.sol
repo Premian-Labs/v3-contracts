@@ -160,7 +160,7 @@ interface IVaultRegistry {
     /// @return The vault settings.
     function getSettings(bytes32 vaultType) external view returns (bytes memory);
 
-    /// @notice Sets the implementation for the vaultType.
+    /// @notice Sets the settings for the vaultType.
     /// @param vaultType The vault type.
     /// @param updatedSettings The updated settings for the vault type.
     function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external;

@@ -36,7 +36,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer, ReentrancyGuard {
 
         bytes32 hash = keccak256(
             abi.encodePacked(
-                bytes1(0xff), // 0
+                bytes1(0xff), // 255
                 address(this), // address of factory contract
                 keccak256(args), // salt
                 // The contract bytecode
