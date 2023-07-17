@@ -29,7 +29,6 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
             address denomination = args[i].denomination;
 
             if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
-
             if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
 
             bytes32 keyForPair = token.keyForUnsortedPair(denomination);
@@ -42,7 +41,6 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
     /// @inheritdoc IFeedRegistry
     function feed(address tokenA, address tokenB) external view returns (address) {
         (address mappedTokenA, address mappedTokenB) = _mapToDenomination(tokenA, tokenB);
-
         return _feed(mappedTokenA, mappedTokenB);
     }
 
@@ -65,7 +63,6 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
     /// @notice Returns the sorted and mapped tokens for `tokenA` and `tokenB`
     function _mapToDenominationAndSort(address tokenA, address tokenB) internal view returns (address, address) {
         (address mappedTokenA, address mappedTokenB) = _mapToDenomination(tokenA, tokenB);
-
         return mappedTokenA.sortTokens(mappedTokenB);
     }
 
