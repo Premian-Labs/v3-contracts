@@ -1,16 +1,9 @@
 import {
-  ProxyUpgradeableOwnable__factory,
   ChainlinkAdapter__factory,
-  UniswapV3Adapter__factory,
-  UniswapV3AdapterProxy__factory,
-  UniswapV3ChainlinkAdapter__factory,
+  ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import {
-  goerliFeeds,
-  arbitrumGoerliFeeds,
-  UNISWAP_V3_FACTORY,
-} from '../../utils/addresses';
+import { arbitrumGoerliFeeds, goerliFeeds } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
