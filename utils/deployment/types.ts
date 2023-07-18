@@ -5,10 +5,6 @@ export interface ContractAddresses {
 
   ChainlinkAdapterImplementation: string;
   ChainlinkAdapterProxy: string;
-  UniswapV3AdapterImplementation: string;
-  UniswapV3AdapterProxy: string;
-  UniswapV3ChainlinkAdapterImplementation: string;
-  UniswapV3ChainlinkAdapterProxy: string;
   PremiaDiamond: string;
   PoolFactoryImplementation: string;
   PoolFactoryProxy: string;

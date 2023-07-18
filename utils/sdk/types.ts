@@ -3,7 +3,6 @@ import { BigNumber } from 'ethers';
 export enum AdapterType {
   NONE,
   CHAINLINK,
-  UNISWAP_V3,
 }
 
 export enum TokenType {
