@@ -518,9 +518,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @notice Revert if price is stale and MAX_DELAY has not passed
     function _revertIfPriceAfterTargetStale(uint256 target, uint256 updatedAt) internal view {
-        if (
-            target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt >= PRICE_STALE_THRESHOLD
-        ) {
+        if (target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt > PRICE_STALE_THRESHOLD) {
             revert ChainlinkAdapter__PriceAfterTargetIsStale(target, updatedAt, block.timestamp);
         }
     }

@@ -563,7 +563,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         uint256[] memory timestamps = new uint256[](1);
 
         prices[0] = 100000000000;
-        timestamps[0] = target - 90000;
+        timestamps[0] = target - 90001;
 
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
