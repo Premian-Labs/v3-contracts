@@ -90,18 +90,18 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
         UD60x18 curr = l.currentTick;
 
-        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
+        uint256 maxTicks = (ONE / PoolStorage.MIN_TICK_DISTANCE).unwrap() / 1e18;
         uint256 count;
 
         IPoolInternal.TickWithRates[] memory _ticks = new IPoolInternal.TickWithRates[](maxTicks);
 
         // compute the longRate and shortRate at MIN_TICK_PRICE
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+        if (l.currentTick != PoolStorage.MIN_TICK_PRICE) {
             while (true) {
                 longRate = longRate.add(l.ticks[curr].longDelta);
                 shortRate = shortRate.add(l.ticks[curr].shortDelta);
 
-                if (prev == Pricing.MIN_TICK_PRICE) {
+                if (prev == PoolStorage.MIN_TICK_PRICE) {
                     break;
                 }
 
@@ -110,8 +110,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             }
         }
 
-        prev = Pricing.MIN_TICK_PRICE;
-        curr = l.tickIndex.next(Pricing.MIN_TICK_PRICE);
+        prev = PoolStorage.MIN_TICK_PRICE;
+        curr = l.tickIndex.next(PoolStorage.MIN_TICK_PRICE);
 
         while (true) {
             _ticks[count++] = IPoolInternal.TickWithRates({
@@ -121,7 +121,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 shortRate: shortRate
             });
 
-            if (curr == Pricing.MAX_TICK_PRICE) {
+            if (curr == PoolStorage.MAX_TICK_PRICE) {
                 _ticks[count++] = IPoolInternal.TickWithRates({
                     tick: l.ticks[curr],
                     price: curr,

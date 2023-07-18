@@ -719,10 +719,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     remaining = ZERO;
                 } else {
                     // The trade will require crossing into the next tick range
-                    if (args.isBuy && l.tickIndex.next(l.currentTick) >= Pricing.MAX_TICK_PRICE)
+                    if (args.isBuy && l.tickIndex.next(l.currentTick) >= PoolStorage.MAX_TICK_PRICE)
                         revert Pool__InsufficientAskLiquidity();
 
-                    if (!args.isBuy && l.currentTick <= Pricing.MIN_TICK_PRICE) revert Pool__InsufficientBidLiquidity();
+                    if (!args.isBuy && l.currentTick <= PoolStorage.MIN_TICK_PRICE)
+                        revert Pool__InsufficientBidLiquidity();
 
                     remaining = remaining - vars.tradeSize;
                     _cross(args.isBuy);
@@ -1360,7 +1361,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         UD60x18 next = l.tickIndex.next(left);
-        while (left != ZERO && next <= price && left != Pricing.MAX_TICK_PRICE) {
+        while (left != ZERO && next <= price && left != PoolStorage.MAX_TICK_PRICE) {
             left = next;
             next = l.tickIndex.next(left);
         }
@@ -1382,7 +1383,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _tryGetTick(UD60x18 price) internal view returns (Tick memory tick, bool tickFound) {
         _revertIfTickWidthInvalid(price);
 
-        if (price < Pricing.MIN_TICK_PRICE || price > Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange(price);
+        if (price < PoolStorage.MIN_TICK_PRICE || price > PoolStorage.MAX_TICK_PRICE)
+            revert Pool__TickOutOfRange(price);
 
         PoolStorage.Layout storage l = PoolStorage.layout();
 
@@ -1428,8 +1430,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         Tick storage tick = l.ticks[price];
 
         if (
-            price > Pricing.MIN_TICK_PRICE &&
-            price < Pricing.MAX_TICK_PRICE &&
+            price > PoolStorage.MIN_TICK_PRICE &&
+            price < PoolStorage.MAX_TICK_PRICE &&
             // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
             tick.counter == 0
         ) {
@@ -1438,7 +1440,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (price == l.currentTick) {
                 UD60x18 newCurrentTick = l.tickIndex.prev(price);
 
-                if (newCurrentTick < Pricing.MIN_TICK_PRICE) revert Pool__TickOutOfRange(newCurrentTick);
+                if (newCurrentTick < PoolStorage.MIN_TICK_PRICE) revert Pool__TickOutOfRange(newCurrentTick);
 
                 l.currentTick = newCurrentTick;
             }
@@ -1660,7 +1662,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (isBuy) {
             UD60x18 right = l.tickIndex.next(l.currentTick);
-            if (right >= Pricing.MAX_TICK_PRICE) revert Pool__TickOutOfRange(right);
+            if (right >= PoolStorage.MAX_TICK_PRICE) revert Pool__TickOutOfRange(right);
             l.currentTick = right;
         }
 
@@ -1689,7 +1691,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         );
 
         if (!isBuy) {
-            if (l.currentTick <= Pricing.MIN_TICK_PRICE) revert Pool__TickOutOfRange(l.currentTick);
+            if (l.currentTick <= PoolStorage.MIN_TICK_PRICE) revert Pool__TickOutOfRange(l.currentTick);
             l.currentTick = l.tickIndex.prev(l.currentTick);
         }
     }
@@ -1743,8 +1745,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
     /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
     function _getStrandedArea(PoolStorage.Layout storage l) internal view returns (UD60x18 lower, UD60x18 upper) {
-        lower = Pricing.MAX_TICK_PRICE + ONE;
-        upper = Pricing.MAX_TICK_PRICE + ONE;
+        lower = PoolStorage.MAX_TICK_PRICE + ONE;
+        upper = PoolStorage.MAX_TICK_PRICE + ONE;
 
         UD60x18 current = l.currentTick;
         UD60x18 right = l.tickIndex.next(current);
@@ -1813,7 +1815,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Revert if the tick width is invalid
     function _revertIfTickWidthInvalid(UD60x18 price) internal pure {
-        if (price % Pricing.MIN_TICK_DISTANCE != ZERO) revert Pool__TickWidthInvalid(price);
+        if (price % PoolStorage.MIN_TICK_DISTANCE != ZERO) revert Pool__TickWidthInvalid(price);
     }
 
     /// @notice Returns the encoded OB quote hash
@@ -1875,7 +1877,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
     function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
-        UD60x18 den = (upper - lower) / Pricing.MIN_TICK_DISTANCE;
+        UD60x18 den = (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
 
         while (den % TWO == ZERO) {
             den = den / TWO;
@@ -1894,8 +1896,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower == ZERO ||
             upper == ZERO ||
             lower >= upper ||
-            lower < Pricing.MIN_TICK_PRICE ||
-            upper > Pricing.MAX_TICK_PRICE ||
+            lower < PoolStorage.MIN_TICK_PRICE ||
+            upper > PoolStorage.MAX_TICK_PRICE ||
             _isRateNonTerminating(lower, upper)
         ) revert Pool__InvalidRange(lower, upper);
     }
@@ -1929,7 +1931,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     function _revertIfInvalidSize(UD60x18 lower, UD60x18 upper, UD60x18 size) internal pure {
-        UD60x18 numTicks = (upper - lower) / Pricing.MIN_TICK_PRICE;
+        UD60x18 numTicks = (upper - lower) / PoolStorage.MIN_TICK_PRICE;
         if ((size / numTicks) * numTicks != size) revert Pool__InvalidSize(lower, upper, size);
     }
 
@@ -1992,7 +1994,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             return (false, InvalidQuoteOBError.QuoteOBOverfilled);
         }
 
-        if (Pricing.MIN_TICK_PRICE > quoteOB.price || quoteOB.price > Pricing.MAX_TICK_PRICE) {
+        if (PoolStorage.MIN_TICK_PRICE > quoteOB.price || quoteOB.price > PoolStorage.MAX_TICK_PRICE) {
             if (revertIfInvalid) revert Pool__OutOfBoundsPrice(quoteOB.price);
             return (false, InvalidQuoteOBError.OutOfBoundsPrice);
         }
