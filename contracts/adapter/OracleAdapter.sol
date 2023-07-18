@@ -2,13 +2,14 @@
 
 pragma solidity >=0.8.19;
 
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
-import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 /// @title Base oracle adapter implementation
-abstract contract OracleAdapter is IOracleAdapter, ReentrancyGuard {
+abstract contract OracleAdapter is IOracleAdapter, ReentrancyGuard, OwnableInternal {
     using SafeCast for int8;
 
     /// @notice Scales `amount` by `factor`

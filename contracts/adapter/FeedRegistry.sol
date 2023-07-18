@@ -3,14 +3,13 @@
 pragma solidity >=0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 
 import {IFeedRegistry} from "./IFeedRegistry.sol";
 import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
 /// @title Adapter feed registry implementation
-abstract contract FeedRegistry is IFeedRegistry, OwnableInternal {
+abstract contract FeedRegistry is IFeedRegistry {
     using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
