@@ -367,7 +367,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     /// @notice Returns the latest price of `tokenIn` denominated in `tokenOut`
     function _fetchLatestPrice(address tokenIn, address tokenOut) internal view returns (uint256) {
         address feed = _feed(tokenIn, tokenOut);
-        (, int256 price, , , ) = _latestRoundData(feed);
+        (, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
+        _revertIfPriceAfterTargetStale(block.timestamp, updatedAt);
         _revertIfPriceInvalid(price);
         return price.toUint256();
     }
