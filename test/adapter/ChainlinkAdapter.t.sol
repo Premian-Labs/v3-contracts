@@ -215,7 +215,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
         data[1] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_ETH, address(0));
 
         adapter.batchRegisterFeedMappings(data); // remove DAI/USD and DAI/ETH feeds
-        adapter.upsertPair(WETH, DAI);
 
         {
             (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter

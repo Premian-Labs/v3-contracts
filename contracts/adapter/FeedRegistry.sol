@@ -10,7 +10,7 @@ import {FeedRegistryStorage} from "./FeedRegistryStorage.sol";
 import {Tokens} from "./Tokens.sol";
 
 /// @title Adapter feed registry implementation
-contract FeedRegistry is IFeedRegistry, OwnableInternal {
+abstract contract FeedRegistry is IFeedRegistry, OwnableInternal {
     using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using Tokens for address;
 
@@ -23,20 +23,7 @@ contract FeedRegistry is IFeedRegistry, OwnableInternal {
     }
 
     /// @inheritdoc IFeedRegistry
-    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external onlyOwner {
-        for (uint256 i = 0; i < args.length; i++) {
-            address token = _tokenToDenomination(args[i].token);
-            address denomination = args[i].denomination;
-
-            if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
-            if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
-
-            bytes32 keyForPair = token.keyForUnsortedPair(denomination);
-            FeedRegistryStorage.layout().feeds[keyForPair] = args[i].feed;
-        }
-
-        emit FeedMappingsRegistered(args);
-    }
+    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external virtual;
 
     /// @inheritdoc IFeedRegistry
     function feed(address tokenA, address tokenB) external view returns (address) {
