@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
-
+// SPDX-License-Identifier: MIT
+// Derived from UD60x18 from PRBMath ( https://github.com/PaulRBerg/prb-math )
 pragma solidity ^0.8.19;
 
 import {mulDiv} from "@prb/math/Common.sol";
