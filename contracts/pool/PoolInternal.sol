@@ -240,20 +240,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _pendingClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
-        Position.Data storage pData
+        Position.Data storage pData,
+        UD60x18 balance
     ) internal view returns (UD60x18 claimableFees, SD59x18 feeRate) {
         Tick memory lowerTick = _getTick(p.lower);
         Tick memory upperTick = _getTick(p.upper);
 
         feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
-
-        claimableFees = _calculateClaimableFees(
-            feeRate,
-            pData.lastFeeRate,
-            p.liquidityPerTick(
-                _balanceOfUD60x18(p.owner, PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType))
-            )
-        );
+        claimableFees = _calculateClaimableFees(feeRate, pData.lastFeeRate, p.liquidityPerTick(balance));
     }
 
     /// @notice Returns the amount of fees an LP can claim for a position (without claiming)
@@ -279,10 +273,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _updateClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
-        Position.Data storage pData
+        Position.Data storage pData,
+        UD60x18 balance
     ) internal {
-        (UD60x18 claimableFees, SD59x18 feeRate) = _pendingClaimableFees(l, p, pData);
-
+        (UD60x18 claimableFees, SD59x18 feeRate) = _pendingClaimableFees(l, p, pData, balance);
         pData.claimableFees = pData.claimableFees + claimableFees;
         pData.lastFeeRate = feeRate;
     }
@@ -290,15 +284,21 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Updates the claimable fees of a position and transfers the claimed fees to the operator of the position.
     ///         Then resets the claimable fees to zero.
     /// @param p The position to claim fees for
-    /// @return claimedFees The amount of fees claimed (poolToken decimals)
-    function _claim(Position.KeyInternal memory p) internal returns (uint256 claimedFees) {
+    /// @return The amount of fees claimed (poolToken decimals)
+    function _claim(Position.KeyInternal memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        UD60x18 balance = _balanceOfUD60x18(p.owner, tokenId);
+        _revertIfPositionDoesNotExist(p.owner, tokenId, balance);
+
         Position.Data storage pData = l.positions[p.keyHash()];
-        _updateClaimableFees(l, p, pData);
+        _updateClaimableFees(l, p, pData, balance);
+
         UD60x18 _claimedFees = pData.claimableFees;
+        if (_claimedFees == ZERO) return 0;
 
         pData.claimableFees = ZERO;
         IERC20(l.getPoolToken()).safeTransfer(p.operator, _claimedFees);
@@ -487,8 +487,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.initialSize = _balanceOfUD60x18(p.owner, vars.tokenId);
-
-        if (vars.initialSize == ZERO) revert Pool__PositionDoesNotExist(p.owner, vars.tokenId);
+        _revertIfPositionDoesNotExist(p.owner, vars.tokenId, vars.initialSize);
 
         vars.isFullWithdrawal = vars.initialSize == size;
 
@@ -1050,30 +1049,33 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 srcKey = srcP.keyHash();
 
         uint256 srcTokenId = PoolStorage.formatTokenId(srcP.operator, srcP.lower, srcP.upper, srcP.orderType);
+        UD60x18 srcPOwnerBalance = _balanceOfUD60x18(srcP.owner, srcTokenId);
+
+        _revertIfPositionDoesNotExist(srcP.owner, srcTokenId, srcPOwnerBalance);
+        if (size > srcPOwnerBalance) revert Pool__NotEnoughTokens(srcPOwnerBalance, size);
 
         uint256 dstTokenId = srcP.operator == newOperator
             ? srcTokenId
             : PoolStorage.formatTokenId(newOperator, srcP.lower, srcP.upper, srcP.orderType);
 
-        UD60x18 balance = _balanceOfUD60x18(srcP.owner, srcTokenId);
-        if (size > balance) revert Pool__NotEnoughTokens(balance, size);
-
-        UD60x18 proportionTransferred = size.div(balance);
-
         Position.Data storage dstData = l.positions[dstP.keyHash()];
         Position.Data storage srcData = l.positions[srcKey];
 
         // Call function to update claimable fees, but do not claim them
-        _updateClaimableFees(l, srcP, srcData);
+        _updateClaimableFees(l, srcP, srcData, srcPOwnerBalance);
 
-        if (_balanceOf(newOwner, dstTokenId) > 0) {
-            // Update claimable fees to reset the fee range rate
-            _updateClaimableFees(l, dstP, dstData);
-        } else {
-            dstData.lastFeeRate = srcData.lastFeeRate;
+        {
+            UD60x18 newOwnerBalance = _balanceOfUD60x18(newOwner, dstTokenId);
+            if (newOwnerBalance > ZERO) {
+                // Update claimable fees to reset the fee range rate
+                _updateClaimableFees(l, dstP, dstData, newOwnerBalance);
+            } else {
+                dstData.lastFeeRate = srcData.lastFeeRate;
+            }
         }
 
         {
+            UD60x18 proportionTransferred = size.div(srcPOwnerBalance);
             UD60x18 feesTransferred = proportionTransferred * srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
             srcData.claimableFees = srcData.claimableFees - feesTransferred;
@@ -1090,7 +1092,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _mint(newOwner, dstTokenId, size);
         }
 
-        if (size == balance) delete l.positions[srcKey];
+        if (size == srcPOwnerBalance) delete l.positions[srcKey];
 
         emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
@@ -1967,6 +1969,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 quoteOBHash
     ) internal view {
         _isQuoteOBValid(l, args, quoteOB, quoteOBHash, true);
+    }
+
+    /// @notice Revert if the position does not exist
+    function _revertIfPositionDoesNotExist(address owner, uint256 tokenId, UD60x18 balance) internal pure {
+        if (balance == ZERO) revert Pool__PositionDoesNotExist(owner, tokenId);
     }
 
     /// @notice Returns true if OB quote is valid

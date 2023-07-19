@@ -188,6 +188,22 @@ abstract contract PoolTransferTest is DeployTest {
         pool.transferPosition(posKey, users.trader, users.lp, ud(0));
     }
 
+    function test_transferPosition_RevertIf_PositionDoesNotExist() public {
+        deposit(1000 ether);
+
+        uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
+        assertEq(tokenIds.length, 0);
+
+        posKey.operator = users.otherLP; // otherLP creates a fake position
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__PositionDoesNotExist.selector, posKey.owner, tokenId())
+        );
+
+        vm.prank(users.otherLP);
+        pool.transferPosition(posKey, users.trader, users.lp, ud(1000 ether + 1000));
+    }
+
     function test_transferPosition_RevertIf_NotEnoughTokensToTransfer() public {
         deposit(1000 ether);
 

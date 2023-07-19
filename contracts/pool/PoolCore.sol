@@ -164,7 +164,17 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function getClaimableFees(Position.Key calldata p) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
-        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p.toKeyInternal(l.strike, l.isCallPool), pData);
+
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        UD60x18 balance = _balanceOfUD60x18(p.owner, tokenId);
+
+        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(
+            l,
+            p.toKeyInternal(l.strike, l.isCallPool),
+            pData,
+            balance
+        );
+
         return l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 
