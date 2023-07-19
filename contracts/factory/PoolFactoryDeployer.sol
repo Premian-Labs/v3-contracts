@@ -1,14 +1,15 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {PoolProxy} from "../pool/PoolProxy.sol";
 import {IPoolFactoryDeployer} from "./IPoolFactoryDeployer.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 
-contract PoolFactoryDeployer is IPoolFactoryDeployer {
+contract PoolFactoryDeployer is IPoolFactoryDeployer, ReentrancyGuard {
     address public immutable DIAMOND;
     address public immutable POOL_FACTORY;
 
@@ -18,7 +19,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
     }
 
     /// @inheritdoc IPoolFactoryDeployer
-    function deployPool(IPoolFactory.PoolKey calldata k) external returns (address poolAddress) {
+    function deployPool(IPoolFactory.PoolKey calldata k) external nonReentrant returns (address poolAddress) {
         _revertIfNotPoolFactory(msg.sender);
 
         bytes32 salt = keccak256(_encodePoolProxyArgs(k));
@@ -35,7 +36,7 @@ contract PoolFactoryDeployer is IPoolFactoryDeployer {
 
         bytes32 hash = keccak256(
             abi.encodePacked(
-                bytes1(0xff), // 0
+                bytes1(0xff), // 255
                 address(this), // address of factory contract
                 keccak256(args), // salt
                 // The contract bytecode

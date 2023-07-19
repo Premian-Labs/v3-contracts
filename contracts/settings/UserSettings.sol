@@ -1,15 +1,16 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {Multicall} from "@solidstate/contracts/utils/Multicall.sol";
 
 import {IUserSettings} from "./IUserSettings.sol";
 import {UserSettingsStorage} from "./UserSettingsStorage.sol";
 
-contract UserSettings is IUserSettings, Multicall {
+contract UserSettings is IUserSettings, Multicall, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IUserSettings
@@ -37,7 +38,11 @@ contract UserSettings is IUserSettings, Multicall {
     }
 
     /// @inheritdoc IUserSettings
-    function setActionAuthorization(address operator, Action[] memory actions, bool[] memory authorization) external {
+    function setActionAuthorization(
+        address operator,
+        Action[] memory actions,
+        bool[] memory authorization
+    ) external nonReentrant {
         if (actions.length != authorization.length) revert UserSettings__InvalidArrayLength();
 
         UserSettingsStorage.Layout storage l = UserSettingsStorage.layout();
@@ -58,7 +63,7 @@ contract UserSettings is IUserSettings, Multicall {
     }
 
     /// @inheritdoc IUserSettings
-    function setAuthorizedCost(UD60x18 amount) external {
+    function setAuthorizedCost(UD60x18 amount) external nonReentrant {
         UserSettingsStorage.layout().authorizedCost[msg.sender] = amount;
         emit AuthorizedCostUpdated(msg.sender, amount);
     }

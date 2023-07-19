@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UintUtils} from "@solidstate/contracts/utils/UintUtils.sol";
 
@@ -923,10 +923,10 @@ abstract contract PoolDepositTest is DeployTest {
 
         IPoolInternal.TickWithRates[] memory ticks = pool.ticks();
 
-        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[0].price, PoolStorage.MIN_TICK_PRICE);
         assertEq(ticks[1].price, posKey.lower);
         assertEq(ticks[2].price, posKey.upper);
-        assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[3].price, PoolStorage.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, 0);
         assertEq(ticks[1].longRate, 5e28);
@@ -945,11 +945,11 @@ abstract contract PoolDepositTest is DeployTest {
 
         ticks = pool.ticks();
 
-        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[0].price, PoolStorage.MIN_TICK_PRICE);
         assertEq(ticks[1].price, posKey.lower);
         assertEq(ticks[2].price, customPosKey.lower);
         assertEq(ticks[3].price, posKey.upper);
-        assertEq(ticks[4].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[4].price, PoolStorage.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, 0);
         assertEq(ticks[1].longRate, 5e28);
@@ -961,8 +961,8 @@ abstract contract PoolDepositTest is DeployTest {
     function test_ticks_NoDeposit() public {
         IPoolInternal.TickWithRates[] memory ticks = pool.ticks();
 
-        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
-        assertEq(ticks[1].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[0].price, PoolStorage.MIN_TICK_PRICE);
+        assertEq(ticks[1].price, PoolStorage.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, 0);
         assertEq(ticks[0].shortRate, 0);
@@ -993,10 +993,10 @@ abstract contract PoolDepositTest is DeployTest {
 
         IPoolInternal.TickWithRates[] memory ticks = pool.ticks();
 
-        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[0].price, PoolStorage.MIN_TICK_PRICE);
         assertEq(ticks[1].price, customPosKey0.upper);
         assertEq(ticks[2].price, customPosKey1.upper);
-        assertEq(ticks[3].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[3].price, PoolStorage.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, 50e28);
         assertEq(ticks[1].longRate, 0);
@@ -1050,13 +1050,13 @@ abstract contract PoolDepositTest is DeployTest {
 
         IPoolInternal.TickWithRates[] memory ticks = pool.ticks();
 
-        assertEq(ticks[0].price, Pricing.MIN_TICK_PRICE);
+        assertEq(ticks[0].price, PoolStorage.MIN_TICK_PRICE);
         assertEq(ticks[1].price, customPosKey0.upper);
         assertEq(ticks[2].price, customPosKey1.lower);
         assertEq(ticks[3].price, customPosKey1.upper);
         assertEq(ticks[4].price, customPosKey2.upper);
         assertEq(ticks[5].price, customPosKey3.upper);
-        assertEq(ticks[6].price, Pricing.MAX_TICK_PRICE);
+        assertEq(ticks[6].price, PoolStorage.MAX_TICK_PRICE);
 
         assertEq(ticks[0].longRate, 40e28);
         assertEq(ticks[0].shortRate, 0);

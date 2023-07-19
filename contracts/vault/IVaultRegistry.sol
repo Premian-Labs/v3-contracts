@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 interface IVaultRegistry {
     // Enumerations
@@ -160,7 +160,7 @@ interface IVaultRegistry {
     /// @return The vault settings.
     function getSettings(bytes32 vaultType) external view returns (bytes memory);
 
-    /// @notice Sets the implementation for the vaultType.
+    /// @notice Sets the settings for the vaultType.
     /// @param vaultType The vault type.
     /// @param updatedSettings The updated settings for the vault type.
     function updateSettings(bytes32 vaultType, bytes memory updatedSettings) external;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import "forge-std/console2.sol";
 
@@ -439,9 +439,9 @@ contract DeployTest is Test, Assertions {
         IERC20 token = IERC20(getPoolToken());
         initialCollateral = toTokenDecimals(isCallTest ? depositSize : depositSize * strike);
 
-        vm.startPrank(users.lp);
+        vm.startPrank(posKey.operator);
 
-        deal(address(token), users.lp, initialCollateral);
+        deal(address(token), posKey.operator, initialCollateral);
         token.approve(address(router), initialCollateral);
 
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(
@@ -498,7 +498,7 @@ contract DeployTest is Test, Assertions {
         if (isBuy && isCSUP) posKey.orderType = Position.OrderType.CSUP;
         if (isBuy && !isCSUP) posKey.orderType = Position.OrderType.CS;
 
-        initialCollateral = deposit(depositSize);
+        initialCollateral = deposit(posKey, depositSize);
 
         UD60x18 _tradeSize = ud(tradeSize);
 

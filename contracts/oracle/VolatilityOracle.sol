@@ -1,12 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
@@ -19,7 +20,7 @@ import {ZERO, iZERO, iONE, iTWO} from "../libraries/Constants.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
-contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
+contract VolatilityOracle is IVolatilityOracle, OwnableInternal, ReentrancyGuard {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
@@ -28,8 +29,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
     using PRBMathExtra for SD59x18;
 
     uint256 private constant DECIMALS = 12;
-
-    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
 
     struct Params {
         SD59x18[5] tau;
@@ -50,6 +49,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.add(accounts[i]);
+            emit AddWhitelistedRelayer(accounts[i]);
         }
     }
 
@@ -59,21 +59,13 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             l.whitelistedRelayers.remove(accounts[i]);
+            emit RemoveWhitelistedRelayer(accounts[i]);
         }
     }
 
     /// @inheritdoc IVolatilityOracle
     function getWhitelistedRelayers() external view returns (address[] memory) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        uint256 length = l.whitelistedRelayers.length();
-        address[] memory result = new address[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            result[i] = l.whitelistedRelayers.at(i);
-        }
-
-        return result;
+        return VolatilityOracleStorage.layout().whitelistedRelayers.toArray();
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -94,7 +86,7 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] calldata psi,
         bytes32[] calldata rho,
         UD60x18 riskFreeRate
-    ) external {
+    ) external nonReentrant {
         if (
             tokens.length != tau.length ||
             tokens.length != theta.length ||
