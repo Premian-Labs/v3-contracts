@@ -379,6 +379,33 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(price, priceBeforeUpsert);
     }
 
+    function test_getPrice_RevertIf_PriceAfterTargetIsStale() public {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+        adapter.upsertPair(stubCoin, CHAINLINK_USD);
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 100000000000;
+        timestamps[0] = block.timestamp - 25 hours;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        assertEq(adapter.getPrice(stubCoin, CHAINLINK_USD), ud(uint256(prices[0]) * 1e10));
+        vm.warp(block.timestamp + 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter.ChainlinkAdapter__PriceAfterTargetIsStale.selector,
+                block.timestamp,
+                timestamps[0],
+                block.timestamp
+            )
+        );
+
+        adapter.getPrice(stubCoin, CHAINLINK_USD);
+    }
+
     function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
@@ -563,7 +590,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         uint256[] memory timestamps = new uint256[](1);
 
         prices[0] = 100000000000;
-        timestamps[0] = target - 90000;
+        timestamps[0] = target - 90001;
 
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
