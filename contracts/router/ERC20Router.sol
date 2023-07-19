@@ -21,7 +21,7 @@ contract ERC20Router is IERC20Router, ReentrancyGuard {
 
     /// @inheritdoc IERC20Router
     function safeTransferFrom(address token, address from, address to, uint256 amount) external nonReentrant {
-        if (IPoolFactory(POOL_FACTORY).isPool(msg.sender) == false) revert ERC20Router__NotAuthorized();
+        if (!IPoolFactory(POOL_FACTORY).isPool(msg.sender)) revert ERC20Router__NotAuthorized();
 
         IERC20(token).safeTransferFrom(from, to, amount);
     }
