@@ -6,14 +6,6 @@
 	path = lib/BokkyPooBahsDateTimeLibrary
 	url = https://github.com/bokkypoobah/BokkyPooBahsDateTimeLibrary
 	branch = 1dc26f977c57a6ba3ed6d7c53cafdb191e7e59ae
-[submodule "lib/v3-core"]
-	path = lib/v3-core
-	url = https://github.com/Uniswap/v3-core
-	branch = 6562c52e8f75f0c10f9deaf44861847585fc8129
-[submodule "lib/v3-periphery"]
-	path = lib/v3-periphery
-	url = https://github.com/Uniswap/v3-periphery
-	branch = b325bb0905d922ae61fcc7df85ee802e8df5e96c
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std

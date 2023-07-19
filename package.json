@@ -14,7 +14,7 @@
     "buidler",
     "wow"
   ],
-  "license": "UNLICENSED",
+  "license": "LicenseRef-P3-DUAL",
   "main": "index.js",
   "repository": "https://github.com/Premian-Labs/premia-contracts-v3-private.git",
   "author": "Premia",

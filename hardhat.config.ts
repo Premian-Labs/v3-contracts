@@ -132,7 +132,6 @@ export default {
     path: './abi',
     clear: true,
     flat: true,
-    except: ['@uniswap'],
   },
 
   etherscan: {

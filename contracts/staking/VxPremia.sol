@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {PremiaStaking} from "./PremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -104,7 +104,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function castVotes(VxPremiaStorage.Vote[] calldata votes) external {
+    function castVotes(VxPremiaStorage.Vote[] calldata votes) external nonReentrant {
         VxPremiaStorage.Layout storage l = VxPremiaStorage.layout();
 
         uint256 userVotingPower = _calculateUserPower(

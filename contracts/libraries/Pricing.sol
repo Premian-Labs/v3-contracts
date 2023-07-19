@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -17,10 +17,6 @@ import {ZERO, ONE} from "./Constants.sol";
 library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
-
-    UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MIN_TICK_PRICE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
 
     struct Args {
         UD60x18 liquidityRate; // Amount of liquidity (18 decimals)
@@ -62,7 +58,7 @@ library Pricing {
     function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) internal pure returns (UD60x18) {
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
-        return (upper - lower) / MIN_TICK_DISTANCE;
+        return (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
     }
 
     /// @notice Returns the number of ticks between `args.lower` and `args.upper`
