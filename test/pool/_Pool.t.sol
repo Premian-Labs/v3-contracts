@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {PoolAnnihilateTest} from "./Pool.annihilate.t.sol";
 import {PoolClaimTest} from "./Pool.claim.t.sol";

@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
@@ -41,7 +41,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             if (l.whitelistedRelayers.add(accounts[i])) {
-                emit AddRelayer(accounts[i]);
+                emit AddWhitelistedRelayer(accounts[i]);
             }
         }
     }
@@ -52,7 +52,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
 
         for (uint256 i = 0; i < accounts.length; i++) {
             if (l.whitelistedRelayers.remove(accounts[i])) {
-                emit RemoveRelayer(accounts[i]);
+                emit RemoveWhitelistedRelayer(accounts[i]);
             }
         }
     }

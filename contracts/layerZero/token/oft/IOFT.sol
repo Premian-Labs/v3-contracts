@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {IOFTCore} from "./IOFTCore.sol";
 import {ISolidStateERC20} from "@solidstate/contracts/token/ERC20/ISolidStateERC20.sol";
