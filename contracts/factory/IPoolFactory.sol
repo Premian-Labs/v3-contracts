@@ -20,6 +20,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__OptionStrikeInvalid(UD60x18 strike, UD60x18 strikeInterval);
     error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
+    error PoolFactory__TransferNativeTokenFailed();
     error PoolFactory__ZeroAddress();
 
     struct PoolKey {

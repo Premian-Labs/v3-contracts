@@ -93,14 +93,8 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         address _poolAddress = _getPoolAddress(poolKey);
         if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
-        if (fee == 0) revert PoolFactory__InitializationFeeIsZero();
-        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
-
-        payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
-
-        if (msg.value > fee) {
-            payable(msg.sender).transfer(msg.value - fee);
-        }
+        _safeTransferNativeToken(PoolFactoryStorage.layout().feeReceiver, fee);
+        if (msg.value > fee) _safeTransferNativeToken(msg.sender, msg.value - fee);
 
         poolAddress = IPoolFactoryDeployer(POOL_FACTORY_DEPLOYER).deployPool(k);
 
@@ -170,6 +164,12 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
     //         This is used to convert the initializationFee from USD to native token
     function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
         return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
+    }
+
+    /// @notice Safely transfer native token to the given address
+    function _safeTransferNativeToken(address to, uint256 amount) internal {
+        (bool success, ) = to.call{value: amount}("");
+        if (!success) revert PoolFactory__TransferNativeTokenFailed();
     }
 
     /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero
