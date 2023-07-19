@@ -93,11 +93,10 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         address _poolAddress = _getPoolAddress(poolKey);
         if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
+        if (fee == 0) revert PoolFactory__InitializationFeeIsZero();
         if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
 
-        if (fee > 0) {
-            payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
-        }
+        payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
 
         if (msg.value > fee) {
             payable(msg.sender).transfer(msg.value - fee);
