@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
@@ -50,7 +50,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     }
 
     /// @inheritdoc IOracleAdapter
-    function upsertPair(address tokenA, address tokenB) external {
+    function upsertPair(address tokenA, address tokenB) external nonReentrant {
         (address mappedTokenA, address mappedTokenB) = _mapToDenominationAndSort(tokenA, tokenB);
 
         PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
@@ -160,9 +160,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address tokenB
     ) internal view returns (PricingPath path, address mappedTokenA, address mappedTokenB) {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
-
         (address sortedA, address sortedB) = mappedTokenA.sortTokens(mappedTokenB);
-
         path = ChainlinkAdapterStorage.layout().pricingPath[sortedA.keyForSortedPair(sortedB)];
     }
 

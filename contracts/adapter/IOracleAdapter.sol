@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -8,8 +8,7 @@ interface IOracleAdapter {
     /// @notice The type of adapter
     enum AdapterType {
         None,
-        Chainlink,
-        UniswapV3
+        Chainlink
     }
 
     /// @notice Thrown when attempting to increase array size

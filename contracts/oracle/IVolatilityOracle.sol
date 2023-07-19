@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -13,6 +13,10 @@ interface IVolatilityOracle {
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
     error VolatilityOracle__TimeToMaturityIsZero();
+
+    event AddWhitelistedRelayer(address indexed account);
+    event RemoveWhitelistedRelayer(address indexed account);
+    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
 
     /// @notice Add relayers to the whitelist so that they can add oracle surfaces
     /// @param accounts The addresses to add to the whitelist

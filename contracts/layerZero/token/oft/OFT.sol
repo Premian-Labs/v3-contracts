@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {ERC20Base, ERC20BaseStorage} from "@solidstate/contracts/token/ERC20/base/ERC20Base.sol";
 import {SolidStateERC20} from "@solidstate/contracts/token/ERC20/SolidStateERC20.sol";
@@ -23,7 +22,7 @@ contract OFT is OFTCore, SolidStateERC20, IOFT {
 
         if (from != spender) {
             unchecked {
-                mapping(address => uint256) storage allowances = ERC20BaseStorage.layout().allowances[spender];
+                mapping(address => uint256) storage allowances = ERC20BaseStorage.layout().allowances[from];
 
                 uint256 allowance = allowances[spender];
                 if (amount > allowance) revert OFT_InsufficientAllowance();

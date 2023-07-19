@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
@@ -33,6 +33,8 @@ library PoolStorage {
     uint8 internal constant TOKEN_VERSION = 1;
 
     UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
+    UD60x18 internal constant MIN_TICK_PRICE = UD60x18.wrap(0.001e18); // 0.001
+    UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
 
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.Pool");
 
@@ -139,6 +141,8 @@ library PoolStorage {
         UD60x18 upper,
         Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
+        if (lower < MIN_TICK_PRICE || upper > MAX_TICK_PRICE) revert IPoolInternal.Pool__InvalidRange(lower, upper);
+
         tokenId =
             (uint256(TOKEN_VERSION) << 252) +
             (uint256(orderType) << 180) +
