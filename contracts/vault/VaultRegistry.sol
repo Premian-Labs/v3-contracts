@@ -108,32 +108,34 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         }
 
         if (l.vaults[vault].side != side) {
-            l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
-            l.vaultsByTradeSide[side].add(vault);
-
             if (l.vaults[vault].side == TradeSide.Both) {
                 l.vaultsByTradeSide[TradeSide.Buy].remove(vault);
                 l.vaultsByTradeSide[TradeSide.Sell].remove(vault);
+            } else {
+                l.vaultsByTradeSide[l.vaults[vault].side].remove(vault);
             }
 
             if (side == TradeSide.Both) {
                 l.vaultsByTradeSide[TradeSide.Buy].add(vault);
                 l.vaultsByTradeSide[TradeSide.Sell].add(vault);
+            } else {
+                l.vaultsByTradeSide[side].add(vault);
             }
         }
 
         if (l.vaults[vault].optionType != optionType) {
-            l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
-            l.vaultsByOptionType[optionType].add(vault);
-
             if (l.vaults[vault].optionType == OptionType.Both) {
                 l.vaultsByOptionType[OptionType.Call].remove(vault);
                 l.vaultsByOptionType[OptionType.Put].remove(vault);
+            } else {
+                l.vaultsByOptionType[l.vaults[vault].optionType].remove(vault);
             }
 
             if (optionType == OptionType.Both) {
                 l.vaultsByOptionType[OptionType.Call].add(vault);
                 l.vaultsByOptionType[OptionType.Put].add(vault);
+            } else {
+                l.vaultsByOptionType[optionType].add(vault);
             }
         }
 

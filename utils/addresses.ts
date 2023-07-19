@@ -7,8 +7,6 @@ export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
 export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
 
-export const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
-
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
 export const tokens: { [symbol: string]: Token } =  {

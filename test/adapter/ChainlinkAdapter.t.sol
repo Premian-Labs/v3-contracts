@@ -190,6 +190,49 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.upsertPair(WBTC, address(0));
     }
 
+    function test_batchRegisterFeedMappings_RemoveFeed() public {
+        adapter.upsertPair(WETH, DAI);
+
+        {
+            (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
+                .describePricingPath(DAI);
+
+            assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
+            assertEq(path.length, 1);
+            assertEq(path[0][0], 0x158228e08C52F3e2211Ccbc8ec275FA93f6033FC);
+            assertEq(decimals.length, 1);
+            assertEq(decimals[0], 18);
+        }
+
+        {
+            (bool isCached, bool hasPath) = adapter.isPairSupported(WETH, DAI);
+            assertTrue(isCached);
+            assertTrue(hasPath);
+        }
+
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](2);
+        data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
+        data[1] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_ETH, address(0));
+
+        adapter.batchRegisterFeedMappings(data); // remove DAI/USD and DAI/ETH feeds
+        adapter.upsertPair(WETH, DAI);
+
+        {
+            (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
+                .describePricingPath(DAI);
+
+            assertEq(uint256(adapterType), uint256(IOracleAdapter.AdapterType.Chainlink));
+            assertEq(path.length, 0);
+            assertEq(decimals.length, 0);
+        }
+
+        {
+            (bool isCached, bool hasPath) = adapter.isPairSupported(WETH, DAI);
+            assertFalse(isCached);
+            assertFalse(hasPath);
+        }
+    }
+
     function test_batchRegisterFeedMappings_RevertIf_TokenEqualDenomination() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));

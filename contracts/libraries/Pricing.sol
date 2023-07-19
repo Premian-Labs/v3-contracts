@@ -18,10 +18,6 @@ library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
 
-    UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MIN_TICK_PRICE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
-
     struct Args {
         UD60x18 liquidityRate; // Amount of liquidity (18 decimals)
         UD60x18 marketPrice; // The current market price (18 decimals)
@@ -62,7 +58,7 @@ library Pricing {
     function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) internal pure returns (UD60x18) {
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
-        return (upper - lower) / MIN_TICK_DISTANCE;
+        return (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
     }
 
     /// @notice Returns the number of ticks between `args.lower` and `args.upper`

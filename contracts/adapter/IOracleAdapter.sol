@@ -8,8 +8,7 @@ interface IOracleAdapter {
     /// @notice The type of adapter
     enum AdapterType {
         None,
-        Chainlink,
-        UniswapV3
+        Chainlink
     }
 
     /// @notice Thrown when attempting to increase array size

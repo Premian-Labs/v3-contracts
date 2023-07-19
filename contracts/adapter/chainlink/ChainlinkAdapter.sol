@@ -160,9 +160,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         address tokenB
     ) internal view returns (PricingPath path, address mappedTokenA, address mappedTokenB) {
         (mappedTokenA, mappedTokenB) = _mapToDenomination(tokenA, tokenB);
-
         (address sortedA, address sortedB) = mappedTokenA.sortTokens(mappedTokenB);
-
         path = ChainlinkAdapterStorage.layout().pricingPath[sortedA.keyForSortedPair(sortedB)];
     }
 
