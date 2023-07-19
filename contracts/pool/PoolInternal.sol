@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {EIP712} from "@solidstate/contracts/cryptography/EIP712.sol";
