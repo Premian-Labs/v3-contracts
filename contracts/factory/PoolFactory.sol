@@ -144,7 +144,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
-    // @inheritdoc IPoolFactory
+    /// @inheritdoc IPoolFactory
     function initializationFee(IPoolFactory.PoolKey calldata k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
@@ -157,14 +157,14 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         return (fee * discount) / _getWrappedNativeUSDSpotPrice();
     }
 
-    // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
-    //         This is used in the calculation of the initializationFee
+    /// @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
+    ///         This is used in the calculation of the initializationFee
     function _getSpotPrice(address oracleAdapter, address base, address quote) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).getPrice(base, quote);
     }
 
-    // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
-    //         This is used to convert the initializationFee from USD to native token
+    /// @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
+    ///         This is used to convert the initializationFee from USD to native token
     function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
         return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
     }
