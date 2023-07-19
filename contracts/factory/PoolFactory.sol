@@ -90,6 +90,9 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k).unwrap();
 
+        if (fee == 0) revert PoolFactory__InitializationFeeIsZero();
+        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
+
         address _poolAddress = _getPoolAddress(poolKey);
         if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
