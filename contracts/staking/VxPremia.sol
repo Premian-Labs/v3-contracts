@@ -139,7 +139,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
                 }
             }
 
-            if (isValid == false) revert VxPremia__InvalidPoolAddress();
+            if (!isValid) revert VxPremia__InvalidPoolAddress();
 
             userVotes.push(vote);
             l.votes[vote.version][vote.target] += vote.amount;
