@@ -203,7 +203,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         uint256 collateral = toTokenDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
-        uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
+        uint256 mintingFee = pool.takerFee(address(0), tradeSize, toTokenDecimals(ud(0.03 ether) * tradeSize), true);
 
         // Check that long contracts have been transferred to trader
         assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
@@ -234,7 +234,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         // Make trader underwrite 2 option contracts to receive 2 shorts
         UD60x18 size = ud(2 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true);
+        uint256 fee = pool.takerFee(users.trader, size, toTokenDecimals(ud(0.03 ether) * size), true);
 
         {
             IUserSettings.Action[] memory actions = new IUserSettings.Action[](2);
@@ -276,7 +276,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         uint256 depositSize = toTokenDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
         uint256 collateral = toTokenDecimals(isCallTest ? tradeSize : tradeSize * strike);
-        uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
+        uint256 mintingFee = pool.takerFee(address(0), tradeSize, toTokenDecimals(ud(0.03 ether) * tradeSize), true);
 
         // Check that long contracts have been transferred to trader
         assertEq(pool.balanceOf(users.trader, PoolStorage.SHORT), ud(0 ether));
@@ -309,7 +309,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         uint256 depositSize = toTokenDecimals(isCallTest ? ud(5e18) : ud(5e18) * strike);
         uint256 collateral = toTokenDecimals(isCallTest ? ud(3e18) : ud(3e18) * strike);
 
-        uint256 mintingFee = pool.takerFee(address(0), tradeSize, 0, false);
+        uint256 mintingFee = pool.takerFee(address(0), tradeSize, toTokenDecimals(ud(0.03 ether) * tradeSize), true);
 
         vm.stopPrank();
         vm.prank(referrer);
@@ -348,7 +348,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
         setup();
 
         UD60x18 tradeSize = ud(3e18);
-        uint256 fee = pool.takerFee(users.trader, tradeSize, 0, true);
+        uint256 fee = pool.takerFee(users.trader, tradeSize, toTokenDecimals(ud(0.03 ether) * tradeSize), true);
 
         uint256 totalPremium = vault.getQuote(poolKey, tradeSize, true, address(0));
 

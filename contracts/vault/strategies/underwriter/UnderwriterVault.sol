@@ -702,7 +702,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         quote.mintingFee = IPool(POOL_DIAMOND)._takerFeeLowLevel(
             args.taker,
             args.size,
-            ud(0),
+            args.size * ud(0.03e18),
             true,
             args.strike,
             l.isCall

@@ -3,7 +3,7 @@
 pragma solidity >=0.8.19;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
@@ -425,7 +425,9 @@ contract UnderwriterVaultMock is UnderwriterVault {
         }
         IERC20(_asset()).approve(ROUTER, allowance.unwrap());
 
-        UD60x18 mintingFee = l.convertAssetToUD60x18(IPool(pool).takerFee(address(0), size, 0, true));
+        UD60x18 mintingFee = l.convertAssetToUD60x18(
+            IPool(pool).takerFee(address(0), size, l.convertAssetFromUD60x18(ud(0.03 ether) * size), true)
+        );
 
         IPool(pool).writeFrom(address(this), msg.sender, size, address(0));
 
