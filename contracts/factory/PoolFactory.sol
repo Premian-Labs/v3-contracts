@@ -66,6 +66,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolFactory
     function setDiscountPerPool(UD60x18 discountPerPool) external onlyOwner {
+        if (discountPerPool == ZERO || discountPerPool >= ONE) revert PoolFactory__InvalidInput();
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.discountPerPool = discountPerPool;
         emit SetDiscountPerPool(discountPerPool);

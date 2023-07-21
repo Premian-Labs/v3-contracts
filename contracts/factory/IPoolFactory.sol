@@ -10,6 +10,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__IdenticalAddresses();
     error PoolFactory__InitializationFeeIsZero();
     error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
+    error PoolFactory__InvalidInput();
     error PoolFactory__NotAuthorized();
     error PoolFactory__OptionExpired(uint256 maturity);
     error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
