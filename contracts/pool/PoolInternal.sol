@@ -60,8 +60,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable VXPREMIA;
 
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
-    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE_1 = UD60x18.wrap(0.03e18); // 3%
-    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE_2 = UD60x18.wrap(0.10e18); // 10%
+    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
     UD60x18 internal constant EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
     UD60x18 internal constant MAX_EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of intrinsic value
@@ -111,13 +110,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 strike,
         bool isCallPool
     ) internal view returns (UD60x18) {
+        if (premium == ZERO) {
+            premium = ud(0.1 ether) * size;
+            isPremiumNormalized = true;
+        }
+
         if (!isPremiumNormalized) {
             // Normalize premium
             premium = Position.collateralToContracts(premium, strike, isCallPool);
         }
 
-        UD60x18 premiumFee1 = premium * PREMIUM_FEE_PERCENTAGE_1;
-        UD60x18 premiumFee2 = premium * PREMIUM_FEE_PERCENTAGE_2;
+        UD60x18 premiumFee1 = premium * PREMIUM_FEE_PERCENTAGE;
+        UD60x18 premiumFee2 = premium * MAX_EXERCISE_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.min(premiumFee2, PRBMathExtra.max(premiumFee1, notionalFee));
 
