@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIY
+// SPDX-License-Identifier: MIT
 // Derived from SD59x18 from PRBMath ( https://github.com/PaulRBerg/prb-math )
 pragma solidity ^0.8.19;
 
