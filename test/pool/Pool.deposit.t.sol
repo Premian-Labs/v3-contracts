@@ -858,6 +858,57 @@ abstract contract PoolDepositTest is DeployTest {
         deposit(depositSize);
     }
 
+    function test_deposit_RevertIf_InvalidPositionState_NonZeroBalance_ZeroLastDeposit() public {
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 depositSize = ud(1e18);
+        uint256 collateral = toTokenDecimals(isCallTest ? depositSize : depositSize * poolKey.strike);
+
+        pool.mint(users.lp, tokenId(), depositSize);
+
+        //////
+
+        vm.startPrank(posKey.operator);
+        deal(address(token), posKey.operator, collateral);
+        token.approve(address(router), collateral);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(posKey.lower, posKey.upper);
+
+        //////
+
+        uint256 balance = depositSize.unwrap();
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, balance, 0));
+        pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
+        vm.stopPrank();
+
+        //////
+    }
+
+    function test_deposit_RevertIf_InvalidPositionState_ZeroBalance_NonZeroLastDeposit() public {
+        IERC20 token = IERC20(getPoolToken());
+
+        UD60x18 depositSize = ud(1e18);
+        uint256 collateral = toTokenDecimals(isCallTest ? depositSize : depositSize * poolKey.strike);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        uint256 timestamp = block.timestamp;
+        pool.forceUpdateLastDeposit(pKeyInternal, timestamp);
+
+        //////
+
+        vm.startPrank(posKey.operator);
+        deal(address(token), posKey.operator, collateral);
+        token.approve(address(router), collateral);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = pool.getNearestTicksBelow(posKey.lower, posKey.upper);
+
+        //////
+
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, 0, timestamp));
+        pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
+        vm.stopPrank();
+
+        //////
+    }
+
     function test_ticks_ReturnExpectedValues() public {
         deposit(1000 ether);
 

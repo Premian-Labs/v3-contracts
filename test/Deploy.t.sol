@@ -290,6 +290,7 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getPositionData.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateClaimableFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateLastDeposit.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);

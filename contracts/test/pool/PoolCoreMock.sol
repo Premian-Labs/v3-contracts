@@ -141,4 +141,8 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
             _balanceOfUD60x18(p.owner, PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType))
         );
     }
+
+    function forceUpdateLastDeposit(Position.KeyInternal memory p, uint256 timestamp) external {
+        PoolStorage.layout().positions[p.keyHash()].lastDeposit = timestamp;
+    }
 }

@@ -358,6 +358,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        uint256 balance = _balanceOf(p.owner, tokenId);
+
+        Position.Data storage pData = l.positions[p.keyHash()];
+
+        if ((balance > 0 || pData.lastDeposit > 0) && (balance == 0 || pData.lastDeposit == 0))
+            revert Pool__InvalidPositionState(balance, pData.lastDeposit);
+
+        pData.lastDeposit = block.timestamp;
+
         // Set the market price correctly in case it's stranded
         if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
             l.marketPrice = _getStrandedMarketPriceUpdate(p, isBidIfStrandedMarketPrice);
@@ -372,9 +382,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfTickWidthInvalid(p.upper);
         _revertIfInvalidSize(p.lower, p.upper, args.size);
 
-        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
-
-        delta = p.calculatePositionUpdate(_balanceOfUD60x18(p.owner, tokenId), args.size.intoSD59x18(), l.marketPrice);
+        delta = p.calculatePositionUpdate(ud(balance), args.size.intoSD59x18(), l.marketPrice);
 
         _transferTokens(
             l,
@@ -385,11 +393,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             delta.shorts.intoUD60x18()
         );
 
-        Position.Data storage pData = l.positions[p.keyHash()];
-
         _depositFeeAndTicksUpdate(l, pData, p, args.belowLower, args.belowUpper, args.size, tokenId);
-
-        pData.lastDeposit = block.timestamp;
 
         emit Deposit(
             p.owner,

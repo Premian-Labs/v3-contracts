@@ -67,4 +67,6 @@ interface IPoolCoreMock {
     function getPositionData(Position.KeyInternal memory p) external view returns (Position.Data memory);
 
     function forceUpdateClaimableFees(Position.KeyInternal memory p) external;
+
+    function forceUpdateLastDeposit(Position.KeyInternal memory p, uint256 timestamp) external;
 }
