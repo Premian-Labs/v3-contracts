@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.19;
 
+import {Test} from "forge-std/Test.sol";
+
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
+import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
@@ -215,7 +217,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
         data[1] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_ETH, address(0));
 
         adapter.batchRegisterFeedMappings(data); // remove DAI/USD and DAI/ETH feeds
-        adapter.upsertPair(WETH, DAI);
 
         {
             (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
@@ -250,6 +251,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, address(0), address(1));
         vm.expectRevert(IFeedRegistry.FeedRegistry__ZeroAddress.selector);
+        adapter.batchRegisterFeedMappings(data);
+    }
+
+    function test_batchRegisterFeedMappings_RevertIf_NotOwner() public {
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
+        data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vm.prank(vm.addr(1));
         adapter.batchRegisterFeedMappings(data);
     }
 

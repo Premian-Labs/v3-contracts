@@ -34,7 +34,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     //////////////////////////////////////////////////
 
     modifier onlyAuthorized() {
-        if (FeeConverterStorage.layout().isAuthorized[msg.sender] == false) revert FeeConverter__NotAuthorized();
+        if (!FeeConverterStorage.layout().isAuthorized[msg.sender]) revert FeeConverter__NotAuthorized();
         _;
     }
 

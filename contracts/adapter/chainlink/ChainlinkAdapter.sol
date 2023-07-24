@@ -11,6 +11,7 @@ import {ONE} from "../../libraries/Constants.sol";
 import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
 
 import {FeedRegistry} from "../FeedRegistry.sol";
+import {FeedRegistryStorage} from "../FeedRegistryStorage.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
 import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "../Tokens.sol";
@@ -24,6 +25,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     using ChainlinkAdapterStorage for address;
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using ChainlinkAdapterStorage for IChainlinkAdapter.PricingPath;
+    using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using SafeCast for int256;
     using Tokens for address;
 
@@ -152,6 +154,24 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     function pricingPath(address tokenA, address tokenB) external view returns (PricingPath) {
         (PricingPath path, , ) = _pricingPath(tokenA, tokenB);
         return path;
+    }
+
+    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner {
+        for (uint256 i = 0; i < args.length; i++) {
+            address token = _tokenToDenomination(args[i].token);
+            address denomination = args[i].denomination;
+            address feed = args[i].feed;
+
+            if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
+            if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
+
+            bytes32 keyForPair = token.keyForUnsortedPair(denomination);
+            FeedRegistryStorage.layout().feeds[keyForPair] = feed;
+
+            if (feed == address(0)) ChainlinkAdapterStorage.layout().pricingPath[keyForPair] = PricingPath.NONE;
+        }
+
+        emit FeedMappingsRegistered(args);
     }
 
     /// @notice Returns the pricing path between `tokenA` and `tokenB` and the mapped tokens (unsorted)
