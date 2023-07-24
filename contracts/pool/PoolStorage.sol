@@ -201,7 +201,6 @@ library PoolStorage {
 
     function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        uint256 value = toPoolTokenDecimals(l, value);
-        safeTransferIgnoreDust(token, to, value);
+        safeTransferIgnoreDust(token, to, toPoolTokenDecimals(l, value));
     }
 }
