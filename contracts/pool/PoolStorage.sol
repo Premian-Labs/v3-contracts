@@ -13,6 +13,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
 import {ZERO} from "../libraries/Constants.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
@@ -52,13 +53,13 @@ library PoolStorage {
         // Index of all existing ticks sorted
         DoublyLinkedList.Bytes32List tickIndex;
         mapping(UD60x18 normalizedPrice => IPoolInternal.Tick) ticks;
-        UD60x18 marketPrice;
-        UD60x18 globalFeeRate;
+        UD50x28 marketPrice;
+        UD50x28 globalFeeRate;
         UD60x18 protocolFees;
         UD60x18 strike;
-        UD60x18 liquidityRate;
-        UD60x18 longRate;
-        UD60x18 shortRate;
+        UD50x28 liquidityRate;
+        UD50x28 longRate;
+        UD50x28 shortRate;
         // Current tick normalized price
         UD60x18 currentTick;
         // Settlement price of option
@@ -187,12 +188,20 @@ library PoolStorage {
     }
 
     /// @notice Converts `value` to pool token decimals and transfers `token`
-    function safeTransfer(IERC20 token, address to, UD60x18 value) internal {
-        token.safeTransfer(to, PoolStorage.layout().toPoolTokenDecimals(value));
-    }
-
-    /// @notice Converts `value` to pool token decimals and transfers `token`
     function safeTransferFrom(IERC20Router router, address token, address from, address to, UD60x18 value) internal {
         router.safeTransferFrom(token, from, to, PoolStorage.layout().toPoolTokenDecimals(value));
+    }
+
+    function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
+        if (balance < value) value = balance;
+        token.safeTransfer(to, value);
+    }
+
+    function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        uint256 value = toPoolTokenDecimals(l, value);
+        safeTransferIgnoreDust(token, to, value);
     }
 }

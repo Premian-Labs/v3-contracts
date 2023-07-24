@@ -11,6 +11,9 @@ import {PoolFlashLoanTest} from "./Pool.flashLoan.t.sol";
 import {PoolGetQuoteAMMTest} from "./Pool.getQuoteAMM.t.sol";
 import {PoolSettleTest} from "./Pool.settle.t.sol";
 import {PoolSettlePositionTest} from "./Pool.settlePosition.t.sol";
+import {PoolSafeTransferIgnoreDustTest} from "./Pool.safeTransferIgnoreDust.t.sol";
+import {PoolSmokeTest} from "./Pool.smoke.t.sol";
+import {PoolSmokeSpamTest} from "./Pool.smokeSpam.t.sol";
 import {PoolStrandedTest} from "./Pool.stranded.t.sol";
 import {PoolTakerFeeTest} from "./Pool.takerFee.t.sol";
 import {PoolTokenIdTest} from "./Pool.tokenId.t.sol";
@@ -27,8 +30,11 @@ abstract contract PoolTest is
     PoolFillQuoteOBTest,
     PoolFlashLoanTest,
     PoolGetQuoteAMMTest,
+    PoolSafeTransferIgnoreDustTest,
     PoolSettleTest,
     PoolSettlePositionTest,
+    PoolSmokeTest,
+    PoolSmokeSpamTest,
     PoolStrandedTest,
     PoolTakerFeeTest,
     PoolTokenIdTest,
