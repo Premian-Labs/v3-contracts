@@ -288,6 +288,8 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getPositionData.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateClaimableFees.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
@@ -421,9 +423,9 @@ contract DeployTest is Test, Assertions {
         IERC20 token = IERC20(getPoolToken());
         initialCollateral = toTokenDecimals(isCallTest ? depositSize : depositSize * strike);
 
-        vm.startPrank(posKey.operator);
+        vm.startPrank(customPosKey.operator);
 
-        deal(address(token), posKey.operator, initialCollateral);
+        deal(address(token), customPosKey.operator, initialCollateral);
         token.approve(address(router), initialCollateral);
 
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(

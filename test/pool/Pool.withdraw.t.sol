@@ -148,6 +148,85 @@ abstract contract PoolWithdrawTest is DeployTest {
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
     }
 
+    function test_withdraw_DoesNotDeletePosition_OnPartialWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(0.75e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+    }
+
+    function test_withdraw_DeletePosition_OnFullWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        /////
+
+        UD60x18 _tradeSize = ud(tradeSize);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, true);
+        address poolToken = getPoolToken();
+        uint256 mintAmount = totalPremium;
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, mintAmount);
+        IERC20(poolToken).approve(address(router), mintAmount);
+        pool.trade(_tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        /////
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(1e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
+    }
+
     function test_withdraw_RevertIf_BeforeEndOfWithdrawalDelay() public {
         deposit(1000 ether);
 

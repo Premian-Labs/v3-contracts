@@ -14,6 +14,7 @@ import {IPoolCoreMock} from "./IPoolCoreMock.sol";
 
 contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     using PoolStorage for PoolStorage.Layout;
+    using Position for Position.KeyInternal;
 
     constructor(
         address factory,
@@ -124,5 +125,20 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
 
     function mint(address account, uint256 id, UD60x18 amount) external {
         _mint(account, id, amount.unwrap(), "");
+    }
+
+    function getPositionData(Position.KeyInternal memory p) external view returns (Position.Data memory) {
+        return PoolStorage.layout().positions[p.keyHash()];
+    }
+
+    function forceUpdateClaimableFees(Position.KeyInternal memory p) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _updateClaimableFees(
+            l,
+            p,
+            l.positions[p.keyHash()],
+            _balanceOfUD60x18(p.owner, PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType))
+        );
     }
 }

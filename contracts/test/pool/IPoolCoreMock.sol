@@ -63,4 +63,8 @@ interface IPoolCoreMock {
     function exposed_isRateNonTerminating(UD60x18 lower, UD60x18 upper) external pure returns (bool);
 
     function mint(address account, uint256 id, UD60x18 amount) external;
+
+    function getPositionData(Position.KeyInternal memory p) external view returns (Position.Data memory);
+
+    function forceUpdateClaimableFees(Position.KeyInternal memory p) external;
 }

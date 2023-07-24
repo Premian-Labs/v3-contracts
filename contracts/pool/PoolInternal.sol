@@ -479,11 +479,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfTickWidthInvalid(p.upper);
         _revertIfInvalidSize(p.lower, p.upper, size);
 
-        Position.Data storage pData = l.positions[p.keyHash()];
+        WithdrawVarsInternal memory vars;
+
+        vars.pKeyHash = p.keyHash();
+        Position.Data storage pData = l.positions[vars.pKeyHash];
 
         _revertIfWithdrawalDelayNotElapsed(pData);
-
-        WithdrawVarsInternal memory vars;
 
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.initialSize = _balanceOfUD60x18(p.owner, vars.tokenId);
@@ -511,10 +512,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 UD60x18 feesClaimed = pData.claimableFees;
                 // Claim all fees and remove the position completely
                 collateralToTransfer = collateralToTransfer + feesClaimed;
-
-                pData.claimableFees = ZERO;
-                pData.lastFeeRate = iZERO;
-
+                _deletePosition(l, vars.pKeyHash);
                 emit ClaimFees(p.owner, vars.tokenId, feesClaimed, iZERO);
             }
 
@@ -1046,7 +1044,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isCall: srcP.isCall
         });
 
-        bytes32 srcKey = srcP.keyHash();
+        bytes32 srcKeyHash = srcP.keyHash();
 
         uint256 srcTokenId = PoolStorage.formatTokenId(srcP.operator, srcP.lower, srcP.upper, srcP.orderType);
         UD60x18 srcPOwnerBalance = _balanceOfUD60x18(srcP.owner, srcTokenId);
@@ -1059,7 +1057,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             : PoolStorage.formatTokenId(newOperator, srcP.lower, srcP.upper, srcP.orderType);
 
         Position.Data storage dstData = l.positions[dstP.keyHash()];
-        Position.Data storage srcData = l.positions[srcKey];
+        Position.Data storage srcData = l.positions[srcKeyHash];
 
         // Call function to update claimable fees, but do not claim them
         _updateClaimableFees(l, srcP, srcData, srcPOwnerBalance);
@@ -1092,7 +1090,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _mint(newOwner, dstTokenId, size);
         }
 
-        if (size == srcPOwnerBalance) delete l.positions[srcKey];
+        if (size == srcPOwnerBalance) _deletePosition(l, srcKeyHash);
 
         emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
@@ -1239,13 +1237,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
-        Position.Data storage pData = l.positions[p.keyHash()];
-
         SettlePositionVarsInternal memory vars;
 
-        vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        vars.pKeyHash = p.keyHash();
+        Position.Data storage pData = l.positions[vars.pKeyHash];
 
+        vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
+
         if (vars.size == ZERO) {
             // Revert if costPerHolder > 0
             _revertIfCostExceedsPayout(costPerHolder, ZERO);
@@ -1297,11 +1296,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             }
         }
 
-        pData.claimableFees = ZERO;
-        pData.lastFeeRate = iZERO;
-
+        _deletePosition(l, vars.pKeyHash);
         _revertIfCostExceedsPayout(costPerHolder, vars.collateral);
-
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
         emit SettlePosition(
@@ -1326,6 +1322,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         success = true;
+    }
+
+    /// @notice Deletes the `pKeyHash` from positions mapping
+    function _deletePosition(PoolStorage.Layout storage l, bytes32 pKeyHash) internal {
+        delete l.positions[pKeyHash];
     }
 
     ////////////////////////////////////////////////////////////////

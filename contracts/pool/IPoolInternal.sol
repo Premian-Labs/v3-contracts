@@ -155,6 +155,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct WithdrawVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 initialSize;
         UD60x18 liquidityPerTick;
@@ -199,6 +200,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct SettlePositionVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 size;
         UD60x18 claimableFees;
