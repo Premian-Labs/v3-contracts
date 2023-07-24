@@ -8,13 +8,15 @@ import {Test} from "forge-std/Test.sol";
 
 import {Assertions} from "../Assertions.sol";
 
-import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {IPosition} from "contracts/libraries/IPosition.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
+import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 import {PositionMock} from "contracts/test/libraries/PositionMock.sol";
 
 contract PositionTest is Test, Assertions {
     using Position for Position.KeyInternal;
+    using PRBMathExtra for UD60x18;
 
     PositionMock internal position;
     Position.KeyInternal internal key;
@@ -57,19 +59,19 @@ contract PositionTest is Test, Assertions {
     }
 
     function test_pieceWiseLinear_Return0_IfLowerGreaterOrEqualPrice() public {
-        assertEq(key.pieceWiseLinear(key.lower), ZERO);
-        assertEq(key.pieceWiseLinear(key.lower - ud(1)), ZERO);
+        assertEq(key.pieceWiseLinear(key.lower.intoUD50x28()), ud50x28(0));
+        assertEq(key.pieceWiseLinear(key.lower.intoUD50x28() - ud50x28(1)), ud50x28(0));
     }
 
     function test_pieceWiseLinear_ReturnExpectedValue_IfPriceInRange() public {
-        assertEq(key.pieceWiseLinear(ud(0.3e18)), ud(0.1e18));
-        assertEq(key.pieceWiseLinear(ud(0.5e18)), ud(0.5e18));
-        assertEq(key.pieceWiseLinear(ud(0.7e18)), ud(0.9e18));
+        assertEq(key.pieceWiseLinear(ud50x28(0.3e28)), ud50x28(0.1e28));
+        assertEq(key.pieceWiseLinear(ud50x28(0.5e28)), ud50x28(0.5e28));
+        assertEq(key.pieceWiseLinear(ud50x28(0.7e28)), ud50x28(0.9e28));
     }
 
     function test_pieceWiseLinear_Return1_IfPriceGreaterOrEqualUpper() public {
-        assertEq(key.pieceWiseLinear(key.upper), ONE);
-        assertEq(key.pieceWiseLinear(key.upper + ud(1)), ONE);
+        assertEq(key.pieceWiseLinear(key.upper.intoUD50x28()), ud50x28(1e28));
+        assertEq(key.pieceWiseLinear(key.upper.intoUD50x28() + ud50x28(1)), ud50x28(1e28));
     }
 
     function test_pieceWiseLinear_RevertIf_LowerGreaterOrEqualUpper() public {
@@ -77,7 +79,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        position.pieceWiseLinear(key, ZERO);
+        position.pieceWiseLinear(key, ud50x28(0));
 
         //
 
@@ -85,24 +87,24 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        position.pieceWiseLinear(key, ZERO);
+        position.pieceWiseLinear(key, ud50x28(0));
     }
 
     function test_pieceWiseQuadratic_Return0_IfLowerGreaterOrEqualPrice() public {
-        assertEq(key.pieceWiseQuadratic(key.lower), ZERO);
-        assertEq(key.pieceWiseQuadratic(key.lower - ud(1)), ZERO);
+        assertEq(key.pieceWiseQuadratic(key.lower.intoUD50x28()), ud50x28(0));
+        assertEq(key.pieceWiseQuadratic(key.lower.intoUD50x28() - ud50x28(1)), ud50x28(0));
     }
 
     function test_pieceWiseQuadratic_ReturnExpectedValue_IfPriceInRange() public {
-        assertEq(key.pieceWiseQuadratic(ud(0.3e18)), ud(0.0275e18));
-        assertEq(key.pieceWiseQuadratic(ud(0.5e18)), ud(0.1875e18));
-        assertEq(key.pieceWiseQuadratic(ud(0.7e18)), ud(0.4275e18));
+        assertEq(key.pieceWiseQuadratic(ud50x28(0.3e28)), ud50x28(0.0275e28));
+        assertEq(key.pieceWiseQuadratic(ud50x28(0.5e28)), ud50x28(0.1875e28));
+        assertEq(key.pieceWiseQuadratic(ud50x28(0.7e28)), ud50x28(0.4275e28));
     }
 
     function test_pieceWiseQuadratic_ReturnAvgPrice_IfPriceGreaterOrEqualUpper() public {
-        UD60x18 avg = key.lower.avg(key.upper);
-        assertEq(key.pieceWiseQuadratic(key.upper), avg);
-        assertEq(key.pieceWiseQuadratic(key.upper + ud(1)), avg);
+        UD50x28 avg = key.lower.avg(key.upper).intoUD50x28();
+        assertEq(key.pieceWiseQuadratic(key.upper.intoUD50x28()), avg);
+        assertEq(key.pieceWiseQuadratic(key.upper.intoUD50x28() + ud50x28(1)), avg);
     }
 
     function test_pieceWiseQuadratic_RevertIf_LowerGreaterOrEqualUpper() public {
@@ -110,7 +112,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        position.pieceWiseQuadratic(key, ZERO);
+        position.pieceWiseQuadratic(key, ud50x28(0));
 
         //
 
@@ -118,7 +120,7 @@ contract PositionTest is Test, Assertions {
         vm.expectRevert(
             abi.encodeWithSelector(IPosition.Position__LowerGreaterOrEqualUpper.selector, key.lower, key.upper)
         );
-        position.pieceWiseQuadratic(key, ZERO);
+        position.pieceWiseQuadratic(key, ud50x28(0));
     }
 
     function _test_collateralToContracts_ReturnExpectedValue(bool isCall) internal {
@@ -200,15 +202,15 @@ contract PositionTest is Test, Assertions {
 
         size = ud(250e18);
         result = ud(0.5e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size).intoUD60x18(), result);
 
         size = ud(500e18);
         result = ud(1e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size).intoUD60x18(), result);
 
         size = ud(1000e18);
         result = ud(2e18);
-        assertEq(key.liquidityPerTick(size), result);
+        assertEq(key.liquidityPerTick(size).intoUD60x18(), result);
     }
 
     function _test_bid_ReturnExpectedValue_Call(bool isCall) internal {
@@ -217,13 +219,13 @@ contract PositionTest is Test, Assertions {
         UD60x18 result;
 
         result = ud(0.01375e18);
-        assertEq(key.bid(ud(0.5e18), ud(0.3e18)), isCall ? result : result * key.strike);
+        assertEq(key.bid(ud(0.5e18), ud50x28(0.3e28)), isCall ? result : result * key.strike);
 
         result = ud(0.1875e18);
-        assertEq(key.bid(ud(1e18), ud(0.5e18)), isCall ? result : result * key.strike);
+        assertEq(key.bid(ud(1e18), ud50x28(0.5e28)), isCall ? result : result * key.strike);
 
         result = ud(0.855e18);
-        assertEq(key.bid(ud(2e18), ud(0.7e18)), isCall ? result : result * key.strike);
+        assertEq(key.bid(ud(2e18), ud50x28(0.7e28)), isCall ? result : result * key.strike);
     }
 
     function test_bid_ReturnExpectedValue_Call() public {
@@ -260,7 +262,7 @@ contract PositionTest is Test, Assertions {
         }
 
         for (uint256 i = 0; i < inputs.length; i++) {
-            assertEq(key.collateral(size, inputs[i]), results[i]);
+            assertEq(key.collateral(size, inputs[i].intoUD50x28()), results[i]);
         }
     }
 
@@ -302,7 +304,7 @@ contract PositionTest is Test, Assertions {
         }
 
         for (uint256 i = 0; i < inputs.length; i++) {
-            assertEq(key.contracts(size, inputs[i]), results[i]);
+            assertEq(key.contracts(size, inputs[i].intoUD50x28()), results[i]);
         }
     }
 
@@ -344,7 +346,7 @@ contract PositionTest is Test, Assertions {
         }
 
         for (uint256 i = 0; i < inputs.length; i++) {
-            assertEq(key.long(size, inputs[i]), results[i]);
+            assertEq(key.long(size, inputs[i].intoUD50x28()), results[i]);
         }
     }
 
@@ -386,7 +388,7 @@ contract PositionTest is Test, Assertions {
         }
 
         for (uint256 i = 0; i < inputs.length; i++) {
-            assertEq(key.short(size, inputs[i]), results[i]);
+            assertEq(key.short(size, inputs[i].intoUD50x28()), results[i]);
         }
     }
 
@@ -501,7 +503,11 @@ contract PositionTest is Test, Assertions {
                     SD59x18 deltaBalance = isDeposit ? deltas[j] : -deltas[j];
                     UD60x18 price = prices[k];
 
-                    Position.Delta memory delta = key.calculatePositionUpdate(currentBalance, deltaBalance, price);
+                    Position.Delta memory delta = key.calculatePositionUpdate(
+                        currentBalance,
+                        deltaBalance,
+                        price.intoUD50x28()
+                    );
 
                     // prettier-ignore
                     assertEq(delta.collateral, expected[counter][0], "collateral");

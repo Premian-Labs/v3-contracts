@@ -10,10 +10,11 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {ONE, ZERO} from "../libraries/Constants.sol";
+import {ONE, ZERO, UD50_ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";
 
@@ -29,6 +30,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using Position for Position.Key;
     using SafeERC20 for IERC20;
     using PRBMathExtra for UD60x18;
+    using PRBMathExtra for UD50x28;
 
     constructor(
         address factory,
@@ -43,7 +45,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (UD60x18) {
-        return PoolStorage.layout().marketPrice;
+        return PoolStorage.layout().marketPrice.intoUD60x18();
     }
 
     /// @inheritdoc IPoolCore
@@ -85,8 +87,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function ticks() external view returns (IPoolInternal.TickWithRates[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 longRate = l.longRate;
-        UD60x18 shortRate = l.shortRate;
+        UD50x28 longRate = l.longRate;
+        UD50x28 shortRate = l.shortRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
         UD60x18 curr = l.currentTick;
 
@@ -125,8 +127,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _ticks[count++] = IPoolInternal.TickWithRates({
                     tick: l.ticks[curr],
                     price: curr,
-                    longRate: ZERO,
-                    shortRate: ZERO
+                    longRate: UD50_ZERO,
+                    shortRate: UD50_ZERO
                 });
                 break;
             }

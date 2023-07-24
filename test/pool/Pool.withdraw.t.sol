@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -17,6 +18,8 @@ import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
+    using PRBMathExtra for UD60x18;
+
     function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
@@ -55,16 +58,18 @@ abstract contract PoolWithdrawTest is DeployTest {
         trade(tradeSize, true, depositSize, false);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), 0 ether);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
+
         vm.startPrank(users.lp);
+
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0 ether);
-        assertEq(pool.getShortRate(), 0.0025 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
         // balance should equal
@@ -90,16 +95,16 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.15 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0 ether);
-        assertEq(pool.getShortRate(), 0.0025 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
         // balance should equal
@@ -126,16 +131,16 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.85 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.175 ether);
+        assertEq(pool.marketPrice(), 0.175e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0025 ether);
-        assertEq(pool.getShortRate(), 0.0 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0025e28);
+        assertEq(pool.getShortRate(), 0.0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.1875 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.0 ether));
         // balance should equal
