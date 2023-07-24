@@ -65,7 +65,7 @@ contract PricingTest is Test, Assertions {
     function test_proportion_RevertIf_MarketPriceGtUpper() public {
         UD60x18 lower = ud(0.25e18);
         UD60x18 upper = ud(0.75e18);
-        UD50x28 marketPrice = ud50x28(0.8e18);
+        UD50x28 marketPrice = ud50x28(0.8e28);
 
         vm.expectRevert(
             abi.encodeWithSelector(IPricing.Pricing__PriceOutOfRange.selector, lower, upper, marketPrice.intoUD60x18())
