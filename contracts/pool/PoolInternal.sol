@@ -621,7 +621,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             taker = longReceiver;
         }
 
-        UD60x18 protocolFee = _takerFee(taker, size, size * ud(0.03e18), true, l.strike, l.isCallPool);
+        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool);
         IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), underwriter, address(this), collateral + protocolFee);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
