@@ -12,7 +12,7 @@ import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTakerFeeTest is DeployTest {
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
-    UD60x18 internal constant MAX_EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5%
+    UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
 
     function stake(uint256 amount) internal {
@@ -47,7 +47,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
         {
             UD60x18 premiumFee1 = normalizedPremium * PREMIUM_FEE_PERCENTAGE;
-            UD60x18 premiumFee2 = normalizedPremium * MAX_EXERCISE_FEE_PERCENTAGE;
+            UD60x18 premiumFee2 = normalizedPremium * MAX_PREMIUM_FEE_PERCENTAGE;
             UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
 
             assertEq(
