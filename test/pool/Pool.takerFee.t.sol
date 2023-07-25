@@ -12,6 +12,7 @@ import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTakerFeeTest is DeployTest {
     UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
+    UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5%
     UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
 
     function stake(uint256 amount) internal {
@@ -31,6 +32,11 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 price,
         UD60x18 discount
     ) internal {
+        if (price == ZERO) {
+            price = (COLLATERAL_FEE_PERCENTAGE / PREMIUM_FEE_PERCENTAGE) * size;
+            isPremiumNormalized = true;
+        }
+
         UD60x18 deNormalizedPremium = contractsToCollateral(price * size);
 
         UD60x18 normalizedPremium = collateralToContracts(deNormalizedPremium);
@@ -40,12 +46,17 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 fee;
 
         {
-            UD60x18 premiumFee = normalizedPremium * PREMIUM_FEE_PERCENTAGE;
+            UD60x18 premiumFee1 = normalizedPremium * PREMIUM_FEE_PERCENTAGE;
+            UD60x18 premiumFee2 = normalizedPremium * MAX_PREMIUM_FEE_PERCENTAGE;
             UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
 
-            assertEq(premiumFee > notionalFee, premiumIsFee, "premiumFee should be greater than notionalFee");
+            assertEq(
+                premiumFee1 > notionalFee || premiumFee2 > notionalFee,
+                premiumIsFee,
+                "premiumFee1 or premium 2 should be greater than notionalFee"
+            );
 
-            fee = PRBMathExtra.max(premiumFee, notionalFee);
+            fee = PRBMathExtra.min(premiumFee2, PRBMathExtra.max(premiumFee1, notionalFee));
 
             if (discount > ud(0)) {
                 fee = fee - fee * discount;
@@ -73,6 +84,14 @@ abstract contract PoolTakerFeeTest is DeployTest {
 
     function test_takerFee_collateral_fee_without_discount_premium_normalized() public {
         _test_takerFee(false, true, ud(100 ether), ud(0.01 ether), ud(0));
+    }
+
+    function test_takerFee_premium_fee_without_discount_zero_price() public {
+        _test_takerFee(true, false, ud(100 ether), ud(0 ether), ud(0));
+    }
+
+    function test_takerFee_collateral_fee_without_discount_low_price() public {
+        _test_takerFee(false, true, ud(100 ether), ud(0.0001 ether), ud(0));
     }
 
     function test_takerFee_premium_fee_with_discount() public {

@@ -36,7 +36,6 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
-
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
@@ -58,7 +57,6 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         UD60x18 size = ud(500 ether);
         uint256 fee = pool.takerFee(users.trader, size, 0, true);
-
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, users.referrer);
 
