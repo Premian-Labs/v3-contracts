@@ -65,6 +65,12 @@ interface IPoolCoreMock {
 
     function mint(address account, uint256 id, UD60x18 amount) external;
 
+    function getPositionData(Position.KeyInternal memory p) external view returns (Position.Data memory);
+
+    function forceUpdateClaimableFees(Position.KeyInternal memory p) external;
+
+    function forceUpdateLastDeposit(Position.KeyInternal memory p, uint256 timestamp) external;
+
     function safeTransferIgnoreDust(address to, uint256 value) external;
 
     function safeTransferIgnoreDustUD60x18(address to, UD60x18 value) external;

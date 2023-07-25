@@ -27,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
     error Pool__InvalidMonth(uint256 month);
+    error Pool__InvalidPositionState(uint256 balance, uint256 lastDeposit);
     error Pool__InvalidQuoteOBSignature();
     error Pool__InvalidQuoteOBTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
@@ -157,6 +158,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct WithdrawVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 initialSize;
         UD50x28 liquidityPerTick;
@@ -201,6 +203,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct SettlePositionVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 size;
         UD60x18 claimableFees;

@@ -20,7 +20,7 @@ abstract contract PoolSmokeTest is DeployTest {
     string[3] public depositTypes;
     string[4] public actionTypes;
 
-    function _isEqualString(string memory a, string memory b) internal returns (bool) {
+    function _isEqualString(string memory a, string memory b) internal pure returns (bool) {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
     }
 

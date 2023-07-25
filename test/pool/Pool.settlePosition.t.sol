@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.19;
 
-import "forge-std/console2.sol";
-
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -87,6 +85,37 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
     function test_settlePosition_Buy100Options_OTM() public {
         _test_settlePosition_Buy100Options(false);
+    }
+
+    function test_settlePosition_DeletePosition() public {
+        _test_settlePosition_trade_Buy100Options();
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        UD60x18 settlementPrice = getSettlementPrice(true);
+        oracleAdapter.setPriceAt(settlementPrice);
+
+        vm.warp(poolKey.maturity);
+        vm.prank(posKey.operator);
+
+        pool.settlePosition(posKey);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
     }
 
     function test_settlePosition_RevertIf_OptionNotExpired() public {

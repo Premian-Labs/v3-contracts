@@ -161,6 +161,96 @@ abstract contract PoolTransferTest is DeployTest {
         assertEq(pool.balanceOf(users.trader, tokenId()), depositSize);
     }
 
+    function test_transferPosition_DoesNotDeletePosition_OnPartialTransfer() public {
+        trade(1 ether, true);
+        uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId()) / 4;
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.prank(users.lp);
+        pool.transferPosition(posKey, users.trader, users.trader, ud(transferAmount));
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        Position.KeyInternal memory newKeyInternal = Position.KeyInternal({
+            owner: users.trader,
+            operator: users.trader,
+            lower: posKey.lower,
+            upper: posKey.upper,
+            orderType: posKey.orderType,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        {
+            Position.Data memory data = pool.getPositionData(newKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+    }
+
+    function test_transferPosition_DeletePosition_OnFullTransfer() public {
+        trade(1 ether, true);
+        uint256 transferAmount = pool.balanceOf(posKey.operator, tokenId());
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.prank(users.lp);
+        pool.transferPosition(posKey, users.trader, users.trader, ud(transferAmount));
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
+
+        Position.KeyInternal memory newKeyInternal = Position.KeyInternal({
+            owner: users.trader,
+            operator: users.trader,
+            lower: posKey.lower,
+            upper: posKey.upper,
+            orderType: posKey.orderType,
+            strike: poolKey.strike,
+            isCall: poolKey.isCallPool
+        });
+
+        {
+            Position.Data memory data = pool.getPositionData(newKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+    }
+
     function test_transferPosition_RevertIf_NotOperator() public {
         deposit(1000 ether);
 
@@ -186,6 +276,22 @@ abstract contract PoolTransferTest is DeployTest {
 
         vm.expectRevert(IPoolInternal.Pool__ZeroSize.selector);
         pool.transferPosition(posKey, users.trader, users.lp, ud(0));
+    }
+
+    function test_transferPosition_RevertIf_PositionDoesNotExist() public {
+        deposit(1000 ether);
+
+        uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
+        assertEq(tokenIds.length, 0);
+
+        posKey.operator = users.otherLP; // otherLP creates a fake position
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__PositionDoesNotExist.selector, posKey.owner, tokenId())
+        );
+
+        vm.prank(users.otherLP);
+        pool.transferPosition(posKey, users.trader, users.lp, ud(1000 ether + 1000));
     }
 
     function test_transferPosition_RevertIf_NotEnoughTokensToTransfer() public {
