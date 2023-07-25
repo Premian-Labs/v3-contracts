@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
+
+import {Test} from "forge-std/Test.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {Test} from "forge-std/Test.sol";
+import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInternal.sol";
 
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
@@ -215,7 +217,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
         data[1] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_ETH, address(0));
 
         adapter.batchRegisterFeedMappings(data); // remove DAI/USD and DAI/ETH feeds
-        adapter.upsertPair(WETH, DAI);
 
         {
             (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
@@ -250,6 +251,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, address(0), address(1));
         vm.expectRevert(IFeedRegistry.FeedRegistry__ZeroAddress.selector);
+        adapter.batchRegisterFeedMappings(data);
+    }
+
+    function test_batchRegisterFeedMappings_RevertIf_NotOwner() public {
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
+        data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
+        vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
+        vm.prank(vm.addr(1));
         adapter.batchRegisterFeedMappings(data);
     }
 
@@ -377,6 +386,33 @@ contract ChainlinkAdapterTest is Test, Assertions {
         UD60x18 price = adapter.getPrice(WETH, DAI);
 
         assertEq(price, priceBeforeUpsert);
+    }
+
+    function test_getPrice_RevertIf_PriceAfterTargetIsStale() public {
+        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+        adapter.upsertPair(stubCoin, CHAINLINK_USD);
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 100000000000;
+        timestamps[0] = block.timestamp - 25 hours;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        assertEq(adapter.getPrice(stubCoin, CHAINLINK_USD), ud(uint256(prices[0]) * 1e10));
+        vm.warp(block.timestamp + 1 seconds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter.ChainlinkAdapter__PriceAfterTargetIsStale.selector,
+                block.timestamp,
+                timestamps[0],
+                block.timestamp
+            )
+        );
+
+        adapter.getPrice(stubCoin, CHAINLINK_USD);
     }
 
     function test_getPrice_RevertIf_PairNotSupported() public {
@@ -563,7 +599,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         uint256[] memory timestamps = new uint256[](1);
 
         prices[0] = 100000000000;
-        timestamps[0] = target - 90000;
+        timestamps[0] = target - 90001;
 
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 

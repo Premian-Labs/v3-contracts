@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
@@ -66,6 +66,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolFactory
     function setDiscountPerPool(UD60x18 discountPerPool) external onlyOwner {
+        if (discountPerPool == ZERO || discountPerPool >= ONE) revert PoolFactory__InvalidInput();
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
         l.discountPerPool = discountPerPool;
         emit SetDiscountPerPool(discountPerPool);
@@ -90,18 +91,14 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         bytes32 poolKey = k.poolKey();
         uint256 fee = initializationFee(k).unwrap();
 
+        if (fee == 0) revert PoolFactory__InitializationFeeIsZero();
+        if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
+
         address _poolAddress = _getPoolAddress(poolKey);
         if (_poolAddress != address(0)) revert PoolFactory__PoolAlreadyDeployed(_poolAddress);
 
-        if (fee > 0) {
-            if (msg.value < fee) revert PoolFactory__InitializationFeeRequired(msg.value, fee);
-
-            payable(PoolFactoryStorage.layout().feeReceiver).transfer(fee);
-
-            if (msg.value > fee) {
-                payable(msg.sender).transfer(msg.value - fee);
-            }
-        }
+        _safeTransferNativeToken(PoolFactoryStorage.layout().feeReceiver, fee);
+        if (msg.value > fee) _safeTransferNativeToken(msg.sender, msg.value - fee);
 
         poolAddress = IPoolFactoryDeployer(POOL_FACTORY_DEPLOYER).deployPool(k);
 
@@ -148,7 +145,7 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         PoolFactoryStorage.layout().maturityCount[k.maturityKey()] -= 1;
     }
 
-    // @inheritdoc IPoolFactory
+    /// @inheritdoc IPoolFactory
     function initializationFee(IPoolFactory.PoolKey calldata k) public view returns (UD60x18) {
         PoolFactoryStorage.Layout storage l = PoolFactoryStorage.layout();
 
@@ -161,16 +158,22 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
         return (fee * discount) / _getWrappedNativeUSDSpotPrice();
     }
 
-    // @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
-    //         This is used in the calculation of the initializationFee
+    /// @notice We use the given oracle adapter to fetch the spot price of the base/quote pair.
+    ///         This is used in the calculation of the initializationFee
     function _getSpotPrice(address oracleAdapter, address base, address quote) internal view returns (UD60x18) {
         return IOracleAdapter(oracleAdapter).getPrice(base, quote);
     }
 
-    // @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
-    //         This is used to convert the initializationFee from USD to native token
+    /// @notice We use the Premia Chainlink Adapter to fetch the spot price of the wrapped native token in USD.
+    ///         This is used to convert the initializationFee from USD to native token
     function _getWrappedNativeUSDSpotPrice() internal view returns (UD60x18) {
         return IOracleAdapter(CHAINLINK_ADAPTER).getPrice(WRAPPED_NATIVE_TOKEN, Denominations.USD);
+    }
+
+    /// @notice Safely transfer native token to the given address
+    function _safeTransferNativeToken(address to, uint256 amount) internal {
+        (bool success, ) = to.call{value: amount}("");
+        if (!success) revert PoolFactory__TransferNativeTokenFailed();
     }
 
     /// @notice Revert if the base and quote are identical or if the base, quote, or oracle adapter are zero

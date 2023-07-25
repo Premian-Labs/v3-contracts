@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
+import {UD50x28} from "../../libraries/UD50x28.sol";
 import {Position} from "../../libraries/Position.sol";
 
 contract PositionMock {
@@ -20,11 +20,11 @@ contract PositionMock {
         return Position.isLong(orderType);
     }
 
-    function pieceWiseLinear(Position.KeyInternal memory self, UD60x18 price) external pure returns (UD60x18) {
+    function pieceWiseLinear(Position.KeyInternal memory self, UD50x28 price) external pure returns (UD50x28) {
         return Position.pieceWiseLinear(self, price);
     }
 
-    function pieceWiseQuadratic(Position.KeyInternal memory self, UD60x18 price) external pure returns (UD60x18) {
+    function pieceWiseQuadratic(Position.KeyInternal memory self, UD50x28 price) external pure returns (UD50x28) {
         return Position.pieceWiseQuadratic(self, price);
     }
 
@@ -36,27 +36,27 @@ contract PositionMock {
         return Position.contractsToCollateral(_collateral, strike, isCall);
     }
 
-    function liquidityPerTick(Position.KeyInternal memory self, UD60x18 size) external pure returns (UD60x18) {
+    function liquidityPerTick(Position.KeyInternal memory self, UD60x18 size) external pure returns (UD50x28) {
         return Position.liquidityPerTick(self, size);
     }
 
-    function bid(Position.KeyInternal memory self, UD60x18 size, UD60x18 price) external pure returns (UD60x18) {
+    function bid(Position.KeyInternal memory self, UD60x18 size, UD50x28 price) external pure returns (UD60x18) {
         return Position.bid(self, size, price);
     }
 
-    function collateral(Position.KeyInternal memory self, UD60x18 size, UD60x18 price) external pure returns (UD60x18) {
+    function collateral(Position.KeyInternal memory self, UD60x18 size, UD50x28 price) external pure returns (UD60x18) {
         return Position.collateral(self, size, price);
     }
 
-    function contracts(Position.KeyInternal memory self, UD60x18 size, UD60x18 price) external pure returns (UD60x18) {
+    function contracts(Position.KeyInternal memory self, UD60x18 size, UD50x28 price) external pure returns (UD60x18) {
         return Position.contracts(self, size, price);
     }
 
-    function long(Position.KeyInternal memory self, UD60x18 size, UD60x18 price) external pure returns (UD60x18) {
+    function long(Position.KeyInternal memory self, UD60x18 size, UD50x28 price) external pure returns (UD60x18) {
         return Position.long(self, size, price);
     }
 
-    function short(Position.KeyInternal memory self, UD60x18 size, UD60x18 price) external pure returns (UD60x18) {
+    function short(Position.KeyInternal memory self, UD60x18 size, UD50x28 price) external pure returns (UD60x18) {
         return Position.short(self, size, price);
     }
 
@@ -64,7 +64,7 @@ contract PositionMock {
         Position.KeyInternal memory self,
         UD60x18 currentBalance,
         SD59x18 amount,
-        UD60x18 price
+        UD50x28 price
     ) external pure returns (Position.Delta memory delta) {
         return Position.calculatePositionUpdate(self, currentBalance, amount, price);
     }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -43,6 +43,85 @@ contract PoolFactoryTest is DeployTest {
         assertEq(strike, poolKey.strike);
         assertEq(maturity, poolKey.maturity);
         assertEq(isCallPool, poolKey.isCallPool);
+    }
+
+    function test_deployPool_NoRefund() public {
+        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+        vm.warp(maturity - 1 hours);
+
+        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
+            base: base,
+            quote: quote,
+            oracleAdapter: address(oracleAdapter),
+            strike: ud(2000 ether), // OTM
+            maturity: maturity + 24 hours,
+            isCallPool: true
+        });
+
+        uint256 fee = factory.initializationFee(poolKey).unwrap();
+
+        assertEq(fee, 109188259456203059);
+        assertEq(address(factory).balance, 0);
+
+        vm.deal(users.lp, 1 ether);
+        uint256 lpBalanceBefore = users.lp.balance;
+
+        vm.prank(users.lp);
+        factory.deployPool{value: fee}(poolKey);
+
+        assertEq(users.lp.balance, lpBalanceBefore - fee);
+        assertEq(FEE_RECEIVER.balance, fee);
+        assertEq(address(factory).balance, 0);
+    }
+
+    function test_deployPool_PartialRefund() public {
+        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+        vm.warp(maturity - 1 hours);
+
+        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
+            base: base,
+            quote: quote,
+            oracleAdapter: address(oracleAdapter),
+            strike: ud(2000 ether), // OTM
+            maturity: maturity + 24 hours,
+            isCallPool: true
+        });
+
+        uint256 fee = factory.initializationFee(poolKey).unwrap();
+
+        assertEq(fee, 109188259456203059);
+        assertEq(address(factory).balance, 0);
+
+        vm.deal(users.lp, 1 ether);
+        uint256 lpBalanceBefore = users.lp.balance;
+
+        vm.prank(users.lp);
+        factory.deployPool{value: 1 ether}(poolKey);
+
+        assertEq(users.lp.balance, lpBalanceBefore - fee);
+        assertEq(FEE_RECEIVER.balance, fee);
+        assertEq(address(factory).balance, 0);
+    }
+
+    function test_deployPool_RevertIf_InitializationFeeRequired() public {
+        uint256 maturity = (block.timestamp - (block.timestamp % 24 hours)) + 32 hours; // 8AM UTC of the following day
+        vm.warp(maturity - 1 hours);
+
+        IPoolFactory.PoolKey memory poolKey = IPoolFactory.PoolKey({
+            base: base,
+            quote: quote,
+            oracleAdapter: address(oracleAdapter),
+            strike: ud(2000 ether), // OTM
+            maturity: maturity + 24 hours,
+            isCallPool: true
+        });
+
+        uint256 fee = factory.initializationFee(poolKey).unwrap();
+
+        vm.deal(users.lp, 1 ether);
+        vm.expectRevert(abi.encodeWithSelector(IPoolFactory.PoolFactory__InitializationFeeRequired.selector, 0, fee));
+        vm.prank(users.lp);
+        factory.deployPool{value: 0}(poolKey);
     }
 
     function test_deployPool_RevertIf_BaseAndQuoteEqual() public {

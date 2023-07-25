@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -14,6 +14,8 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {Pricing} from "../libraries/Pricing.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
+import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
 
@@ -21,6 +23,7 @@ import {PoolStorage} from "./PoolStorage.sol";
 contract PoolProxy is Proxy, ERC165BaseInternal {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
+    using PRBMathExtra for UD60x18;
 
     address private immutable DIAMOND;
 
@@ -55,11 +58,11 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
 
             l.isCallPool = isCallPool;
 
-            l.tickIndex.push(Pricing.MIN_TICK_PRICE);
-            l.tickIndex.push(Pricing.MAX_TICK_PRICE);
+            l.tickIndex.push(PoolStorage.MIN_TICK_PRICE);
+            l.tickIndex.push(PoolStorage.MAX_TICK_PRICE);
 
-            l.currentTick = Pricing.MIN_TICK_PRICE;
-            l.marketPrice = Pricing.MIN_TICK_PRICE;
+            l.currentTick = PoolStorage.MIN_TICK_PRICE;
+            l.marketPrice = PoolStorage.MIN_TICK_PRICE.intoUD50x28();
         }
 
         _setSupportsInterface(type(IERC165).interfaceId, true);

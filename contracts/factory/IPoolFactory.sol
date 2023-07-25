@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -8,7 +8,9 @@ import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__IdenticalAddresses();
+    error PoolFactory__InitializationFeeIsZero();
     error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
+    error PoolFactory__InvalidInput();
     error PoolFactory__NotAuthorized();
     error PoolFactory__OptionExpired(uint256 maturity);
     error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
@@ -19,6 +21,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__OptionStrikeInvalid(UD60x18 strike, UD60x18 strikeInterval);
     error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
+    error PoolFactory__TransferNativeTokenFailed();
     error PoolFactory__ZeroAddress();
 
     struct PoolKey {

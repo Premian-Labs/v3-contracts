@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -10,10 +10,11 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {ONE, ZERO} from "../libraries/Constants.sol";
+import {ONE, ZERO, UD50_ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";
 
@@ -29,6 +30,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using Position for Position.Key;
     using SafeERC20 for IERC20;
     using PRBMathExtra for UD60x18;
+    using PRBMathExtra for UD50x28;
 
     constructor(
         address factory,
@@ -43,7 +45,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (UD60x18) {
-        return PoolStorage.layout().marketPrice;
+        return PoolStorage.layout().marketPrice.intoUD60x18();
     }
 
     /// @inheritdoc IPoolCore
@@ -85,23 +87,23 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function ticks() external view returns (IPoolInternal.TickWithRates[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 longRate = l.longRate;
-        UD60x18 shortRate = l.shortRate;
+        UD50x28 longRate = l.longRate;
+        UD50x28 shortRate = l.shortRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
         UD60x18 curr = l.currentTick;
 
-        uint256 maxTicks = (ONE / Pricing.MIN_TICK_DISTANCE).unwrap() / 1e18;
+        uint256 maxTicks = (ONE / PoolStorage.MIN_TICK_DISTANCE).unwrap() / 1e18;
         uint256 count;
 
         IPoolInternal.TickWithRates[] memory _ticks = new IPoolInternal.TickWithRates[](maxTicks);
 
         // compute the longRate and shortRate at MIN_TICK_PRICE
-        if (l.currentTick != Pricing.MIN_TICK_PRICE) {
+        if (l.currentTick != PoolStorage.MIN_TICK_PRICE) {
             while (true) {
                 longRate = longRate.add(l.ticks[curr].longDelta);
                 shortRate = shortRate.add(l.ticks[curr].shortDelta);
 
-                if (prev == Pricing.MIN_TICK_PRICE) {
+                if (prev == PoolStorage.MIN_TICK_PRICE) {
                     break;
                 }
 
@@ -110,8 +112,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
             }
         }
 
-        prev = Pricing.MIN_TICK_PRICE;
-        curr = l.tickIndex.next(Pricing.MIN_TICK_PRICE);
+        prev = PoolStorage.MIN_TICK_PRICE;
+        curr = l.tickIndex.next(PoolStorage.MIN_TICK_PRICE);
 
         while (true) {
             _ticks[count++] = IPoolInternal.TickWithRates({
@@ -121,12 +123,12 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 shortRate: shortRate
             });
 
-            if (curr == Pricing.MAX_TICK_PRICE) {
+            if (curr == PoolStorage.MAX_TICK_PRICE) {
                 _ticks[count++] = IPoolInternal.TickWithRates({
                     tick: l.ticks[curr],
                     price: curr,
-                    longRate: ZERO,
-                    shortRate: ZERO
+                    longRate: UD50_ZERO,
+                    shortRate: UD50_ZERO
                 });
                 break;
             }

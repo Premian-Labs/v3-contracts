@@ -1,15 +1,17 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
-pragma solidity >=0.8.19;
-
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
+import {UD50x28, ud50x28} from "../libraries/UD50x28.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
+import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 import {IPricing} from "./IPricing.sol";
 
-import {ZERO, ONE} from "./Constants.sol";
+import {ZERO, ONE, UD50_ONE} from "./Constants.sol";
 
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
 /// @dev WARNING: This library should not be used for computations that span multiple ticks. Instead, the user should
@@ -17,14 +19,11 @@ import {ZERO, ONE} from "./Constants.sol";
 library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
-
-    UD60x18 internal constant MIN_TICK_DISTANCE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MIN_TICK_PRICE = UD60x18.wrap(0.001e18); // 0.001
-    UD60x18 internal constant MAX_TICK_PRICE = UD60x18.wrap(1e18); // 1
+    using PRBMathExtra for UD60x18;
 
     struct Args {
-        UD60x18 liquidityRate; // Amount of liquidity (18 decimals)
-        UD60x18 marketPrice; // The current market price (18 decimals)
+        UD50x28 liquidityRate; // Amount of liquidity (28 decimals)
+        UD50x28 marketPrice; // The current market price (28 decimals)
         UD60x18 lower; // The normalized price of the lower bound of the range (18 decimals)
         UD60x18 upper; // The normalized price of the upper bound of the range (18 decimals)
         bool isBuy; // The direction of the trade
@@ -32,17 +31,18 @@ library Pricing {
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
-    function proportion(UD60x18 lower, UD60x18 upper, UD60x18 marketPrice) internal pure returns (UD60x18) {
+    function proportion(UD60x18 lower, UD60x18 upper, UD50x28 marketPrice) internal pure returns (UD50x28) {
+        UD60x18 marketPriceUD60 = marketPrice.intoUD60x18();
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
-        if (lower > marketPrice || marketPrice > upper)
-            revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPrice);
+        if (lower > marketPriceUD60 || marketPriceUD60 > upper)
+            revert IPricing.Pricing__PriceOutOfRange(lower, upper, marketPriceUD60);
 
-        return (marketPrice - lower) / (upper - lower);
+        return (marketPrice - lower.intoUD50x28()) / (upper - lower).intoUD50x28();
     }
 
     /// @notice Returns the percentage by which the market price has passed through the lower and upper prices
     ///         from left to right. Reverts if the market price is not within the range of the lower and upper prices.
-    function proportion(Args memory args) internal pure returns (UD60x18) {
+    function proportion(Args memory args) internal pure returns (UD50x28) {
         return proportion(args.lower, args.upper, args.marketPrice);
     }
 
@@ -62,7 +62,7 @@ library Pricing {
     function amountOfTicksBetween(UD60x18 lower, UD60x18 upper) internal pure returns (UD60x18) {
         if (lower >= upper) revert IPricing.Pricing__UpperNotGreaterThanLower(lower, upper);
 
-        return (upper - lower) / MIN_TICK_DISTANCE;
+        return (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
     }
 
     /// @notice Returns the number of ticks between `args.lower` and `args.upper`
@@ -72,17 +72,35 @@ library Pricing {
 
     /// @notice Returns the liquidity between `args.lower` and `args.upper`
     function liquidity(Args memory args) internal pure returns (UD60x18) {
-        return args.liquidityRate * amountOfTicksBetween(args);
+        return (args.liquidityRate * amountOfTicksBetween(args).intoUD50x28()).intoUD60x18();
     }
 
     /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`
     function bidLiquidity(Args memory args) internal pure returns (UD60x18) {
-        return proportion(args) * liquidity(args);
+        UD50x28 result = proportion(args) * liquidity(args).intoUD50x28();
+        UD60x18 resultUD60 = result.intoUD60x18();
+
+        // (10 ** (28 - 18)) / 2 = 5e9
+        if (result - resultUD60.intoUD50x28() > ud50x28(5e9)) {
+            // Round up
+            resultUD60 = resultUD60 + ud(1);
+        }
+
+        return resultUD60;
     }
 
     /// @notice Returns the ask-side liquidity between `args.lower` and `args.upper`
     function askLiquidity(Args memory args) internal pure returns (UD60x18) {
-        return (ONE - proportion(args)) * liquidity(args);
+        UD50x28 result = (UD50_ONE - proportion(args)) * liquidity(args).intoUD50x28();
+        UD60x18 resultUD60 = result.intoUD60x18();
+
+        // (10 ** (28 - 18)) / 2 = 5e9
+        if (result - resultUD60.intoUD50x28() >= ud50x28(5e9)) {
+            // Round up
+            resultUD60 = resultUD60 + ud(1);
+        }
+
+        return resultUD60;
     }
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
@@ -92,23 +110,23 @@ library Pricing {
 
     /// @notice Computes price reached from the current lower/upper tick after buying/selling `trade_size` amount of
     ///         contracts
-    function price(Args memory args, UD60x18 tradeSize) internal pure returns (UD60x18) {
+    function price(Args memory args, UD60x18 tradeSize) internal pure returns (UD50x28) {
         UD60x18 liq = liquidity(args);
-        if (liq == ZERO) return args.isBuy ? args.upper : args.lower;
+        if (liq == ZERO) return (args.isBuy ? args.upper : args.lower).intoUD50x28();
 
-        UD60x18 _proportion;
-        if (tradeSize > ZERO) _proportion = tradeSize / liq;
+        UD50x28 _proportion;
+        if (tradeSize > ZERO) _proportion = tradeSize.intoUD50x28() / liq.intoUD50x28();
 
-        if (_proportion > ONE) revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
+        if (_proportion > UD50_ONE) revert IPricing.Pricing__PriceCannotBeComputedWithinTickRange();
 
         return
             args.isBuy
-                ? args.lower + (args.upper - args.lower) * _proportion
-                : args.upper - (args.upper - args.lower) * _proportion;
+                ? args.lower.intoUD50x28() + (args.upper - args.lower).intoUD50x28() * _proportion
+                : args.upper.intoUD50x28() - (args.upper - args.lower).intoUD50x28() * _proportion;
     }
 
     /// @notice Gets the next market price within a tick range after buying/selling `tradeSize` amount of contracts
-    function nextPrice(Args memory args, UD60x18 tradeSize) internal pure returns (UD60x18) {
+    function nextPrice(Args memory args, UD60x18 tradeSize) internal pure returns (UD50x28) {
         UD60x18 offset = args.isBuy ? bidLiquidity(args) : askLiquidity(args);
         return price(args, offset + tradeSize);
     }
