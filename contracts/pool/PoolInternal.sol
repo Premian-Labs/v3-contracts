@@ -111,23 +111,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 strike,
         bool isCallPool
     ) internal view returns (UD60x18) {
-        if (premium == ZERO) {
-            // if the premium is zero we want to default to using the
-            // in the takerFee function if the premium is set to the value below, ie the ratio of the
-            // collateral_fee_percentage and premium_fee_percentage times the size then the takerFee function defaults
-            // to using the notionalFee
-            premium = (COLLATERAL_FEE_PERCENTAGE / PREMIUM_FEE_PERCENTAGE) * size;
-            isPremiumNormalized = true;
-        }
-
         if (!isPremiumNormalized) {
             // Normalize premium
             premium = Position.collateralToContracts(premium, strike, isCallPool);
         }
 
-        UD60x18 premiumFee1 = premium * PREMIUM_FEE_PERCENTAGE;
-        UD60x18 premiumFee2 = premium * MAX_PREMIUM_FEE_PERCENTAGE;
         UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
+        UD60x18 premiumFee1 = (premium == ZERO) ? notionalFee : premium * PREMIUM_FEE_PERCENTAGE;
+        UD60x18 premiumFee2 = (premium == ZERO) ? notionalFee : premium * MAX_PREMIUM_FEE_PERCENTAGE;
         UD60x18 fee = PRBMathExtra.min(premiumFee2, PRBMathExtra.max(premiumFee1, notionalFee));
 
         UD60x18 discount;

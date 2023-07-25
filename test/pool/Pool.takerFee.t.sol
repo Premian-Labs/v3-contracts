@@ -33,7 +33,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 discount
     ) internal {
         if (price == ZERO) {
-            price = ud(0.1 ether) * size;
+            price = (COLLATERAL_FEE_PERCENTAGE / PREMIUM_FEE_PERCENTAGE) * size;
             isPremiumNormalized = true;
         }
 
