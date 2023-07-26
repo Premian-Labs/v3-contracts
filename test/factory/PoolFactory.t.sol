@@ -145,12 +145,20 @@ contract PoolFactoryTest is DeployTest {
         factory.deployPool{value: 1 ether}(poolKey);
     }
 
-    function test_deployPool_RevertIf_OracleAddress() public {
+    // Note, this test is temporary and should be removed when the factory is updated to support multiple adapters
+    function test_deployPool_RevertIf_InvalidOracleAdapter() public {
         poolKey.oracleAdapter = address(0);
 
-        vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
+        vm.expectRevert(IPoolFactory.PoolFactory__InvalidOracleAdapter.selector);
         factory.deployPool{value: 1 ether}(poolKey);
     }
+
+    //    function test_deployPool_RevertIf_OracleAddress() public {
+    //        poolKey.oracleAdapter = address(0);
+    //
+    //        vm.expectRevert(IPoolFactory.PoolFactory__ZeroAddress.selector);
+    //        factory.deployPool{value: 1 ether}(poolKey);
+    //    }
 
     function test_deployPool_RevertIf_StrikeIsZero() public {
         poolKey.strike = ud(0);
