@@ -1,3 +1,4 @@
+import arbitrum from './deployment/arbitrum.json';
 import goerli from './deployment/goerli.json';
 import arbitrumGoerli from './deployment/arbitrumGoerli.json';
 
@@ -71,6 +72,29 @@ export const feeds = [
     { token: tokens.DAI.address, denomination: tokens.CHAINLINK_ETH.address, feed: '0x773616E4d11A78F511299002da57A0a94577F1f4'},
     { token: tokens.WBTC.address, denomination: tokens.CHAINLINK_BTC.address, feed: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23'},
 ]
+
+export const arbitrumFeeds = [
+  {
+    token: CHAINLINK_ETH,
+    denomination: CHAINLINK_USD,
+    feed: '0x639fe6ab55c921f74e7fac1ee960c0b6293ba612',
+  },
+  {
+    token: arbitrum.tokens.WBTC,
+    denomination: CHAINLINK_USD,
+    feed: '0xd0C7101eACbB49F3deCcCc166d238410D6D46d57',
+  },
+  {
+    token: arbitrum.tokens.ARB,
+    denomination: CHAINLINK_USD,
+    feed: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
+  },
+  {
+    token: arbitrum.tokens.USDCe,
+    denomination: CHAINLINK_USD,
+    feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3', // uses USDC feed
+  },
+];
 
 export const goerliFeeds = [
   {

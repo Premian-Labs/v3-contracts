@@ -37,11 +37,11 @@ address constant ALPHA = 0xa1faa113cbE53436Df28FF0aEe54275c13B40975;
 function feeds() pure returns (IFeedRegistry.FeedMappingArgs[] memory r) {
     r = new IFeedRegistry.FeedMappingArgs[](26);
 
-    r[0]  = IFeedRegistry.FeedMappingArgs( CHAINLINK_BTC, CHAINLINK_USD,  0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c );
-    r[1]  = IFeedRegistry.FeedMappingArgs( YFI,           CHAINLINK_USD,  0xA027702dbb89fbd58938e4324ac03B58d812b0E1 );
-    r[2]  = IFeedRegistry.FeedMappingArgs( ENS,           CHAINLINK_USD,  0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16 );
-    r[3]  = IFeedRegistry.FeedMappingArgs( USDC,          CHAINLINK_USD,  0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 );
-    r[4]  = IFeedRegistry.FeedMappingArgs( WETH,          CHAINLINK_USD,  0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 );
+    r[0]  = IFeedRegistry.FeedMappingArgs( CHAINLINK_ETH, CHAINLINK_USD,  0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 );
+    r[1]  = IFeedRegistry.FeedMappingArgs( CHAINLINK_BTC, CHAINLINK_USD,  0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c );
+    r[2]  = IFeedRegistry.FeedMappingArgs( YFI,           CHAINLINK_USD,  0xA027702dbb89fbd58938e4324ac03B58d812b0E1 );
+    r[3]  = IFeedRegistry.FeedMappingArgs( ENS,           CHAINLINK_USD,  0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16 );
+    r[4]  = IFeedRegistry.FeedMappingArgs( USDC,          CHAINLINK_USD,  0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 );
     r[5]  = IFeedRegistry.FeedMappingArgs( DAI,           CHAINLINK_USD,  0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9 );
     r[6]  = IFeedRegistry.FeedMappingArgs( BNT,           CHAINLINK_USD,  0x1E6cF0D433de4FE882A437ABC654F58E1e78548c );
     r[7]  = IFeedRegistry.FeedMappingArgs( CRV,           CHAINLINK_USD,  0xCd627aA160A6fA45Eb793D19Ef54f5062F20f33f );

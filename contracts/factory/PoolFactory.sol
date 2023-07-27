@@ -81,6 +81,8 @@ contract PoolFactory is IPoolFactory, OwnableInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolFactory
     function deployPool(PoolKey calldata k) external payable nonReentrant returns (address poolAddress) {
+        if (k.oracleAdapter != CHAINLINK_ADAPTER) revert PoolFactory__InvalidOracleAdapter();
+
         _revertIfAddressInvalid(k);
 
         IOracleAdapter(k.oracleAdapter).upsertPair(k.base, k.quote);
