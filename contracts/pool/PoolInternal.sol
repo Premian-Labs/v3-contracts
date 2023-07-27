@@ -1186,6 +1186,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         l.protocolFees = l.protocolFees + fee;
         _exerciseValue = _exerciseValue - fee;
+
+        if (size == ZERO) return (0, 0, false);
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
@@ -1219,6 +1221,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         (UD60x18 size, UD60x18 exerciseValue, UD60x18 _collateral) = _beforeExerciseOrSettle(l, false, holder);
 
+        if (size == ZERO) return (0, false);
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
