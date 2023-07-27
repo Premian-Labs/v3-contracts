@@ -1191,21 +1191,13 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        if (size == ZERO) return (0, 0, false);
-
         exerciseFee = l.toPoolTokenDecimals(fee);
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
         emit Exercise(msg.sender, holder, size, _exerciseValue, l.settlementPrice, fee, costPerHolder);
 
-        if (costPerHolder > ZERO) {
-            _exerciseValue = _exerciseValue - costPerHolder;
-        }
-
-        if (_exerciseValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _exerciseValue);
-        }
+        if (costPerHolder > ZERO) _exerciseValue = _exerciseValue - costPerHolder;
+        if (_exerciseValue > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _exerciseValue);
 
         success = true;
     }
@@ -1225,20 +1217,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        if (size == ZERO) return (0, false);
-
         collateral = l.toPoolTokenDecimals(_collateral);
 
         emit Settle(msg.sender, holder, size, exerciseValue, l.settlementPrice, ZERO, costPerHolder);
 
-        if (costPerHolder > ZERO) {
-            _collateral = _collateral - costPerHolder;
-        }
-
-        if (_collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _collateral);
-        }
+        if (costPerHolder > ZERO) _collateral = _collateral - costPerHolder;
+        if (_collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _collateral);
 
         success = true;
     }
@@ -1304,18 +1288,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             vars.collateral = vars.collateral + longs * vars.payoff;
 
             vars.collateral = vars.collateral + shorts * ((l.isCallPool ? ONE : l.strike) - vars.payoff);
-
             vars.collateral = vars.collateral + vars.claimableFees;
 
             _burn(p.owner, vars.tokenId, vars.size);
 
-            if (longs > ZERO) {
-                _burn(address(this), PoolStorage.LONG, longs);
-            }
-
-            if (shorts > ZERO) {
-                _burn(address(this), PoolStorage.SHORT, shorts);
-            }
+            if (longs > ZERO) _burn(address(this), PoolStorage.LONG, longs);
+            if (shorts > ZERO) _burn(address(this), PoolStorage.SHORT, shorts);
         }
 
         _deletePosition(l, vars.pKeyHash);
@@ -1335,13 +1313,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             costPerHolder
         );
 
-        if (costPerHolder > ZERO) {
-            vars.collateral = vars.collateral - costPerHolder;
-        }
-
-        if (vars.collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, vars.collateral);
-        }
+        if (costPerHolder > ZERO) vars.collateral = vars.collateral - costPerHolder;
+        if (vars.collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, vars.collateral);
 
         success = true;
     }

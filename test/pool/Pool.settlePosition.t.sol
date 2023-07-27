@@ -296,7 +296,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         // create an erroneous position that will be used to 'settle' and steal all
         // the tokens out of the pool
-        Position.Key memory fakePosition1 = Position.Key({
+        Position.Key memory fakePosition = Position.Key({
             owner: user,
             operator: operator,
             lower: posKey.lower,
@@ -314,11 +314,11 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         // This is the key to the attack. We need to trick the pool into generating an invalid tokenId. To do this, we
         // update one of the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
-        fakePosition1.lower = ud(.7e18);
+        fakePosition.lower = ud(.7e18);
 
         // settlePositionFor batches handling position settlements, so we need to provide an array
         Position.Key[] memory p = new Position.Key[](1);
-        p[0] = fakePosition1;
+        p[0] = fakePosition;
 
         // Verify that the pool contains tokens (so we can steal them)
         assertGt(originalPoolBalance, 0);
