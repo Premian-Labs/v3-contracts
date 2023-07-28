@@ -168,8 +168,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             address denomination = args[i].denomination;
             address feed = args[i].feed;
 
-            if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
-            if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
+            if (token == denomination) revert OracleAdapter__TokensAreSame(token, denomination);
+            if (token == address(0) || denomination == address(0)) revert OracleAdapter__ZeroAddress();
 
             if (!denomination.isETH() && !denomination.isBTC() && !denomination.isUSD())
                 revert ChainlinkAdapter__InvalidDenomination(denomination);

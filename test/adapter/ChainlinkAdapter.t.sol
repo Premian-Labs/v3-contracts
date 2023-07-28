@@ -279,7 +279,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));
 
-        vm.expectRevert(abi.encodeWithSelector(IFeedRegistry.FeedRegistry__TokensAreSame.selector, EUL, EUL));
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, EUL, EUL));
         adapter.batchRegisterFeedMappings(data);
     }
 
@@ -287,11 +287,11 @@ contract ChainlinkAdapterTest is Test, Assertions {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
 
         data[0] = IFeedRegistry.FeedMappingArgs(address(0), DAI, address(1));
-        vm.expectRevert(IFeedRegistry.FeedRegistry__ZeroAddress.selector);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
         adapter.batchRegisterFeedMappings(data);
 
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, address(0), address(1));
-        vm.expectRevert(IFeedRegistry.FeedRegistry__ZeroAddress.selector);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
         adapter.batchRegisterFeedMappings(data);
     }
 
