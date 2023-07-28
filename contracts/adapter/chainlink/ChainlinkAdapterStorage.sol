@@ -3,6 +3,7 @@
 pragma solidity ^0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
@@ -11,6 +12,7 @@ library ChainlinkAdapterStorage {
 
     struct Layout {
         mapping(bytes32 key => IChainlinkAdapter.PricingPath) pricingPath;
+        mapping(address token => EnumerableSet.AddressSet tokens) pairedTokens;
     }
 
     function layout() internal pure returns (Layout storage l) {
