@@ -66,9 +66,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             // Check if there is a current path. If there is, it means that the pair was supported and it
             // lost support. In that case, we will remove the current path and continue working as expected.
             // If there was no supported path, and there still isn't, then we will fail
-            PricingPath _currentPath = l.pricingPath[keyForPair];
-
-            if (_currentPath == PricingPath.NONE) revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
+            if (l.pricingPath[keyForPair] == PricingPath.NONE)
+                revert OracleAdapter__PairCannotBeSupported(tokenA, tokenB);
         }
 
         if (l.pricingPath[keyForPair] == path) return;
@@ -266,9 +265,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             return adjustedTokenInToUSD / adjustedEthToUSDPrice / tokenOutToETH;
         } else {
             UD60x18 tokenInToETH = _getPriceAgainstETH(tokenIn, target);
-
             UD60x18 adjustedTokenOutToUSD = _getPriceAgainstUSD(tokenOut, target);
-
             return (tokenInToETH * adjustedEthToUSDPrice) / adjustedTokenOutToUSD;
         }
     }
