@@ -171,6 +171,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
             if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
 
+            if (!denomination.isETH() && !denomination.isBTC() && !denomination.isUSD())
+                revert ChainlinkAdapter__InvalidDenomination(denomination);
+
             bytes32 keyForPair = token.keyForUnsortedPair(denomination);
             FeedRegistryStorage.layout().feeds[keyForPair] = feed;
 

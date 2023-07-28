@@ -35,6 +35,10 @@ library ChainlinkAdapterStorage {
         return token == Denominations.USD;
     }
 
+    function isBTC(address token) internal pure returns (bool) {
+        return token == Denominations.BTC;
+    }
+
     function isETH(address token) internal pure returns (bool) {
         return token == Denominations.ETH;
     }

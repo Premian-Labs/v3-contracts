@@ -295,6 +295,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.batchRegisterFeedMappings(data);
     }
 
+    function test_batchRegisterFeedMappings_RevertIf_InvalidDenomination() public {
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
+        data[0] = IFeedRegistry.FeedMappingArgs(WETH, CRV, address(1));
+        vm.expectRevert(abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__InvalidDenomination.selector, CRV));
+        adapter.batchRegisterFeedMappings(data);
+    }
+
     function test_batchRegisterFeedMappings_RevertIf_NotOwner() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));

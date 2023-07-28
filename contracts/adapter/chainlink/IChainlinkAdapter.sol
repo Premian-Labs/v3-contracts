@@ -41,6 +41,9 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Thrown when the getRoundData call reverts without a reason
     error ChainlinkAdapter__GetRoundDataCallReverted(bytes data);
 
+    /// @notice Thrown when the denomination is invalid
+    error ChainlinkAdapter__InvalidDenomination(address denomination);
+
     /// @notice Thrown when the lastRoundData call reverts without a reason
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
