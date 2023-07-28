@@ -5,6 +5,7 @@ pragma solidity ^0.8.19;
 import "forge-std/console2.sol";
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -45,22 +46,23 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     }
 
     function test_computeCLevel_Success() public {
-        UD60x18[6] memory utilisation = [ud(0e18), ud(0.2e18), ud(0.4e18), ud(0.6e18), ud(0.8e18), ud(1e18)];
+        SD59x18[7] memory utilisation = [sd(0e18), sd(0.2e18), sd(0.4e18), sd(0.6e18), sd(0.8e18), sd(1e18), sd(1e18)];
 
-        UD60x18[6] memory duration = [ud(0e18), ud(3e18), ud(6e18), ud(9e18), ud(12e18), ud(15e18)];
+        SD59x18[7] memory duration = [sd(0e18), sd(3e18), sd(6e18), sd(9e18), sd(12e18), sd(15e18), sd(250e18)];
 
-        UD60x18[6] memory expected = [
+        UD60x18[7] memory expected = [
             ud(1e18),
             ud(1e18),
             ud(1e18),
             ud(1.007915959186644182e18),
             ud(1.045034261503684539e18),
-            ud(1.125e18)
+            ud(1.125e18),
+            ud(1e18)
         ];
 
         for (uint256 i = 0; i < utilisation.length; i++) {
             assertEq(
-                vault.computeCLevel(utilisation[i], duration[i], ud(3e18), ud(1e18), ud(1.2e18), ud(0.005e18)),
+                vault.computeCLevel(utilisation[i], duration[i], sd(3e18), sd(1e18), sd(1.2e18), sd(0.005e18)),
                 expected[i]
             );
         }
