@@ -313,8 +313,9 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.warp(poolKey.maturity);
 
         // This is the key to the attack. We need to trick the pool into generating an invalid tokenId. To do this, we
-        // update one of the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
-        fakePosition.lower = ud(.7e18);
+        // update the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
+        fakePosition.lower = ud(0.7e18);
+        fakePosition.upper = ud(0.8e18);
 
         // settlePositionFor batches handling position settlements, so we need to provide an array
         Position.Key[] memory p = new Position.Key[](1);

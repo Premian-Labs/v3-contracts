@@ -142,7 +142,8 @@ library PoolStorage {
         UD60x18 upper,
         Position.OrderType orderType
     ) internal pure returns (uint256 tokenId) {
-        if (lower < MIN_TICK_PRICE || upper > MAX_TICK_PRICE) revert IPoolInternal.Pool__InvalidRange(lower, upper);
+        if (lower >= upper || lower < MIN_TICK_PRICE || upper > MAX_TICK_PRICE)
+            revert IPoolInternal.Pool__InvalidRange(lower, upper);
 
         tokenId =
             (uint256(TOKEN_VERSION) << 252) +
