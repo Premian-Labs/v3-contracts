@@ -3,7 +3,6 @@
 pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -14,7 +13,7 @@ import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/R
 
 import {IOracleAdapter} from "../../../adapter/IOracleAdapter.sol";
 import {IPoolFactory} from "../../../factory/IPoolFactory.sol";
-import {ZERO, ONE, iONE} from "../../../libraries/Constants.sol";
+import {ZERO, ONE} from "../../../libraries/Constants.sol";
 import {EnumerableSetUD60x18, EnumerableSet} from "../../../libraries/EnumerableSetUD60x18.sol";
 import {OptionMath} from "../../../libraries/OptionMath.sol";
 import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
@@ -529,22 +528,23 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     /// @param decayRate The decay rate of the C-level back down to minimum level (decay/hour)
     /// @return The C-level corresponding to the post-utilisation value.
     function _computeCLevel(
-        SD59x18 utilisation,
-        SD59x18 duration,
-        SD59x18 alpha,
-        SD59x18 minCLevel,
-        SD59x18 maxCLevel,
-        SD59x18 decayRate
+        UD60x18 utilisation,
+        UD60x18 duration,
+        UD60x18 alpha,
+        UD60x18 minCLevel,
+        UD60x18 maxCLevel,
+        UD60x18 decayRate
     ) internal pure returns (UD60x18) {
-        if (utilisation > iONE) revert Vault__UtilisationOutOfBounds();
+        if (utilisation > ONE) revert Vault__UtilisationOutOfBounds();
 
-        SD59x18 posExp = (alpha * (iONE - utilisation)).exp();
-        SD59x18 alphaExp = alpha.exp();
-        SD59x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - iONE);
+        UD60x18 posExp = (alpha * (ONE - utilisation)).exp();
+        UD60x18 alphaExp = alpha.exp();
+        UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - ONE);
 
-        SD59x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 decay = decayRate * duration;
 
-        return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel).intoUD60x18();
+        return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
@@ -653,12 +653,12 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
             UD60x18 hoursSinceLastTx = ud((_getBlockTimestamp() - l.lastTradeTimestamp) * WAD) / ud(ONE_HOUR * WAD);
 
             vars.cLevel = _computeCLevel(
-                utilisation.intoSD59x18(),
-                hoursSinceLastTx.intoSD59x18(),
-                l.alphaCLevel.intoSD59x18(),
-                l.minCLevel.intoSD59x18(),
-                l.maxCLevel.intoSD59x18(),
-                l.hourlyDecayDiscount.intoSD59x18()
+                utilisation,
+                hoursSinceLastTx,
+                l.alphaCLevel,
+                l.minCLevel,
+                l.maxCLevel,
+                l.hourlyDecayDiscount
             );
         }
 

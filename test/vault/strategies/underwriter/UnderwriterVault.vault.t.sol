@@ -46,9 +46,9 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
     }
 
     function test_computeCLevel_Success() public {
-        SD59x18[7] memory utilisation = [sd(0e18), sd(0.2e18), sd(0.4e18), sd(0.6e18), sd(0.8e18), sd(1e18), sd(1e18)];
+        UD60x18[7] memory utilisation = [ud(0e18), ud(0.2e18), ud(0.4e18), ud(0.6e18), ud(0.8e18), ud(1e18), ud(1e18)];
 
-        SD59x18[7] memory duration = [sd(0e18), sd(3e18), sd(6e18), sd(9e18), sd(12e18), sd(15e18), sd(250e18)];
+        UD60x18[7] memory duration = [ud(0e18), ud(3e18), ud(6e18), ud(9e18), ud(12e18), ud(15e18), ud(250e18)];
 
         UD60x18[7] memory expected = [
             ud(1e18),
@@ -62,7 +62,7 @@ abstract contract UnderwriterVaultVaultTest is UnderwriterVaultDeployTest {
 
         for (uint256 i = 0; i < utilisation.length; i++) {
             assertEq(
-                vault.computeCLevel(utilisation[i], duration[i], sd(3e18), sd(1e18), sd(1.2e18), sd(0.005e18)),
+                vault.computeCLevel(utilisation[i], duration[i], ud(3e18), ud(1e18), ud(1.2e18), ud(0.005e18)),
                 expected[i]
             );
         }
