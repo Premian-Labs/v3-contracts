@@ -542,8 +542,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - ONE);
 
         UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 decay = decayRate * duration;
 
-        return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel);
+        return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
