@@ -2,6 +2,6 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-interface IProxyManager {
-    function getPoolList() external view returns (address[] memory);
+interface IPaymentSplitter {
+    function pay(uint256 baseAmount, uint256 quoteAmount) external;
 }

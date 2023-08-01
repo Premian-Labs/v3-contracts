@@ -6,7 +6,7 @@ import {BokkyPooBahsDateTimeLibrary as DateTime} from "@bokkypoobah/BokkyPooBahs
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {ZERO, TWO, iZERO, iONE, iTWO, iFOUR, iNINE} from "./Constants.sol";
+import {ZERO, ONE, TWO, iZERO, iONE, iTWO, iFOUR, iNINE} from "./Constants.sol";
 
 library OptionMath {
     struct BlackScholesPriceVarsInternal {
@@ -232,6 +232,17 @@ library OptionMath {
         uint256 multiplier = (_strike >= 5 * 10 ** nbDigits) ? 5 : 1;
 
         return ud(multiplier * 10 ** (nbDigits - 1));
+    }
+
+    /// @notice Rounds `strike` using the calculated strike interval
+    /// @param strike The price to round (18 decimals)
+    /// @return The rounded strike price (18 decimals)
+    function roundToStrikeInterval(UD60x18 strike) internal pure returns (UD60x18) {
+        uint256 _strike = strike.div(ONE).unwrap();
+        uint256 interval = calculateStrikeInterval(strike).div(ONE).unwrap();
+        uint256 lower = interval * (_strike / interval);
+        uint256 upper = interval * ((_strike / interval) + 1);
+        return (_strike - lower < upper - _strike) ? ud(lower) : ud(upper);
     }
 
     /// @notice Calculate the log moneyness of a strike/spot price pair
