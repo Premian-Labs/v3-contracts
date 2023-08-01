@@ -705,6 +705,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
             args.size,
             ZERO,
             true,
+            false,
             args.strike,
             l.isCall
         );

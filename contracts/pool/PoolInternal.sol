@@ -64,9 +64,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable VXPREMIA;
 
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
-    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
-    UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5%
-    UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
+
+    UD60x18 internal constant AMM_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3% of premium
+    UD60x18 internal constant AMM_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
+    UD60x18 internal constant ORDERBOOK_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.0008e18); // 0.08% of notional
+    UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of premium
+
     UD60x18 internal constant EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
     UD60x18 internal constant MAX_EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of intrinsic value
 
@@ -106,6 +109,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///        1500, and a premium of 750, the normalized premium would be 0.5)
     /// @param strike The strike of the option (18 decimals)
     /// @param isCallPool Whether the pool is a call pool or not
+    /// @param isOrderbook Whether the fee is for the `fillQuoteOB` function or not
     /// @return The taker fee for an option trade denormalized. (18 decimals)
     function _takerFee(
         address taker,
@@ -113,17 +117,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premium,
         bool isPremiumNormalized,
         UD60x18 strike,
-        bool isCallPool
+        bool isCallPool,
+        bool isOrderbook
     ) internal view returns (UD60x18) {
         if (!isPremiumNormalized) {
             // Normalize premium
             premium = Position.collateralToContracts(premium, strike, isCallPool);
         }
 
-        UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
-        UD60x18 premiumFee1 = (premium == ZERO) ? notionalFee : premium * PREMIUM_FEE_PERCENTAGE;
-        UD60x18 premiumFee2 = (premium == ZERO) ? notionalFee : premium * MAX_PREMIUM_FEE_PERCENTAGE;
-        UD60x18 fee = PRBMathExtra.min(premiumFee2, PRBMathExtra.max(premiumFee1, notionalFee));
+        UD60x18 fee;
+        if (isOrderbook) {
+            fee = PRBMathExtra.min(premium * MAX_PREMIUM_FEE_PERCENTAGE, size * ORDERBOOK_NOTIONAL_FEE_PERCENTAGE);
+        } else {
+            UD60x18 notionalFee = size * AMM_NOTIONAL_FEE_PERCENTAGE;
+            UD60x18 premiumFee1 = (premium == ZERO) ? notionalFee : premium * AMM_PREMIUM_FEE_PERCENTAGE;
+            UD60x18 maxFee = (premium == ZERO) ? notionalFee : premium * MAX_PREMIUM_FEE_PERCENTAGE;
+
+            fee = PRBMathExtra.min(maxFee, PRBMathExtra.max(premiumFee1, notionalFee));
+        }
 
         UD60x18 discount;
         if (taker != address(0)) discount = ud(IVxPremia(VXPREMIA).getDiscount(taker));
@@ -202,7 +213,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             if (tradeSize > ZERO) {
                 UD60x18 premium = (pricing.marketPrice.avg(nextPrice) * tradeSize.intoUD50x28()).intoUD60x18();
 
-                UD60x18 takerFee = _takerFee(taker, tradeSize, premium, true, l.strike, l.isCallPool);
+                UD60x18 takerFee = _takerFee(taker, tradeSize, premium, true, l.strike, l.isCallPool, false);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
@@ -633,7 +644,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             taker = longReceiver;
         }
 
-        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool);
+        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool, false);
         IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), underwriter, address(this), collateral + protocolFee);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
@@ -689,7 +700,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                         premium = (quoteAMMPrice * vars.tradeSize.intoUD50x28()).intoUD60x18();
                     }
 
-                    UD60x18 takerFee = _takerFee(args.user, vars.tradeSize, premium, true, l.strike, l.isCallPool);
+                    UD60x18 takerFee = _takerFee(
+                        args.user,
+                        vars.tradeSize,
+                        premium,
+                        true,
+                        l.strike,
+                        l.isCallPool,
+                        false
+                    );
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
@@ -901,7 +920,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool);
+        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool, true);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
             taker,

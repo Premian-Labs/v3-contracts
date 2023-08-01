@@ -18,12 +18,14 @@ interface IPoolCore is IPoolInternal {
     /// @param size The size of a trade (number of contracts) (18 decimals)
     /// @param premium The total cost of option(s) for a purchase (poolToken decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of 1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @param isOrderbook Whether the fee is for the `fillQuoteOB` function or not
     /// @return The taker fee for an option trade denormalized (poolToken decimals)
     function takerFee(
         address taker,
         UD60x18 size,
         uint256 premium,
-        bool isPremiumNormalized
+        bool isPremiumNormalized,
+        bool isOrderbook
     ) external view returns (uint256);
 
     /// @notice Calculates the fee for a trade based on the `size` and `premiumNormalized` of the trade.
@@ -36,6 +38,7 @@ interface IPoolCore is IPoolInternal {
     /// @param premium The total cost of option(s) for a purchase (18 decimals)
     /// @param isPremiumNormalized Whether the premium given is already normalized by strike or not (Ex: For a strike of
     ///        1500, and a premium of 750, the normalized premium would be 0.5)
+    /// @param isOrderbook Whether the fee is for the `fillQuoteOB` function or not
     /// @param strike The strike of the option (18 decimals)
     /// @param isCallPool Whether the pool is a call pool or not
     /// @return The taker fee for an option trade denormalized. (18 decimals)
@@ -44,6 +47,7 @@ interface IPoolCore is IPoolInternal {
         UD60x18 size,
         UD60x18 premium,
         bool isPremiumNormalized,
+        bool isOrderbook,
         UD60x18 strike,
         bool isCallPool
     ) external view returns (UD60x18);
