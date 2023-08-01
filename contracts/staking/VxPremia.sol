@@ -8,20 +8,26 @@ import {VxPremiaStorage} from "./VxPremiaStorage.sol";
 import {IVxPremia} from "./IVxPremia.sol";
 
 import {IPoolV2ProxyManager} from "./IPoolV2ProxyManager.sol";
+import {IVaultRegistry} from "../vault/IVaultRegistry.sol";
 
 /// @author Premia
 /// @title A contract allowing you to use your locked Premia as voting power for mining weights
 contract VxPremia is IVxPremia, PremiaStaking {
-    address private immutable PROXY_MANAGER;
+    /// @notice The proxy manager contract used to deploy PremiaV2 pools
+    address private immutable PROXY_MANAGER_V2;
+    /// @notice The vault registry contract for PremiaV3 vaults
+    address private immutable VAULT_REGISTRY;
 
     constructor(
         address proxyManager,
         address lzEndpoint,
         address premia,
         address rewardToken,
-        address exchangeHelper
+        address exchangeHelper,
+        address vaultRegistry
     ) PremiaStaking(lzEndpoint, premia, rewardToken, exchangeHelper) {
-        PROXY_MANAGER = proxyManager;
+        PROXY_MANAGER_V2 = proxyManager;
+        VAULT_REGISTRY = vaultRegistry;
     }
 
     function _beforeUnstake(address user, uint256 amount) internal override {
@@ -88,7 +94,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
     }
 
     /// @inheritdoc IVxPremia
-    function getPoolVotes(VxPremiaStorage.VoteVersion version, bytes calldata target) external view returns (uint256) {
+    function getPoolVotes(VoteVersion version, bytes calldata target) external view returns (uint256) {
         return VxPremiaStorage.layout().votes[version][target];
     }
 
@@ -111,8 +117,10 @@ contract VxPremia is IVxPremia, PremiaStaking {
         // Remove previous votes
         _resetUserVotes(l, userVotes, msg.sender);
 
-        // ToDo : This is a check for v2 pools. Update this to handle v3 pools voting
-        address[] memory poolList = IPoolV2ProxyManager(PROXY_MANAGER).getPoolList();
+        address[] memory poolList;
+        if (PROXY_MANAGER_V2 != address(0)) {
+            poolList = IPoolV2ProxyManager(PROXY_MANAGER_V2).getPoolList();
+        }
 
         // Cast new votes
         uint256 votingPowerUsed = 0;
@@ -122,9 +130,11 @@ contract VxPremia is IVxPremia, PremiaStaking {
             votingPowerUsed += vote.amount;
             if (votingPowerUsed > userVotingPower) revert VxPremia__NotEnoughVotingPower();
 
-            // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
-            if (vote.version != VxPremiaStorage.VoteVersion.V2 || vote.target.length != 21)
-                revert VxPremia__InvalidVoteTarget();
+            if (
+                vote.version > VoteVersion.VaultV3 ||
+                (vote.version == VoteVersion.V2 && vote.target.length != 21) || // abi.encodePacked on [address, bool] uses 20 bytes for the address and 1 byte for the bool
+                (vote.version == VoteVersion.VaultV3 && vote.target.length != 20)
+            ) revert VxPremia__InvalidVoteTarget();
 
             // Check that the pool address is valid
             address contractAddress = address(
@@ -132,11 +142,16 @@ contract VxPremia is IVxPremia, PremiaStaking {
             );
 
             bool isValid = false;
-            for (uint256 j = 0; j < poolList.length; j++) {
-                if (contractAddress == poolList[j]) {
-                    isValid = true;
-                    break;
+            if (vote.version == VoteVersion.V2 && PROXY_MANAGER_V2 != address(0)) {
+                for (uint256 j = 0; j < poolList.length; j++) {
+                    if (contractAddress == poolList[j]) {
+                        isValid = true;
+                        break;
+                    }
                 }
+            } else if (vote.version == VoteVersion.VaultV3 && VAULT_REGISTRY != address(0)) {
+                // Chains other than Arbitrum dont have VAULT_REGISTRY
+                isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 
             if (!isValid) revert VxPremia__InvalidPoolAddress();

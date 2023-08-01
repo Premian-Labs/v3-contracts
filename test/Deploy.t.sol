@@ -189,12 +189,17 @@ contract DeployTest is Test, Assertions {
 
         userSettings = IUserSettings(address(userSettingsProxy));
 
+        address vaultRegistryImpl = address(new VaultRegistry());
+        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
+        vaultRegistry = VaultRegistry(vaultRegistryProxy);
+
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
             address(premia),
             address(quote),
-            address(exchangeHelper)
+            address(exchangeHelper),
+            vaultRegistryProxy
         );
 
         VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
@@ -202,12 +207,6 @@ contract DeployTest is Test, Assertions {
         vxPremia = IVxPremia(address(vxPremiaProxy));
 
         PoolBase poolBaseImpl = new PoolBase();
-
-        address vaultRegistryImpl = address(new VaultRegistry());
-
-        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
-
-        vaultRegistry = VaultRegistry(vaultRegistryProxy);
 
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
             address(factory),

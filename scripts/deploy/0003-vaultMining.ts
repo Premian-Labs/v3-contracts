@@ -1,14 +1,13 @@
 import {
-  VxPremia__factory,
+  VaultMining__factory,
+  VaultMiningProxy__factory,
   VxPremiaProxy,
-  VxPremiaProxy__factory,
 } from '../../typechain';
+import { ethers } from 'hardhat';
+import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import goerliAddresses from '../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import fs from 'fs';
-import { ethers } from 'hardhat';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -16,28 +15,20 @@ async function main() {
 
   //////////////////////////
 
-  let proxyManager: string;
-  let lzEndpoint: string;
   let proxy: VxPremiaProxy;
   let addresses: ContractAddresses;
   let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.Goerli) {
-    proxyManager = ethers.constants.AddressZero;
-    lzEndpoint = ethers.constants.AddressZero;
     addresses = goerliAddresses;
     addressesPath = 'utils/deployment/goerli.json';
     setImplementation = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    proxyManager = ethers.constants.AddressZero;
-    lzEndpoint = ethers.constants.AddressZero;
     addresses = arbitrumGoerliAddresses;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
@@ -45,28 +36,29 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = VxPremiaProxy__factory.connect(addresses.VxPremiaProxy, deployer);
+  // ToDo : Deploy OptionReward address
 
-  //////////////////////////
-
-  const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
-    proxyManager,
-    lzEndpoint,
-    addresses.tokens.PREMIA,
-    addresses.tokens.USDC,
-    addresses.ExchangeHelper,
+  const vaultMiningImplementation = await new VaultMining__factory(
+    deployer,
+  ).deploy(
     addresses.VaultRegistryProxy,
+    addresses.tokens.PREMIA,
+    addresses.VxPremiaProxy,
+    addresses.OptionRewardProxy,
   );
-  await vxPremiaImpl.deployed();
-  console.log(`VxPremia implementation : ${vxPremiaImpl.address}`);
 
-  // Save new addresses
-  addresses.VxPremiaImplementation = vxPremiaImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  await vaultMiningImplementation.deployed();
 
-  if (setImplementation) {
-    await proxy.setImplementation(vxPremiaImpl.address);
-  }
+  console.log(`VaultMining impl : ${vaultMiningImplementation.address}`);
+
+  const rewardsPerYear = 0; // ToDo : Set
+  const vaultMiningProxy = await new VaultMiningProxy__factory(deployer).deploy(
+    vaultMiningImplementation.address,
+    rewardsPerYear,
+  );
+  await vaultMiningProxy.deployed();
+
+  console.log(`VaultMining proxy : ${vaultMiningProxy.address}`);
 }
 
 main()

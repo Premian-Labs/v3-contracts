@@ -3,12 +3,11 @@
 pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {IERC4626Internal} from "@solidstate/contracts/interfaces/IERC4626Internal.sol";
-import {IERC20Internal} from "@solidstate/contracts/interfaces/IERC20Internal.sol";
+import {ISolidStateERC4626} from "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
 import {IPoolFactory} from "../factory/IPoolFactory.sol";
 
-interface IVault is IERC4626Internal, IERC20Internal {
+interface IVault is ISolidStateERC4626 {
     // Errors
     error Vault__AboveMaxSlippage(UD60x18 totalPremium, UD60x18 premiumLimit);
     error Vault__AddressZero();
@@ -117,4 +116,8 @@ interface IVault is IERC4626Internal, IERC20Internal {
         uint256 premiumLimit,
         address referrer
     ) external;
+
+    /// @notice Returns the utilisation rate of the vault
+    /// @return The utilisation rate of the vault
+    function getUtilisation() external view returns (UD60x18);
 }

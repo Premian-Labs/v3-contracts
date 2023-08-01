@@ -124,7 +124,9 @@ contract OptionRewardTest is Assertions, Test {
         size = 100e18;
         _size = ud(size);
 
-        address vxPremiaImpl = address(new VxPremia(address(0), address(0), address(base), address(quote), address(0)));
+        address vxPremiaImpl = address(
+            new VxPremia(address(0), address(0), address(base), address(quote), address(0), address(0))
+        );
         address vxPremiaProxy = address(new VxPremiaProxy(vxPremiaImpl));
         vxPremia = VxPremia(vxPremiaProxy);
 

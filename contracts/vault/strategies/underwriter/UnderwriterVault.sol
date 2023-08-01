@@ -20,12 +20,14 @@ import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
+import {IVaultMining} from "../../../mining/vaultMining/IVaultMining.sol";
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
+import {Vault} from "../../Vault.sol";
 import {UnderwriterVaultStorage} from "./UnderwriterVaultStorage.sol";
 
 /// @title An ERC-4626 implementation for underwriting call/put option contracts by using collateral deposited by users
-contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGuard {
+contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     using DoublyLinkedList for DoublyLinkedList.Uint256List;
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
@@ -40,7 +42,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
     address internal immutable IV_ORACLE;
     address internal immutable FACTORY;
     address internal immutable ROUTER;
-    address internal immutable VXPREMIA;
+    address internal immutable VX_PREMIA;
     address internal immutable POOL_DIAMOND;
 
     constructor(
@@ -50,15 +52,21 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         address factory,
         address router,
         address vxPremia,
-        address poolDiamond
-    ) {
+        address poolDiamond,
+        address vaultMining
+    ) Vault(vaultMining) {
         VAULT_REGISTRY = vaultRegistry;
         FEE_RECEIVER = feeReceiver;
         IV_ORACLE = oracle;
         FACTORY = factory;
         ROUTER = router;
-        VXPREMIA = vxPremia;
+        VX_PREMIA = vxPremia;
         POOL_DIAMOND = poolDiamond;
+    }
+
+    function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+        return l.totalLockedAssets / l.totalAssets;
     }
 
     function updateSettings(bytes memory settings) external {
