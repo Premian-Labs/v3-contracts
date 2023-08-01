@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
@@ -542,8 +542,9 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         UD60x18 k = (alpha * (minCLevel * alphaExp - maxCLevel)) / (alphaExp - ONE);
 
         UD60x18 cLevel = (k * posExp + maxCLevel * alpha - k) / (alpha * posExp);
+        UD60x18 decay = decayRate * duration;
 
-        return PRBMathExtra.max(cLevel - decayRate * duration, minCLevel);
+        return PRBMathExtra.max(cLevel <= decay ? ZERO : cLevel - decay, minCLevel);
     }
 
     /// @notice Ensures that an option is tradeable with the vault.
@@ -702,7 +703,7 @@ contract UnderwriterVault is IUnderwriterVault, SolidStateERC4626, ReentrancyGua
         quote.mintingFee = IPool(POOL_DIAMOND)._takerFeeLowLevel(
             args.taker,
             args.size,
-            ud(0),
+            ZERO,
             true,
             args.strike,
             l.isCall

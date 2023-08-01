@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";

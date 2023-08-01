@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";

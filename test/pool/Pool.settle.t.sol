@@ -154,6 +154,26 @@ abstract contract PoolSettleTest is DeployTest {
         _test_settleFor_Sell100Options(false);
     }
 
+    function test_settleFor_RevertIf_SettlementFailed() public {
+        UD60x18 settlementPrice = getSettlementPrice(false);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
+        oracleAdapter.setPriceAt(settlementPrice);
+
+        TradeInternal memory trade = _test_settle_trade_Sell100Options();
+
+        uint256 poolBalance = IERC20(trade.poolToken).balanceOf(address(pool));
+        enableExerciseSettleAuthorization(users.otherTrader, fromTokenDecimals(poolBalance));
+        vm.warp(poolKey.maturity);
+
+        address[] memory holders = new address[](1);
+        holders[0] = users.otherTrader;
+
+        vm.expectRevert(IPoolInternal.Pool__SettlementFailed.selector);
+        vm.prank(users.operator);
+        pool.settleFor(holders, poolBalance);
+    }
+
     function test_settleFor_RevertIf_TotalCostExceedsCollateralValue() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
         UD60x18 price = isCallTest ? ONE : settlementPrice.inv();

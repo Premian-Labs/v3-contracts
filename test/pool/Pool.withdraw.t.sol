@@ -8,6 +8,7 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
@@ -17,6 +18,8 @@ import {DeployTest} from "../Deploy.t.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
+    using PRBMathExtra for UD60x18;
+
     function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
@@ -55,16 +58,18 @@ abstract contract PoolWithdrawTest is DeployTest {
         trade(tradeSize, true, depositSize, false);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), 0 ether);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
+
         vm.startPrank(users.lp);
+
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0 ether);
-        assertEq(pool.getShortRate(), 0.0025 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
         // balance should equal
@@ -90,16 +95,16 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.15 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.125 ether);
+        assertEq(pool.marketPrice(), 0.125e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0 ether);
-        assertEq(pool.getShortRate(), 0.0025 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
         // balance should equal
@@ -126,16 +131,16 @@ abstract contract PoolWithdrawTest is DeployTest {
             : toTokenDecimals(ud(0.85 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
         vm.warp(block.timestamp + 60);
-        assertEq(pool.marketPrice(), 0.175 ether);
+        assertEq(pool.marketPrice(), 0.175e18);
         assertEq(pool.getCurrentTick(), 0.1 ether);
         vm.startPrank(users.lp);
         pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
         vm.stopPrank();
         assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
         assertEq(pool.getCurrentTick(), 0.1 ether);
-        assertEq(pool.getLiquidityRate(), 0.0025 ether);
-        assertEq(pool.getLongRate(), 0.0025 ether);
-        assertEq(pool.getShortRate(), 0.0 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0025e28);
+        assertEq(pool.getShortRate(), 0.0);
         assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.1875 ether));
         assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.0 ether));
         // balance should equal
@@ -146,6 +151,85 @@ abstract contract PoolWithdrawTest is DeployTest {
             ? toTokenDecimals(ud(0.92734375 ether))
             : toTokenDecimals(ud(0.92734375 ether) * poolKey.strike);
         assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
+    }
+
+    function test_withdraw_DoesNotDeletePosition_OnPartialWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(0.75e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+    }
+
+    function test_withdraw_DeletePosition_OnFullWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        /////
+
+        UD60x18 _tradeSize = ud(tradeSize);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, true);
+        address poolToken = getPoolToken();
+        uint256 mintAmount = totalPremium;
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, mintAmount);
+        IERC20(poolToken).approve(address(router), mintAmount);
+        pool.trade(_tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        /////
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(1e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
     }
 
     function test_withdraw_RevertIf_BeforeEndOfWithdrawalDelay() public {
