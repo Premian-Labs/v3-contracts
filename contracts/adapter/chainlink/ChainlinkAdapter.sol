@@ -380,61 +380,79 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
         (uint16 phaseId, uint64 nextAggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
-        int256 leftPrice;
-        uint256 leftUpdatedAt;
-        int256 rightPrice = price;
-        uint256 rightUpdatedAt = updatedAt;
+        BinarySearchDataInternal memory binarySearchData;
 
-        // if the last observation is after the target skip loop
-        bool skip;
-        if (target >= updatedAt) skip = true;
+        // if latest round data is on right side of target, search for round data closest to the target
+        if (updatedAt > target) {
+            binarySearchData.rightPrice = price;
+            binarySearchData.rightUpdatedAt = updatedAt;
 
-        {
-            uint64 lowestAggregatorRoundId = 0;
-            uint64 highestAggregatorRoundId = nextAggregatorRoundId;
+            binarySearchData = _performBinarySearchForRoundData(
+                binarySearchData,
+                feed,
+                phaseId,
+                nextAggregatorRoundId,
+                target
+            );
 
-            // perform binary search to find the roundId that is closest to the target
-            while (!skip && lowestAggregatorRoundId <= highestAggregatorRoundId) {
-                nextAggregatorRoundId =
-                    lowestAggregatorRoundId +
-                    (highestAggregatorRoundId - lowestAggregatorRoundId) /
-                    2;
-                roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, nextAggregatorRoundId);
-                (, price, , updatedAt, ) = _getRoundData(feed, roundId);
+            price = binarySearchData.rightPrice;
+            updatedAt = binarySearchData.rightUpdatedAt;
 
-                if (target == updatedAt) {
-                    skip = true;
-                    break;
-                }
-
-                if (target > updatedAt) {
-                    lowestAggregatorRoundId = nextAggregatorRoundId + 1;
-                    leftPrice = price;
-                    leftUpdatedAt = updatedAt;
-                } else {
-                    rightPrice = price;
-                    rightUpdatedAt = updatedAt;
-
-                    if (nextAggregatorRoundId == 0) break;
-
-                    highestAggregatorRoundId = nextAggregatorRoundId - 1;
-                }
-            }
-        }
-
-        if (!skip) {
-            if (target - leftUpdatedAt < rightUpdatedAt - target) {
-                price = leftPrice;
-                updatedAt = leftUpdatedAt;
-            } else {
-                price = rightPrice;
-                updatedAt = rightUpdatedAt;
+            if (
+                binarySearchData.leftUpdatedAt > 0 &&
+                target - binarySearchData.leftUpdatedAt <= binarySearchData.rightUpdatedAt - target
+            ) {
+                price = binarySearchData.leftPrice;
+                updatedAt = binarySearchData.leftUpdatedAt;
             }
         }
 
         _revertIfPriceAfterTargetStale(target, updatedAt);
         _revertIfPriceInvalid(price);
+
         return price.toUint256();
+    }
+
+    /// @notice Performs a binary search to find the round data closest to the target timestamp
+    function _performBinarySearchForRoundData(
+        BinarySearchDataInternal memory binarySearchData,
+        address feed,
+        uint16 phaseId,
+        uint64 nextAggregatorRoundId,
+        uint256 target
+    ) internal view returns (BinarySearchDataInternal memory) {
+        uint64 lowestAggregatorRoundId = 0;
+        uint64 highestAggregatorRoundId = nextAggregatorRoundId;
+
+        uint80 roundId;
+        int256 price;
+        uint256 updatedAt;
+
+        while (lowestAggregatorRoundId <= highestAggregatorRoundId) {
+            nextAggregatorRoundId = lowestAggregatorRoundId + (highestAggregatorRoundId - lowestAggregatorRoundId) / 2;
+            roundId = ChainlinkAdapterStorage.formatRoundId(phaseId, nextAggregatorRoundId);
+            (, price, , updatedAt, ) = _getRoundData(feed, roundId);
+
+            if (target == updatedAt) {
+                binarySearchData.leftPrice = price;
+                binarySearchData.leftUpdatedAt = updatedAt;
+                break;
+            }
+
+            if (target > updatedAt) {
+                binarySearchData.leftPrice = price;
+                binarySearchData.leftUpdatedAt = updatedAt;
+                lowestAggregatorRoundId = nextAggregatorRoundId + 1;
+            } else {
+                binarySearchData.rightPrice = price;
+                binarySearchData.rightUpdatedAt = updatedAt;
+
+                if (nextAggregatorRoundId == 0) break;
+                highestAggregatorRoundId = nextAggregatorRoundId - 1;
+            }
+        }
+
+        return binarySearchData;
     }
 
     /// @notice Try/Catch wrapper for Chainlink aggregator's latestRoundData() function
