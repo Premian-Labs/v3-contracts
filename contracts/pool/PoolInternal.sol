@@ -370,9 +370,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         Position.Data storage pData = l.positions[p.keyHash()];
 
-        if ((balance > 0 || pData.lastDeposit > 0) && (balance == 0 || pData.lastDeposit == 0))
-            revert Pool__InvalidPositionState(balance, pData.lastDeposit);
-
+        _revertIfInvalidPositionState(balance, pData.lastDeposit);
         pData.lastDeposit = block.timestamp;
 
         // Set the market price correctly in case it's stranded
@@ -1251,6 +1249,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
 
+        _revertIfInvalidPositionState(vars.size.unwrap(), pData.lastDeposit);
+
         if (vars.size == ZERO) {
             // Revert if costPerHolder > 0
             _revertIfCostExceedsPayout(costPerHolder, ZERO);
@@ -1979,6 +1979,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Revert if the position does not exist
     function _revertIfPositionDoesNotExist(address owner, uint256 tokenId, UD60x18 balance) internal pure {
         if (balance == ZERO) revert Pool__PositionDoesNotExist(owner, tokenId);
+    }
+
+    /// @notice Revert if the position is in an invalid state
+    function _revertIfInvalidPositionState(uint256 balance, uint256 lastDeposit) internal pure {
+        if ((balance > 0 || lastDeposit > 0) && (balance == 0 || lastDeposit == 0))
+            revert Pool__InvalidPositionState(balance, lastDeposit);
     }
 
     /// @notice Returns true if OB quote is valid

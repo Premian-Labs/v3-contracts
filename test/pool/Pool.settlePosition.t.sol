@@ -130,6 +130,30 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
     }
 
+    function test_settlePosition_RevertIf_InvalidPositionState_NonZeroBalance_ZeroLastDeposit() public {
+        UD60x18 depositSize = ud(1e18);
+        pool.mint(users.lp, tokenId(), depositSize);
+
+        vm.warp(poolKey.maturity);
+        uint256 balance = depositSize.unwrap();
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, balance, 0));
+
+        vm.prank(posKey.operator);
+        pool.settlePosition(posKey);
+    }
+
+    function test_settlePosition_RevertIf_InvalidPositionState_ZeroBalance_NonZeroLastDeposit() public {
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        uint256 timestamp = block.timestamp;
+        pool.forceUpdateLastDeposit(pKeyInternal, timestamp);
+
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, 0, timestamp));
+
+        vm.prank(posKey.operator);
+        pool.settlePosition(posKey);
+    }
+
     function _test_settlePositionFor_Buy100Options(bool isITM) internal {
         UD60x18 settlementPrice = getSettlementPrice(isITM);
         UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
