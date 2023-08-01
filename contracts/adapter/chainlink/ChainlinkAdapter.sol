@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ArrayUtils} from "../../libraries/ArrayUtils.sol";
@@ -25,6 +26,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
     using ChainlinkAdapterStorage for address;
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using ChainlinkAdapterStorage for IChainlinkAdapter.PricingPath;
+    using EnumerableSet for EnumerableSet.AddressSet;
     using FeedRegistryStorage for FeedRegistryStorage.Layout;
     using SafeCast for int256;
     using Tokens for address;
@@ -53,10 +55,10 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
     /// @inheritdoc IOracleAdapter
     function upsertPair(address tokenA, address tokenB) external nonReentrant {
-        (address mappedTokenA, address mappedTokenB) = _mapToDenominationAndSort(tokenA, tokenB);
+        (address sortedA, address sortedB) = _mapToDenominationAndSort(tokenA, tokenB);
 
-        PricingPath path = _determinePricingPath(mappedTokenA, mappedTokenB);
-        bytes32 keyForPair = mappedTokenA.keyForSortedPair(mappedTokenB);
+        PricingPath path = _determinePricingPath(sortedA, sortedB);
+        bytes32 keyForPair = sortedA.keyForSortedPair(sortedB);
 
         ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage.layout();
 
@@ -71,7 +73,11 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
 
         if (l.pricingPath[keyForPair] == path) return;
         l.pricingPath[keyForPair] = path;
-        emit UpdatedPathForPair(mappedTokenA, mappedTokenB, path);
+
+        if (!l.pairedTokens[sortedA].contains(sortedB)) l.pairedTokens[sortedA].add(sortedB);
+        if (!l.pairedTokens[sortedB].contains(sortedA)) l.pairedTokens[sortedB].add(sortedA);
+
+        emit UpdatedPathForPair(sortedA, sortedB, path);
     }
 
     /// @inheritdoc IOracleAdapter
@@ -162,13 +168,26 @@ contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
             address denomination = args[i].denomination;
             address feed = args[i].feed;
 
-            if (token == denomination) revert FeedRegistry__TokensAreSame(token, denomination);
-            if (token == address(0) || denomination == address(0)) revert FeedRegistry__ZeroAddress();
+            if (token == denomination) revert OracleAdapter__TokensAreSame(token, denomination);
+            if (token == address(0) || denomination == address(0)) revert OracleAdapter__ZeroAddress();
+
+            if (!denomination.isETH() && !denomination.isBTC() && !denomination.isUSD())
+                revert ChainlinkAdapter__InvalidDenomination(denomination);
 
             bytes32 keyForPair = token.keyForUnsortedPair(denomination);
             FeedRegistryStorage.layout().feeds[keyForPair] = feed;
 
-            if (feed == address(0)) ChainlinkAdapterStorage.layout().pricingPath[keyForPair] = PricingPath.NONE;
+            ChainlinkAdapterStorage.Layout storage l = ChainlinkAdapterStorage.layout();
+
+            if (feed == address(0)) {
+                for (uint256 j = 0; j < l.pairedTokens[token].length(); j++) {
+                    address pairedToken = l.pairedTokens[token].at(j);
+                    (address sortedA, address sortedB) = _mapToDenominationAndSort(token, pairedToken);
+                    l.pricingPath[sortedA.keyForSortedPair(sortedB)] = PricingPath.NONE;
+                }
+
+                delete l.pairedTokens[token];
+            }
         }
 
         emit FeedMappingsRegistered(args);
