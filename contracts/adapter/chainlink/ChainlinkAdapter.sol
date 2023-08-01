@@ -4,6 +4,7 @@ pragma solidity =0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
@@ -15,6 +16,7 @@ import {FeedRegistry} from "../FeedRegistry.sol";
 import {FeedRegistryStorage} from "../FeedRegistryStorage.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
+import {PriceRepository} from "../PriceRepository.sol";
 import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "../Tokens.sol";
 
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
@@ -22,7 +24,7 @@ import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
 /// @title An implementation of IOracleAdapter that uses Chainlink feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
-contract ChainlinkAdapter is IChainlinkAdapter, OracleAdapter, FeedRegistry {
+contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, OwnableInternal, PriceRepository {
     using ChainlinkAdapterStorage for address;
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using ChainlinkAdapterStorage for IChainlinkAdapter.PricingPath;
