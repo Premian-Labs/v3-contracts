@@ -123,12 +123,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
         stub = new ChainlinkOraclePriceStub();
         stubCoin = address(100);
 
-        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
-
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](2);
         data[0] = IFeedRegistry.FeedMappingArgs(stubCoin, CHAINLINK_USD, address(stub));
+        data[1] = IFeedRegistry.FeedMappingArgs(stubCoin, CHAINLINK_ETH, address(stub));
 
         adapter.batchRegisterFeedMappings(data);
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
+        adapter.upsertPair(stubCoin, CHAINLINK_ETH);
     }
 
     function _addWBTCUSD(IChainlinkAdapter.PricingPath path) internal {
@@ -845,6 +846,38 @@ contract ChainlinkAdapterTest is Test, Assertions {
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
         int256 freshPrice = stub.price(4);
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+    }
+
+    function test_getPriceAt_ReturnCachedPriceAtTarget() public {
+        UD60x18 cachedPrice = ud(9e18);
+        adapter.setPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
+        adapter.setPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+
+        int256[] memory prices = new int256[](7);
+        prices[0] = 0;
+        prices[1] = 50000000000;
+        prices[2] = 100000000000;
+        prices[3] = 200000000000;
+        prices[4] = 300000000000;
+        prices[5] = 400000000000;
+        prices[6] = 500000000000;
+
+        uint256[] memory timestamps = new uint256[](7);
+        timestamps[0] = 0;
+        timestamps[1] = target - 500;
+        timestamps[2] = target - 100;
+        timestamps[3] = target - 50;
+        timestamps[4] = target;
+        timestamps[5] = target + 100;
+        timestamps[6] = target + 500;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        // decimals == 8, internal logic should scale the cached price (18 decimals) to feed decimals (8 decimals)
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), cachedPrice);
+
+        // decimals == 18, no scaling necessary
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
     }
 
     function test_describePricingPath_Success() public {
