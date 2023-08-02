@@ -850,8 +850,17 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_getPriceAt_ReturnCachedPriceAtTarget() public {
         UD60x18 cachedPrice = ud(9e18);
+
+        address relayer = vm.addr(1);
+        address[] memory relayers = new address[](1);
+        relayers[0] = relayer;
+
+        adapter.addWhitelistedRelayers(relayers);
+
+        vm.startPrank(relayer);
         adapter.setPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
         adapter.setPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        vm.stopPrank();
 
         int256[] memory prices = new int256[](7);
         prices[0] = 0;

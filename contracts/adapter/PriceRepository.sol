@@ -51,9 +51,9 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         relayers = PriceRepositoryStorage.layout().whitelistedRelayers.toArray();
     }
 
-    /// @notice Revert if `account` is not an authorized relayer
-    function _revertIfWhitelistedRelayerNotAuthorized(address account) internal view {
-        if (PriceRepositoryStorage.layout().whitelistedRelayers.contains(account))
-            revert PriceRepository__NotAuthorized(account);
+    /// @notice Revert if `relayer` is not an authorized relayer
+    function _revertIfWhitelistedRelayerNotAuthorized(address relayer) internal view {
+        if (!PriceRepositoryStorage.layout().whitelistedRelayers.contains(relayer))
+            revert PriceRepository__NotAuthorized(relayer);
     }
 }
