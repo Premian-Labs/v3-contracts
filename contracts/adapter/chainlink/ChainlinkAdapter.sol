@@ -6,6 +6,7 @@ import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {ArrayUtils} from "../../libraries/ArrayUtils.sol";
@@ -24,7 +25,14 @@ import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
 /// @title An implementation of IOracleAdapter that uses Chainlink feeds
 /// @notice This oracle adapter will attempt to use all available feeds to determine prices between pairs
-contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, OwnableInternal, PriceRepository {
+contract ChainlinkAdapter is
+    IChainlinkAdapter,
+    OwnableInternal,
+    ReentrancyGuard,
+    FeedRegistry,
+    OracleAdapter,
+    PriceRepository
+{
     using ChainlinkAdapterStorage for address;
     using ChainlinkAdapterStorage for ChainlinkAdapterStorage.Layout;
     using ChainlinkAdapterStorage for IChainlinkAdapter.PricingPath;
@@ -163,7 +171,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Own
         return path;
     }
 
-    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner {
+    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner nonReentrant {
         for (uint256 i = 0; i < args.length; i++) {
             address token = _tokenToDenomination(args[i].token);
             address denomination = args[i].denomination;

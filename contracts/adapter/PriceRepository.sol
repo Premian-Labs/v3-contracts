@@ -5,15 +5,16 @@ pragma solidity =0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IPriceRepository} from "./IPriceRepository.sol";
 import {PriceRepositoryStorage} from "./PriceRepositoryStorage.sol";
 
-contract PriceRepository is IPriceRepository, OwnableInternal {
+contract PriceRepository is IPriceRepository, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @inheritdoc IPriceRepository
-    function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external virtual {
+    function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external virtual nonReentrant {
         _revertIfWhitelistedRelayerNotAuthorized(msg.sender);
         PriceRepositoryStorage.layout().prices[base][quote][timestamp] = price;
         emit PriceUpdate(base, quote, timestamp, price);
@@ -25,7 +26,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
     }
 
     /// @inheritdoc IPriceRepository
-    function addWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner {
+    function addWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner nonReentrant {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
 
         for (uint256 i = 0; i < relayers.length; i++) {
@@ -36,7 +37,7 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
     }
 
     /// @inheritdoc IPriceRepository
-    function removeWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner {
+    function removeWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner nonReentrant {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
 
         for (uint256 i = 0; i < relayers.length; i++) {
