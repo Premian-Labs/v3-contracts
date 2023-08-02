@@ -11,6 +11,8 @@ import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
+import {IPriceRepository} from "../IPriceRepository.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionRewardProxy is Proxy {
     IProxyManager private immutable MANAGER;
@@ -18,8 +20,8 @@ contract OptionRewardProxy is Proxy {
     constructor(
         IProxyManager manager,
         IOptionPS option,
-        address priceRepository,
-        address paymentSplitter,
+        IPriceRepository priceRepository,
+        IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
         uint256 optionDuration,

@@ -114,7 +114,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         l.totalBaseReserved -= baseReserved;
         delete l.baseReserved[strike][maturity];
 
-        IERC20(l.base).approve(l.paymentSplitter, baseReserved);
+        IERC20(l.base).approve(address(l.paymentSplitter), baseReserved);
         IPaymentSplitter(l.paymentSplitter).pay(baseReserved, 0);
 
         emit RewardsNotClaimedReleased(strike, maturity, l.fromTokenDecimals(baseReserved, true));
@@ -152,8 +152,9 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         (, uint256 quoteAmount) = l.option.settle(strike, maturity, vars.totalUnderwritten);
 
         vars.fee = l.toTokenDecimals(l.fromTokenDecimals(quoteAmount, false) * FEE, false);
-        IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
-        IERC20(l.quote).approve(l.paymentSplitter, quoteAmount - vars.fee);
+
+        if (vars.fee > 0) IERC20(l.quote).safeTransfer(FEE_RECEIVER, vars.fee);
+        IERC20(l.quote).approve(address(l.paymentSplitter), quoteAmount - vars.fee);
 
         // There is a possible scenario where, if other underwriters have underwritten the same strike/maturity,
         // directly on optionPS, and most of the long holders who purchased from other holder exercised, that settlement
@@ -179,7 +180,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
                 baseAmountToPay = baseBalance - l.totalBaseReserved;
             }
         }
-        IERC20(l.base).approve(l.paymentSplitter, baseAmountToPay);
+        IERC20(l.base).approve(address(l.paymentSplitter), baseAmountToPay);
 
         IPaymentSplitter(l.paymentSplitter).pay(baseAmountToPay, quoteAmount - vars.fee);
 

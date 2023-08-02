@@ -35,7 +35,8 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         price = PriceRepositoryStorage.layout().prices[base][quote][timestamp];
     }
 
-    /// @inheritdoc IPriceRepository
+    /// @notice Add relayers to the whitelist so that they can add price updates
+    /// @param accounts The addresses to add to the whitelist
     function addWhitelistedRelayers(address[] calldata accounts) external onlyOwner {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
 
@@ -46,7 +47,8 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         }
     }
 
-    /// @inheritdoc IPriceRepository
+    /// @notice Remove relayers from the whitelist so that they cannot add priced updates
+    /// @param accounts The addresses to remove from the whitelist
     function removeWhitelistedRelayers(address[] calldata accounts) external onlyOwner {
         PriceRepositoryStorage.Layout storage l = PriceRepositoryStorage.layout();
 
@@ -57,7 +59,8 @@ contract PriceRepository is IPriceRepository, OwnableInternal {
         }
     }
 
-    /// @inheritdoc IPriceRepository
+    /// @notice Get the list of whitelisted relayers
+    /// @return The list of whitelisted relayers
     function getWhitelistedRelayers() external view returns (address[] memory) {
         return PriceRepositoryStorage.layout().whitelistedRelayers.toArray();
     }

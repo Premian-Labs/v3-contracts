@@ -24,16 +24,4 @@ interface IPriceRepository {
     /// @param timestamp Reference timestamp (in seconds)
     /// @return price for token pair (18 decimals)
     function getPriceAt(address base, address quote, uint256 timestamp) external view returns (UD60x18);
-
-    /// @notice Add relayers to the whitelist so that they can add price updates
-    /// @param accounts The addresses to add to the whitelist
-    function addWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Remove relayers from the whitelist so that they cannot add priced updates
-    /// @param accounts The addresses to remove from the whitelist
-    function removeWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Get the list of whitelisted relayers
-    /// @return The list of whitelisted relayers
-    function getWhitelistedRelayers() external view returns (address[] memory);
 }

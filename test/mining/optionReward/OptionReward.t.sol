@@ -156,8 +156,8 @@ contract OptionRewardTest is Assertions, Test {
 
         IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs({
             option: option,
-            priceRepository: address(priceRepository),
-            paymentSplitter: address(paymentSplitter),
+            priceRepository: priceRepository,
+            paymentSplitter: paymentSplitter,
             discount: discount,
             penalty: penalty,
             optionDuration: optionDuration,

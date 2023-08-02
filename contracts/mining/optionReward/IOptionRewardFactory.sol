@@ -6,12 +6,14 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
+import {IPriceRepository} from "../IPriceRepository.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 interface IOptionRewardFactory is IProxyManager {
     event ProxyDeployed(
         IOptionPS indexed option,
-        address priceRepository,
-        address paymentSplitter,
+        IPriceRepository priceRepository,
+        IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
         uint256 optionDuration,
@@ -22,8 +24,8 @@ interface IOptionRewardFactory is IProxyManager {
 
     struct OptionRewardArgs {
         IOptionPS option;
-        address priceRepository;
-        address paymentSplitter;
+        IPriceRepository priceRepository;
+        IPaymentSplitter paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;
         uint256 optionDuration;

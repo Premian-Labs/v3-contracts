@@ -10,6 +10,8 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
+import {IPriceRepository} from "../IPriceRepository.sol";
+import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 library OptionRewardStorage {
@@ -25,8 +27,8 @@ library OptionRewardStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        address priceRepository;
-        address paymentSplitter;
+        IPriceRepository priceRepository;
+        IPaymentSplitter paymentSplitter;
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;
         // percentage of the intrinsic value that is reduced after lockup period (ie 80% penalty (0.80e18), means the
