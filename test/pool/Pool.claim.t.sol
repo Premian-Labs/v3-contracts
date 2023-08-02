@@ -193,7 +193,13 @@ abstract contract PoolClaimTest is DeployTest {
         UD60x18 nextPrice = posKey.upper;
         UD60x18 avgPrice = price.avg(nextPrice);
 
-        uint256 takerFee = pool.takerFee(users.trader, ud(tradeSize), toTokenDecimals(ud(tradeSize) * avgPrice), true);
+        uint256 takerFee = pool.takerFee(
+            users.trader,
+            ud(tradeSize),
+            toTokenDecimals(ud(tradeSize) * avgPrice),
+            true,
+            false
+        );
 
         assertEq(pool.getClaimableFees(posKey), takerFee / 2); // 50% protocol fee percentage
     }

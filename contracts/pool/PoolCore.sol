@@ -53,12 +53,21 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address taker,
         UD60x18 size,
         uint256 premium,
-        bool isPremiumNormalized
+        bool isPremiumNormalized,
+        bool isOrderbook
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return
             l.toPoolTokenDecimals(
-                _takerFee(taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized, l.strike, l.isCallPool)
+                _takerFee(
+                    taker,
+                    size,
+                    l.fromPoolTokenDecimals(premium),
+                    isPremiumNormalized,
+                    l.strike,
+                    l.isCallPool,
+                    isOrderbook
+                )
             );
     }
 
@@ -68,10 +77,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         UD60x18 premium,
         bool isPremiumNormalized,
+        bool isOrderbook,
         UD60x18 strike,
         bool isCallPool
     ) external view returns (UD60x18) {
-        return _takerFee(taker, size, premium, isPremiumNormalized, strike, isCallPool);
+        return _takerFee(taker, size, premium, isPremiumNormalized, strike, isCallPool, isOrderbook);
     }
 
     /// @inheritdoc IPoolCore

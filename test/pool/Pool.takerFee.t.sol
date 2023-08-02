@@ -11,9 +11,10 @@ import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolTakerFeeTest is DeployTest {
-    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
+    UD60x18 internal constant AMM_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
+    UD60x18 internal constant AMM_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
+    UD60x18 internal constant ORDERBOOK_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.0008e18); // 0.08% of notional
     UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5%
-    UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
 
     function stake(uint256 amount) internal {
         vm.startPrank(users.trader);
@@ -33,7 +34,7 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 discount
     ) internal {
         if (price == ZERO) {
-            price = (COLLATERAL_FEE_PERCENTAGE / PREMIUM_FEE_PERCENTAGE) * size;
+            price = (AMM_NOTIONAL_FEE_PERCENTAGE / AMM_PREMIUM_FEE_PERCENTAGE) * size;
             isPremiumNormalized = true;
         }
 
@@ -46,9 +47,9 @@ abstract contract PoolTakerFeeTest is DeployTest {
         UD60x18 fee;
 
         {
-            UD60x18 premiumFee1 = normalizedPremium * PREMIUM_FEE_PERCENTAGE;
+            UD60x18 premiumFee1 = normalizedPremium * AMM_PREMIUM_FEE_PERCENTAGE;
             UD60x18 premiumFee2 = normalizedPremium * MAX_PREMIUM_FEE_PERCENTAGE;
-            UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
+            UD60x18 notionalFee = size * AMM_NOTIONAL_FEE_PERCENTAGE;
 
             assertEq(
                 premiumFee1 > notionalFee || premiumFee2 > notionalFee,
@@ -63,11 +64,25 @@ abstract contract PoolTakerFeeTest is DeployTest {
             }
         }
 
-        uint256 protocolFee = pool.takerFee(users.trader, size, premium, isPremiumNormalized);
+        assertEq(
+            pool.takerFee(users.trader, size, premium, isPremiumNormalized, false),
+            toTokenDecimals(contractsToCollateral(fee)),
+            "protocol fee should equal expected"
+        );
 
-        uint256 expectedFee = toTokenDecimals(contractsToCollateral(fee));
+        UD60x18 orderbookFee = PRBMathExtra.min(
+            normalizedPremium * MAX_PREMIUM_FEE_PERCENTAGE,
+            size * ORDERBOOK_NOTIONAL_FEE_PERCENTAGE
+        );
 
-        assertEq(protocolFee, expectedFee, "protocol fee should equal expected");
+        if (discount > ud(0)) {
+            orderbookFee = orderbookFee - orderbookFee * discount;
+        }
+
+        assertEq(
+            pool.takerFee(users.trader, size, premium, isPremiumNormalized, true),
+            toTokenDecimals(contractsToCollateral(orderbookFee))
+        );
     }
 
     function test_takerFee_premium_fee_without_discount() public {

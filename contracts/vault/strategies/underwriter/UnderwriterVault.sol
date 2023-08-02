@@ -713,6 +713,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
             args.size,
             ZERO,
             true,
+            false,
             args.strike,
             l.isCall
         );
