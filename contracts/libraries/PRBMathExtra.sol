@@ -10,12 +10,12 @@ import {SD49x28, uMAX_SD49x28} from "./SD49x28.sol";
 import {iZERO, SD49_ZERO} from "./Constants.sol";
 
 library PRBMathExtra {
-    error SD49x28_IntoSD59x18_Overflow(SD59x18 x);
+    error SD59x18_IntoSD49x28_Overflow(SD59x18 x);
     error UD60x18_IntoUD50x28_Overflow(UD60x18 x);
 
     function intoSD49x28(SD59x18 x) internal pure returns (SD49x28 result) {
         int256 xUint = x.unwrap() * int256(1e10); // Scaling factor = 10 ** (28 - 18)
-        if (xUint > uMAX_SD49x28) revert SD49x28_IntoSD59x18_Overflow(x);
+        if (xUint > uMAX_SD49x28) revert SD59x18_IntoSD49x28_Overflow(x);
         result = SD49x28.wrap(xUint);
     }
 
