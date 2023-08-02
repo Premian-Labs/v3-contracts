@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 library RelayerAccessManagerStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.Relayer");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.RelayerAccessManager");
 
     struct Layout {
         EnumerableSet.AddressSet whitelistedRelayers;
