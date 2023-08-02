@@ -130,10 +130,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             fee = PRBMathExtra.min(premium * MAX_PREMIUM_FEE_PERCENTAGE, size * ORDERBOOK_NOTIONAL_FEE_PERCENTAGE);
         } else {
             UD60x18 notionalFee = size * AMM_NOTIONAL_FEE_PERCENTAGE;
-            UD60x18 premiumFee1 = (premium == ZERO) ? notionalFee : premium * AMM_PREMIUM_FEE_PERCENTAGE;
+            UD60x18 premiumFee = (premium == ZERO) ? notionalFee : premium * AMM_PREMIUM_FEE_PERCENTAGE;
             UD60x18 maxFee = (premium == ZERO) ? notionalFee : premium * MAX_PREMIUM_FEE_PERCENTAGE;
 
-            fee = PRBMathExtra.min(maxFee, PRBMathExtra.max(premiumFee1, notionalFee));
+            fee = PRBMathExtra.min(maxFee, PRBMathExtra.max(premiumFee, notionalFee));
         }
 
         UD60x18 discount;
