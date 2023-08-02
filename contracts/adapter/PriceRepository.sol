@@ -10,7 +10,7 @@ import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/R
 import {IPriceRepository} from "./IPriceRepository.sol";
 import {PriceRepositoryStorage} from "./PriceRepositoryStorage.sol";
 
-contract PriceRepository is IPriceRepository, OwnableInternal, ReentrancyGuard {
+abstract contract PriceRepository is IPriceRepository, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @inheritdoc IPriceRepository
