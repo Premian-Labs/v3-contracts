@@ -3,10 +3,9 @@ import {
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { arbitrumGoerliFeeds, goerliFeeds } from '../../utils/addresses';
+import { arbitrumGoerliFeeds } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { ChainID } from '../../utils/deployment/types';
@@ -28,11 +27,6 @@ async function main() {
     wbtc = arbitrumAddresses.tokens.WBTC;
     feeReceiver = arbitrumAddresses.feeReceiver;
     vxPremia = arbitrumAddresses.VxPremiaProxy;
-  } else if (chainId === ChainID.Goerli) {
-    weth = goerliAddresses.tokens.WETH;
-    wbtc = goerliAddresses.tokens.WBTC;
-    feeReceiver = goerliAddresses.feeReceiver;
-    vxPremia = goerliAddresses.VxPremiaProxy;
   } else if (chainId == ChainID.ArbitrumGoerli) {
     weth = arbitrumGoerliAddresses.tokens.WETH;
     wbtc = arbitrumGoerliAddresses.tokens.WBTC;
@@ -58,13 +52,7 @@ async function main() {
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
 
-  if (chainId === ChainID.Goerli) {
-    // Goerli
-    await ChainlinkAdapter__factory.connect(
-      chainlinkAdapter,
-      deployer,
-    ).batchRegisterFeedMappings(goerliFeeds);
-  } else if (chainId == ChainID.ArbitrumGoerli) {
+  if (chainId == ChainID.ArbitrumGoerli) {
     await ChainlinkAdapter__factory.connect(
       chainlinkAdapter,
       deployer,

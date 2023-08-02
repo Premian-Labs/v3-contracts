@@ -4,7 +4,6 @@ import {
   UserSettings__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import fs from 'fs';
@@ -25,10 +24,6 @@ async function main() {
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
-  } else if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-    addressesPath = 'utils/deployment/goerli.json';
-    setImplementation = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';

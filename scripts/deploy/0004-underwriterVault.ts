@@ -12,7 +12,6 @@ import {
 } from 'ethers/lib/utils';
 import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 
 async function main() {
@@ -30,10 +29,6 @@ async function main() {
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
-  } else if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-    addressesPath = 'utils/deployment/goerli.json';
-    setImplementation = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
