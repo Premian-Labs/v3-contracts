@@ -12,14 +12,14 @@ import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 import {PRBMathExtra} from "../../libraries/PRBMathExtra.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
+
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {OptionPSStorage} from "../optionPS/OptionPSStorage.sol";
 
 import {IOptionReward} from "./IOptionReward.sol";
-
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IPaymentSplitter} from "../IPaymentSplitter.sol";
-import {IPriceRepository} from "../IPriceRepository.sol";
 
 contract OptionReward is IOptionReward, ReentrancyGuard {
     using OptionRewardStorage for IERC20;
@@ -53,9 +53,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         // Calculates the maturity starting from the 8AM UTC timestamp of the current day
         uint64 maturity = (block.timestamp - (block.timestamp % 24 hours) + 8 hours + l.optionDuration).toUint64();
 
-        (UD60x18 price, uint256 timestamp) = IPriceRepository(l.priceRepository).getPrice(l.base, l.quote);
-
-        _revertIfPriceIsStale(timestamp);
+        UD60x18 price = IOracleAdapter(l.oracleAdapter).getPrice(l.base, l.quote);
         _revertIfPriceIsZero(price);
 
         UD60x18 strike = OptionMath.roundToStrikeInterval(price * l.discount);
@@ -128,7 +126,7 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
         SettleVarsInternal memory vars;
 
         {
-            UD60x18 price = IPriceRepository(l.priceRepository).getPriceAt(l.base, l.quote, maturity);
+            UD60x18 price = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, maturity);
             _revertIfPriceIsZero(price);
             vars.intrinsicValuePerContract = strike > price ? ZERO : (price - strike) / price;
             vars.rewardPerContract = vars.intrinsicValuePerContract * (ONE - l.penalty);
@@ -205,12 +203,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     /// @inheritdoc IOptionReward
     function getRedeemableLongs(address user, UD60x18 strike, uint64 maturity) external view returns (UD60x18) {
         return OptionRewardStorage.layout().redeemableLongs[user][strike][maturity];
-    }
-
-    /// @notice Revert if price is stale
-    function _revertIfPriceIsStale(uint256 timestamp) internal view {
-        if (block.timestamp - timestamp >= STALE_PRICE_THRESHOLD)
-            revert OptionReward__PriceIsStale(block.timestamp, timestamp);
     }
 
     /// @notice Revert if price is zero

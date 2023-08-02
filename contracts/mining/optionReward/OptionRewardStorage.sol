@@ -25,7 +25,7 @@ library OptionRewardStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        address priceRepository;
+        address oracleAdapter;
         address paymentSplitter;
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;

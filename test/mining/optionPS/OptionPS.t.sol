@@ -8,8 +8,6 @@ import {IERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/IER
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 
-import {PriceRepository} from "contracts/mining/PriceRepository.sol";
-
 import {Assertions} from "../../Assertions.sol";
 import {OptionPSFactory} from "contracts/mining/optionPS/OptionPSFactory.sol";
 import {IOptionPS} from "contracts/mining/optionPS/IOptionPS.sol";
@@ -18,8 +16,6 @@ import {OptionPSStorage} from "contracts/mining/optionPS/OptionPSStorage.sol";
 
 abstract contract OptionPSTest is Assertions, Test {
     uint256 internal constant exercisePeriod = 7 days;
-
-    PriceRepository internal priceRepository;
     OptionPSFactory internal optionPSFactory;
 
     OptionPS internal option;
@@ -49,10 +45,6 @@ abstract contract OptionPSTest is Assertions, Test {
         otherUnderwriter = vm.addr(2);
         longReceiver = vm.addr(3);
         feeReceiver = vm.addr(4);
-
-        address priceRepositoryImpl = address(new PriceRepository());
-        address priceRepositoryProxy = address(new ProxyUpgradeableOwnable(priceRepositoryImpl));
-        priceRepository = PriceRepository(priceRepositoryProxy);
 
         address optionPSFactoryImpl = address(new OptionPSFactory());
         address optionPSFactoryProxy = address(new ProxyUpgradeableOwnable(optionPSFactoryImpl));
