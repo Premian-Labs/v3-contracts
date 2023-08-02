@@ -10,7 +10,7 @@ import {RelayerAccessManager} from "../relayer/RelayerAccessManager.sol";
 import {IPriceRepository} from "./IPriceRepository.sol";
 import {PriceRepositoryStorage} from "./PriceRepositoryStorage.sol";
 
-contract PriceRepository is IPriceRepository, ReentrancyGuard, RelayerAccessManager {
+abstract contract PriceRepository is IPriceRepository, ReentrancyGuard, RelayerAccessManager {
     /// @inheritdoc IPriceRepository
     function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external virtual nonReentrant {
         _revertIfNotWhitelistedRelayer(msg.sender);
