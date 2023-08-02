@@ -9,6 +9,12 @@
     "ARB": "0x912CE59144191C1204E64559FE8253a0e49E6548"
   },
   "vaults": {},
+  "optionPS": {
+    "PREMIA/USDC-C": ""
+  },
+  "optionReward": {
+    "PREMIA/USDC": "0x0000000000000000000000000000000000000000"
+  },
   "feeReceiver": "",
   "ChainlinkAdapterImplementation": "",
   "ChainlinkAdapterProxy": "",
@@ -35,6 +41,10 @@
   "UnderwriterVaultImplementation": "",
   "VaultMiningImplementation": "",
   "VaultMiningProxy": "",
-  "OptionRewardImplementation": "",
-  "OptionRewardProxy": ""
+  "OptionPSFactoryImplementation": "",
+  "OptionPSFactoryProxy": "",
+  "OptionPSImplementation": "",
+  "OptionRewardFactoryImplementation": "",
+  "OptionRewardFactoryProxy": "",
+  "OptionRewardImplementation": ""
 }

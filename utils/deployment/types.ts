@@ -1,6 +1,8 @@
 export interface ContractAddresses {
   tokens: { [symbol: string]: string };
   vaults: { [name: string]: string };
+  optionPS: { [name: string]: string };
+  optionReward: { [name: string]: string };
   feeReceiver: string;
 
   ChainlinkAdapterImplementation: string;
@@ -28,8 +30,12 @@ export interface ContractAddresses {
   UnderwriterVaultImplementation: string;
   VaultMiningImplementation: string;
   VaultMiningProxy: string;
+  OptionPSFactoryImplementation: string;
+  OptionPSFactoryProxy: string;
+  OptionPSImplementation: string;
+  OptionRewardFactoryImplementation: string;
+  OptionRewardFactoryProxy: string;
   OptionRewardImplementation: string;
-  OptionRewardProxy: string;
 }
 
 export enum ChainID {
