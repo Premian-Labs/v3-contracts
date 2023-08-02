@@ -191,7 +191,7 @@ library Position {
         return isCall ? _collateral : _collateral / strike.intoUD50x28();
     }
 
-    /// @notice Converts `_contracts` to the amount of collateral normalized to 18 decimals
+    /// @notice Converts `_contracts` to the amount of collateral normalized to 28 decimals
     /// @dev WARNING: Decimals needs to be scaled before using this amount for collateral transfers
     /// @param strike The strike price (18 decimals)
     function contractsToCollateral(UD50x28 _contracts, UD60x18 strike, bool isCall) internal pure returns (UD50x28) {
@@ -216,7 +216,7 @@ library Position {
     ///         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     /// @param self The internal position key
     /// @param size The contract amount (18 decimals)
-    /// @param price The current market price (18 decimals)
+    /// @param price The current market price (28 decimals)
     function bid(KeyInternal memory self, UD60x18 size, UD50x28 price) internal pure returns (UD60x18) {
         return
             contractsToCollateral(pieceWiseQuadratic(self, price) * size.intoUD50x28(), self.strike, self.isCall)
@@ -226,7 +226,7 @@ library Position {
     /// @notice Returns the total collateral (18 decimals) held by the position key `self`. Note that here we do not
     ///         distinguish between ask- and bid-side collateral. This increases the capital efficiency of the range order
     /// @param size The contract amount (18 decimals)
-    /// @param price The current market price (18 decimals)
+    /// @param price The current market price (28 decimals)
     function collateral(
         KeyInternal memory self,
         UD60x18 size,
@@ -252,7 +252,7 @@ library Position {
 
     /// @notice Returns the total contracts (18 decimals) held by the position key `self`
     /// @param size The contract amount (18 decimals)
-    /// @param price The current market price (18 decimals)
+    /// @param price The current market price (28 decimals)
     function contracts(KeyInternal memory self, UD60x18 size, UD50x28 price) internal pure returns (UD60x18) {
         UD50x28 nu = pieceWiseLinear(self, price);
 
@@ -265,7 +265,7 @@ library Position {
 
     /// @notice Returns the number of long contracts (18 decimals) held in position `self` at current price
     /// @param size The contract amount (18 decimals)
-    /// @param price The current market price (18 decimals)
+    /// @param price The current market price (28 decimals)
     function long(KeyInternal memory self, UD60x18 size, UD50x28 price) internal pure returns (UD60x18) {
         if (self.orderType.isShort()) {
             return ZERO;
@@ -278,7 +278,7 @@ library Position {
 
     /// @notice Returns the number of short contracts (18 decimals) held in position `self` at current price
     /// @param size The contract amount (18 decimals)
-    /// @param price The current market price (18 decimals)
+    /// @param price The current market price (28 decimals)
     function short(KeyInternal memory self, UD60x18 size, UD50x28 price) internal pure returns (UD60x18) {
         if (self.orderType.isShort()) {
             return self.contracts(size, price);
@@ -295,7 +295,7 @@ library Position {
     /// @param currentBalance The current balance of tokens (18 decimals)
     /// @param amount The number of tokens deposited or withdrawn (18 decimals)
     /// @param price The current market price, used to compute the change in collateral, long and shorts due to the
-    ///        change in tokens (18 decimals)
+    ///        change in tokens (28 decimals)
     /// @return delta Absolute change in collateral / longs / shorts due to change in tokens
     function calculatePositionUpdate(
         KeyInternal memory self,
