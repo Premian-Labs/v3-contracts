@@ -10,8 +10,10 @@ import {UD50x28} from "./UD50x28.sol";
 
 type SD49x28 is int256;
 
-int256 constant uMAX_SD49x28 = 5789604461865809771178549250434395392663499233282_0282019728792003956564819967;
-int256 constant uMIN_SD49x28 = -5789604461865809771178549250434395392663499233282_0282019728792003956564819968;
+/// @dev Max SD49x28 value
+int256 constant uMAX_SD49x28 = type(int256).max;
+/// @dev Min SD49x28 value
+int256 constant uMIN_SD49x28 = type(int256).min;
 
 /// @dev The unit number, which gives the decimal precision of SD49x28.
 int256 constant uUNIT = 1e28;

@@ -8,7 +8,8 @@ import {SD49x28, uMAX_SD49x28} from "./SD49x28.sol";
 
 type UD50x28 is uint256;
 
-uint256 constant uMAX_UD50x28 = 11579208923731619542357098500868790785326998466564_0564039457584007913129639935;
+/// @dev Max UD50x28 value
+uint256 constant uMAX_UD50x28 = type(uint256).max;
 
 /// @dev The unit number, which gives the decimal precision of UD50x28.
 uint256 constant uUNIT = 1e28;
