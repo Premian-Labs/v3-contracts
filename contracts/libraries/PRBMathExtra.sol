@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
 
-import {UD50x28, uMAX_UD50x28} from "./UD50x28.sol";
+import {UD50x28, uMAX_UD50x28, ud50x28} from "./UD50x28.sol";
 import {SD49x28, uMAX_SD49x28} from "./SD49x28.sol";
 
 import {iZERO, SD49_ZERO} from "./Constants.sol";
@@ -87,5 +87,19 @@ library PRBMathExtra {
     /// @notice Returns the difference of `a` and `b`
     function sub(UD50x28 a, SD49x28 b) internal pure returns (UD50x28) {
         return b < SD49_ZERO ? add(a, -b) : a - b.intoUD50x28();
+    }
+
+    ////////////////////////
+
+    /// @notice Rounds an `UD50x28` to the nearest `UD60x18`
+    function roundToNearestUD60x18(UD50x28 value) internal pure returns (UD60x18 result) {
+        // Rounded down by default
+        result = value.intoUD60x18();
+
+        // (10 ** (28 - 18)) / 2 = 5e9
+        if (value - intoUD50x28(result) >= ud50x28(5e9)) {
+            // Round up
+            result = result + ud(1);
+        }
     }
 }
