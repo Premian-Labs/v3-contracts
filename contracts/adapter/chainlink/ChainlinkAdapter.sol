@@ -425,7 +425,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         uint256 target,
         int8 factor
     ) internal view returns (uint256) {
-        UD60x18 cachedPriceAtTarget = _getCachedPriceAt(tokenIn, tokenOut, target);
+        UD60x18 cachedPriceAtTarget = _getTokenPriceAt(token, denomination, target);
         // NOTE: The cached prices are 18 decimals to maintain consistency across all adapters, because of this we need
         // to downscale the cached price to the precision used by the feed before calculating the final price
         if (cachedPriceAtTarget > ZERO) return _scale(cachedPriceAtTarget.unwrap(), -int8(factor));

@@ -5,12 +5,12 @@ pragma solidity ^0.8.19;
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IPriceRepository {
-    event PriceUpdate(address indexed base, address indexed quote, uint256 timestamp, UD60x18 price);
+    event PriceUpdate(address indexed token, address indexed denomination, uint256 timestamp, UD60x18 price);
 
-    /// @notice Set the price of `base` in terms of `quote` at the given `timestamp`
-    /// @param base The exchange token (base token)
-    /// @param quote The token to quote against (quote token)
+    /// @notice Set the price of `token` denominated in `denomination` at the given `timestamp`
+    /// @param token The exchange token (ERC20 token)
+    /// @param denomination The Chainlink token denomination to quote against (ETH, BTC, or USD)
     /// @param timestamp Reference timestamp (in seconds)
-    /// @param price for token pair (18 decimals)
-    function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external;
+    /// @param price The amount of `token` denominated in `denomination` (18 decimals)
+    function setTokenPriceAt(address token, address denomination, uint256 timestamp, UD60x18 price) external;
 }

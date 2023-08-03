@@ -12,14 +12,15 @@ import {PriceRepositoryStorage} from "./PriceRepositoryStorage.sol";
 
 abstract contract PriceRepository is IPriceRepository, ReentrancyGuard, RelayerAccessManager {
     /// @inheritdoc IPriceRepository
-    function setPriceAt(address base, address quote, uint256 timestamp, UD60x18 price) external virtual nonReentrant {
-        _revertIfNotWhitelistedRelayer(msg.sender);
-        PriceRepositoryStorage.layout().prices[base][quote][timestamp] = price;
-        emit PriceUpdate(base, quote, timestamp, price);
-    }
+    function setTokenPriceAt(address token, address denomination, uint256 timestamp, UD60x18 price) external virtual;
 
-    /// @notice Returns the cached price at a given timestamp, if zero, a price has not been recorded
-    function _getCachedPriceAt(address base, address quote, uint256 timestamp) internal view returns (UD60x18 price) {
-        price = PriceRepositoryStorage.layout().prices[base][quote][timestamp];
+    /// @notice Returns the price of `token` denominated in `denomination` at a given timestamp, if zero, a price has
+    ///         not been recorded
+    function _getTokenPriceAt(
+        address token,
+        address denomination,
+        uint256 timestamp
+    ) internal view returns (UD60x18 price) {
+        price = PriceRepositoryStorage.layout().prices[token][denomination][timestamp];
     }
 }
