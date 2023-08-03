@@ -9,7 +9,6 @@ library PriceRepositoryStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.PriceRepository");
 
     struct Layout {
-        EnumerableSet.AddressSet whitelistedRelayers;
         mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) prices;
     }
 
