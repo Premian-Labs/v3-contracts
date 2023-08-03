@@ -17,7 +17,7 @@ library OptionPSStorage {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.OptionPS");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.OptionPS");
 
     struct Layout {
         bool isCall;

@@ -57,6 +57,13 @@ interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry {
     /// @param path The new path
     event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
 
+    struct BinarySearchDataInternal {
+        int256 leftPrice;
+        uint256 leftUpdatedAt;
+        int256 rightPrice;
+        uint256 rightUpdatedAt;
+    }
+
     /// @notice Returns the pricing path that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order
     /// @param tokenA One of the pair's tokens

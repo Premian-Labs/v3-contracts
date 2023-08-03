@@ -10,7 +10,6 @@ library PriceRepositoryStorage {
 
     struct Layout {
         EnumerableSet.AddressSet whitelistedRelayers;
-        mapping(address base => mapping(address quote => uint256 timestamp)) latestPriceTimestamp;
         mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) prices;
     }
 
