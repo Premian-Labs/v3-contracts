@@ -35,8 +35,6 @@ contract OptionReward is IOptionReward, ReentrancyGuard {
     address public immutable FEE_RECEIVER;
     UD60x18 public immutable FEE;
 
-    uint256 public constant STALE_PRICE_THRESHOLD = 24 hours;
-
     constructor(address feeReceiver, UD60x18 fee) {
         FEE_RECEIVER = feeReceiver;
         FEE = fee;
