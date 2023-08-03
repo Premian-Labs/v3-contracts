@@ -6,7 +6,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 library PriceRepositoryStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.PriceRepository");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.PriceRepository");
 
     struct Layout {
         EnumerableSet.AddressSet whitelistedRelayers;
