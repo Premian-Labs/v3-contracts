@@ -303,7 +303,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
 
     /// @notice Returns the pricing path between `tokenA` and `tokenB`
     function _determinePricingPath(address tokenA, address tokenB) internal view virtual returns (PricingPath) {
-        if (tokenA == tokenB) revert OracleAdapter__TokensAreSame(tokenA, tokenB);
+        _revertIfTokensAreSame(tokenA, tokenB);
+        _revertIfZeroAddress(tokenA, tokenB);
 
         (tokenA, tokenB) = tokenA.sortTokens(tokenB);
 

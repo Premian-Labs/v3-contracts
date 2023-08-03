@@ -187,7 +187,20 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertTrue(hasPath);
     }
 
-    function test_upserPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
+    function test_isPairSupported_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.isPairSupported(CRV, CRV);
+    }
+
+    function test_isPairSupported_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(CRV, address(0));
+    }
+
+    function test_upsertPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
         adapter.upsertPair(WETH, DAI);
         (bool isCached, ) = adapter.isPairSupported(WETH, DAI);
         assertTrue(isCached);
@@ -197,14 +210,27 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_upsertPair_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(0), WETH)
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
-        adapter.upsertPair(address(0), WETH);
+        adapter.upsertPair(address(1), WETH);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(1))
         );
-        adapter.upsertPair(WBTC, address(0));
+        adapter.upsertPair(WBTC, address(1));
+    }
+
+    function test_upsertPair_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.upsertPair(CRV, CRV);
+    }
+
+    function test_upsertPair_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(CRV, address(0));
     }
 
     function test_batchRegisterFeedMappings_RemoveFeed() public {
@@ -290,7 +316,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenEqualDenomination() public {
+    function test_batchRegisterFeedMappings_RevertIf_TokensAreSame() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));
 
@@ -298,7 +324,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.batchRegisterFeedMappings(data);
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenOrDenominationIsZero() public {
+    function test_batchRegisterFeedMappings_RevertIf_ZeroAddress() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
 
         data[0] = IFeedRegistry.FeedMappingArgs(address(0), DAI, address(1));
@@ -479,9 +505,22 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
         );
-        adapter.getPrice(WETH, address(0));
+        adapter.getPrice(WETH, address(1));
+    }
+
+    function test_getPrice_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPrice(CRV, CRV);
+    }
+
+    function test_getPrice_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(CRV, address(0));
     }
 
     function test_getPrice_CatchRevert() public {
@@ -900,6 +939,26 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
     }
 
+    function test_getPriceAt_RevertIf_PairNotSupported() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
+        );
+        adapter.getPriceAt(WETH, address(1), target);
+    }
+
+    function test_getPriceAt_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPriceAt(CRV, CRV, target);
+    }
+
+    function test_getPriceAt_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(address(0), DAI, target);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(CRV, address(0), target);
+    }
+
     function test_describePricingPath_Success() public {
         {
             (IOracleAdapter.AdapterType adapterType, address[][] memory path, uint8[] memory decimals) = adapter
@@ -978,13 +1037,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
     }
 
-    function test_setTokenPriceAt_RevertIf_TokenEqualDenomination() public {
+    function test_setTokenPriceAt_RevertIf_TokensAreSame() public {
         vm.prank(relayer);
         vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
         adapter.setTokenPriceAt(CRV, CRV, block.timestamp, ONE);
     }
 
-    function test_setTokenPriceAt_RevertIf_TokenOrDenominationIsZero() public {
+    function test_setTokenPriceAt_RevertIf_ZeroAddress() public {
         vm.prank(relayer);
         vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
         adapter.setTokenPriceAt(address(0), DAI, block.timestamp, ONE);
