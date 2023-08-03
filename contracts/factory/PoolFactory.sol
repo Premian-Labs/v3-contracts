@@ -12,7 +12,7 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 import {IPoolFactory} from "./IPoolFactory.sol";
 import {IPoolFactoryDeployer} from "./IPoolFactoryDeployer.sol";
 import {PoolFactoryStorage} from "./PoolFactoryStorage.sol";
-import {PoolProxy, PoolStorage} from "../pool/PoolProxy.sol";
+import {PoolStorage} from "../pool/PoolStorage.sol";
 import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {OptionMath} from "../libraries/OptionMath.sol";

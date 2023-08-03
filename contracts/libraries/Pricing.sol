@@ -11,7 +11,7 @@ import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 import {IPricing} from "./IPricing.sol";
 
-import {ZERO, ONE, UD50_ONE} from "./Constants.sol";
+import {ZERO, UD50_ONE} from "./Constants.sol";
 
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
 /// @dev WARNING: This library should not be used for computations that span multiple ticks. Instead, the user should

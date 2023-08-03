@@ -11,7 +11,6 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {ONE, ZERO, UD50_ZERO} from "../libraries/Constants.sol";
-import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {UD50x28} from "../libraries/UD50x28.sol";
