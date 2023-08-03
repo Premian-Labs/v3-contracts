@@ -15,7 +15,9 @@ import {FeedRegistry, IFeedRegistry} from "../FeedRegistry.sol";
 import {FeedRegistryStorage} from "../FeedRegistryStorage.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
+import {IPriceRepository} from "../IPriceRepository.sol";
 import {PriceRepository} from "../PriceRepository.sol";
+import {PriceRepositoryStorage} from "../PriceRepositoryStorage.sol";
 import {ETH_DECIMALS, FOREX_DECIMALS, Tokens} from "../Tokens.sol";
 
 import {ChainlinkAdapterStorage} from "./ChainlinkAdapterStorage.sol";
@@ -162,6 +164,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return path;
     }
 
+    /// @inheritdoc IFeedRegistry
     function batchRegisterFeedMappings(
         FeedMappingArgs[] memory args
     ) external override(FeedRegistry, IFeedRegistry) onlyOwner {
@@ -170,11 +173,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
             address denomination = args[i].denomination;
             address feed = args[i].feed;
 
-            if (token == denomination) revert OracleAdapter__TokensAreSame(token, denomination);
-            if (token == address(0) || denomination == address(0)) revert OracleAdapter__ZeroAddress();
-
-            if (!denomination.isETH() && !denomination.isBTC() && !denomination.isUSD())
-                revert ChainlinkAdapter__InvalidDenomination(denomination);
+            _revertIfTokensAreSame(token, denomination);
+            _revertIfZeroAddress(token, denomination);
+            _revertIfInvalidDenomination(denomination);
 
             bytes32 keyForPair = token.keyForUnsortedPair(denomination);
             FeedRegistryStorage.layout().feeds[keyForPair] = feed;
@@ -193,6 +194,23 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         }
 
         emit FeedMappingsRegistered(args);
+    }
+
+    /// @inheritdoc IPriceRepository
+    function setTokenPriceAt(
+        address token,
+        address denomination,
+        uint256 timestamp,
+        UD60x18 price
+    ) external override(PriceRepository, IPriceRepository) nonReentrant {
+        _revertIfTokensAreSame(token, denomination);
+        _revertIfZeroAddress(token, denomination);
+
+        _revertIfInvalidDenomination(denomination);
+        _revertIfNotWhitelistedRelayer(msg.sender);
+
+        PriceRepositoryStorage.layout().prices[token][denomination][timestamp] = price;
+        emit PriceUpdate(token, denomination, timestamp, price);
     }
 
     /// @notice Returns the pricing path between `tokenA` and `tokenB` and the mapped tokens (unsorted)
@@ -591,5 +609,11 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     function _revertIfPriceAfterTargetStale(uint256 target, uint256 updatedAt) internal view {
         if (target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt > PRICE_STALE_THRESHOLD)
             revert ChainlinkAdapter__PriceAfterTargetIsStale(target, updatedAt, block.timestamp);
+    }
+
+    /// @notice Revert if `denomination` is not a valid
+    function _revertIfInvalidDenomination(address denomination) internal pure {
+        if (!denomination.isETH() && !denomination.isBTC() && !denomination.isUSD())
+            revert ChainlinkAdapter__InvalidDenomination(denomination);
     }
 }

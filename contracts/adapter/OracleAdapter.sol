@@ -30,4 +30,14 @@ abstract contract OracleAdapter is IOracleAdapter {
     function _revertIfPriceInvalid(int256 price) internal pure {
         if (price <= 0) revert OracleAdapter__InvalidPrice(price);
     }
+
+    /// @notice Revert if `tokenA` has same address as `tokenB`
+    function _revertIfTokensAreSame(address tokenA, address tokenB) internal pure {
+        if (tokenA == tokenB) revert OracleAdapter__TokensAreSame(tokenA, tokenB);
+    }
+
+    /// @notice Revert if `tokenA` or `tokenB` are null addresses
+    function _revertIfZeroAddress(address tokenA, address tokenB) internal pure {
+        if (tokenA == address(0) || tokenB == address(0)) revert OracleAdapter__ZeroAddress();
+    }
 }

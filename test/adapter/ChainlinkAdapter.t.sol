@@ -10,11 +10,13 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
+import {ONE} from "contracts/libraries/Constants.sol";
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";
 import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.sol";
 import {ChainlinkAdapter} from "contracts/adapter/chainlink/ChainlinkAdapter.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
+import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol";
 
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePriceStub.sol";
@@ -34,6 +36,9 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     ChainlinkOraclePriceStub stub;
     address stubCoin;
+
+    address internal relayer;
+    address internal user;
 
     function setUp() public {
         string memory ETH_RPC_URL = string.concat(
@@ -117,6 +122,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         adapter.batchRegisterFeedMappings(feeds());
         _deployStub();
+
+        relayer = vm.addr(1);
+        user = vm.addr(2);
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = relayer;
+        adapter.addWhitelistedRelayers(relayers);
     }
 
     function _deployStub() internal {
@@ -309,7 +321,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        vm.prank(vm.addr(1));
+        vm.prank(user);
         adapter.batchRegisterFeedMappings(data);
     }
 
@@ -851,15 +863,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
     function test_getPriceAt_ReturnCachedPriceAtTarget() public {
         UD60x18 cachedPrice = ud(9e18);
 
-        address relayer = vm.addr(1);
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
 
         adapter.addWhitelistedRelayers(relayers);
 
         vm.startPrank(relayer);
-        adapter.setPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
-        adapter.setPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
         vm.stopPrank();
 
         int256[] memory prices = new int256[](7);
@@ -960,5 +971,40 @@ contract ChainlinkAdapterTest is Test, Assertions {
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
         }
+    }
+
+    function test_setTokenPriceAt_Success() public {
+        vm.prank(relayer);
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_TokenEqualDenomination() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.setTokenPriceAt(CRV, CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_TokenOrDenominationIsZero() public {
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(address(0), DAI, block.timestamp, ONE);
+
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(CRV, address(0), block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_InvalidDenomination() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__InvalidDenomination.selector, CRV));
+        adapter.setTokenPriceAt(address(1), CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_NotWhitelistedRelayer() public {
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRelayerAccessManager.RelayerAccessManager__NotWhitelistedRelayer.selector, user)
+        );
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
     }
 }
