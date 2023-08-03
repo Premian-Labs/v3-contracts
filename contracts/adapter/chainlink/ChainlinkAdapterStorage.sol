@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
+import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {IChainlinkAdapter} from "./IChainlinkAdapter.sol";
 
@@ -11,6 +12,7 @@ library ChainlinkAdapterStorage {
 
     struct Layout {
         mapping(bytes32 key => IChainlinkAdapter.PricingPath) pricingPath;
+        mapping(address token => EnumerableSet.AddressSet tokens) pairedTokens;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -31,6 +33,10 @@ library ChainlinkAdapterStorage {
 
     function isUSD(address token) internal pure returns (bool) {
         return token == Denominations.USD;
+    }
+
+    function isBTC(address token) internal pure returns (bool) {
+        return token == Denominations.BTC;
     }
 
     function isETH(address token) internal pure returns (bool) {

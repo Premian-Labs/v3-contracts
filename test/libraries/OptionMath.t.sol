@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
@@ -8,9 +8,18 @@ import {Test} from "forge-std/Test.sol";
 
 import {Assertions} from "../Assertions.sol";
 
+import {ZERO} from "contracts/libraries/Constants.sol";
+
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
+import {OptionMathMock} from "contracts/test/libraries/OptionMathMock.sol";
 
 contract OptionMathTest is Test, Assertions {
+    OptionMathMock internal optionMath;
+
+    function setUp() public {
+        optionMath = new OptionMathMock();
+    }
+
     // Normal CDF approximation helper
     function test_helperNormal_ReturnExpectedValue() public {
         // prettier-ignore
@@ -281,6 +290,35 @@ contract OptionMathTest is Test, Assertions {
         _test_optionDelta_ReturnExpectedValue(false);
     }
 
+    /// forge-config: default.fuzz.runs = 10000
+    function testFuzz_is8AMUTC_ReturnFalse_IfNot8AMUTC(uint256 input) public {
+        input = bound(input, 1672531200, 2335219199);
+        vm.assume(input % 24 hours != 8 hours);
+        assertFalse(OptionMath.is8AMUTC(input));
+    }
+
+    function test_is8AMUTC_ReturnTrue_If8AMUTC() public {
+        // prettier-ignore
+        uint32[100] memory timestamps = [
+            1874217600,1856851200,1807430400,2283321600,1730707200,1685520000,1706515200,2185084800,1797580800,
+            2115532800,2008051200,1853222400,2003472000,1732003200,2048572800,1679904000,2051596800,1819612800,
+            2048659200,1725091200,1722067200,1911801600,1839398400,2116396800,1895990400,2110348800,1962086400,
+            1723449600,2100240000,2254377600,1774857600,1812787200,2053929600,2174544000,2194243200,1679990400,
+            1874995200,2252995200,2096611200,2186985600,1692950400,1777276800,2126160000,2172556800,1771142400,
+            2052633600,2231481600,2321769600,2123654400,1952668800,2152684800,2111731200,2302761600,2201846400,
+            1952582400,2280211200,2180764800,1675324800,2319523200,1840262400,2051078400,1887868800,1794124800,
+            1796371200,2282544000,1871193600,1681545600,2306131200,2139120000,1762675200,2232345600,2289456000,
+            1749456000,1707206400,2106374400,2323497600,1954828800,2322979200,1789459200,1905062400,2314944000,
+            2037945600,2134540800,2260598400,2326262400,2287209600,1695283200,2142316800,1762416000,1795766400,
+            2144304000,2073801600,1836806400,2150956800,1943424000,1902297600,2230704000,1810195200,2061878400,
+            2008137600
+        ];
+
+        for (uint256 i = 0; i < timestamps.length; i++) {
+            assertTrue(OptionMath.is8AMUTC(timestamps[i]));
+        }
+    }
+
     function test_isFriday_ReturnFalse_IfNotFriday() public {
         uint32[8] memory timestamps = [
             1674460800,
@@ -307,7 +345,17 @@ contract OptionMathTest is Test, Assertions {
     }
 
     function test_isLastFriday_ReturnFalse_IfNotLastWeekOfMonth() public {
-        uint32[6] memory timestamps = [1675324800, 1675411200, 1675670400, 1676016000, 1676620800, 1676707200];
+        uint32[9] memory timestamps = [
+            1675324800,
+            1675411200,
+            1675670400,
+            1676016000,
+            1676620800,
+            1676707200,
+            1679644800,
+            1695408787,
+            1716576787
+        ];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             assertFalse(OptionMath.isLastFriday(timestamps[i]));
@@ -333,7 +381,20 @@ contract OptionMathTest is Test, Assertions {
     }
 
     function test_isLastFriday_ReturnTrue_IfLastWeekOfMonthAndFriday() public {
-        uint32[3] memory timestamps = [1677225600, 1695970800, 1703836800];
+        uint32[12] memory timestamps = [
+            1674777600,
+            1677196800,
+            1680220800,
+            1682640000,
+            1685059200,
+            1688083200,
+            1690502400,
+            1692921600,
+            1695945600,
+            1698364800,
+            1700784000,
+            1703808000
+        ];
 
         for (uint256 i = 0; i < timestamps.length; i++) {
             assertTrue(OptionMath.isLastFriday(timestamps[i]));
@@ -343,75 +404,197 @@ contract OptionMathTest is Test, Assertions {
     function test_calculateTimeToMaturity_ReturnExpectedValue() public {
         uint256 timestamp = 1683240000;
         uint256 oneWeek = 7 * 24 * 3600;
-
         vm.warp(timestamp);
-
         assertEq(OptionMath.calculateTimeToMaturity(uint64(timestamp + oneWeek)), oneWeek);
     }
 
-    function test_calculateStrikeInterval_ReturnExpectedValue() public {
+    /// forge-config: default.fuzz.runs = 10000
+    /// forge-config: default.fuzz.max-test-rejects = 500
+    function testFuzz_calculateStrikeInterval_ReturnExpectedValue(
+        uint256 inputE1,
+        uint256 inputE18,
+        uint256 inputE34
+    ) public {
+        {
+            inputE1 = bound(inputE1, 1e1, 1e2 - 1);
+            UD60x18 interval = inputE1 >= 5e1 ? ud(5) : ud(1);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE1)), interval);
+        }
+
+        {
+            inputE18 = bound(inputE18, 1e18, 1e19 - 1);
+            UD60x18 interval = inputE18 >= 5e18 ? ud(5e17) : ud(1e17);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE18)), interval);
+        }
+
+        {
+            inputE34 = bound(inputE34, 1e33, 1e34 - 1);
+            UD60x18 interval = inputE34 >= 5e33 ? ud(5e32) : ud(1e32);
+            assertEq(OptionMath.calculateStrikeInterval(ud(inputE34)), interval);
+        }
+    }
+
+    function test_calculateStrikeInterval_ReturnExpectedValue_BoundaryConditions_ONE() public {
+        uint256 boundary;
+        for (uint256 i = 1; i <= 34; i++) {
+            // tests boundary of 99 -> 100 -> 101, 999 -> 1000 -> 1001, 9999 -> 10000 -> 10001, etc
+            boundary = 10 ** i;
+
+            UD60x18 lower = ud(boundary - 1);
+            UD60x18 upper = ud(boundary + 1);
+
+            UD60x18 lowerInterval = i > 1 ? ud(5 * 10 ** (i - 2)) : ZERO;
+            UD60x18 upperInterval = ud(10 ** (i - 1));
+
+            if (i > 1) assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+            assertEq(OptionMath.calculateStrikeInterval(ud(boundary)), upperInterval);
+            if (i < 34) assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+
+            for (uint256 j = 1; j < i; j++) {
+                lower = ud(boundary - (10 ** j) - 1);
+                upper = ud(boundary + 10 ** j);
+
+                if (i > 1) assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+                if (i < 34) assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+            }
+        }
+    }
+
+    function test_calculateStrikeInterval_ReturnExpectedValue_BoundaryConditions_FIVE() public {
+        uint256 boundary;
+        for (uint256 i = 1; i < 34; i++) {
+            // tests boundary of 49 -> 50 -> 51, 499 -> 500 -> 501, 4999 -> 5000 -> 5001, etc
+            boundary = 5 * 10 ** i;
+
+            UD60x18 lower = ud(boundary - 1);
+            UD60x18 upper = ud(boundary + 1);
+
+            UD60x18 lowerInterval = ud(10 ** (i - 1));
+            UD60x18 upperInterval = ud(5 * 10 ** (i - 1));
+
+            assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+            assertEq(OptionMath.calculateStrikeInterval(ud(boundary)), upperInterval);
+            assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+
+            for (uint256 j = 1; j < i; j++) {
+                lower = ud(boundary - (10 ** j) - 1);
+                upper = ud(boundary + 10 ** j);
+
+                assertEq(OptionMath.calculateStrikeInterval(lower), lowerInterval);
+                assertEq(OptionMath.calculateStrikeInterval(upper), upperInterval);
+            }
+        }
+    }
+
+    function test_calculateStrikeInterval_RevertIf_OutOfPriceBounds_Lower() public {
+        UD60x18 price = UD60x18.wrap(9);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OptionMath.OptionMath__OutOfBoundsPrice.selector,
+                UD60x18.wrap(1e1),
+                UD60x18.wrap(1e34),
+                price
+            )
+        );
+
+        optionMath.calculateStrikeInterval(price);
+    }
+
+    function test_calculateStrikeInterval_RevertIf_OutOfPriceBounds_Upper() public {
+        UD60x18 price = UD60x18.wrap(10000000000000000000000000000000001);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OptionMath.OptionMath__OutOfBoundsPrice.selector,
+                UD60x18.wrap(1e1),
+                UD60x18.wrap(1e34),
+                price
+            )
+        );
+
+        optionMath.calculateStrikeInterval(price);
+    }
+
+    function test_roundToStrikeInterval_ReturnExpectedValue() public {
         // prettier-ignore
-        UD60x18[2][56] memory values = [
-            [ud(1e18),       ud(0.1e18)],
-            [ud(2e18),       ud(0.1e18)],
-            [ud(3e18),       ud(0.1e18)],
-            [ud(4e18),       ud(0.1e18)],
-            [ud(5e18),       ud(0.5e18)],
-            [ud(6e18),       ud(0.5e18)],
-            [ud(7e18),       ud(0.5e18)],
-            [ud(9e18),       ud(0.5e18)],
-            [ud(10e18),      ud(1e18)],
-            [ud(11e18),      ud(1e18)],
-            [ud(33e18),      ud(1e18)],
-            [ud(49e18),      ud(1e18)],
-            [ud(50e18),      ud(5e18)],
-            [ud(51e18),      ud(5e18)],
-            [ud(74e18),      ud(5e18)],
-            [ud(99e18),      ud(5e18)],
-            [ud(100e18),     ud(10e18)],
-            [ud(101e18),     ud(10e18)],
-            [ud(434e18),     ud(10e18)],
-            [ud(499e18),     ud(10e18)],
-            [ud(500e18),     ud(50e18)],
-            [ud(501e18),     ud(50e18)],
-            [ud(871e18),     ud(50e18)],
-            [ud(999e18),     ud(50e18)],
-            [ud(1000e18),    ud(100e18)],
-            [ud(1001e18),    ud(100e18)],
-            [ud(4356e18),    ud(100e18)],
-            [ud(4999e18),    ud(100e18)],
-            [ud(5000e18),    ud(500e18)],
-            [ud(5001e18),    ud(500e18)],
-            [ud(5643e18),    ud(500e18)],
-            [ud(9999e18),    ud(500e18)],
-            [ud(10000e18),   ud(1000e18)],
-            [ud(10001e18),   ud(1000e18)],
-            [ud(35321e18),   ud(1000e18)],
-            [ud(49999e18),   ud(1000e18)],
-            [ud(50000e18),   ud(5000e18)],
-            [ud(50001e18),   ud(5000e18)],
-            [ud(64312e18),   ud(5000e18)],
-            [ud(99999e18),   ud(5000e18)],
-            [ud(100000e18),  ud(10000e18)],
-            [ud(100001e18),  ud(10000e18)],
-            [ud(256110e18),  ud(10000e18)],
-            [ud(499999e18),  ud(10000e18)],
-            [ud(500000e18),  ud(50000e18)],
-            [ud(500001e18),  ud(50000e18)],
-            [ud(862841e18),  ud(50000e18)],
-            [ud(999999e18),  ud(50000e18)],
-            [ud(1000000e18), ud(100000e18)],
-            [ud(1000001e18), ud(100000e18)],
-            [ud(4321854e18), ud(100000e18)],
-            [ud(4999999e18), ud(100000e18)],
-            [ud(5000000e18), ud(500000e18)],
-            [ud(5000001e18), ud(500000e18)],
-            [ud(9418355e18), ud(500000e18)],
-            [ud(9999999e18), ud(500000e18)]
-        ];
+        UD60x18[2][74] memory values = [
+                [ud(0.00000000000000001e18), ud(0.00000000000000001e18)],
+                [ud(0.00000000000000111e18), ud(0.00000000000000110e18)],
+                [ud(0.00000000000000811e18), ud(0.00000000000000800e18)],
+                [ud(0.00000000000000116e18), ud(0.00000000000000120e18)],
+                [ud(0.00000000010000111e18), ud(0.00000000010000000e18)],
+                [ud(0.00000000099000111e18), ud(0.00000000100000000e18)],
+                [ud(0.00002345500000000e18), ud(0.00002300000000000e18)],
+                [ud(0.00005800000000100e18), ud(0.00006000000000000e18)],
+                [ud(1.25778000099000111e18), ud(1.30000000000000000e18)],
+                [ud(10.5990000000000000e18), ud(11.0000000000000000e18)],
+                [ud(110.599000000000000e18), ud(110.000000000000000e18)],
+                [ud(1e18),       ud(1e18)],
+                [ud(2e18),       ud(2e18)],
+                [ud(3e18),       ud(3e18)],
+                [ud(4e18),       ud(4e18)],
+                [ud(5e18),       ud(5e18)],
+                [ud(6e18),       ud(6e18)],
+                [ud(7e18),       ud(7e18)],
+                [ud(8e18),       ud(8e18)],
+                [ud(9e18),       ud(9e18)],
+                [ud(10e18),      ud(10e18)],
+                [ud(11e18),      ud(11e18)],
+                [ud(33e18),      ud(33e18)],
+                [ud(49e18),      ud(49e18)],
+                [ud(50e18),      ud(50e18)],
+                [ud(51e18),      ud(50e18)],
+                [ud(74e18),      ud(75e18)],
+                [ud(99e18),      ud(100e18)],
+                [ud(100e18),     ud(100e18)],
+                [ud(101e18),     ud(100e18)],
+                [ud(434e18),     ud(430e18)],
+                [ud(499e18),     ud(500e18)],
+                [ud(500e18),     ud(500e18)],
+                [ud(501e18),     ud(500e18)],
+                [ud(871e18),     ud(850e18)],
+                [ud(999e18),     ud(1000e18)],
+                [ud(1000e18),    ud(1000e18)],
+                [ud(1001e18),    ud(1000e18)],
+                [ud(4356e18),    ud(4400e18)],
+                [ud(4999e18),    ud(5000e18)],
+                [ud(5000e18),    ud(5000e18)],
+                [ud(5001e18),    ud(5000e18)],
+                [ud(5643e18),    ud(5500e18)],
+                [ud(9999e18),    ud(10000e18)],
+                [ud(10000e18),   ud(10000e18)],
+                [ud(10001e18),   ud(10000e18)],
+                [ud(35321e18),   ud(35000e18)],
+                [ud(49999e18),   ud(50000e18)],
+                [ud(50000e18),   ud(50000e18)],
+                [ud(50001e18),   ud(50000e18)],
+                [ud(64312e18),   ud(65000e18)],
+                [ud(99999e18),   ud(100000e18)],
+                [ud(100000e18),  ud(100000e18)],
+                [ud(100001e18),  ud(100000e18)],
+                [ud(256110e18),  ud(260000e18)],
+                [ud(499999e18),  ud(500000e18)],
+                [ud(500000e18),  ud(500000e18)],
+                [ud(500001e18),  ud(500000e18)],
+                [ud(862841e18),  ud(850000e18)],
+                [ud(999999e18),  ud(1000000e18)],
+                [ud(1000000e18), ud(1000000e18)],
+                [ud(1000001e18), ud(1000000e18)],
+                [ud(4321854e18), ud(4300000e18)],
+                [ud(4999999e18), ud(5000000e18)],
+                [ud(5000000e18), ud(5000000e18)],
+                [ud(5000001e18), ud(5000000e18)],
+                [ud(9418355e18), ud(9500000e18)],
+                [ud(9999999e18), ud(10000000e18)],
+                [ud(592103573508216e18), ud(600000000000000e18)],
+                [ud(841200002215070e18), ud(850000000000000e18)],
+                [ud(5524000051020708e18), ud(5500000000000000e18)],
+                [ud(1874000024100000e18), ud(1900000000000000e18)],
+                [ud(4990000000442141e18), ud(5000000000000000e18)],
+                [ud(9990000000000000e18), ud(10000000000000000e18)]
+            ];
 
         for (uint256 i = 0; i < values.length; i++) {
-            assertEq(OptionMath.calculateStrikeInterval(values[i][0]), values[i][1]);
+            assertEq(OptionMath.roundToStrikeInterval(values[i][0]), values[i][1]);
         }
     }
 }

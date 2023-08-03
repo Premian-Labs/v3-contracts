@@ -1,35 +1,36 @@
 import { diamondCut } from '../scripts/utils/diamond';
 import {
-  PoolBase__factory,
-  PoolCore__factory,
-  PoolFactory,
-  PoolFactory__factory,
-  PoolFactoryProxy__factory,
-  PoolCoreMock__factory,
-  PoolDepositWithdraw__factory,
-  Premia,
-  Premia__factory,
-  PoolTrade__factory,
-  ERC20Router__factory,
-  ERC20Router,
-  InitFeeCalculator__factory,
-  ProxyUpgradeableOwnable__factory,
-  UserSettings__factory,
   ERC20Mock__factory,
-  VxPremia__factory,
-  VxPremiaProxy__factory,
+  ERC20Router,
+  ERC20Router__factory,
   ExchangeHelper__factory,
   IReferral,
   IReferral__factory,
+  Placeholder__factory,
+  PoolBase__factory,
+  PoolCore__factory,
+  PoolCoreMock__factory,
+  PoolDepositWithdraw__factory,
+  PoolFactory,
+  PoolFactory__factory,
+  PoolFactoryDeployer__factory,
+  PoolFactoryProxy__factory,
+  PoolTrade__factory,
+  Premia,
+  Premia__factory,
+  ProxyUpgradeableOwnable__factory,
   Referral__factory,
   ReferralProxy__factory,
+  UserSettings__factory,
   VaultRegistry__factory,
+  VxPremia__factory,
+  VxPremiaProxy__factory,
 } from '../typechain';
 import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { tokens } from '../utils/addresses';
+import { tokens } from './addresses';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -211,39 +212,40 @@ export class PoolUtil {
     // PoolFactory //
     /////////////////
 
-    const initFeeImpl = await new InitFeeCalculator__factory(deployer).deploy(
-      wrappedNativeToken,
-      chainlinkAdapter,
-    );
+    const placeholder = await new Placeholder__factory(deployer).deploy();
+    await placeholder.deployed();
 
-    await initFeeImpl.deployed();
+    if (log) console.log(`Placeholder : ${placeholder.address}`);
 
-    if (log) console.log(`InitFeeCalculator impl: ${initFeeImpl.address}`);
-
-    const initFeeProxy = await new ProxyUpgradeableOwnable__factory(
+    const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
-    ).deploy(initFeeImpl.address);
+    ).deploy(placeholder.address, discountPerPool, feeReceiver);
+    await poolFactoryProxy.deployed();
 
-    await initFeeProxy.deployed();
+    if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);
 
-    if (log) console.log(`InitFeeCalculator proxy: ${initFeeProxy.address}`);
+    const poolFactoryDeployer = await new PoolFactoryDeployer__factory(
+      deployer,
+    ).deploy(premiaDiamond.address, poolFactoryProxy.address);
+    await poolFactoryDeployer.deployed();
+
+    if (log)
+      console.log(`PoolFactoryDeployer : ${poolFactoryDeployer.address}`);
 
     const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
       premiaDiamond.address,
       chainlinkAdapter,
-      initFeeProxy.address,
+      wrappedNativeToken,
+      poolFactoryDeployer.address,
     );
 
     await poolFactoryImpl.deployed();
 
     if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);
 
-    const poolFactoryProxy = await new PoolFactoryProxy__factory(
-      deployer,
-    ).deploy(poolFactoryImpl.address, discountPerPool, feeReceiver);
-    await poolFactoryProxy.deployed();
-
-    if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);
+    await (
+      await poolFactoryProxy.setImplementation(poolFactoryImpl.address)
+    ).wait();
 
     const poolFactory = PoolFactory__factory.connect(
       poolFactoryProxy.address,
@@ -299,6 +301,7 @@ export class PoolUtil {
         premia.address,
         tokens.USDC.address,
         exchangeHelper.address,
+        vaultRegistry ?? constants.AddressZero,
       );
 
       await vxPremiaImpl.deployed();

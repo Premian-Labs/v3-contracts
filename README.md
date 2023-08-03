@@ -6,7 +6,6 @@ https://premia.finance
 
 | Network         |                                              |
 | --------------- | -------------------------------------------- |
-| Goerli          | [📜](./utils/deployment/goerli.json)         |
 | Arbitrum Goerli | [📜](./utils/deployment/arbitrumGoerli.json) |
 
 <!---

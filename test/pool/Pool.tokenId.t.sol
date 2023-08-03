@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {Position} from "contracts/libraries/Position.sol";
+import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -26,6 +27,27 @@ abstract contract PoolTokenIdTest is DeployTest {
         assertEq(operator, _operator);
         assertEq(lower, ud(0.001e18));
         assertEq(upper, ud(1e18));
+    }
+
+    function test_formatTokenId_RevertIf_InvalidRange_LowerGTUpper() public {
+        UD60x18 lower = ud(0.3e18);
+        UD60x18 upper = ud(0.1e18);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, lower, upper));
+        pool.formatTokenId(users.operator, lower, upper, Position.OrderType.LC);
+    }
+
+    function test_formatTokenId_RevertIf_InvalidRange_LowerLTMinTickPrice() public {
+        UD60x18 lower = ud(0.00099e18);
+        UD60x18 upper = ud(0.3e18);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, lower, upper));
+        pool.formatTokenId(users.operator, lower, upper, Position.OrderType.LC);
+    }
+
+    function test_formatTokenId_RevertIf_InvalidRange_UpperGTMaxTickPrice() public {
+        UD60x18 lower = ud(0.1e18);
+        UD60x18 upper = ud(1.0001e18);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidRange.selector, lower, upper));
+        pool.formatTokenId(users.operator, lower, upper, Position.OrderType.LC);
     }
 
     function test_parseTokenId_ReturnExpectedValue() public {

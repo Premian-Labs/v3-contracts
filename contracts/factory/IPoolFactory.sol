@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -8,7 +8,10 @@ import {IPoolFactoryEvents} from "./IPoolFactoryEvents.sol";
 
 interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__IdenticalAddresses();
+    error PoolFactory__InitializationFeeIsZero();
     error PoolFactory__InitializationFeeRequired(uint256 msgValue, uint256 fee);
+    error PoolFactory__InvalidInput();
+    error PoolFactory__InvalidOracleAdapter();
     error PoolFactory__NotAuthorized();
     error PoolFactory__OptionExpired(uint256 maturity);
     error PoolFactory__OptionMaturityExceedsMax(uint256 maturity);
@@ -19,6 +22,7 @@ interface IPoolFactory is IPoolFactoryEvents {
     error PoolFactory__OptionStrikeInvalid(UD60x18 strike, UD60x18 strikeInterval);
     error PoolFactory__PoolAlreadyDeployed(address poolAddress);
     error PoolFactory__PoolNotExpired();
+    error PoolFactory__TransferNativeTokenFailed();
     error PoolFactory__ZeroAddress();
 
     struct PoolKey {
@@ -41,16 +45,12 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @return Whether the given address is a pool
     function isPool(address contractAddress) external view returns (bool);
 
-    /// @notice Returns the address of a pool, and whether it has been deployed
+    /// @notice Returns the address of a valid pool, and whether it has been deployed. If the pool configuration is invalid
+    ///         the transaction will revert.
     /// @param k The pool key
     /// @return pool The pool address
     /// @return isDeployed Whether the pool has been deployed
     function getPoolAddress(PoolKey calldata k) external view returns (address pool, bool isDeployed);
-
-    /// @notice Returns the fee required to initialize a pool
-    /// @param k The pool key
-    /// @return The fee required to initialize this pool (18 decimals)
-    function initializationFee(PoolKey calldata k) external view returns (UD60x18);
 
     /// @notice Set the discountPerPool for new pools - only callable by owner
     /// @param discountPerPool The new discount percentage (18 decimals)
@@ -68,4 +68,9 @@ interface IPoolFactory is IPoolFactoryEvents {
     /// @notice Removes the discount caused by an existing pool, can only be called by the pool after maturity
     /// @param k The pool key
     function removeDiscount(PoolKey calldata k) external;
+
+    /// @notice Calculates the initialization fee for a pool
+    /// @param k The pool key
+    /// @return The initialization fee (18 decimals)
+    function initializationFee(PoolKey calldata k) external view returns (UD60x18);
 }

@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity =0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -15,7 +16,7 @@ import {IPoolFactory} from "../factory/PoolFactory.sol";
 import {IReferral} from "./IReferral.sol";
 import {ReferralStorage} from "./ReferralStorage.sol";
 
-contract Referral is IReferral, OwnableInternal {
+contract Referral is IReferral, OwnableInternal, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
     using ReferralStorage for address;
@@ -27,7 +28,7 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function getReferrer(address user) external view returns (address) {
+    function getReferrer(address user) public view returns (address) {
         return ReferralStorage.layout().referrals[user];
     }
 
@@ -74,6 +75,20 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
+    function getRebateAmounts(
+        address user,
+        address referrer,
+        UD60x18 tradingFee
+    ) external view returns (UD60x18 primaryRebate, UD60x18 secondaryRebate) {
+        if (referrer == address(0)) referrer = getReferrer(user);
+        if (referrer == address(0)) return (ZERO, ZERO);
+
+        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(referrer);
+        primaryRebate = tradingFee * primaryRebatePercent;
+        secondaryRebate = primaryRebate * secondaryRebatePercent;
+    }
+
+    /// @inheritdoc IReferral
     function setRebateTier(address referrer, RebateTier tier) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
         emit SetRebateTier(referrer, l.rebateTiers[referrer], tier);
@@ -83,9 +98,7 @@ contract Referral is IReferral, OwnableInternal {
     /// @inheritdoc IReferral
     function setPrimaryRebatePercent(UD60x18 percent, RebateTier tier) external onlyOwner {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
-
         emit SetPrimaryRebatePercent(tier, l.primaryRebatePercents[uint8(tier)], percent);
-
         l.primaryRebatePercents[uint8(tier)] = percent;
     }
 
@@ -97,61 +110,58 @@ contract Referral is IReferral, OwnableInternal {
     }
 
     /// @inheritdoc IReferral
-    function useReferral(address user, address primaryReferrer, address token, UD60x18 tradingFee) external {
-        ReferralStorage.Layout storage l = ReferralStorage.layout();
-
+    function useReferral(
+        address user,
+        address referrer,
+        address token,
+        UD60x18 primaryRebate,
+        UD60x18 secondaryRebate
+    ) external nonReentrant {
         _revertIfPoolNotAuthorized();
 
-        primaryReferrer = _trySetReferrer(user, primaryReferrer);
-        if (primaryReferrer == address(0)) return;
+        referrer = _trySetReferrer(user, referrer);
+        if (referrer == address(0)) return;
 
-        (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = getRebatePercents(primaryReferrer);
+        UD60x18 totalRebate = primaryRebate + secondaryRebate;
+        if (totalRebate == ZERO) return;
 
-        uint256 primaryRebate;
-        uint256 secondaryRebate;
+        IERC20(token).safeTransferFrom(msg.sender, address(this), token.toTokenDecimals(totalRebate));
 
-        UD60x18 totalRebate;
-        {
-            UD60x18 _primaryRebate = tradingFee * primaryRebatePercent;
-            UD60x18 _secondaryRebate = tradingFee * secondaryRebatePercent;
-            totalRebate = _primaryRebate + _secondaryRebate;
+        ReferralStorage.Layout storage l = ReferralStorage.layout();
+        address secondaryReferrer = l.referrals[referrer];
+        _tryUpdateRebate(l, secondaryReferrer, token, secondaryRebate);
+        _tryUpdateRebate(l, referrer, token, primaryRebate);
 
-            primaryRebate = token.toTokenDecimals(_primaryRebate);
-            secondaryRebate = token.toTokenDecimals(_secondaryRebate);
-            uint256 _totalRebate = primaryRebate + secondaryRebate;
-
-            IERC20(token).safeTransferFrom(msg.sender, address(this), _totalRebate);
-        }
-
-        address secondaryReferrer = l.referrals[primaryReferrer];
-
-        if (secondaryRebate > 0) {
-            l.rebates[secondaryReferrer][token] += secondaryRebate;
-
-            if (!l.rebateTokens[secondaryReferrer].contains(token)) l.rebateTokens[secondaryReferrer].add(token);
-        }
-
-        l.rebates[primaryReferrer][token] += primaryRebate;
-
-        if (!l.rebateTokens[primaryReferrer].contains(token)) l.rebateTokens[primaryReferrer].add(token);
-
-        emit Refer(user, primaryReferrer, secondaryReferrer, token, primaryRebatePercent, totalRebate);
+        (UD60x18 primaryRebatePercent, ) = getRebatePercents(referrer);
+        emit Refer(user, referrer, secondaryReferrer, token, primaryRebatePercent, primaryRebate, secondaryRebate);
     }
 
     /// @inheritdoc IReferral
-    function claimRebate() external {
+    function claimRebate(address[] memory tokens) external nonReentrant {
         ReferralStorage.Layout storage l = ReferralStorage.layout();
 
-        (address[] memory tokens, uint256[] memory rebates) = getRebates(msg.sender);
-
-        if (tokens.length == 0) revert Referral__NoRebatesToClaim();
-
         for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 rebate = l.rebates[msg.sender][tokens[i]];
+            if (rebate == 0) continue;
+
             l.rebates[msg.sender][tokens[i]] = 0;
             l.rebateTokens[msg.sender].remove(tokens[i]);
 
-            IERC20(tokens[i]).safeTransfer(msg.sender, rebates[i]);
-            emit ClaimRebate(msg.sender, tokens[i], rebates[i]);
+            IERC20(tokens[i]).safeTransfer(msg.sender, rebate);
+            emit ClaimRebate(msg.sender, tokens[i], rebate);
+        }
+    }
+
+    /// @notice Updates the `referrer` rebate balance and rebate tokens, if `amount` is greater than zero
+    function _tryUpdateRebate(
+        ReferralStorage.Layout storage l,
+        address referrer,
+        address token,
+        UD60x18 amount
+    ) internal {
+        if (amount > ZERO) {
+            l.rebates[referrer][token] += token.toTokenDecimals(amount);
+            if (!l.rebateTokens[referrer].contains(token)) l.rebateTokens[referrer].add(token);
         }
     }
 

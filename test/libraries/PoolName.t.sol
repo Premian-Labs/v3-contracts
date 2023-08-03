@@ -1,19 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {PoolName} from "contracts/libraries/PoolName.sol";
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+import {PoolNameMock} from "contracts/test/libraries/PoolNameMock.sol";
 
 contract PoolNameTest is Test {
-    address weth;
-    address wbtc;
-    address usdc;
-    address dai;
+    PoolNameMock internal poolName;
+
+    address internal weth;
+    address internal wbtc;
+    address internal usdc;
+    address internal dai;
 
     function setUp() public {
+        poolName = new PoolNameMock();
+
         weth = address(new ERC20Mock("WETH", 18));
         wbtc = address(new ERC20Mock("WBTC", 8));
         usdc = address(new ERC20Mock("USDC", 6));
@@ -74,10 +79,10 @@ contract PoolNameTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 13));
 
-        PoolName.monthToString(13);
+        poolName.monthToString(13);
 
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidMonth.selector, 0));
 
-        PoolName.monthToString(0);
+        poolName.monthToString(0);
     }
 }

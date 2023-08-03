@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 interface IFeedRegistry {
     struct FeedMappingArgs {
@@ -12,12 +12,6 @@ interface IFeedRegistry {
     /// @notice Emitted when new price feed mappings are registered
     /// @param args The arguments for the new mappings
     event FeedMappingsRegistered(FeedMappingArgs[] args);
-
-    /// @notice Thrown when trying to add pair where addresses are the same
-    error FeedRegistry__TokensAreSame(address tokenA, address tokenB);
-
-    /// @notice Thrown when one of the parameters is a zero address
-    error FeedRegistry__ZeroAddress();
 
     /// @notice Registers mappings of ERC20 token, and denomination (ETH, or USD) to feed
     /// @param args The arguments for the new mappings

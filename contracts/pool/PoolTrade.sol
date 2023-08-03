@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -10,7 +10,6 @@ import {IERC3156FlashLender} from "@solidstate/contracts/interfaces/IERC3156Flas
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {iZERO, ZERO} from "../libraries/Constants.sol";
 import {Position} from "../libraries/Position.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -46,13 +45,13 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolTrade
-    function fillQuoteRFQ(
-        QuoteRFQ calldata quoteRFQ,
+    function fillQuoteOB(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata signature,
         address referrer
     ) external nonReentrant returns (uint256 premiumTaker, Position.Delta memory delta) {
-        return _fillQuoteRFQ(FillQuoteRFQArgsInternal(msg.sender, referrer, size, signature, true), quoteRFQ);
+        return _fillQuoteOB(FillQuoteOBArgsInternal(msg.sender, referrer, size, signature, true), quoteOB);
     }
 
     /// @inheritdoc IPoolTrade
@@ -66,34 +65,34 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolTrade
-    function cancelQuotesRFQ(bytes32[] calldata hashes) external nonReentrant {
+    function cancelQuotesOB(bytes32[] calldata hashes) external nonReentrant {
         PoolStorage.Layout storage l = PoolStorage.layout();
         for (uint256 i = 0; i < hashes.length; i++) {
-            l.quoteRFQAmountFilled[msg.sender][hashes[i]] = ud(type(uint256).max);
-            emit CancelQuoteRFQ(msg.sender, hashes[i]);
+            l.quoteOBAmountFilled[msg.sender][hashes[i]] = ud(type(uint256).max);
+            emit CancelQuoteOB(msg.sender, hashes[i]);
         }
     }
 
     /// @inheritdoc IPoolTrade
-    function isQuoteRFQValid(
-        QuoteRFQ calldata quoteRFQ,
+    function isQuoteOBValid(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
-    ) external view returns (bool, InvalidQuoteRFQError) {
+    ) external view returns (bool, InvalidQuoteOBError) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        bytes32 quoteRFQHash = _quoteRFQHash(quoteRFQ);
+        bytes32 quoteOBHash = _quoteOBHash(quoteOB);
         return
-            _areQuoteRFQAndBalanceValid(
+            _areQuoteOBAndBalanceValid(
                 l,
-                FillQuoteRFQArgsInternal(msg.sender, address(0), size, sig, true),
-                quoteRFQ,
-                quoteRFQHash
+                FillQuoteOBArgsInternal(msg.sender, address(0), size, sig, true),
+                quoteOB,
+                quoteOBHash
             );
     }
 
     /// @inheritdoc IPoolTrade
-    function getQuoteRFQFilledAmount(address provider, bytes32 quoteRFQHash) external view returns (UD60x18) {
-        return PoolStorage.layout().quoteRFQAmountFilled[provider][quoteRFQHash];
+    function getQuoteOBFilledAmount(address provider, bytes32 quoteOBHash) external view returns (UD60x18) {
+        return PoolStorage.layout().quoteOBAmountFilled[provider][quoteOBHash];
     }
 
     /// @inheritdoc IERC3156FlashLender

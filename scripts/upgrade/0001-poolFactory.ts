@@ -4,7 +4,6 @@ import {
   PoolFactoryProxy__factory,
 } from '../../typechain';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import fs from 'fs';
@@ -18,7 +17,6 @@ async function main() {
 
   let addresses: ContractAddresses;
   let addressesPath: string;
-  let initFeeCalculator: string;
   let premiaDiamond: string;
   let chainlinkAdapter: string;
   let proxy: PoolFactoryProxy;
@@ -28,10 +26,6 @@ async function main() {
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
-  } else if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-    addressesPath = 'utils/deployment/goerli.json';
-    setImplementation = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
@@ -40,7 +34,6 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  initFeeCalculator = addresses.InitFeeCalculatorProxy;
   premiaDiamond = addresses.PremiaDiamond;
   chainlinkAdapter = addresses.ChainlinkAdapterProxy;
   proxy = PoolFactoryProxy__factory.connect(
@@ -53,7 +46,8 @@ async function main() {
   const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
     premiaDiamond,
     chainlinkAdapter,
-    initFeeCalculator,
+    addresses.tokens.WETH,
+    addresses.PoolFactoryDeployer,
   );
   await poolFactoryImpl.deployed();
   console.log(`PoolFactory impl : ${poolFactoryImpl.address}`);

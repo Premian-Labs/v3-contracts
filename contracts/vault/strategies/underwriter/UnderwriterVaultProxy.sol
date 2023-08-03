@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity =0.8.19;
 
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {ERC20MetadataStorage} from "@solidstate/contracts/token/ERC20/metadata/ERC20MetadataStorage.sol";
@@ -15,10 +15,7 @@ contract UnderwriterVaultProxy is Proxy {
 
     // Constants
     bytes32 public constant VAULT_TYPE = keccak256("UnderwriterVault");
-
     address internal immutable VAULT_REGISTRY;
-
-    // Errors
 
     constructor(
         address vaultRegistry,

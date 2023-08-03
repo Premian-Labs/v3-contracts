@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-
-import {Denominations} from "@chainlink/contracts/src/v0.8/Denominations.sol";
 
 import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 
@@ -12,42 +9,42 @@ contract OracleAdapterMock {
     address internal immutable BASE;
     address internal immutable QUOTE;
 
-    UD60x18 internal quoteAmount;
-    UD60x18 internal quoteFromAmount;
+    UD60x18 internal getPriceAmount;
+    UD60x18 internal getPriceAtAmount;
 
-    mapping(uint256 => UD60x18) internal quoteFromAmountMap;
+    mapping(uint256 => UD60x18) internal getPriceAtAmountMap;
 
-    constructor(address _base, address _quote, UD60x18 _quoteAmount, UD60x18 _quoteFromAmount) {
+    constructor(address _base, address _quote, UD60x18 _getPriceAmount, UD60x18 _getPriceAtAmount) {
         BASE = _base;
         QUOTE = _quote;
-        quoteAmount = _quoteAmount;
-        quoteFromAmount = _quoteFromAmount;
+        getPriceAmount = _getPriceAmount;
+        getPriceAtAmount = _getPriceAtAmount;
     }
 
     function upsertPair(address tokenA, address tokenB) external {}
 
-    function setQuote(UD60x18 _quoteAmount) external {
-        quoteAmount = _quoteAmount;
+    function setPrice(UD60x18 _getPriceAmount) external {
+        getPriceAmount = _getPriceAmount;
     }
 
-    function setQuoteFrom(uint256 maturity, UD60x18 _quoteFromAmount) external {
-        quoteFromAmountMap[maturity] = _quoteFromAmount;
+    function setPriceAt(uint256 maturity, UD60x18 _getPriceAtAmount) external {
+        getPriceAtAmountMap[maturity] = _getPriceAtAmount;
     }
 
-    function setQuoteFrom(UD60x18 _quoteFromAmount) external {
-        quoteFromAmount = _quoteFromAmount;
+    function setPriceAt(UD60x18 _getPriceAtAmount) external {
+        getPriceAtAmount = _getPriceAtAmount;
     }
 
-    function quote(address, address) external view returns (UD60x18) {
-        return quoteAmount;
+    function getPrice(address, address) external view returns (UD60x18) {
+        return getPriceAmount;
     }
 
-    function quoteFrom(address, address, uint256 maturity) external view returns (UD60x18) {
-        if (quoteFromAmountMap[maturity] != ud(0)) {
-            return quoteFromAmountMap[maturity];
+    function getPriceAt(address, address, uint256 maturity) external view returns (UD60x18) {
+        if (getPriceAtAmountMap[maturity] != ud(0)) {
+            return getPriceAtAmountMap[maturity];
         }
 
-        return quoteFromAmount;
+        return getPriceAtAmount;
     }
 
     function describePricingPath(

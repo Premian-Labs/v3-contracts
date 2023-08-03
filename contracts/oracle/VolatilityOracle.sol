@@ -1,13 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
+import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
+
+import {RelayerAccessManager} from "../relayer/RelayerAccessManager.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
@@ -19,17 +20,14 @@ import {ZERO, iZERO, iONE, iTWO} from "../libraries/Constants.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 /// @title Premia volatility surface oracle contract for liquid markets.
-contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
+contract VolatilityOracle is IVolatilityOracle, ReentrancyGuard, RelayerAccessManager {
     using VolatilityOracleStorage for VolatilityOracleStorage.Layout;
-    using EnumerableSet for EnumerableSet.AddressSet;
     using SafeCast for uint256;
     using SafeCast for int256;
     using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;
 
     uint256 private constant DECIMALS = 12;
-
-    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
 
     struct Params {
         SD59x18[5] tau;
@@ -42,38 +40,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         SD59x18 theta;
         SD59x18 psi;
         SD59x18 rho;
-    }
-
-    /// @inheritdoc IVolatilityOracle
-    function addWhitelistedRelayers(address[] calldata accounts) external onlyOwner {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        for (uint256 i = 0; i < accounts.length; i++) {
-            l.whitelistedRelayers.add(accounts[i]);
-        }
-    }
-
-    /// @inheritdoc IVolatilityOracle
-    function removeWhitelistedRelayers(address[] calldata accounts) external onlyOwner {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        for (uint256 i = 0; i < accounts.length; i++) {
-            l.whitelistedRelayers.remove(accounts[i]);
-        }
-    }
-
-    /// @inheritdoc IVolatilityOracle
-    function getWhitelistedRelayers() external view returns (address[] memory) {
-        VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        uint256 length = l.whitelistedRelayers.length();
-        address[] memory result = new address[](length);
-
-        for (uint256 i = 0; i < length; i++) {
-            result[i] = l.whitelistedRelayers.at(i);
-        }
-
-        return result;
     }
 
     /// @inheritdoc IVolatilityOracle
@@ -94,7 +60,9 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         bytes32[] calldata psi,
         bytes32[] calldata rho,
         UD60x18 riskFreeRate
-    ) external {
+    ) external nonReentrant {
+        _revertIfNotWhitelistedRelayer(msg.sender);
+
         if (
             tokens.length != tau.length ||
             tokens.length != theta.length ||
@@ -103,9 +71,6 @@ contract VolatilityOracle is IVolatilityOracle, OwnableInternal {
         ) revert IVolatilityOracle.VolatilityOracle__ArrayLengthMismatch();
 
         VolatilityOracleStorage.Layout storage l = VolatilityOracleStorage.layout();
-
-        if (!l.whitelistedRelayers.contains(msg.sender))
-            revert IVolatilityOracle.VolatilityOracle__RelayerNotWhitelisted(msg.sender);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             l.parameters[tokens[i]] = VolatilityOracleStorage.Update({

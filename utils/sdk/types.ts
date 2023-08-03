@@ -3,7 +3,6 @@ import { BigNumber } from 'ethers';
 export enum AdapterType {
   NONE,
   CHAINLINK,
-  UNISWAP_V3,
 }
 
 export enum TokenType {
@@ -48,7 +47,7 @@ export interface PoolKey {
   isCallPool: boolean;
 }
 
-export interface QuoteRFQ {
+export interface QuoteOB {
   provider: string;
   taker: string;
   price: BigNumber;

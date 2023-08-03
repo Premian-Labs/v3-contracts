@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {IERC3156FlashLender} from "@solidstate/contracts/interfaces/IERC3156FlashLender.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
@@ -22,18 +22,18 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         bool isBuy
     ) external view returns (uint256 premiumNet, uint256 takerFee);
 
-    /// @notice Functionality to support the RFQ / OTC system.
-    ///         An LP can create a RFQ quote for which he will do an OTC trade through
+    /// @notice Functionality to support the OB / OTC system.
+    ///         An LP can create a OB quote for which he will do an OTC trade through
     ///         the exchange. Takers can buy from / sell to the LP then partially or
     ///         fully while having the price guaranteed.
-    /// @param quoteRFQ The RFQ quote given by the provider
-    /// @param size The size to fill from the RFQ quote (18 decimals)
+    /// @param quoteOB The OB quote given by the provider
+    /// @param size The size to fill from the OB quote (18 decimals)
     /// @param signature secp256k1 'r', 's', and 'v' value
-    /// @param referrer The referrer of the user filling the RFQ quote
+    /// @param referrer The referrer of the user filling the OB quote
     /// @return premiumTaker The premium paid or received by the taker for the trade (poolToken decimals)
     /// @return delta The net collateral / longs / shorts change for taker of the trade.
-    function fillQuoteRFQ(
-        QuoteRFQ calldata quoteRFQ,
+    function fillQuoteOB(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata signature,
         address referrer
@@ -56,26 +56,26 @@ interface IPoolTrade is IPoolInternal, IERC3156FlashLender {
         address referrer
     ) external returns (uint256 totalPremium, Position.Delta memory delta);
 
-    /// @notice Cancel given RFQ quotes
-    /// @dev No check is done to ensure the given hash correspond to a RFQ quote provider by msg.sender,
-    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a RFQ quote
+    /// @notice Cancel given OB quotes
+    /// @dev No check is done to ensure the given hash correspond to a OB quote provider by msg.sender,
+    ///      but as we register the cancellation in a mapping provider -> hash, it is not possible to cancel a OB quote
     ///      created by another provider
-    /// @param hashes The hashes of the RFQ quotes to cancel
-    function cancelQuotesRFQ(bytes32[] calldata hashes) external;
+    /// @param hashes The hashes of the OB quotes to cancel
+    function cancelQuotesOB(bytes32[] calldata hashes) external;
 
-    /// @notice Returns whether or not an RFQ quote is valid, given a fill size
-    /// @param quoteRFQ The RFQ quote to check
-    /// @param size Size to fill from the RFQ quote (18 decimals)
+    /// @notice Returns whether or not an OB quote is valid, given a fill size
+    /// @param quoteOB The OB quote to check
+    /// @param size Size to fill from the OB quote (18 decimals)
     /// @param sig secp256k1 Signature
-    function isQuoteRFQValid(
-        QuoteRFQ calldata quoteRFQ,
+    function isQuoteOBValid(
+        QuoteOB calldata quoteOB,
         UD60x18 size,
         Signature calldata sig
-    ) external view returns (bool, InvalidQuoteRFQError);
+    ) external view returns (bool, InvalidQuoteOBError);
 
-    /// @notice Returns the size already filled for a given RFQ quote
-    /// @param provider Provider of the RFQ quote
-    /// @param quoteRFQHash Hash of the RFQ quote
+    /// @notice Returns the size already filled for a given OB quote
+    /// @param provider Provider of the OB quote
+    /// @param quoteOBHash Hash of the OB quote
     /// @return The size already filled (18 decimals)
-    function getQuoteRFQFilledAmount(address provider, bytes32 quoteRFQHash) external view returns (UD60x18);
+    function getQuoteOBFilledAmount(address provider, bytes32 quoteOBHash) external view returns (UD60x18);
 }

@@ -51,7 +51,7 @@ export default {
       },
     ],
     overrides: {
-      // Uncomment the following lines if we need to reduce UnderwriterVault bytecode size further
+      // This override allows to save ~0.5kB contract size if necessary
       // 'contracts/vault/strategies/underwriter/UnderwriterVault.sol': {
       //   version: '0.8.19',
       //   settings: {
@@ -132,7 +132,6 @@ export default {
     path: './abi',
     clear: true,
     flat: true,
-    except: ['@uniswap'],
   },
 
   etherscan: {

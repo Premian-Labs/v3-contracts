@@ -1,4 +1,4 @@
-import goerli from './deployment/goerli.json';
+import arbitrum from './deployment/arbitrum.json';
 import arbitrumGoerli from './deployment/arbitrumGoerli.json';
 
 export type Token = { address: string; decimals: number; symbol: string };
@@ -6,8 +6,6 @@ export type Token = { address: string; decimals: number; symbol: string };
 export const CHAINLINK_BTC = '0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB';
 export const CHAINLINK_ETH = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 export const CHAINLINK_USD = '0x0000000000000000000000000000000000000348';
-
-export const UNISWAP_V3_FACTORY = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 
 // NOTE: Ethereum Addresses Only
 // prettier-ignore
@@ -74,31 +72,26 @@ export const feeds = [
     { token: tokens.WBTC.address, denomination: tokens.CHAINLINK_BTC.address, feed: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23'},
 ]
 
-export const goerliFeeds = [
-  {
-    token: goerli.tokens.testWETH,
-    denomination: CHAINLINK_USD,
-    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
-  },
+export const arbitrumFeeds = [
   {
     token: CHAINLINK_ETH,
     denomination: CHAINLINK_USD,
-    feed: '0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e',
+    feed: '0x639fe6ab55c921f74e7fac1ee960c0b6293ba612',
   },
   {
-    token: goerli.tokens.WBTC,
+    token: arbitrum.tokens.WBTC,
     denomination: CHAINLINK_USD,
-    feed: '0xA39434A63A52E749F02807ae27335515BA4b07F7',
+    feed: '0xd0C7101eACbB49F3deCcCc166d238410D6D46d57',
   },
   {
-    token: goerli.tokens.LINK,
+    token: arbitrum.tokens.ARB,
     denomination: CHAINLINK_USD,
-    feed: '0x48731cF7e84dc94C5f84577882c14Be11a5B7456',
+    feed: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
   },
   {
-    token: goerli.tokens.USDC,
+    token: arbitrum.tokens.USDCe,
     denomination: CHAINLINK_USD,
-    feed: '0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7',
+    feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3', // uses USDC feed
   },
 ];
 

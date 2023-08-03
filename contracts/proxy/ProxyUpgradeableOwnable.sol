@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity =0.8.19;
 
 import {AddressUtils} from "@solidstate/contracts/utils/AddressUtils.sol";
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
@@ -13,7 +13,7 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
 
     event ImplementationSet(address implementation);
 
-    error InvalidImplementation(address implementation);
+    error ProxyUpgradeableOwnable__InvalidImplementation(address implementation);
 
     constructor(address implementation) {
         _setOwner(msg.sender);
@@ -41,7 +41,7 @@ contract ProxyUpgradeableOwnable is Proxy, SafeOwnable {
 
     /// @notice set address of implementation contract
     function _setImplementation(address implementation) internal {
-        if (!implementation.isContract()) revert InvalidImplementation(implementation);
+        if (!implementation.isContract()) revert ProxyUpgradeableOwnable__InvalidImplementation(implementation);
 
         ProxyUpgradeableOwnableStorage.layout().implementation = implementation;
         emit ImplementationSet(implementation);

@@ -1,9 +1,8 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LicenseRef-P3-DUAL
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {IVolatilityOracle} from "./IVolatilityOracle.sol";
 
@@ -33,8 +32,6 @@ library VolatilityOracleStorage {
 
     struct Layout {
         mapping(address token => Update) parameters;
-        // Relayer addresses which can be trusted to provide accurate option trades
-        EnumerableSet.AddressSet whitelistedRelayers;
         // risk-free rate
         UD60x18 riskFreeRate;
     }

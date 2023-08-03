@@ -1,14 +1,13 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {SD59x18} from "@prb/math/SD59x18.sol";
 import {UD60x18} from "@prb/math/UD60x18.sol";
-import {ISolidStateERC4626} from "@solidstate/contracts/token/ERC4626/ISolidStateERC4626.sol";
 
 import {IVault} from "../../../vault/IVault.sol";
 
-interface IUnderwriterVault is ISolidStateERC4626, IVault {
+interface IUnderwriterVault is IVault {
     // Errors
     error Vault__UtilisationOutOfBounds();
 
@@ -93,26 +92,6 @@ interface IUnderwriterVault is ISolidStateERC4626, IVault {
         // the address of the taker
         address taker;
     }
-
-    struct FeeInternal {
-        // amount of assets that the user's shares are worth currently
-        UD60x18 assets;
-        // total amount of shares the user owns
-        UD60x18 balanceShares;
-        // performance of the user's deposited capital (1.2 meaning 20% in returns, 0.9 meaning -10% in returns)
-        UD60x18 performance;
-        // performance fee given to the vault based on the amount transferred denoted in assets
-        UD60x18 performanceFeeInAssets;
-        // management fee given to the vault based on the amount transferred denoted in assets
-        UD60x18 managementFeeInAssets;
-        // total fee given to the vault based on the amount transferred denoted in shares
-        UD60x18 totalFeeInShares;
-        // total fee given to the vault based on the amount transferred denoted in the assets
-        UD60x18 totalFeeInAssets;
-    }
-
-    // Events
-    event ClaimProtocolFees(address indexed feeReceiver, UD60x18 feesClaimed);
 
     /// @notice Settles all expired option positions.
     function settle() external;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import "forge-std/console2.sol";
 
@@ -16,10 +16,11 @@ import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writ
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
+import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
-import {InitFeeCalculator} from "contracts/factory/InitFeeCalculator.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
+import {PoolFactoryDeployer} from "contracts/factory/PoolFactoryDeployer.sol";
 import {PoolFactoryProxy} from "contracts/factory/PoolFactoryProxy.sol";
 
 import {IPoolMock} from "contracts/test/pool/IPoolMock.sol";
@@ -48,6 +49,7 @@ import {ReferralMock} from "contracts/test/referral/ReferralMock.sol";
 import {IReferralMock} from "contracts/test/referral/IReferralMock.sol";
 
 import {ExchangeHelper} from "contracts/utils/ExchangeHelper.sol";
+import {Placeholder} from "contracts/utils/Placeholder.sol";
 
 import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {UserSettings} from "contracts/settings/UserSettings.sol";
@@ -80,7 +82,7 @@ contract DeployTest is Test, Assertions {
 
     Position.Key posKey;
 
-    IPoolInternal.QuoteRFQ quoteRFQ;
+    IPoolInternal.QuoteOB quoteOB;
 
     Users users;
 
@@ -92,7 +94,7 @@ contract DeployTest is Test, Assertions {
         address trader;
         address otherTrader;
         address referrer;
-        address agent;
+        address operator;
         address caller;
         address receiver;
         address underwriter;
@@ -104,7 +106,7 @@ contract DeployTest is Test, Assertions {
     bytes4[] internal poolDepositWithdrawSelectors;
     bytes4[] internal poolTradeSelectors;
 
-    address public constant feeReceiver = address(123456789);
+    address public constant FEE_RECEIVER = address(123456789);
 
     receive() external payable {}
 
@@ -126,7 +128,7 @@ contract DeployTest is Test, Assertions {
             trader: vm.addr(3),
             otherTrader: vm.addr(4),
             referrer: vm.addr(5),
-            agent: vm.addr(6),
+            operator: vm.addr(6),
             caller: vm.addr(7),
             receiver: vm.addr(8),
             underwriter: vm.addr(9)
@@ -147,10 +149,10 @@ contract DeployTest is Test, Assertions {
             isCallPool: true
         });
 
-        quoteRFQ = IPoolInternal.QuoteRFQ({
+        quoteOB = IPoolInternal.QuoteOB({
             provider: users.lp,
             taker: address(0),
-            price: ud(0.1 ether),
+            price: ud(0.1e18),
             size: ud(10 ether),
             isBuy: false,
             deadline: block.timestamp + 1 hours,
@@ -159,17 +161,17 @@ contract DeployTest is Test, Assertions {
 
         diamond = new Premia();
 
-        InitFeeCalculator initFeeCalculatorImpl = new InitFeeCalculator(address(base), address(oracleAdapter));
+        Placeholder placeholder = new Placeholder();
+        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(placeholder), ud(0.1 ether), FEE_RECEIVER);
 
-        ProxyUpgradeableOwnable initFeeCalculatorProxy = new ProxyUpgradeableOwnable(address(initFeeCalculatorImpl));
-
+        PoolFactoryDeployer poolFactoryDeployer = new PoolFactoryDeployer(address(diamond), address(factoryProxy));
         PoolFactory factoryImpl = new PoolFactory(
             address(diamond),
             address(oracleAdapter),
-            address(initFeeCalculatorProxy)
+            address(base),
+            address(poolFactoryDeployer)
         );
-
-        PoolFactoryProxy factoryProxy = new PoolFactoryProxy(address(factoryImpl), ud(0.1 ether), feeReceiver);
+        factoryProxy.setImplementation(address(factoryImpl));
 
         flashLoanMock = new FlashLoanMock();
 
@@ -187,12 +189,17 @@ contract DeployTest is Test, Assertions {
 
         userSettings = IUserSettings(address(userSettingsProxy));
 
+        address vaultRegistryImpl = address(new VaultRegistry());
+        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
+        vaultRegistry = VaultRegistry(vaultRegistryProxy);
+
         VxPremia vxPremiaImpl = new VxPremia(
             address(0),
             address(0),
             address(premia),
             address(quote),
-            address(exchangeHelper)
+            address(exchangeHelper),
+            vaultRegistryProxy
         );
 
         VxPremiaProxy vxPremiaProxy = new VxPremiaProxy(address(vxPremiaImpl));
@@ -201,17 +208,11 @@ contract DeployTest is Test, Assertions {
 
         PoolBase poolBaseImpl = new PoolBase();
 
-        address vaultRegistryImpl = address(new VaultRegistry());
-
-        address vaultRegistryProxy = address(new ProxyUpgradeableOwnable(vaultRegistryImpl));
-
-        vaultRegistry = VaultRegistry(vaultRegistryProxy);
-
         PoolCoreMock poolCoreMockImpl = new PoolCoreMock(
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -222,7 +223,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -233,7 +234,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -244,7 +245,7 @@ contract DeployTest is Test, Assertions {
             address(factory),
             address(router),
             address(base),
-            feeReceiver,
+            FEE_RECEIVER,
             address(referral),
             address(userSettings),
             address(vaultRegistry),
@@ -273,33 +274,46 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedArea.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_cross.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getStrandedMarketPriceUpdate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_getTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isMarketPriceStranded.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exposed_isRateNonTerminating.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getCurrentTick.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.getLiquidityRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getLongRate.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getShortRate.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.formatTokenId.selector);
-        poolCoreMockSelectors.push(poolCoreMockImpl.quoteRFQHash.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.quoteOBHash.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.parseTokenId.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getPositionData.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateClaimableFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateLastDeposit.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDust.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDustUD60x18.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
+        poolCoreSelectors.push(poolCoreImpl.annihilateFor.selector);
         poolCoreSelectors.push(poolCoreImpl.claim.selector);
         poolCoreSelectors.push(poolCoreImpl.exercise.selector);
         poolCoreSelectors.push(poolCoreImpl.exerciseFor.selector);
         poolCoreSelectors.push(poolCoreImpl.getClaimableFees.selector);
         poolCoreSelectors.push(poolCoreImpl.getPoolSettings.selector);
+        poolCoreSelectors.push(poolCoreImpl.getSettlementPrice.selector);
+        poolCoreSelectors.push(poolCoreImpl.getTokenIds.selector);
         poolCoreSelectors.push(poolCoreImpl.marketPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.settle.selector);
         poolCoreSelectors.push(poolCoreImpl.settleFor.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePosition.selector);
         poolCoreSelectors.push(poolCoreImpl.settlePositionFor.selector);
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
+        poolCoreSelectors.push(poolCoreImpl._takerFeeLowLevel.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
-        poolCoreSelectors.push(poolCoreImpl.tick.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);
-        poolCoreSelectors.push(poolCoreImpl.liquidityForTick.selector);
-        poolCoreSelectors.push(poolCoreImpl.liquidityForRange.selector);
 
         // PoolDepositWithdraw
         poolDepositWithdrawSelectors.push(
@@ -318,14 +332,14 @@ contract DeployTest is Test, Assertions {
         poolDepositWithdrawSelectors.push(poolDepositWithdrawImpl.getNearestTicksBelow.selector);
 
         // PoolTrade
-        poolTradeSelectors.push(poolTradeImpl.cancelQuotesRFQ.selector);
-        poolTradeSelectors.push(poolTradeImpl.fillQuoteRFQ.selector);
+        poolTradeSelectors.push(poolTradeImpl.cancelQuotesOB.selector);
+        poolTradeSelectors.push(poolTradeImpl.fillQuoteOB.selector);
         poolTradeSelectors.push(poolTradeImpl.flashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.maxFlashLoan.selector);
         poolTradeSelectors.push(poolTradeImpl.flashFee.selector);
         poolTradeSelectors.push(poolTradeImpl.getQuoteAMM.selector);
-        poolTradeSelectors.push(poolTradeImpl.getQuoteRFQFilledAmount.selector);
-        poolTradeSelectors.push(poolTradeImpl.isQuoteRFQValid.selector);
+        poolTradeSelectors.push(poolTradeImpl.getQuoteOBFilledAmount.selector);
+        poolTradeSelectors.push(poolTradeImpl.isQuoteOBValid.selector);
         poolTradeSelectors.push(poolTradeImpl.trade.selector);
 
         IDiamondWritableInternal.FacetCut[] memory facetCuts = new IDiamondWritableInternal.FacetCut[](5);
@@ -378,7 +392,21 @@ contract DeployTest is Test, Assertions {
     }
 
     function deposit(UD60x18 depositSize) internal returns (uint256 initialCollateral) {
-        return deposit(pool, poolKey.strike, depositSize);
+        return deposit(pool, posKey, poolKey.strike, depositSize, Position.isLong(posKey.orderType));
+    }
+
+    function deposit(
+        Position.Key memory customPosKey,
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, customPosKey, poolKey.strike, ud(depositSize), Position.isLong(customPosKey.orderType));
+    }
+
+    function deposit(
+        Position.Key memory customPosKey,
+        UD60x18 depositSize
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, customPosKey, poolKey.strike, depositSize, Position.isLong(customPosKey.orderType));
     }
 
     function deposit(
@@ -386,25 +414,93 @@ contract DeployTest is Test, Assertions {
         UD60x18 strike,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
+        return deposit(_pool, posKey, strike, depositSize, Position.isLong(posKey.orderType));
+    }
+
+    function deposit(
+        uint256 depositSize,
+        bool isBidIfStrandedMarketPrice
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, posKey, poolKey.strike, ud(depositSize), isBidIfStrandedMarketPrice);
+    }
+
+    function deposit(
+        UD60x18 depositSize,
+        bool isBidIfStrandedMarketPrice
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, posKey, poolKey.strike, depositSize, isBidIfStrandedMarketPrice);
+    }
+
+    function deposit(
+        IPoolMock _pool,
+        Position.Key memory customPosKey,
+        UD60x18 strike,
+        UD60x18 depositSize,
+        bool isBidIfStrandedMarketPrice
+    ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
-        initialCollateral = scaleDecimals(isCallTest ? depositSize : depositSize * strike);
+        initialCollateral = toTokenDecimals(isCallTest ? depositSize : depositSize * strike);
 
-        vm.startPrank(users.lp);
+        vm.startPrank(customPosKey.operator);
 
-        deal(address(token), users.lp, initialCollateral);
+        deal(address(token), customPosKey.operator, initialCollateral);
         token.approve(address(router), initialCollateral);
 
-        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(posKey.lower, posKey.upper);
+        (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(
+            customPosKey.lower,
+            customPosKey.upper
+        );
 
-        _pool.deposit(posKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
+        _pool.deposit(
+            customPosKey,
+            nearestBelowLower,
+            nearestBelowUpper,
+            depositSize,
+            ZERO,
+            ONE,
+            isBidIfStrandedMarketPrice
+        );
 
         vm.stopPrank();
     }
 
-    function trade(uint256 tradeSize, bool isBuy) internal returns (uint256 initialCollateral, uint256 totalPremium) {
-        if (isBuy) posKey.orderType = Position.OrderType.CS;
+    function tradeOnly(uint256 tradeSize, bool isBuy) internal returns (uint256 totalPremium) {
+        UD60x18 _tradeSize = ud(tradeSize);
+        (totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, isBuy);
+        deal(getPoolToken(), users.trader, tradeSize);
+        vm.startPrank(users.trader);
+        IERC20(getPoolToken()).approve(address(router), tradeSize);
+        pool.trade(
+            _tradeSize,
+            isBuy,
+            isBuy ? totalPremium + totalPremium / 10 : totalPremium - totalPremium / 10,
+            address(0)
+        );
+        vm.stopPrank();
+    }
 
-        initialCollateral = deposit(tradeSize);
+    function trade(uint256 tradeSize, bool isBuy) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        (initialCollateral, totalPremium) = trade(tradeSize, isBuy, tradeSize, false);
+    }
+
+    function trade(
+        uint256 tradeSize,
+        bool isBuy,
+        uint256 depositSize
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        (initialCollateral, totalPremium) = trade(tradeSize, isBuy, depositSize, false);
+    }
+
+    function trade(
+        uint256 tradeSize,
+        bool isBuy,
+        uint256 depositSize,
+        bool isCSUP
+    ) internal returns (uint256 initialCollateral, uint256 totalPremium) {
+        if (isBuy && isCSUP) posKey.orderType = Position.OrderType.CSUP;
+        if (isBuy && !isCSUP) posKey.orderType = Position.OrderType.CS;
+
+        initialCollateral = deposit(posKey, depositSize);
 
         UD60x18 _tradeSize = ud(tradeSize);
 
@@ -412,7 +508,7 @@ contract DeployTest is Test, Assertions {
 
         address poolToken = getPoolToken();
 
-        uint256 mintAmount = isBuy ? totalPremium : scaleDecimals(poolKey.strike);
+        uint256 mintAmount = isBuy ? totalPremium : toTokenDecimals(poolKey.strike);
 
         vm.startPrank(users.trader);
         deal(poolToken, users.trader, mintAmount);
@@ -439,22 +535,20 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? amount : amount / poolKey.strike;
     }
 
-    function scaleDecimals(UD60x18 amount) internal view returns (uint256) {
+    /// @notice Adjust decimals of a value with 18 decimals to match the token decimals
+    function toTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), 18, decimals);
     }
 
-    function scaleDecimals(uint256 amount) internal view returns (UD60x18) {
+    /// @notice Adjust decimals of a value with token decimals to 18 decimals
+    function fromTokenDecimals(uint256 amount) internal view returns (UD60x18) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return ud(OptionMath.scaleDecimals(amount, decimals, 18));
     }
 
-    function scaleDecimalsTo(uint256 amount) internal view returns (uint256) {
-        uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
-        return OptionMath.scaleDecimals(amount, decimals, 18);
-    }
-
-    function scaleDecimalsTo(UD60x18 amount) internal view returns (uint256) {
+    /// @notice Adjust decimals of a value with token decimals to 18 decimals
+    function fromTokenDecimals(UD60x18 amount) internal view returns (uint256) {
         uint8 decimals = ISolidStateERC20(getPoolToken()).decimals();
         return OptionMath.scaleDecimals(amount.unwrap(), decimals, 18);
     }
@@ -492,15 +586,31 @@ contract DeployTest is Test, Assertions {
         return isCallTest ? tradeSize - exerciseValue : tradeSize * poolKey.strike - exerciseValue;
     }
 
-    function handleExerciseSettleAuthorization(address user, uint256 authorizedCost) internal {
+    function setActionAuthorization(address user, IUserSettings.Action action, bool authorization) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = action;
+
+        bool[] memory _authorization = new bool[](1);
+        _authorization[0] = authorization;
+
+        vm.prank(user);
+        userSettings.setActionAuthorization(users.operator, actions, _authorization);
+    }
+
+    function enableExerciseSettleAuthorization(address user, UD60x18 authorizedCost) internal {
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](3);
+        actions[0] = IUserSettings.Action.Exercise;
+        actions[1] = IUserSettings.Action.Settle;
+        actions[2] = IUserSettings.Action.SettlePosition;
+
+        bool[] memory authorization = new bool[](3);
+        authorization[0] = true;
+        authorization[1] = true;
+        authorization[2] = true;
+
         vm.startPrank(user);
-
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        userSettings.setAuthorizedAgents(agents);
+        userSettings.setActionAuthorization(users.operator, actions, authorization);
         userSettings.setAuthorizedCost(authorizedCost);
-
         vm.stopPrank();
     }
 }

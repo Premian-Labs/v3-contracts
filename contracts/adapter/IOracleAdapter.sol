@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -8,8 +8,7 @@ interface IOracleAdapter {
     /// @notice The type of adapter
     enum AdapterType {
         None,
-        Chainlink,
-        UniswapV3
+        Chainlink
     }
 
     /// @notice Thrown when attempting to increase array size
@@ -52,18 +51,18 @@ interface IOracleAdapter {
     /// @param tokenB The other of the pair's tokens
     function upsertPair(address tokenA, address tokenB) external;
 
-    /// @notice Returns a quote, based on the given token pair
+    /// @notice Returns the most recent price for the given token pair
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
-    /// @return Spot price of base denominated in quote token (18 decimals)
-    function quote(address tokenIn, address tokenOut) external view returns (UD60x18);
+    /// @return The most recent price for the token pair (18 decimals)
+    function getPrice(address tokenIn, address tokenOut) external view returns (UD60x18);
 
-    /// @notice Returns a quote closest to the target timestamp, based on the given token pair
+    /// @notice Returns the price closest to `target` for the given token pair
     /// @param tokenIn The exchange token (base token)
     /// @param tokenOut The token to quote against (quote token)
     /// @param target Reference timestamp of the quote
-    /// @return Historical price of base denominated in quote token (18 decimals)
-    function quoteFrom(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18);
+    /// @return Historical price for the token pair (18 decimals)
+    function getPriceAt(address tokenIn, address tokenOut, uint256 target) external view returns (UD60x18);
 
     /// @notice Describes the pricing path used to convert the token to ETH
     /// @param token The token from where the pricing path starts

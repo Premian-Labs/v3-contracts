@@ -14,7 +14,7 @@
     "buidler",
     "wow"
   ],
-  "license": "UNLICENSED",
+  "license": "LicenseRef-P3-DUAL",
   "main": "index.js",
   "repository": "https://github.com/Premian-Labs/premia-contracts-v3-private.git",
   "author": "Premia",
@@ -31,7 +31,7 @@
     "@ethersproject/providers": "^5.7.2",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
-    "@solidstate/contracts": "^0.0.56",
+    "@solidstate/contracts": "^0.0.57",
     "@solidstate/hardhat-4byte-uploader": "^1.1.0",
     "@solidstate/library": "^0.0.56",
     "@solidstate/spec": "^0.0.56",

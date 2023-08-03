@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {Position} from "contracts/libraries/Position.sol";
+
 import {IPoolEvents} from "contracts/pool/IPoolEvents.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -17,7 +20,7 @@ abstract contract PoolWriteFromTest is DeployTest {
     function _mintForLP() internal returns (uint256) {
         IERC20 poolToken = IERC20(getPoolToken());
 
-        uint256 initialCollateral = scaleDecimals(
+        uint256 initialCollateral = toTokenDecimals(
             contractsToCollateral(isCallTest ? ud(1000 ether) : ud(1000 ether) * poolKey.strike)
         );
 
@@ -32,12 +35,11 @@ abstract contract PoolWriteFromTest is DeployTest {
         uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true);
-
+        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
+        uint256 collateral = toTokenDecimals(contractsToCollateral(size)) + fee;
 
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -54,8 +56,7 @@ abstract contract PoolWriteFromTest is DeployTest {
         uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true);
-
+        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, users.referrer);
 
@@ -63,18 +64,16 @@ abstract contract PoolWriteFromTest is DeployTest {
 
         {
             (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
+            UD60x18 _primaryRebate = primaryRebatePercent * fromTokenDecimals(fee);
+            UD60x18 _secondaryRebate = secondaryRebatePercent * fromTokenDecimals(fee);
 
-            UD60x18 _primaryRebate = primaryRebatePercent * scaleDecimals(fee);
-
-            UD60x18 _secondaryRebate = secondaryRebatePercent * scaleDecimals(fee);
-
-            uint256 primaryRebate = scaleDecimals(_primaryRebate);
-            uint256 secondaryRebate = scaleDecimals(_secondaryRebate);
+            uint256 primaryRebate = toTokenDecimals(_primaryRebate);
+            uint256 secondaryRebate = toTokenDecimals(_secondaryRebate);
 
             totalRebate = primaryRebate + secondaryRebate;
         }
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size));
+        uint256 collateral = toTokenDecimals(contractsToCollateral(size));
 
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -94,15 +93,14 @@ abstract contract PoolWriteFromTest is DeployTest {
         uint256 initialCollateral = _mintForLP();
 
         UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true);
+        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
 
-        vm.prank(users.lp);
-        pool.setApprovalForAll(users.otherTrader, true);
+        setActionAuthorization(users.lp, IUserSettings.Action.WriteFrom, true);
 
-        vm.prank(users.otherTrader);
+        vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, size, address(0));
 
-        uint256 collateral = scaleDecimals(contractsToCollateral(size)) + fee;
+        uint256 collateral = toTokenDecimals(contractsToCollateral(size)) + fee;
 
         IERC20 poolToken = IERC20(getPoolToken());
 
@@ -128,19 +126,27 @@ abstract contract PoolWriteFromTest is DeployTest {
         _mintForLP();
 
         UD60x18 size = ud(500 ether);
-        uint256 fee = pool.takerFee(users.trader, size, 0, true);
+        uint256 fee = pool.takerFee(users.trader, size, 0, true, false);
 
         vm.expectEmit();
 
-        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), ud(scaleDecimalsTo(fee)));
+        emit WriteFrom(users.lp, users.trader, users.lp, size, contractsToCollateral(size), fromTokenDecimals(fee));
 
         vm.prank(users.lp);
         pool.writeFrom(users.lp, users.trader, size, address(0));
     }
 
-    function test_writeFrom_RevertIf_OnBehalfOfAnotherAddress_WithoutApproval() public {
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.otherTrader));
-        vm.prank(users.otherTrader);
+    function test_writeFrom_RevertIf_ActionNotAuthorized() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                users.lp,
+                users.operator,
+                IUserSettings.Action.WriteFrom
+            )
+        );
+
+        vm.prank(users.operator);
         pool.writeFrom(users.lp, users.trader, ud(500 ether), address(0));
     }
 

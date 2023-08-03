@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
-import {ONE, TWO} from "contracts/libraries/Constants.sol";
+import {ZERO, ONE, TWO} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+
 import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
+
+import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
 
@@ -29,7 +32,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         (trade.totalPremium, ) = pool.getQuoteAMM(users.trader, trade.size, true);
 
         trade.poolToken = getPoolToken();
-        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(feeReceiver);
+        trade.feeReceiverBalance = IERC20(trade.poolToken).balanceOf(FEE_RECEIVER);
 
         vm.startPrank(users.trader);
 
@@ -47,7 +50,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         uint256 protocolFees = pool.protocolFees();
 
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         vm.warp(poolKey.maturity);
         vm.prank(posKey.operator);
@@ -55,7 +58,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals(trade.size * payoff);
+        uint256 collateral = toTokenDecimals(trade.size * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
 
@@ -66,7 +69,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             trade.initialCollateral + trade.totalPremium - collateral - protocolFees
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
+        assertEq(IERC20(trade.poolToken).balanceOf(FEE_RECEIVER) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.getClaimableFees(posKey), 0);
         assertEq(pool.protocolFees(), 0);
@@ -84,6 +87,37 @@ abstract contract PoolSettlePositionTest is DeployTest {
         _test_settlePosition_Buy100Options(false);
     }
 
+    function test_settlePosition_DeletePosition() public {
+        _test_settlePosition_trade_Buy100Options();
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        UD60x18 settlementPrice = getSettlementPrice(true);
+        oracleAdapter.setPriceAt(settlementPrice);
+
+        vm.warp(poolKey.maturity);
+        vm.prank(posKey.operator);
+
+        pool.settlePosition(posKey);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
+    }
+
     function test_settlePosition_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
         vm.prank(posKey.operator);
@@ -96,10 +130,35 @@ abstract contract PoolSettlePositionTest is DeployTest {
         pool.settlePosition(posKey);
     }
 
+    function test_settlePosition_RevertIf_InvalidPositionState_NonZeroBalance_ZeroLastDeposit() public {
+        UD60x18 depositSize = ud(1e18);
+        pool.mint(users.lp, tokenId(), depositSize);
+
+        vm.warp(poolKey.maturity);
+        uint256 balance = depositSize.unwrap();
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, balance, 0));
+
+        vm.prank(posKey.operator);
+        pool.settlePosition(posKey);
+    }
+
+    function test_settlePosition_RevertIf_InvalidPositionState_ZeroBalance_NonZeroLastDeposit() public {
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        uint256 timestamp = block.timestamp;
+        pool.forceUpdateLastDeposit(pKeyInternal, timestamp);
+
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, 0, timestamp));
+
+        vm.prank(posKey.operator);
+        pool.settlePosition(posKey);
+    }
+
     function _test_settlePositionFor_Buy100Options(bool isITM) internal {
         UD60x18 settlementPrice = getSettlementPrice(isITM);
-        oracleAdapter.setQuote(settlementPrice.inv());
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         Position.Key memory posKey2 = Position.Key({
             owner: users.otherLP,
@@ -109,38 +168,33 @@ abstract contract PoolSettlePositionTest is DeployTest {
             orderType: Position.OrderType.CS
         });
 
-        handleExerciseSettleAuthorization(posKey.operator, 0.1 ether);
-        handleExerciseSettleAuthorization(posKey2.operator, 0.1 ether);
+        UD60x18 authorizedCost = ud(0.1e18);
+        enableExerciseSettleAuthorization(posKey.operator, authorizedCost);
+        enableExerciseSettleAuthorization(posKey2.operator, authorizedCost);
 
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
         vm.startPrank(posKey.operator);
-
         pool.transferPosition(posKey, users.otherLP, users.otherLP, ud(pool.balanceOf(posKey.operator, tokenId()) / 2));
-
         vm.stopPrank();
 
         uint256 protocolFees = pool.protocolFees();
-
-        uint256 cost = scaleDecimals(ud(0.1 ether));
-
         vm.warp(poolKey.maturity);
-        vm.prank(users.agent);
 
         Position.Key[] memory p = new Position.Key[](2);
         p[0] = posKey;
         p[1] = posKey2;
 
+        uint256 cost = toTokenDecimals(authorizedCost);
+        vm.prank(users.operator);
         pool.settlePositionFor(p, cost);
 
         UD60x18 payoff = getExerciseValue(isITM, ONE, settlementPrice);
-        uint256 collateral = scaleDecimals((trade.size / TWO) * payoff);
+        uint256 collateral = toTokenDecimals((trade.size / TWO) * payoff);
 
         assertEq(IERC20(trade.poolToken).balanceOf(users.trader), 0);
-
         assertEq(IERC20(trade.poolToken).balanceOf(address(pool)), collateral * 2);
-
-        assertEq(IERC20(trade.poolToken).balanceOf(users.agent), cost * 2);
+        assertEq(IERC20(trade.poolToken).balanceOf(users.operator), cost * 2);
 
         assertEq(
             IERC20(trade.poolToken).balanceOf(posKey.operator),
@@ -152,7 +206,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
             (trade.initialCollateral / 2) + (trade.totalPremium / 2) - collateral - (protocolFees / 2) - cost
         );
 
-        assertEq(IERC20(trade.poolToken).balanceOf(feeReceiver) - trade.feeReceiverBalance, protocolFees);
+        assertEq(IERC20(trade.poolToken).balanceOf(FEE_RECEIVER) - trade.feeReceiverBalance, protocolFees);
 
         assertEq(pool.getClaimableFees(posKey), 0);
         assertEq(pool.getClaimableFees(posKey2), 0);
@@ -177,80 +231,137 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
     function test_settlePositionFor_RevertIf_TotalCostExceedsExerciseValue() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setQuote(quote);
-        oracleAdapter.setQuoteFrom(settlementPrice);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
+        oracleAdapter.setPriceAt(settlementPrice);
 
         TradeInternal memory trade = _test_settlePosition_trade_Buy100Options();
 
         UD60x18 payoff = getExerciseValue(false, ONE, settlementPrice);
+        UD60x18 collateral = fromTokenDecimals(
+            trade.initialCollateral + trade.totalPremium - toTokenDecimals(trade.size * payoff) - pool.protocolFees()
+        );
 
-        uint256 collateral = trade.initialCollateral +
-            trade.totalPremium -
-            scaleDecimals(trade.size * payoff) -
-            pool.protocolFees();
+        UD60x18 cost = collateral + ONE;
+        enableExerciseSettleAuthorization(posKey.operator, isCallTest ? cost : cost * price);
 
-        uint256 cost = collateral + 1 wei;
-
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.startPrank(posKey.operator);
-
-        userSettings.setAuthorizedAgents(agents);
-
-        // if !isCall, convert collateral to WETH
-        userSettings.setAuthorizedCost(isCallTest ? cost : (ud(scaleDecimalsTo(cost)) * quote).unwrap());
-
-        vm.stopPrank();
         vm.warp(poolKey.maturity);
+
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = posKey;
+
+        uint256 _cost = toTokenDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostExceedsPayout.selector, cost, collateral));
+        vm.prank(users.operator);
+        pool.settlePositionFor(p, _cost);
+    }
+
+    function test_settlePositionFor_RevertIf_ActionNotAuthorized() public {
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = posKey;
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IPoolInternal.Pool__CostExceedsPayout.selector,
-                scaleDecimalsTo(cost),
-                scaleDecimalsTo(collateral)
+                IPoolInternal.Pool__ActionNotAuthorized.selector,
+                posKey.operator,
+                users.operator,
+                IUserSettings.Action.SettlePosition
             )
         );
 
-        vm.prank(users.agent);
-
-        Position.Key[] memory p = new Position.Key[](1);
-        p[0] = posKey;
-
-        pool.settlePositionFor(p, cost);
-    }
-
-    function test_settlePositionFor_RevertIf_AgentNotAuthorized() public {
-        vm.expectRevert(IPoolInternal.Pool__AgentNotAuthorized.selector);
-        vm.prank(users.agent);
-        Position.Key[] memory p = new Position.Key[](1);
-        p[0] = posKey;
+        vm.prank(users.operator);
         pool.settlePositionFor(p, 0);
     }
 
     function test_settlePositionFor_RevertIf_CostNotAuthorized() public {
         UD60x18 settlementPrice = getSettlementPrice(false);
-        UD60x18 quote = isCallTest ? ONE : settlementPrice.inv();
-        oracleAdapter.setQuote(quote);
+        UD60x18 price = isCallTest ? ONE : settlementPrice.inv();
+        oracleAdapter.setPrice(price);
 
-        address[] memory agents = new address[](1);
-        agents[0] = users.agent;
-
-        vm.prank(posKey.operator);
-        userSettings.setAuthorizedAgents(agents);
-
-        UD60x18 _cost = ud(0.1 ether);
-        uint256 cost = scaleDecimals(_cost);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, (_cost * quote).unwrap(), 0)
-        );
-
-        vm.prank(users.agent);
+        setActionAuthorization(posKey.operator, IUserSettings.Action.SettlePosition, true);
+        UD60x18 cost = ud(0.1e18);
 
         Position.Key[] memory p = new Position.Key[](1);
         p[0] = posKey;
+
+        uint256 _cost = toTokenDecimals(cost);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__CostNotAuthorized.selector, cost * price, ZERO));
+        vm.prank(users.operator);
+        pool.settlePositionFor(p, _cost);
+    }
+
+    function test_settlePositionFor_RevertIf_CostNotCovered() public {
+        // This test is a PoC for an issue discovered in the audit which is now fixed
+
+        UD60x18 poolValue = ud(1000 ether);
+        // as an LP, deposit ether into a pool
+        // deposit is a helper function that handles this for us
+        deposit(poolValue);
+
+        // an attacker sees the liquidity in the pool, and using two addresses will
+        // conspire to drain the pool of its liquidity
+        address user = vm.addr(10);
+        address operator = vm.addr(11);
+
+        IUserSettings.Action[] memory actions = new IUserSettings.Action[](1);
+        actions[0] = IUserSettings.Action.SettlePosition;
+
+        bool[] memory authorization = new bool[](1);
+        authorization[0] = true;
+
+        // attackerUser sets attackerAgent as their operator, and assigns a cost of
+        // the entire pool value
+        vm.startPrank(user);
+
+        userSettings.setActionAuthorization(operator, actions, authorization);
+        userSettings.setAuthorizedCost(poolValue);
+
+        vm.stopPrank();
+
+        // create an erroneous position that will be used to 'settle' and steal all
+        // the tokens out of the pool
+        Position.Key memory fakePosition = Position.Key({
+            owner: user,
+            operator: operator,
+            lower: posKey.lower,
+            upper: posKey.upper,
+            orderType: Position.OrderType.LC
+        });
+
+        address poolToken = getPoolToken();
+
+        // take a snapshot of various balances before the attack
+        uint256 originalPoolBalance = IERC20(poolToken).balanceOf(address(pool));
+
+        // Skip ahead in time to when the positions have matured
+        vm.warp(poolKey.maturity);
+
+        // This is the key to the attack. We need to trick the pool into generating an invalid tokenId. To do this, we
+        // update the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
+        fakePosition.lower = ud(0.7e18);
+        fakePosition.upper = ud(0.8e18);
+
+        // settlePositionFor batches handling position settlements, so we need to provide an array
+        Position.Key[] memory p = new Position.Key[](1);
+        p[0] = fakePosition;
+
+        // Verify that the pool contains tokens (so we can steal them)
+        assertGt(originalPoolBalance, 0);
+
+        // Set the cost ("settlement fee") equal to the current balance of the pool
+        uint256 cost = originalPoolBalance;
+
+        // This call will short-circuit before closing the position due to the invalid `lower` values
+        // set above, but it will still pay the operator their fee (all the tokens in the pool)
+        vm.prank(operator);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IPoolInternal.Pool__CostExceedsPayout.selector,
+                isCallTest ? ud(200e18) : ud(200_000e18),
+                ZERO
+            )
+        );
 
         pool.settlePositionFor(p, cost);
     }

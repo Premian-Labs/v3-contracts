@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 
@@ -8,20 +8,24 @@ import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 import {ZERO, ONE_HALF, ONE, TWO, THREE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
+import {PRBMathExtra} from "contracts/libraries/PRBMathExtra.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 
 import {IPoolInternal} from "contracts/pool/IPoolInternal.sol";
 
 import {DeployTest} from "../Deploy.t.sol";
+import {PoolStorage} from "contracts/pool/PoolStorage.sol";
 
 abstract contract PoolWithdrawTest is DeployTest {
+    using PRBMathExtra for UD60x18;
+
     function test_withdraw_750LC() public {
         UD60x18 depositSize = ud(1000 ether);
         uint256 initialCollateral = deposit(depositSize);
         vm.warp(block.timestamp + 60);
 
-        uint256 depositCollateralValue = scaleDecimals(contractsToCollateral(ud(200 ether)));
+        uint256 depositCollateralValue = toTokenDecimals(contractsToCollateral(ud(200 ether)));
 
         address poolToken = getPoolToken();
 
@@ -30,7 +34,7 @@ abstract contract PoolWithdrawTest is DeployTest {
 
         UD60x18 withdrawSize = ud(750 ether);
         UD60x18 avgPrice = posKey.lower.avg(posKey.upper);
-        uint256 withdrawCollateralValue = scaleDecimals(contractsToCollateral(withdrawSize * avgPrice));
+        uint256 withdrawCollateralValue = toTokenDecimals(contractsToCollateral(withdrawSize * avgPrice));
 
         vm.prank(users.lp);
         pool.withdraw(posKey, withdrawSize, ZERO, ONE);
@@ -42,6 +46,190 @@ abstract contract PoolWithdrawTest is DeployTest {
             IERC20(poolToken).balanceOf(users.lp),
             initialCollateral - depositCollateralValue + withdrawCollateralValue
         );
+    }
+
+    function test_withdraw_CS_Straddle() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+
+        uint256 depositSize = 1 ether;
+        uint256 withdrawSize = 0.75 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, true, depositSize, false);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), 0 ether);
+        vm.warp(block.timestamp + 60);
+        assertEq(pool.marketPrice(), 0.125e18);
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+
+        vm.startPrank(users.lp);
+
+        pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
+        // balance should equal
+        // premiums generated = (0.125^2 - 0.1^2) / (2 * (0.1)) * 0.75 = 0.02109375
+        // collateral removed = 0.75 * collateral remaining = 0.75 * 0.75 = 0.5625
+        // new balance = 0.5625 + 0.02109375 = 0.58359375
+        uint256 expectedBalance = isCallTest
+            ? toTokenDecimals(ud(0.58359375 ether))
+            : toTokenDecimals(ud(0.58359375 ether) * poolKey.strike);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
+    }
+
+    function test_withdraw_CSUP_Straddle() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+
+        uint256 depositSize = 1 ether;
+        uint256 withdrawSize = 0.75 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, true, depositSize, true);
+        uint256 expectedBalanceAfterDeposit = isCallTest
+            ? toTokenDecimals(ud(0.15 ether))
+            : toTokenDecimals(ud(0.15 ether) * poolKey.strike);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
+        vm.warp(block.timestamp + 60);
+        assertEq(pool.marketPrice(), 0.125e18);
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0);
+        assertEq(pool.getShortRate(), 0.0025e28);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.0 ether));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.1875 ether));
+        // balance should equal
+        // balance after deposit = 0.15
+        // premiums generated = (0.125^2 - 0.1^2) / (2 * (0.1)) = 0.028125
+        // collateral in position = 0.75  - 0.15 + 0.028125 = 0.628125
+        // new balance = 0.15 + 0.75 * 0.628125 = 0.62109375
+        uint256 expectedBalance = isCallTest
+            ? toTokenDecimals(ud(0.62109375 ether))
+            : toTokenDecimals(ud(0.62109375 ether) * poolKey.strike);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
+    }
+
+    function test_withdraw_LC_Straddle() public {
+        posKey.lower = ud(0.1 ether);
+        posKey.upper = ud(0.2 ether);
+        posKey.orderType = Position.OrderType.LC;
+        uint256 depositSize = 1 ether;
+        uint256 withdrawSize = 0.75 ether;
+        uint256 tradeSize = 0.25 ether;
+        trade(tradeSize, false, depositSize);
+        uint256 expectedBalanceAfterDeposit = isCallTest
+            ? toTokenDecimals(ud(0.85 ether))
+            : toTokenDecimals(ud(0.85 ether) * poolKey.strike);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalanceAfterDeposit);
+        vm.warp(block.timestamp + 60);
+        assertEq(pool.marketPrice(), 0.175e18);
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(withdrawSize), ZERO, ONE);
+        vm.stopPrank();
+        assertEq(pool.totalSupply(tokenId()), ud(0.25 ether));
+        assertEq(pool.getCurrentTick(), 0.1 ether);
+        assertEq(pool.getLiquidityRate(), 0.0025e28);
+        assertEq(pool.getLongRate(), 0.0025e28);
+        assertEq(pool.getShortRate(), 0.0);
+        assertEq(pool.balanceOf(users.lp, PoolStorage.LONG), ud(0.1875 ether));
+        assertEq(pool.balanceOf(users.lp, PoolStorage.SHORT), ud(0.0 ether));
+        // balance should equal
+        // balance after deposit = 0.85
+        // collateral in position = (0.175^2 - 0.1^2) / (2 * (0.1)) = 0.103125
+        // new balance = 0.85 + 0.75 * 0.103125 = 0.92734375
+        uint256 expectedBalance = isCallTest
+            ? toTokenDecimals(ud(0.92734375 ether))
+            : toTokenDecimals(ud(0.92734375 ether) * poolKey.strike);
+        assertEq(IERC20(getPoolToken()).balanceOf(users.lp), expectedBalance);
+    }
+
+    function test_withdraw_DoesNotDeletePosition_OnPartialWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(0.75e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+    }
+
+    function test_withdraw_DeletePosition_OnFullWithdrawal() public {
+        posKey.orderType = Position.OrderType.LC;
+
+        uint256 depositSize = 1e18;
+        uint256 tradeSize = 0.25e18;
+        trade(tradeSize, false, depositSize);
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        vm.warp(block.timestamp + 60);
+
+        /////
+
+        UD60x18 _tradeSize = ud(tradeSize);
+        (uint256 totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, true);
+        address poolToken = getPoolToken();
+        uint256 mintAmount = totalPremium;
+
+        vm.startPrank(users.trader);
+        deal(poolToken, users.trader, mintAmount);
+        IERC20(poolToken).approve(address(router), mintAmount);
+        pool.trade(_tradeSize, true, totalPremium + totalPremium / 10, address(0));
+        vm.stopPrank();
+
+        /////
+
+        vm.prank(posKey.operator);
+        pool.withdraw(posKey, ud(1e18), ZERO, ONE);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
     }
 
     function test_withdraw_RevertIf_BeforeEndOfWithdrawalDelay() public {
@@ -145,12 +333,40 @@ abstract contract PoolWithdrawTest is DeployTest {
         Position.Key memory posKeySave = posKey;
 
         posKey.lower = ud(0.2501e18);
+        posKey.upper = ud(0.7501e18);
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.lower));
         pool.withdraw(posKey, THREE, ZERO, ONE);
 
         posKey.lower = posKeySave.lower;
         posKey.upper = ud(0.7501e18);
-        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__TickWidthInvalid.selector, posKey.upper));
+        // we won't catch the second tickWidth revert as there is no way to define a valid lower and an invalid upper
+        // without having an invalid range
+        vm.expectRevert();
         pool.withdraw(posKey, THREE, ZERO, ONE);
+    }
+
+    function test_withdraw_RevertIf_InvalidSize() public {
+        uint256 size = 1 ether + 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
+        size = 1 ether + 199;
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__InvalidSize.selector, posKey.lower, posKey.upper, size)
+        );
+        vm.startPrank(users.lp);
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
+        // this one below is expected to pass as the range order has a width of 200 ticks
+        size = 1 ether + 400;
+        deposit(size);
+        vm.warp(block.timestamp + 60);
+        vm.startPrank(users.lp);
+        size = 1 ether + 200;
+        pool.withdraw(posKey, ud(size), ZERO, ONE);
+        vm.stopPrank();
     }
 }

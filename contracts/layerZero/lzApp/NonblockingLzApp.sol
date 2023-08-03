@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity >=0.8.19;
+pragma solidity =0.8.19;
 
 import {LzApp} from "./LzApp.sol";
 import {NonblockingLzAppStorage} from "./NonblockingLzAppStorage.sol";

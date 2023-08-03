@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import "forge-std/console2.sol";
 
@@ -17,6 +17,8 @@ import {IVault} from "contracts/vault/IVault.sol";
 import {IUnderwriterVault} from "contracts/vault/strategies/underwriter/IUnderwriterVault.sol";
 
 abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
+    event PerformanceFeePaid(address indexed feeReceiver, uint256 feesInAssetsCharged);
+
     function setupSpreadVault() internal {
         startTime = 1678435200 + 500 * 7 days;
         t0 = startTime + 7 days;
@@ -71,6 +73,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     function test_afterBuy_Success() public {
         setupSpreadVault();
 
+        UD60x18 premium = ud(20e18);
         UD60x18 spread = ud(10e18);
         UD60x18 strike = ud(100e18);
         UD60x18 size = ud(1e18);
@@ -79,26 +82,37 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
 
         vault.increasePositionSize(t0, strike, ud(1.234e18));
 
+        UD60x18 initialTotalAssets = ud(1e18);
+        vault.increaseTotalAssets(initialTotalAssets);
         UD60x18 lockedAmount = isCallTest ? ud(1.234e18) : ud(1.234e18) * strike;
         vault.increaseTotalLockedAssetsNoTransfer(lockedAmount);
+        UD60x18 initialProtocolFees = vault.getProtocolFees();
 
         vault.setTimestamp(startTime + 1 days);
-        vault.afterBuy(strike, t0, size, spread);
+        vm.expectEmit();
+        emit PerformanceFeePaid(FEE_RECEIVER, toTokenDecimals(spread * ud(0.05e18)));
+        vault.afterBuy(strike, t0, size, spread, premium);
 
         // lastSpreadUnlockUpdate should equal the time we executed afterBuy as we updated the state there
         assertEq(vault.lastSpreadUnlockUpdate(), startTime + 1 days);
-        assertEq(vault.spreadUnlockingRate(), 37034832451498);
+        // (1,24 / 7 + 5,56 / 10 + 11,2 / 14 + (10 * 0,95) / 6) / (24 * 60 * 60) = 0,000036070326278658
+        assertEq(vault.spreadUnlockingRate(), 36070326278658);
         // positionSize should be incremented by the bought amount and equal 2.234
         assertEq(vault.positionSize(t0, strike), ud(1.234e18) + size);
         // spreadUnlockingTick should be incremented by the spread amount divided by the the time to maturity
-        UD60x18 increment = ud(10e18) / ud(6 days * 1e18);
+        UD60x18 increment = (ud(10e18) * ud(0.95e18)) / ud(6 days * 1e18);
         assertEq(vault.spreadUnlockingTicks(t0), ud(1.24e18) / ud(7 days * 1e18) + increment);
-
         // totalLockedSpread should be incremented by the spread earned (10) after updating the state
-        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread);
-
+        assertEq(vault.totalLockedSpread(), ud(18e18) - ud(17744708994708) * ud(1 days * 1e18) + spread * ud(0.95e18));
+        // totalAssets should be incremented by the premiums collected and the spread
+        uint256 totalAssets = vault.totalAssets();
+        assertEq(totalAssets, toTokenDecimals(initialTotalAssets + premium + spread * ud(0.95e18)));
+        // last trade timestamp should be updated
         assertEq(vault.getLastTradeTimestamp(), startTime + 1 days);
+        // total locked assets should be incremented by the notional value of the option
         assertEq(vault.totalLockedAssets(), (isCallTest ? size : size * strike) + lockedAmount);
+        // protocol fees should be incremented
+        assertEq(vault.getProtocolFees(), initialProtocolFees + spread * ud(0.05e18));
     }
 
     function test_settleMaturity_Success() public {
@@ -112,7 +126,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         UD60x18 deposit = isCallTest ? ud(10e18) : ud(10000e18);
 
         addDeposit(users.caller, deposit);
-        assertEq(vault.totalAssets(), scaleDecimals(deposit));
+        assertEq(vault.totalAssets(), toTokenDecimals(deposit));
 
         UnderwriterVaultMock.MaturityInfo[] memory infos = new UnderwriterVaultMock.MaturityInfo[](2);
 
@@ -144,7 +158,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         poolKey.strike = strike1;
         factory.deployPool{value: 1 ether}(poolKey);
 
-        oracleAdapter.setQuoteFrom(t0, ud(1500e18));
+        oracleAdapter.setPriceAt(t0, ud(1500e18));
 
         vm.startPrank(users.caller);
         vault.mintFromPool(strike1, t0, size);
@@ -155,14 +169,14 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         assertEq(vault.totalLockedAssets(), lockedAssets);
 
         UD60x18 assetsAfterMint = isCallTest ? ud(9.982e18) : ud(9976e18);
-        assertEq(vault.totalAssets(), scaleDecimals(assetsAfterMint));
+        assertEq(vault.totalAssets(), toTokenDecimals(assetsAfterMint));
 
         vm.warp(t0);
         vault.settleMaturity(t0);
 
         assertApproxEqAbs(
             vault.totalAssets(),
-            scaleDecimals(isCallTest ? ud(9.3153333e18) : ud(8976e18)),
+            toTokenDecimals(isCallTest ? ud(9.3153333e18) : ud(8976e18)),
             0.0000001e18
         );
 
@@ -218,9 +232,9 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
         infos[2].sizes[1] = ud(3e18);
         infos[2].sizes[2] = ud(1e18);
 
-        oracleAdapter.setQuoteFrom(t0, ud(1500e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1500e18));
-        oracleAdapter.setQuoteFrom(t2, ud(1500e18));
+        oracleAdapter.setPriceAt(t0, ud(1500e18));
+        oracleAdapter.setPriceAt(t1, ud(1500e18));
+        oracleAdapter.setPriceAt(t2, ud(1500e18));
 
         addDeposit(users.caller, totalAssets);
         vault.setListingsAndSizes(infos);
@@ -291,7 +305,7 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
             vault.settle();
             uint256 delta = isCallTest ? 0.00001e18 : 0;
 
-            assertApproxEqAbs(scaleDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
+            assertApproxEqAbs(fromTokenDecimals(vault.totalAssets()).unwrap(), newTotalAssets[i].unwrap(), delta);
             assertEq(vault.totalLockedAssets(), newLocked[i]);
             assertEq(vault.minMaturity(), minMaturity[i]);
             assertEq(vault.maxMaturity(), maxMaturity[i]);
@@ -403,18 +417,6 @@ abstract contract UnderwriterVaultInternalTest is UnderwriterVaultDeployTest {
     }
 
     function test_getPoolAddress_ReturnExpectedValue() public {
-        UD60x18 badStrike = ud(100e18);
-        uint256 badMaturity = 10000000;
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, poolKey.maturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(poolKey.strike, badMaturity);
-
-        vm.expectRevert(IVault.Vault__OptionPoolNotListed.selector);
-        vault.getPoolAddress(badStrike, badMaturity);
-
         assertEq(vault.getPoolAddress(poolKey.strike, poolKey.maturity), address(pool));
     }
 

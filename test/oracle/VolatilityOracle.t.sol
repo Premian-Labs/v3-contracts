@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
@@ -45,7 +45,6 @@ contract VolatilityOracleTest is Test, Assertions {
         oracle = VolatilityOracleMock(address(proxy));
 
         relayer = vm.addr(10);
-
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
 

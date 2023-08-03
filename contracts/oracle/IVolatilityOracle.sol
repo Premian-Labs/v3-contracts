@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// For terms and conditions regarding commercial use please see https://license.premia.blue
+pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -9,22 +9,11 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
     error VolatilityOracle__OutOfBounds(int256 value);
-    error VolatilityOracle__RelayerNotWhitelisted(address sender);
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
     error VolatilityOracle__TimeToMaturityIsZero();
 
-    /// @notice Add relayers to the whitelist so that they can add oracle surfaces
-    /// @param accounts The addresses to add to the whitelist
-    function addWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Remove relayers from the whitelist so that they cannot add oracle surfaces
-    /// @param accounts The addresses to remove from the whitelist
-    function removeWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Get the list of whitelisted relayers
-    /// @return The list of whitelisted relayers
-    function getWhitelistedRelayers() external view returns (address[] memory);
+    event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
 
     /// @notice Pack IV model parameters into a single bytes32
     /// @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`

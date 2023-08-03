@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-
-pragma solidity >=0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18} from "@prb/math/SD59x18.sol";
@@ -68,8 +67,8 @@ contract OptionMathMock {
         return OptionMath.calculateTimeToMaturity(maturity);
     }
 
-    function calculateStrikeInterval(UD60x18 spot) external pure returns (UD60x18) {
-        return OptionMath.calculateStrikeInterval(spot);
+    function calculateStrikeInterval(UD60x18 strike) external pure returns (UD60x18) {
+        return OptionMath.calculateStrikeInterval(strike);
     }
 
     function logMoneyness(UD60x18 spot, UD60x18 strike) external pure returns (UD60x18) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-pragma solidity >=0.8.19;
+pragma solidity ^0.8.19;
 
 import "forge-std/console2.sol";
 
@@ -51,10 +51,10 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
     }
 
     function setupOracleAdapterMock() internal {
-        oracleAdapter.setQuoteFrom(t0, ud(1000e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1400e18));
-        oracleAdapter.setQuoteFrom(t2, ud(1600e18));
-        oracleAdapter.setQuoteFrom(t3, ud(1000e18));
+        oracleAdapter.setPriceAt(t0, ud(1000e18));
+        oracleAdapter.setPriceAt(t1, ud(1400e18));
+        oracleAdapter.setPriceAt(t2, ud(1600e18));
+        oracleAdapter.setPriceAt(t3, ud(1000e18));
     }
 
     function test_getTotalLiabilitiesExpired_ReturnExpectedValue() public {
@@ -289,7 +289,7 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
             t0 = block.timestamp + 7 days;
             volOracle.setVolatility(base, ud(1500e18), ud(1200e18), ud(19178082191780821), ud(0.51e18));
 
-            assertEq(vault.totalAssets(), scaleDecimals(deposit));
+            assertEq(vault.totalAssets(), toTokenDecimals(deposit));
             assertEq(vault.totalSupply(), deposit);
 
             vault.increaseTotalLockedSpread(tls);
@@ -319,8 +319,8 @@ abstract contract UnderwriterVaultPpsTest is UnderwriterVaultDeployTest {
     }
 
     function test_getSettlementPrice_ReturnExpectedValue() public {
-        oracleAdapter.setQuoteFrom(t0, ud(1000e18));
-        oracleAdapter.setQuoteFrom(t1, ud(1400e18));
+        oracleAdapter.setPriceAt(t0, ud(1000e18));
+        oracleAdapter.setPriceAt(t1, ud(1400e18));
 
         assertEq(vault.getSettlementPrice(t0), ud(1000e18));
         assertEq(vault.getSettlementPrice(t1), ud(1400e18));

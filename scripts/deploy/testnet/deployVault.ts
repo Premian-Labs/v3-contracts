@@ -2,11 +2,10 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
-import goerliAddresses from '../../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
 import { ChainID, ContractAddresses } from '../../../utils/deployment/types';
-import { keccak256 } from 'ethers/lib/utils';
+import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
 
 async function main() {
@@ -15,22 +14,20 @@ async function main() {
 
   let addresses: ContractAddresses;
 
-  if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
+  if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
   } else {
     throw new Error('ChainId not implemented');
   }
 
   // Deploy UnderwriterVaultProxy
-  const vaultType = keccak256('UnderwriterVault');
-  const base = '';
-  const quote = '';
-  const oracleAdapter = '';
-  const name = '';
-  const symbol = '';
+  const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
+  const base = addresses.tokens.testWETH;
+  const quote = addresses.tokens.USDC;
+  const oracleAdapter = addresses.ChainlinkAdapterProxy;
   const isCall = true;
+  const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
+  const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
 
   const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
     deployer,
@@ -55,7 +52,7 @@ async function main() {
 
   await vaultRegistry.addVault(
     underwriterVaultProxy.address,
-    isCall ? quote : base,
+    isCall ? base : quote,
     vaultType,
     TradeSide.SELL,
     isCall ? OptionType.CALL : OptionType.PUT,
