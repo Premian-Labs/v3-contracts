@@ -11,7 +11,7 @@ import {ArrayUtils} from "../../libraries/ArrayUtils.sol";
 import {ZERO, ONE} from "../../libraries/Constants.sol";
 import {AggregatorProxyInterface} from "../../vendor/AggregatorProxyInterface.sol";
 
-import {FeedRegistry} from "../FeedRegistry.sol";
+import {FeedRegistry, IFeedRegistry} from "../FeedRegistry.sol";
 import {FeedRegistryStorage} from "../FeedRegistryStorage.sol";
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {OracleAdapter} from "../OracleAdapter.sol";
@@ -162,7 +162,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return path;
     }
 
-    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner {
+    function batchRegisterFeedMappings(
+        FeedMappingArgs[] memory args
+    ) external override(FeedRegistry, IFeedRegistry) onlyOwner {
         for (uint256 i = 0; i < args.length; i++) {
             address token = _tokenToDenomination(args[i].token);
             address denomination = args[i].denomination;
