@@ -17,7 +17,6 @@ interface IOptionReward {
     error OptionReward__OptionNotExpired(uint256 maturity);
     error OptionReward__OptionInTheMoney(UD60x18 settlementPrice, UD60x18 strike);
     error OptionReward__OptionOutTheMoney(UD60x18 settlementPrice, UD60x18 strike);
-    error OptionReward__PriceIsStale(uint256 blockTimestamp, uint256 timestamp);
     error OptionReward__PriceIsZero();
     error OptionReward__ZeroRewardPerContract(UD60x18 strike, uint256 maturity);
 

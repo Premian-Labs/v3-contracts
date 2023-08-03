@@ -23,8 +23,7 @@ import {IOptionRewardFactory} from "contracts/mining/optionReward/IOptionRewardF
 import {OptionRewardStorage} from "contracts/mining/optionReward/OptionRewardStorage.sol";
 import {OptionRewardFactory} from "contracts/mining/optionReward/OptionRewardFactory.sol";
 
-import {IPriceRepository} from "contracts/mining/IPriceRepository.sol";
-import {PriceRepository} from "contracts/mining/PriceRepository.sol";
+import {OracleAdapterMock} from "contracts/test/adapter/OracleAdapterMock.sol";
 
 import {PaymentSplitter} from "contracts/mining/PaymentSplitter.sol";
 
@@ -65,7 +64,7 @@ contract OptionRewardTest is Assertions, Test {
     UD60x18 internal spot;
 
     PaymentSplitter internal paymentSplitter;
-    PriceRepository internal priceRepository;
+    OracleAdapterMock internal oracleAdapter;
     OptionPSFactory internal optionPSFactory;
     OptionReward internal optionReward;
     VxPremia internal vxPremia;
@@ -107,10 +106,6 @@ contract OptionRewardTest is Assertions, Test {
         feeReceiverOptionReward = vm.addr(6);
         relayer = vm.addr(7);
 
-        address priceRepositoryImpl = address(new PriceRepository());
-        address priceRepositoryProxy = address(new ProxyUpgradeableOwnable(priceRepositoryImpl));
-        priceRepository = PriceRepository(priceRepositoryProxy);
-
         address optionPSFactoryImpl = address(new OptionPSFactory());
         address optionPSFactoryProxy = address(new ProxyUpgradeableOwnable(optionPSFactoryImpl));
         optionPSFactory = OptionPSFactory(optionPSFactoryProxy);
@@ -134,13 +129,9 @@ contract OptionRewardTest is Assertions, Test {
 
         paymentSplitter = new PaymentSplitter(base, quote, vxPremia, IMiningAddRewards(mining));
 
-        PriceRepository implementation = new PriceRepository();
+        OracleAdapterMock implementation = new OracleAdapterMock(address(base), address(quote), spot, spot);
         ProxyUpgradeableOwnable proxy = new ProxyUpgradeableOwnable(address(implementation));
-        priceRepository = PriceRepository(address(proxy));
-
-        address[] memory relayers = new address[](1);
-        relayers[0] = relayer;
-        priceRepository.addWhitelistedRelayers(relayers);
+        oracleAdapter = OracleAdapterMock(address(proxy));
 
         OptionReward optionRewardImplementation = new OptionReward(feeReceiverOptionReward, fee);
         address optionRewardFactoryImpl = address(new OptionRewardFactory());
@@ -156,7 +147,7 @@ contract OptionRewardTest is Assertions, Test {
 
         IOptionRewardFactory.OptionRewardArgs memory args = IOptionRewardFactory.OptionRewardArgs({
             option: option,
-            priceRepository: address(priceRepository),
+            oracleAdapter: address(oracleAdapter),
             paymentSplitter: address(paymentSplitter),
             discount: discount,
             penalty: penalty,
@@ -206,13 +197,8 @@ contract OptionRewardTest is Assertions, Test {
         return OptionPSStorage.formatTokenId(IOptionPS.TokenType.Short, maturity, ud(0.55e18));
     }
 
-    function _setPriceAt(uint256 timestamp, UD60x18 price) internal {
-        vm.prank(relayer);
-        priceRepository.setPriceAt(address(base), address(quote), timestamp, price);
-    }
-
     function test_underwrite_Success() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
@@ -230,7 +216,7 @@ contract OptionRewardTest is Assertions, Test {
 
     function test_underwrite_CorrectMaturity() public {
         vm.warp(1682155823); // Apr-22-2023 09:30:23 AM +UTC
-        _setPriceAt(block.timestamp, ONE);
+        oracleAdapter.setPrice(ONE);
         uint256 timestamp8AMUTC = 1682150400; // Apr-22-2023 08:00:00 AM +UTC
         uint256 expectedMaturity = timestamp8AMUTC + 30 days; // May-22-2023 08:00:00 AM +UTC
 
@@ -261,38 +247,20 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_underwrite_RevertIf_PriceIsZero() public {
-        _setPriceAt(block.timestamp, ZERO);
+        oracleAdapter.setPrice(ZERO);
 
         vm.prank(underwriter);
         vm.expectRevert(IOptionReward.OptionReward__PriceIsZero.selector);
         optionReward.underwrite(longReceiver, _size);
     }
 
-    function test_underwrite_RevertIf_PriceIsStale() public {
-        vm.warp(60 days);
-        uint256 updatedAt = block.timestamp - 24 hours + 1;
-        _setPriceAt(updatedAt, spot);
-
-        vm.prank(underwriter);
-        optionReward.underwrite(longReceiver, ONE); // should succeed
-
-        vm.warp(block.timestamp + 1); // block.timestamp - timestamp = 86400
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IOptionReward.OptionReward__PriceIsStale.selector, block.timestamp, updatedAt)
-        );
-
-        vm.prank(underwriter);
-        optionReward.underwrite(longReceiver, ONE); // should revert
-    }
-
     function test_settle_Success() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + 1);
         vm.prank(longReceiver);
@@ -321,7 +289,7 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_settle_ReserveExcessBaseFromNextSettlement_WhenPartialBaseReserve() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size / ud(10e18));
@@ -330,7 +298,7 @@ contract OptionRewardTest is Assertions, Test {
         option.underwrite(strike, maturity, otherLongReceiver, _size);
 
         spot = spot * ud(10e18);
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + 1);
         vm.prank(otherLongReceiver);
@@ -346,14 +314,14 @@ contract OptionRewardTest is Assertions, Test {
         assertLt(base.balanceOf(address(optionReward)), baseReserved.unwrap()); // There is not enough `base` tokens compared to the expected reserved amount
 
         spot = spot / ud(10e18);
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size / ud(2e18));
 
         maturity = 5817600;
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -362,12 +330,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_settle_RevertIf_SettlementAlreadyDone() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -377,12 +345,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_settle_RevertIf_ExercisePeriodNotEnded() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod - 1);
         vm.expectRevert(
@@ -396,7 +364,7 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_settle_RevertIf_PriceIsZero() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
@@ -407,12 +375,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_Success() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + 1);
         vm.prank(longReceiver);
@@ -438,12 +406,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_RevertIf_LockPeriodNotEnded() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -459,12 +427,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_RevertIf_ClaimPeriodEnded() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -483,12 +451,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_RevertIf_NoErc1155Approval() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -501,12 +469,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_RevertIf_NotEnoughRedeemableLongs() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + exercisePeriod + 1);
         optionReward.settle(strike, maturity);
@@ -523,12 +491,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_claimRewards_RevertIf_ZeroRewardPerContract() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + lockupDuration + 1);
 
@@ -541,12 +509,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_getTotalBaseReserved_ReturnExpectedValue() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + 1);
         vm.prank(longReceiver);
@@ -563,12 +531,12 @@ contract OptionRewardTest is Assertions, Test {
     }
 
     function test_releaseRewardsNotClaimed_Success() public {
-        _setPriceAt(block.timestamp, spot);
+        oracleAdapter.setPrice(spot);
 
         vm.prank(underwriter);
         optionReward.underwrite(longReceiver, _size);
 
-        _setPriceAt(maturity, spot);
+        oracleAdapter.setPriceAt(maturity, spot);
 
         vm.warp(maturity + 1);
         vm.prank(longReceiver);

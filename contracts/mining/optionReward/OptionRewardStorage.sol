@@ -9,7 +9,6 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
-import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 library OptionRewardStorage {
@@ -25,7 +24,7 @@ library OptionRewardStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        address priceRepository;
+        address oracleAdapter;
         address paymentSplitter;
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;

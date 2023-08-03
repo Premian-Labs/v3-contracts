@@ -10,7 +10,6 @@ import {IERC3156FlashLender} from "@solidstate/contracts/interfaces/IERC3156Flas
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
-import {ZERO} from "../libraries/Constants.sol";
 import {Position} from "../libraries/Position.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";

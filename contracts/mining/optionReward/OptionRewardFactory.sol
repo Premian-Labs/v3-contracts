@@ -30,7 +30,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
             new OptionRewardProxy(
                 IProxyManager(address(this)),
                 args.option,
-                args.priceRepository,
+                args.oracleAdapter,
                 args.paymentSplitter,
                 args.discount,
                 args.penalty,
@@ -47,7 +47,7 @@ contract OptionRewardFactory is IOptionRewardFactory, ProxyManager, ReentrancyGu
 
         emit ProxyDeployed(
             args.option,
-            args.priceRepository,
+            args.oracleAdapter,
             args.paymentSplitter,
             args.discount,
             args.penalty,
