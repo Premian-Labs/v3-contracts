@@ -17,8 +17,8 @@ library Tokens {
         return keccak256(abi.encode(tokenA, tokenB));
     }
 
-    /// @notice Returns the sorted `tokenA` and `tokenB`, where _tokenA < _tokenB
-    function sortTokens(address tokenA, address tokenB) internal pure returns (address _tokenA, address _tokenB) {
-        (_tokenA, _tokenB) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    /// @notice Returns the sorted `tokenA` and `tokenB`, where sortedA < sortedB
+    function sortTokens(address tokenA, address tokenB) internal pure returns (address sortedA, address sortedB) {
+        (sortedA, sortedB) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
     }
 }
