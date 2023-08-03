@@ -2,14 +2,12 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity =0.8.19;
 
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
-import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeCast} from "@solidstate/contracts/utils/SafeCast.sol";
 
 import {IOracleAdapter} from "./IOracleAdapter.sol";
 
 /// @title Base oracle adapter implementation
-abstract contract OracleAdapter is IOracleAdapter, ReentrancyGuard, OwnableInternal {
+abstract contract OracleAdapter is IOracleAdapter {
     using SafeCast for int8;
 
     /// @notice Scales `amount` by `factor`
