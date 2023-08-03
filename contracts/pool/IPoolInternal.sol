@@ -7,6 +7,8 @@ import {SD59x18} from "@prb/math/SD59x18.sol";
 
 import {IPosition} from "../libraries/IPosition.sol";
 import {IPricing} from "../libraries/IPricing.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
+import {SD49x28} from "../libraries/SD49x28.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";
 
@@ -25,6 +27,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
     error Pool__InvalidMonth(uint256 month);
+    error Pool__InvalidPositionState(uint256 balance, uint256 lastDeposit);
     error Pool__InvalidQuoteOBSignature();
     error Pool__InvalidQuoteOBTaker();
     error Pool__InvalidRange(UD60x18 lower, UD60x18 upper);
@@ -54,18 +57,18 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__ZeroSize();
 
     struct Tick {
-        SD59x18 delta;
-        UD60x18 externalFeeRate;
-        SD59x18 longDelta;
-        SD59x18 shortDelta;
+        SD49x28 delta;
+        UD50x28 externalFeeRate;
+        SD49x28 longDelta;
+        SD49x28 shortDelta;
         uint256 counter;
     }
 
     struct TickWithRates {
         Tick tick;
         UD60x18 price;
-        UD60x18 longRate;
-        UD60x18 shortRate;
+        UD50x28 longRate;
+        UD50x28 shortRate;
     }
 
     struct QuoteOB {
@@ -130,12 +133,12 @@ interface IPoolInternal is IPosition, IPricing {
     struct TradeVarsInternal {
         UD60x18 maxSize;
         UD60x18 tradeSize;
-        UD60x18 oldMarketPrice;
+        UD50x28 oldMarketPrice;
         UD60x18 totalPremium;
         UD60x18 totalTakerFees;
         UD60x18 totalProtocolFees;
-        UD60x18 longDelta;
-        UD60x18 shortDelta;
+        UD50x28 longDelta;
+        UD50x28 shortDelta;
         ReferralVarsInternal referral;
     }
 
@@ -155,11 +158,12 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct WithdrawVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 initialSize;
-        UD60x18 liquidityPerTick;
+        UD50x28 liquidityPerTick;
         bool isFullWithdrawal;
-        SD59x18 tickDelta;
+        SD49x28 tickDelta;
     }
 
     struct Signature {
@@ -199,6 +203,7 @@ interface IPoolInternal is IPosition, IPricing {
     }
 
     struct SettlePositionVarsInternal {
+        bytes32 pKeyHash;
         uint256 tokenId;
         UD60x18 size;
         UD60x18 claimableFees;

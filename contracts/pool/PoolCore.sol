@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
@@ -10,10 +10,11 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-import {ONE, ZERO} from "../libraries/Constants.sol";
+import {ONE, ZERO, UD50_ZERO} from "../libraries/Constants.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 
 import {IUserSettings} from "../settings/IUserSettings.sol";
 
@@ -29,6 +30,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     using Position for Position.Key;
     using SafeERC20 for IERC20;
     using PRBMathExtra for UD60x18;
+    using PRBMathExtra for UD50x28;
 
     constructor(
         address factory,
@@ -43,7 +45,7 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
 
     /// @inheritdoc IPoolCore
     function marketPrice() external view returns (UD60x18) {
-        return PoolStorage.layout().marketPrice;
+        return PoolStorage.layout().marketPrice.intoUD60x18();
     }
 
     /// @inheritdoc IPoolCore
@@ -51,12 +53,21 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         address taker,
         UD60x18 size,
         uint256 premium,
-        bool isPremiumNormalized
+        bool isPremiumNormalized,
+        bool isOrderbook
     ) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return
             l.toPoolTokenDecimals(
-                _takerFee(taker, size, l.fromPoolTokenDecimals(premium), isPremiumNormalized, l.strike, l.isCallPool)
+                _takerFee(
+                    taker,
+                    size,
+                    l.fromPoolTokenDecimals(premium),
+                    isPremiumNormalized,
+                    l.strike,
+                    l.isCallPool,
+                    isOrderbook
+                )
             );
     }
 
@@ -66,10 +77,11 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         UD60x18 size,
         UD60x18 premium,
         bool isPremiumNormalized,
+        bool isOrderbook,
         UD60x18 strike,
         bool isCallPool
     ) external view returns (UD60x18) {
-        return _takerFee(taker, size, premium, isPremiumNormalized, strike, isCallPool);
+        return _takerFee(taker, size, premium, isPremiumNormalized, strike, isCallPool, isOrderbook);
     }
 
     /// @inheritdoc IPoolCore
@@ -85,8 +97,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     /// @inheritdoc IPoolCore
     function ticks() external view returns (IPoolInternal.TickWithRates[] memory) {
         PoolStorage.Layout storage l = PoolStorage.layout();
-        UD60x18 longRate = l.longRate;
-        UD60x18 shortRate = l.shortRate;
+        UD50x28 longRate = l.longRate;
+        UD50x28 shortRate = l.shortRate;
         UD60x18 prev = l.tickIndex.prev(l.currentTick);
         UD60x18 curr = l.currentTick;
 
@@ -125,8 +137,8 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
                 _ticks[count++] = IPoolInternal.TickWithRates({
                     tick: l.ticks[curr],
                     price: curr,
-                    longRate: ZERO,
-                    shortRate: ZERO
+                    longRate: UD50_ZERO,
+                    shortRate: UD50_ZERO
                 });
                 break;
             }
@@ -164,7 +176,17 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     function getClaimableFees(Position.Key calldata p) external view returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         Position.Data storage pData = l.positions[p.keyHash()];
-        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(l, p.toKeyInternal(l.strike, l.isCallPool), pData);
+
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        UD60x18 balance = _balanceOfUD60x18(p.owner, tokenId);
+
+        (UD60x18 pendingClaimableFees, ) = _pendingClaimableFees(
+            l,
+            p.toKeyInternal(l.strike, l.isCallPool),
+            pData,
+            balance
+        );
+
         return l.toPoolTokenDecimals(pData.claimableFees + pendingClaimableFees);
     }
 

@@ -149,27 +149,19 @@ abstract contract PoolClaimTest is DeployTest {
 
     function test_claim_FeesNotClaimed() public {
         uint256 tradeSize = 1 ether;
-        (uint256 initialCollateral, uint256 totalPremium) = trade(tradeSize, true);
-
-        uint256 protocolFees = pool.protocolFees();
-        IERC20 poolToken = IERC20(getPoolToken());
+        trade(tradeSize, true);
 
         uint256[] memory tokenIds = pool.tokensByAccount(users.otherLP);
         assertEq(tokenIds.length, 0);
 
-        vm.prank(users.otherLP);
         posKey.operator = users.otherLP; // otherLP creates a fake position
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IPoolInternal.Pool__PositionDoesNotExist.selector, posKey.owner, tokenId())
+        );
+
+        vm.prank(users.otherLP);
         pool.claim(posKey);
-
-        uint256 collateral = toTokenDecimals(contractsToCollateral(ud(tradeSize)));
-
-        assertEq(poolToken.balanceOf(posKey.owner), initialCollateral - collateral);
-        assertEq(poolToken.balanceOf(users.otherLP), 0);
-        assertEq(poolToken.balanceOf(address(pool)), collateral + totalPremium - protocolFees);
-        assertEq(poolToken.balanceOf(FEE_RECEIVER), protocolFees);
-
-        assertEq(pool.balanceOf(users.trader, PoolStorage.LONG), tradeSize);
-        assertEq(pool.balanceOf(address(pool), PoolStorage.SHORT), tradeSize);
     }
 
     function test_claim_ClaimFees_2() public {
@@ -201,7 +193,13 @@ abstract contract PoolClaimTest is DeployTest {
         UD60x18 nextPrice = posKey.upper;
         UD60x18 avgPrice = price.avg(nextPrice);
 
-        uint256 takerFee = pool.takerFee(users.trader, ud(tradeSize), toTokenDecimals(ud(tradeSize) * avgPrice), true);
+        uint256 takerFee = pool.takerFee(
+            users.trader,
+            ud(tradeSize),
+            toTokenDecimals(ud(tradeSize) * avgPrice),
+            true,
+            false
+        );
 
         assertEq(pool.getClaimableFees(posKey), takerFee / 2); // 50% protocol fee percentage
     }

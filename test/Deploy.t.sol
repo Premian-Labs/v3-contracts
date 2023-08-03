@@ -16,6 +16,7 @@ import {IDiamondWritableInternal} from "@solidstate/contracts/proxy/diamond/writ
 import {ZERO, ONE} from "contracts/libraries/Constants.sol";
 import {Position} from "contracts/libraries/Position.sol";
 import {OptionMath} from "contracts/libraries/OptionMath.sol";
+import {UD50x28, ud50x28} from "contracts/libraries/UD50x28.sol";
 
 import {IPoolFactory} from "contracts/factory/IPoolFactory.sol";
 import {PoolFactory} from "contracts/factory/PoolFactory.sol";
@@ -151,7 +152,7 @@ contract DeployTest is Test, Assertions {
         quoteOB = IPoolInternal.QuoteOB({
             provider: users.lp,
             taker: address(0),
-            price: ud(0.1 ether),
+            price: ud(0.1e18),
             size: ud(10 ether),
             isBuy: false,
             deadline: block.timestamp + 1 hours,
@@ -287,6 +288,11 @@ contract DeployTest is Test, Assertions {
         poolCoreMockSelectors.push(poolCoreMockImpl.protocolFees.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.exerciseFee.selector);
         poolCoreMockSelectors.push(poolCoreMockImpl.mint.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.getPositionData.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateClaimableFees.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.forceUpdateLastDeposit.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDust.selector);
+        poolCoreMockSelectors.push(poolCoreMockImpl.safeTransferIgnoreDustUD60x18.selector);
 
         // PoolCore
         poolCoreSelectors.push(poolCoreImpl.annihilate.selector);
@@ -386,21 +392,21 @@ contract DeployTest is Test, Assertions {
     }
 
     function deposit(UD60x18 depositSize) internal returns (uint256 initialCollateral) {
-        return deposit(pool, posKey, poolKey.strike, depositSize);
+        return deposit(pool, posKey, poolKey.strike, depositSize, Position.isLong(posKey.orderType));
     }
 
     function deposit(
         Position.Key memory customPosKey,
         uint256 depositSize
     ) internal returns (uint256 initialCollateral) {
-        return deposit(pool, customPosKey, poolKey.strike, ud(depositSize));
+        return deposit(pool, customPosKey, poolKey.strike, ud(depositSize), Position.isLong(customPosKey.orderType));
     }
 
     function deposit(
         Position.Key memory customPosKey,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
-        return deposit(pool, customPosKey, poolKey.strike, depositSize);
+        return deposit(pool, customPosKey, poolKey.strike, depositSize, Position.isLong(customPosKey.orderType));
     }
 
     function deposit(
@@ -408,21 +414,36 @@ contract DeployTest is Test, Assertions {
         UD60x18 strike,
         UD60x18 depositSize
     ) internal returns (uint256 initialCollateral) {
-        return deposit(_pool, posKey, strike, depositSize);
+        return deposit(_pool, posKey, strike, depositSize, Position.isLong(posKey.orderType));
+    }
+
+    function deposit(
+        uint256 depositSize,
+        bool isBidIfStrandedMarketPrice
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, posKey, poolKey.strike, ud(depositSize), isBidIfStrandedMarketPrice);
+    }
+
+    function deposit(
+        UD60x18 depositSize,
+        bool isBidIfStrandedMarketPrice
+    ) internal returns (uint256 initialCollateral) {
+        return deposit(pool, posKey, poolKey.strike, depositSize, isBidIfStrandedMarketPrice);
     }
 
     function deposit(
         IPoolMock _pool,
         Position.Key memory customPosKey,
         UD60x18 strike,
-        UD60x18 depositSize
+        UD60x18 depositSize,
+        bool isBidIfStrandedMarketPrice
     ) internal returns (uint256 initialCollateral) {
         IERC20 token = IERC20(getPoolToken());
         initialCollateral = toTokenDecimals(isCallTest ? depositSize : depositSize * strike);
 
-        vm.startPrank(posKey.operator);
+        vm.startPrank(customPosKey.operator);
 
-        deal(address(token), posKey.operator, initialCollateral);
+        deal(address(token), customPosKey.operator, initialCollateral);
         token.approve(address(router), initialCollateral);
 
         (UD60x18 nearestBelowLower, UD60x18 nearestBelowUpper) = _pool.getNearestTicksBelow(
@@ -430,8 +451,31 @@ contract DeployTest is Test, Assertions {
             customPosKey.upper
         );
 
-        _pool.deposit(customPosKey, nearestBelowLower, nearestBelowUpper, depositSize, ZERO, ONE);
+        _pool.deposit(
+            customPosKey,
+            nearestBelowLower,
+            nearestBelowUpper,
+            depositSize,
+            ZERO,
+            ONE,
+            isBidIfStrandedMarketPrice
+        );
 
+        vm.stopPrank();
+    }
+
+    function tradeOnly(uint256 tradeSize, bool isBuy) internal returns (uint256 totalPremium) {
+        UD60x18 _tradeSize = ud(tradeSize);
+        (totalPremium, ) = pool.getQuoteAMM(users.trader, _tradeSize, isBuy);
+        deal(getPoolToken(), users.trader, tradeSize);
+        vm.startPrank(users.trader);
+        IERC20(getPoolToken()).approve(address(router), tradeSize);
+        pool.trade(
+            _tradeSize,
+            isBuy,
+            isBuy ? totalPremium + totalPremium / 10 : totalPremium - totalPremium / 10,
+            address(0)
+        );
         vm.stopPrank();
     }
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {PremiaStaking} from "./PremiaStaking.sol";
 import {PremiaStakingStorage} from "./PremiaStakingStorage.sol";
@@ -154,7 +154,7 @@ contract VxPremia is IVxPremia, PremiaStaking {
                 isValid = IVaultRegistry(VAULT_REGISTRY).isVault(contractAddress);
             }
 
-            if (isValid == false) revert VxPremia__InvalidPoolAddress();
+            if (!isValid) revert VxPremia__InvalidPoolAddress();
 
             userVotes.push(vote);
             l.votes[vote.version][vote.target] += vote.amount;

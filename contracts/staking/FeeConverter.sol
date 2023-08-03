@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -34,7 +34,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     //////////////////////////////////////////////////
 
     modifier onlyAuthorized() {
-        if (FeeConverterStorage.layout().isAuthorized[msg.sender] == false) revert FeeConverter__NotAuthorized();
+        if (!FeeConverterStorage.layout().isAuthorized[msg.sender]) revert FeeConverter__NotAuthorized();
         _;
     }
 

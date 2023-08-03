@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
@@ -21,7 +21,7 @@ contract ERC20Router is IERC20Router, ReentrancyGuard {
 
     /// @inheritdoc IERC20Router
     function safeTransferFrom(address token, address from, address to, uint256 amount) external nonReentrant {
-        if (IPoolFactory(POOL_FACTORY).isPool(msg.sender) == false) revert ERC20Router__NotAuthorized();
+        if (!IPoolFactory(POOL_FACTORY).isPool(msg.sender)) revert ERC20Router__NotAuthorized();
 
         IERC20(token).safeTransferFrom(from, to, amount);
     }

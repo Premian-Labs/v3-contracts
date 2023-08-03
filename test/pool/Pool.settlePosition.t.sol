@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.19;
 
-import "forge-std/console2.sol";
-
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
@@ -89,6 +87,37 @@ abstract contract PoolSettlePositionTest is DeployTest {
         _test_settlePosition_Buy100Options(false);
     }
 
+    function test_settlePosition_DeletePosition() public {
+        _test_settlePosition_trade_Buy100Options();
+
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        pool.forceUpdateClaimableFees(pKeyInternal);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() != 0);
+            assertTrue(data.lastFeeRate.unwrap() != 0);
+            assertTrue(data.lastDeposit != 0);
+        }
+
+        UD60x18 settlementPrice = getSettlementPrice(true);
+        oracleAdapter.setPriceAt(settlementPrice);
+
+        vm.warp(poolKey.maturity);
+        vm.prank(posKey.operator);
+
+        pool.settlePosition(posKey);
+
+        {
+            Position.Data memory data = pool.getPositionData(pKeyInternal);
+
+            assertTrue(data.claimableFees.unwrap() == 0);
+            assertTrue(data.lastFeeRate.unwrap() == 0);
+            assertTrue(data.lastDeposit == 0);
+        }
+    }
+
     function test_settlePosition_RevertIf_OptionNotExpired() public {
         vm.expectRevert(IPoolInternal.Pool__OptionNotExpired.selector);
         vm.prank(posKey.operator);
@@ -98,6 +127,30 @@ abstract contract PoolSettlePositionTest is DeployTest {
     function test_settlePosition_RevertIf_OperatorNotAuthorized() public {
         vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__OperatorNotAuthorized.selector, users.trader));
         vm.prank(users.trader);
+        pool.settlePosition(posKey);
+    }
+
+    function test_settlePosition_RevertIf_InvalidPositionState_NonZeroBalance_ZeroLastDeposit() public {
+        UD60x18 depositSize = ud(1e18);
+        pool.mint(users.lp, tokenId(), depositSize);
+
+        vm.warp(poolKey.maturity);
+        uint256 balance = depositSize.unwrap();
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, balance, 0));
+
+        vm.prank(posKey.operator);
+        pool.settlePosition(posKey);
+    }
+
+    function test_settlePosition_RevertIf_InvalidPositionState_ZeroBalance_NonZeroLastDeposit() public {
+        Position.KeyInternal memory pKeyInternal = Position.toKeyInternal(posKey, poolKey.strike, poolKey.isCallPool);
+        uint256 timestamp = block.timestamp;
+        pool.forceUpdateLastDeposit(pKeyInternal, timestamp);
+
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(abi.encodeWithSelector(IPoolInternal.Pool__InvalidPositionState.selector, 0, timestamp));
+
+        vm.prank(posKey.operator);
         pool.settlePosition(posKey);
     }
 
@@ -267,7 +320,7 @@ abstract contract PoolSettlePositionTest is DeployTest {
 
         // create an erroneous position that will be used to 'settle' and steal all
         // the tokens out of the pool
-        Position.Key memory fakePosition1 = Position.Key({
+        Position.Key memory fakePosition = Position.Key({
             owner: user,
             operator: operator,
             lower: posKey.lower,
@@ -284,12 +337,13 @@ abstract contract PoolSettlePositionTest is DeployTest {
         vm.warp(poolKey.maturity);
 
         // This is the key to the attack. We need to trick the pool into generating an invalid tokenId. To do this, we
-        // update one of the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
-        fakePosition1.lower = ud(.7e18);
+        // update the fields used to generate the tokenId to values that do not correspond to exisitng postiions.
+        fakePosition.lower = ud(0.7e18);
+        fakePosition.upper = ud(0.8e18);
 
         // settlePositionFor batches handling position settlements, so we need to provide an array
         Position.Key[] memory p = new Position.Key[](1);
-        p[0] = fakePosition1;
+        p[0] = fakePosition;
 
         // Verify that the pool contains tokens (so we can steal them)
         assertGt(originalPoolBalance, 0);

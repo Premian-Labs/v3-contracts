@@ -1,5 +1,4 @@
 import { PoolFactory__factory } from '../../../typechain';
-import goerliAddresses from '../../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
 import { PoolKey } from '../../../utils/sdk/types';
 import { getValidMaturity } from '../../../utils/time';
@@ -14,9 +13,7 @@ async function main() {
 
   let addresses: ContractAddresses;
 
-  if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
+  if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
   } else {
     throw new Error('ChainId not implemented');

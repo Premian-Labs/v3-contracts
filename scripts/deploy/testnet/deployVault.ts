@@ -2,7 +2,6 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
-import goerliAddresses from '../../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
 import { ChainID, ContractAddresses } from '../../../utils/deployment/types';
@@ -15,9 +14,7 @@ async function main() {
 
   let addresses: ContractAddresses;
 
-  if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
+  if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
   } else {
     throw new Error('ChainId not implemented');

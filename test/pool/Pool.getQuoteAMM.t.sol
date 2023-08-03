@@ -21,7 +21,7 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         UD60x18 nextPrice = ud(0.2e18);
         UD60x18 avgPrice = price.avg(nextPrice);
 
-        uint256 takerFee = pool.takerFee(users.trader, tradeSize, toTokenDecimals(tradeSize * avgPrice), true);
+        uint256 takerFee = pool.takerFee(users.trader, tradeSize, toTokenDecimals(tradeSize * avgPrice), true, false);
 
         uint256 quote = toTokenDecimals(contractsToCollateral(tradeSize * avgPrice)) + takerFee;
 
@@ -37,7 +37,7 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
         UD60x18 nextPrice = ud(0.2e18);
         UD60x18 avgPrice = price.avg(nextPrice);
 
-        uint256 takerFee = pool.takerFee(users.trader, tradeSize, toTokenDecimals(tradeSize * avgPrice), true);
+        uint256 takerFee = pool.takerFee(users.trader, tradeSize, toTokenDecimals(tradeSize * avgPrice), true, false);
 
         uint256 quote = toTokenDecimals(contractsToCollateral(tradeSize * avgPrice)) - takerFee;
 
@@ -85,7 +85,21 @@ abstract contract PoolGetQuoteAMMTest is DeployTest {
             ud(9 ether),
             false
         );
-        assertEq(totalNetPremiumUpdated, isCallTest ? 0.915568750 ether : 915.568750e6);
-        assertEq(totalTakerFeeUpdated, isCallTest ? 0.058031250 ether : 58.031250e6);
+        // 0,0875390625 * 0,03
+        // 0.703125 * 0,003
+        //
+
+        // 0.120 - 0.129: liq: 0.703125, premium: 0,703125 * (0,12 + 0,129) / 2 = 0,0875390625
+        // 0.104 - 0.120: liq: 5 + 1,25, premium: 6,25 * (0,104 + 0,12) / 2 = 0,7
+        // 0.0XX - 0.104: 2,046875, agg liquidity: 8,046875
+        // next mp: 0,104 - 2,046875 / 8,046875 * 0,103 = 0,0778
+        // premium = (0,0778 + 0,104) / 2 * 2,046875 = 0,1860609375
+        // total premium received: 0,1860609375 + 0,0875390625 + 0,7 = 0,9736
+        // fees1 = 0,0875390625 * 0,03 = 0,002626171875
+        // fees2 = 0,7 * 0,03 = 0,021
+        // fees3 = 2,046875 * 0,003 = 0,006140625
+
+        assertEq(totalNetPremiumUpdated, isCallTest ? 0.943833203125 ether : 943.833203e6);
+        assertEq(totalTakerFeeUpdated, isCallTest ? 0.029766796875 ether : 29.766796e6);
     }
 }

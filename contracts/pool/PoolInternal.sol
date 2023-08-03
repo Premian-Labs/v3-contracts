@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-P3-DUAL
 // For terms and conditions regarding commercial use please see https://license.premia.blue
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 import {EIP712} from "@solidstate/contracts/cryptography/EIP712.sol";
@@ -25,7 +25,9 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {Position} from "../libraries/Position.sol";
 import {Pricing} from "../libraries/Pricing.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
-import {iZERO, ZERO, ONE, TWO, FIVE} from "../libraries/Constants.sol";
+import {iZERO, ZERO, ONE, TWO, FIVE, UD50_ZERO, SD49_ZERO} from "../libraries/Constants.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
+import {SD49x28} from "../libraries/SD49x28.sol";
 
 import {IReferral} from "../referral/IReferral.sol";
 
@@ -49,6 +51,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     using ECDSA for bytes32;
     using PRBMathExtra for UD60x18;
     using PRBMathExtra for SD59x18;
+    using PRBMathExtra for UD50x28;
+    using PRBMathExtra for SD49x28;
 
     address internal immutable FACTORY;
     address internal immutable ROUTER;
@@ -60,8 +64,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     address internal immutable VXPREMIA;
 
     UD60x18 internal constant PROTOCOL_FEE_PERCENTAGE = UD60x18.wrap(0.5e18); // 50%
-    UD60x18 internal constant PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3%
-    UD60x18 internal constant COLLATERAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3%
+
+    UD60x18 internal constant AMM_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.03e18); // 3% of premium
+    UD60x18 internal constant AMM_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
+    UD60x18 internal constant ORDERBOOK_NOTIONAL_FEE_PERCENTAGE = UD60x18.wrap(0.0008e18); // 0.08% of notional
+    UD60x18 internal constant MAX_PREMIUM_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of premium
+
     UD60x18 internal constant EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.003e18); // 0.3% of notional
     UD60x18 internal constant MAX_EXERCISE_FEE_PERCENTAGE = UD60x18.wrap(0.125e18); // 12.5% of intrinsic value
 
@@ -101,6 +109,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ///        1500, and a premium of 750, the normalized premium would be 0.5)
     /// @param strike The strike of the option (18 decimals)
     /// @param isCallPool Whether the pool is a call pool or not
+    /// @param isOrderbook Whether the fee is for the `fillQuoteOB` function or not
     /// @return The taker fee for an option trade denormalized. (18 decimals)
     function _takerFee(
         address taker,
@@ -108,16 +117,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 premium,
         bool isPremiumNormalized,
         UD60x18 strike,
-        bool isCallPool
+        bool isCallPool,
+        bool isOrderbook
     ) internal view returns (UD60x18) {
         if (!isPremiumNormalized) {
             // Normalize premium
             premium = Position.collateralToContracts(premium, strike, isCallPool);
         }
 
-        UD60x18 premiumFee = premium * PREMIUM_FEE_PERCENTAGE;
-        UD60x18 notionalFee = size * COLLATERAL_FEE_PERCENTAGE;
-        UD60x18 fee = PRBMathExtra.max(premiumFee, notionalFee);
+        UD60x18 fee;
+        if (isOrderbook) {
+            fee = PRBMathExtra.min(premium * MAX_PREMIUM_FEE_PERCENTAGE, size * ORDERBOOK_NOTIONAL_FEE_PERCENTAGE);
+        } else {
+            UD60x18 notionalFee = size * AMM_NOTIONAL_FEE_PERCENTAGE;
+            UD60x18 premiumFee = (premium == ZERO) ? notionalFee : premium * AMM_PREMIUM_FEE_PERCENTAGE;
+            UD60x18 maxFee = (premium == ZERO) ? notionalFee : premium * MAX_PREMIUM_FEE_PERCENTAGE;
+
+            fee = PRBMathExtra.min(maxFee, PRBMathExtra.max(premiumFee, notionalFee));
+        }
 
         UD60x18 discount;
         if (taker != address(0)) discount = ud(IVxPremia(VXPREMIA).getDiscount(taker));
@@ -183,19 +200,20 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         while (size > ZERO) {
             UD60x18 tradeSize = PRBMathExtra.min(size, vars.maxSize);
 
-            UD60x18 nextPrice;
+            UD50x28 nextPrice;
             // Compute next price
             if (vars.liquidity == ZERO || tradeSize == vars.maxSize) {
-                nextPrice = isBuy ? pricing.upper : pricing.lower;
+                nextPrice = (isBuy ? pricing.upper : pricing.lower).intoUD50x28();
             } else {
-                UD60x18 priceDelta = ((pricing.upper - pricing.lower) * tradeSize) / vars.liquidity;
+                UD50x28 priceDelta = ((pricing.upper - pricing.lower).intoUD50x28() * tradeSize.intoUD50x28()) /
+                    vars.liquidity.intoUD50x28();
                 nextPrice = isBuy ? pricing.marketPrice + priceDelta : pricing.marketPrice - priceDelta;
             }
 
             if (tradeSize > ZERO) {
-                UD60x18 premium = pricing.marketPrice.avg(nextPrice) * tradeSize;
+                UD60x18 premium = (pricing.marketPrice.avg(nextPrice) * tradeSize.intoUD50x28()).intoUD60x18();
 
-                UD60x18 takerFee = _takerFee(taker, size, premium, true, l.strike, l.isCallPool);
+                UD60x18 takerFee = _takerFee(taker, tradeSize, premium, true, l.strike, l.isCallPool, false);
 
                 // Denormalize premium
                 premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
@@ -240,33 +258,27 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _pendingClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
-        Position.Data storage pData
-    ) internal view returns (UD60x18 claimableFees, SD59x18 feeRate) {
+        Position.Data storage pData,
+        UD60x18 balance
+    ) internal view returns (UD60x18 claimableFees, SD49x28 feeRate) {
         Tick memory lowerTick = _getTick(p.lower);
         Tick memory upperTick = _getTick(p.upper);
 
         feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
-
-        claimableFees = _calculateClaimableFees(
-            feeRate,
-            pData.lastFeeRate,
-            p.liquidityPerTick(
-                _balanceOfUD60x18(p.owner, PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType))
-            )
-        );
+        claimableFees = _calculateClaimableFees(feeRate, pData.lastFeeRate, p.liquidityPerTick(balance));
     }
 
     /// @notice Returns the amount of fees an LP can claim for a position (without claiming)
     function _calculateClaimableFees(
-        SD59x18 feeRate,
-        SD59x18 lastFeeRate,
-        UD60x18 liquidityPerTick
+        SD49x28 feeRate,
+        SD49x28 lastFeeRate,
+        UD50x28 liquidityPerTick
     ) internal pure returns (UD60x18) {
-        return (feeRate - lastFeeRate).intoUD60x18() * liquidityPerTick;
+        return ((feeRate - lastFeeRate).intoUD50x28() * liquidityPerTick).intoUD60x18();
     }
 
     /// @notice Updates the amount of fees an LP can claim for a position (without claiming)
-    function _updateClaimableFees(Position.Data storage pData, SD59x18 feeRate, UD60x18 liquidityPerTick) internal {
+    function _updateClaimableFees(Position.Data storage pData, SD49x28 feeRate, UD50x28 liquidityPerTick) internal {
         pData.claimableFees =
             pData.claimableFees +
             _calculateClaimableFees(feeRate, pData.lastFeeRate, liquidityPerTick);
@@ -279,10 +291,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _updateClaimableFees(
         PoolStorage.Layout storage l,
         Position.KeyInternal memory p,
-        Position.Data storage pData
+        Position.Data storage pData,
+        UD60x18 balance
     ) internal {
-        (UD60x18 claimableFees, SD59x18 feeRate) = _pendingClaimableFees(l, p, pData);
-
+        (UD60x18 claimableFees, SD49x28 feeRate) = _pendingClaimableFees(l, p, pData, balance);
         pData.claimableFees = pData.claimableFees + claimableFees;
         pData.lastFeeRate = feeRate;
     }
@@ -290,24 +302,30 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Updates the claimable fees of a position and transfers the claimed fees to the operator of the position.
     ///         Then resets the claimable fees to zero.
     /// @param p The position to claim fees for
-    /// @return claimedFees The amount of fees claimed (poolToken decimals)
-    function _claim(Position.KeyInternal memory p) internal returns (uint256 claimedFees) {
+    /// @return The amount of fees claimed (poolToken decimals)
+    function _claim(Position.KeyInternal memory p) internal returns (uint256) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        UD60x18 balance = _balanceOfUD60x18(p.owner, tokenId);
+        _revertIfPositionDoesNotExist(p.owner, tokenId, balance);
+
         Position.Data storage pData = l.positions[p.keyHash()];
-        _updateClaimableFees(l, p, pData);
+        _updateClaimableFees(l, p, pData, balance);
+
         UD60x18 _claimedFees = pData.claimableFees;
+        if (_claimedFees == ZERO) return 0;
 
         pData.claimableFees = ZERO;
-        IERC20(l.getPoolToken()).safeTransfer(p.operator, _claimedFees);
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, _claimedFees);
 
         emit ClaimFees(
             p.owner,
             PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType),
             _claimedFees,
-            pData.lastFeeRate
+            pData.lastFeeRate.intoSD59x18()
         );
 
         return l.toPoolTokenDecimals(_claimedFees);
@@ -321,7 +339,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (claimedFees == ZERO) return;
 
         l.protocolFees = ZERO;
-        IERC20(l.getPoolToken()).safeTransfer(FEE_RECEIVER, claimedFees);
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(FEE_RECEIVER, claimedFees);
         emit ClaimProtocolFees(FEE_RECEIVER, claimedFees);
     }
 
@@ -358,12 +376,24 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     ) internal returns (Position.Delta memory delta) {
         PoolStorage.Layout storage l = PoolStorage.layout();
 
+        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        uint256 balance = _balanceOf(p.owner, tokenId);
+
+        Position.Data storage pData = l.positions[p.keyHash()];
+
+        _revertIfInvalidPositionState(balance, pData.lastDeposit);
+        pData.lastDeposit = block.timestamp;
+
         // Set the market price correctly in case it's stranded
         if (_isMarketPriceStranded(l, p, isBidIfStrandedMarketPrice)) {
             l.marketPrice = _getStrandedMarketPriceUpdate(p, isBidIfStrandedMarketPrice);
         }
 
-        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice, args.minMarketPrice, args.maxMarketPrice);
+        _revertIfDepositWithdrawalAboveMaxSlippage(
+            l.marketPrice.intoUD60x18(),
+            args.minMarketPrice,
+            args.maxMarketPrice
+        );
         _revertIfZeroSize(args.size);
         _revertIfOptionExpired(l);
 
@@ -372,9 +402,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _revertIfTickWidthInvalid(p.upper);
         _revertIfInvalidSize(p.lower, p.upper, args.size);
 
-        uint256 tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
-
-        delta = p.calculatePositionUpdate(_balanceOfUD60x18(p.owner, tokenId), args.size.intoSD59x18(), l.marketPrice);
+        delta = p.calculatePositionUpdate(ud(balance), args.size.intoSD59x18(), l.marketPrice);
 
         _transferTokens(
             l,
@@ -385,11 +413,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             delta.shorts.intoUD60x18()
         );
 
-        Position.Data storage pData = l.positions[p.keyHash()];
-
         _depositFeeAndTicksUpdate(l, pData, p, args.belowLower, args.belowUpper, args.size, tokenId);
-
-        pData.lastDeposit = block.timestamp;
 
         emit Deposit(
             p.owner,
@@ -397,10 +421,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             delta.collateral.intoUD60x18(),
             delta.longs.intoUD60x18(),
             delta.shorts.intoUD60x18(),
-            pData.lastFeeRate,
+            pData.lastFeeRate.intoSD59x18(),
             pData.claimableFees,
-            l.marketPrice,
-            l.liquidityRate,
+            l.marketPrice.intoUD60x18(),
+            l.liquidityRate.intoUD60x18(),
             l.currentTick
         );
     }
@@ -415,7 +439,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 size,
         uint256 tokenId
     ) internal {
-        SD59x18 feeRate;
+        SD49x28 feeRate;
         {
             // If ticks dont exist they are created and inserted into the linked list
             Tick memory lowerTick = _getOrCreateTick(p.lower, belowLower);
@@ -426,7 +450,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             UD60x18 initialSize = _balanceOfUD60x18(p.owner, tokenId);
-            UD60x18 liquidityPerTick;
+            UD50x28 liquidityPerTick;
 
             if (initialSize > ZERO) {
                 liquidityPerTick = p.liquidityPerTick(initialSize);
@@ -438,8 +462,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             _mint(p.owner, tokenId, size);
 
-            SD59x18 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD59x18() -
-                liquidityPerTick.intoSD59x18();
+            SD49x28 tickDelta = p.liquidityPerTick(_balanceOfUD60x18(p.owner, tokenId)).intoSD49x28() -
+                liquidityPerTick.intoSD49x28();
 
             // Adjust tick deltas
             _updateTicks(p.lower, p.upper, l.marketPrice, tickDelta, initialSize == ZERO, false, p.orderType);
@@ -472,23 +496,23 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOptionExpired(l);
 
-        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice, minMarketPrice, maxMarketPrice);
+        _revertIfDepositWithdrawalAboveMaxSlippage(l.marketPrice.intoUD60x18(), minMarketPrice, maxMarketPrice);
         _revertIfZeroSize(size);
         _revertIfRangeInvalid(p.lower, p.upper);
         _revertIfTickWidthInvalid(p.lower);
         _revertIfTickWidthInvalid(p.upper);
         _revertIfInvalidSize(p.lower, p.upper, size);
 
-        Position.Data storage pData = l.positions[p.keyHash()];
+        WithdrawVarsInternal memory vars;
+
+        vars.pKeyHash = p.keyHash();
+        Position.Data storage pData = l.positions[vars.pKeyHash];
 
         _revertIfWithdrawalDelayNotElapsed(pData);
 
-        WithdrawVarsInternal memory vars;
-
         vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.initialSize = _balanceOfUD60x18(p.owner, vars.tokenId);
-
-        if (vars.initialSize == ZERO) revert Pool__PositionDoesNotExist(p.owner, vars.tokenId);
+        _revertIfPositionDoesNotExist(p.owner, vars.tokenId, vars.initialSize);
 
         vars.isFullWithdrawal = vars.initialSize == size;
 
@@ -498,7 +522,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
             // Initialize variables before position update
             vars.liquidityPerTick = p.liquidityPerTick(vars.initialSize);
-            SD59x18 feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
+            SD49x28 feeRate = _rangeFeeRate(l, p.lower, p.upper, lowerTick.externalFeeRate, upperTick.externalFeeRate);
 
             // Update claimable fees
             _updateClaimableFees(pData, feeRate, vars.liquidityPerTick);
@@ -512,10 +536,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 UD60x18 feesClaimed = pData.claimableFees;
                 // Claim all fees and remove the position completely
                 collateralToTransfer = collateralToTransfer + feesClaimed;
-
-                pData.claimableFees = ZERO;
-                pData.lastFeeRate = iZERO;
-
+                _deletePosition(l, vars.pKeyHash);
                 emit ClaimFees(p.owner, vars.tokenId, feesClaimed, iZERO);
             }
 
@@ -540,8 +561,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         }
 
         vars.tickDelta =
-            p.liquidityPerTick(_balanceOfUD60x18(p.owner, vars.tokenId)).intoSD59x18() -
-            vars.liquidityPerTick.intoSD59x18();
+            p.liquidityPerTick(_balanceOfUD60x18(p.owner, vars.tokenId)).intoSD49x28() -
+            vars.liquidityPerTick.intoSD49x28();
 
         _updateTicks(
             p.lower,
@@ -559,10 +580,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             delta.collateral.intoUD60x18(),
             delta.longs.intoUD60x18(),
             delta.shorts.intoUD60x18(),
-            pData.lastFeeRate,
+            pData.lastFeeRate.intoSD59x18(),
             pData.claimableFees,
-            l.marketPrice,
-            l.liquidityRate,
+            l.marketPrice.intoUD60x18(),
+            l.liquidityRate.intoUD60x18(),
             l.currentTick
         );
     }
@@ -583,7 +604,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         address poolToken = l.getPoolToken();
 
         if (from == address(this)) {
-            IERC20(poolToken).safeTransfer(to, collateral);
+            IERC20(poolToken).safeTransferIgnoreDust(to, collateral);
         } else {
             IERC20Router(ROUTER).safeTransferFrom(poolToken, from, to, collateral);
         }
@@ -621,8 +642,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             taker = longReceiver;
         }
 
-        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool);
-
+        UD60x18 protocolFee = _takerFee(taker, size, ZERO, true, l.strike, l.isCallPool, false);
         IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), underwriter, address(this), collateral + protocolFee);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
@@ -664,21 +684,29 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                 vars.oldMarketPrice = l.marketPrice;
 
                 {
-                    UD60x18 nextMarketPrice;
+                    UD50x28 nextMarketPrice;
                     if (vars.tradeSize != vars.maxSize) {
                         nextMarketPrice = pricing.nextPrice(vars.tradeSize);
                     } else {
-                        nextMarketPrice = args.isBuy ? pricing.upper : pricing.lower;
+                        nextMarketPrice = (args.isBuy ? pricing.upper : pricing.lower).intoUD50x28();
                     }
 
                     UD60x18 premium;
 
                     {
-                        UD60x18 quoteAMMPrice = l.marketPrice.avg(nextMarketPrice);
-                        premium = quoteAMMPrice * vars.tradeSize;
+                        UD50x28 quoteAMMPrice = l.marketPrice.avg(nextMarketPrice);
+                        premium = (quoteAMMPrice * vars.tradeSize.intoUD50x28()).intoUD60x18();
                     }
 
-                    UD60x18 takerFee = _takerFee(args.user, vars.tradeSize, premium, true, l.strike, l.isCallPool);
+                    UD60x18 takerFee = _takerFee(
+                        args.user,
+                        vars.tradeSize,
+                        premium,
+                        true,
+                        l.strike,
+                        l.isCallPool,
+                        false
+                    );
 
                     // Denormalize premium
                     premium = Position.contractsToCollateral(premium, l.strike, l.isCallPool);
@@ -710,10 +738,12 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
                     l.marketPrice = nextMarketPrice;
                 }
 
-                UD60x18 dist = (l.marketPrice.intoSD59x18() - vars.oldMarketPrice.intoSD59x18()).abs().intoUD60x18();
+                UD50x28 dist = (l.marketPrice.intoSD49x28() - vars.oldMarketPrice.intoSD49x28()).abs().intoUD50x28();
 
-                vars.shortDelta = vars.shortDelta + l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
-                vars.longDelta = vars.longDelta + l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE);
+                vars.shortDelta =
+                    vars.shortDelta +
+                    (l.shortRate * (dist / PoolStorage.MIN_TICK_DISTANCE.intoUD50x28()));
+                vars.longDelta = vars.longDelta + (l.longRate * (dist / PoolStorage.MIN_TICK_DISTANCE.intoUD50x28()));
 
                 if (vars.maxSize >= remaining) {
                     remaining = ZERO;
@@ -747,11 +777,11 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         _useReferral(l, args.user, args.referrer, vars.referral.primaryRebate, vars.referral.secondaryRebate);
 
         if (args.isBuy) {
-            if (vars.shortDelta > ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta);
-            if (vars.longDelta > ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta);
+            if (vars.shortDelta > UD50_ZERO) _mint(address(this), PoolStorage.SHORT, vars.shortDelta.intoUD60x18());
+            if (vars.longDelta > UD50_ZERO) _burn(address(this), PoolStorage.LONG, vars.longDelta.intoUD60x18());
         } else {
-            if (vars.longDelta > ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta);
-            if (vars.shortDelta > ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta);
+            if (vars.longDelta > UD50_ZERO) _mint(address(this), PoolStorage.LONG, vars.longDelta.intoUD60x18());
+            if (vars.shortDelta > UD50_ZERO) _burn(address(this), PoolStorage.SHORT, vars.shortDelta.intoUD60x18());
         }
 
         emit Trade(
@@ -761,8 +791,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             args.isBuy ? vars.totalPremium - vars.totalTakerFees : vars.totalPremium,
             vars.totalTakerFees,
             vars.totalProtocolFees,
-            l.marketPrice,
-            l.liquidityRate,
+            l.marketPrice.intoUD60x18(),
+            l.liquidityRate.intoUD60x18(),
             l.currentTick,
             vars.referral.totalRebate,
             args.isBuy
@@ -860,7 +890,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (deltaCollateral < 0) {
             IERC20Router(ROUTER).safeTransferFrom(l.getPoolToken(), user, address(this), uint256(-deltaCollateral));
         } else if (deltaCollateral > 0 && transferCollateralToUser) {
-            IERC20(l.getPoolToken()).safeTransfer(user, uint256(deltaCollateral));
+            IERC20(l.getPoolToken()).safeTransferIgnoreDust(user, uint256(deltaCollateral));
         }
 
         // Transfer long
@@ -888,7 +918,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bool isBuy
     ) internal view returns (PremiumAndFeeInternal memory r) {
         r.premium = price * size;
-        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool);
+        r.protocolFee = _takerFee(taker, size, r.premium, true, l.strike, l.isCallPool, true);
 
         (UD60x18 primaryReferralRebate, UD60x18 secondaryReferralRebate) = IReferral(REFERRAL).getRebateAmounts(
             taker,
@@ -1014,7 +1044,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         _burn(owner, PoolStorage.SHORT, size);
         _burn(owner, PoolStorage.LONG, size);
-        IERC20(l.getPoolToken()).safeTransfer(owner, Position.contractsToCollateral(size, l.strike, l.isCallPool));
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(
+            owner,
+            Position.contractsToCollateral(size, l.strike, l.isCallPool)
+        );
 
         emit Annihilate(owner, size, 0);
     }
@@ -1047,33 +1080,36 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             isCall: srcP.isCall
         });
 
-        bytes32 srcKey = srcP.keyHash();
+        bytes32 srcKeyHash = srcP.keyHash();
 
         uint256 srcTokenId = PoolStorage.formatTokenId(srcP.operator, srcP.lower, srcP.upper, srcP.orderType);
+        UD60x18 srcPOwnerBalance = _balanceOfUD60x18(srcP.owner, srcTokenId);
+
+        _revertIfPositionDoesNotExist(srcP.owner, srcTokenId, srcPOwnerBalance);
+        if (size > srcPOwnerBalance) revert Pool__NotEnoughTokens(srcPOwnerBalance, size);
 
         uint256 dstTokenId = srcP.operator == newOperator
             ? srcTokenId
             : PoolStorage.formatTokenId(newOperator, srcP.lower, srcP.upper, srcP.orderType);
 
-        UD60x18 balance = _balanceOfUD60x18(srcP.owner, srcTokenId);
-        if (size > balance) revert Pool__NotEnoughTokens(balance, size);
-
-        UD60x18 proportionTransferred = size.div(balance);
-
         Position.Data storage dstData = l.positions[dstP.keyHash()];
-        Position.Data storage srcData = l.positions[srcKey];
+        Position.Data storage srcData = l.positions[srcKeyHash];
 
         // Call function to update claimable fees, but do not claim them
-        _updateClaimableFees(l, srcP, srcData);
+        _updateClaimableFees(l, srcP, srcData, srcPOwnerBalance);
 
-        if (_balanceOf(newOwner, dstTokenId) > 0) {
-            // Update claimable fees to reset the fee range rate
-            _updateClaimableFees(l, dstP, dstData);
-        } else {
-            dstData.lastFeeRate = srcData.lastFeeRate;
+        {
+            UD60x18 newOwnerBalance = _balanceOfUD60x18(newOwner, dstTokenId);
+            if (newOwnerBalance > ZERO) {
+                // Update claimable fees to reset the fee range rate
+                _updateClaimableFees(l, dstP, dstData, newOwnerBalance);
+            } else {
+                dstData.lastFeeRate = srcData.lastFeeRate;
+            }
         }
 
         {
+            UD60x18 proportionTransferred = size.div(srcPOwnerBalance);
             UD60x18 feesTransferred = proportionTransferred * srcData.claimableFees;
             dstData.claimableFees = dstData.claimableFees + feesTransferred;
             srcData.claimableFees = srcData.claimableFees - feesTransferred;
@@ -1090,7 +1126,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             _mint(newOwner, dstTokenId, size);
         }
 
-        if (size == balance) delete l.positions[srcKey];
+        if (size == srcPOwnerBalance) _deletePosition(l, srcKeyHash);
 
         emit TransferPosition(srcP.owner, newOwner, srcTokenId, dstTokenId);
     }
@@ -1167,24 +1203,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         l.protocolFees = l.protocolFees + fee;
         _exerciseValue = _exerciseValue - fee;
+
+        if (size == ZERO) return (0, 0, false);
         _revertIfCostExceedsPayout(costPerHolder, _exerciseValue);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        if (size == ZERO) return (0, 0, false);
-
         exerciseFee = l.toPoolTokenDecimals(fee);
         exerciseValue = l.toPoolTokenDecimals(_exerciseValue);
 
         emit Exercise(msg.sender, holder, size, _exerciseValue, l.settlementPrice, fee, costPerHolder);
 
-        if (costPerHolder > ZERO) {
-            _exerciseValue = _exerciseValue - costPerHolder;
-        }
-
-        if (_exerciseValue > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, _exerciseValue);
-        }
+        if (costPerHolder > ZERO) _exerciseValue = _exerciseValue - costPerHolder;
+        if (_exerciseValue > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _exerciseValue);
 
         success = true;
     }
@@ -1200,23 +1230,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         (UD60x18 size, UD60x18 exerciseValue, UD60x18 _collateral) = _beforeExerciseOrSettle(l, false, holder);
 
+        if (size == ZERO) return (0, false);
         _revertIfCostExceedsPayout(costPerHolder, _collateral);
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
-
-        if (size == ZERO) return (0, false);
-
         collateral = l.toPoolTokenDecimals(_collateral);
 
         emit Settle(msg.sender, holder, size, exerciseValue, l.settlementPrice, ZERO, costPerHolder);
 
-        if (costPerHolder > ZERO) {
-            _collateral = _collateral - costPerHolder;
-        }
-
-        if (_collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(holder, _collateral);
-        }
+        if (costPerHolder > ZERO) _collateral = _collateral - costPerHolder;
+        if (_collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(holder, _collateral);
 
         success = true;
     }
@@ -1237,13 +1260,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.protocolFees > ZERO) _claimProtocolFees();
 
-        Position.Data storage pData = l.positions[p.keyHash()];
-
         SettlePositionVarsInternal memory vars;
 
-        vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
+        vars.pKeyHash = p.keyHash();
+        Position.Data storage pData = l.positions[vars.pKeyHash];
 
+        vars.tokenId = PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType);
         vars.size = _balanceOfUD60x18(p.owner, vars.tokenId);
+
+        _revertIfInvalidPositionState(vars.size.unwrap(), pData.lastDeposit);
+
         if (vars.size == ZERO) {
             // Revert if costPerHolder > 0
             _revertIfCostExceedsPayout(costPerHolder, ZERO);
@@ -1252,7 +1278,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         {
             // Update claimable fees
-            SD59x18 feeRate = _rangeFeeRate(
+            SD49x28 feeRate = _rangeFeeRate(
                 l,
                 p.lower,
                 p.upper,
@@ -1281,25 +1307,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             vars.collateral = vars.collateral + longs * vars.payoff;
 
             vars.collateral = vars.collateral + shorts * ((l.isCallPool ? ONE : l.strike) - vars.payoff);
-
             vars.collateral = vars.collateral + vars.claimableFees;
 
             _burn(p.owner, vars.tokenId, vars.size);
 
-            if (longs > ZERO) {
-                _burn(address(this), PoolStorage.LONG, longs);
-            }
-
-            if (shorts > ZERO) {
-                _burn(address(this), PoolStorage.SHORT, shorts);
-            }
+            if (longs > ZERO) _burn(address(this), PoolStorage.LONG, longs);
+            if (shorts > ZERO) _burn(address(this), PoolStorage.SHORT, shorts);
         }
 
-        pData.claimableFees = ZERO;
-        pData.lastFeeRate = iZERO;
-
+        _deletePosition(l, vars.pKeyHash);
         _revertIfCostExceedsPayout(costPerHolder, vars.collateral);
-
         collateral = l.toPoolTokenDecimals(vars.collateral);
 
         emit SettlePosition(
@@ -1315,15 +1332,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             costPerHolder
         );
 
-        if (costPerHolder > ZERO) {
-            vars.collateral = vars.collateral - costPerHolder;
-        }
-
-        if (vars.collateral > ZERO) {
-            IERC20(l.getPoolToken()).safeTransfer(p.operator, vars.collateral);
-        }
+        if (costPerHolder > ZERO) vars.collateral = vars.collateral - costPerHolder;
+        if (vars.collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, vars.collateral);
 
         success = true;
+    }
+
+    /// @notice Deletes the `pKeyHash` from positions mapping
+    function _deletePosition(PoolStorage.Layout storage l, bytes32 pKeyHash) internal {
+        delete l.positions[pKeyHash];
     }
 
     ////////////////////////////////////////////////////////////////
@@ -1390,7 +1407,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
         if (l.tickIndex.contains(price)) return (l.ticks[price], true);
 
-        return (Tick({delta: iZERO, externalFeeRate: ZERO, longDelta: iZERO, shortDelta: iZERO, counter: 0}), false);
+        return (
+            Tick({
+                delta: SD49_ZERO,
+                externalFeeRate: UD50_ZERO,
+                longDelta: SD49_ZERO,
+                shortDelta: SD49_ZERO,
+                counter: 0
+            }),
+            false
+        );
     }
 
     /// @notice Creates a Tick for a given price, or returns the existing tick.
@@ -1408,10 +1434,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             revert Pool__InvalidBelowPrice(price, priceBelow);
 
         tick = Tick({
-            delta: iZERO,
-            externalFeeRate: price <= l.currentTick ? l.globalFeeRate : ZERO,
-            longDelta: iZERO,
-            shortDelta: iZERO,
+            delta: SD49_ZERO,
+            externalFeeRate: price <= l.currentTick ? l.globalFeeRate : UD50_ZERO,
+            longDelta: SD49_ZERO,
+            shortDelta: SD49_ZERO,
             counter: 0
         });
 
@@ -1435,7 +1461,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             // Can only remove an active tick if no active range order marks a starting / ending tick on this tick.
             tick.counter == 0
         ) {
-            if (tick.delta != iZERO) revert Pool__TickDeltaNotZero(tick.delta);
+            if (tick.delta != SD49_ZERO) revert Pool__TickDeltaNotZero(tick.delta.intoSD59x18());
 
             if (price == l.currentTick) {
                 UD60x18 newCurrentTick = l.tickIndex.prev(price);
@@ -1454,8 +1480,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _updateTicks(
         UD60x18 lower,
         UD60x18 upper,
-        UD60x18 marketPrice,
-        SD59x18 delta,
+        UD50x28 marketPrice,
+        SD49x28 delta,
         bool isNewDeposit,
         bool isFullWithdrawal,
         Position.OrderType orderType
@@ -1603,15 +1629,15 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         //              market price
         // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        if (delta > iZERO) {
+        if (delta > SD49_ZERO) {
             uint256 crossings;
 
-            while (l.tickIndex.next(l.currentTick) < marketPrice) {
+            while (l.tickIndex.next(l.currentTick).intoUD50x28() < marketPrice) {
                 _cross(true);
                 crossings++;
             }
 
-            while (l.currentTick > marketPrice) {
+            while (l.currentTick.intoUD50x28() > marketPrice) {
                 _cross(false);
                 crossings++;
             }
@@ -1623,10 +1649,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower,
             l.tickIndex.prev(lower),
             l.tickIndex.next(lower),
-            lowerTick.delta,
-            lowerTick.externalFeeRate,
-            lowerTick.longDelta,
-            lowerTick.shortDelta,
+            lowerTick.delta.intoSD59x18(),
+            lowerTick.externalFeeRate.intoUD60x18(),
+            lowerTick.longDelta.intoSD59x18(),
+            lowerTick.shortDelta.intoSD59x18(),
             lowerTick.counter
         );
 
@@ -1634,14 +1660,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             upper,
             l.tickIndex.prev(upper),
             l.tickIndex.next(upper),
-            upperTick.delta,
-            upperTick.externalFeeRate,
-            upperTick.longDelta,
-            upperTick.shortDelta,
+            upperTick.delta.intoSD59x18(),
+            upperTick.externalFeeRate.intoUD60x18(),
+            upperTick.longDelta.intoSD59x18(),
+            upperTick.shortDelta.intoSD59x18(),
             upperTick.counter
         );
 
-        if (delta <= iZERO) {
+        if (delta <= SD49_ZERO) {
             _removeTickIfNotActive(lower);
             _removeTickIfNotActive(upper);
         }
@@ -1649,8 +1675,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice Updates the global fee rate
     function _updateGlobalFeeRate(PoolStorage.Layout storage l, UD60x18 makerRebate) internal {
-        if (l.liquidityRate == ZERO) return;
-        l.globalFeeRate = l.globalFeeRate + (makerRebate / l.liquidityRate);
+        if (l.liquidityRate == UD50_ZERO) return;
+        l.globalFeeRate = l.globalFeeRate + (makerRebate.intoUD50x28() / l.liquidityRate);
     }
 
     /// @notice Crosses the active tick either to the left if the LT is selling
@@ -1683,10 +1709,10 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             l.currentTick,
             l.tickIndex.prev(l.currentTick),
             l.tickIndex.next(l.currentTick),
-            currentTick.delta,
-            currentTick.externalFeeRate,
-            currentTick.longDelta,
-            currentTick.shortDelta,
+            currentTick.delta.intoSD59x18(),
+            currentTick.externalFeeRate.intoUD60x18(),
+            currentTick.longDelta.intoSD59x18(),
+            currentTick.shortDelta.intoSD59x18(),
             currentTick.counter
         );
 
@@ -1725,18 +1751,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         PoolStorage.Layout storage l,
         UD60x18 lower,
         UD60x18 upper,
-        UD60x18 lowerTickExternalFeeRate,
-        UD60x18 upperTickExternalFeeRate
-    ) internal view returns (SD59x18) {
-        UD60x18 aboveFeeRate = l.currentTick >= upper
+        UD50x28 lowerTickExternalFeeRate,
+        UD50x28 upperTickExternalFeeRate
+    ) internal view returns (SD49x28) {
+        UD50x28 aboveFeeRate = l.currentTick >= upper
             ? l.globalFeeRate - upperTickExternalFeeRate
             : upperTickExternalFeeRate;
 
-        UD60x18 belowFeeRate = l.currentTick >= lower
+        UD50x28 belowFeeRate = l.currentTick >= lower
             ? lowerTickExternalFeeRate
             : l.globalFeeRate - lowerTickExternalFeeRate;
 
-        return l.globalFeeRate.intoSD59x18() - aboveFeeRate.intoSD59x18() - belowFeeRate.intoSD59x18();
+        return l.globalFeeRate.intoSD49x28() - aboveFeeRate.intoSD49x28() - belowFeeRate.intoSD49x28();
     }
 
     /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
@@ -1751,16 +1777,16 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         UD60x18 current = l.currentTick;
         UD60x18 right = l.tickIndex.next(current);
 
-        if (l.liquidityRate == ZERO) {
+        if (l.liquidityRate == UD50_ZERO) {
             // applies whenever the pool is empty or the last active order that
             // was traversed by the price was withdrawn
             // the check is independent of the current market price
             lower = current;
             upper = right;
         } else if (
-            -l.ticks[right].delta > iZERO &&
-            l.liquidityRate == (-l.ticks[right].delta).intoUD60x18() &&
-            right == l.marketPrice &&
+            -l.ticks[right].delta > SD49_ZERO &&
+            l.liquidityRate == (-l.ticks[right].delta).intoUD50x28() &&
+            right == l.marketPrice.intoUD60x18() &&
             l.tickIndex.next(right) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1776,9 +1802,9 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
             lower = right;
             upper = l.tickIndex.next(right);
         } else if (
-            -l.ticks[current].delta > iZERO &&
-            l.liquidityRate == (-l.ticks[current].delta).intoUD60x18() &&
-            current == l.marketPrice &&
+            -l.ticks[current].delta > SD49_ZERO &&
+            l.liquidityRate == (-l.ticks[current].delta).intoUD50x28() &&
+            current == l.marketPrice.intoUD60x18() &&
             l.tickIndex.prev(current) != ZERO
         ) {
             // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1809,8 +1835,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
 
     /// @notice In case the market price is stranded the market price needs to be set to the upper (lower) tick of the
     ///         bid (ask) order.
-    function _getStrandedMarketPriceUpdate(Position.KeyInternal memory p, bool isBid) internal pure returns (UD60x18) {
-        return isBid ? p.upper : p.lower;
+    function _getStrandedMarketPriceUpdate(Position.KeyInternal memory p, bool isBid) internal pure returns (UD50x28) {
+        return (isBid ? p.upper : p.lower).intoUD50x28();
     }
 
     /// @notice Revert if the tick width is invalid
@@ -1967,6 +1993,17 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         bytes32 quoteOBHash
     ) internal view {
         _isQuoteOBValid(l, args, quoteOB, quoteOBHash, true);
+    }
+
+    /// @notice Revert if the position does not exist
+    function _revertIfPositionDoesNotExist(address owner, uint256 tokenId, UD60x18 balance) internal pure {
+        if (balance == ZERO) revert Pool__PositionDoesNotExist(owner, tokenId);
+    }
+
+    /// @notice Revert if the position is in an invalid state
+    function _revertIfInvalidPositionState(uint256 balance, uint256 lastDeposit) internal pure {
+        if ((balance > 0 || lastDeposit > 0) && (balance == 0 || lastDeposit == 0))
+            revert Pool__InvalidPositionState(balance, lastDeposit);
     }
 
     /// @notice Returns true if OB quote is valid

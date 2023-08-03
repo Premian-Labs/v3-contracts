@@ -3,8 +3,10 @@
 pragma solidity ^0.8.19;
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
+import {IFeedRegistry} from "../IFeedRegistry.sol";
+import {IPriceRepository} from "../../adapter/IPriceRepository.sol";
 
-interface IChainlinkAdapter is IOracleAdapter {
+interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry, IPriceRepository {
     // Note : The following enums do not follow regular style guidelines for the purpose of easier readability
 
     /// @notice The path that will be used to calculate quotes for a given pair
@@ -41,6 +43,9 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @notice Thrown when the getRoundData call reverts without a reason
     error ChainlinkAdapter__GetRoundDataCallReverted(bytes data);
 
+    /// @notice Thrown when the denomination is invalid
+    error ChainlinkAdapter__InvalidDenomination(address denomination);
+
     /// @notice Thrown when the lastRoundData call reverts without a reason
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
@@ -52,6 +57,13 @@ interface IChainlinkAdapter is IOracleAdapter {
     /// @param tokenB The other of the pair's tokens
     /// @param path The new path
     event UpdatedPathForPair(address tokenA, address tokenB, PricingPath path);
+
+    struct BinarySearchDataInternal {
+        int256 leftPrice;
+        uint256 leftUpdatedAt;
+        int256 rightPrice;
+        uint256 rightUpdatedAt;
+    }
 
     /// @notice Returns the pricing path that will be used when quoting the given pair
     /// @dev tokenA and tokenB may be passed in either tokenA/tokenB or tokenB/tokenA order

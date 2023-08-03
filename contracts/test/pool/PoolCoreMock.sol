@@ -1,19 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.19;
+pragma solidity =0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
 import {Position} from "../../libraries/Position.sol";
 import {Pricing} from "../../libraries/Pricing.sol";
+import {UD50x28} from "../../libraries/UD50x28.sol";
 
 import {PoolInternal} from "../../pool/PoolInternal.sol";
 import {PoolStorage} from "../../pool/PoolStorage.sol";
 import {IPoolInternal} from "../../pool/IPoolInternal.sol";
 
 import {IPoolCoreMock} from "./IPoolCoreMock.sol";
+import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
 
 contract PoolCoreMock is IPoolCoreMock, PoolInternal {
+    using PoolStorage for IERC20;
     using PoolStorage for PoolStorage.Layout;
+    using Position for Position.KeyInternal;
 
     constructor(
         address factory,
@@ -81,7 +86,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
     function exposed_getStrandedMarketPriceUpdate(
         Position.KeyInternal memory p,
         bool isBid
-    ) external pure returns (UD60x18) {
+    ) external pure returns (UD50x28) {
         return _getStrandedMarketPriceUpdate(p, isBid);
     }
 
@@ -99,7 +104,7 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return l.currentTick;
     }
 
-    function getLiquidityRate() external view returns (UD60x18) {
+    function getLiquidityRate() external view returns (UD50x28) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.liquidityRate;
     }
@@ -112,17 +117,46 @@ contract PoolCoreMock is IPoolCoreMock, PoolInternal {
         return _isRateNonTerminating(lower, upper);
     }
 
-    function getLongRate() external view returns (UD60x18) {
+    function getLongRate() external view returns (UD50x28) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.longRate;
     }
 
-    function getShortRate() external view returns (UD60x18) {
+    function getShortRate() external view returns (UD50x28) {
         PoolStorage.Layout storage l = PoolStorage.layout();
         return l.shortRate;
     }
 
     function mint(address account, uint256 id, UD60x18 amount) external {
         _mint(account, id, amount.unwrap(), "");
+    }
+
+    function getPositionData(Position.KeyInternal memory p) external view returns (Position.Data memory) {
+        return PoolStorage.layout().positions[p.keyHash()];
+    }
+
+    function forceUpdateClaimableFees(Position.KeyInternal memory p) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+
+        _updateClaimableFees(
+            l,
+            p,
+            l.positions[p.keyHash()],
+            _balanceOfUD60x18(p.owner, PoolStorage.formatTokenId(p.operator, p.lower, p.upper, p.orderType))
+        );
+    }
+
+    function forceUpdateLastDeposit(Position.KeyInternal memory p, uint256 timestamp) external {
+        PoolStorage.layout().positions[p.keyHash()].lastDeposit = timestamp;
+    }
+
+    function safeTransferIgnoreDustUD60x18(address to, UD60x18 value) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(to, value);
+    }
+
+    function safeTransferIgnoreDust(address to, uint256 value) external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        IERC20(l.getPoolToken()).safeTransferIgnoreDust(to, value);
     }
 }

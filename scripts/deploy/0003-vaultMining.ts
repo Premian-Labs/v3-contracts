@@ -6,7 +6,6 @@ import {
 import { ethers } from 'hardhat';
 import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
 
 async function main() {
@@ -24,10 +23,6 @@ async function main() {
     addresses = arbitrumAddresses;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
-  } else if (chainId === ChainID.Goerli) {
-    addresses = goerliAddresses;
-    addressesPath = 'utils/deployment/goerli.json';
-    setImplementation = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     addresses = arbitrumGoerliAddresses;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
@@ -36,7 +31,7 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  // ToDo : Deploy OptionReward address
+  // ToDo : Deploy OptionReward contract
 
   const vaultMiningImplementation = await new VaultMining__factory(
     deployer,
@@ -44,7 +39,7 @@ async function main() {
     addresses.VaultRegistryProxy,
     addresses.tokens.PREMIA,
     addresses.VxPremiaProxy,
-    addresses.OptionRewardProxy,
+    addresses.optionReward['PREMIA/USDC'],
   );
 
   await vaultMiningImplementation.deployed();

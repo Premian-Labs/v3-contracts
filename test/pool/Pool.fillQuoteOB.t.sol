@@ -65,7 +65,7 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
 
         uint256 collateral = toTokenDecimals(contractsToCollateral(quoteOB.size));
 
-        uint256 protocolFee = pool.takerFee(users.trader, quoteOB.size, premium, false);
+        uint256 protocolFee = pool.takerFee(users.trader, quoteOB.size, premium, false, true);
 
         uint256 initialCollateral = getInitialCollateral();
 
@@ -92,7 +92,7 @@ abstract contract PoolFillQuoteOBTest is DeployTest {
         IPoolInternal.Signature memory sig = signQuoteOB(quoteOB);
 
         uint256 premium = toTokenDecimals(contractsToCollateral(quoteOB.price * quoteOB.size));
-        uint256 protocolFee = pool.takerFee(users.trader, quoteOB.size, premium, false);
+        uint256 protocolFee = pool.takerFee(users.trader, quoteOB.size, premium, false, true);
 
         (UD60x18 primaryRebatePercent, UD60x18 secondaryRebatePercent) = referral.getRebatePercents(users.referrer);
 

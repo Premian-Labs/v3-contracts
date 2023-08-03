@@ -3,13 +3,12 @@ import {
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { arbitrumGoerliFeeds, goerliFeeds } from '../../utils/addresses';
+import { arbitrumGoerliFeeds } from '../../utils/addresses';
 import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import goerliAddresses from '../../utils/deployment/goerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { ChainID } from '../../utils/deployment/types';
+import { ChainID, ContractAddresses } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -23,24 +22,21 @@ async function main() {
   let feeReceiver: string;
   let chainlinkAdapter: string;
 
+  let addresses: ContractAddresses;
+
   if (chainId === ChainID.Arbitrum) {
-    weth = arbitrumAddresses.tokens.WETH;
-    wbtc = arbitrumAddresses.tokens.WBTC;
-    feeReceiver = arbitrumAddresses.feeReceiver;
-    vxPremia = arbitrumAddresses.VxPremiaProxy;
-  } else if (chainId === ChainID.Goerli) {
-    weth = goerliAddresses.tokens.WETH;
-    wbtc = goerliAddresses.tokens.WBTC;
-    feeReceiver = goerliAddresses.feeReceiver;
-    vxPremia = goerliAddresses.VxPremiaProxy;
+    addresses = arbitrumAddresses;
   } else if (chainId == ChainID.ArbitrumGoerli) {
-    weth = arbitrumGoerliAddresses.tokens.WETH;
-    wbtc = arbitrumGoerliAddresses.tokens.WBTC;
-    feeReceiver = arbitrumAddresses.feeReceiver;
-    vxPremia = arbitrumGoerliAddresses.VxPremiaProxy;
+    addresses = arbitrumGoerliAddresses;
   } else {
     throw new Error('ChainId not implemented');
   }
+
+  weth = addresses.tokens.WETH;
+  wbtc = addresses.tokens.WBTC;
+  feeReceiver = addresses.feeReceiver;
+  vxPremia = addresses.VxPremiaProxy;
+
   //////////////////////////
   // Deploy ChainlinkAdapter
   const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
@@ -58,13 +54,7 @@ async function main() {
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
 
-  if (chainId === ChainID.Goerli) {
-    // Goerli
-    await ChainlinkAdapter__factory.connect(
-      chainlinkAdapter,
-      deployer,
-    ).batchRegisterFeedMappings(goerliFeeds);
-  } else if (chainId == ChainID.ArbitrumGoerli) {
+  if (chainId == ChainID.ArbitrumGoerli) {
     await ChainlinkAdapter__factory.connect(
       chainlinkAdapter,
       deployer,
