@@ -4,16 +4,15 @@ pragma solidity =0.8.19;
 
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
-import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IRelayerAccessManager} from "./IRelayerAccessManager.sol";
 import {RelayerAccessManagerStorage} from "./RelayerAccessManagerStorage.sol";
 
-abstract contract RelayerAccessManager is IRelayerAccessManager, OwnableInternal, ReentrancyGuard {
+abstract contract RelayerAccessManager is IRelayerAccessManager, OwnableInternal {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @inheritdoc IRelayerAccessManager
-    function addWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner nonReentrant {
+    function addWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner {
         RelayerAccessManagerStorage.Layout storage l = RelayerAccessManagerStorage.layout();
 
         for (uint256 i = 0; i < relayers.length; i++) {
@@ -24,7 +23,7 @@ abstract contract RelayerAccessManager is IRelayerAccessManager, OwnableInternal
     }
 
     /// @inheritdoc IRelayerAccessManager
-    function removeWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner nonReentrant {
+    function removeWhitelistedRelayers(address[] calldata relayers) external virtual onlyOwner {
         RelayerAccessManagerStorage.Layout storage l = RelayerAccessManagerStorage.layout();
 
         for (uint256 i = 0; i < relayers.length; i++) {

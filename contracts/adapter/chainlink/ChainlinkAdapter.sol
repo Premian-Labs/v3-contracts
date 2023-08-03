@@ -171,7 +171,7 @@ contract ChainlinkAdapter is
         return path;
     }
 
-    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner nonReentrant {
+    function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external override onlyOwner {
         for (uint256 i = 0; i < args.length; i++) {
             address token = _tokenToDenomination(args[i].token);
             address denomination = args[i].denomination;
