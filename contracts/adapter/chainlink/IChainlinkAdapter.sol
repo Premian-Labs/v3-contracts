@@ -4,8 +4,9 @@ pragma solidity ^0.8.19;
 
 import {IOracleAdapter} from "../IOracleAdapter.sol";
 import {IFeedRegistry} from "../IFeedRegistry.sol";
+import {IPriceRepository} from "../../adapter/IPriceRepository.sol";
 
-interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry {
+interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry, IPriceRepository {
     // Note : The following enums do not follow regular style guidelines for the purpose of easier readability
 
     /// @notice The path that will be used to calculate quotes for a given pair
