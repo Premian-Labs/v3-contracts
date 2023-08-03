@@ -13,13 +13,13 @@ interface IFeedRegistry {
     /// @param args The arguments for the new mappings
     event FeedMappingsRegistered(FeedMappingArgs[] args);
 
-    /// @notice Registers mappings of ERC20 token, and denomination (ETH, or USD) to feed
+    /// @notice Registers mappings of ERC20 token, and denomination (ETH, BTC, or USD) to feed
     /// @param args The arguments for the new mappings
     function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external;
 
-    /// @notice Returns the feed for the given pair
-    /// @param tokenA One of the pair's tokens
-    /// @param tokenB The other of the pair's tokens
+    /// @notice Returns the feed for `token` and `denomination`
+    /// @param token The exchange token (ERC20 token)
+    /// @param denomination The Chainlink token denomination to quote against (ETH, BTC, or USD)
     /// @return The feed address
-    function feed(address tokenA, address tokenB) external view returns (address);
+    function feed(address token, address denomination) external view returns (address);
 }

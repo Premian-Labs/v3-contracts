@@ -103,9 +103,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         if (path <= PricingPath.TOKEN_ETH) {
             return _getDirectPrice(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.TOKEN_ETH_TOKEN) {
-            return _getPriceSameBase(path, mappedTokenIn, mappedTokenOut, target);
+            return _getPriceSameDenomination(path, mappedTokenIn, mappedTokenOut, target);
         } else if (path <= PricingPath.A_ETH_USD_B) {
-            return _getPriceDifferentBases(path, mappedTokenIn, mappedTokenOut, target);
+            return _getPriceDifferentDenomination(path, mappedTokenIn, mappedTokenOut, target);
         } else {
             return _getPriceWBTCPrice(mappedTokenIn, mappedTokenOut, target);
         }
@@ -228,29 +228,29 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return invert ? price.inv() : price;
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when both tokens share the same base (either
-    ///         ETH or USD)
-    function _getPriceSameBase(
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when both tokens share the same token
+    ///         denomination (either ETH or USD)
+    function _getPriceSameDenomination(
         PricingPath path,
         address tokenIn,
         address tokenOut,
         uint256 target
     ) internal view returns (UD60x18) {
         int8 factor = PricingPath.TOKEN_USD_TOKEN == path ? int8(ETH_DECIMALS - FOREX_DECIMALS) : int8(0);
-        address base = path == PricingPath.TOKEN_USD_TOKEN ? Denominations.USD : Denominations.ETH;
+        address denomination = path == PricingPath.TOKEN_USD_TOKEN ? Denominations.USD : Denominations.ETH;
 
-        uint256 tokenInToBase = _fetchPrice(tokenIn, base, target, factor);
-        uint256 tokenOutToBase = _fetchPrice(tokenOut, base, target, factor);
+        uint256 tokenInToDenomination = _fetchPrice(tokenIn, denomination, target, factor);
+        uint256 tokenOutToDenomination = _fetchPrice(tokenOut, denomination, target, factor);
 
-        UD60x18 adjustedTokenInToBase = ud(_scale(tokenInToBase, factor));
-        UD60x18 adjustedTokenOutToBase = ud(_scale(tokenOutToBase, factor));
+        UD60x18 adjustedTokenInToDenomination = ud(_scale(tokenInToDenomination, factor));
+        UD60x18 adjustedTokenOutToDenomination = ud(_scale(tokenOutToDenomination, factor));
 
-        return adjustedTokenInToBase / adjustedTokenOutToBase;
+        return adjustedTokenInToDenomination / adjustedTokenOutToDenomination;
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when one of the tokens uses ETH as the base,
-    ///         and the other USD
-    function _getPriceDifferentBases(
+    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` when one of the tokens uses ETH as the
+    ///         denomination, and the other USD
+    function _getPriceDifferentDenomination(
         PricingPath path,
         address tokenIn,
         address tokenOut,
@@ -368,67 +368,69 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         PricingPath preferredPath,
         PricingPath fallbackPath
     ) internal view returns (PricingPath) {
-        address preferredQuote;
-        address fallbackQuote;
+        address preferredDenomination;
+        address fallbackDenomination;
 
         if (conversionType == ConversionType.TO_BTC) {
-            preferredQuote = Denominations.USD;
-            fallbackQuote = Denominations.BTC;
+            preferredDenomination = Denominations.USD;
+            fallbackDenomination = Denominations.BTC;
         } else if (conversionType == ConversionType.TO_USD) {
-            preferredQuote = Denominations.USD;
-            fallbackQuote = Denominations.ETH;
+            preferredDenomination = Denominations.USD;
+            fallbackDenomination = Denominations.ETH;
         } else if (conversionType == ConversionType.TO_ETH) {
-            preferredQuote = Denominations.ETH;
-            fallbackQuote = Denominations.USD;
+            preferredDenomination = Denominations.ETH;
+            fallbackDenomination = Denominations.USD;
         } else if (conversionType == ConversionType.TO_USD_TO_TOKEN) {
-            preferredQuote = Denominations.USD;
-            fallbackQuote = Denominations.ETH;
+            preferredDenomination = Denominations.USD;
+            fallbackDenomination = Denominations.ETH;
         } else if (conversionType == ConversionType.TO_ETH_TO_TOKEN) {
-            preferredQuote = Denominations.ETH;
-            fallbackQuote = Denominations.USD;
+            preferredDenomination = Denominations.ETH;
+            fallbackDenomination = Denominations.USD;
         }
 
-        if (_feedExists(token, preferredQuote)) {
+        if (_feedExists(token, preferredDenomination)) {
             return preferredPath;
-        } else if (_feedExists(token, fallbackQuote)) {
+        } else if (_feedExists(token, fallbackDenomination)) {
             return fallbackPath;
         } else {
             return PricingPath.NONE;
         }
     }
 
-    /// @notice Returns the price of `tokenIn` denominated in `tokenOut` at `target`
+    /// @notice Returns the latest price of `token` denominated in `denomination`, if `target` is 0, otherwise the
+    ///         closest price to `target` is returned
     function _fetchPrice(
-        address tokenIn,
-        address tokenOut,
+        address token,
+        address denomination,
         uint256 target,
         int8 factor
     ) internal view returns (uint256) {
-        return target == 0 ? _fetchLatestPrice(tokenIn, tokenOut) : _fetchPriceAt(tokenIn, tokenOut, target, factor);
+        return
+            target == 0 ? _fetchLatestPrice(token, denomination) : _fetchPriceAt(token, denomination, target, factor);
     }
 
-    /// @notice Returns the latest price of `tokenIn` denominated in `tokenOut`
-    function _fetchLatestPrice(address tokenIn, address tokenOut) internal view returns (uint256) {
-        address feed = _feed(tokenIn, tokenOut);
+    /// @notice Returns the latest price of `token` denominated in `denomination`
+    function _fetchLatestPrice(address token, address denomination) internal view returns (uint256) {
+        address feed = _feed(token, denomination);
         (, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
         _revertIfPriceAfterTargetStale(block.timestamp, updatedAt);
         _revertIfPriceInvalid(price);
         return price.toUint256();
     }
 
-    /// @notice Returns the historical price of `tokenIn` denominated in `tokenOut` at `target`.
+    /// @notice Returns the price of `token` denominated in `denomination` closest to `target`
     function _fetchPriceAt(
-        address tokenIn,
-        address tokenOut,
+        address token,
+        address denomination,
         uint256 target,
         int8 factor
     ) internal view returns (uint256) {
         UD60x18 cachedPriceAtTarget = _getCachedPriceAt(tokenIn, tokenOut, target);
         // NOTE: The cached prices are 18 decimals to maintain consistency across all adapters, because of this we need
-        // to downscale the cached price the precision used by the feed before calculating the final price
+        // to downscale the cached price to the precision used by the feed before calculating the final price
         if (cachedPriceAtTarget > ZERO) return _scale(cachedPriceAtTarget.unwrap(), -int8(factor));
 
-        address feed = _feed(tokenIn, tokenOut);
+        address feed = _feed(token, denomination);
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
         (uint16 phaseId, uint64 nextAggregatorRoundId) = ChainlinkAdapterStorage.parseRoundId(roundId);
 
@@ -544,9 +546,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         }
     }
 
-    /// @notice Returns the Chainlink aggregator for pair `tokenA` and `tokenB`
-    function _aggregator(address tokenA, address tokenB) internal view returns (address[] memory aggregator) {
-        address feed = _feed(tokenA, tokenB);
+    /// @notice Returns the Chainlink aggregator for `token` / `denomination`
+    function _aggregator(address token, address denomination) internal view returns (address[] memory aggregator) {
+        address feed = _feed(token, denomination);
         aggregator = new address[](1);
         aggregator[0] = AggregatorProxyInterface(feed).aggregator();
     }
