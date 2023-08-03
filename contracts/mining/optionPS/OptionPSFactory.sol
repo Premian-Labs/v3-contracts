@@ -2,7 +2,6 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 
 import {IOptionPSFactory} from "./IOptionPSFactory.sol";

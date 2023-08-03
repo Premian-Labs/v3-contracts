@@ -9,7 +9,6 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
-import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
 library OptionRewardStorage {
