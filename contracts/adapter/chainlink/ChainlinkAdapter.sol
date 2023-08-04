@@ -483,8 +483,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
             }
         }
 
-        _revertIfPriceAfterTargetStale(target, updatedAt);
         _revertIfPriceInvalid(price);
+        _revertIfPriceAfterTargetStale(target, updatedAt);
 
         return price.toUint256();
     }
