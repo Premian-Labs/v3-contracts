@@ -1339,11 +1339,14 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     function _tryCacheSettlementPrice(PoolStorage.Layout storage l) internal returns (UD60x18) {
-        if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
+        UD60x18 settlementPrice = l.settlementPrice;
+        if (settlementPrice == ZERO) {
+            settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
+            l.settlementPrice = settlementPrice;
+            emit SettlementPriceCached(settlementPrice);
         }
 
-        return l.settlementPrice;
+        return settlementPrice;
     }
 
     /// @notice Deletes the `pKeyHash` from positions mapping
