@@ -609,9 +609,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return ud(_scale(_fetchPrice(WRAPPED_BTC_TOKEN, Denominations.BTC, target, factor), factor));
     }
 
-    /// @notice Revert if price is stale and MAX_DELAY has not passed
+    /// @notice Revert if price is stale and MAX_DELAY is not exceeded
     function _revertIfPriceAfterTargetStale(uint256 target, uint256 updatedAt) internal view {
-        if (target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt > PRICE_STALE_THRESHOLD)
+        if (target >= updatedAt && block.timestamp - target <= MAX_DELAY && target - updatedAt > PRICE_STALE_THRESHOLD)
             revert ChainlinkAdapter__PriceAfterTargetIsStale(target, updatedAt, block.timestamp);
     }
 
