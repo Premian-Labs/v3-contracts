@@ -1902,6 +1902,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
+    /// @dev lower should NOT be equal to upper, to avoid running into an infinite loop
     function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
         UD60x18 den = (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
 
