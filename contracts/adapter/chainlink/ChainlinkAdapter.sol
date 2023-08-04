@@ -417,7 +417,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     }
 
     /// @notice Returns the latest price of `token` denominated in `denomination`, if `target` is 0, otherwise the
-    ///         closest price to `target` is returned
+    ///         price at or left of `target` is returned
     function _fetchPrice(
         address token,
         address denomination,
@@ -437,7 +437,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return price.toUint256();
     }
 
-    /// @notice Returns the price of `token` denominated in `denomination` closest to `target`
+    /// @notice Returns the price of `token` denominated in `denomination` at or left of `target`
     function _fetchPriceAt(
         address token,
         address denomination,
@@ -455,7 +455,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
 
         BinarySearchDataInternal memory binarySearchData;
 
-        // if latest round data is on right side of target, search for round data closest to the target
+        // if latest round data is on right side of target, search for round data at or left of target
         if (updatedAt > target) {
             binarySearchData.rightPrice = price;
             binarySearchData.rightUpdatedAt = updatedAt;
@@ -471,12 +471,15 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
             price = binarySearchData.rightPrice;
             updatedAt = binarySearchData.rightUpdatedAt;
 
-            if (
-                binarySearchData.leftUpdatedAt > 0 &&
-                target - binarySearchData.leftUpdatedAt <= binarySearchData.rightUpdatedAt - target
-            ) {
-                price = binarySearchData.leftPrice;
-                updatedAt = binarySearchData.leftUpdatedAt;
+            if (binarySearchData.leftUpdatedAt > 0) {
+                if (target - binarySearchData.leftUpdatedAt <= binarySearchData.rightUpdatedAt - target) {
+                    price = binarySearchData.leftPrice;
+                    updatedAt = binarySearchData.leftUpdatedAt;
+                }
+            } else {
+                // if leftUpdatedAt is 0, it means that the target is not in the current phase, therefore, we must
+                // revert and wait until a price is set in PriceRepository
+                revert ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound(token, denomination, target);
             }
         }
 

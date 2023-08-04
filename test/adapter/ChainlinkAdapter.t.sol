@@ -939,6 +939,34 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
     }
 
+    function test_getPriceAt_RevertIf_PriceAtOrLeftOfTargetNotFound() public {
+        // price at or to left of target is not found
+        int256[] memory prices = new int256[](4);
+        prices[0] = 0;
+        prices[1] = 100000000000;
+        prices[2] = 200000000000;
+        prices[3] = 300000000000;
+
+        uint256[] memory timestamps = new uint256[](4);
+        timestamps[0] = 0;
+        timestamps[1] = target + 50;
+        timestamps[2] = target + 100;
+        timestamps[3] = target + 200;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter.ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound.selector,
+                stubCoin,
+                CHAINLINK_USD,
+                target
+            )
+        );
+
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+    }
+
     function test_getPriceAt_RevertIf_PairNotSupported() public {
         vm.expectRevert(
             abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
