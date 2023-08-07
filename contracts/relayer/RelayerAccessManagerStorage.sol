@@ -2,16 +2,13 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
-library PriceRepositoryStorage {
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.PriceRepository");
+library RelayerAccessManagerStorage {
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.RelayerAccessManager");
 
     struct Layout {
         EnumerableSet.AddressSet whitelistedRelayers;
-        mapping(address base => mapping(address quote => uint256 timestamp)) latestPriceTimestamp;
-        mapping(address base => mapping(address quote => mapping(uint256 timestamp => UD60x18 price))) prices;
     }
 
     function layout() internal pure returns (Layout storage l) {

@@ -19,7 +19,7 @@ library OptionRewardStorage {
     using SafeCast for uint256;
     using SafeERC20 for IERC20;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.mining.OptionReward");
+    bytes32 internal constant STORAGE_SLOT = keccak256("premia.contracts.storage.OptionReward");
 
     struct Layout {
         IOptionPS option;
@@ -27,7 +27,7 @@ library OptionRewardStorage {
         uint8 quoteDecimals;
         address base;
         address quote;
-        IPriceRepository priceRepository;
+        IPriceRepository oracleAdapter;
         IPaymentSplitter paymentSplitter;
         // percentage of the asset spot price used to set the strike price
         UD60x18 discount;

@@ -31,7 +31,7 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  // ToDo : Deploy OptionReward address
+  // ToDo : Deploy OptionReward contract
 
   const vaultMiningImplementation = await new VaultMining__factory(
     deployer,
@@ -39,7 +39,7 @@ async function main() {
     addresses.VaultRegistryProxy,
     addresses.tokens.PREMIA,
     addresses.VxPremiaProxy,
-    addresses.OptionRewardProxy,
+    addresses.optionReward['PREMIA/USDC'],
   );
 
   await vaultMiningImplementation.deployed();

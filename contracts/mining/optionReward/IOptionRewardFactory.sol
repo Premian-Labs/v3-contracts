@@ -12,7 +12,7 @@ import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 interface IOptionRewardFactory is IProxyManager {
     event ProxyDeployed(
         IOptionPS indexed option,
-        IPriceRepository priceRepository,
+        IPriceRepository oracleAdapter,
         IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
@@ -24,7 +24,7 @@ interface IOptionRewardFactory is IProxyManager {
 
     struct OptionRewardArgs {
         IOptionPS option;
-        IPriceRepository priceRepository;
+        IPriceRepository oracleAdapter;
         IPaymentSplitter paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;

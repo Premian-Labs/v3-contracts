@@ -123,14 +123,6 @@ library PoolStorage {
         return l.isCallPool ? l.base : l.quote;
     }
 
-    function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
-        if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
-        }
-
-        return l.settlementPrice;
-    }
-
     /// @notice calculate ERC1155 token id for given option parameters
     /// @param operator The current operator of the position
     /// @param lower The lower bound normalized option price (18 decimals)

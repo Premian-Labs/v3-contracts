@@ -9,26 +9,11 @@ import {VolatilityOracleStorage} from "./VolatilityOracleStorage.sol";
 interface IVolatilityOracle {
     error VolatilityOracle__ArrayLengthMismatch();
     error VolatilityOracle__OutOfBounds(int256 value);
-    error VolatilityOracle__RelayerNotWhitelisted(address sender);
     error VolatilityOracle__SpotIsZero();
     error VolatilityOracle__StrikeIsZero();
     error VolatilityOracle__TimeToMaturityIsZero();
 
-    event AddWhitelistedRelayer(address indexed account);
-    event RemoveWhitelistedRelayer(address indexed account);
     event UpdateParameters(address indexed token, bytes32 tau, bytes32 theta, bytes32 psi, bytes32 rho);
-
-    /// @notice Add relayers to the whitelist so that they can add oracle surfaces
-    /// @param accounts The addresses to add to the whitelist
-    function addWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Remove relayers from the whitelist so that they cannot add oracle surfaces
-    /// @param accounts The addresses to remove from the whitelist
-    function removeWhitelistedRelayers(address[] calldata accounts) external;
-
-    /// @notice Get the list of whitelisted relayers
-    /// @return The list of whitelisted relayers
-    function getWhitelistedRelayers() external view returns (address[] memory);
 
     /// @notice Pack IV model parameters into a single bytes32
     /// @dev This function is used to pack the parameters into a single variable, which is then used as input in `update`

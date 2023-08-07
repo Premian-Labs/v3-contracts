@@ -2,7 +2,6 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {UD60x18} from "@prb/math/UD60x18.sol";
 import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorage.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC165} from "@solidstate/contracts/interfaces/IERC165.sol";
@@ -12,7 +11,6 @@ import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20M
 
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionPSStorage} from "./OptionPSStorage.sol";
-import {OptionPSFactory} from "./OptionPSFactory.sol";
 
 contract OptionPSProxy is Proxy, ERC165BaseInternal {
     IProxyManager private immutable MANAGER;

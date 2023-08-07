@@ -10,11 +10,13 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
+import {ONE} from "contracts/libraries/Constants.sol";
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";
 import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.sol";
 import {ChainlinkAdapter} from "contracts/adapter/chainlink/ChainlinkAdapter.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
+import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol";
 
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePriceStub.sol";
@@ -31,6 +33,12 @@ contract ChainlinkAdapterTest is Test, Assertions {
     Path[] paths;
     ChainlinkAdapter adapter;
     uint256 target;
+
+    ChainlinkOraclePriceStub stub;
+    address stubCoin;
+
+    address internal relayer;
+    address internal user;
 
     function setUp() public {
         string memory ETH_RPC_URL = string.concat(
@@ -113,20 +121,27 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter = ChainlinkAdapter(proxy);
 
         adapter.batchRegisterFeedMappings(feeds());
+        _deployStub();
+
+        relayer = vm.addr(1);
+        user = vm.addr(2);
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = relayer;
+        adapter.addWhitelistedRelayers(relayers);
     }
 
-    function _deployStub() internal returns (ChainlinkOraclePriceStub stub, address stubCoin) {
+    function _deployStub() internal {
         stub = new ChainlinkOraclePriceStub();
         stubCoin = address(100);
 
-        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
-
+        IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](2);
         data[0] = IFeedRegistry.FeedMappingArgs(stubCoin, CHAINLINK_USD, address(stub));
+        data[1] = IFeedRegistry.FeedMappingArgs(stubCoin, CHAINLINK_ETH, address(stub));
 
         adapter.batchRegisterFeedMappings(data);
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
-
-        return (stub, stubCoin);
+        adapter.upsertPair(stubCoin, CHAINLINK_ETH);
     }
 
     function _addWBTCUSD(IChainlinkAdapter.PricingPath path) internal {
@@ -172,7 +187,20 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertTrue(hasPath);
     }
 
-    function test_upserPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
+    function test_isPairSupported_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.isPairSupported(CRV, CRV);
+    }
+
+    function test_isPairSupported_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(CRV, address(0));
+    }
+
+    function test_upsertPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
         adapter.upsertPair(WETH, DAI);
         (bool isCached, ) = adapter.isPairSupported(WETH, DAI);
         assertTrue(isCached);
@@ -182,14 +210,27 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_upsertPair_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(0), WETH)
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
-        adapter.upsertPair(address(0), WETH);
+        adapter.upsertPair(address(1), WETH);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(1))
         );
-        adapter.upsertPair(WBTC, address(0));
+        adapter.upsertPair(WBTC, address(1));
+    }
+
+    function test_upsertPair_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.upsertPair(CRV, CRV);
+    }
+
+    function test_upsertPair_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(CRV, address(0));
     }
 
     function test_batchRegisterFeedMappings_RemoveFeed() public {
@@ -275,7 +316,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenEqualDenomination() public {
+    function test_batchRegisterFeedMappings_RevertIf_TokensAreSame() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));
 
@@ -283,7 +324,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.batchRegisterFeedMappings(data);
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenOrDenominationIsZero() public {
+    function test_batchRegisterFeedMappings_RevertIf_ZeroAddress() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
 
         data[0] = IFeedRegistry.FeedMappingArgs(address(0), DAI, address(1));
@@ -306,7 +347,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        vm.prank(vm.addr(1));
+        vm.prank(user);
         adapter.batchRegisterFeedMappings(data);
     }
 
@@ -323,47 +364,47 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPrice_ReturnPriceForPair() public {
-        // Expected values exported from Defilama
-        UD60x18[39] memory expected = [
-            ud(1551253958184865268777), // WETH CHAINLINK_USD
-            ud(644639773341889), // CHAINLINK_USD WETH
-            ud(1552089999999999918145), // CHAINLINK_ETH CHAINLINK_USD
-            ud(999758000000000036), // DAI CHAINLINK_USD
-            ud(79200000000000002842), // AAVE CHAINLINK_USD
-            ud(45722646426775), // CHAINLINK_USD WBTC
-            ud(21871000000000000000000), // WBTC CHAINLINK_USD
-            ud(282273493583309), // BNT WETH
-            ud(6617057201666803), // AXS WETH
-            ud(1570958490531603047202), // WETH CRV
-            ud(12467891414141414), // CRV AAVE
-            ud(12623207070707071), // DAI AAVE
-            ud(79219171039391525824), // AAVE DAI
-            ud(987652555205930871), // CRV USDC
-            ud(20230716309186565), // USDC COMP
-            ud(45711581546340), // DAI WBTC
-            ud(21875331315600487869233), // WBTC USDC
-            ud(410573778449028981), // BOND AXS
-            ud(28582048972903472), // ALPHA BOND
-            ud(7725626669884812), // FXS WETH
-            ud(1202522448205321779824), // WETH MATIC
-            ud(97446588693957115), // USDC AXS
-            ud(120430653003309712), // ALPHA DAI
-            ud(8303533818524737597), // DAI ALPHA
-            ud(1168071047867190515), // FXS AXS
-            ud(93334502934327837), // ALPHA MATIC
-            ud(70927436248222092), // WETH WBTC
-            ud(1701565115821158997278), // WETH IMX
-            ud(587694229684187), // IMX WETH
-            ud(11254158609047422601), // AXS IMX
-            ud(2844972351326624072), // FXS BOND
-            ud(351497264827088818), // BOND FXS
-            ud(21871000000000000000000), // WBTC CHAINLINK_USD
-            ud(999177669148887615), // WBTC CHAINLINK_BTC
-            ud(14098916482760458280), // WBTC WETH
-            ud(70927436248222092), // WETH WBTC
-            ud(45711581546340), // DAI WBTC
-            ud(21875331315600487869233), // WBTC USDC
-            ud(49947716676413132518064) // WBTC BNT
+        // Expected price values provided by DeFiLlama API (https://coins.llama.fi)
+        uint80[39] memory expected = [
+            1551253958184865268777, // WETH CHAINLINK_USD
+            644639773341889, // CHAINLINK_USD WETH
+            1552089999999999918145, // CHAINLINK_ETH CHAINLINK_USD
+            999758000000000036, // DAI CHAINLINK_USD
+            79200000000000002842, // AAVE CHAINLINK_USD
+            45722646426775, // CHAINLINK_USD WBTC
+            21871000000000000000000, // WBTC CHAINLINK_USD
+            282273493583309, // BNT WETH
+            6617057201666803, // AXS WETH
+            1570958490531603047202, // WETH CRV
+            12467891414141414, // CRV AAVE
+            12623207070707071, // DAI AAVE
+            79219171039391525824, // AAVE DAI
+            987652555205930871, // CRV USDC
+            20230716309186565, // USDC COMP
+            45711581546340, // DAI WBTC
+            21875331315600487869233, // WBTC USDC
+            410573778449028981, // BOND AXS
+            28582048972903472, // ALPHA BOND
+            7725626669884812, // FXS WETH
+            1202522448205321779824, // WETH MATIC
+            97446588693957115, // USDC AXS
+            120430653003309712, // ALPHA DAI
+            8303533818524737597, // DAI ALPHA
+            1168071047867190515, // FXS AXS
+            93334502934327837, // ALPHA MATIC
+            70927436248222092, // WETH WBTC
+            1701565115821158997278, // WETH IMX
+            587694229684187, // IMX WETH
+            11254158609047422601, // AXS IMX
+            2844972351326624072, // FXS BOND
+            351497264827088818, // BOND FXS
+            21871000000000000000000, // WBTC CHAINLINK_USD
+            999177669148887615, // WBTC CHAINLINK_BTC
+            14098916482760458280, // WBTC WETH
+            70927436248222092, // WETH WBTC
+            45711581546340, // DAI WBTC
+            21875331315600487869233, // WBTC USDC
+            49947716676413132518064 // WBTC BNT
         ];
 
         uint256 snapshot = vm.snapshot();
@@ -377,8 +418,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             assertApproxEqAbs(
                 price.unwrap(),
-                expected[i].unwrap(),
-                (expected[i].unwrap() * 3) / 100 // 3% tolerance
+                expected[i],
+                (expected[i] * 3) / 100 // 3% tolerance
             );
 
             vm.revertTo(snapshot);
@@ -437,7 +478,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPrice_RevertIf_PriceAfterTargetIsStale() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
         int256[] memory prices = new int256[](1);
@@ -465,14 +505,25 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
         );
-        adapter.getPrice(WETH, address(0));
+        adapter.getPrice(WETH, address(1));
+    }
+
+    function test_getPrice_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPrice(CRV, CRV);
+    }
+
+    function test_getPrice_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(CRV, address(0));
     }
 
     function test_getPrice_CatchRevert() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
-
         int256[] memory prices = new int256[](1);
         uint256[] memory timestamps = new uint256[](1);
 
@@ -495,47 +546,47 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPriceAt_ReturnPriceForPairFromTarget() public {
-        // Expected values exported from Defilama
-        UD60x18[39] memory expected = [
-            ud(1552329999999999927240), // WETH CHAINLINK_USD
-            ud(644192922896549), // CHAINLINK_USD WETH
-            ud(1553210000000000036380), // CHAINLINK_ETH CHAINLINK_USD
-            ud(1000999999999999890), // DAI CHAINLINK_USD
-            ud(79620000000000004547), // AAVE CHAINLINK_USD
-            ud(45583006655119), // CHAINLINK_USD WBTC
-            ud(21938000000000000000000), // WBTC CHAINLINK_USD
-            ud(282841277305728), // BNT WETH
-            ud(6609419388918594), // AXS WETH
-            ud(1560637272199920062121), // WETH CRV
-            ud(12492803315749812), // CRV AAVE
-            ud(12572218035669427), // DAI AAVE
-            ud(79540459540459551135), // AAVE DAI
-            ud(992691616766467111), // CRV USDC
-            ud(20242424242424242), // USDC COMP
-            ud(45628589661774), // DAI WBTC
-            ud(21894211576846308162203), // WBTC USDC
-            ud(413255360623781709), // BOND AXS
-            ud(28558726415094340), // ALPHA BOND
-            ud(7930014880856519), // FXS WETH
-            ud(1232007936507936392445), // WETH MATIC
-            ud(97660818713450295), // USDC AXS
-            ud(120968031968031978), // ALPHA DAI
-            ud(8266646846534365878), // DAI ALPHA
-            ud(1199805068226120985), // FXS AXS
-            ud(96102380952380953), // ALPHA MATIC
-            ud(70759868720940824), // WETH WBTC
-            ud(1732435753354485541422), // WETH IMX
-            ud(577221982439301), // IMX WETH
-            ud(11450394458276926812), // AXS IMX
-            ud(2903301886792452713), // FXS BOND
-            ud(344435418359057666), // BOND FXS
-            ud(21938000000000000000000), // WBTC CHAINLINK_USD
-            ud(999225688909132326), // WBTC CHAINLINK_BTC
-            ud(14132304342504493633), // WBTC WETH
-            ud(70759868720940824), // WETH WBTC
-            ud(45628589661774), // DAI WBTC
-            ud(21894211576846308162203), // WBTC USDC
-            ud(49965494701215997338295) // WBTC BNT
+        // Expected price values provided by DeFiLlama API (https://coins.llama.fi)
+        uint80[39] memory expected = [
+            1552329999999999927240, // WETH CHAINLINK_USD
+            644192922896549, // CHAINLINK_USD WETH
+            1553210000000000036380, // CHAINLINK_ETH CHAINLINK_USD
+            1000999999999999890, // DAI CHAINLINK_USD
+            79620000000000004547, // AAVE CHAINLINK_USD
+            45583006655119, // CHAINLINK_USD WBTC
+            21938000000000000000000, // WBTC CHAINLINK_USD
+            282841277305728, // BNT WETH
+            6609419388918594, // AXS WETH
+            1560637272199920062121, // WETH CRV
+            12492803315749812, // CRV AAVE
+            12572218035669427, // DAI AAVE
+            79540459540459551135, // AAVE DAI
+            992691616766467111, // CRV USDC
+            20242424242424242, // USDC COMP
+            45628589661774, // DAI WBTC
+            21894211576846308162203, // WBTC USDC
+            413255360623781709, // BOND AXS
+            28558726415094340, // ALPHA BOND
+            7930014880856519, // FXS WETH
+            1232007936507936392445, // WETH MATIC
+            97660818713450295, // USDC AXS
+            120968031968031978, // ALPHA DAI
+            8266646846534365878, // DAI ALPHA
+            1199805068226120985, // FXS AXS
+            96102380952380953, // ALPHA MATIC
+            70759868720940824, // WETH WBTC
+            1732435753354485541422, // WETH IMX
+            577221982439301, // IMX WETH
+            11450394458276926812, // AXS IMX
+            2903301886792452713, // FXS BOND
+            344435418359057666, // BOND FXS
+            21938000000000000000000, // WBTC CHAINLINK_USD
+            999225688909132326, // WBTC CHAINLINK_BTC
+            14132304342504493633, // WBTC WETH
+            70759868720940824, // WETH WBTC
+            45628589661774, // DAI WBTC
+            21894211576846308162203, // WBTC USDC
+            49965494701215997338295 // WBTC BNT
         ];
 
         uint256 snapshot = vm.snapshot();
@@ -549,8 +600,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
             assertApproxEqAbs(
                 price.unwrap(),
-                expected[i].unwrap(),
-                (expected[i].unwrap() * 3) / 100 // 3% tolerance
+                expected[i],
+                (expected[i] * 3) / 100 // 3% tolerance
             );
 
             vm.revertTo(snapshot);
@@ -576,7 +627,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPriceAt_CatchRevert() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
         int256[] memory prices = new int256[](3);
@@ -624,8 +674,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPriceAt_WhenStalePrice_ReturnStalePrice_IfCall12HoursAfterTarget() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
-
         int256[] memory prices = new int256[](1);
         uint256[] memory timestamps = new uint256[](1);
 
@@ -641,8 +689,6 @@ contract ChainlinkAdapterTest is Test, Assertions {
     }
 
     function test_getPriceAt_WhenStalePrice_RevertIf_CallWithin12HoursOfTarget() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
-
         int256[] memory prices = new int256[](1);
         uint256[] memory timestamps = new uint256[](1);
 
@@ -662,131 +708,255 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
     }
 
-    function _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget() public {
-        (ChainlinkOraclePriceStub stub, address stubCoin) = _deployStub();
+    function test_getPriceAt_WhenFreshPrice_IfCall12HoursAfterTarget() public {
+        vm.warp(target + 43200);
 
         {
-            int256[] memory prices = new int256[](1);
-            uint256[] memory timestamps = new uint256[](1);
-
-            prices[0] = 1000000000000;
-            timestamps[0] = target + 100;
-
-            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(0);
-            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
-        }
-
-        //
-
-        {
-            int256[] memory prices = new int256[](3);
-            uint256[] memory timestamps = new uint256[](3);
-
-            prices[0] = 100000000000;
-            prices[1] = 200000000000;
-            prices[2] = 300000000000;
-
-            timestamps[0] = target + 100;
-            timestamps[1] = target + 200;
-            timestamps[2] = target + 300;
-
-            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(0);
-            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
-        }
-
-        //
-
-        {
+            // returns the closest price to the target because the delay limit (12 hrs) is exceeded
             int256[] memory prices = new int256[](4);
-            uint256[] memory timestamps = new uint256[](4);
-
-            prices[0] = 50000000000;
+            prices[0] = 0;
             prices[1] = 100000000000;
             prices[2] = 200000000000;
             prices[3] = 300000000000;
 
-            timestamps[0] = target - 50;
-            timestamps[1] = target + 100;
-            timestamps[2] = target + 200;
-            timestamps[3] = target + 300;
-
-            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(0);
-            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
-        }
-
-        //
-
-        {
-            int256[] memory prices = new int256[](4);
             uint256[] memory timestamps = new uint256[](4);
-
-            prices[0] = 50000000000;
-            prices[1] = 100000000000;
-            prices[2] = 200000000000;
-            prices[3] = 300000000000;
-
-            timestamps[0] = target - 100;
+            timestamps[0] = 0;
             timestamps[1] = target + 50;
-            timestamps[2] = target + 300;
-            timestamps[3] = target + 500;
+            timestamps[2] = target + 100;
+            timestamps[3] = target + 200;
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(1);
             assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
 
-        //
-
         {
-            int256[] memory prices = new int256[](2);
-            uint256[] memory timestamps = new uint256[](2);
-
-            prices[0] = 50000000000;
-            prices[1] = 100000000000;
-
-            timestamps[0] = target - 100;
-            timestamps[1] = target - 50;
-
-            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(1);
-            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
-        }
-
-        //
-
-        {
+            // returns the closest price to the target because the delay limit (12 hrs) is exceeded
             int256[] memory prices = new int256[](5);
-            uint256[] memory timestamps = new uint256[](5);
-
-            prices[0] = 50000000000;
+            prices[0] = 0;
             prices[1] = 100000000000;
             prices[2] = 200000000000;
             prices[3] = 300000000000;
             prices[4] = 400000000000;
 
-            timestamps[0] = target - 500;
-            timestamps[1] = target - 100;
-            timestamps[2] = target - 50; // first improvement
-            timestamps[3] = target; // second improvement (closest)
-            timestamps[4] = target + 500;
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 200;
+            timestamps[2] = target - 100;
+            timestamps[3] = target + 100;
+            timestamps[4] = target + 200;
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(3);
-            // checks that the smallest time delta is returned after one time delta improvement
+            int256 freshPrice = stub.price(2);
             assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
     }
 
-    function test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget_IfCallWithin12HoursOfTarget() public {
-        _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget();
+    function test_getPriceAt_WhenFreshPrice_ReturnsTargetInTieBreak() public {
+        int256[] memory prices = new int256[](4);
+        prices[0] = 0;
+        prices[1] = 5000000000;
+        prices[2] = 10000000000;
+        prices[3] = 50000000000;
+
+        // 1st and 2nd indexes are equidistant but the 1st index is returned
+        uint256[] memory timestamps = new uint256[](4);
+        timestamps[0] = 0;
+        timestamps[1] = target - 10;
+        timestamps[2] = target + 10;
+        timestamps[3] = target + 50;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+        int256 freshPrice = stub.price(1);
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
     }
 
-    function test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget_IfCall12HoursAfterTarget() public {
-        vm.warp(target + 43200);
-        _test_getPriceAt_WhenFreshPrice_ReturnClosestPriceToTarget();
+    function test_getPriceAt_WhenFreshPrice_UpdatedAtEqTarget() public {
+        {
+            // target == updatedAt at AggregatorRoundId = 1
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 100000000000;
+            prices[2] = 200000000000;
+            prices[3] = 300000000000;
+            prices[4] = 400000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target;
+            timestamps[2] = target + 200;
+            timestamps[3] = target + 300;
+            timestamps[4] = target + 400;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            int256 freshPrice = stub.price(1);
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
+
+        {
+            // target == updatedAt at AggregatorRoundId = 2
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 50000000000;
+            prices[2] = 100000000000;
+            prices[3] = 200000000000;
+            prices[4] = 300000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 100;
+            timestamps[2] = target;
+            timestamps[3] = target + 100;
+            timestamps[4] = target + 200;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            int256 freshPrice = stub.price(2);
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
+    }
+
+    function test_getPriceAt_WhenFreshPrice_HandleAggregatorRoundIdEq1() public {
+        {
+            // search misses AggregatorRoundId = 1, closest round update is left of target
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 50000000000;
+            prices[2] = 100000000000;
+            prices[3] = 200000000000;
+            prices[4] = 300000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 50;
+            timestamps[2] = target + 100;
+            timestamps[3] = target + 200;
+            timestamps[4] = target + 300;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            int256 freshPrice = stub.price(1);
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
+
+        {
+            // search misses AggregatorRoundId = 1, closest round update is right of target
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 50000000000;
+            prices[2] = 100000000000;
+            prices[3] = 200000000000;
+            prices[4] = 300000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 100;
+            timestamps[2] = target + 50;
+            timestamps[3] = target + 300;
+            timestamps[4] = target + 500;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+            int256 freshPrice = stub.price(2);
+            assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+        }
+    }
+
+    function test_getPriceAt_WhenFreshPrice_ChecksLeftOfTarget() public {
+        int256[] memory prices = new int256[](3);
+        prices[0] = 0;
+        prices[1] = 50000000000;
+        prices[2] = 100000000000;
+
+        uint256[] memory timestamps = new uint256[](3);
+        timestamps[0] = 0;
+        timestamps[1] = target - 100;
+        timestamps[2] = target - 50;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+        int256 freshPrice = stub.price(2);
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+    }
+
+    function test_getPriceAt_WhenFreshPrice_ChecksLeftRightOfTarget() public {
+        int256[] memory prices = new int256[](7);
+        prices[0] = 0;
+        prices[1] = 50000000000;
+        prices[2] = 100000000000;
+        prices[3] = 200000000000;
+        prices[4] = 300000000000;
+        prices[5] = 400000000000;
+        prices[6] = 500000000000;
+
+        uint256[] memory timestamps = new uint256[](7);
+        timestamps[0] = 0;
+        timestamps[1] = target - 500;
+        timestamps[2] = target - 100;
+        timestamps[3] = target - 50; // second improvement
+        timestamps[4] = target - 10; // first improvement (closest)
+        timestamps[5] = target + 100;
+        timestamps[6] = target + 500;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+        int256 freshPrice = stub.price(4);
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
+    }
+
+    function test_getPriceAt_ReturnCachedPriceAtTarget() public {
+        UD60x18 cachedPrice = ud(9e18);
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = relayer;
+
+        adapter.addWhitelistedRelayers(relayers);
+
+        vm.startPrank(relayer);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        vm.stopPrank();
+
+        int256[] memory prices = new int256[](7);
+        prices[0] = 0;
+        prices[1] = 50000000000;
+        prices[2] = 100000000000;
+        prices[3] = 200000000000;
+        prices[4] = 300000000000;
+        prices[5] = 400000000000;
+        prices[6] = 500000000000;
+
+        uint256[] memory timestamps = new uint256[](7);
+        timestamps[0] = 0;
+        timestamps[1] = target - 500;
+        timestamps[2] = target - 100;
+        timestamps[3] = target - 50;
+        timestamps[4] = target;
+        timestamps[5] = target + 100;
+        timestamps[6] = target + 500;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        // decimals == 8, internal logic should scale the cached price (18 decimals) to feed decimals (8 decimals)
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), cachedPrice);
+
+        // decimals == 18, no scaling necessary
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
+    }
+
+    function test_getPriceAt_RevertIf_PairNotSupported() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
+        );
+        adapter.getPriceAt(WETH, address(1), target);
+    }
+
+    function test_getPriceAt_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPriceAt(CRV, CRV, target);
+    }
+
+    function test_getPriceAt_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(address(0), DAI, target);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(CRV, address(0), target);
     }
 
     function test_describePricingPath_Success() public {
@@ -860,5 +1030,40 @@ contract ChainlinkAdapterTest is Test, Assertions {
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
         }
+    }
+
+    function test_setTokenPriceAt_Success() public {
+        vm.prank(relayer);
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_TokensAreSame() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.setTokenPriceAt(CRV, CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_ZeroAddress() public {
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(address(0), DAI, block.timestamp, ONE);
+
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(CRV, address(0), block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_InvalidDenomination() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__InvalidDenomination.selector, CRV));
+        adapter.setTokenPriceAt(address(1), CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_NotWhitelistedRelayer() public {
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRelayerAccessManager.RelayerAccessManager__NotWhitelistedRelayer.selector, user)
+        );
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
     }
 }

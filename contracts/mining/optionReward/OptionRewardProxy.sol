@@ -20,7 +20,7 @@ contract OptionRewardProxy is Proxy {
     constructor(
         IProxyManager manager,
         IOptionPS option,
-        IPriceRepository priceRepository,
+        IPriceRepository oracleAdapter,
         IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
@@ -45,7 +45,7 @@ contract OptionRewardProxy is Proxy {
         l.quoteDecimals = IERC20Metadata(quote).decimals();
 
         l.optionDuration = optionDuration;
-        l.priceRepository = priceRepository;
+        l.oracleAdapter = oracleAdapter;
         l.paymentSplitter = paymentSplitter;
 
         l.discount = discount;

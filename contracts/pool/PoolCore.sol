@@ -11,7 +11,6 @@ import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLink
 import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {ONE, ZERO, UD50_ZERO} from "../libraries/Constants.sol";
-import {Pricing} from "../libraries/Pricing.sol";
 import {Position} from "../libraries/Position.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 import {UD50x28} from "../libraries/UD50x28.sol";
@@ -315,6 +314,15 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
         PoolStorage.Layout storage l = PoolStorage.layout();
         _revertIfOperatorNotAuthorized(srcP.operator);
         _transferPosition(srcP.toKeyInternal(l.strike, l.isCallPool), newOwner, newOperator, size);
+    }
+
+    /// @inheritdoc IPoolCore
+    function tryCacheSettlementPrice() external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        _revertIfOptionNotExpired(l);
+
+        if (l.settlementPrice == ZERO) _tryCacheSettlementPrice(l);
+        else revert Pool__SettlementPriceAlreadyCached();
     }
 
     /// @inheritdoc IPoolCore

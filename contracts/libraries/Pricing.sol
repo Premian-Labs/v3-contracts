@@ -2,16 +2,16 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
-import {UD50x28, ud50x28} from "../libraries/UD50x28.sol";
+import {UD50x28} from "../libraries/UD50x28.sol";
 import {PoolStorage} from "../pool/PoolStorage.sol";
 import {PRBMathExtra} from "./PRBMathExtra.sol";
 
 import {IPricing} from "./IPricing.sol";
 
-import {ZERO, ONE, UD50_ONE} from "./Constants.sol";
+import {ZERO, UD50_ONE} from "./Constants.sol";
 
 /// @notice This library implements the functions necessary for computing price movements within a tick range.
 /// @dev WARNING: This library should not be used for computations that span multiple ticks. Instead, the user should
@@ -20,6 +20,7 @@ library Pricing {
     using DoublyLinkedListUD60x18 for DoublyLinkedList.Bytes32List;
     using PoolStorage for PoolStorage.Layout;
     using PRBMathExtra for UD60x18;
+    using PRBMathExtra for UD50x28;
 
     struct Args {
         UD50x28 liquidityRate; // Amount of liquidity (28 decimals)
@@ -77,30 +78,12 @@ library Pricing {
 
     /// @notice Returns the bid-side liquidity between `args.lower` and `args.upper`
     function bidLiquidity(Args memory args) internal pure returns (UD60x18) {
-        UD50x28 result = proportion(args) * liquidity(args).intoUD50x28();
-        UD60x18 resultUD60 = result.intoUD60x18();
-
-        // (10 ** (28 - 18)) / 2 = 5e9
-        if (result - resultUD60.intoUD50x28() > ud50x28(5e9)) {
-            // Round up
-            resultUD60 = resultUD60 + ud(1);
-        }
-
-        return resultUD60;
+        return (proportion(args) * liquidity(args).intoUD50x28()).roundToNearestUD60x18();
     }
 
     /// @notice Returns the ask-side liquidity between `args.lower` and `args.upper`
     function askLiquidity(Args memory args) internal pure returns (UD60x18) {
-        UD50x28 result = (UD50_ONE - proportion(args)) * liquidity(args).intoUD50x28();
-        UD60x18 resultUD60 = result.intoUD60x18();
-
-        // (10 ** (28 - 18)) / 2 = 5e9
-        if (result - resultUD60.intoUD50x28() >= ud50x28(5e9)) {
-            // Round up
-            resultUD60 = resultUD60 + ud(1);
-        }
-
-        return resultUD60;
+        return ((UD50_ONE - proportion(args)) * liquidity(args).intoUD50x28()).roundToNearestUD60x18();
     }
 
     /// @notice Returns the maximum trade size (askLiquidity or bidLiquidity depending on the TradeSide).
