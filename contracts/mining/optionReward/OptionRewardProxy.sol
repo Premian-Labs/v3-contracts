@@ -7,11 +7,11 @@ import {OwnableStorage} from "@solidstate/contracts/access/ownable/OwnableStorag
 import {Proxy} from "@solidstate/contracts/proxy/Proxy.sol";
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
 import {OptionRewardStorage} from "./OptionRewardStorage.sol";
 import {IOptionReward} from "./IOptionReward.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
-import {IPriceRepository} from "../IPriceRepository.sol";
 import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 contract OptionRewardProxy is Proxy {
@@ -20,7 +20,7 @@ contract OptionRewardProxy is Proxy {
     constructor(
         IProxyManager manager,
         IOptionPS option,
-        IPriceRepository oracleAdapter,
+        IOracleAdapter oracleAdapter,
         IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,

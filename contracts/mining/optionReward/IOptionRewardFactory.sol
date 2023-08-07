@@ -4,15 +4,15 @@ pragma solidity ^0.8.19;
 
 import {UD60x18} from "@prb/math/UD60x18.sol";
 
+import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 import {IProxyManager} from "../../proxy/IProxyManager.sol";
-import {IPriceRepository} from "../IPriceRepository.sol";
 import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 
 interface IOptionRewardFactory is IProxyManager {
     event ProxyDeployed(
         IOptionPS indexed option,
-        IPriceRepository oracleAdapter,
+        IOracleAdapter oracleAdapter,
         IPaymentSplitter paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
@@ -24,7 +24,7 @@ interface IOptionRewardFactory is IProxyManager {
 
     struct OptionRewardArgs {
         IOptionPS option;
-        IPriceRepository oracleAdapter;
+        IOracleAdapter oracleAdapter;
         IPaymentSplitter paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;
