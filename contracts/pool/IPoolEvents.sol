@@ -125,4 +125,6 @@ interface IPoolEvents {
     event CancelQuoteOB(address indexed provider, bytes32 quoteOBHash);
 
     event FlashLoan(address indexed initiator, address indexed receiver, UD60x18 amount, UD60x18 fee);
+
+    event SettlementPriceCached(UD60x18 settlementPrice);
 }
