@@ -1135,7 +1135,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _calculateExerciseValue(PoolStorage.Layout storage l, UD60x18 size) internal returns (UD60x18) {
         if (size == ZERO) return ZERO;
 
-        UD60x18 settlementPrice = l.getSettlementPrice();
+        UD60x18 settlementPrice = _tryCacheSettlementPrice(l);
         UD60x18 strike = l.strike;
         bool isCall = l.isCallPool;
 
@@ -1336,6 +1336,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (vars.collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, vars.collateral);
 
         success = true;
+    }
+
+    /// @notice Fetch and cache the settlement price, if it has not been cached yet. Returns the cached price
+    function _tryCacheSettlementPrice(PoolStorage.Layout storage l) internal returns (UD60x18) {
+        UD60x18 settlementPrice = l.settlementPrice;
+        if (settlementPrice == ZERO) {
+            settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
+            l.settlementPrice = settlementPrice;
+            emit SettlementPriceCached(settlementPrice);
+        }
+
+        return settlementPrice;
     }
 
     /// @notice Deletes the `pKeyHash` from positions mapping
