@@ -477,7 +477,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(price, priceBeforeUpsert);
     }
 
-    function test_getPrice_RevertIf_PriceAfterTargetIsStale() public {
+    function test_getPrice_RevertIf_PriceStale() public {
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
         int256[] memory prices = new int256[](1);
@@ -493,8 +493,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IChainlinkAdapter.ChainlinkAdapter__PriceAfterTargetIsStale.selector,
-                block.timestamp,
+                IChainlinkAdapter.ChainlinkAdapter__PriceStale.selector,
                 timestamps[0],
                 block.timestamp
             )

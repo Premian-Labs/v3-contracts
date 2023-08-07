@@ -55,6 +55,9 @@ interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry, IPriceRepository {
     /// @notice Thrown when a price at or to the left of target is not found
     error ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound(address token, address denomination, uint256 target);
 
+    /// @notice Thrown when price is stale
+    error ChainlinkAdapter__PriceStale(uint256 updatedAt, uint256 blockTimestamp);
+
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA One of the pair's tokens
     /// @param tokenB The other of the pair's tokens

@@ -432,8 +432,10 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     function _fetchLatestPrice(address token, address denomination) internal view returns (uint256) {
         address feed = _feed(token, denomination);
         (, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
-        _revertIfPriceAfterTargetStale(block.timestamp, updatedAt);
+
         _revertIfPriceInvalid(price);
+        if (isStalePrice(block.timestamp, updatedAt)) revert ChainlinkAdapter__PriceStale(updatedAt, block.timestamp);
+
         return price.toUint256();
     }
 
