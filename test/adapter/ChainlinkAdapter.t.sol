@@ -10,11 +10,13 @@ import {IOwnableInternal} from "@solidstate/contracts/access/ownable/IOwnableInt
 
 import "../Addresses.sol";
 import {Assertions} from "../Assertions.sol";
+import {ONE} from "contracts/libraries/Constants.sol";
 import {IFeedRegistry} from "contracts/adapter/IFeedRegistry.sol";
 import {IOracleAdapter} from "contracts/adapter/IOracleAdapter.sol";
 import {IChainlinkAdapter} from "contracts/adapter/chainlink/IChainlinkAdapter.sol";
 import {ChainlinkAdapter} from "contracts/adapter/chainlink/ChainlinkAdapter.sol";
 import {ProxyUpgradeableOwnable} from "contracts/proxy/ProxyUpgradeableOwnable.sol";
+import {IRelayerAccessManager} from "contracts/relayer/IRelayerAccessManager.sol";
 
 import {ERC20Mock} from "contracts/test/ERC20Mock.sol";
 import {ChainlinkOraclePriceStub} from "contracts/test/adapter/ChainlinkOraclePriceStub.sol";
@@ -34,6 +36,9 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     ChainlinkOraclePriceStub stub;
     address stubCoin;
+
+    address internal relayer;
+    address internal user;
 
     function setUp() public {
         string memory ETH_RPC_URL = string.concat(
@@ -117,6 +122,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         adapter.batchRegisterFeedMappings(feeds());
         _deployStub();
+
+        relayer = vm.addr(1);
+        user = vm.addr(2);
+
+        address[] memory relayers = new address[](1);
+        relayers[0] = relayer;
+        adapter.addWhitelistedRelayers(relayers);
     }
 
     function _deployStub() internal {
@@ -175,7 +187,20 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertTrue(hasPath);
     }
 
-    function test_upserPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
+    function test_isPairSupported_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.isPairSupported(CRV, CRV);
+    }
+
+    function test_isPairSupported_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.isPairSupported(CRV, address(0));
+    }
+
+    function test_upsertPair_ShouldNotRevert_IfCalledMultipleTime_ForSamePair() public {
         adapter.upsertPair(WETH, DAI);
         (bool isCached, ) = adapter.isPairSupported(WETH, DAI);
         assertTrue(isCached);
@@ -185,14 +210,27 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_upsertPair_RevertIf_PairCannotBeSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(0), WETH)
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, address(1), WETH)
         );
-        adapter.upsertPair(address(0), WETH);
+        adapter.upsertPair(address(1), WETH);
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairCannotBeSupported.selector, WBTC, address(1))
         );
-        adapter.upsertPair(WBTC, address(0));
+        adapter.upsertPair(WBTC, address(1));
+    }
+
+    function test_upsertPair_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.upsertPair(CRV, CRV);
+    }
+
+    function test_upsertPair_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.upsertPair(CRV, address(0));
     }
 
     function test_batchRegisterFeedMappings_RemoveFeed() public {
@@ -278,7 +316,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenEqualDenomination() public {
+    function test_batchRegisterFeedMappings_RevertIf_TokensAreSame() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(EUL, EUL, address(1));
 
@@ -286,7 +324,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.batchRegisterFeedMappings(data);
     }
 
-    function test_batchRegisterFeedMappings_RevertIf_TokenOrDenominationIsZero() public {
+    function test_batchRegisterFeedMappings_RevertIf_ZeroAddress() public {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
 
         data[0] = IFeedRegistry.FeedMappingArgs(address(0), DAI, address(1));
@@ -309,7 +347,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         IFeedRegistry.FeedMappingArgs[] memory data = new IFeedRegistry.FeedMappingArgs[](1);
         data[0] = IFeedRegistry.FeedMappingArgs(DAI, CHAINLINK_USD, address(0));
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
-        vm.prank(vm.addr(1));
+        vm.prank(user);
         adapter.batchRegisterFeedMappings(data);
     }
 
@@ -467,9 +505,22 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
     function test_getPrice_RevertIf_PairNotSupported() public {
         vm.expectRevert(
-            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(0))
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
         );
-        adapter.getPrice(WETH, address(0));
+        adapter.getPrice(WETH, address(1));
+    }
+
+    function test_getPrice_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPrice(CRV, CRV);
+    }
+
+    function test_getPrice_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(address(0), DAI);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPrice(CRV, address(0));
     }
 
     function test_getPrice_CatchRevert() public {
@@ -851,15 +902,14 @@ contract ChainlinkAdapterTest is Test, Assertions {
     function test_getPriceAt_ReturnCachedPriceAtTarget() public {
         UD60x18 cachedPrice = ud(9e18);
 
-        address relayer = vm.addr(1);
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
 
         adapter.addWhitelistedRelayers(relayers);
 
         vm.startPrank(relayer);
-        adapter.setPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
-        adapter.setPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
         vm.stopPrank();
 
         int256[] memory prices = new int256[](7);
@@ -887,6 +937,26 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         // decimals == 18, no scaling necessary
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
+    }
+
+    function test_getPriceAt_RevertIf_PairNotSupported() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(IOracleAdapter.OracleAdapter__PairNotSupported.selector, WETH, address(1))
+        );
+        adapter.getPriceAt(WETH, address(1), target);
+    }
+
+    function test_getPriceAt_RevertIf_TokensAreSame() public {
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.getPriceAt(CRV, CRV, target);
+    }
+
+    function test_getPriceAt_RevertIf_ZeroAddress() public {
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(address(0), DAI, target);
+
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.getPriceAt(CRV, address(0), target);
     }
 
     function test_describePricingPath_Success() public {
@@ -960,5 +1030,40 @@ contract ChainlinkAdapterTest is Test, Assertions {
             vm.revertTo(snapshot);
             snapshot = vm.snapshot();
         }
+    }
+
+    function test_setTokenPriceAt_Success() public {
+        vm.prank(relayer);
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_TokensAreSame() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__TokensAreSame.selector, CRV, CRV));
+        adapter.setTokenPriceAt(CRV, CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_ZeroAddress() public {
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(address(0), DAI, block.timestamp, ONE);
+
+        vm.prank(relayer);
+        vm.expectRevert(IOracleAdapter.OracleAdapter__ZeroAddress.selector);
+        adapter.setTokenPriceAt(CRV, address(0), block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_InvalidDenomination() public {
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(IChainlinkAdapter.ChainlinkAdapter__InvalidDenomination.selector, CRV));
+        adapter.setTokenPriceAt(address(1), CRV, block.timestamp, ONE);
+    }
+
+    function test_setTokenPriceAt_RevertIf_NotWhitelistedRelayer() public {
+        vm.prank(user);
+        vm.expectRevert(
+            abi.encodeWithSelector(IRelayerAccessManager.RelayerAccessManager__NotWhitelistedRelayer.selector, user)
+        );
+        adapter.setTokenPriceAt(address(1), CHAINLINK_USD, block.timestamp, ONE);
     }
 }
