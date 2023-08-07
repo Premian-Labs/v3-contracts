@@ -1338,6 +1338,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         success = true;
     }
 
+    /// @notice Fetch and cache the settlement price, if it has not been cached yet. Returns the cached price
     function _tryCacheSettlementPrice(PoolStorage.Layout storage l) internal returns (UD60x18) {
         UD60x18 settlementPrice = l.settlementPrice;
         if (settlementPrice == ZERO) {
