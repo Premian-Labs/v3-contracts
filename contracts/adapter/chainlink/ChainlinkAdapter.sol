@@ -39,8 +39,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     ///      MAX_DELAY before returning the stale price
     uint256 internal constant MAX_DELAY = 12 hours;
     /// @dev If the difference between target and last update is greater than the
-    ///      PRICE_STALE_THRESHOLD, the price is considered stale
-    uint256 internal constant PRICE_STALE_THRESHOLD = 25 hours;
+    ///      STALE_PRICE_THRESHOLD, the price is considered stale
+    uint256 internal constant STALE_PRICE_THRESHOLD = 25 hours;
 
     constructor(
         address _wrappedNativeToken,
@@ -416,8 +416,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         }
     }
 
-    /// @notice Returns the latest price of `token` denominated in `denomination`, if `target` is 0, otherwise the
-    ///         closest price to `target` is returned
+    /// @notice Returns the latest price of `token` denominated in `denomination`, if `target` is 0, otherwise we
+    ///         algorithmically search for a price which meets our criteria
     function _fetchPrice(
         address token,
         address denomination,
@@ -432,12 +432,15 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     function _fetchLatestPrice(address token, address denomination) internal view returns (uint256) {
         address feed = _feed(token, denomination);
         (, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
-        _revertIfPriceAfterTargetStale(block.timestamp, updatedAt);
+
         _revertIfPriceInvalid(price);
+        if (isStalePrice(block.timestamp, updatedAt)) revert ChainlinkAdapter__PriceStale(updatedAt, block.timestamp);
+
         return price.toUint256();
     }
 
-    /// @notice Returns the price of `token` denominated in `denomination` closest to `target`
+    /// @notice Returns the price of `token` denominated in `denomination` at or left of `target`. If the price left of
+    ///         target is stale, we return the price closest to target
     function _fetchPriceAt(
         address token,
         address denomination,
@@ -455,7 +458,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
 
         BinarySearchDataInternal memory binarySearchData;
 
-        // if latest round data is on right side of target, search for round data closest to the target
+        // if latest round data is on right side of target, search for round data at or left of target
         if (updatedAt > target) {
             binarySearchData.rightPrice = price;
             binarySearchData.rightUpdatedAt = updatedAt;
@@ -468,21 +471,36 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
                 target
             );
 
-            price = binarySearchData.rightPrice;
-            updatedAt = binarySearchData.rightUpdatedAt;
+            if (binarySearchData.leftUpdatedAt == 0) {
+                // if leftUpdatedAt is 0, it means that the target is not in the current phase, therefore, we must
+                // revert and wait until a price is set in PriceRepository
+                revert ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound(token, denomination, target);
+            }
 
+            price = binarySearchData.leftPrice;
+            updatedAt = binarySearchData.leftUpdatedAt;
+        }
+
+        if (isStalePrice(target, updatedAt)) {
+            // if the price left of target is stale, use the price closest to target
             if (
-                binarySearchData.leftUpdatedAt > 0 &&
-                target - binarySearchData.leftUpdatedAt <= binarySearchData.rightUpdatedAt - target
+                binarySearchData.rightUpdatedAt > target &&
+                target - updatedAt > binarySearchData.rightUpdatedAt - target
             ) {
-                price = binarySearchData.leftPrice;
-                updatedAt = binarySearchData.leftUpdatedAt;
+                // if the right side of price exists, and it is closer to target, we return this price because no further
+                // updates will be closer to target
+                price = binarySearchData.rightPrice;
+                updatedAt = binarySearchData.rightUpdatedAt;
+            } else {
+                // if MAX_DELAY is not exceeded and the stale price (left side) is closest to target, we revert and wait
+                // until `target + MAX_DELAY` because there may be an update closer to the target before `target + MAX_DELAY`
+                // is reached
+                if (!isMaxDelayExceeded(target))
+                    revert ChainlinkAdapter__PriceStaleAndMaxDelayNotExceeded(target, updatedAt, block.timestamp);
             }
         }
 
-        _revertIfPriceAfterTargetStale(target, updatedAt);
         _revertIfPriceInvalid(price);
-
         return price.toUint256();
     }
 
@@ -606,10 +624,14 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return ud(_scale(_fetchPrice(WRAPPED_BTC_TOKEN, Denominations.BTC, target, factor), factor));
     }
 
-    /// @notice Revert if price is stale and MAX_DELAY has not passed
-    function _revertIfPriceAfterTargetStale(uint256 target, uint256 updatedAt) internal view {
-        if (target >= updatedAt && block.timestamp - target < MAX_DELAY && target - updatedAt > PRICE_STALE_THRESHOLD)
-            revert ChainlinkAdapter__PriceAfterTargetIsStale(target, updatedAt, block.timestamp);
+    /// @notice Returns true if the difference between `target` and `updateAt` is greater than `STALE_PRICE_THRESHOLD`, false otherwise
+    function isStalePrice(uint256 target, uint256 updatedAt) internal pure returns (bool) {
+        return target - updatedAt > STALE_PRICE_THRESHOLD;
+    }
+
+    /// @notice Returns true if the difference between `block.timestamp` and `target` is greater than `MAX_DELAY`, false otherwise
+    function isMaxDelayExceeded(uint256 target) internal view returns (bool) {
+        return block.timestamp - target > MAX_DELAY;
     }
 
     /// @notice Revert if `denomination` is not a valid
