@@ -1224,13 +1224,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/chai@npm:^4.3.5":
-  version: 4.3.5
-  resolution: "@types/chai@npm:4.3.5"
-  checksum: c8f26a88c6b5b53a3275c7f5ff8f107028e3cbb9ff26795fff5f3d9dea07106a54ce9e2dce5e40347f7c4cc35657900aaf0c83934a25a1ae12e61e0f5516e431
-  languageName: node
-  linkType: hard
-
 "@types/lru-cache@npm:^5.1.0":
   version: 5.1.1
   resolution: "@types/lru-cache@npm:5.1.1"
@@ -1249,13 +1242,6 @@ __metadata:
   version: 1.2.2
   resolution: "@types/minimist@npm:1.2.2"
   checksum: b8da83c66eb4aac0440e64674b19564d9d86c80ae273144db9681e5eeff66f238ade9515f5006ffbfa955ceff8b89ad2bd8ec577d7caee74ba101431fb07045d
-  languageName: node
-  linkType: hard
-
-"@types/mocha@npm:^10.0.1":
-  version: 10.0.1
-  resolution: "@types/mocha@npm:10.0.1"
-  checksum: 224ea9fce7b1734ccdb9aa99a622d902a538ce1847bca7fd22c5fb38adcf3ed536f50f48f587085db988a4bb3c2eb68f4b98e1cd6a38bc5547bd3bbbedc54495
   languageName: node
   linkType: hard
 
@@ -1894,7 +1880,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chai@npm:^4.3.4, chai@npm:^4.3.7":
+"chai@npm:^4.3.4":
   version: 4.3.7
   resolution: "chai@npm:4.3.7"
   dependencies:
@@ -3990,7 +3976,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mocha@npm:^10.0.0, mocha@npm:^10.2.0":
+"mocha@npm:^10.0.0":
   version: 10.2.0
   resolution: "mocha@npm:10.2.0"
   dependencies:
@@ -4439,10 +4425,7 @@ __metadata:
     "@solidstate/spec": ^0.0.57
     "@typechain/ethers-v5": ^11.1.1
     "@typechain/hardhat": ^8.0.3
-    "@types/chai": ^4.3.5
-    "@types/mocha": ^10.0.1
     "@types/node": ^18.17.4
-    chai: ^4.3.7
     dotenv: ^16.3.1
     ethers: 5.7.2
     hardhat: ^2.17.1
@@ -4453,7 +4436,6 @@ __metadata:
     hardhat-preprocessor: ^0.1.5
     hardhat-spdx-license-identifier: ^2.1.0
     husky: ^8.0.3
-    mocha: ^10.2.0
     moment-timezone: ^0.5.43
     prettier: ^2.8.8
     prettier-plugin-solidity: ^1.1.3
