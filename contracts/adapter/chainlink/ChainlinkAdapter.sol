@@ -434,13 +434,13 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         (, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
 
         _revertIfPriceInvalid(price);
-        if (isStalePrice(block.timestamp, updatedAt)) revert ChainlinkAdapter__PriceStale(updatedAt, block.timestamp);
+        _revertIfPriceLeftOfTargetStale(updatedAt, block.timestamp);
 
         return price.toUint256();
     }
 
     /// @notice Returns the price of `token` denominated in `denomination` at or left of `target`. If the price left of
-    ///         target is stale, we return the price closest to target
+    ///         target is stale, we revert and wait until a price override is set.
     function _fetchPriceAt(
         address token,
         address denomination,
@@ -481,26 +481,9 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
             updatedAt = binarySearchData.leftUpdatedAt;
         }
 
-        if (isStalePrice(target, updatedAt)) {
-            // if the price left of target is stale, use the price closest to target
-            if (
-                binarySearchData.rightUpdatedAt > target &&
-                target - updatedAt > binarySearchData.rightUpdatedAt - target
-            ) {
-                // if the right side of price exists, and it is closer to target, we return this price because no further
-                // updates will be closer to target
-                price = binarySearchData.rightPrice;
-                updatedAt = binarySearchData.rightUpdatedAt;
-            } else {
-                // if MAX_DELAY is not exceeded and the stale price (left side) is closest to target, we revert and wait
-                // until `target + MAX_DELAY` because there may be an update closer to the target before `target + MAX_DELAY`
-                // is reached
-                if (!isMaxDelayExceeded(target))
-                    revert ChainlinkAdapter__PriceStaleAndMaxDelayNotExceeded(target, updatedAt, block.timestamp);
-            }
-        }
-
         _revertIfPriceInvalid(price);
+        _revertIfPriceLeftOfTargetStale(updatedAt, target);
+
         return price.toUint256();
     }
 
@@ -624,14 +607,10 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         return ud(_scale(_fetchPrice(WRAPPED_BTC_TOKEN, Denominations.BTC, target, factor), factor));
     }
 
-    /// @notice Returns true if the difference between `target` and `updateAt` is greater than `STALE_PRICE_THRESHOLD`, false otherwise
-    function isStalePrice(uint256 target, uint256 updatedAt) internal pure returns (bool) {
-        return target - updatedAt > STALE_PRICE_THRESHOLD;
-    }
-
-    /// @notice Returns true if the difference between `block.timestamp` and `target` is greater than `MAX_DELAY`, false otherwise
-    function isMaxDelayExceeded(uint256 target) internal view returns (bool) {
-        return block.timestamp - target > MAX_DELAY;
+    /// @notice Revert if the difference between `target` and `updateAt` is greater than `STALE_PRICE_THRESHOLD`
+    function _revertIfPriceLeftOfTargetStale(uint256 updatedAt, uint256 target) internal pure {
+        if (target - updatedAt > STALE_PRICE_THRESHOLD)
+            revert ChainlinkAdapter__PriceLeftOfTargetStale(updatedAt, target);
     }
 
     /// @notice Revert if `denomination` is not a valid
