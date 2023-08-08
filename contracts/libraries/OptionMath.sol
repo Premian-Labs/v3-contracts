@@ -228,10 +228,9 @@ library OptionMath {
             revert OptionMath__OutOfBoundsPrice(MIN_INPUT_PRICE, MAX_INPUT_PRICE, strike);
 
         uint256 _strike = strike.unwrap();
-        uint256 nbDigits = countDigits(_strike);
-        uint256 multiplier = (_strike >= 5 * 10 ** nbDigits) ? 5 : 1;
-
-        return ud(multiplier * 10 ** (nbDigits - 1));
+        uint256 exponent = log10Floor(_strike);
+        uint256 multiplier = (_strike >= 5 * 10 ** exponent) ? 5 : 1;
+        return ud(multiplier * 10 ** (exponent - 1));
     }
 
     /// @notice Rounds `strike` using the calculated strike interval
@@ -296,8 +295,8 @@ library OptionMath {
         return value / int256(10 ** (inputDecimals - targetDecimals));
     }
 
-    /// @notice Counts the number of digits in the given input
-    function countDigits(uint256 input) internal pure returns (uint256 count) {
+    /// @notice Performs a naive log10 calculation on `input` returning the floor of the result
+    function log10Floor(uint256 input) internal pure returns (uint256 count) {
         while (input >= 10) {
             input /= 10;
             count++;
