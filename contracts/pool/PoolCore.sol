@@ -317,6 +317,15 @@ contract PoolCore is IPoolCore, PoolInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IPoolCore
+    function tryCacheSettlementPrice() external {
+        PoolStorage.Layout storage l = PoolStorage.layout();
+        _revertIfOptionNotExpired(l);
+
+        if (l.settlementPrice == ZERO) _tryCacheSettlementPrice(l);
+        else revert Pool__SettlementPriceAlreadyCached();
+    }
+
+    /// @inheritdoc IPoolCore
     function getSettlementPrice() external view returns (UD60x18) {
         return PoolStorage.layout().settlementPrice;
     }
