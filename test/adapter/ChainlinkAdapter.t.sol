@@ -764,8 +764,9 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IChainlinkAdapter.ChainlinkAdapter__MaxDelayNotExceeded.selector,
+                IChainlinkAdapter.ChainlinkAdapter__PriceStaleAndMaxDelayNotExceeded.selector,
                 target,
+                timestamps[3],
                 block.timestamp
             )
         );
@@ -793,8 +794,9 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IChainlinkAdapter.ChainlinkAdapter__MaxDelayNotExceeded.selector,
+                IChainlinkAdapter.ChainlinkAdapter__PriceStaleAndMaxDelayNotExceeded.selector,
                 target,
+                timestamps[3],
                 block.timestamp
             )
         );

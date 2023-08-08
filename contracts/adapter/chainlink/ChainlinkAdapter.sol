@@ -495,7 +495,8 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
                 // if MAX_DELAY is not exceeded and the stale price (left side) is closest to target, we revert and wait
                 // until `target + MAX_DELAY` because there may be an update closer to the target before `target + MAX_DELAY`
                 // is reached
-                if (!isMaxDelayExceeded(target)) revert ChainlinkAdapter__MaxDelayNotExceeded(target, block.timestamp);
+                if (!isMaxDelayExceeded(target))
+                    revert ChainlinkAdapter__PriceStaleAndMaxDelayNotExceeded(target, updatedAt, block.timestamp);
             }
         }
 
