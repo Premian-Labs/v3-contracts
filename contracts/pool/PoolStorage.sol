@@ -188,8 +188,19 @@ library PoolStorage {
     function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
-        if (balance < value) value = balance;
-        token.safeTransfer(to, value);
+        SD59x18 balanceSD59x18 = l.fromPoolTokenDecimals(balance).intoSD59x18();
+        SD59x18 valueSD59x18 = l.fromPoolTokenDecimals(value).intoSD59x18();
+        if (value > 0) {
+            SD59x18 relativeDiff = (valueSD59x18 - balanceSD59x18) / valueSD59x18;
+            SD59x18 relativeTolerance = sd(0.0001 ether);
+            if (relativeDiff > relativeTolerance) {
+                revert IPoolInternal.Pool__InsufficientFunds();
+            }
+            if (balance < value) {
+                value = balance;
+            }
+            token.safeTransfer(to, value);
+        }
     }
 
     function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
