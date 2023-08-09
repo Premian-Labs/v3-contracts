@@ -193,6 +193,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _burn(account, tokenId, amount.unwrap());
     }
 
+    /// @notice Revert if option has expired
     function _revertIfOptionExpired(uint64 maturity) internal view {
         if (block.timestamp >= maturity) revert OptionPS__OptionExpired(maturity);
     }
@@ -208,11 +209,13 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         if (block.timestamp < target) revert OptionPS__ExercisePeriodNotEnded(maturity, target);
     }
 
+    /// @notice Revert if exercise period has ended
     function _revertIfExercisePeriodEnded(uint64 maturity) internal view {
         uint256 target = maturity + EXERCISE_DURATION;
         if (block.timestamp > target) revert OptionPS__ExercisePeriodEnded(maturity, target);
     }
 
+    /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
     function _beforeTokenTransfer(
         address operator,
         address from,

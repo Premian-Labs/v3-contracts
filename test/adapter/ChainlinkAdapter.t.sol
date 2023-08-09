@@ -998,8 +998,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
     }
 
-    function test_getPriceAt_ReturnCachedPriceAtTarget() public {
-        UD60x18 cachedPrice = ud(9e18);
+    function test_getPriceAt_ReturnPriceOverrideAtTarget() public {
+        UD60x18 priceOverride = ud(9e18);
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -1007,8 +1007,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.addWhitelistedRelayers(relayers);
 
         vm.startPrank(relayer);
-        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
-        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, priceOverride);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, priceOverride);
         vm.stopPrank();
 
         int256[] memory prices = new int256[](7);
@@ -1031,11 +1031,11 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
-        // decimals == 8, internal logic should scale the cached price (18 decimals) to feed decimals (8 decimals)
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), cachedPrice);
+        // decimals == 8, internal logic should scale the price override (18 decimals) to feed decimals (8 decimals)
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), priceOverride);
 
         // decimals == 18, no scaling necessary
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), priceOverride);
     }
 
     function test_getPriceAt_RevertIf_PriceAtOrLeftOfTargetNotFound() public {
