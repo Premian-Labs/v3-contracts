@@ -8,7 +8,26 @@
     "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
     "ARB": "0x912CE59144191C1204E64559FE8253a0e49E6548"
   },
-  "vaults": {},
+  "vaults": {
+    "SV-ETH/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
   "optionPS": {
     "PREMIA/USDC-C": ""
   },

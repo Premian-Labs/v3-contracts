@@ -1230,6 +1230,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/lodash@npm:^4":
+  version: 4.14.196
+  resolution: "@types/lodash@npm:4.14.196"
+  checksum: 201d17c3e62ae02a93c99ec78e024b2be9bd75564dd8fd8c26f6ac51a985ab280d28ce2688c3bcdfe785b0991cd9814edff19ee000234c7b45d9a697f09feb6a
+  languageName: node
+  linkType: hard
+
 "@types/lru-cache@npm:^5.1.0":
   version: 5.1.1
   resolution: "@types/lru-cache@npm:5.1.1"
@@ -4526,6 +4533,7 @@ __metadata:
     "@typechain/ethers-v5": ^11.1.1
     "@typechain/hardhat": ^7.0.0
     "@types/chai": ^4.3.5
+    "@types/lodash": ^4
     "@types/mocha": ^10.0.1
     "@types/node": ^18.17.4
     chai: ^4.3.7
@@ -4539,6 +4547,7 @@ __metadata:
     hardhat-preprocessor: ^0.1.5
     hardhat-spdx-license-identifier: ^2.1.0
     husky: ^8.0.3
+    lodash: ^4.17.21
     mocha: ^10.2.0
     moment-timezone: ^0.5.43
     prettier: ^2.8.8

@@ -4,16 +4,17 @@ import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import _ from 'lodash';
 
 export async function updateDeploymentInfos(
   providerOrSigner: Provider | SignerWithAddress,
-  contractKey: ContractKey,
+  objectPath: ContractKey | string,
   contractType: ContractType,
   deployedContract: BaseContract,
   deploymentArgs: string[],
   logAddress = false,
 ) {
-  if (logAddress) console.log(`${contractKey}: ${deployedContract.address}`);
+  if (logAddress) console.log(`${objectPath}: ${deployedContract.address}`);
 
   const provider: Provider =
     (providerOrSigner as SignerWithAddress).provider ??
@@ -29,7 +30,7 @@ export async function updateDeploymentInfos(
 
   const txReceipt = await deployedContract.deployTransaction.wait();
 
-  data[contractKey] = {
+  _.set(data, objectPath, {
     address: deployedContract.address,
     block: txReceipt.blockNumber,
     commitHash: getCommitHash(),
@@ -37,7 +38,7 @@ export async function updateDeploymentInfos(
     deploymentArgs,
     timestamp: await getBlockTimestamp(provider, txReceipt.blockNumber),
     txHash: txReceipt.transactionHash,
-  };
+  });
 
   fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
 

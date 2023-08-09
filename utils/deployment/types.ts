@@ -1,6 +1,6 @@
 export interface DeploymentInfos {
   tokens: { [symbol: string]: string };
-  vaults: { [name: string]: string };
+  vaults: { [name: string]: ContractDeploymentInfos };
   optionPS: { [name: string]: string };
   optionReward: { [name: string]: string };
   feeReceiver: string;

@@ -8,8 +8,24 @@
     "DAI": ""
   },
   "vaults": {
-    "SV-ETH/USDC-C": "",
-    "SV-ETH/USDC-P": ""
+    "SV-ETH/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
   },
   "optionPS": {
     "PREMIA/USDC-C": ""

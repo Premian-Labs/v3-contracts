@@ -4,9 +4,14 @@ import {
 } from '../../../typechain';
 import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
-import { ChainID, DeploymentInfos } from '../../../utils/deployment/types';
+import {
+  ChainID,
+  ContractType,
+  DeploymentInfos,
+} from '../../../utils/deployment/types';
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
+import { updateDeploymentInfos } from '../../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -29,20 +34,34 @@ async function main() {
   const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
   const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
 
-  const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
-    deployer,
-  ).deploy(
+  const args = [
     deployment.VaultRegistryProxy.address,
     base,
     quote,
     oracleAdapter,
     name,
     symbol,
-    isCall,
+    isCall.toString(),
+  ];
+  const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
+    deployer,
+  ).deploy(
+    args[0],
+    args[1],
+    args[2],
+    args[3],
+    args[4],
+    args[5],
+    args[6] === 'true',
   );
-
-  await underwriterVaultProxy.deployed();
-  console.log('UnderwriterVaultProxy: ', underwriterVaultProxy.address);
+  await updateDeploymentInfos(
+    deployer,
+    `vaults.${symbol}`,
+    ContractType.Proxy,
+    underwriterVaultProxy,
+    args,
+    true,
+  );
 
   // Register vault on the VaultRegistry
   const vaultRegistry = VaultRegistry__factory.connect(

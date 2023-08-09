@@ -9,8 +9,24 @@
     "DAI": "0x350bC4115F09E619bFBc6E56AD87d5e122b7B8c5"
   },
   "vaults": {
-    "SV-ETH/USDC-C": "0x0840c9625e5DDd73E09feD5FDAD04AaD41af7477",
-    "SV-ETH/USDC-P": "0xc97DBcbC5388329CABa2991a2231e3ECE395Cc02"
+    "SV-ETH/USDC-C": {
+      "address": "0x0840c9625e5DDd73E09feD5FDAD04AaD41af7477",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "0xc97DBcbC5388329CABa2991a2231e3ECE395Cc02",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
   },
   "optionPS": {
     "PREMIA/USDC-C": ""
