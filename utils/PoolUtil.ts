@@ -9,7 +9,6 @@ import {
   Placeholder__factory,
   PoolBase__factory,
   PoolCore__factory,
-  PoolCoreMock__factory,
   PoolDepositWithdraw__factory,
   PoolFactory,
   PoolFactory__factory,
@@ -30,7 +29,8 @@ import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { tokens } from './addresses';
+import { updateDeploymentInfos } from './deployment/deployment';
+import { ContractKey, ContractType } from './deployment/types';
 
 interface PoolUtilArgs {
   premiaDiamond: Premia;
@@ -68,28 +68,31 @@ export class PoolUtil {
     feeReceiver: string,
     referralAddress: string,
     vaultRegistry: string,
-    log = true,
-    isDevMode = false,
   ) {
     const result: DeployedFacets[] = [];
 
     // PoolBase
     const poolBaseFactory = new PoolBase__factory(deployer);
     const poolBaseImpl = await poolBaseFactory.deploy();
-    await poolBaseImpl.deployed();
-
-    if (log) console.log(`PoolBase : ${poolBaseImpl.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolBase,
+      ContractType.DiamondFacet,
+      poolBaseImpl,
+      [],
+      true,
+    );
 
     result.push({
-      name: 'PoolBase',
+      name: ContractKey.PoolBase,
       address: poolBaseImpl.address,
       interface: poolBaseImpl.interface,
     });
 
     // PoolCore
-
     const poolCoreFactory = new PoolCore__factory(deployer);
-    const poolCoreImpl = await poolCoreFactory.deploy(
+
+    const poolCoreImplArgs = [
       poolFactory,
       router,
       wrappedNativeToken,
@@ -98,23 +101,37 @@ export class PoolUtil {
       userSettings,
       vaultRegistry,
       vxPremia,
+    ];
+    const poolCoreImpl = await poolCoreFactory.deploy(
+      poolCoreImplArgs[0],
+      poolCoreImplArgs[1],
+      poolCoreImplArgs[2],
+      poolCoreImplArgs[3],
+      poolCoreImplArgs[4],
+      poolCoreImplArgs[5],
+      poolCoreImplArgs[6],
+      poolCoreImplArgs[7],
     );
-    await poolCoreImpl.deployed();
-
-    if (log) console.log(`PoolCore : ${poolCoreImpl.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolCore,
+      ContractType.DiamondFacet,
+      poolCoreImpl,
+      poolCoreImplArgs,
+      true,
+    );
 
     result.push({
-      name: 'PoolCore',
+      name: ContractKey.PoolCore,
       address: poolCoreImpl.address,
       interface: poolCoreImpl.interface,
     });
 
     // PoolDepositWithdraw
-
     const poolDepositWithdrawFactory = new PoolDepositWithdraw__factory(
       deployer,
     );
-    const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
+    const poolDepositWithdrawImplArgs = [
       poolFactory,
       router,
       wrappedNativeToken,
@@ -123,23 +140,36 @@ export class PoolUtil {
       userSettings,
       vaultRegistry,
       vxPremia,
+    ];
+    const poolDepositWithdrawImpl = await poolDepositWithdrawFactory.deploy(
+      poolDepositWithdrawImplArgs[0],
+      poolDepositWithdrawImplArgs[1],
+      poolDepositWithdrawImplArgs[2],
+      poolDepositWithdrawImplArgs[3],
+      poolDepositWithdrawImplArgs[4],
+      poolDepositWithdrawImplArgs[5],
+      poolDepositWithdrawImplArgs[6],
+      poolDepositWithdrawImplArgs[7],
     );
-    await poolDepositWithdrawImpl.deployed();
-
-    if (log) {
-      console.log(`PoolDepositWithdraw : ${poolDepositWithdrawImpl.address}`);
-    }
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolDepositWithdraw,
+      ContractType.DiamondFacet,
+      poolDepositWithdrawImpl,
+      poolDepositWithdrawImplArgs,
+      true,
+    );
 
     result.push({
-      name: 'PoolDepositWithdraw',
+      name: ContractKey.PoolDepositWithdraw,
       address: poolDepositWithdrawImpl.address,
       interface: poolDepositWithdrawImpl.interface,
     });
 
     // PoolTrade
-
     const poolTradeFactory = new PoolTrade__factory(deployer);
-    const poolTradeImpl = await poolTradeFactory.deploy(
+
+    const poolTradeImplArgs = [
       poolFactory,
       router,
       wrappedNativeToken,
@@ -148,43 +178,31 @@ export class PoolUtil {
       userSettings,
       vaultRegistry,
       vxPremia,
+    ];
+    const poolTradeImpl = await poolTradeFactory.deploy(
+      poolTradeImplArgs[0],
+      poolTradeImplArgs[1],
+      poolTradeImplArgs[2],
+      poolTradeImplArgs[3],
+      poolTradeImplArgs[4],
+      poolTradeImplArgs[5],
+      poolTradeImplArgs[6],
+      poolTradeImplArgs[7],
     );
-    await poolTradeImpl.deployed();
-
-    if (log) {
-      console.log(`PoolTrade : ${poolTradeImpl.address}`);
-    }
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolTrade,
+      ContractType.DiamondFacet,
+      poolTradeImpl,
+      poolTradeImplArgs,
+      true,
+    );
 
     result.push({
-      name: 'PoolTrade',
+      name: ContractKey.PoolTrade,
       address: poolTradeImpl.address,
       interface: poolTradeImpl.interface,
     });
-
-    // PoolCoreMock
-
-    if (isDevMode) {
-      const poolCoreMockFactory = new PoolCoreMock__factory(deployer);
-      const poolCoreMockImpl = await poolCoreMockFactory.deploy(
-        poolFactory,
-        router,
-        wrappedNativeToken,
-        feeReceiver,
-        referralAddress,
-        userSettings,
-        vaultRegistry,
-        vxPremia,
-      );
-      await poolCoreMockImpl.deployed();
-
-      if (log) console.log(`PoolCoreMock : ${poolCoreMockImpl.address}`);
-
-      result.push({
-        name: 'PoolCoreMock',
-        address: poolCoreMockImpl.address,
-        interface: poolCoreMockImpl.interface,
-      });
-    }
 
     return result;
   }
@@ -196,15 +214,25 @@ export class PoolUtil {
     feeReceiver: string,
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
-    isDevMode = false,
     vxPremiaAddress?: string,
-    vaultRegistry?: string,
+    premiaAddress?: string,
+    usdcAddress?: string,
   ) {
+    if (!vxPremiaAddress || !premiaAddress || !usdcAddress)
+      throw new Error(
+        "PREMIA and USDC addresses are required if vxPremia address isn't provided",
+      );
+
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
-    await premiaDiamond.deployed();
-
-    if (log) console.log(`Premia Diamond : ${premiaDiamond.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PremiaDiamond,
+      ContractType.DiamondProxy,
+      premiaDiamond,
+      [],
+      true,
+    );
 
     //////////////////////////////////////////////
 
@@ -214,34 +242,71 @@ export class PoolUtil {
 
     const placeholder = await new Placeholder__factory(deployer).deploy();
     await placeholder.deployed();
+    console.log(`Placeholder : ${placeholder.address}`);
 
-    if (log) console.log(`Placeholder : ${placeholder.address}`);
+    //////////////////////////////////////////////
 
+    const poolFactoryProxyArgs = [
+      placeholder.address,
+      discountPerPool.toString(),
+      feeReceiver,
+    ];
     const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
-    ).deploy(placeholder.address, discountPerPool, feeReceiver);
-    await poolFactoryProxy.deployed();
+    ).deploy(
+      poolFactoryProxyArgs[0],
+      poolFactoryProxyArgs[1],
+      poolFactoryProxyArgs[2],
+    );
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolFactoryProxy,
+      ContractType.Proxy,
+      poolFactoryProxy,
+      poolFactoryProxyArgs,
+      true,
+    );
 
-    if (log) console.log(`PoolFactoryProxy : ${poolFactoryProxy.address}`);
+    //////////////////////////////////////////////
 
+    const poolFactoryDeployerArgs = [
+      premiaDiamond.address,
+      poolFactoryProxy.address,
+    ];
     const poolFactoryDeployer = await new PoolFactoryDeployer__factory(
       deployer,
-    ).deploy(premiaDiamond.address, poolFactoryProxy.address);
-    await poolFactoryDeployer.deployed();
+    ).deploy(poolFactoryDeployerArgs[0], poolFactoryDeployerArgs[1]);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolFactoryDeployer,
+      ContractType.Standalone,
+      poolFactoryDeployer,
+      poolFactoryDeployerArgs,
+      true,
+    );
 
-    if (log)
-      console.log(`PoolFactoryDeployer : ${poolFactoryDeployer.address}`);
+    //////////////////////////////////////////////
 
-    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
+    const poolFactoryImplArgs = [
       premiaDiamond.address,
       chainlinkAdapter,
       wrappedNativeToken,
       poolFactoryDeployer.address,
+    ];
+    const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
+      poolFactoryImplArgs[0],
+      poolFactoryImplArgs[1],
+      poolFactoryImplArgs[2],
+      poolFactoryImplArgs[3],
     );
-
-    await poolFactoryImpl.deployed();
-
-    if (log) console.log(`PoolFactory : ${poolFactoryImpl.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.PoolFactoryImplementation,
+      ContractType.Implementation,
+      poolFactoryImpl,
+      poolFactoryImplArgs,
+      true,
+    );
 
     await (
       await poolFactoryProxy.setImplementation(poolFactoryImpl.address)
@@ -259,105 +324,158 @@ export class PoolUtil {
     //////////
 
     // ERC20Router
+    const routerArgs = [poolFactory.address];
     const router = await new ERC20Router__factory(deployer).deploy(
-      poolFactory.address,
+      routerArgs[0],
     );
-    await router.deployed();
-
-    if (log) console.log(`ERC20Router : ${router.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.ERC20Router,
+      ContractType.Standalone,
+      router,
+      routerArgs,
+      true,
+    );
 
     // ExchangeHelper
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-    await exchangeHelper.deployed();
-
-    if (log) console.log(`ExchangeHelper : ${exchangeHelper.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.ExchangeHelper,
+      ContractType.Standalone,
+      exchangeHelper,
+      [],
+      true,
+    );
 
     // UserSettings
     const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
-    await userSettingsImpl.deployed();
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.UserSettingsImplementation,
+      ContractType.Implementation,
+      userSettingsImpl,
+      [],
+      true,
+    );
 
-    if (log) console.log(`UserSettings : ${userSettingsImpl.address}`);
-
+    const userSettingsProxyArgs = [userSettingsImpl.address];
     const userSettingsProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
-    ).deploy(userSettingsImpl.address);
+    ).deploy(userSettingsProxyArgs[0]);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.UserSettingsProxy,
+      ContractType.Proxy,
+      userSettingsProxy,
+      userSettingsProxyArgs,
+      true,
+    );
 
-    await userSettingsProxy.deployed();
+    //////////////////////////////////////////////
 
-    if (log) console.log(`UserSettingsProxy : ${userSettingsProxy.address}`);
+    // Vault Registry
+    const vaultRegistryImpl = await new VaultRegistry__factory(
+      deployer,
+    ).deploy();
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.VaultRegistryImplementation,
+      ContractType.Implementation,
+      vaultRegistryImpl,
+      [],
+      true,
+    );
+
+    const vaultRegistryProxyArgs = [vaultRegistryImpl.address];
+    const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
+      deployer,
+    ).deploy(vaultRegistryProxyArgs[0]);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.VaultRegistryProxy,
+      ContractType.Proxy,
+      vaultRegistryProxy,
+      vaultRegistryProxyArgs,
+      true,
+    );
+
+    //////////////////////////////////////////////
 
     // VxPremia
     if (!vxPremiaAddress) {
-      const premia = await new ERC20Mock__factory(deployer).deploy(
-        'PREMIA',
-        18,
-      );
-
-      if (log) console.log(`Premia : ${exchangeHelper.address}`);
-
-      const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+      const vxPremiaImplArgs = [
         constants.AddressZero,
         constants.AddressZero,
-        premia.address,
-        tokens.USDC.address,
+        premiaAddress,
+        usdcAddress,
         exchangeHelper.address,
-        vaultRegistry ?? constants.AddressZero,
+        vaultRegistryProxy.address,
+      ];
+      const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
+        vxPremiaImplArgs[0],
+        vxPremiaImplArgs[1],
+        vxPremiaImplArgs[2],
+        vxPremiaImplArgs[3],
+        vxPremiaImplArgs[4],
+        vxPremiaImplArgs[5],
+      );
+      await updateDeploymentInfos(
+        deployer,
+        ContractKey.VxPremiaImplementation,
+        ContractType.Implementation,
+        vxPremiaImpl,
+        vxPremiaImplArgs,
+        true,
       );
 
-      await vxPremiaImpl.deployed();
-
-      if (log) console.log(`VxPremia : ${vxPremiaImpl.address}`);
-
+      const vxPremiaProxyArgs = [vxPremiaImpl.address];
       const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
-        vxPremiaImpl.address,
+        vxPremiaProxyArgs[0],
       );
-
-      await vxPremiaProxy.deployed();
-
-      if (log) console.log(`VxPremiaProxy : ${vxPremiaProxy.address}`);
-
+      await updateDeploymentInfos(
+        deployer,
+        ContractKey.VxPremiaProxy,
+        ContractType.Proxy,
+        vxPremiaProxy,
+        vxPremiaProxyArgs,
+        true,
+      );
       vxPremiaAddress = vxPremiaProxy.address;
     }
 
-    // Vault Registry
-    if (!vaultRegistry) {
-      const vaultRegistryImpl = await new VaultRegistry__factory(
-        deployer,
-      ).deploy();
-
-      await vaultRegistryImpl.deployed();
-
-      if (log) console.log(`VaultRegistry : ${vaultRegistryImpl.address}`);
-
-      const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
-        deployer,
-      ).deploy(vaultRegistryImpl.address);
-
-      await vaultRegistryProxy.deployed();
-
-      if (log)
-        console.log(`VaultRegistryProxy : ${vaultRegistryProxy.address}`);
-
-      vaultRegistry = vaultRegistryProxy.address;
-    }
-
+    const referralImplArgs = [poolFactory.address];
     const referralImpl = await new Referral__factory(deployer).deploy(
       poolFactory.address,
     );
-    await referralImpl.deployed();
-    if (log) console.log(`Referral : ${referralImpl.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.ReferralImplementation,
+      ContractType.Implementation,
+      referralImpl,
+      referralImplArgs,
+      true,
+    );
 
+    const referralProxyArgs = [referralImpl.address];
     const referralProxy = await new ReferralProxy__factory(deployer).deploy(
       referralImpl.address,
     );
-
-    await referralProxy.deployed();
-    if (log) console.log(`ReferralProxy : ${referralProxy.address}`);
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.ReferralProxy,
+      ContractType.Proxy,
+      referralProxy,
+      referralProxyArgs,
+      true,
+    );
 
     const referral = IReferral__factory.connect(
       referralProxy.address,
       deployer,
     );
+
+    //////////////////////////////////////////////
 
     const deployedFacets = await PoolUtil.deployPoolImplementations(
       deployer,
@@ -368,9 +486,7 @@ export class PoolUtil {
       wrappedNativeToken,
       feeReceiver,
       referral.address,
-      vaultRegistry,
-      log,
-      isDevMode,
+      vaultRegistryProxy.address,
     );
 
     let registeredSelectors = [
