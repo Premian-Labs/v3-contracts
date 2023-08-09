@@ -149,8 +149,4 @@ export default {
     alwaysGenerateOverloads: true,
     outDir: 'typechain',
   },
-
-  mocha: {
-    timeout: 6000000,
-  },
 };
