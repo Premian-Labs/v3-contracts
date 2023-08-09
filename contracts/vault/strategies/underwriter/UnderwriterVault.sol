@@ -30,6 +30,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     using EnumerableSetUD60x18 for EnumerableSet.Bytes32Set;
     using UnderwriterVaultStorage for UnderwriterVaultStorage.Layout;
     using SafeERC20 for IERC20;
+    using PRBMathExtra for UD60x18;
 
     uint256 internal constant WAD = 1e18;
     uint256 internal constant ONE_YEAR = 365 days;
@@ -65,7 +66,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        UD60x18 totalAssets = l.totalAssets + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        UD60x18 totalAssets = l.totalAssets.add(l.convertAssetToSD59x18(l.pendingAssetsChange));
         if (totalAssets == ZERO) return ZERO;
 
         return l.totalLockedAssets / totalAssets;
@@ -323,10 +324,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
-        l.pendingAssetsDeposit = assetAmount;
+        l.pendingAssetsChange = int256(assetAmount);
         shareAmount = super._deposit(assetAmount, receiver);
-        if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
-        delete l.pendingAssetsDeposit;
+        l.resetPendingAssetsChange(int256(assetAmount));
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -383,7 +383,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         assetAmount = l.convertAssetFromUD60x18(shares * pps);
 
+        l.pendingAssetsChange = -int256(assetAmount);
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+        l.resetPendingAssetsChange(-int256(assetAmount));
     }
 
     function _maxWithdrawUD60x18(
@@ -443,7 +445,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         shareAmount = _previewWithdrawUD60x18(l, assets, pps).unwrap();
 
+        l.pendingAssetsChange = -int256(assetAmount);
         _withdraw(msg.sender, receiver, owner, assetAmount, shareAmount, 0, 0);
+        l.resetPendingAssetsChange(-int256(assetAmount));
     }
 
     /// @inheritdoc ERC4626BaseInternal
