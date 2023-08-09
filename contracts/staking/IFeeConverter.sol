@@ -25,4 +25,10 @@ interface IFeeConverter {
     /// @param allowanceTarget address for which to set allowance for the trade
     /// @param data calldata to execute the trade
     function convert(address sourceToken, address callee, address allowanceTarget, bytes calldata data) external;
+
+    /// @notice Redeem shares from an ERC4626 vault
+    /// @param vault address of the ERC4626 vault to redeem from
+    /// @param shareAmount quantity of shares to redeem
+    /// @return assetAmount quantity of assets received
+    function redeem(address vault, uint256 shareAmount) external returns (uint256 assetAmount);
 }

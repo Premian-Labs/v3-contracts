@@ -4,6 +4,7 @@ pragma solidity =0.8.19;
 
 import {OwnableInternal} from "@solidstate/contracts/access/ownable/OwnableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
+import {IERC4626} from "@solidstate/contracts/interfaces/IERC4626.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 
@@ -118,5 +119,13 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
         }
 
         emit Converted(msg.sender, sourceToken, amount, outAmount, treasuryAmount);
+    }
+
+    /// @inheritdoc IFeeConverter
+    function redeem(
+        address vault,
+        uint256 shareAmount
+    ) external nonReentrant onlyAuthorized returns (uint256 assetAmount) {
+        return IERC4626(vault).redeem(shareAmount, address(this), address(this));
     }
 }
