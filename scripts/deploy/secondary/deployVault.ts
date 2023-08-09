@@ -2,6 +2,7 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
+import arbitrumDeployment from '../../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
 import {
@@ -18,8 +19,9 @@ async function main() {
   const chainId = await deployer.getChainId();
 
   let deployment: DeploymentInfos;
-
-  if (chainId === ChainID.ArbitrumGoerli) {
+  if (chainId === ChainID.Arbitrum) {
+    deployment = arbitrumDeployment;
+  } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
   } else {
     throw new Error('ChainId not implemented');
