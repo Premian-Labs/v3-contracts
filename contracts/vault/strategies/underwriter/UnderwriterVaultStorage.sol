@@ -2,8 +2,7 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {UD60x18, ud} from "@prb/math/UD60x18.sol";
-import {SD59x18, sd} from "@prb/math/SD59x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 
 import {IVault} from "../../IVault.sol";
@@ -91,15 +90,11 @@ library UnderwriterVaultStorage {
         UD60x18 performanceFeeRate;
         UD60x18 protocolFees;
         uint256 lastManagementFeeTimestamp;
-        // Amount of assets about to be deposited or withdrawn from the vault.
-        // Taking deposits as an example :
-        // This is set in `_deposit` before `super._deposit` call, and reset after.
+        // Amount of assets about to be deposited in the vault. This is set in `_deposit` before `super._deposit` call, and reset after.
         // We have the following function flow : _deposit -> _mint -> _beforeTokenTransfer -> getUtilisation
         // When `getUtilisation` is called here, we want it to return the new utilisation after the deposit, not the current one.
         // As `_beforeTokenTransfer` know the share amount change, but not the asset amount change, we need to store it here temporarily.
-        //
-        // Similar thing happens with the case of withdrawal
-        int256 pendingAssetsChange;
+        uint256 pendingAssetsDeposit;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -136,11 +131,7 @@ library UnderwriterVaultStorage {
     }
 
     function convertAssetToUD60x18(Layout storage l, uint256 value) internal view returns (UD60x18) {
-        return ud(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
-    }
-
-    function convertAssetToSD59x18(Layout storage l, int256 value) internal view returns (SD59x18) {
-        return sd(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
+        return UD60x18.wrap(OptionMath.scaleDecimals(value, l.assetDecimals(), 18));
     }
 
     function convertAssetFromUD60x18(Layout storage l, UD60x18 value) internal view returns (uint256) {
@@ -229,11 +220,5 @@ library UnderwriterVaultStorage {
                 l.maturities.remove(maturity);
             }
         }
-    }
-
-    function resetPendingAssetsChange(Layout storage l, int256 expectedPendingAssetsChange) internal {
-        // Safety check, should never happen
-        if (l.pendingAssetsChange != expectedPendingAssetsChange) revert IVault.Vault__InvariantViolated();
-        delete l.pendingAssetsChange;
     }
 }
