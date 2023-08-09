@@ -3,9 +3,9 @@ import {
   ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
 
@@ -15,7 +15,7 @@ async function main() {
 
   //////////////////////////
 
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let weth: string;
   let wbtc: string;
@@ -24,21 +24,21 @@ async function main() {
 
   if (chainId === ChainID.Arbitrum) {
     // Arbitrum
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  weth = addresses.tokens.WETH;
-  wbtc = addresses.tokens.WBTC;
+  weth = deployment.tokens.WETH;
+  wbtc = deployment.tokens.WBTC;
   proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.ChainlinkAdapterProxy,
+    deployment.ChainlinkAdapterProxy.address,
     deployer,
   );
 
@@ -51,8 +51,9 @@ async function main() {
   console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
 
   // Save new addresses
-  addresses.ChainlinkAdapterImplementation = chainlinkAdapterImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  deployment.ChainlinkAdapterImplementation.address =
+    chainlinkAdapterImpl.address;
+  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   if (setImplementation) {
     await proxy.setImplementation(chainlinkAdapterImpl.address);

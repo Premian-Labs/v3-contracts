@@ -1,8 +1,8 @@
 import { Premia__factory } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import fs from 'fs';
 import { ethers } from 'hardhat';
@@ -13,7 +13,7 @@ async function main() {
 
   //////////////////////////
 
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let premiaDiamond: string;
   let poolFactory: string;
@@ -27,12 +27,12 @@ async function main() {
   let updateFacets: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     feeReceiver = '';
     updateFacets = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
     updateFacets = true;
@@ -40,14 +40,14 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
-  premiaDiamond = addresses.PremiaDiamond;
-  poolFactory = addresses.PoolFactoryProxy;
-  router = addresses.ERC20Router;
-  referral = addresses.ReferralProxy;
-  userSettings = addresses.UserSettingsProxy;
-  vxPremia = addresses.VxPremiaProxy;
-  weth = addresses.tokens.WETH;
-  vaultRegistry = addresses.VaultRegistryProxy;
+  premiaDiamond = deployment.PremiaDiamond.address;
+  poolFactory = deployment.PoolFactoryProxy.address;
+  router = deployment.ERC20Router.address;
+  referral = deployment.ReferralProxy.address;
+  userSettings = deployment.UserSettingsProxy.address;
+  vxPremia = deployment.VxPremiaProxy.address;
+  weth = deployment.tokens.WETH;
+  vaultRegistry = deployment.VaultRegistryProxy.address;
 
   //////////////////////////
 
@@ -70,9 +70,9 @@ async function main() {
 
   // Save new addresses
   for (const el of deployedFacets) {
-    (addresses as any)[el.name] = el.address;
+    (deployment as any)[el.name] = el.address;
   }
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   //
 

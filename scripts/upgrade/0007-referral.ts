@@ -3,9 +3,9 @@ import {
   ReferralProxy,
   ReferralProxy__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
 
@@ -16,35 +16,38 @@ async function main() {
   //////////////////////////
 
   let proxy: ReferralProxy;
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = ReferralProxy__factory.connect(addresses.ReferralProxy, deployer);
+  proxy = ReferralProxy__factory.connect(
+    deployment.ReferralProxy.address,
+    deployer,
+  );
 
   //////////////////////////
 
   const referralImpl = await new Referral__factory(deployer).deploy(
-    addresses.PoolFactoryProxy,
+    deployment.PoolFactoryProxy.address,
   );
   await referralImpl.deployed();
   console.log(`Referral implementation : ${referralImpl.address}`);
 
   // Save new addresses
-  addresses.ReferralImplementation = referralImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  deployment.ReferralImplementation.address = referralImpl.address;
+  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   if (setImplementation) {
     await proxy.setImplementation(referralImpl.address);

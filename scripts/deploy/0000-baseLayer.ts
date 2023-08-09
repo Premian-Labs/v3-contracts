@@ -4,11 +4,11 @@ import {
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
 import { arbitrumGoerliFeeds } from '../../utils/addresses';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -22,20 +22,20 @@ async function main() {
   let feeReceiver: string;
   let chainlinkAdapter: string;
 
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
   } else if (chainId == ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  weth = addresses.tokens.WETH;
-  wbtc = addresses.tokens.WBTC;
-  feeReceiver = addresses.feeReceiver;
-  vxPremia = addresses.VxPremiaProxy;
+  weth = deployment.tokens.WETH;
+  wbtc = deployment.tokens.WBTC;
+  feeReceiver = deployment.feeReceiver;
+  vxPremia = deployment.VxPremiaProxy.address;
 
   //////////////////////////
   // Deploy ChainlinkAdapter

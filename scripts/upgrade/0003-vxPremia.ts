@@ -3,9 +3,9 @@ import {
   VxPremiaProxy,
   VxPremiaProxy__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
 
@@ -18,44 +18,47 @@ async function main() {
   let proxyManager: string;
   let lzEndpoint: string;
   let proxy: VxPremiaProxy;
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
     lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
     lzEndpoint = ethers.constants.AddressZero;
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = VxPremiaProxy__factory.connect(addresses.VxPremiaProxy, deployer);
+  proxy = VxPremiaProxy__factory.connect(
+    deployment.VxPremiaProxy.address,
+    deployer,
+  );
 
   //////////////////////////
 
   const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
     proxyManager,
     lzEndpoint,
-    addresses.tokens.PREMIA,
-    addresses.tokens.USDC,
-    addresses.ExchangeHelper,
-    addresses.VaultRegistryProxy,
+    deployment.tokens.PREMIA,
+    deployment.tokens.USDC,
+    deployment.ExchangeHelper,
+    deployment.VaultRegistryProxy,
   );
   await vxPremiaImpl.deployed();
   console.log(`VxPremia implementation : ${vxPremiaImpl.address}`);
 
   // Save new addresses
-  addresses.VxPremiaImplementation = vxPremiaImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  deployment.VxPremiaImplementation.address = vxPremiaImpl.address;
+  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   if (setImplementation) {
     await proxy.setImplementation(vxPremiaImpl.address);

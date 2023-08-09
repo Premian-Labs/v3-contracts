@@ -3,9 +3,9 @@ import {
   PoolFactoryProxy,
   PoolFactoryProxy__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import fs from 'fs';
 import { ethers } from 'hardhat';
 
@@ -15,7 +15,7 @@ async function main() {
 
   //////////////////////////
 
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let premiaDiamond: string;
   let chainlinkAdapter: string;
@@ -23,21 +23,21 @@ async function main() {
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  premiaDiamond = addresses.PremiaDiamond;
-  chainlinkAdapter = addresses.ChainlinkAdapterProxy;
+  premiaDiamond = deployment.PremiaDiamond.address;
+  chainlinkAdapter = deployment.ChainlinkAdapterProxy.address;
   proxy = PoolFactoryProxy__factory.connect(
-    addresses.PoolFactoryProxy,
+    deployment.PoolFactoryProxy.address,
     deployer,
   );
 
@@ -46,15 +46,15 @@ async function main() {
   const poolFactoryImpl = await new PoolFactory__factory(deployer).deploy(
     premiaDiamond,
     chainlinkAdapter,
-    addresses.tokens.WETH,
-    addresses.PoolFactoryDeployer,
+    deployment.tokens.WETH,
+    deployment.PoolFactoryDeployer.address,
   );
   await poolFactoryImpl.deployed();
   console.log(`PoolFactory impl : ${poolFactoryImpl.address}`);
 
   // Save new addresses
-  addresses.PoolFactoryImplementation = poolFactoryImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  deployment.PoolFactoryImplementation.address = poolFactoryImpl.address;
+  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   if (setImplementation) {
     await proxy.setImplementation(poolFactoryImpl.address);

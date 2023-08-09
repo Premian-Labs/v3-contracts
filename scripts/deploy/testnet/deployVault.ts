@@ -2,9 +2,9 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
-import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
+import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
-import { ChainID, ContractAddresses } from '../../../utils/deployment/types';
+import { ChainID, DeploymentInfos } from '../../../utils/deployment/types';
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
 
@@ -12,19 +12,19 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
 
   if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
   } else {
     throw new Error('ChainId not implemented');
   }
 
   // Deploy UnderwriterVaultProxy
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
-  const base = addresses.tokens.testWETH;
-  const quote = addresses.tokens.USDC;
-  const oracleAdapter = addresses.ChainlinkAdapterProxy;
+  const base = deployment.tokens.testWETH;
+  const quote = deployment.tokens.USDC;
+  const oracleAdapter = deployment.ChainlinkAdapterProxy.address;
   const isCall = true;
   const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
   const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
@@ -32,7 +32,7 @@ async function main() {
   const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
     deployer,
   ).deploy(
-    addresses.VaultRegistryProxy,
+    deployment.VaultRegistryProxy.address,
     base,
     quote,
     oracleAdapter,
@@ -46,7 +46,7 @@ async function main() {
 
   // Register vault on the VaultRegistry
   const vaultRegistry = VaultRegistry__factory.connect(
-    addresses.VaultRegistryProxy,
+    deployment.VaultRegistryProxy.address,
     deployer,
   );
 

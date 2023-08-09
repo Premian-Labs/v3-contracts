@@ -10,9 +10,9 @@ import {
   parseEther,
   solidityKeccak256,
 } from 'ethers/lib/utils';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -21,16 +21,16 @@ async function main() {
   //////////////////////////
 
   let proxy: VxPremiaProxy;
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
@@ -59,7 +59,7 @@ async function main() {
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    addresses.VaultRegistryProxy,
+    deployment.VaultRegistryProxy.address,
     deployer,
   );
   const currentSettings = await vaultRegistry.getSettings(vaultType);
@@ -82,14 +82,14 @@ async function main() {
     },
     deployer,
   ).deploy(
-    addresses.VaultRegistryProxy,
-    addresses.feeReceiver,
-    addresses.VolatilityOracleProxy,
-    addresses.PoolFactoryProxy,
-    addresses.ERC20Router,
-    addresses.VxPremiaProxy,
-    addresses.PremiaDiamond,
-    addresses.VaultMiningProxy,
+    deployment.VaultRegistryProxy.address,
+    deployment.feeReceiver,
+    deployment.VolatilityOracleProxy.address,
+    deployment.PoolFactoryProxy.address,
+    deployment.ERC20Router.address,
+    deployment.VxPremiaProxy.address,
+    deployment.PremiaDiamond.address,
+    deployment.VaultMiningProxy.address,
   );
   await underwriterVaultImpl.deployed();
 

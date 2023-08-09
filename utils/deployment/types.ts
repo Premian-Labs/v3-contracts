@@ -1,4 +1,4 @@
-export interface ContractAddresses {
+export interface DeploymentInfos {
   tokens: { [symbol: string]: string };
   vaults: { [name: string]: string };
   optionPS: { [name: string]: string };
@@ -38,9 +38,43 @@ export interface ContractAddresses {
   OptionRewardImplementation: ContractDeploymentInfos;
 }
 
+export enum ContractKey {
+  ChainlinkAdapterImplementation = 'ChainlinkAdapterImplementation',
+  ChainlinkAdapterProxy = 'ChainlinkAdapterProxy',
+  PremiaDiamond = 'PremiaDiamond',
+  PoolFactoryImplementation = 'PoolFactoryImplementation',
+  PoolFactoryProxy = 'PoolFactoryProxy',
+  PoolFactoryDeployer = 'PoolFactoryDeployer',
+  UserSettingsImplementation = 'UserSettingsImplementation',
+  UserSettingsProxy = 'UserSettingsProxy',
+  ExchangeHelper = 'ExchangeHelper',
+  ReferralImplementation = 'ReferralImplementation',
+  ReferralProxy = 'ReferralProxy',
+  VxPremiaImplementation = 'VxPremiaImplementation',
+  VxPremiaProxy = 'VxPremiaProxy',
+  ERC20Router = 'ERC20Router',
+  PoolBase = 'PoolBase',
+  PoolCore = 'PoolCore',
+  PoolTrade = 'PoolTrade',
+  OrderbookStream = 'OrderbookStream',
+  VaultRegistryImplementation = 'VaultRegistryImplementation',
+  VaultRegistryProxy = 'VaultRegistryProxy',
+  VolatilityOracleImplementation = 'VolatilityOracleImplementation',
+  VolatilityOracleProxy = 'VolatilityOracleProxy',
+  UnderwriterVaultImplementation = 'UnderwriterVaultImplementation',
+  VaultMiningImplementation = 'VaultMiningImplementation',
+  VaultMiningProxy = 'VaultMiningProxy',
+  OptionPSFactoryImplementation = 'OptionPSFactoryImplementation',
+  OptionPSFactoryProxy = 'OptionPSFactoryProxy',
+  OptionPSImplementation = 'OptionPSImplementation',
+  OptionRewardFactoryImplementation = 'OptionRewardFactoryImplementation',
+  OptionRewardFactoryProxy = 'OptionRewardFactoryProxy',
+  OptionRewardImplementation = 'OptionRewardImplementation',
+}
+
 export interface ContractDeploymentInfos {
   address: string;
-  contractType: ContractType;
+  contractType: ContractType | string;
   deploymentArgs: string[];
   commitHash: string;
   txHash: string;

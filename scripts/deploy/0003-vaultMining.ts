@@ -4,9 +4,9 @@ import {
   VxPremiaProxy,
 } from '../../typechain';
 import { ethers } from 'hardhat';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,16 +15,16 @@ async function main() {
   //////////////////////////
 
   let proxy: VxPremiaProxy;
-  let addresses: ContractAddresses;
+  let deployment: DeploymentInfos;
   let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
+    deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+    deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
@@ -36,10 +36,10 @@ async function main() {
   const vaultMiningImplementation = await new VaultMining__factory(
     deployer,
   ).deploy(
-    addresses.VaultRegistryProxy,
-    addresses.tokens.PREMIA,
-    addresses.VxPremiaProxy,
-    addresses.optionReward['PREMIA/USDC'],
+    deployment.VaultRegistryProxy.address,
+    deployment.tokens.PREMIA,
+    deployment.VxPremiaProxy.address,
+    deployment.optionReward['PREMIA/USDC'],
   );
 
   await vaultMiningImplementation.deployed();
