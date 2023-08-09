@@ -51,6 +51,7 @@
     }
   },
   "feeReceiver": "0x7bf2392bd078C8353069CffeAcc67c094079be23",
+  "treasury": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469",
 
   "ChainlinkAdapterImplementation": {
     "address": "",

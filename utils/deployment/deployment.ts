@@ -13,6 +13,7 @@ export async function updateDeploymentInfos(
   deployedContract: BaseContract,
   deploymentArgs: string[],
   logAddress = false,
+  writeFile = true,
 ) {
   if (logAddress) console.log(`${objectPath}: ${deployedContract.address}`);
 
@@ -40,7 +41,9 @@ export async function updateDeploymentInfos(
     txHash: txReceipt.transactionHash,
   });
 
-  fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+  if (writeFile) {
+    fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+  }
 
   return data;
 }

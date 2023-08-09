@@ -6,6 +6,7 @@ export interface DeploymentInfos {
   optionReward: { [name: string]: ContractDeploymentInfos };
 
   feeReceiver: string;
+  treasury: string;
 
   ChainlinkAdapterImplementation: ContractDeploymentInfos;
   ChainlinkAdapterProxy: ContractDeploymentInfos;
