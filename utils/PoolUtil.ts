@@ -218,7 +218,7 @@ export class PoolUtil {
     premiaAddress?: string,
     usdcAddress?: string,
   ) {
-    if (!vxPremiaAddress || !premiaAddress || !usdcAddress)
+if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
       throw new Error(
         "PREMIA and USDC addresses are required if vxPremia address isn't provided",
       );
