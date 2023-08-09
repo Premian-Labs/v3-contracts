@@ -4965,7 +4965,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"solhint@npm:^3.4.1":
+"solhint@npm:3.4.1":
   version: 3.4.1
   resolution: "solhint@npm:3.4.1"
   dependencies:
