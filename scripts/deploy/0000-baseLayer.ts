@@ -3,12 +3,18 @@ import {
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import { arbitrumGoerliFeeds } from '../../utils/addresses';
+import { arbitrumFeeds, arbitrumGoerliFeeds } from '../../utils/addresses';
 import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -39,22 +45,40 @@ async function main() {
 
   //////////////////////////
   // Deploy ChainlinkAdapter
+  const chainlinkAdapterImplArgs = [weth, wbtc];
   const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
     deployer,
-  ).deploy(weth, wbtc);
-  await chainlinkAdapterImpl.deployed();
-  console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
+  ).deploy(chainlinkAdapterImplArgs[0], chainlinkAdapterImplArgs[1]);
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.ChainlinkAdapterImplementation,
+    ContractType.Implementation,
+    chainlinkAdapterImpl,
+    chainlinkAdapterImplArgs,
+    true,
+  );
 
+  const chainlinkAdapterProxyArgs = [chainlinkAdapterImpl.address];
   const chainlinkAdapterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
-  ).deploy(chainlinkAdapterImpl.address);
-  await chainlinkAdapterProxy.deployed();
-
-  console.log(`ChainlinkAdapter proxy : ${chainlinkAdapterProxy.address}`);
+  ).deploy(chainlinkAdapterProxyArgs[0]);
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.ChainlinkAdapterProxy,
+    ContractType.Proxy,
+    chainlinkAdapterProxy,
+    chainlinkAdapterProxyArgs,
+    true,
+  );
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
 
-  if (chainId == ChainID.ArbitrumGoerli) {
+  if (chainId === ChainID.Arbitrum) {
+    await ChainlinkAdapter__factory.connect(
+      chainlinkAdapter,
+      deployer,
+    ).batchRegisterFeedMappings(arbitrumFeeds);
+  } else if (chainId === ChainID.ArbitrumGoerli) {
     await ChainlinkAdapter__factory.connect(
       chainlinkAdapter,
       deployer,
@@ -67,7 +91,6 @@ async function main() {
 
   const discountPerPool = parseEther('0.1'); // 10%
   const log = true;
-  const isDevMode = false;
 
   await PoolUtil.deploy(
     deployer,
@@ -76,7 +99,7 @@ async function main() {
     feeReceiver,
     discountPerPool,
     log,
-    isDevMode,
+    deployment.tokens.PREMIA,
     vxPremia,
   );
 }

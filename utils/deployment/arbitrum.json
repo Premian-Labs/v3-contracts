@@ -161,15 +161,6 @@
     "block": 0,
     "timestamp": 0
   },
-  "PoolTrade": {
-    "address": "",
-    "contractType": "DiamondFacet",
-    "deploymentArgs": [],
-    "commitHash": "",
-    "txHash": "",
-    "block": 0,
-    "timestamp": 0
-  },
   "PoolDepositWithdraw": {
     "address": "",
     "contractType": "DiamondFacet",
@@ -179,7 +170,25 @@
     "block": 0,
     "timestamp": 0
   },
+  "PoolTrade": {
+    "address": "",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
   "OrderbookStream": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionMathExternal": {
     "address": "",
     "contractType": "Standalone",
     "deploymentArgs": [],

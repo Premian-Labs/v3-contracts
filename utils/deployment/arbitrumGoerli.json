@@ -164,15 +164,6 @@
     "block": 0,
     "timestamp": 0
   },
-  "PoolTrade": {
-    "address": "0xAFc7117e3a77315B5BA3D629b6330269f4A12D75",
-    "contractType": "DiamondFacet",
-    "deploymentArgs": [],
-    "commitHash": "",
-    "txHash": "",
-    "block": 0,
-    "timestamp": 0
-  },
   "PoolDepositWithdraw": {
     "address": "0xBd2c903689FA2Fd4c958855F97BBD13C590808F0",
     "contractType": "DiamondFacet",
@@ -182,8 +173,26 @@
     "block": 0,
     "timestamp": 0
   },
+  "PoolTrade": {
+    "address": "0xAFc7117e3a77315B5BA3D629b6330269f4A12D75",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
   "OrderbookStream": {
     "address": "0x34C9B11475C195A69A581ED94f5e640b591c485A",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionMathExternal": {
+    "address": "",
     "contractType": "Standalone",
     "deploymentArgs": [],
     "commitHash": "",

@@ -2,7 +2,6 @@ import {
   OptionMathExternal__factory,
   UnderwriterVault__factory,
   VaultRegistry__factory,
-  VxPremiaProxy,
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import {
@@ -10,9 +9,15 @@ import {
   parseEther,
   solidityKeccak256,
 } from 'ethers/lib/utils';
-import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -20,19 +25,12 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: VxPremiaProxy;
   let deployment: DeploymentInfos;
-  let addressesPath: string;
-  let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    addressesPath = 'utils/deployment/arbitrum.json';
-    setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
-    setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -70,18 +68,19 @@ async function main() {
   const optionMathExternal = await new OptionMathExternal__factory(
     deployer,
   ).deploy();
-  await optionMathExternal.deployed();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.OptionMathExternal,
+    ContractType.Standalone,
+    optionMathExternal,
+    [],
+    true,
+  );
 
-  console.log('OptionMathExternal : ', optionMathExternal.address);
+  //////////////////////////
 
   // Deploy UnderwriterVault implementation
-  const underwriterVaultImpl = await new UnderwriterVault__factory(
-    {
-      'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
-        optionMathExternal.address,
-    },
-    deployer,
-  ).deploy(
+  const underwriterVaultImplArgs = [
     deployment.VaultRegistryProxy.address,
     deployment.feeReceiver,
     deployment.VolatilityOracleProxy.address,
@@ -90,13 +89,35 @@ async function main() {
     deployment.VxPremiaProxy.address,
     deployment.PremiaDiamond.address,
     deployment.VaultMiningProxy.address,
-  );
-  await underwriterVaultImpl.deployed();
+  ];
 
-  console.log(
-    'UnderwriterVault implementation : ',
-    underwriterVaultImpl.address,
+  const underwriterVaultImpl = await new UnderwriterVault__factory(
+    {
+      'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
+        optionMathExternal.address,
+    },
+    deployer,
+  ).deploy(
+    underwriterVaultImplArgs[0],
+    underwriterVaultImplArgs[1],
+    underwriterVaultImplArgs[2],
+    underwriterVaultImplArgs[3],
+    underwriterVaultImplArgs[4],
+    underwriterVaultImplArgs[5],
+    underwriterVaultImplArgs[6],
+    underwriterVaultImplArgs[7],
   );
+
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.UnderwriterVaultImplementation,
+    ContractType.Implementation,
+    underwriterVaultImpl,
+    underwriterVaultImplArgs,
+    true,
+  );
+
+  //////////////////////////
 
   // Set the implementation on the registry
   await vaultRegistry.setImplementation(

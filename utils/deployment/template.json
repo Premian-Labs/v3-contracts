@@ -163,7 +163,7 @@
     "block": 0,
     "timestamp": 0
   },
-  "PoolTrade": {
+  "PoolDepositWithdraw": {
     "address": "",
     "contractType": "DiamondFacet",
     "deploymentArgs": [],
@@ -172,7 +172,7 @@
     "block": 0,
     "timestamp": 0
   },
-  "PoolDepositWithdraw": {
+  "PoolTrade": {
     "address": "",
     "contractType": "DiamondFacet",
     "deploymentArgs": [],
@@ -229,6 +229,15 @@
   "UnderwriterVaultImplementation": {
     "address": "",
     "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionMathExternal": {
+    "address": "",
+    "contractType": "Standalone",
     "deploymentArgs": [],
     "commitHash": "",
     "txHash": "",

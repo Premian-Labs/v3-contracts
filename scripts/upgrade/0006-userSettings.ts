@@ -1,13 +1,17 @@
 import {
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   UserSettings__factory,
 } from '../../typechain';
 import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
-import fs from 'fs';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,40 +19,37 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: ProxyUpgradeableOwnable;
   let deployment: DeploymentInfos;
-  let addressesPath: string;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    addressesPath = 'utils/deployment/arbitrum.json';
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.UserSettingsProxy.address,
-    deployer,
-  );
-
   //////////////////////////
 
-  const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
-  await userSettingsImpl.deployed();
-  console.log(`UserSettings implementation : ${userSettingsImpl.address}`);
-
-  // Save new addresses
-  deployment.UserSettingsImplementation.address = userSettingsImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
+  const implementation = await new UserSettings__factory(deployer).deploy();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.UserSettingsImplementation,
+    ContractType.Implementation,
+    implementation,
+    [],
+    true,
+  );
 
   if (setImplementation) {
-    await proxy.setImplementation(userSettingsImpl.address);
+    const proxy = ProxyUpgradeableOwnable__factory.connect(
+      deployment.UserSettingsProxy.address,
+      deployer,
+    );
+    await proxy.setImplementation(implementation.address);
   }
 }
 

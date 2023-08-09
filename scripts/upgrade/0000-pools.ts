@@ -23,18 +23,15 @@ async function main() {
   let userSettings: string;
   let vxPremia: string;
   let weth: string;
-  let feeReceiver: string;
   let updateFacets: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
     addressesPath = 'utils/deployment/arbitrum.json';
-    feeReceiver = '';
     updateFacets = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
     addressesPath = 'utils/deployment/arbitrumGoerli.json';
-    feeReceiver = '0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709';
     updateFacets = true;
   } else {
     throw new Error('ChainId not implemented');
@@ -51,9 +48,6 @@ async function main() {
 
   //////////////////////////
 
-  const log = true;
-  const isDevMode = false;
-
   const deployedFacets = await PoolUtil.deployPoolImplementations(
     deployer,
     poolFactory,
@@ -61,18 +55,16 @@ async function main() {
     userSettings,
     vxPremia,
     weth,
-    feeReceiver,
+    deployment.feeReceiver,
     referral,
     vaultRegistry,
-    log,
-    isDevMode,
   );
 
   // Save new addresses
-  for (const el of deployedFacets) {
-    (deployment as any)[el.name] = el.address;
-  }
-  fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
+  // for (const el of deployedFacets) {
+  //   (deployment as any)[el.name] = el.address;
+  // }
+  // fs.writeFileSync(addressesPath, JSON.stringify(deployment, null, 2));
 
   //
 

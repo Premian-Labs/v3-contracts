@@ -21,12 +21,14 @@ export interface DeploymentInfos {
   ERC20Router: ContractDeploymentInfos;
   PoolBase: ContractDeploymentInfos;
   PoolCore: ContractDeploymentInfos;
+  PoolDepositWithdraw: ContractDeploymentInfos;
   PoolTrade: ContractDeploymentInfos;
   OrderbookStream: ContractDeploymentInfos;
   VaultRegistryImplementation: ContractDeploymentInfos;
   VaultRegistryProxy: ContractDeploymentInfos;
   VolatilityOracleImplementation: ContractDeploymentInfos;
   VolatilityOracleProxy: ContractDeploymentInfos;
+  OptionMathExternal: ContractDeploymentInfos;
   UnderwriterVaultImplementation: ContractDeploymentInfos;
   VaultMiningImplementation: ContractDeploymentInfos;
   VaultMiningProxy: ContractDeploymentInfos;
@@ -55,12 +57,14 @@ export enum ContractKey {
   ERC20Router = 'ERC20Router',
   PoolBase = 'PoolBase',
   PoolCore = 'PoolCore',
+  PoolDepositWithdraw = 'PoolDepositWithdraw',
   PoolTrade = 'PoolTrade',
   OrderbookStream = 'OrderbookStream',
   VaultRegistryImplementation = 'VaultRegistryImplementation',
   VaultRegistryProxy = 'VaultRegistryProxy',
   VolatilityOracleImplementation = 'VolatilityOracleImplementation',
   VolatilityOracleProxy = 'VolatilityOracleProxy',
+  OptionMathExternal = 'OptionMathExternal',
   UnderwriterVaultImplementation = 'UnderwriterVaultImplementation',
   VaultMiningImplementation = 'VaultMiningImplementation',
   VaultMiningProxy = 'VaultMiningProxy',

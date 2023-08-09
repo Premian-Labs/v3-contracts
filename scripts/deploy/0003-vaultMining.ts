@@ -4,9 +4,15 @@ import {
   VxPremiaProxy,
 } from '../../typechain';
 import { ethers } from 'hardhat';
-import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -33,27 +39,53 @@ async function main() {
 
   // ToDo : Deploy OptionReward contract
 
-  const vaultMiningImplementation = await new VaultMining__factory(
-    deployer,
-  ).deploy(
+  //////////////////////////
+
+  const vaultMiningImplementationArgs = [
     deployment.VaultRegistryProxy.address,
     deployment.tokens.PREMIA,
     deployment.VxPremiaProxy.address,
     deployment.optionReward['PREMIA/USDC'],
+  ];
+
+  const vaultMiningImplementation = await new VaultMining__factory(
+    deployer,
+  ).deploy(
+    vaultMiningImplementationArgs[0],
+    vaultMiningImplementationArgs[1],
+    vaultMiningImplementationArgs[2],
+    vaultMiningImplementationArgs[3],
   );
 
-  await vaultMiningImplementation.deployed();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.VaultMiningImplementation,
+    ContractType.Implementation,
+    vaultMiningImplementation,
+    vaultMiningImplementationArgs,
+    true,
+  );
 
-  console.log(`VaultMining impl : ${vaultMiningImplementation.address}`);
+  //////////////////////////
 
   const rewardsPerYear = 0; // ToDo : Set
-  const vaultMiningProxy = await new VaultMiningProxy__factory(deployer).deploy(
-    vaultMiningImplementation.address,
-    rewardsPerYear,
-  );
-  await vaultMiningProxy.deployed();
 
-  console.log(`VaultMining proxy : ${vaultMiningProxy.address}`);
+  const vaultMiningProxyArgs = [
+    vaultMiningImplementation.address,
+    rewardsPerYear.toString(),
+  ];
+  const vaultMiningProxy = await new VaultMiningProxy__factory(deployer).deploy(
+    vaultMiningProxyArgs[0],
+    vaultMiningProxyArgs[1],
+  );
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.VaultMiningProxy,
+    ContractType.Proxy,
+    vaultMiningProxy,
+    vaultMiningProxyArgs,
+    true,
+  );
 }
 
 main()
