@@ -35,9 +35,6 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
     using SafeCast for uint8;
     using Tokens for address;
 
-    /// @dev If a fresh price is unavailable the adapter will wait the duration of
-    ///      MAX_DELAY before returning the stale price
-    uint256 internal constant MAX_DELAY = 12 hours;
     /// @dev If the difference between target and last update is greater than the
     ///      STALE_PRICE_THRESHOLD, the price is considered stale
     uint256 internal constant STALE_PRICE_THRESHOLD = 25 hours;
