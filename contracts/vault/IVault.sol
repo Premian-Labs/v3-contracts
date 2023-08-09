@@ -12,6 +12,7 @@ interface IVault is ISolidStateERC4626 {
     error Vault__AboveMaxSlippage(UD60x18 totalPremium, UD60x18 premiumLimit);
     error Vault__AddressZero();
     error Vault__InsufficientFunds();
+    error Vault__InvariantViolated();
     error Vault__MaximumAmountExceeded(UD60x18 maximum, UD60x18 amount);
     error Vault__OptionExpired(uint256 timestamp, uint256 maturity);
     error Vault__OptionPoolNotListed();
