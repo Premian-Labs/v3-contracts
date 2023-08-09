@@ -185,6 +185,13 @@ library PoolStorage {
         router.safeTransferFrom(token, from, to, PoolStorage.layout().toPoolTokenDecimals(value));
     }
 
+    /// @notice Transfers token amount to recipient. Ignores if dust is missing on the exchange level,
+    ///         i.e. if the pool balance is 0.01% less than the amount that should be sent, then the pool balance is
+    ///         transferred instead of the amount. If the relative difference is larger than 0.01% then the transaction
+    ///         will revert.
+    /// @param token IERC20 token that is intended to be sent.
+    /// @param to Recipient address of the tokens.
+    /// @param value The amount of tokens that are intended to be sent.
     function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
@@ -203,6 +210,13 @@ library PoolStorage {
         }
     }
 
+    /// @notice Transfers token amount to recipient. Ignores if dust is missing on the exchange level,
+    ///         i.e. if the pool balance is 0.01% less than the amount that should be sent, then the pool balance is
+    ///         transferred instead of the amount. If the relative difference is larger than 0.01% then the transaction
+    ///         will revert.
+    /// @param token IERC20 token that is intended to be sent.
+    /// @param to Recipient address of the tokens.
+    /// @param value The amount of tokens that are intended to be sent. (18 decimals)
     function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         safeTransferIgnoreDust(token, to, toPoolTokenDecimals(l, value));
