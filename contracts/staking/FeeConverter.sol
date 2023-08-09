@@ -114,8 +114,8 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
         }
 
         if (vxPremiaAmount > 0) {
-            IERC20(USDC).approve(VX_PREMIA, outAmount - treasuryAmount);
-            IVxPremia(VX_PREMIA).addRewards(outAmount - treasuryAmount);
+            IERC20(USDC).approve(VX_PREMIA, vxPremiaAmount);
+            IVxPremia(VX_PREMIA).addRewards(vxPremiaAmount);
         }
 
         emit Converted(msg.sender, sourceToken, amount, outAmount, treasuryAmount);
