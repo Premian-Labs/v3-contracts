@@ -191,7 +191,7 @@ library PoolStorage {
     ///         will revert.
     /// @param token IERC20 token that is intended to be sent.
     /// @param to Recipient address of the tokens.
-    /// @param value The amount of tokens that are intended to be sent.
+    /// @param value The amount of tokens that are intended to be sent (poolToken decimals).
     function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
