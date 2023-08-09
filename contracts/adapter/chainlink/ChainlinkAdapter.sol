@@ -447,10 +447,10 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
         uint256 target,
         int8 factor
     ) internal view returns (uint256) {
-        UD60x18 cachedPriceAtTarget = _getTokenPriceAt(token, denomination, target);
-        // NOTE: The cached prices are 18 decimals to maintain consistency across all adapters, because of this we need
-        // to downscale the cached price to the precision used by the feed before calculating the final price
-        if (cachedPriceAtTarget > ZERO) return _scale(cachedPriceAtTarget.unwrap(), -int8(factor));
+        UD60x18 priceOverrideAtTarget = _getTokenPriceAt(token, denomination, target);
+        // NOTE: The override prices are 18 decimals to maintain consistency across all adapters, because of this we need
+        // to downscale the override price to the precision used by the feed before calculating the final price
+        if (priceOverrideAtTarget > ZERO) return _scale(priceOverrideAtTarget.unwrap(), -int8(factor));
 
         address feed = _feed(token, denomination);
         (uint80 roundId, int256 price, , uint256 updatedAt, ) = _latestRoundData(feed);
@@ -473,7 +473,7 @@ contract ChainlinkAdapter is IChainlinkAdapter, FeedRegistry, OracleAdapter, Pri
 
             if (binarySearchData.leftUpdatedAt == 0) {
                 // if leftUpdatedAt is 0, it means that the target is not in the current phase, therefore, we must
-                // revert and wait until a price is set in PriceRepository
+                // revert and wait until a price override is set in PriceRepository
                 revert ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound(token, denomination, target);
             }
 
