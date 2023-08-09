@@ -1,13 +1,17 @@
 import {
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   VolatilityOracle__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import fs from 'fs';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,44 +19,37 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: ProxyUpgradeableOwnable;
-  let addresses: ContractAddresses;
-  let addressesPath: string;
+  let deployment: DeploymentInfos;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
-    addressesPath = 'utils/deployment/arbitrum.json';
+    deployment = arbitrumDeployment;
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
+    deployment = arbitrumGoerliDeployment;
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.VolatilityOracleProxy,
-    deployer,
-  );
-
   //////////////////////////
 
-  const volatilityOracleImpl = await new VolatilityOracle__factory(
+  const implementation = await new VolatilityOracle__factory(deployer).deploy();
+  await updateDeploymentInfos(
     deployer,
-  ).deploy();
-  await volatilityOracleImpl.deployed();
-  console.log(
-    `VolatilityOracle implementation : ${volatilityOracleImpl.address}`,
+    ContractKey.VolatilityOracleImplementation,
+    ContractType.Implementation,
+    implementation,
+    [],
+    true,
   );
 
-  // Save new addresses
-  addresses.VolatilityOracleImplementation = volatilityOracleImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
-
   if (setImplementation) {
-    await proxy.setImplementation(volatilityOracleImpl.address);
+    const proxy = ProxyUpgradeableOwnable__factory.connect(
+      deployment.VolatilityOracleProxy.address,
+      deployer,
+    );
+    await proxy.setImplementation(implementation.address);
   }
 }
 

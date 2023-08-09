@@ -1,12 +1,20 @@
 import { OrderbookStream__factory } from '../../typechain';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
 
   const orderbook = await new OrderbookStream__factory(deployer).deploy();
-
-  console.log('Orderbook deployed to:', orderbook.address);
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.OrderbookStream,
+    ContractType.Standalone,
+    orderbook,
+    [],
+    true,
+  );
 }
 
 main()
