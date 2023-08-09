@@ -99,8 +99,9 @@ async function main() {
     feeReceiver,
     discountPerPool,
     log,
-    deployment.tokens.PREMIA,
     vxPremia,
+    deployment.tokens.PREMIA,
+    deployment.tokens.USDC,
   );
 }
 

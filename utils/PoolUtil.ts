@@ -29,7 +29,6 @@ import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { tokens } from './addresses';
 import { updateDeploymentInfos } from './deployment/deployment';
 import { ContractKey, ContractType } from './deployment/types';
 
@@ -215,9 +214,15 @@ export class PoolUtil {
     feeReceiver: string,
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
-    premiaAddress?: string,
     vxPremiaAddress?: string,
+    premiaAddress?: string,
+    usdcAddress?: string,
   ) {
+    if (!vxPremiaAddress || !premiaAddress || !usdcAddress)
+      throw new Error(
+        "PREMIA and USDC addresses are required if vxPremia address isn't provided",
+      );
+
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
     await updateDeploymentInfos(
@@ -399,22 +404,11 @@ export class PoolUtil {
 
     // VxPremia
     if (!vxPremiaAddress) {
-      if (!premiaAddress) {
-        const premia = await new ERC20Mock__factory(deployer).deploy(
-          'PREMIA',
-          18,
-        );
-
-        await premia.deployed();
-        if (log) console.log(`Premia : ${premia.address}`);
-        premiaAddress = premia.address;
-      }
-
       const vxPremiaImplArgs = [
         constants.AddressZero,
         constants.AddressZero,
         premiaAddress,
-        tokens.USDC.address,
+        usdcAddress,
         exchangeHelper.address,
         vaultRegistryProxy.address,
       ];
