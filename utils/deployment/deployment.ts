@@ -33,7 +33,7 @@ export async function updateDeploymentInfos(
     address: deployedContract.address,
     block: txReceipt.blockNumber,
     commitHash: getCommitHash(),
-    contractType: ContractType.Standalone,
+    contractType,
     deploymentArgs,
     timestamp: await getBlockTimestamp(provider, txReceipt.blockNumber),
     txHash: txReceipt.transactionHash,
