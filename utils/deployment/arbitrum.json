@@ -50,7 +50,7 @@
       "timestamp": 0
     }
   },
-  "feeReceiver": "",
+  "feeReceiver": "0x7bf2392bd078C8353069CffeAcc67c094079be23",
 
   "ChainlinkAdapterImplementation": {
     "address": "",

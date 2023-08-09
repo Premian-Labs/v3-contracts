@@ -31,15 +31,14 @@ async function main() {
 
   //////////////////////////
 
-  const implementation = await new Referral__factory(deployer).deploy(
-    deployment.PoolFactoryProxy.address,
-  );
+  const args = [deployment.PoolFactoryProxy.address];
+  const implementation = await new Referral__factory(deployer).deploy(args[0]);
   await updateDeploymentInfos(
     deployer,
     ContractKey.ReferralImplementation,
     ContractType.Implementation,
     implementation,
-    [],
+    args,
     true,
   );
 
