@@ -28,10 +28,26 @@
     }
   },
   "optionPS": {
-    "PREMIA/USDC-C": ""
+    "PREMIA/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
   },
   "optionReward": {
-    "PREMIA/USDC": ""
+    "PREMIA/USDC": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
   },
   "feeReceiver": "",
 

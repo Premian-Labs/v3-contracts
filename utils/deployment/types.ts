@@ -1,8 +1,10 @@
 export interface DeploymentInfos {
   tokens: { [symbol: string]: string };
+
   vaults: { [name: string]: ContractDeploymentInfos };
-  optionPS: { [name: string]: string };
-  optionReward: { [name: string]: string };
+  optionPS: { [name: string]: ContractDeploymentInfos };
+  optionReward: { [name: string]: ContractDeploymentInfos };
+
   feeReceiver: string;
 
   ChainlinkAdapterImplementation: ContractDeploymentInfos;

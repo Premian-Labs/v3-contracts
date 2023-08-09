@@ -45,7 +45,7 @@ async function main() {
     deployment.VaultRegistryProxy.address,
     deployment.tokens.PREMIA,
     deployment.VxPremiaProxy.address,
-    deployment.optionReward['PREMIA/USDC'],
+    deployment.optionReward['PREMIA/USDC'].address,
   ];
 
   const vaultMiningImplementation = await new VaultMining__factory(
