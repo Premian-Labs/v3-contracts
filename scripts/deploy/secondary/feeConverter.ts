@@ -33,7 +33,7 @@ async function main() {
 
   if (!deployment.ExchangeHelper.address) {
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-    await updateDeploymentInfos(
+    deployment = await updateDeploymentInfos(
       deployer,
       ContractKey.ExchangeHelper,
       ContractType.Standalone,
