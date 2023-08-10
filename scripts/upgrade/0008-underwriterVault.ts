@@ -21,11 +21,14 @@ async function main() {
   //////////////////////////
 
   let deployment: DeploymentInfos;
+  let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
+    setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
+    setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -80,10 +83,12 @@ async function main() {
   //////////////////////////
 
   // Set the implementation on the registry
-  await vaultRegistry.setImplementation(
-    vaultType,
-    underwriterVaultImpl.address,
-  );
+  if (setImplementation) {
+    await vaultRegistry.setImplementation(
+      vaultType,
+      underwriterVaultImpl.address,
+    );
+  }
 }
 
 main()
