@@ -40,7 +40,6 @@ async function main() {
 
   weth = deployment.tokens.WETH;
   wbtc = deployment.tokens.WBTC;
-  feeReceiver = deployment.feeReceiver;
   vxPremia = deployment.VxPremiaProxy.address;
 
   //////////////////////////
@@ -96,7 +95,8 @@ async function main() {
     deployer,
     weth,
     chainlinkAdapter,
-    feeReceiver,
+    deployment.feeConverter.main.address,
+    deployment.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
     discountPerPool,
     log,
     vxPremia,

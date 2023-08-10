@@ -8,19 +8,20 @@
     "USDC": "0x53421DB1f41368E028A4239954feB5033C7B3729",
     "DAI": "0x350bC4115F09E619bFBc6E56AD87d5e122b7B8c5"
   },
-  "vaults": {
-    "SV-ETH/USDC-C": {
-      "address": "0x0840c9625e5DDd73E09feD5FDAD04AaD41af7477",
-      "contractType": "Proxy",
+
+  "feeConverter": {
+    "main": {
+      "address": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+      "contractType": "",
       "deploymentArgs": [],
       "commitHash": "",
       "txHash": "",
       "block": 0,
       "timestamp": 0
     },
-    "SV-ETH/USDC-P": {
-      "address": "0xc97DBcbC5388329CABa2991a2231e3ECE395Cc02",
-      "contractType": "Proxy",
+    "insuranceFund": {
+      "address": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+      "contractType": "",
       "deploymentArgs": [],
       "commitHash": "",
       "txHash": "",
@@ -50,7 +51,29 @@
       "timestamp": 0
     }
   },
-  "feeReceiver": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+  "vaults": {
+    "SV-ETH/USDC-C": {
+      "address": "0x0840c9625e5DDd73E09feD5FDAD04AaD41af7477",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "0xc97DBcbC5388329CABa2991a2231e3ECE395Cc02",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+
+  "treasury": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+  "insuranceFund": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
 
   "ChainlinkAdapterImplementation": {
     "address": "0x9D963Ba2a4d52Ad17b608aA1434cAD056ea03F98",
@@ -341,6 +364,15 @@
     "timestamp": 0
   },
   "OptionRewardImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "FeeConverterImplementation": {
     "address": "",
     "contractType": "Implementation",
     "deploymentArgs": [],

@@ -8,17 +8,18 @@
     "DAI": "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
     "ARB": "0x912CE59144191C1204E64559FE8253a0e49E6548"
   },
-  "vaults": {
-    "SV-ETH/USDC-C": {
-      "address": "",
+
+  "feeConverter": {
+    "main": {
+      "address": "0x7bf2392bd078C8353069CffeAcc67c094079be23",
       "contractType": "Proxy",
       "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0
+      "commitHash": "60d2175447e9acb79d7b0da3329665eba739302c",
+      "txHash": "0x4d3d2bcf43fc50d1efb10e8cac7d1e1da528a24b6ae29f035bf3fddb4274f459",
+      "block": 3303331,
+      "timestamp": 1637774105
     },
-    "SV-ETH/USDC-P": {
+    "insuranceFund": {
       "address": "",
       "contractType": "Proxy",
       "deploymentArgs": [],
@@ -50,7 +51,29 @@
       "timestamp": 0
     }
   },
-  "feeReceiver": "0x7bf2392bd078C8353069CffeAcc67c094079be23",
+  "vaults": {
+    "SV-ETH/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+
+  "treasury": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469",
+  "insuranceFund": "0xa0C49ae8C749A53e9881B226fC0Fa5E570754393",
 
   "ChainlinkAdapterImplementation": {
     "address": "",
@@ -341,6 +364,15 @@
     "timestamp": 0
   },
   "OptionRewardImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "FeeConverterImplementation": {
     "address": "",
     "contractType": "Implementation",
     "deploymentArgs": [],
