@@ -64,7 +64,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.totalLockedAssets / l.totalAssets;
+
+        UD60x18 totalAssets = l.totalAssets + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        if (totalAssets == ZERO) return ZERO;
+
+        return l.totalLockedAssets / totalAssets;
     }
 
     function updateSettings(bytes memory settings) external {
@@ -311,9 +315,18 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
         uint256 assetAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
+        _revertIfAddressZero(receiver);
+        _revertIfZeroAsset(assetAmount);
+
         // charge management fees such that the timestamp is up to date
         _chargeManagementFees();
-        return super._deposit(assetAmount, receiver);
+
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        l.pendingAssetsDeposit = assetAmount;
+        shareAmount = super._deposit(assetAmount, receiver);
+        if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
+        delete l.pendingAssetsDeposit;
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -434,18 +447,14 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    function _afterDeposit(address receiver, uint256 assetAmount, uint256 shareAmount) internal virtual override {
-        _revertIfAddressZero(receiver);
-        _revertIfZeroAsset(assetAmount);
+    function _afterDeposit(address, uint256 assetAmount, uint256 shareAmount) internal virtual override {
         _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         // Add assetAmount deposited to user's balance
         // This is needed to compute average price per share
-        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
-
-        l.totalAssets = l.totalAssets + assets;
+        l.totalAssets = l.totalAssets + l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
     }
