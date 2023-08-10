@@ -2,7 +2,6 @@ import {
   OptionMathExternal__factory,
   UnderwriterVault__factory,
   VaultRegistry__factory,
-  VxPremiaProxy,
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import {
@@ -10,9 +9,15 @@ import {
   parseEther,
   solidityKeccak256,
 } from 'ethers/lib/utils';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -20,19 +25,12 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: VxPremiaProxy;
-  let addresses: ContractAddresses;
-  let addressesPath: string;
-  let setImplementation: boolean;
+  let deployment: DeploymentInfos;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
-    addressesPath = 'utils/deployment/arbitrum.json';
-    setImplementation = false;
+    deployment = arbitrumDeployment;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
-    setImplementation = true;
+    deployment = arbitrumGoerliDeployment;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -59,7 +57,7 @@ async function main() {
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    addresses.VaultRegistryProxy,
+    deployment.VaultRegistryProxy.address,
     deployer,
   );
   const currentSettings = await vaultRegistry.getSettings(vaultType);
@@ -70,11 +68,29 @@ async function main() {
   const optionMathExternal = await new OptionMathExternal__factory(
     deployer,
   ).deploy();
-  await optionMathExternal.deployed();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.OptionMathExternal,
+    ContractType.Standalone,
+    optionMathExternal,
+    [],
+    true,
+  );
 
-  console.log('OptionMathExternal : ', optionMathExternal.address);
+  //////////////////////////
 
   // Deploy UnderwriterVault implementation
+  const underwriterVaultImplArgs = [
+    deployment.VaultRegistryProxy.address,
+    deployment.feeReceiver,
+    deployment.VolatilityOracleProxy.address,
+    deployment.PoolFactoryProxy.address,
+    deployment.ERC20Router.address,
+    deployment.VxPremiaProxy.address,
+    deployment.PremiaDiamond.address,
+    deployment.VaultMiningProxy.address,
+  ];
+
   const underwriterVaultImpl = await new UnderwriterVault__factory(
     {
       'contracts/libraries/OptionMathExternal.sol:OptionMathExternal':
@@ -82,21 +98,26 @@ async function main() {
     },
     deployer,
   ).deploy(
-    addresses.VaultRegistryProxy,
-    addresses.feeReceiver,
-    addresses.VolatilityOracleProxy,
-    addresses.PoolFactoryProxy,
-    addresses.ERC20Router,
-    addresses.VxPremiaProxy,
-    addresses.PremiaDiamond,
-    addresses.VaultMiningProxy,
+    underwriterVaultImplArgs[0],
+    underwriterVaultImplArgs[1],
+    underwriterVaultImplArgs[2],
+    underwriterVaultImplArgs[3],
+    underwriterVaultImplArgs[4],
+    underwriterVaultImplArgs[5],
+    underwriterVaultImplArgs[6],
+    underwriterVaultImplArgs[7],
   );
-  await underwriterVaultImpl.deployed();
 
-  console.log(
-    'UnderwriterVault implementation : ',
-    underwriterVaultImpl.address,
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.UnderwriterVaultImplementation,
+    ContractType.Implementation,
+    underwriterVaultImpl,
+    underwriterVaultImplArgs,
+    true,
   );
+
+  //////////////////////////
 
   // Set the implementation on the registry
   await vaultRegistry.setImplementation(

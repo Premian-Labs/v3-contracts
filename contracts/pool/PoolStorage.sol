@@ -79,6 +79,7 @@ library PoolStorage {
         }
     }
 
+    /// @notice Returns the token decimals for the pool token
     function getPoolTokenDecimals(Layout storage l) internal view returns (uint8) {
         return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
     }

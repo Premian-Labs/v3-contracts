@@ -1223,10 +1223,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/chai@npm:^4.3.5":
-  version: 4.3.5
-  resolution: "@types/chai@npm:4.3.5"
-  checksum: c8f26a88c6b5b53a3275c7f5ff8f107028e3cbb9ff26795fff5f3d9dea07106a54ce9e2dce5e40347f7c4cc35657900aaf0c83934a25a1ae12e61e0f5516e431
+"@types/lodash@npm:^4":
+  version: 4.14.197
+  resolution: "@types/lodash@npm:4.14.197"
+  checksum: 53d7567d1704de76cf33266c78062e0fd722d4b846e5b1417d0b6ef0ee41c0d9c451b92bc34f73d5f1fcc45c7d36511e92f6f47a9279b48157ba60a92ddaa078
   languageName: node
   linkType: hard
 
@@ -1248,13 +1248,6 @@ __metadata:
   version: 1.2.2
   resolution: "@types/minimist@npm:1.2.2"
   checksum: b8da83c66eb4aac0440e64674b19564d9d86c80ae273144db9681e5eeff66f238ade9515f5006ffbfa955ceff8b89ad2bd8ec577d7caee74ba101431fb07045d
-  languageName: node
-  linkType: hard
-
-"@types/mocha@npm:^10.0.1":
-  version: 10.0.1
-  resolution: "@types/mocha@npm:10.0.1"
-  checksum: 224ea9fce7b1734ccdb9aa99a622d902a538ce1847bca7fd22c5fb38adcf3ed536f50f48f587085db988a4bb3c2eb68f4b98e1cd6a38bc5547bd3bbbedc54495
   languageName: node
   linkType: hard
 
@@ -1892,7 +1885,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chai@npm:^4.3.4, chai@npm:^4.3.7":
+"chai@npm:^4.3.4":
   version: 4.3.7
   resolution: "chai@npm:4.3.7"
   dependencies:
@@ -3483,15 +3476,15 @@ __metadata:
   linkType: hard
 
 "jackspeak@npm:^2.0.3":
-  version: 2.2.2
-  resolution: "jackspeak@npm:2.2.2"
+  version: 2.2.3
+  resolution: "jackspeak@npm:2.2.3"
   dependencies:
     "@isaacs/cliui": ^8.0.2
     "@pkgjs/parseargs": ^0.11.0
   dependenciesMeta:
     "@pkgjs/parseargs":
       optional: true
-  checksum: 7b1468dd910afc00642db87448f24b062346570b8b47531409aa9012bcb95fdf7ec2b1c48edbb8b57a938c08391f8cc01b5034fc335aa3a2e74dbcc0ee5c555a
+  checksum: 8add557045eb51f619d247ac9786dbfa7ee4d52a0eb3fb488c2637aecfd15d12c284a4ff7dead2c1aba34d6228d9452e4509fb771daae87793a48786b095ee07
   languageName: node
   linkType: hard
 
@@ -4065,7 +4058,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mocha@npm:^10.0.0, mocha@npm:^10.2.0":
+"mocha@npm:^10.0.0":
   version: 10.2.0
   resolution: "mocha@npm:10.2.0"
   dependencies:
@@ -4525,10 +4518,8 @@ __metadata:
     "@solidstate/spec": ^0.0.57
     "@typechain/ethers-v5": ^11.1.1
     "@typechain/hardhat": ^7.0.0
-    "@types/chai": ^4.3.5
-    "@types/mocha": ^10.0.1
+    "@types/lodash": ^4
     "@types/node": ^18.17.4
-    chai: ^4.3.7
     dotenv: ^16.3.1
     ethers: 5.7.2
     hardhat: ^2.17.1
@@ -4539,7 +4530,7 @@ __metadata:
     hardhat-preprocessor: ^0.1.5
     hardhat-spdx-license-identifier: ^2.1.0
     husky: ^8.0.3
-    mocha: ^10.2.0
+    lodash: ^4.17.21
     moment-timezone: ^0.5.43
     prettier: ^2.8.8
     prettier-plugin-solidity: ^1.1.3

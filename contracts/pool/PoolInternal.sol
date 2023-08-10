@@ -2145,6 +2145,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
     }
 
+    /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
     function _beforeTokenTransfer(
         address operator,
         address from,
