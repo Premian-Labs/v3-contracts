@@ -1,13 +1,17 @@
 import {
   ChainlinkAdapter__factory,
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import fs from 'fs';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,47 +19,47 @@ async function main() {
 
   //////////////////////////
 
-  let addresses: ContractAddresses;
-  let addressesPath: string;
+  let deployment: DeploymentInfos;
   let weth: string;
   let wbtc: string;
-  let proxy: ProxyUpgradeableOwnable;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     // Arbitrum
-    addresses = arbitrumAddresses;
-    addressesPath = 'utils/deployment/arbitrum.json';
+    deployment = arbitrumDeployment;
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
+    deployment = arbitrumGoerliDeployment;
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  weth = addresses.tokens.WETH;
-  wbtc = addresses.tokens.WBTC;
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.ChainlinkAdapterProxy,
-    deployer,
-  );
+  weth = deployment.tokens.WETH;
+  wbtc = deployment.tokens.WBTC;
 
   //////////////////////////
 
-  const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
+  const args = [weth, wbtc];
+  const implementation = await new ChainlinkAdapter__factory(deployer).deploy(
+    args[0],
+    args[1],
+  );
+  await updateDeploymentInfos(
     deployer,
-  ).deploy(weth, wbtc);
-  await chainlinkAdapterImpl.deployed();
-  console.log(`ChainlinkAdapter impl : ${chainlinkAdapterImpl.address}`);
-
-  // Save new addresses
-  addresses.ChainlinkAdapterImplementation = chainlinkAdapterImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+    ContractKey.ChainlinkAdapterImplementation,
+    ContractType.Implementation,
+    implementation,
+    args,
+    true,
+  );
 
   if (setImplementation) {
-    await proxy.setImplementation(chainlinkAdapterImpl.address);
+    const proxy = ProxyUpgradeableOwnable__factory.connect(
+      deployment.ChainlinkAdapterProxy.address,
+      deployer,
+    );
+    await proxy.setImplementation(implementation.address);
   }
 }
 

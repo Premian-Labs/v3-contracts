@@ -2,51 +2,72 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
-import arbitrumGoerliAddresses from '../../../utils/deployment/arbitrumGoerli.json';
+import arbitrumDeployment from '../../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
-import { ChainID, ContractAddresses } from '../../../utils/deployment/types';
+import {
+  ChainID,
+  ContractType,
+  DeploymentInfos,
+} from '../../../utils/deployment/types';
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
+import { updateDeploymentInfos } from '../../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
-  let addresses: ContractAddresses;
-
-  if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
+  let deployment: DeploymentInfos;
+  if (chainId === ChainID.Arbitrum) {
+    deployment = arbitrumDeployment;
+  } else if (chainId === ChainID.ArbitrumGoerli) {
+    deployment = arbitrumGoerliDeployment;
   } else {
     throw new Error('ChainId not implemented');
   }
 
   // Deploy UnderwriterVaultProxy
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
-  const base = addresses.tokens.testWETH;
-  const quote = addresses.tokens.USDC;
-  const oracleAdapter = addresses.ChainlinkAdapterProxy;
+  const base = deployment.tokens.testWETH;
+  const quote = deployment.tokens.USDC;
+  const oracleAdapter = deployment.ChainlinkAdapterProxy.address;
   const isCall = true;
   const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
   const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
 
-  const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
-    deployer,
-  ).deploy(
-    addresses.VaultRegistryProxy,
+  const args = [
+    deployment.VaultRegistryProxy.address,
     base,
     quote,
     oracleAdapter,
     name,
     symbol,
-    isCall,
+    isCall.toString(),
+  ];
+  const underwriterVaultProxy = await new UnderwriterVaultProxy__factory(
+    deployer,
+  ).deploy(
+    args[0],
+    args[1],
+    args[2],
+    args[3],
+    args[4],
+    args[5],
+    args[6] === 'true',
   );
-
-  await underwriterVaultProxy.deployed();
-  console.log('UnderwriterVaultProxy: ', underwriterVaultProxy.address);
+  await updateDeploymentInfos(
+    deployer,
+    `vaults.${symbol}`,
+    ContractType.Proxy,
+    underwriterVaultProxy,
+    args,
+    true,
+  );
 
   // Register vault on the VaultRegistry
   const vaultRegistry = VaultRegistry__factory.connect(
-    addresses.VaultRegistryProxy,
+    deployment.VaultRegistryProxy.address,
     deployer,
   );
 

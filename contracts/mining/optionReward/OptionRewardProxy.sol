@@ -52,6 +52,7 @@ contract OptionRewardProxy is Proxy {
         l.claimDuration = claimDuration;
     }
 
+    /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return MANAGER.getManagedProxyImplementation();
     }

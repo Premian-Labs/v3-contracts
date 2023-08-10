@@ -3,6 +3,8 @@ import {
   VolatilityOracle__factory,
 } from '../../typechain';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -11,20 +13,28 @@ async function main() {
     deployer,
   ).deploy();
 
-  console.log(
-    'VolatilityOracle implementation : ',
-    volatilityOracleImplementation.address,
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.VolatilityOracleImplementation,
+    ContractType.Implementation,
+    volatilityOracleImplementation,
+    [],
+    true,
   );
 
-  await volatilityOracleImplementation.deployed();
-
+  const volatilityOracleProxyArgs = [volatilityOracleImplementation.address];
   const volatilityOracleProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
-  ).deploy(volatilityOracleImplementation.address);
+  ).deploy(volatilityOracleProxyArgs[0]);
 
-  console.log('VolatilityOracle proxy : ', volatilityOracleProxy.address);
-
-  await volatilityOracleProxy.deployed();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.VolatilityOracleProxy,
+    ContractType.Proxy,
+    volatilityOracleProxy,
+    volatilityOracleProxyArgs,
+    true,
+  );
 }
 
 main()

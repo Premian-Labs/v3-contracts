@@ -173,7 +173,7 @@ library UnderwriterVaultStorage {
     /// @notice Checks if a listing exists within internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    /// @return If listing exists, return true, otherwise false
+    /// @return If listing exists, return true, false otherwise
     function contains(Layout storage l, UD60x18 strike, uint256 maturity) internal view returns (bool) {
         if (!l.maturities.contains(maturity)) return false;
 
