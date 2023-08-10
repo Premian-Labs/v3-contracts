@@ -447,7 +447,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    function _afterDeposit(address receiver, uint256 assetAmount, uint256 shareAmount) internal virtual override {
+    function _afterDeposit(address, uint256 assetAmount, uint256 shareAmount) internal virtual override {
         _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
