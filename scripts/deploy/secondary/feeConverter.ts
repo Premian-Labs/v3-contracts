@@ -29,42 +29,33 @@ async function main() {
   const treasury = deployment.treasury;
   const treasuryShare = parseEther('0.5');
 
-  const feeConverterImplArgs = [
-    deployment.ExchangeHelper.address,
-    deployment.tokens.USDC,
-    deployment.VxPremiaProxy.address,
-    treasury,
-    treasuryShare.toString(),
-  ];
-  const feeConverterImpl = await new FeeConverter__factory(deployer).deploy(
-    feeConverterImplArgs[0],
-    feeConverterImplArgs[1],
-    feeConverterImplArgs[2],
-    feeConverterImplArgs[3],
-    feeConverterImplArgs[4],
-  );
+  if (!deployment.FeeConverterImplementation.address) {
+    const feeConverterImplArgs = [
+      deployment.ExchangeHelper.address,
+      deployment.tokens.USDC,
+      deployment.VxPremiaProxy.address,
+    ];
+    const feeConverterImpl = await new FeeConverter__factory(deployer).deploy(
+      feeConverterImplArgs[0],
+      feeConverterImplArgs[1],
+      feeConverterImplArgs[2],
+    );
+    deployment = await updateDeploymentInfos(
+      deployer,
+      'FeeConverterImplementation',
+      ContractType.Implementation,
+      feeConverterImpl,
+      feeConverterImplArgs,
+      true,
+    );
+  }
 
-  let data = await updateDeploymentInfos(
-    deployer,
-    'FeeConverterImplementation',
-    ContractType.Implementation,
-    feeConverterImpl,
-    feeConverterImplArgs,
-    false,
-    false,
-  );
-
-  console.log(
-    'FeeConverterImplementation',
-    (data as any).FeeConverterImplementation,
-  );
-
-  const feeConverterProxyArgs = [feeConverterImpl.address];
+  const feeConverterProxyArgs = [deployment.FeeConverterImplementation.address];
   const feeConverterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(feeConverterProxyArgs[0]);
 
-  data = await updateDeploymentInfos(
+  const data = await updateDeploymentInfos(
     deployer,
     'FeeConverterProxy',
     ContractType.Proxy,
@@ -73,6 +64,12 @@ async function main() {
     false,
     false,
   );
+
+  const feeConverter = FeeConverter__factory.connect(
+    feeConverterProxy.address,
+    deployer,
+  );
+  await feeConverter.setTreasury(treasury, treasuryShare);
 
   console.log('FeeConverterProxy', (data as any).FeeConverterProxy);
 }
