@@ -107,4 +107,5 @@ export enum ChainID {
   Goerli = 5,
   Arbitrum = 42161,
   ArbitrumGoerli = 421613,
+  ArbitrumNova = 42170,
 }

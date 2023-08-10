@@ -54,6 +54,8 @@ export function getDeploymentJsonPath(chainId: ChainID) {
       return 'utils/deployment/arbitrum.json';
     case ChainID.ArbitrumGoerli:
       return 'utils/deployment/arbitrumGoerli.json';
+    case ChainID.ArbitrumNova:
+      return 'utils/deployment/arbitrumNova.json';
     default:
       throw new Error('ChainId not implemented');
   }

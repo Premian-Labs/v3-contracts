@@ -1,4 +1,5 @@
 import {
+  IERC20Metadata__factory,
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
@@ -26,15 +27,36 @@ async function main() {
   } else {
     throw new Error('ChainId not implemented');
   }
+  //////////////////////////
+  // Set those vars to the vault you want to deploy
+  const base = deployment.tokens.WETH;
+  const quote = deployment.tokens.USDC;
+  const isCall = true;
+
+  //////////////////////////
+
+  let baseSymbol = await IERC20Metadata__factory.connect(
+    base,
+    deployer,
+  ).symbol();
+  let quoteSymbol = await IERC20Metadata__factory.connect(
+    quote,
+    deployer,
+  ).symbol();
+
+  if (chainId === ChainID.Arbitrum) {
+    const USDCe = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'.toLowerCase();
+    if (base.toLowerCase() === USDCe) baseSymbol = 'USDCe';
+    if (quote.toLowerCase() === USDCe) quoteSymbol = 'USDCe';
+  }
 
   // Deploy UnderwriterVaultProxy
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
-  const base = deployment.tokens.testWETH;
-  const quote = deployment.tokens.USDC;
   const oracleAdapter = deployment.ChainlinkAdapterProxy.address;
-  const isCall = true;
-  const name = `Short Volatility - ETH/USDC-${isCall ? 'C' : 'P'}`;
-  const symbol = `pSV-ETH/USDC-${isCall ? 'C' : 'P'}`;
+  const name = `Short Volatility - ${baseSymbol}/${quoteSymbol}-${
+    isCall ? 'C' : 'P'
+  }`;
+  const symbol = `pSV-${baseSymbol}/${quoteSymbol}-${isCall ? 'C' : 'P'}`;
 
   const args = [
     deployment.VaultRegistryProxy.address,
