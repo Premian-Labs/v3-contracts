@@ -41,6 +41,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     }
 
     constructor(address exchangeHelper, address usdc, address vxPremia, address treasury, UD60x18 treasuryShare) {
+        // solhint-disable-next-line reason-string
         require(treasuryShare <= ONE);
         EXCHANGE_HELPER = exchangeHelper;
         USDC = usdc;
