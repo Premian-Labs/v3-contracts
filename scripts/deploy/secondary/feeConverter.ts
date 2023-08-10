@@ -1,4 +1,5 @@
 import {
+  ExchangeHelper__factory,
   FeeConverter__factory,
   ProxyUpgradeableOwnable__factory,
 } from '../../../typechain';
@@ -7,6 +8,7 @@ import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.j
 import { ethers } from 'hardhat';
 import {
   ChainID,
+  ContractKey,
   ContractType,
   DeploymentInfos,
 } from '../../../utils/deployment/types';
@@ -28,6 +30,18 @@ async function main() {
 
   const treasury = deployment.treasury;
   const treasuryShare = parseEther('0.5');
+
+  if (!deployment.ExchangeHelper.address) {
+    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
+    await updateDeploymentInfos(
+      deployer,
+      ContractKey.ExchangeHelper,
+      ContractType.Standalone,
+      exchangeHelper,
+      [],
+      true,
+    );
+  }
 
   if (!deployment.FeeConverterImplementation.address) {
     const feeConverterImplArgs = [

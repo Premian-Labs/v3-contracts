@@ -102,6 +102,7 @@ async function main() {
     vxPremia,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
+    deployment.ExchangeHelper.address,
   );
 }
 

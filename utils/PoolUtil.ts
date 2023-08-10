@@ -218,6 +218,7 @@ export class PoolUtil {
     vxPremiaAddress?: string,
     premiaAddress?: string,
     usdcAddress?: string,
+    exchangeHelperAddress?: string,
   ) {
     if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
       throw new Error(
@@ -339,15 +340,21 @@ export class PoolUtil {
     );
 
     // ExchangeHelper
-    const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-    await updateDeploymentInfos(
-      deployer,
-      ContractKey.ExchangeHelper,
-      ContractType.Standalone,
-      exchangeHelper,
-      [],
-      true,
-    );
+    if (!exchangeHelperAddress) {
+      const exchangeHelper = await new ExchangeHelper__factory(
+        deployer,
+      ).deploy();
+      await updateDeploymentInfos(
+        deployer,
+        ContractKey.ExchangeHelper,
+        ContractType.Standalone,
+        exchangeHelper,
+        [],
+        true,
+      );
+
+      exchangeHelperAddress = exchangeHelper.address;
+    }
 
     // UserSettings
     const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
@@ -410,7 +417,7 @@ export class PoolUtil {
         constants.AddressZero,
         premiaAddress as string, // We already ensured this cant be undefined at the beginning of the function
         usdcAddress as string, // We already ensured this cant be undefined at the beginning of the function
-        exchangeHelper.address,
+        exchangeHelperAddress,
         vaultRegistryProxy.address,
       ];
       const vxPremiaImpl = await new VxPremia__factory(deployer).deploy(
