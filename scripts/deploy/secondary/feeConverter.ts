@@ -26,13 +26,14 @@ async function main() {
     throw new Error('ChainId not implemented');
   }
 
+  const treasury = deployment.treasury;
   const treasuryShare = parseEther('0.5');
 
   const feeConverterImplArgs = [
     deployment.ExchangeHelper.address,
     deployment.tokens.USDC,
     deployment.VxPremiaProxy.address,
-    deployment.treasury,
+    treasury,
     treasuryShare.toString(),
   ];
   const feeConverterImpl = await new FeeConverter__factory(deployer).deploy(
