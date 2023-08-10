@@ -23,18 +23,17 @@ function getRemappings() {
     .map((line: string) => line.trim().split('='));
 }
 
-const { API_KEY_ALCHEMY, API_KEY_ARBISCAN, PKEY_ETH_MAIN, PKEY_ETH_TEST } =
-  process.env;
+const { API_KEY_ALCHEMY, API_KEY_ARBISCAN, PKEY_MAIN, PKEY_TEST } = process.env;
 
 // As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
 const pkeyMainnet =
-  PKEY_ETH_MAIN == undefined || PKEY_ETH_MAIN.length == 0
+  PKEY_MAIN == undefined || PKEY_MAIN.length == 0
     ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    : PKEY_ETH_MAIN;
+    : PKEY_MAIN;
 const pkeyTestnet =
-  PKEY_ETH_TEST == undefined || PKEY_ETH_TEST.length == 0
+  PKEY_TEST == undefined || PKEY_TEST.length == 0
     ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-    : PKEY_ETH_TEST;
+    : PKEY_TEST;
 
 export default {
   solidity: {

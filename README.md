@@ -32,8 +32,8 @@ Create a `.env` file with the following values defined:
 | ------------------ | ---------------------------------------------------------------------- | ---------------------- |
 | `API_KEY_ALCHEMY`  | [Alchemy](https://www.alchemy.com/) API key for node connectivity      | Tests + deployments    |
 | `API_KEY_ARBISCAN` | [Arbiscan](https://arbiscan.io//) API key for source code verification | Contracts verification |
-| `PKEY_ETH_MAIN`    | private key for production use on mainnets                             | Mainnet deployment     |
-| `PKEY_ETH_TEST`    | private key for test/development use on testnets                       | Testnet deployment     |
+| `PKEY_MAIN`        | private key for production use on mainnets                             | Mainnet deployment     |
+| `PKEY_TEST`        | private key for test/development use on testnets                       | Testnet deployment     |
 
 ### Testing
 
