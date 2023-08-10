@@ -312,21 +312,29 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @inheritdoc ERC4626BaseInternal
     function _deposit(
+        address caller,
+        address receiver,
         uint256 assetAmount,
-        address receiver
-    ) internal virtual override nonReentrant returns (uint256 shareAmount) {
-        _revertIfAddressZero(receiver);
-        _revertIfZeroAsset(assetAmount);
-
-        // charge management fees such that the timestamp is up to date
-        _chargeManagementFees();
-
+        uint256 shareAmount,
+        uint256 assetAmountOffset,
+        uint256 shareAmountOffset
+    ) internal virtual override {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
 
         l.pendingAssetsDeposit = assetAmount;
-        shareAmount = super._deposit(assetAmount, receiver);
+        super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
         if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
         delete l.pendingAssetsDeposit;
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _deposit(
+        uint256 assetAmount,
+        address receiver
+    ) internal virtual override nonReentrant returns (uint256 shareAmount) {
+        // charge management fees such that the timestamp is up to date
+        _chargeManagementFees();
+        return super._deposit(assetAmount, receiver);
     }
 
     function _previewMintUD60x18(UD60x18 shareAmount) internal view returns (UD60x18 assetAmount) {
@@ -447,7 +455,9 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
     }
 
     /// @inheritdoc ERC4626BaseInternal
-    function _afterDeposit(address, uint256 assetAmount, uint256 shareAmount) internal virtual override {
+    function _afterDeposit(address receiver, uint256 assetAmount, uint256 shareAmount) internal virtual override {
+        _revertIfAddressZero(receiver);
+        _revertIfZeroAsset(assetAmount);
         _revertIfZeroShares(shareAmount);
 
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
