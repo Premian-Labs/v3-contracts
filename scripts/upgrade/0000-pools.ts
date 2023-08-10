@@ -4,7 +4,6 @@ import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
-import fs from 'fs';
 import { ethers } from 'hardhat';
 
 async function main() {
@@ -14,7 +13,6 @@ async function main() {
   //////////////////////////
 
   let deployment: DeploymentInfos;
-  let addressesPath: string;
   let premiaDiamond: string;
   let poolFactory: string;
   let router: string;
@@ -27,11 +25,9 @@ async function main() {
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    addressesPath = 'utils/deployment/arbitrum.json';
     updateFacets = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
     updateFacets = true;
   } else {
     throw new Error('ChainId not implemented');
@@ -55,7 +51,7 @@ async function main() {
     userSettings,
     vxPremia,
     weth,
-    deployment.feeReceiver,
+    deployment.feeConverter.main.address,
     referral,
     vaultRegistry,
   );

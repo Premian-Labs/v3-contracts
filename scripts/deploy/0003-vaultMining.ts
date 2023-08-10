@@ -1,7 +1,6 @@
 import {
   VaultMining__factory,
   VaultMiningProxy__factory,
-  VxPremiaProxy,
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import {
@@ -20,19 +19,12 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: VxPremiaProxy;
   let deployment: DeploymentInfos;
-  let addressesPath: string;
-  let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    addressesPath = 'utils/deployment/arbitrum.json';
-    setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
-    setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }

@@ -82,7 +82,7 @@ async function main() {
   // Deploy UnderwriterVault implementation
   const underwriterVaultImplArgs = [
     deployment.VaultRegistryProxy.address,
-    deployment.feeReceiver,
+    deployment.feeConverter.insuranceFund.address,
     deployment.VolatilityOracleProxy.address,
     deployment.PoolFactoryProxy.address,
     deployment.ERC20Router.address,

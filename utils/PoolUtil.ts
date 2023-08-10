@@ -212,13 +212,14 @@ export class PoolUtil {
     wrappedNativeToken: string,
     chainlinkAdapter: string,
     feeReceiver: string,
+    insuranceFund: string,
     discountPerPool: BigNumber = parseEther('0.1'), // 10%
     log = true,
     vxPremiaAddress?: string,
     premiaAddress?: string,
     usdcAddress?: string,
   ) {
-if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
+    if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
       throw new Error(
         "PREMIA and USDC addresses are required if vxPremia address isn't provided",
       );
@@ -249,7 +250,7 @@ if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
     const poolFactoryProxyArgs = [
       placeholder.address,
       discountPerPool.toString(),
-      feeReceiver,
+      insuranceFund,
     ];
     const poolFactoryProxy = await new PoolFactoryProxy__factory(
       deployer,
@@ -407,8 +408,8 @@ if (!vxPremiaAddress && (!premiaAddress || !usdcAddress))
       const vxPremiaImplArgs = [
         constants.AddressZero,
         constants.AddressZero,
-        premiaAddress,
-        usdcAddress,
+        premiaAddress as string, // We already ensured this cant be undefined at the beginning of the function
+        usdcAddress as string, // We already ensured this cant be undefined at the beginning of the function
         exchangeHelper.address,
         vaultRegistryProxy.address,
       ];
