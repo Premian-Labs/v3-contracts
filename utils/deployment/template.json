@@ -7,8 +7,9 @@
     "USDC": "",
     "DAI": ""
   },
-  "vaults": {
-    "SV-ETH/USDC-C": {
+
+  "feeConverter": {
+    "main": {
       "address": "",
       "contractType": "Proxy",
       "deploymentArgs": [],
@@ -17,7 +18,7 @@
       "block": 0,
       "timestamp": 0
     },
-    "SV-ETH/USDC-P": {
+    "insuranceFund": {
       "address": "",
       "contractType": "Proxy",
       "deploymentArgs": [],
@@ -49,7 +50,29 @@
       "timestamp": 0
     }
   },
-  "feeReceiver": "",
+  "vaults": {
+    "SV-ETH/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+
+  "treasury": "",
+  "insuranceFund": "",
 
   "ChainlinkAdapterImplementation": {
     "address": "",
@@ -340,6 +363,15 @@
     "timestamp": 0
   },
   "OptionRewardImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "FeeConverterImplementation": {
     "address": "",
     "contractType": "Implementation",
     "deploymentArgs": [],

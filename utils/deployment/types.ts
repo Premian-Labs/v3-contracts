@@ -1,12 +1,16 @@
 export interface DeploymentInfos {
   tokens: { [symbol: string]: string };
 
-  vaults: { [name: string]: ContractDeploymentInfos };
+  feeConverter: {
+    main: ContractDeploymentInfos;
+    insuranceFund: ContractDeploymentInfos;
+  };
   optionPS: { [name: string]: ContractDeploymentInfos };
   optionReward: { [name: string]: ContractDeploymentInfos };
+  vaults: { [name: string]: ContractDeploymentInfos };
 
-  feeReceiver: string;
   treasury: string;
+  insuranceFund: string;
 
   ChainlinkAdapterImplementation: ContractDeploymentInfos;
   ChainlinkAdapterProxy: ContractDeploymentInfos;
@@ -41,6 +45,7 @@ export interface DeploymentInfos {
   OptionRewardFactoryImplementation: ContractDeploymentInfos;
   OptionRewardFactoryProxy: ContractDeploymentInfos;
   OptionRewardImplementation: ContractDeploymentInfos;
+  FeeConverterImplementation: ContractDeploymentInfos;
 }
 
 export enum ContractKey {
@@ -77,6 +82,7 @@ export enum ContractKey {
   OptionRewardFactoryImplementation = 'OptionRewardFactoryImplementation',
   OptionRewardFactoryProxy = 'OptionRewardFactoryProxy',
   OptionRewardImplementation = 'OptionRewardImplementation',
+  FeeConverterImplementation = 'FeeConverterImplementation',
 }
 
 export interface ContractDeploymentInfos {

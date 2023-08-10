@@ -26,11 +26,6 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     address private immutable USDC;
     address private immutable VX_PREMIA;
 
-    // The treasury address which will receive a portion of the protocol fees
-    address private immutable TREASURY;
-    // The percentage of protocol fees the treasury will get
-    UD60x18 private immutable TREASURY_SHARE;
-
     //////////////////////////////////////////////////
     //////////////////////////////////////////////////
     //////////////////////////////////////////////////
@@ -40,14 +35,15 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
         _;
     }
 
-    constructor(address exchangeHelper, address usdc, address vxPremia, address treasury, UD60x18 treasuryShare) {
-        // solhint-disable-next-line reason-string
-        require(treasuryShare <= ONE);
+    modifier isInitialized() {
+        if (FeeConverterStorage.layout().treasury == address(0)) revert FeeConverter__NotInitialized();
+        _;
+    }
+
+    constructor(address exchangeHelper, address usdc, address vxPremia) {
         EXCHANGE_HELPER = exchangeHelper;
         USDC = usdc;
         VX_PREMIA = vxPremia;
-        TREASURY = treasury;
-        TREASURY_SHARE = treasuryShare;
     }
 
     //////////////////////////////////////////////////
@@ -61,6 +57,12 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
         exchangeHelper = EXCHANGE_HELPER;
     }
 
+    /// @inheritdoc IFeeConverter
+    function getTreasury() external view returns (address treasury, UD60x18 treasuryShare) {
+        FeeConverterStorage.Layout storage l = FeeConverterStorage.layout();
+        return (l.treasury, l.treasuryShare);
+    }
+
     ///////////
     // Admin //
     ///////////
@@ -70,8 +72,18 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     /// @param isAuthorized Whether the account is authorized or not
     function setAuthorized(address account, bool isAuthorized) external onlyOwner {
         FeeConverterStorage.layout().isAuthorized[account] = isAuthorized;
-
         emit SetAuthorized(account, isAuthorized);
+    }
+
+    /// @notice Set a new treasury address, and its share (The % of funds allocated to the `treasury` address)
+    function setTreasury(address newTreasury, UD60x18 newTreasuryShare) external onlyOwner {
+        if (newTreasuryShare > ONE) revert FeeConverter__TreasuryShareGreaterThanOne();
+
+        FeeConverterStorage.Layout storage l = FeeConverterStorage.layout();
+        l.treasury = newTreasury;
+        l.treasuryShare = newTreasuryShare;
+
+        emit SetTreasury(newTreasury, newTreasuryShare);
     }
 
     //////////////////////////
@@ -82,7 +94,8 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
         address callee,
         address allowanceTarget,
         bytes calldata data
-    ) external nonReentrant onlyAuthorized {
+    ) external isInitialized nonReentrant onlyAuthorized {
+        FeeConverterStorage.Layout storage l = FeeConverterStorage.layout();
         uint256 amount = IERC20(sourceToken).balanceOf(address(this));
 
         if (amount == 0) return;
@@ -107,11 +120,11 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
 
         if (outAmount == 0) return;
 
-        uint256 treasuryAmount = (ud(outAmount) * TREASURY_SHARE).unwrap();
+        uint256 treasuryAmount = (ud(outAmount) * l.treasuryShare).unwrap();
         uint256 vxPremiaAmount = outAmount - treasuryAmount;
 
         if (treasuryAmount > 0) {
-            IERC20(USDC).safeTransfer(TREASURY, treasuryAmount);
+            IERC20(USDC).safeTransfer(l.treasury, treasuryAmount);
         }
 
         if (vxPremiaAmount > 0) {
@@ -126,7 +139,7 @@ contract FeeConverter is IFeeConverter, OwnableInternal, ReentrancyGuard {
     function redeem(
         address vault,
         uint256 shareAmount
-    ) external nonReentrant onlyAuthorized returns (uint256 assetAmount) {
+    ) external isInitialized nonReentrant onlyAuthorized returns (uint256 assetAmount) {
         return IERC4626(vault).redeem(shareAmount, address(this), address(this));
     }
 }
