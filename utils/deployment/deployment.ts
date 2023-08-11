@@ -1,4 +1,5 @@
 import child_process from 'child_process';
+import { IOwnable__factory } from '../../typechain';
 import { ChainID, ContractKey, ContractType, DeploymentInfos } from './types';
 import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
@@ -22,7 +23,6 @@ export async function updateDeploymentInfos(
     (providerOrSigner as Provider);
 
   const chainId = (await provider.getNetwork()).chainId;
-
   const jsonPath = getDeploymentJsonPath(chainId);
 
   const data = JSON.parse(
@@ -30,6 +30,12 @@ export async function updateDeploymentInfos(
   ) as DeploymentInfos;
 
   const txReceipt = await deployedContract.deployTransaction.wait();
+  let owner = '';
+
+  try {
+    const owned = IOwnable__factory.connect(deployedContract.address, provider);
+    owner = await owned.owner();
+  } catch (e) {}
 
   _.set(data, objectPath, {
     address: deployedContract.address,
@@ -39,6 +45,7 @@ export async function updateDeploymentInfos(
     deploymentArgs,
     timestamp: await getBlockTimestamp(provider, txReceipt.blockNumber),
     txHash: txReceipt.transactionHash,
+    owner: owner,
   });
 
   if (writeFile) {

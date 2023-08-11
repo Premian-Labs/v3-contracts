@@ -6,6 +6,7 @@
     "contractType": "Standalone",
     "deploymentArgs": [],
     "timestamp": 1691662833,
-    "txHash": "0x5394ebd048e12555f6729afc3f9be05e255622e50bf0128d2d4e236fdaf4a61e"
+    "txHash": "0x5394ebd048e12555f6729afc3f9be05e255622e50bf0128d2d4e236fdaf4a61e",
+    "owner": ""
   }
 }

@@ -93,6 +93,7 @@ export interface ContractDeploymentInfos {
   txHash: string;
   block: number;
   timestamp: number;
+  owner: string;
 }
 
 export enum ContractType {
