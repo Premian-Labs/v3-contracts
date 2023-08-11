@@ -67,7 +67,8 @@ async function main() {
     proposeToMultiSig,
     deployment.treasury,
     deployer,
-    transaction,
+    [transaction],
+    false,
   );
 }
 

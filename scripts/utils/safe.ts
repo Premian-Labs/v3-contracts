@@ -1,5 +1,5 @@
 import {
-  SafeTransactionDataPartial,
+  MetaTransactionData,
   OperationType,
 } from '@safe-global/safe-core-sdk-types';
 import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
@@ -10,24 +10,17 @@ import { Provider } from '@ethersproject/providers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 /**
- * Sends a transaction proposal to the `safeAddress`
+ * Sends a Safe transaction proposal to the `safeAddress`
  *
  * @param safeAddress - The Safe Multi-sig address
- * @param target - The targeted address of the proposal
- * @param data - The transaction proposal calldata
- * @param isCall - Whether the transaction is a call or delegate call
- * @param msgValue - The transaction msg.value
+ * @param proposer - The Safe transaction proposer
+ * @param safeTransactionData - The Safe transaction data
  */
-export async function proposeTransaction(
+export async function proposeSafeTransaction(
   safeAddress: string,
-  target: string,
-  data: string,
-  isCall: boolean = true,
-  msgValue: BigNumber = BigNumber.from(0),
+  proposer: SignerWithAddress,
+  safeTransactionData: MetaTransactionData[],
 ) {
-  const [proposer] = await ethers.getSigners();
-  const provider = proposer.provider as Provider;
-
   const ethAdapter = new EthersAdapter({
     ethers,
     signerOrProvider: proposer,
@@ -38,13 +31,6 @@ export async function proposeTransaction(
     ethAdapter,
     safeAddress,
   });
-
-  const safeTransactionData: SafeTransactionDataPartial = {
-    to: target,
-    data,
-    value: msgValue.toString(),
-    operation: isCall ? OperationType.Call : OperationType.DelegateCall,
-  };
 
   // Create a Safe transaction with the provided parameters
   const safeTransaction = await safeSdk.createTransaction({
@@ -58,6 +44,7 @@ export async function proposeTransaction(
   const signature = await safeSdk.signTransactionHash(safeTxHash);
 
   // Initialize the Safe API Kit
+  const provider = proposer.provider as Provider;
   const chainName = (await provider.getNetwork()).name;
   const safeService = new SafeApiKit({
     txServiceUrl: `https://safe-transaction-${chainName}.safe.global`,
@@ -75,26 +62,36 @@ export async function proposeTransaction(
 }
 
 /**
- * Propose transaction to `safeAddress` or send to contract directly
+ * Propose Safe transaction to `safeAddress` or send to contract directly
  *
  * @param propose - Whether to propose the transaction or send it directly
  * @param safeAddress - The Safe Multi-sig address
  * @param signer - The transaction signer
- * @param transaction - The transaction to propose or send
+ * @param transactions - The transactions to propose or send
+ * @param isCall - Whether the transaction is a call or delegate call
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
   signer: SignerWithAddress,
-  transaction: PopulatedTransaction,
+  transactions: PopulatedTransaction[],
+  isCall: boolean,
 ) {
   if (propose) {
-    await proposeTransaction(
-      safeAddress,
-      transaction.to as string,
-      transaction.data as string,
-    );
+    const safeTransactionData = [];
+    for (let transaction of transactions) {
+      safeTransactionData.push({
+        to: transaction.to as string,
+        data: transaction.data as string,
+        value: transaction.value?.toString() ?? BigNumber.from(0).toString(),
+        operation: isCall ? OperationType.Call : OperationType.DelegateCall,
+      });
+    }
+
+    await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
   } else {
-    await signer.sendTransaction(transaction);
+    for (let transaction of transactions) {
+      await signer.sendTransaction(transaction);
+    }
   }
 }
