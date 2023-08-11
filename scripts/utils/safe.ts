@@ -4,9 +4,10 @@ import {
 } from '@safe-global/safe-core-sdk-types';
 import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
 import SafeApiKit from '@safe-global/api-kit';
-import { BigNumber } from 'ethers';
+import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
 import { Provider } from '@ethersproject/providers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 /**
  * Sends a transaction proposal to the `safeAddress`
@@ -53,7 +54,7 @@ export async function proposeTransaction(
   // Deterministic hash based on transaction parameters
   const safeTxHash = await safeSdk.getTransactionHash(safeTransaction);
 
-  // Sign transaction to verify that the transaction is coming from owner 1
+  // Sign transaction to verify that the transaction is coming from proposer
   const signature = await safeSdk.signTransactionHash(safeTxHash);
 
   // Initialize the Safe API Kit
@@ -71,4 +72,29 @@ export async function proposeTransaction(
     senderAddress: proposer.address,
     senderSignature: signature.data,
   });
+}
+
+/**
+ * Propose transaction to `safeAddress` or send to contract directly
+ *
+ * @param propose - Whether to propose the transaction or send it directly
+ * @param safeAddress - The Safe Multi-sig address
+ * @param signer - The transaction signer
+ * @param transaction - The transaction to propose or send
+ */
+export async function proposeOrSendTransaction(
+  propose: boolean,
+  safeAddress: string,
+  signer: SignerWithAddress,
+  transaction: PopulatedTransaction,
+) {
+  if (propose) {
+    await proposeTransaction(
+      safeAddress,
+      transaction.to as string,
+      transaction.data as string,
+    );
+  } else {
+    await signer.sendTransaction(transaction);
+  }
 }

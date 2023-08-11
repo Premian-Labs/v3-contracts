@@ -13,6 +13,7 @@ import {
 import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
 import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
 import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -21,14 +22,14 @@ async function main() {
   //////////////////////////
 
   let deployment: DeploymentInfos;
-  let setImplementation: boolean;
+  let proposeToMultiSig: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    setImplementation = false;
+    proposeToMultiSig = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
+    proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -83,12 +84,17 @@ async function main() {
   //////////////////////////
 
   // Set the implementation on the registry
-  if (setImplementation) {
-    await vaultRegistry.setImplementation(
-      vaultType,
-      underwriterVaultImpl.address,
-    );
-  }
+  const transaction = await vaultRegistry.populateTransaction.setImplementation(
+    vaultType,
+    underwriterVaultImpl.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.treasury,
+    deployer,
+    transaction,
+  );
 }
 
 main()

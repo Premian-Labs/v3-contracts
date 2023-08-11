@@ -12,6 +12,7 @@ import {
 } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -22,14 +23,14 @@ async function main() {
   let deployment: DeploymentInfos;
   let premiaDiamond: string;
   let chainlinkAdapter: string;
-  let setImplementation: boolean;
+  let proposeToMultiSig: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    setImplementation = false;
+    proposeToMultiSig = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
+    proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -60,13 +61,21 @@ async function main() {
     true,
   );
 
-  if (setImplementation) {
-    const proxy = PoolFactoryProxy__factory.connect(
-      deployment.PoolFactoryProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = PoolFactoryProxy__factory.connect(
+    deployment.PoolFactoryProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.treasury,
+    deployer,
+    transaction,
+  );
 }
 
 main()
