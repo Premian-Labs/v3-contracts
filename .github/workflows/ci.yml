@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  lint:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --frozen-lockfile'
+
+      - name: 'Lint contracts'
+        run: 'yarn run lint'
+
+      - name: 'lint-contract summary'
+        run: |
+          echo "## Lint result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+  build:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --frozen-lockfile'
+
+      - name: 'Install Foundry'
+        uses: 'foundry-rs/foundry-toolchain@v1'
+
+      - name: 'Show the Foundry config'
+        run: 'forge config'
+
+      - name: 'Build the contracts'
+        run: 'forge build'
+
+      - name: 'Cache the build so that it can be re-used by the other jobs'
+        uses: 'actions/cache/save@v3'
+        with:
+          path: 'out'
+          key: 'foundry-build-${{ github.sha }}'
+
+      - name: 'Store the contract artifacts in CI'
+        uses: 'actions/upload-artifact@v3'
+        with:
+          name: 'contract-artifacts'
+          path: 'artifacts'
+
+      - name: 'Add build summary'
+        run: |
+          echo "## Build result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+  test:
+    needs: ['lint', 'build']
+    runs-on: 'ubuntu-latest'
+    env:
+      API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Foundry'
+        uses: 'foundry-rs/foundry-toolchain@v1'
+
+      - name: 'Restore the cached build'
+        uses: 'actions/cache/restore@v3'
+        with:
+          fail-on-cache-miss: true
+          key: 'foundry-build-${{ github.sha }}'
+          path: 'out'
+
+      - name: 'Run tests'
+        run: 'yarn run test'
+
+      - name: 'Add test summary'
+        run: |
+          echo "## Test result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
