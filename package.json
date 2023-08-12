@@ -19,11 +19,12 @@
   "repository": "https://github.com/Premian-Labs/premia-contracts-v3-private.git",
   "author": "Premia",
   "scripts": {
-    "postinstall": "husky install",
-    "test": "forge test -vv",
+    "build-docs": "forge doc --build && npx replace-in-files --string '%5C' --replacement '/' './docs/book/**/*'",
     "contract-size": "yarn run hardhat size-contracts",
+    "lint": "find contracts -name \"*.sol\" | xargs yarn solhint",
+    "postinstall": "husky install",
     "prettier": "prettier --write \"**/*.sol\"",
-    "build-docs": "forge doc --build && npx replace-in-files --string '%5C' --replacement '/' './docs/book/**/*'"
+    "test": "forge test -vvv"
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
