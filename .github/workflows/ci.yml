@@ -66,12 +66,6 @@ jobs:
           path: 'out'
           key: 'foundry-build-${{ github.sha }}'
 
-      - name: 'Store the contract artifacts in CI'
-        uses: 'actions/upload-artifact@v3'
-        with:
-          name: 'contract-artifacts'
-          path: 'artifacts'
-
       - name: 'Add build summary'
         run: |
           echo "## Build result" >> $GITHUB_STEP_SUMMARY
@@ -87,6 +81,15 @@ jobs:
         uses: 'actions/checkout@v3'
         with:
           submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --frozen-lockfile'
 
       - name: 'Install Foundry'
         uses: 'foundry-rs/foundry-toolchain@v1'
