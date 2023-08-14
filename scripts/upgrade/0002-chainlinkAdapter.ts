@@ -15,7 +15,7 @@ import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const [deployer, proposer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
   //////////////////////////
@@ -66,7 +66,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.treasury,
-    deployer,
+    proposer,
     [transaction],
     false,
   );
