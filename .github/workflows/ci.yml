@@ -11,6 +11,9 @@ on:
     branches:
       - 'master'
 
+env:
+  API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
+
 jobs:
   lint:
     runs-on: 'ubuntu-latest'
@@ -78,8 +81,6 @@ jobs:
   test:
     needs: ['lint', 'build']
     runs-on: 'ubuntu-latest'
-    env:
-      API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
     steps:
       - name: 'Check out the repo'
         uses: 'actions/checkout@v3'
