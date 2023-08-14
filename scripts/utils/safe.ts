@@ -67,31 +67,38 @@ export async function proposeSafeTransaction(
  * @param propose - Whether to propose the transaction or send it directly
  * @param safeAddress - The Safe Multi-sig address
  * @param signer - The transaction signer
- * @param transactions - The transactions to propose or send
- * @param isCall - Whether the transaction is a call or delegate call
+ * @param proposals - The list of transactions to propose or send
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
   signer: SignerWithAddress,
-  transactions: PopulatedTransaction[],
-  isCall: boolean,
+  proposals: ProposedTransaction[],
 ) {
   if (propose) {
     const safeTransactionData = [];
-    for (let transaction of transactions) {
+    for (let proposal of proposals) {
+      const transaction = proposal.transaction;
+
       safeTransactionData.push({
         to: transaction.to as string,
         data: transaction.data as string,
         value: transaction.value?.toString() ?? BigNumber.from(0).toString(),
-        operation: isCall ? OperationType.Call : OperationType.DelegateCall,
+        operation: proposal.isCall
+          ? OperationType.Call
+          : OperationType.DelegateCall,
       });
     }
 
     await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
   } else {
-    for (let transaction of transactions) {
-      await signer.sendTransaction(transaction);
+    for (let proposal of proposals) {
+      await signer.sendTransaction(proposal.transaction);
     }
   }
+}
+
+export interface ProposedTransaction {
+  transaction: PopulatedTransaction;
+  isCall: boolean;
 }
