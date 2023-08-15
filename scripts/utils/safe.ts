@@ -77,7 +77,12 @@ export async function proposeOrSendTransaction(
 ) {
   if (propose) {
     const safeTransactionData = [];
+
     for (let proposal of proposals) {
+      if (proposal.isCall == undefined) {
+        throw new Error('isCall is undefined');
+      }
+
       const transaction = proposal.transaction;
 
       safeTransactionData.push({
@@ -100,5 +105,5 @@ export async function proposeOrSendTransaction(
 
 export interface ProposedTransaction {
   transaction: PopulatedTransaction;
-  isCall: boolean;
+  isCall?: boolean;
 }
