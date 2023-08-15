@@ -1,6 +1,6 @@
 // Hardhat plugins
 import '@nomiclabs/hardhat-ethers';
-import '@nomiclabs/hardhat-etherscan';
+import '@nomicfoundation/hardhat-verify';
 import '@solidstate/hardhat-4byte-uploader';
 import '@typechain/hardhat';
 import Dotenv from 'dotenv';
@@ -23,15 +23,6 @@ function getRemappings() {
     .map((line: string) => line.trim().split('='));
 }
 
-const {
-  API_KEY_ALCHEMY,
-  API_KEY_ARBISCAN,
-  PKEY_DEPLOYER_MAIN,
-  PKEY_DEPLOYER_TEST,
-  PKEY_PROPOSER_MAIN,
-  PKEY_PROPOSER_TEST,
-} = process.env;
-
 /**
  * As the PKEYs are only used for deployment, we use default dummy PKEYs if none are set in .env file, so that project can compile
  * @param pKey PKEY to return or replace, if necessary
@@ -41,6 +32,15 @@ function tryFetchPKey(pKey: string | undefined) {
     ? 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
     : pKey;
 }
+
+const {
+  API_KEY_ALCHEMY,
+  API_KEY_ARBISCAN,
+  PKEY_DEPLOYER_MAIN,
+  PKEY_DEPLOYER_TEST,
+  PKEY_PROPOSER_MAIN,
+  PKEY_PROPOSER_TEST,
+} = process.env;
 
 const pkeyDeployerMainnet = tryFetchPKey(PKEY_DEPLOYER_MAIN);
 const pkeyDeployerTestnet = tryFetchPKey(PKEY_DEPLOYER_TEST);
@@ -148,6 +148,7 @@ export default {
   etherscan: {
     apiKey: {
       arbitrumOne: API_KEY_ARBISCAN,
+      arbitrumGoerli: API_KEY_ARBISCAN,
     },
   },
 
