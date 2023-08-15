@@ -4,6 +4,7 @@ import { ChainID, ContractKey, ContractType, DeploymentInfos } from './types';
 import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
+import { run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 
@@ -15,6 +16,8 @@ export async function updateDeploymentInfos(
   deploymentArgs: string[],
   logAddress = false,
   writeFile = true,
+  verifyContracts = true,
+  libraries: any = {},
 ) {
   if (logAddress) console.log(`${objectPath}: ${deployedContract.address}`);
 
@@ -52,6 +55,15 @@ export async function updateDeploymentInfos(
     fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
   }
 
+  if (verifyContracts) {
+    await deployedContract.deployed();
+    await verifyContractsOnEtherscan(
+      deployedContract.address,
+      deploymentArgs,
+      libraries,
+    );
+  }
+
   return data;
 }
 
@@ -77,4 +89,16 @@ export async function getBlockTimestamp(
 
 export function getCommitHash() {
   return child_process.execSync('git rev-parse HEAD').toString().trim();
+}
+
+export async function verifyContractsOnEtherscan(
+  contractAddress: string,
+  constructorArguments: any[],
+  libraries: any = {},
+) {
+  await run('verify:verify', {
+    address: contractAddress,
+    constructorArguments,
+    libraries,
+  });
 }
