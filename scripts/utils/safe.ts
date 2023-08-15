@@ -8,6 +8,8 @@ import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
 import { Provider } from '@ethersproject/providers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { SafeChainPrefix } from '../../utils/deployment/types';
+import { getTransactionUrl } from '../../utils/deployment/deployment';
 
 /**
  * Sends a Safe transaction proposal to the `safeAddress`
@@ -15,11 +17,13 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
  * @param safeAddress - The Safe Multi-sig address
  * @param proposer - The Safe transaction proposer
  * @param safeTransactionData - The Safe transaction data
+ * @param logSafeTxUrl - If true, log the Safe transaction queue URL
  */
 export async function proposeSafeTransaction(
   safeAddress: string,
   proposer: SignerWithAddress,
   safeTransactionData: MetaTransactionData[],
+  logSafeTxUrl = false,
 ) {
   const ethAdapter = new EthersAdapter({
     ethers,
@@ -45,9 +49,9 @@ export async function proposeSafeTransaction(
 
   // Initialize the Safe API Kit
   const provider = proposer.provider as Provider;
-  const chainName = (await provider.getNetwork()).name;
+  const network = await provider.getNetwork();
   const safeService = new SafeApiKit({
-    txServiceUrl: `https://safe-transaction-${chainName}.safe.global`,
+    txServiceUrl: `https://safe-transaction-${network.name}.safe.global`,
     ethAdapter,
   });
 
@@ -59,6 +63,14 @@ export async function proposeSafeTransaction(
     senderAddress: proposer.address,
     senderSignature: signature.data,
   });
+
+  if (logSafeTxUrl) {
+    console.log(
+      `Transaction proposed to Safe: https://app.safe.global/transactions/queue?safe=${
+        SafeChainPrefix[network.chainId]
+      }:${safeAddress}`,
+    );
+  }
 }
 
 /**
@@ -68,12 +80,14 @@ export async function proposeSafeTransaction(
  * @param safeAddress - The Safe Multi-sig address
  * @param signer - The transaction signer
  * @param proposals - The list of transactions to propose or send
+ * @param logTxUrl - If true, log the Safe transaction queue or transaction URL
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
   signer: SignerWithAddress,
   proposals: ProposedTransaction[],
+  logTxUrl = false,
 ) {
   if (propose) {
     const safeTransactionData = [];
@@ -97,8 +111,23 @@ export async function proposeOrSendTransaction(
 
     await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
   } else {
+    let m = 1;
+    const n = proposals.length;
+
     for (let proposal of proposals) {
-      await signer.sendTransaction(proposal.transaction);
+      const tx = await signer.sendTransaction(proposal.transaction);
+      await tx.wait();
+
+      if (logTxUrl) {
+        const transactionUrl = await getTransactionUrl(tx.hash, signer);
+        console.log(
+          n > 1
+            ? `${m} of ${n} transactions executed: ${transactionUrl}`
+            : `Transaction executed: ${transactionUrl}`,
+        );
+      }
+
+      ++m;
     }
   }
 }

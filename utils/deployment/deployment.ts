@@ -1,6 +1,12 @@
 import child_process from 'child_process';
 import { IOwnable__factory } from '../../typechain';
-import { ChainID, ContractKey, ContractType, DeploymentInfos } from './types';
+import {
+  BlockExplorerUrl,
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from './types';
 import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
@@ -13,15 +19,10 @@ export async function updateDeploymentInfos(
   contractType: ContractType,
   deployedContract: BaseContract,
   deploymentArgs: string[],
-  logAddress = false,
+  logTxUrl = false,
   writeFile = true,
 ) {
-  if (logAddress) console.log(`${objectPath}: ${deployedContract.address}`);
-
-  const provider: Provider =
-    (providerOrSigner as SignerWithAddress).provider ??
-    (providerOrSigner as Provider);
-
+  const provider = getProvider(providerOrSigner);
   const chainId = (await provider.getNetwork()).chainId;
   const jsonPath = getDeploymentJsonPath(chainId);
 
@@ -52,6 +53,15 @@ export async function updateDeploymentInfos(
     fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
   }
 
+  if (logTxUrl) {
+    const transactionUrl = await getTransactionUrl(
+      txReceipt.transactionHash,
+      providerOrSigner,
+    );
+
+    console.log(`Transaction executed: ${transactionUrl}`);
+  }
+
   return data;
 }
 
@@ -77,4 +87,20 @@ export async function getBlockTimestamp(
 
 export function getCommitHash() {
   return child_process.execSync('git rev-parse HEAD').toString().trim();
+}
+
+export async function getTransactionUrl(
+  txHash: string,
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<string> {
+  const provider = getProvider(providerOrSigner);
+  const network = await provider.getNetwork();
+  return `${BlockExplorerUrl[network.chainId]}/tx/${txHash}`;
+}
+
+function getProvider(providerOrSigner: Provider | SignerWithAddress): Provider {
+  return (
+    (providerOrSigner as SignerWithAddress).provider ??
+    (providerOrSigner as Provider)
+  );
 }
