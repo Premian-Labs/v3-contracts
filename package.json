@@ -28,6 +28,7 @@
   "devDependencies": {
     "@chainlink/contracts": "^0.6.1",
     "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/bytes": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
@@ -63,8 +64,5 @@
     "typechain": "^8.3.1",
     "typescript": "^5.1.6"
   },
-  "packageManager": "yarn@3.4.1",
-  "peerDependencies": {
-    "@ethersproject/bytes": "*"
-  }
+  "packageManager": "yarn@3.4.1"
 }
