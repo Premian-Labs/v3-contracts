@@ -6,10 +6,12 @@ import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
 import SafeApiKit from '@safe-global/api-kit';
 import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
-import { Provider } from '@ethersproject/providers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { SafeChainPrefix } from '../../utils/deployment/types';
-import { getTransactionUrl } from '../../utils/deployment/deployment';
+import {
+  getNetwork,
+  getTransactionUrl,
+} from '../../utils/deployment/deployment';
 
 /**
  * Sends a Safe transaction proposal to the `safeAddress`
@@ -48,8 +50,7 @@ export async function proposeSafeTransaction(
   const signature = await safeSdk.signTransactionHash(safeTxHash);
 
   // Initialize the Safe API Kit
-  const provider = proposer.provider as Provider;
-  const network = await provider.getNetwork();
+  const network = await getNetwork(proposer);
   const safeService = new SafeApiKit({
     txServiceUrl: `https://safe-transaction-${network.name}.safe.global`,
     ethAdapter,

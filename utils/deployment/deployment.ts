@@ -12,6 +12,7 @@ import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
+import { Network } from '@ethersproject/networks';
 
 export async function updateDeploymentInfos(
   providerOrSigner: Provider | SignerWithAddress,
@@ -23,7 +24,7 @@ export async function updateDeploymentInfos(
   writeFile = true,
 ) {
   const provider = getProvider(providerOrSigner);
-  const chainId = (await provider.getNetwork()).chainId;
+  const chainId = (await getNetwork(provider)).chainId;
   const jsonPath = getDeploymentJsonPath(chainId);
 
   const data = JSON.parse(
@@ -54,12 +55,12 @@ export async function updateDeploymentInfos(
   }
 
   if (logTxUrl) {
-    const transactionUrl = await getTransactionUrl(
-      txReceipt.transactionHash,
+    const addressUrl = await getAddressUrl(
+      deployedContract.address,
       providerOrSigner,
     );
 
-    console.log(`Transaction executed: ${transactionUrl}`);
+    console.log(`Contract deployed: ${addressUrl}`);
   }
 
   return data;
@@ -93,12 +94,28 @@ export async function getTransactionUrl(
   txHash: string,
   providerOrSigner: Provider | SignerWithAddress,
 ): Promise<string> {
-  const provider = getProvider(providerOrSigner);
-  const network = await provider.getNetwork();
+  const network = await getNetwork(providerOrSigner);
   return `${BlockExplorerUrl[network.chainId]}/tx/${txHash}`;
 }
 
-function getProvider(providerOrSigner: Provider | SignerWithAddress): Provider {
+export async function getAddressUrl(
+  address: string,
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<string> {
+  const network = await getNetwork(providerOrSigner);
+  return `${BlockExplorerUrl[network.chainId]}/address/${address}`;
+}
+
+export async function getNetwork(
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<Network> {
+  const provider = getProvider(providerOrSigner);
+  return await provider.getNetwork();
+}
+
+export function getProvider(
+  providerOrSigner: Provider | SignerWithAddress,
+): Provider {
   return (
     (providerOrSigner as SignerWithAddress).provider ??
     (providerOrSigner as Provider)
