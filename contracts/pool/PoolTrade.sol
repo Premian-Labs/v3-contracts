@@ -126,6 +126,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         IERC20(token).safeTransfer(address(receiver), amount);
 
         UD60x18 fee = _flashFee(amount);
+        l.protocolFees = l.protocolFees + fee;
         uint256 _fee = l.toPoolTokenDecimals(fee);
 
         if (
