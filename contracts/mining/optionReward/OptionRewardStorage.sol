@@ -10,7 +10,6 @@ import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {OptionMath} from "../../libraries/OptionMath.sol";
 
 import {IOracleAdapter} from "../../adapter/IOracleAdapter.sol";
-import {IOptionReward} from "./IOptionReward.sol";
 import {IPaymentSplitter} from "../IPaymentSplitter.sol";
 import {IOptionPS} from "../optionPS/IOptionPS.sol";
 
