@@ -90,6 +90,11 @@ library UnderwriterVaultStorage {
         UD60x18 performanceFeeRate;
         UD60x18 protocolFees;
         uint256 lastManagementFeeTimestamp;
+        // Amount of assets about to be deposited in the vault. This is set in `_deposit` before `super._deposit` call, and reset after.
+        // We have the following function flow : _deposit -> _mint -> _beforeTokenTransfer -> getUtilisation
+        // When `getUtilisation` is called here, we want it to return the new utilisation after the deposit, not the current one.
+        // As `_beforeTokenTransfer` know the share amount change, but not the asset amount change, we need to store it here temporarily.
+        uint256 pendingAssetsDeposit;
     }
 
     function layout() internal pure returns (Layout storage l) {
@@ -168,7 +173,7 @@ library UnderwriterVaultStorage {
     /// @notice Checks if a listing exists within internal data structures
     /// @param strike The strike price of the listing
     /// @param maturity The maturity of the listing
-    /// @return If listing exists, return true, otherwise false
+    /// @return If listing exists, return true, false otherwise
     function contains(Layout storage l, UD60x18 strike, uint256 maturity) internal view returns (bool) {
         if (!l.maturities.contains(maturity)) return false;
 

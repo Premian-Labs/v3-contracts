@@ -107,6 +107,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         return PoolStorage.layout().toPoolTokenDecimals(_flashFee(amount));
     }
 
+    /// @notice Returns the fee required for a flash loan of `amount`
     function _flashFee(uint256 amount) internal view returns (UD60x18) {
         return PoolStorage.layout().fromPoolTokenDecimals(amount) * FLASH_LOAN_FEE;
     }
@@ -125,6 +126,7 @@ contract PoolTrade is IPoolTrade, PoolInternal, ReentrancyGuard {
         IERC20(token).safeTransfer(address(receiver), amount);
 
         UD60x18 fee = _flashFee(amount);
+        l.protocolFees = l.protocolFees + fee;
         uint256 _fee = l.toPoolTokenDecimals(fee);
 
         if (

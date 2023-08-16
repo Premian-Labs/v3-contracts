@@ -477,7 +477,22 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(price, priceBeforeUpsert);
     }
 
-    function test_getPrice_RevertIf_PriceAfterTargetIsStale() public {
+    function test_getPrice_RevertIf_InvalidPrice() public {
+        adapter.upsertPair(stubCoin, CHAINLINK_USD);
+
+        int256[] memory prices = new int256[](1);
+        uint256[] memory timestamps = new uint256[](1);
+
+        prices[0] = 0;
+        timestamps[0] = block.timestamp;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__InvalidPrice.selector, prices[0]));
+        adapter.getPrice(stubCoin, CHAINLINK_USD);
+    }
+
+    function test_getPrice_RevertIf_PriceLeftOfTargetStale() public {
         adapter.upsertPair(stubCoin, CHAINLINK_USD);
 
         int256[] memory prices = new int256[](1);
@@ -493,8 +508,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IChainlinkAdapter.ChainlinkAdapter__PriceAfterTargetIsStale.selector,
-                block.timestamp,
+                IChainlinkAdapter.ChainlinkAdapter__PriceLeftOfTargetStale.selector,
                 timestamps[0],
                 block.timestamp
             )
@@ -673,57 +687,20 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.getPriceAt(WETH, DAI, block.timestamp + 1);
     }
 
-    function test_getPriceAt_WhenStalePrice_ReturnStalePrice_IfCall12HoursAfterTarget() public {
-        int256[] memory prices = new int256[](1);
-        uint256[] memory timestamps = new uint256[](1);
-
-        prices[0] = 100000000000;
-        timestamps[0] = target - 90000;
-
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-
-        vm.warp(target + 43200);
-        int256 stalePrice = stub.price(0);
-
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(stalePrice) * 1e10));
-    }
-
-    function test_getPriceAt_WhenStalePrice_RevertIf_CallWithin12HoursOfTarget() public {
-        int256[] memory prices = new int256[](1);
-        uint256[] memory timestamps = new uint256[](1);
-
-        prices[0] = 100000000000;
-        timestamps[0] = target - 90001;
-
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IChainlinkAdapter.ChainlinkAdapter__PriceAfterTargetIsStale.selector,
-                target,
-                timestamps[0],
-                block.timestamp
-            )
-        );
-        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
-    }
-
-    function test_getPriceAt_WhenFreshPrice_IfCall12HoursAfterTarget() public {
-        vm.warp(target + 43200);
-
+    function test_getPriceAt_ReturnsLeftOfTarget() public {
         {
-            // returns the closest price to the target because the delay limit (12 hrs) is exceeded
             int256[] memory prices = new int256[](4);
             prices[0] = 0;
-            prices[1] = 100000000000;
-            prices[2] = 200000000000;
-            prices[3] = 300000000000;
+            prices[1] = 5000000000;
+            prices[2] = 10000000000;
+            prices[3] = 50000000000;
 
+            // left and right of target are equidistant from target but the left side is returned
             uint256[] memory timestamps = new uint256[](4);
             timestamps[0] = 0;
-            timestamps[1] = target + 50;
-            timestamps[2] = target + 100;
-            timestamps[3] = target + 200;
+            timestamps[1] = target - 10;
+            timestamps[2] = target + 10;
+            timestamps[3] = target + 50;
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
             int256 freshPrice = stub.price(1);
@@ -731,47 +708,26 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
 
         {
-            // returns the closest price to the target because the delay limit (12 hrs) is exceeded
-            int256[] memory prices = new int256[](5);
+            int256[] memory prices = new int256[](4);
             prices[0] = 0;
-            prices[1] = 100000000000;
-            prices[2] = 200000000000;
-            prices[3] = 300000000000;
-            prices[4] = 400000000000;
+            prices[1] = 5000000000;
+            prices[2] = 10000000000;
+            prices[3] = 50000000000;
 
-            uint256[] memory timestamps = new uint256[](5);
+            // left of target is further from target than right, but the left side is returned
+            uint256[] memory timestamps = new uint256[](4);
             timestamps[0] = 0;
-            timestamps[1] = target - 200;
-            timestamps[2] = target - 100;
-            timestamps[3] = target + 100;
-            timestamps[4] = target + 200;
+            timestamps[1] = target - 20;
+            timestamps[2] = target + 10;
+            timestamps[3] = target + 50;
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(2);
+            int256 freshPrice = stub.price(1);
             assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
     }
 
-    function test_getPriceAt_WhenFreshPrice_ReturnsTargetInTieBreak() public {
-        int256[] memory prices = new int256[](4);
-        prices[0] = 0;
-        prices[1] = 5000000000;
-        prices[2] = 10000000000;
-        prices[3] = 50000000000;
-
-        // 1st and 2nd indexes are equidistant but the 1st index is returned
-        uint256[] memory timestamps = new uint256[](4);
-        timestamps[0] = 0;
-        timestamps[1] = target - 10;
-        timestamps[2] = target + 10;
-        timestamps[3] = target + 50;
-
-        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-        int256 freshPrice = stub.price(1);
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
-    }
-
-    function test_getPriceAt_WhenFreshPrice_UpdatedAtEqTarget() public {
+    function test_getPriceAt_UpdatedAtEqTarget() public {
         {
             // target == updatedAt at AggregatorRoundId = 1
             int256[] memory prices = new int256[](5);
@@ -815,9 +771,9 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
     }
 
-    function test_getPriceAt_WhenFreshPrice_HandleAggregatorRoundIdEq1() public {
+    function test_getPriceAt_HandleAggregatorRoundIdEq1() public {
         {
-            // search misses AggregatorRoundId = 1, closest round update is left of target
+            // closest round update is left of target
             int256[] memory prices = new int256[](5);
             prices[0] = 0;
             prices[1] = 50000000000;
@@ -838,7 +794,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         }
 
         {
-            // search misses AggregatorRoundId = 1, closest round update is right of target
+            // closest round update is right of target we always return price left of target unless the left price is stale
             int256[] memory prices = new int256[](5);
             prices[0] = 0;
             prices[1] = 50000000000;
@@ -854,12 +810,13 @@ contract ChainlinkAdapterTest is Test, Assertions {
             timestamps[4] = target + 500;
 
             stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
-            int256 freshPrice = stub.price(2);
+            int256 freshPrice = stub.price(1);
             assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
         }
     }
 
-    function test_getPriceAt_WhenFreshPrice_ChecksLeftOfTarget() public {
+    function test_getPriceAt_ReturnsClosestPriceLeftOfTarget() public {
+        // feed only has prices left of target, adapter returns price closest to target
         int256[] memory prices = new int256[](3);
         prices[0] = 0;
         prices[1] = 50000000000;
@@ -875,7 +832,7 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
     }
 
-    function test_getPriceAt_WhenFreshPrice_ChecksLeftRightOfTarget() public {
+    function test_getPriceAt_ChecksLeftAndRightOfTarget() public {
         int256[] memory prices = new int256[](7);
         prices[0] = 0;
         prices[1] = 50000000000;
@@ -899,8 +856,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
         assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), ud(uint256(freshPrice) * 1e10));
     }
 
-    function test_getPriceAt_ReturnCachedPriceAtTarget() public {
-        UD60x18 cachedPrice = ud(9e18);
+    function test_getPriceAt_ReturnPriceOverrideAtTarget() public {
+        UD60x18 priceOverride = ud(9e18);
 
         address[] memory relayers = new address[](1);
         relayers[0] = relayer;
@@ -908,8 +865,8 @@ contract ChainlinkAdapterTest is Test, Assertions {
         adapter.addWhitelistedRelayers(relayers);
 
         vm.startPrank(relayer);
-        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, cachedPrice);
-        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, cachedPrice);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_USD, target, priceOverride);
+        adapter.setTokenPriceAt(stubCoin, CHAINLINK_ETH, target, priceOverride);
         vm.stopPrank();
 
         int256[] memory prices = new int256[](7);
@@ -932,11 +889,145 @@ contract ChainlinkAdapterTest is Test, Assertions {
 
         stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
 
-        // decimals == 8, internal logic should scale the cached price (18 decimals) to feed decimals (8 decimals)
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), cachedPrice);
+        // decimals == 8, internal logic should scale the price override (18 decimals) to feed decimals (8 decimals)
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_USD, target), priceOverride);
 
         // decimals == 18, no scaling necessary
-        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), cachedPrice);
+        assertEq(adapter.getPriceAt(stubCoin, CHAINLINK_ETH, target), priceOverride);
+    }
+
+    function test_getPriceAt_RevertIf_PriceAtOrLeftOfTargetNotFound() public {
+        // price at or to left of target is not found
+        int256[] memory prices = new int256[](4);
+        prices[0] = 0;
+        prices[1] = 100000000000;
+        prices[2] = 200000000000;
+        prices[3] = 300000000000;
+
+        uint256[] memory timestamps = new uint256[](4);
+        timestamps[0] = 0;
+        timestamps[1] = target + 50;
+        timestamps[2] = target + 100;
+        timestamps[3] = target + 200;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainlinkAdapter.ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound.selector,
+                stubCoin,
+                CHAINLINK_USD,
+                target
+            )
+        );
+
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+    }
+
+    function test_getPriceAt_RevertIf_InvalidPrice() public {
+        int256[] memory prices = new int256[](4);
+        prices[0] = 0;
+        prices[1] = 0;
+        prices[2] = 200000000000;
+        prices[3] = 300000000000;
+
+        uint256[] memory timestamps = new uint256[](4);
+        timestamps[0] = 0;
+        timestamps[1] = target;
+        timestamps[2] = target + 100;
+        timestamps[3] = target + 200;
+
+        stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+        vm.expectRevert(abi.encodeWithSelector(IOracleAdapter.OracleAdapter__InvalidPrice.selector, prices[1]));
+        adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+    }
+
+    function test_getPriceAt_RevertIf_PriceLeftOfTargetStale() public {
+        {
+            // left is stale and right does not exist
+            int256[] memory prices = new int256[](4);
+            prices[0] = 0;
+            prices[1] = 100000000000;
+            prices[2] = 200000000000;
+            prices[3] = 300000000000;
+
+            uint256[] memory timestamps = new uint256[](4);
+            timestamps[0] = 0;
+            timestamps[1] = target - 110000;
+            timestamps[2] = target - 100000;
+            timestamps[3] = target - 90001;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IChainlinkAdapter.ChainlinkAdapter__PriceLeftOfTargetStale.selector,
+                    timestamps[3],
+                    target
+                )
+            );
+
+            adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+        }
+
+        {
+            // left is stale but right is closer to target
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 100000000000;
+            prices[2] = 200000000000;
+            prices[3] = 300000000000;
+            prices[4] = 400000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 110000;
+            timestamps[2] = target - 100000;
+            timestamps[3] = target - 90001;
+            timestamps[4] = target + 10;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IChainlinkAdapter.ChainlinkAdapter__PriceLeftOfTargetStale.selector,
+                    timestamps[3],
+                    target
+                )
+            );
+
+            adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+        }
+
+        {
+            // left and right are both stale but right is closer to target
+            int256[] memory prices = new int256[](5);
+            prices[0] = 0;
+            prices[1] = 100000000000;
+            prices[2] = 200000000000;
+            prices[3] = 300000000000;
+            prices[4] = 400000000000;
+
+            uint256[] memory timestamps = new uint256[](5);
+            timestamps[0] = 0;
+            timestamps[1] = target - 110000;
+            timestamps[2] = target - 100000;
+            timestamps[3] = target - 90002;
+            timestamps[4] = target + 90001;
+
+            stub.setup(ChainlinkOraclePriceStub.FailureMode.None, prices, timestamps);
+
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IChainlinkAdapter.ChainlinkAdapter__PriceLeftOfTargetStale.selector,
+                    timestamps[3],
+                    target
+                )
+            );
+
+            adapter.getPriceAt(stubCoin, CHAINLINK_USD, target);
+        }
     }
 
     function test_getPriceAt_RevertIf_PairNotSupported() public {

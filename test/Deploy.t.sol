@@ -572,14 +572,14 @@ contract DeployTest is Test, Assertions {
     function getExerciseValue(
         bool isITM,
         UD60x18 tradeSize,
-        UD60x18 settlementPrice
+        UD60x18 _settlementPrice
     ) internal view returns (UD60x18 exerciseValue) {
         if (isITM) {
             if (isCallTest) {
-                exerciseValue = tradeSize * (settlementPrice - poolKey.strike);
-                exerciseValue = exerciseValue / settlementPrice;
+                exerciseValue = tradeSize * (_settlementPrice - poolKey.strike);
+                exerciseValue = exerciseValue / _settlementPrice;
             } else {
-                exerciseValue = tradeSize * (poolKey.strike - settlementPrice);
+                exerciseValue = tradeSize * (poolKey.strike - _settlementPrice);
             }
         }
 

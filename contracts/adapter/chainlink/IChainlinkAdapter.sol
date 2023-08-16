@@ -49,8 +49,11 @@ interface IChainlinkAdapter is IOracleAdapter, IFeedRegistry, IPriceRepository {
     /// @notice Thrown when the lastRoundData call reverts without a reason
     error ChainlinkAdapter__LatestRoundDataCallReverted(bytes data);
 
-    /// @notice Thrown when the price after the target time is stale
-    error ChainlinkAdapter__PriceAfterTargetIsStale(uint256 target, uint256 updatedAt, uint256 blockTimestamp);
+    /// @notice Thrown when a price at or to the left of target is not found
+    error ChainlinkAdapter__PriceAtOrLeftOfTargetNotFound(address token, address denomination, uint256 target);
+
+    /// @notice Thrown when price left of target is stale
+    error ChainlinkAdapter__PriceLeftOfTargetStale(uint256 updatedAt, uint256 target);
 
     /// @notice Emitted when the adapter updates the pricing path for a pair
     /// @param tokenA One of the pair's tokens

@@ -23,6 +23,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientFunds();
     error Pool__InsufficientLiquidity();
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);

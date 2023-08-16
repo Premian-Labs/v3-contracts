@@ -15,7 +15,19 @@ import {IUserSettings} from "contracts/settings/IUserSettings.sol";
 import {DeployTest} from "../Deploy.t.sol";
 
 abstract contract PoolSafeTransferIgnoreDustTest is DeployTest {
-    function test_exercise_TransferFullAmount() public {
+    function test_safeTransferIgnoreDust_RevertIf_InsufficientFunds() public {
+        uint256 funds = 0;
+        deal(getPoolToken(), address(pool), funds);
+        pool.mint(users.trader, 1, ud(1 ether));
+        UD60x18 settlementPrice = isCallTest ? ud(2000 ether) : ud(500 ether);
+        oracleAdapter.setPriceAt(settlementPrice);
+        vm.warp(poolKey.maturity);
+        vm.expectRevert(IPoolInternal.Pool__InsufficientFunds.selector);
+        vm.prank(users.trader);
+        pool.exercise();
+    }
+
+    function test_safeTransferIgnoreDust_exercise_TransferFullAmount() public {
         uint256 funds = isCallTest ? 5e17 : 500e6;
         deal(getPoolToken(), address(pool), funds);
         pool.mint(users.trader, 1, ud(1 ether));
@@ -29,7 +41,7 @@ abstract contract PoolSafeTransferIgnoreDustTest is DeployTest {
         assertEq(IERC20(getPoolToken()).balanceOf(users.trader), balanceTrader);
     }
 
-    function test_exercise_TransferLessThanFullAmount() public {
+    function test_safeTransferIgnoreDust_exercise_TransferLessThanFullAmount() public {
         uint256 funds = isCallTest ? 5e17 - 1e13 : 500e6 - 1e4;
         deal(getPoolToken(), address(pool), funds);
         pool.mint(users.trader, 1, ud(1 ether));

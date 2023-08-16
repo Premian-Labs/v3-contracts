@@ -1,0 +1,383 @@
+{
+  "tokens": {
+    "WETH": "",
+    "WBTC": "",
+    "PREMIA": "",
+    "LINK": "",
+    "USDC": "",
+    "DAI": ""
+  },
+
+  "feeConverter": {
+    "main": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "insuranceFund": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+  "optionPS": {
+    "PREMIA/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+  "optionReward": {
+    "PREMIA/USDC": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+  "vaults": {
+    "SV-ETH/USDC-C": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    },
+    "SV-ETH/USDC-P": {
+      "address": "",
+      "contractType": "Proxy",
+      "deploymentArgs": [],
+      "commitHash": "",
+      "txHash": "",
+      "block": 0,
+      "timestamp": 0
+    }
+  },
+
+  "treasury": "",
+  "insuranceFund": "",
+
+  "ChainlinkAdapterImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "ChainlinkAdapterProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PremiaDiamond": {
+    "address": "",
+    "contractType": "DiamondProxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolFactoryImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolFactoryProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolFactoryDeployer": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "UserSettingsImplementation": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "UserSettingsProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "ExchangeHelper": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "ReferralImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "ReferralProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VxPremiaImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VxPremiaProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "ERC20Router": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolBase": {
+    "address": "",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolCore": {
+    "address": "",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolDepositWithdraw": {
+    "address": "",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "PoolTrade": {
+    "address": "",
+    "contractType": "DiamondFacet",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OrderbookStream": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VaultRegistryImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VaultRegistryProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VolatilityOracleImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VolatilityOracleProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "UnderwriterVaultImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionMathExternal": {
+    "address": "",
+    "contractType": "Standalone",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VaultMiningImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "VaultMiningProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionPSFactoryImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionPSFactoryProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionPSImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionRewardFactoryImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionRewardFactoryProxy": {
+    "address": "",
+    "contractType": "Proxy",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "OptionRewardImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  },
+  "FeeConverterImplementation": {
+    "address": "",
+    "contractType": "Implementation",
+    "deploymentArgs": [],
+    "commitHash": "",
+    "txHash": "",
+    "block": 0,
+    "timestamp": 0
+  }
+}
