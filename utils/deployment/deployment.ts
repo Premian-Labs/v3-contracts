@@ -60,7 +60,9 @@ export async function updateDeploymentInfos(
       providerOrSigner,
     );
 
-    console.log(`Contract deployed: ${addressUrl}`);
+    console.log(
+      `Contract deployed: ${deployedContract.address} (${addressUrl})`,
+    );
   }
 
   return data;

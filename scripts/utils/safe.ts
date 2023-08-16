@@ -115,8 +115,8 @@ export async function proposeOrSendTransaction(
         const transactionUrl = await getTransactionUrl(tx.hash, signer);
         console.log(
           n > 1
-            ? `${m} of ${n} transactions executed: ${transactionUrl}`
-            : `Transaction executed: ${transactionUrl}`,
+            ? `${m} of ${n} transactions executed: ${tx.hash} (${transactionUrl})`
+            : `Transaction executed: ${tx.hash} (${transactionUrl})`,
         );
       }
 
