@@ -13,6 +13,36 @@ import { BaseContract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
+import arbitrumDeployment from './arbitrum.json';
+import arbitrumGoerliDeployment from './arbitrumGoerli.json';
+import { ethers } from 'hardhat';
+
+export async function initialize(
+  providerOrSigner: Provider | SignerWithAddress,
+) {
+  const network = await getNetwork(providerOrSigner);
+
+  let deployment: DeploymentInfos;
+  let proposeToMultiSig: boolean;
+  let proxyManager: string;
+  let lzEndpoint: string;
+
+  if (network.chainId === ChainID.Arbitrum) {
+    proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
+    lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
+    deployment = arbitrumDeployment;
+    proposeToMultiSig = true;
+  } else if (network.chainId === ChainID.ArbitrumGoerli) {
+    proxyManager = ethers.constants.AddressZero;
+    lzEndpoint = ethers.constants.AddressZero;
+    deployment = arbitrumGoerliDeployment;
+    proposeToMultiSig = false;
+  } else {
+    throw new Error('ChainId not implemented');
+  }
+
+  return { network, deployment, proposeToMultiSig, proxyManager, lzEndpoint };
+}
 
 export async function updateDeploymentInfos(
   providerOrSigner: Provider | SignerWithAddress,

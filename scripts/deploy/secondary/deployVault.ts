@@ -3,30 +3,19 @@ import {
   UnderwriterVaultProxy__factory,
   VaultRegistry__factory,
 } from '../../../typechain';
-import arbitrumDeployment from '../../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { ethers } from 'hardhat';
-import {
-  ChainID,
-  ContractType,
-  DeploymentInfos,
-} from '../../../utils/deployment/types';
+import { ChainID, ContractType } from '../../../utils/deployment/types';
 import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
-import { updateDeploymentInfos } from '../../../utils/deployment/deployment';
+import {
+  initialize,
+  updateDeploymentInfos,
+} from '../../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const { network, deployment } = await initialize(deployer);
 
-  let deployment: DeploymentInfos;
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
   //////////////////////////
   // Set those vars to the vault you want to deploy
   const base = deployment.tokens.WETH;
@@ -44,7 +33,7 @@ async function main() {
     deployer,
   ).symbol();
 
-  if (chainId === ChainID.Arbitrum) {
+  if (network.chainId === ChainID.Arbitrum) {
     const USDCe = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'.toLowerCase();
     if (base.toLowerCase() === USDCe) baseSymbol = 'USDCe';
     if (quote.toLowerCase() === USDCe) quoteSymbol = 'USDCe';
