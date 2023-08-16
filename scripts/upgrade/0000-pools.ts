@@ -1,19 +1,16 @@
 import { Premia__factory } from '../../typechain';
 import { PoolUtil } from '../../utils/PoolUtil';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import { ethers } from 'hardhat';
 import { proposeOrSendTransaction } from '../utils/safe';
+import { initialize } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
 
-  let deployment: DeploymentInfos;
   let premiaDiamond: string;
   let poolFactory: string;
   let router: string;
@@ -22,17 +19,6 @@ async function main() {
   let userSettings: string;
   let vxPremia: string;
   let weth: string;
-  let proposeToMultiSig: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-    proposeToMultiSig = true;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    proposeToMultiSig = false;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
 
   premiaDiamond = deployment.PremiaDiamond.address;
   poolFactory = deployment.PoolFactoryProxy.address;

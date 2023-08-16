@@ -166,6 +166,7 @@
   },
   "treasury": "0xa079C6B032133b95Cf8b3d273D27eeb6B110a469",
   "insuranceFund": "0xa0C49ae8C749A53e9881B226fC0Fa5E570754393",
+  "lzEndpoint": "0x3c2269811836af69497E5F486A85D7316753cf62",
   "ChainlinkAdapterImplementation": {
     "address": "0x6d4Ec320FC9af8B5A7C8a9935dF9c6c8996546bb",
     "block": 119998897,

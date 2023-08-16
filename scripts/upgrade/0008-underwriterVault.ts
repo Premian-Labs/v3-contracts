@@ -4,35 +4,18 @@ import {
 } from '../../typechain';
 import { ethers } from 'hardhat';
 import { solidityKeccak256 } from 'ethers/lib/utils';
+import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
-  ChainID,
-  ContractKey,
-  ContractType,
-  DeploymentInfos,
-} from '../../utils/deployment/types';
-import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
-import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+  initialize,
+  updateDeploymentInfos,
+} from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
+  const { deployment, proposeToMultiSig } = await initialize(deployer);
 
   //////////////////////////
-
-  let deployment: DeploymentInfos;
-  let proposeToMultiSig: boolean;
-
-  if (chainId === ChainID.Arbitrum) {
-    deployment = arbitrumDeployment;
-    proposeToMultiSig = true;
-  } else if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-    proposeToMultiSig = false;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
 
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
