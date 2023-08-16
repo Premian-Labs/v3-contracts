@@ -93,7 +93,7 @@ async function main() {
     proposeToMultiSig,
     deployment.treasury,
     proposer,
-    [{ transaction, isCall: true }],
+    [transaction],
   );
 }
 

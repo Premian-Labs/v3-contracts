@@ -80,43 +80,35 @@ export async function proposeSafeTransaction(
  * @param propose - Whether to propose the transaction or send it directly
  * @param safeAddress - The Safe Multi-sig address
  * @param signer - The transaction signer
- * @param proposals - The list of transactions to propose or send
+ * @param transactions - The list of transactions to propose or send
  * @param logTxUrl - If true, log the Safe transaction queue or transaction URL
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
   signer: SignerWithAddress,
-  proposals: ProposedTransaction[],
+  transactions: PopulatedTransaction[],
   logTxUrl = false,
 ) {
   if (propose) {
     const safeTransactionData = [];
 
-    for (let proposal of proposals) {
-      if (proposal.isCall == undefined) {
-        throw new Error('isCall is undefined');
-      }
-
-      const transaction = proposal.transaction;
-
+    for (let transaction of transactions) {
       safeTransactionData.push({
         to: transaction.to as string,
         data: transaction.data as string,
         value: transaction.value?.toString() ?? BigNumber.from(0).toString(),
-        operation: proposal.isCall
-          ? OperationType.Call
-          : OperationType.DelegateCall,
+        operation: OperationType.Call,
       });
     }
 
     await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
   } else {
     let m = 1;
-    const n = proposals.length;
+    const n = transactions.length;
 
-    for (let proposal of proposals) {
-      const tx = await signer.sendTransaction(proposal.transaction);
+    for (let transaction of transactions) {
+      const tx = await signer.sendTransaction(transaction);
       await tx.wait();
 
       if (logTxUrl) {
@@ -131,9 +123,4 @@ export async function proposeOrSendTransaction(
       ++m;
     }
   }
-}
-
-export interface ProposedTransaction {
-  transaction: PopulatedTransaction;
-  isCall?: boolean;
 }
