@@ -12,10 +12,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ZERO} from "../libraries/Constants.sol";
 import {UD50x28} from "../libraries/UD50x28.sol";
-
-import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {IERC20Router} from "../router/IERC20Router.sol";
 

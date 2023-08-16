@@ -79,6 +79,7 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         assertEq(IERC20(poolToken).balanceOf(address(flashLoanMock)), 0);
         assertEq(IERC20(poolToken).balanceOf(address(pool)), initialCollateral + fee);
+        assertEq(pool.protocolFees(), fee);
     }
 
     function test_flashLoan_Single_RevertIf_NotRepayed() public {
@@ -168,8 +169,11 @@ abstract contract PoolFlashLoanTest is DeployTest {
 
         assertEq(IERC20(poolToken).balanceOf(address(flashLoanMock)), 0);
         assertEq(IERC20(poolToken).balanceOf(address(pool)), initialCollateral + fee);
+        assertEq(pool.protocolFees(), fee);
         assertEq(IERC20(poolToken).balanceOf(address(poolTwo)), initialCollateralTwo + feeTwo);
+        assertEq(poolTwo.protocolFees(), feeTwo);
         assertEq(IERC20(poolToken).balanceOf(address(poolThree)), initialCollateralThree + feeThree);
+        assertEq(poolThree.protocolFees(), feeThree);
     }
 
     function test_flashLoan_RevertIf_NotPoolToken() public {

@@ -1,0 +1,49 @@
+name: Code Coverage
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+
+env:
+  API_KEY_ALCHEMY: ${{ secrets.API_KEY_ALCHEMY }}
+
+jobs:
+  coverage:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Check out the repo'
+        uses: 'actions/checkout@v3'
+        with:
+          submodules: 'recursive'
+
+      - name: 'Install Node.js'
+        uses: 'actions/setup-node@v3'
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: 'Install Node.js packages'
+        run: 'yarn install --frozen-lockfile'
+
+      - name: 'Install Foundry'
+        uses: 'foundry-rs/foundry-toolchain@v1'
+
+      - name: 'Generate the coverage report'
+        run: 'forge coverage --report lcov'
+
+      - name: 'Upload coverage report to Codecov'
+        uses: 'codecov/codecov-action@v3'
+        with:
+          files: './lcov.info'
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 'Add coverage summary'
+        run: |
+          echo "## Coverage result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Uploaded to Codecov" >> $GITHUB_STEP_SUMMARY

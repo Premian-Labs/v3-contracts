@@ -6,8 +6,12 @@ import Safe, { EthersAdapter } from '@safe-global/protocol-kit';
 import SafeApiKit from '@safe-global/api-kit';
 import { BigNumber, PopulatedTransaction } from 'ethers';
 import { ethers } from 'hardhat';
-import { Provider } from '@ethersproject/providers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { SafeChainPrefix } from '../../utils/deployment/types';
+import {
+  getNetwork,
+  getTransactionUrl,
+} from '../../utils/deployment/deployment';
 
 /**
  * Sends a Safe transaction proposal to the `safeAddress`
@@ -15,11 +19,13 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
  * @param safeAddress - The Safe Multi-sig address
  * @param proposer - The Safe transaction proposer
  * @param safeTransactionData - The Safe transaction data
+ * @param logSafeTxUrl - If true, log the Safe transaction queue URL
  */
 export async function proposeSafeTransaction(
   safeAddress: string,
   proposer: SignerWithAddress,
   safeTransactionData: MetaTransactionData[],
+  logSafeTxUrl = false,
 ) {
   const ethAdapter = new EthersAdapter({
     ethers,
@@ -44,10 +50,9 @@ export async function proposeSafeTransaction(
   const signature = await safeSdk.signTransactionHash(safeTxHash);
 
   // Initialize the Safe API Kit
-  const provider = proposer.provider as Provider;
-  const chainName = (await provider.getNetwork()).name;
+  const network = await getNetwork(proposer);
   const safeService = new SafeApiKit({
-    txServiceUrl: `https://safe-transaction-${chainName}.safe.global`,
+    txServiceUrl: `https://safe-transaction-${network.name}.safe.global`,
     ethAdapter,
   });
 
@@ -59,6 +64,14 @@ export async function proposeSafeTransaction(
     senderAddress: proposer.address,
     senderSignature: signature.data,
   });
+
+  if (logSafeTxUrl) {
+    console.log(
+      `Transaction proposed to Safe: https://app.safe.global/transactions/queue?safe=${
+        SafeChainPrefix[network.chainId]
+      }:${safeAddress}`,
+    );
+  }
 }
 
 /**
@@ -67,38 +80,47 @@ export async function proposeSafeTransaction(
  * @param propose - Whether to propose the transaction or send it directly
  * @param safeAddress - The Safe Multi-sig address
  * @param signer - The transaction signer
- * @param proposals - The list of transactions to propose or send
+ * @param transactions - The list of transactions to propose or send
+ * @param logTxUrl - If true, log the Safe transaction queue or transaction URL
  */
 export async function proposeOrSendTransaction(
   propose: boolean,
   safeAddress: string,
   signer: SignerWithAddress,
-  proposals: ProposedTransaction[],
+  transactions: PopulatedTransaction[],
+  logTxUrl = false,
 ) {
   if (propose) {
     const safeTransactionData = [];
-    for (let proposal of proposals) {
-      const transaction = proposal.transaction;
 
+    for (let transaction of transactions) {
       safeTransactionData.push({
         to: transaction.to as string,
         data: transaction.data as string,
         value: transaction.value?.toString() ?? BigNumber.from(0).toString(),
-        operation: proposal.isCall
-          ? OperationType.Call
-          : OperationType.DelegateCall,
+        operation: OperationType.Call,
       });
     }
 
     await proposeSafeTransaction(safeAddress, signer, safeTransactionData);
   } else {
-    for (let proposal of proposals) {
-      await signer.sendTransaction(proposal.transaction);
+    let m = 1;
+    const n = transactions.length;
+
+    for (let transaction of transactions) {
+      const tx = await signer.sendTransaction(transaction);
+      await tx.wait();
+
+      if (logTxUrl) {
+        const transactionUrl = await getTransactionUrl(tx.hash, signer);
+        console.log(
+          n > 1
+            ? `${m} of ${n} transactions executed: ${tx.hash} (${transactionUrl})`
+            : `Transaction executed: ${tx.hash} (${transactionUrl})`,
+        );
+      }
+
+      ++m;
     }
   }
-}
-
-export interface ProposedTransaction {
-  transaction: PopulatedTransaction;
-  isCall: boolean;
 }

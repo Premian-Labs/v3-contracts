@@ -1,12 +1,19 @@
 import child_process from 'child_process';
 import { IOwnable__factory } from '../../typechain';
-import { ChainID, ContractKey, ContractType, DeploymentInfos } from './types';
+import {
+  BlockExplorerUrl,
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from './types';
 import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
+import { Network } from '@ethersproject/networks';
 
 export async function updateDeploymentInfos(
   providerOrSigner: Provider | SignerWithAddress,
@@ -14,18 +21,13 @@ export async function updateDeploymentInfos(
   contractType: ContractType,
   deployedContract: BaseContract,
   deploymentArgs: string[],
-  logAddress = false,
+  logTxUrl = false,
   writeFile = true,
   verifyContracts = true,
   libraries: any = {},
 ) {
-  if (logAddress) console.log(`${objectPath}: ${deployedContract.address}`);
-
-  const provider: Provider =
-    (providerOrSigner as SignerWithAddress).provider ??
-    (providerOrSigner as Provider);
-
-  const chainId = (await provider.getNetwork()).chainId;
+  const provider = getProvider(providerOrSigner);
+  const chainId = (await getNetwork(provider)).chainId;
   const jsonPath = getDeploymentJsonPath(chainId);
 
   const data = JSON.parse(
@@ -53,6 +55,17 @@ export async function updateDeploymentInfos(
 
   if (writeFile) {
     fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+  }
+
+  if (logTxUrl) {
+    const addressUrl = await getAddressUrl(
+      deployedContract.address,
+      providerOrSigner,
+    );
+
+    console.log(
+      `Contract deployed: ${deployedContract.address} (${addressUrl})`,
+    );
   }
 
   if (verifyContracts) {
@@ -89,6 +102,38 @@ export async function getBlockTimestamp(
 
 export function getCommitHash() {
   return child_process.execSync('git rev-parse HEAD').toString().trim();
+}
+
+export async function getTransactionUrl(
+  txHash: string,
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<string> {
+  const network = await getNetwork(providerOrSigner);
+  return `${BlockExplorerUrl[network.chainId]}/tx/${txHash}`;
+}
+
+export async function getAddressUrl(
+  address: string,
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<string> {
+  const network = await getNetwork(providerOrSigner);
+  return `${BlockExplorerUrl[network.chainId]}/address/${address}`;
+}
+
+export async function getNetwork(
+  providerOrSigner: Provider | SignerWithAddress,
+): Promise<Network> {
+  const provider = getProvider(providerOrSigner);
+  return await provider.getNetwork();
+}
+
+export function getProvider(
+  providerOrSigner: Provider | SignerWithAddress,
+): Provider {
+  return (
+    (providerOrSigner as SignerWithAddress).provider ??
+    (providerOrSigner as Provider)
+  );
 }
 
 export async function verifyContractsOnEtherscan(
