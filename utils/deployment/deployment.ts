@@ -69,9 +69,8 @@ export async function updateDeploymentInfos(
   }
 
   if (verifyContracts) {
-    await deployedContract.deployed();
     await verifyContractsOnEtherscan(
-      deployedContract.address,
+      deployedContract,
       deploymentArgs,
       libraries,
     );
@@ -137,12 +136,13 @@ export function getProvider(
 }
 
 export async function verifyContractsOnEtherscan(
-  contractAddress: string,
+  contract: BaseContract,
   constructorArguments: any[],
   libraries: any = {},
 ) {
+  await contract.deployed();
   await run('verify:verify', {
-    address: contractAddress,
+    address: contract.address,
     constructorArguments,
     libraries,
   });
