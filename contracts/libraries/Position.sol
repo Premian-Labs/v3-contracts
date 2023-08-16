@@ -4,10 +4,10 @@ pragma solidity ^0.8.19;
 
 import {Math} from "@solidstate/contracts/utils/Math.sol";
 
-import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {SD59x18, sd} from "@prb/math/SD59x18.sol";
 
-import {iZERO, ZERO, ONE, TWO, UD50_ZERO, UD50_ONE, UD50_TWO} from "./Constants.sol";
+import {iZERO, ZERO, UD50_ZERO, UD50_ONE, UD50_TWO} from "./Constants.sol";
 import {IPosition} from "./IPosition.sol";
 import {Pricing} from "./Pricing.sol";
 import {UD50x28} from "./UD50x28.sol";

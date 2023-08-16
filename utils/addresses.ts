@@ -89,9 +89,9 @@ export const arbitrumFeeds = [
     feed: '0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6',
   },
   {
-    token: arbitrum.tokens.USDCe,
+    token: arbitrum.tokens.USDC,
     denomination: CHAINLINK_USD,
-    feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3', // uses USDC feed
+    feed: '0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3',
   },
 ];
 

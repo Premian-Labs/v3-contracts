@@ -12,10 +12,7 @@ import {EnumerableSet} from "@solidstate/contracts/data/EnumerableSet.sol";
 
 import {Position} from "../libraries/Position.sol";
 import {OptionMath} from "../libraries/OptionMath.sol";
-import {ZERO} from "../libraries/Constants.sol";
 import {UD50x28} from "../libraries/UD50x28.sol";
-
-import {IOracleAdapter} from "../adapter/IOracleAdapter.sol";
 
 import {IERC20Router} from "../router/IERC20Router.sol";
 
@@ -79,6 +76,7 @@ library PoolStorage {
         }
     }
 
+    /// @notice Returns the token decimals for the pool token
     function getPoolTokenDecimals(Layout storage l) internal view returns (uint8) {
         return l.isCallPool ? l.baseDecimals : l.quoteDecimals;
     }
@@ -121,14 +119,6 @@ library PoolStorage {
     ///         pools)
     function getPoolToken(Layout storage l) internal view returns (address) {
         return l.isCallPool ? l.base : l.quote;
-    }
-
-    function getSettlementPrice(Layout storage l) internal returns (UD60x18) {
-        if (l.settlementPrice == ZERO) {
-            l.settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
-        }
-
-        return l.settlementPrice;
     }
 
     /// @notice calculate ERC1155 token id for given option parameters
@@ -193,13 +183,40 @@ library PoolStorage {
         router.safeTransferFrom(token, from, to, PoolStorage.layout().toPoolTokenDecimals(value));
     }
 
+    /// @notice Transfers token amount to recipient. Ignores if dust is missing on the exchange level,
+    ///         i.e. if the pool balance is 0.01% less than the amount that should be sent, then the pool balance is
+    ///         transferred instead of the amount. If the relative difference is larger than 0.01% then the transaction
+    ///         will revert.
+    /// @param token IERC20 token that is intended to be sent.
+    /// @param to Recipient address of the tokens.
+    /// @param value The amount of tokens that are intended to be sent (poolToken decimals).
     function safeTransferIgnoreDust(IERC20 token, address to, uint256 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         uint256 balance = IERC20(l.getPoolToken()).balanceOf(address(this));
-        if (balance < value) value = balance;
+
+        if (value == 0) return;
+
+        if (balance < value) {
+            UD60x18 _balance = l.fromPoolTokenDecimals(balance);
+            UD60x18 _value = l.fromPoolTokenDecimals(value);
+            UD60x18 relativeDiff = (_value - _balance) / _value;
+
+            // If relativeDiff is larger than the 0.01% tolerance, then revert
+            if (relativeDiff > ud(0.0001 ether)) revert IPoolInternal.Pool__InsufficientFunds();
+
+            value = balance;
+        }
+
         token.safeTransfer(to, value);
     }
 
+    /// @notice Transfers token amount to recipient. Ignores if dust is missing on the exchange level,
+    ///         i.e. if the pool balance is 0.01% less than the amount that should be sent, then the pool balance is
+    ///         transferred instead of the amount. If the relative difference is larger than 0.01% then the transaction
+    ///         will revert.
+    /// @param token IERC20 token that is intended to be sent.
+    /// @param to Recipient address of the tokens.
+    /// @param value The amount of tokens that are intended to be sent. (18 decimals)
     function safeTransferIgnoreDust(IERC20 token, address to, UD60x18 value) internal {
         PoolStorage.Layout storage l = PoolStorage.layout();
         safeTransferIgnoreDust(token, to, toPoolTokenDecimals(l, value));

@@ -1135,7 +1135,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     function _calculateExerciseValue(PoolStorage.Layout storage l, UD60x18 size) internal returns (UD60x18) {
         if (size == ZERO) return ZERO;
 
-        UD60x18 settlementPrice = l.getSettlementPrice();
+        UD60x18 settlementPrice = _tryCacheSettlementPrice(l);
         UD60x18 strike = l.strike;
         bool isCall = l.isCallPool;
 
@@ -1336,6 +1336,18 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (vars.collateral > ZERO) IERC20(l.getPoolToken()).safeTransferIgnoreDust(p.operator, vars.collateral);
 
         success = true;
+    }
+
+    /// @notice Fetch and cache the settlement price, if it has not been cached yet. Returns the cached price
+    function _tryCacheSettlementPrice(PoolStorage.Layout storage l) internal returns (UD60x18) {
+        UD60x18 settlementPrice = l.settlementPrice;
+        if (settlementPrice == ZERO) {
+            settlementPrice = IOracleAdapter(l.oracleAdapter).getPriceAt(l.base, l.quote, l.maturity);
+            l.settlementPrice = settlementPrice;
+            emit SettlementPriceCached(settlementPrice);
+        }
+
+        return settlementPrice;
     }
 
     /// @notice Deletes the `pKeyHash` from positions mapping
@@ -1768,8 +1780,8 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     /// @notice Gets the lower and upper bound of the stranded market area when it exists. In case the stranded market
     ///         area does not exist it will return the stranded market area the maximum tick price for both the lower
     ///         and the upper, in which case the market price is not stranded given any range order info order.
-    /// @return lower Lower bound of the stranded market price area (Default : 1e18) (18 decimals)
-    /// @return upper Upper bound of the stranded market price area (Default : 1e18) (18 decimals)
+    /// @return lower Lower bound of the stranded market price area (Default : PoolStorage.MAX_TICK_PRICE + ONE = 2e18) (18 decimals)
+    /// @return upper Upper bound of the stranded market price area (Default : PoolStorage.MAX_TICK_PRICE + ONE = 2e18) (18 decimals)
     function _getStrandedArea(PoolStorage.Layout storage l) internal view returns (UD60x18 lower, UD60x18 upper) {
         lower = PoolStorage.MAX_TICK_PRICE + ONE;
         upper = PoolStorage.MAX_TICK_PRICE + ONE;
@@ -1902,6 +1914,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
     }
 
     /// @notice Checks if the liquidity rate of the range results in a non-terminating decimal.
+    /// @dev lower should NOT be equal to upper, to avoid running into an infinite loop
     function _isRateNonTerminating(UD60x18 lower, UD60x18 upper) internal pure returns (bool) {
         UD60x18 den = (upper - lower) / PoolStorage.MIN_TICK_DISTANCE;
 
@@ -2132,6 +2145,7 @@ contract PoolInternal is IPoolInternal, IPoolEvents, ERC1155EnumerableInternal {
         if (cost > payout) revert Pool__CostExceedsPayout(cost, payout);
     }
 
+    /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
     function _beforeTokenTransfer(
         address operator,
         address from,

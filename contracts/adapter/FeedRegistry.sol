@@ -25,19 +25,18 @@ abstract contract FeedRegistry is IFeedRegistry {
     function batchRegisterFeedMappings(FeedMappingArgs[] memory args) external virtual;
 
     /// @inheritdoc IFeedRegistry
-    function feed(address tokenA, address tokenB) external view returns (address) {
-        (address mappedTokenA, address mappedTokenB) = _mapToDenomination(tokenA, tokenB);
-        return _feed(mappedTokenA, mappedTokenB);
+    function feed(address token, address denomination) external view returns (address) {
+        return _feed(_tokenToDenomination(token), denomination);
     }
 
-    /// @notice Returns the feed for `tokenA` and `tokenB`
-    function _feed(address tokenA, address tokenB) internal view returns (address) {
-        return FeedRegistryStorage.layout().feeds[tokenA.keyForUnsortedPair(tokenB)];
+    /// @notice Returns the feed for `token` and `denomination`
+    function _feed(address token, address denomination) internal view returns (address) {
+        return FeedRegistryStorage.layout().feeds[token.keyForUnsortedPair(denomination)];
     }
 
-    /// @notice Returns true if a feed exists for `tokenA` and `tokenB`
-    function _feedExists(address tokenA, address tokenB) internal view returns (bool) {
-        return _feed(tokenA, tokenB) != address(0);
+    /// @notice Returns true if a feed exists for `token` and `denomination`
+    function _feedExists(address token, address denomination) internal view returns (bool) {
+        return _feed(token, denomination) != address(0);
     }
 
     /// @notice Returns the denomination mapped to `token`, if it has one
@@ -52,7 +51,7 @@ abstract contract FeedRegistry is IFeedRegistry {
         return mappedTokenA.sortTokens(mappedTokenB);
     }
 
-    /// @notice Returns the mapped token denominations for `tokenA` and `tokenB`
+    /// @notice Returns the mapped tokens for `tokenA` and `tokenB`
     function _mapToDenomination(
         address tokenA,
         address tokenB

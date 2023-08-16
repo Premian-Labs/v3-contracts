@@ -10,7 +10,7 @@ import {IProxyManager} from "../../proxy/IProxyManager.sol";
 interface IOptionRewardFactory is IProxyManager {
     event ProxyDeployed(
         IOptionPS indexed option,
-        address priceRepository,
+        address oracleAdapter,
         address paymentSplitter,
         UD60x18 discount,
         UD60x18 penalty,
@@ -22,7 +22,7 @@ interface IOptionRewardFactory is IProxyManager {
 
     struct OptionRewardArgs {
         IOptionPS option;
-        address priceRepository;
+        address oracleAdapter;
         address paymentSplitter;
         UD60x18 discount;
         UD60x18 penalty;

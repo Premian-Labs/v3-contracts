@@ -154,6 +154,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         }
     }
 
+    /// @notice Returns true if `tokenPairs` contains `tokenPair`, false otherwise
     function _containsTokenPair(
         TokenPair[] memory tokenPairs,
         TokenPair memory tokenPair
@@ -212,6 +213,7 @@ contract VaultRegistry is IVaultRegistry, OwnableInternal {
         return l.supportedTokenPairs[vault];
     }
 
+    /// @notice Returns an array of vaults from a set of vault addresses
     function _getVaultsFromAddressSet(
         EnumerableSet.AddressSet storage vaultSet
     ) internal view returns (Vault[] memory) {

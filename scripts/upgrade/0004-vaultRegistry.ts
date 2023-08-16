@@ -1,13 +1,17 @@
 import {
-  ProxyUpgradeableOwnable,
   ProxyUpgradeableOwnable__factory,
   VaultRegistry__factory,
 } from '../../typechain';
-import arbitrumAddresses from '../../utils/deployment/arbitrum.json';
-import arbitrumGoerliAddresses from '../../utils/deployment/arbitrumGoerli.json';
-import { ChainID, ContractAddresses } from '../../utils/deployment/types';
-import fs from 'fs';
+import arbitrumDeployment from '../../utils/deployment/arbitrum.json';
+import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json';
+import {
+  ChainID,
+  ContractKey,
+  ContractType,
+  DeploymentInfos,
+} from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
+import { updateDeploymentInfos } from '../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -15,40 +19,37 @@ async function main() {
 
   //////////////////////////
 
-  let proxy: ProxyUpgradeableOwnable;
-  let addresses: ContractAddresses;
-  let addressesPath: string;
+  let deployment: DeploymentInfos;
   let setImplementation: boolean;
 
   if (chainId === ChainID.Arbitrum) {
-    addresses = arbitrumAddresses;
-    addressesPath = 'utils/deployment/arbitrum.json';
+    deployment = arbitrumDeployment;
     setImplementation = false;
   } else if (chainId === ChainID.ArbitrumGoerli) {
-    addresses = arbitrumGoerliAddresses;
-    addressesPath = 'utils/deployment/arbitrumGoerli.json';
+    deployment = arbitrumGoerliDeployment;
     setImplementation = true;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  proxy = ProxyUpgradeableOwnable__factory.connect(
-    addresses.VaultRegistryProxy,
-    deployer,
-  );
-
   //////////////////////////
 
-  const vaultRegistryImpl = await new VaultRegistry__factory(deployer).deploy();
-  await vaultRegistryImpl.deployed();
-  console.log(`VaultRegistry implementation : ${vaultRegistryImpl.address}`);
-
-  // Save new addresses
-  addresses.VaultRegistryImplementation = vaultRegistryImpl.address;
-  fs.writeFileSync(addressesPath, JSON.stringify(addresses, null, 2));
+  const implementation = await new VaultRegistry__factory(deployer).deploy();
+  await updateDeploymentInfos(
+    deployer,
+    ContractKey.VaultRegistryImplementation,
+    ContractType.Implementation,
+    implementation,
+    [],
+    true,
+  );
 
   if (setImplementation) {
-    await proxy.setImplementation(vaultRegistryImpl.address);
+    const proxy = ProxyUpgradeableOwnable__factory.connect(
+      deployment.VaultRegistryProxy.address,
+      deployer,
+    );
+    await proxy.setImplementation(implementation.address);
   }
 }
 

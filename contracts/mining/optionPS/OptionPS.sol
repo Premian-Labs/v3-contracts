@@ -2,11 +2,10 @@
 // For terms and conditions regarding commercial use please see https://license.premia.blue
 pragma solidity ^0.8.19;
 
-import {UD60x18, ud} from "@prb/math/UD60x18.sol";
+import {UD60x18} from "@prb/math/UD60x18.sol";
 import {ERC165Base} from "@solidstate/contracts/introspection/ERC165/base/ERC165Base.sol";
 import {ERC1155Base} from "@solidstate/contracts/token/ERC1155/base/ERC1155Base.sol";
 import {ERC1155BaseInternal} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseInternal.sol";
-import {ERC1155BaseStorage} from "@solidstate/contracts/token/ERC1155/base/ERC1155BaseStorage.sol";
 import {ERC1155Enumerable} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155Enumerable.sol";
 import {ERC1155EnumerableInternal} from "@solidstate/contracts/token/ERC1155/enumerable/ERC1155EnumerableInternal.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
@@ -194,6 +193,7 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         _burn(account, tokenId, amount.unwrap());
     }
 
+    /// @notice Revert if option has expired
     function _revertIfOptionExpired(uint64 maturity) internal view {
         if (block.timestamp >= maturity) revert OptionPS__OptionExpired(maturity);
     }
@@ -209,11 +209,13 @@ contract OptionPS is ERC1155Base, ERC1155Enumerable, ERC165Base, IOptionPS, Reen
         if (block.timestamp < target) revert OptionPS__ExercisePeriodNotEnded(maturity, target);
     }
 
+    /// @notice Revert if exercise period has ended
     function _revertIfExercisePeriodEnded(uint64 maturity) internal view {
         uint256 target = maturity + EXERCISE_DURATION;
         if (block.timestamp > target) revert OptionPS__ExercisePeriodEnded(maturity, target);
     }
 
+    /// @notice `_beforeTokenTransfer` wrapper, updates `tokenIds` set
     function _beforeTokenTransfer(
         address operator,
         address from,

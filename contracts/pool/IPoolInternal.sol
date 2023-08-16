@@ -23,6 +23,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__FlashLoanNotRepayed();
     error Pool__InsufficientAskLiquidity();
     error Pool__InsufficientBidLiquidity();
+    error Pool__InsufficientFunds();
     error Pool__InsufficientLiquidity();
     error Pool__InvalidAssetUpdate(SD59x18 deltaLongs, SD59x18 deltaShorts);
     error Pool__InvalidBelowPrice(UD60x18 price, UD60x18 priceBelow);
@@ -49,6 +50,7 @@ interface IPoolInternal is IPosition, IPricing {
     error Pool__QuoteOBExpired();
     error Pool__QuoteOBOverfilled(UD60x18 filledAmount, UD60x18 size, UD60x18 quoteOBSize);
     error Pool__SettlementFailed();
+    error Pool__SettlementPriceAlreadyCached();
     error Pool__TickDeltaNotZero(SD59x18 tickDelta);
     error Pool__TickNotFound(UD60x18 price);
     error Pool__TickOutOfRange(UD60x18 price);

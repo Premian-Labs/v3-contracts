@@ -61,6 +61,8 @@ import {Assertions} from "./Assertions.sol";
 contract DeployTest is Test, Assertions {
     uint256 mainnetFork;
 
+    UD60x18 settlementPrice;
+
     address base;
     address quote;
     IERC20 premia;
@@ -138,7 +140,8 @@ contract DeployTest is Test, Assertions {
         quote = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48; // USDC
         premia = IERC20(0x6399C842dD2bE3dE30BF99Bc7D1bBF6Fa3650E70);
 
-        oracleAdapter = new OracleAdapterMock(address(base), address(quote), ud(1000 ether), ud(1000 ether));
+        settlementPrice = ud(1000 ether);
+        oracleAdapter = new OracleAdapterMock(address(base), address(quote), settlementPrice, settlementPrice);
 
         poolKey = IPoolFactory.PoolKey({
             base: base,
@@ -312,6 +315,7 @@ contract DeployTest is Test, Assertions {
         poolCoreSelectors.push(poolCoreImpl.takerFee.selector);
         poolCoreSelectors.push(poolCoreImpl._takerFeeLowLevel.selector);
         poolCoreSelectors.push(poolCoreImpl.transferPosition.selector);
+        poolCoreSelectors.push(poolCoreImpl.tryCacheSettlementPrice.selector);
         poolCoreSelectors.push(poolCoreImpl.writeFrom.selector);
         poolCoreSelectors.push(poolCoreImpl.ticks.selector);
 
@@ -568,14 +572,14 @@ contract DeployTest is Test, Assertions {
     function getExerciseValue(
         bool isITM,
         UD60x18 tradeSize,
-        UD60x18 settlementPrice
+        UD60x18 _settlementPrice
     ) internal view returns (UD60x18 exerciseValue) {
         if (isITM) {
             if (isCallTest) {
-                exerciseValue = tradeSize * (settlementPrice - poolKey.strike);
-                exerciseValue = exerciseValue / settlementPrice;
+                exerciseValue = tradeSize * (_settlementPrice - poolKey.strike);
+                exerciseValue = exerciseValue / _settlementPrice;
             } else {
-                exerciseValue = tradeSize * (poolKey.strike - settlementPrice);
+                exerciseValue = tradeSize * (poolKey.strike - _settlementPrice);
             }
         }
 

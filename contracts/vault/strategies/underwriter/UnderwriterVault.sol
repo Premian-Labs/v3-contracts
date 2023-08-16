@@ -6,7 +6,6 @@ import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {DoublyLinkedList} from "@solidstate/contracts/data/DoublyLinkedList.sol";
 import {IERC1155} from "@solidstate/contracts/interfaces/IERC1155.sol";
 import {IERC20} from "@solidstate/contracts/interfaces/IERC20.sol";
-import {SolidStateERC4626} from "@solidstate/contracts/token/ERC4626/SolidStateERC4626.sol";
 import {ERC4626BaseInternal} from "@solidstate/contracts/token/ERC4626/base/ERC4626BaseInternal.sol";
 import {SafeERC20} from "@solidstate/contracts/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@solidstate/contracts/security/reentrancy_guard/ReentrancyGuard.sol";
@@ -20,7 +19,6 @@ import {OptionMathExternal} from "../../../libraries/OptionMathExternal.sol";
 import {PRBMathExtra} from "../../../libraries/PRBMathExtra.sol";
 import {IVolatilityOracle} from "../../../oracle/IVolatilityOracle.sol";
 import {IPool} from "../../../pool/IPool.sol";
-import {IVaultMining} from "../../../mining/vaultMining/IVaultMining.sol";
 
 import {IUnderwriterVault, IVault} from "./IUnderwriterVault.sol";
 import {Vault} from "../../Vault.sol";
@@ -66,7 +64,11 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     function getUtilisation() public view override(IVault, Vault) returns (UD60x18) {
         UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
-        return l.totalLockedAssets / l.totalAssets;
+
+        UD60x18 totalAssets = l.totalAssets + l.convertAssetToUD60x18(l.pendingAssetsDeposit);
+        if (totalAssets == ZERO) return ZERO;
+
+        return l.totalLockedAssets / totalAssets;
     }
 
     function updateSettings(bytes memory settings) external {
@@ -310,6 +312,23 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
     /// @inheritdoc ERC4626BaseInternal
     function _deposit(
+        address caller,
+        address receiver,
+        uint256 assetAmount,
+        uint256 shareAmount,
+        uint256 assetAmountOffset,
+        uint256 shareAmountOffset
+    ) internal virtual override {
+        UnderwriterVaultStorage.Layout storage l = UnderwriterVaultStorage.layout();
+
+        l.pendingAssetsDeposit = assetAmount;
+        super._deposit(caller, receiver, assetAmount, shareAmount, assetAmountOffset, shareAmountOffset);
+        if (l.pendingAssetsDeposit != assetAmount) revert Vault__InvariantViolated(); // Safety check, should never happen
+        delete l.pendingAssetsDeposit;
+    }
+
+    /// @inheritdoc ERC4626BaseInternal
+    function _deposit(
         uint256 assetAmount,
         address receiver
     ) internal virtual override nonReentrant returns (uint256 shareAmount) {
@@ -445,9 +464,7 @@ contract UnderwriterVault is IUnderwriterVault, Vault, ReentrancyGuard {
 
         // Add assetAmount deposited to user's balance
         // This is needed to compute average price per share
-        UD60x18 assets = l.convertAssetToUD60x18(assetAmount);
-
-        l.totalAssets = l.totalAssets + assets;
+        l.totalAssets = l.totalAssets + l.convertAssetToUD60x18(assetAmount);
 
         emit UpdateQuotes();
     }

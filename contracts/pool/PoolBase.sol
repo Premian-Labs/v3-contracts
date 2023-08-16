@@ -22,6 +22,7 @@ contract PoolBase is IPoolBase, ERC1155Base, ERC1155Enumerable, ERC165Base, Mult
         return PoolName.name(l.base, l.quote, l.maturity, l.strike.unwrap(), l.isCallPool);
     }
 
+    /// @notice `_beforeTokenTransfer` wrapper, reverts if transferring LP tokens
     function _beforeTokenTransfer(
         address operator,
         address from,

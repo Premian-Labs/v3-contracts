@@ -13,8 +13,6 @@ import {IDiamondReadable} from "@solidstate/contracts/proxy/diamond/readable/IDi
 import {IERC20Metadata} from "@solidstate/contracts/token/ERC20/metadata/IERC20Metadata.sol";
 
 import {DoublyLinkedListUD60x18, DoublyLinkedList} from "../libraries/DoublyLinkedListUD60x18.sol";
-import {Pricing} from "../libraries/Pricing.sol";
-import {UD50x28} from "../libraries/UD50x28.sol";
 import {PRBMathExtra} from "../libraries/PRBMathExtra.sol";
 
 import {PoolStorage} from "./PoolStorage.sol";
@@ -69,6 +67,7 @@ contract PoolProxy is Proxy, ERC165BaseInternal {
         _setSupportsInterface(type(IERC1155).interfaceId, true);
     }
 
+    /// @inheritdoc Proxy
     function _getImplementation() internal view override returns (address) {
         return IDiamondReadable(DIAMOND).facetAddress(msg.sig);
     }
