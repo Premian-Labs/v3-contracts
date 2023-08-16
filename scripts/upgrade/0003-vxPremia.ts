@@ -9,9 +9,10 @@ import {
 } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const [deployer, proposer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
   //////////////////////////
@@ -19,18 +20,18 @@ async function main() {
   let proxyManager: string;
   let lzEndpoint: string;
   let deployment: DeploymentInfos;
-  let setImplementation: boolean;
+  let proposeToMultiSig: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
     lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
     deployment = arbitrumDeployment;
-    setImplementation = false;
+    proposeToMultiSig = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
     lzEndpoint = ethers.constants.AddressZero;
     deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
+    proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -62,13 +63,21 @@ async function main() {
     true,
   );
 
-  if (setImplementation) {
-    const proxy = VxPremiaProxy__factory.connect(
-      deployment.VxPremiaProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = VxPremiaProxy__factory.connect(
+    deployment.VxPremiaProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.treasury,
+    proposer,
+    [transaction],
+  );
 }
 
 main()

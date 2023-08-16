@@ -93,6 +93,7 @@ export interface ContractDeploymentInfos {
   txHash: string;
   block: number;
   timestamp: number;
+  owner: string;
 }
 
 export enum ContractType {
@@ -104,8 +105,24 @@ export enum ContractType {
 }
 
 export enum ChainID {
+  Ethereum = 1,
   Goerli = 5,
   Arbitrum = 42161,
   ArbitrumGoerli = 421613,
   ArbitrumNova = 42170,
 }
+
+export const SafeChainPrefix: { [chainId: number]: string } = {
+  [ChainID.Ethereum]: 'eth',
+  [ChainID.Goerli]: 'gor',
+  [ChainID.Arbitrum]: 'arb1',
+  // Arbitrum Goerli and Arbitrum Nova are currently not supported by Safe https://docs.safe.global/safe-core-api/available-services
+};
+
+export const BlockExplorerUrl: { [chainId: number]: string } = {
+  [ChainID.Ethereum]: 'https://etherscan.io',
+  [ChainID.Goerli]: 'https://goerli.etherscan.io',
+  [ChainID.Arbitrum]: 'https://arbiscan.io',
+  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io/',
+  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io/',
+};

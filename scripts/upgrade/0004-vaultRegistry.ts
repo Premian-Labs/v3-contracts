@@ -12,22 +12,23 @@ import {
 } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import { updateDeploymentInfos } from '../../utils/deployment/deployment';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const [deployer, proposer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
   //////////////////////////
 
   let deployment: DeploymentInfos;
-  let setImplementation: boolean;
+  let proposeToMultiSig: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    setImplementation = false;
+    proposeToMultiSig = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    setImplementation = true;
+    proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -44,13 +45,21 @@ async function main() {
     true,
   );
 
-  if (setImplementation) {
-    const proxy = ProxyUpgradeableOwnable__factory.connect(
-      deployment.VaultRegistryProxy.address,
-      deployer,
-    );
-    await proxy.setImplementation(implementation.address);
-  }
+  const proxy = ProxyUpgradeableOwnable__factory.connect(
+    deployment.VaultRegistryProxy.address,
+    deployer,
+  );
+
+  const transaction = await proxy.populateTransaction.setImplementation(
+    implementation.address,
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.treasury,
+    proposer,
+    [transaction],
+  );
 }
 
 main()

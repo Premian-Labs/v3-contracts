@@ -5,9 +5,10 @@ import arbitrumGoerliDeployment from '../../utils/deployment/arbitrumGoerli.json
 import { ChainID, DeploymentInfos } from '../../utils/deployment/types';
 import { FacetCut, FacetCutAction, getSelectors } from '../utils/diamond';
 import { ethers } from 'hardhat';
+import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  const [deployer, proposer] = await ethers.getSigners();
   const chainId = await deployer.getChainId();
 
   //////////////////////////
@@ -21,14 +22,14 @@ async function main() {
   let userSettings: string;
   let vxPremia: string;
   let weth: string;
-  let updateFacets: boolean;
+  let proposeToMultiSig: boolean;
 
   if (chainId === ChainID.Arbitrum) {
     deployment = arbitrumDeployment;
-    updateFacets = false;
+    proposeToMultiSig = true;
   } else if (chainId === ChainID.ArbitrumGoerli) {
     deployment = arbitrumGoerliDeployment;
-    updateFacets = true;
+    proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
@@ -64,42 +65,50 @@ async function main() {
 
   //
 
-  if (updateFacets) {
-    const diamond = Premia__factory.connect(premiaDiamond, deployer);
+  const diamond = Premia__factory.connect(premiaDiamond, deployer);
+  const facets = await diamond.facets();
 
-    const facets = await diamond.facets();
-
-    let selectorsToRemove: string[] = [];
-    for (const el of facets.filter((el) => el.target != diamond.address)) {
-      selectorsToRemove = selectorsToRemove.concat(el.selectors);
-    }
-
-    const facetCuts: FacetCut[] = [
-      {
-        target: ethers.constants.AddressZero,
-        selectors: selectorsToRemove,
-        action: FacetCutAction.REMOVE,
-      },
-    ];
-
-    let registeredSelectors = [
-      diamond.interface.getSighash('supportsInterface(bytes4)'),
-    ];
-
-    for (const el of deployedFacets) {
-      const selectors = getSelectors(el.interface, registeredSelectors);
-
-      facetCuts.push({
-        action: FacetCutAction.ADD,
-        target: el.address,
-        selectors,
-      });
-
-      registeredSelectors = registeredSelectors.concat(selectors);
-    }
-
-    await diamond.diamondCut(facetCuts, ethers.constants.AddressZero, '0x');
+  let selectorsToRemove: string[] = [];
+  for (const el of facets.filter((el) => el.target != diamond.address)) {
+    selectorsToRemove = selectorsToRemove.concat(el.selectors);
   }
+
+  const facetCuts: FacetCut[] = [
+    {
+      target: ethers.constants.AddressZero,
+      selectors: selectorsToRemove,
+      action: FacetCutAction.REMOVE,
+    },
+  ];
+
+  let registeredSelectors = [
+    diamond.interface.getSighash('supportsInterface(bytes4)'),
+  ];
+
+  for (const el of deployedFacets) {
+    const selectors = getSelectors(el.interface, registeredSelectors);
+
+    facetCuts.push({
+      action: FacetCutAction.ADD,
+      target: el.address,
+      selectors,
+    });
+
+    registeredSelectors = registeredSelectors.concat(selectors);
+  }
+
+  const transaction = await diamond.populateTransaction.diamondCut(
+    facetCuts,
+    ethers.constants.AddressZero,
+    '0x',
+  );
+
+  await proposeOrSendTransaction(
+    proposeToMultiSig,
+    deployment.treasury,
+    proposer,
+    [transaction],
+  );
 }
 
 main()

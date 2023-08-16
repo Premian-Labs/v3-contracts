@@ -7,7 +7,6 @@
     "USDC": "",
     "DAI": ""
   },
-
   "feeConverter": {
     "main": {
       "address": "",
@@ -16,7 +15,8 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     },
     "insuranceFund": {
       "address": "",
@@ -25,7 +25,8 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     }
   },
   "optionPS": {
@@ -36,7 +37,8 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     }
   },
   "optionReward": {
@@ -47,7 +49,8 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     }
   },
   "vaults": {
@@ -58,7 +61,8 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     },
     "SV-ETH/USDC-P": {
       "address": "",
@@ -67,13 +71,12 @@
       "commitHash": "",
       "txHash": "",
       "block": 0,
-      "timestamp": 0
+      "timestamp": 0,
+      "owner": ""
     }
   },
-
   "treasury": "",
   "insuranceFund": "",
-
   "ChainlinkAdapterImplementation": {
     "address": "",
     "contractType": "Implementation",
@@ -81,7 +84,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "ChainlinkAdapterProxy": {
     "address": "",
@@ -90,7 +94,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PremiaDiamond": {
     "address": "",
@@ -99,7 +104,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolFactoryImplementation": {
     "address": "",
@@ -108,7 +114,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolFactoryProxy": {
     "address": "",
@@ -117,7 +124,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolFactoryDeployer": {
     "address": "",
@@ -126,7 +134,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "UserSettingsImplementation": {
     "address": "",
@@ -135,7 +144,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "UserSettingsProxy": {
     "address": "",
@@ -144,7 +154,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "ExchangeHelper": {
     "address": "",
@@ -153,7 +164,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "ReferralImplementation": {
     "address": "",
@@ -162,7 +174,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "ReferralProxy": {
     "address": "",
@@ -171,7 +184,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VxPremiaImplementation": {
     "address": "",
@@ -180,7 +194,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VxPremiaProxy": {
     "address": "",
@@ -189,7 +204,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "ERC20Router": {
     "address": "",
@@ -198,7 +214,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolBase": {
     "address": "",
@@ -207,7 +224,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolCore": {
     "address": "",
@@ -216,7 +234,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolDepositWithdraw": {
     "address": "",
@@ -225,7 +244,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "PoolTrade": {
     "address": "",
@@ -234,7 +254,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OrderbookStream": {
     "address": "",
@@ -243,7 +264,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VaultRegistryImplementation": {
     "address": "",
@@ -252,7 +274,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VaultRegistryProxy": {
     "address": "",
@@ -261,7 +284,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VolatilityOracleImplementation": {
     "address": "",
@@ -270,7 +294,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VolatilityOracleProxy": {
     "address": "",
@@ -279,7 +304,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "UnderwriterVaultImplementation": {
     "address": "",
@@ -288,7 +314,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionMathExternal": {
     "address": "",
@@ -297,7 +324,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VaultMiningImplementation": {
     "address": "",
@@ -306,7 +334,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "VaultMiningProxy": {
     "address": "",
@@ -315,7 +344,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionPSFactoryImplementation": {
     "address": "",
@@ -324,7 +354,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionPSFactoryProxy": {
     "address": "",
@@ -333,7 +364,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionPSImplementation": {
     "address": "",
@@ -342,7 +374,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionRewardFactoryImplementation": {
     "address": "",
@@ -351,7 +384,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionRewardFactoryProxy": {
     "address": "",
@@ -360,7 +394,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "OptionRewardImplementation": {
     "address": "",
@@ -369,7 +404,8 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   },
   "FeeConverterImplementation": {
     "address": "",
@@ -378,6 +414,7 @@
     "commitHash": "",
     "txHash": "",
     "block": 0,
-    "timestamp": 0
+    "timestamp": 0,
+    "owner": ""
   }
 }
