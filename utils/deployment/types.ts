@@ -11,6 +11,7 @@ export interface DeploymentInfos {
 
   treasury: string;
   insuranceFund: string;
+  lzEndpoint: string;
 
   ChainlinkAdapterImplementation: ContractDeploymentInfos;
   ChainlinkAdapterProxy: ContractDeploymentInfos;

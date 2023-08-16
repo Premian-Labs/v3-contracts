@@ -9,14 +9,15 @@ import { proposeOrSendTransaction } from '../utils/safe';
 
 async function main() {
   const [deployer, proposer] = await ethers.getSigners();
-  const { deployment, proposeToMultiSig, proxyManager, lzEndpoint } =
-    await initialize(deployer);
+  const { deployment, proposeToMultiSig, proxyManager } = await initialize(
+    deployer,
+  );
 
   //////////////////////////
 
   const args = [
     proxyManager,
-    lzEndpoint,
+    deployment.lzEndpoint,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
     deployment.ExchangeHelper.address,

@@ -25,23 +25,20 @@ export async function initialize(
   let deployment: DeploymentInfos;
   let proposeToMultiSig: boolean;
   let proxyManager: string;
-  let lzEndpoint: string;
 
   if (network.chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    lzEndpoint = '0x3c2269811836af69497E5F486A85D7316753cf62';
     deployment = arbitrumDeployment;
     proposeToMultiSig = true;
   } else if (network.chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
-    lzEndpoint = ethers.constants.AddressZero;
     deployment = arbitrumGoerliDeployment;
     proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
   }
 
-  return { network, deployment, proposeToMultiSig, proxyManager, lzEndpoint };
+  return { network, deployment, proposeToMultiSig, proxyManager };
 }
 
 export async function updateDeploymentInfos(
