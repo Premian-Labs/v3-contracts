@@ -166,6 +166,20 @@ function updateTableView(
     }
   }
 
+  // sort sections by name (Core contracts only)
+  tableView.categories.core.sections = _.sortBy(
+    tableView.categories.core.sections,
+    ['name'],
+  );
+
+  // sort contracts by name (Core contracts only)
+  tableView.categories.core.sections.forEach((section, i) => {
+    tableView.categories.core.sections[i].contracts = _.sortBy(
+      section.contracts,
+      ['name'],
+    );
+  });
+
   return tableView;
 }
 
