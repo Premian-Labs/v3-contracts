@@ -21,7 +21,7 @@ import {
 import {
   TableData,
   Contract,
-  CoreContractMetaData,
+  NameOverride,
   DescriptionOverride,
 } from './types';
 
@@ -100,10 +100,8 @@ function updateTableView(
 ) {
   for (const key in deploymentMetadata) {
     // Update Vaults, OptionReward, and OptionPS views
-    if (
-      chain !== 'Arbitrum Nova' &&
-      (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
-    ) {
+    if (key === 'vaults' || key === 'optionReward' || key === 'optionPS') {
+      if (chain === 'Arbitrum Nova') continue;
       const category = tableView.categories[key];
       category.chain = chain;
 
@@ -131,8 +129,10 @@ function updateTableView(
       const category = tableView.categories.core;
       category.chain = chain;
 
-      const contractMetadata = CoreContractMetaData[key];
-      const filePath = getContractFilePath(contractMetadata.name);
+      const contractData = deploymentMetadata[key as ContractKey];
+      const contractName = inferContractName(key, contractData.contractType);
+
+      const filePath = getContractFilePath(contractName);
       let section = filePath.split('/')[1];
       // Capitalize first letter of section
       section = section.charAt(0).toUpperCase() + section.slice(1);
@@ -148,11 +148,9 @@ function updateTableView(
         sectionIndex = category.sections.length - 1;
       }
 
-      const contractData = deploymentMetadata[key as ContractKey];
-
       const contractInfo: Contract = {
-        name: contractMetadata.name,
-        description: getContractDescription(key, contractData.contractType),
+        name: contractName,
+        description: inferContractDescription(key, contractData.contractType),
         address: contractData.address,
         commitHash: contractData.commitHash,
         etherscanUrl,
@@ -191,10 +189,8 @@ function writeTables(deploymentPath: string, chain: string) {
     let partial = detailedSummaryPartial;
     let pathKey = 'core';
 
-    if (
-      chain !== 'Arbitrum Nova' &&
-      (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
-    ) {
+    if (key === 'vaults' || key === 'optionReward' || key === 'optionPS') {
+      if (chain === 'Arbitrum Nova') continue;
       template = tableTemplateNoHeader;
       partial = summaryPartial;
       pathKey = key;
@@ -213,7 +209,22 @@ function writeTables(deploymentPath: string, chain: string) {
   }
 }
 
-function getContractDescription(
+function inferContractName(
+  contractKey: string,
+  contractType: ContractType | string,
+) {
+  const override = NameOverride[contractKey];
+  if (override) return override;
+
+  let name = addSpaceBetweenUpperCaseLetters(contractKey);
+  // remove the contract type from the name, if it's there
+  const typeInName = name.split(' ').pop() === contractType;
+
+  if (typeInName) return name.split(' ').slice(0, -1).join('');
+  return name.split(' ').join('');
+}
+
+function inferContractDescription(
   contractKey: string,
   contractType: ContractType | string,
 ) {
@@ -221,12 +232,11 @@ function getContractDescription(
   if (override) return override;
 
   let name = addSpaceBetweenUpperCaseLetters(contractKey);
-
   // remove the contract type from the name, if it's there
   const typeInName = name.split(' ').pop() === contractType;
+
   if (typeInName) name = name.split(' ').slice(0, -1).join(' ');
   const type = addSpaceBetweenUpperCaseLetters(contractType);
-
   return `${name} ${type}`;
 }
 
