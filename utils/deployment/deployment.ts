@@ -19,6 +19,7 @@ import { Network } from '@ethersproject/networks';
 import arbitrumDeployment from './arbitrum/metadata.json';
 import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
 import { ethers } from 'hardhat';
+import { generateTables } from '../tables/model';
 
 export async function initialize(
   providerOrSigner: Provider | SignerWithAddress,
@@ -54,7 +55,8 @@ export async function updateDeploymentMetadata(
   writeFile = true,
 ) {
   const provider = getProvider(providerOrSigner);
-  const chainId = (await getNetwork(provider)).chainId;
+  const network = await getNetwork(provider);
+  const chainId = network.chainId;
   const metadataJsonPath = DeploymentPath[chainId] + 'metadata.json';
 
   const data = JSON.parse(
@@ -94,6 +96,8 @@ export async function updateDeploymentMetadata(
       `Contract deployed: ${deployedContract.address} (${addressUrl})`,
     );
   }
+
+  await generateTables(network);
 
   return data;
 }
