@@ -43,59 +43,68 @@ function displayFilePathUrl() {
   } else return '';
 }
 
+let tableView: TableData = {
+  categories: {
+    vaults: {
+      name: 'Vault',
+      chain: '',
+      sections: [],
+      displayHeader,
+    },
+    optionPS: {
+      name: 'Physically Settled Option',
+      chain: '',
+      sections: [],
+      displayHeader,
+    },
+    optionReward: {
+      name: 'Option Reward',
+      chain: '',
+      sections: [],
+      displayHeader,
+    },
+    core: {
+      name: 'Core Contract',
+      chain: '',
+      sections: [],
+      displayHeader,
+    },
+  },
+};
+
 export async function generateTables(network: Network) {
   const chain = ChainName[network.chainId];
-
-  let tableData: TableData = {
-    categories: {
-      vaults: {
-        name: 'Vault',
-        chain,
-        sections: [],
-        displayHeader,
-      },
-      optionPS: {
-        name: 'Physically Settled Option',
-        chain,
-        sections: [],
-        displayHeader,
-      },
-      optionReward: {
-        name: 'Option Reward',
-        chain,
-        sections: [],
-        displayHeader,
-      },
-      core: {
-        name: 'Core Contract',
-        chain,
-        sections: [],
-        displayHeader,
-      },
-    },
-  };
-
   const etherscanUrl = BlockExplorerUrl[network.chainId];
   const deploymentPath = DeploymentPath[network.chainId];
 
-  const deployData = JSON.parse(
+  const deploymentMetadata = JSON.parse(
     fs.readFileSync(`${deploymentPath}/metadata.json`).toString(),
   ) as DeploymentMetadata;
 
-  for (const key in deployData) {
+  updateTableView(deploymentMetadata, chain, etherscanUrl);
+  writeTables(deploymentPath, chain);
+}
+
+function updateTableView(
+  deploymentMetadata: DeploymentMetadata,
+  chain: string,
+  etherscanUrl: string,
+) {
+  for (const key in deploymentMetadata) {
     if (
       chain !== 'Arbitrum Nova' &&
       (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
     ) {
-      const category = tableData.categories[key];
+      const category = tableView.categories[key];
+      category.chain = chain;
 
       category.sections.push({
         name: '',
         contracts: [],
       });
 
-      for (let contract in deployData[key]) {
-        let contractData = deployData[key][contract];
+      for (let contract in deploymentMetadata[key]) {
+        let contractData = deploymentMetadata[key][contract];
 
         let contractInfo: Contract = {
           name: contract,
@@ -109,7 +118,9 @@ export async function generateTables(network: Network) {
         category.sections[0].contracts.push(contractInfo);
       }
     } else if (key in ContractKey) {
-      const category = tableData.categories.core;
+      const category = tableView.categories.core;
+      category.chain = chain;
+
       const contractMetadata = CoreContractMetaData[key];
 
       let sectionIndex = _.findIndex(category.sections, [
@@ -126,7 +137,7 @@ export async function generateTables(network: Network) {
         sectionIndex = category.sections.length - 1;
       }
 
-      let contractData = deployData[key as ContractKey];
+      let contractData = deploymentMetadata[key as ContractKey];
 
       let contractInfo: Contract = {
         name: contractMetadata.name,
@@ -143,8 +154,12 @@ export async function generateTables(network: Network) {
     }
   }
 
-  for (const key in tableData.categories) {
-    const category = tableData.categories[key];
+  return tableView;
+}
+
+function writeTables(deploymentPath: string, chain: string) {
+  for (const key in tableView.categories) {
+    const category = tableView.categories[key];
 
     let template = tableTemplate;
     let partial = detailedSummaryPartial;
