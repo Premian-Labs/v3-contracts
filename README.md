@@ -4,9 +4,12 @@ https://premia.finance
 
 ## Deployments
 
-| Network         |                                                     |
-| --------------- | --------------------------------------------------- |
-| Arbitrum Goerli | [📜](utils/deployment/arbitrumGoerli/metadata.json) |
+| Network         | Deployment                |                                                            |
+| --------------- | ------------------------- | ---------------------------------------------------------- |
+| Arbitrum Goerli | Core Contracts            | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         |
+| Arbitrum Goerli | Option Physically Settled | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |
+| Arbitrum Goerli | Option Rewards            | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |
+| Arbitrum Goerli | Vaults                    | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |
 
 <!---
  | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
