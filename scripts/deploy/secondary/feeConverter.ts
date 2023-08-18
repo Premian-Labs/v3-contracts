@@ -8,7 +8,7 @@ import { ContractKey, ContractType } from '../../../utils/deployment/types';
 import { parseEther } from 'ethers/lib/utils';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../../utils/deployment/deployment';
 
 async function main() {
@@ -20,7 +20,7 @@ async function main() {
 
   if (!deployment.ExchangeHelper.address) {
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
-    deployment = await updateDeploymentInfos(
+    deployment = await updateDeploymentMetadata(
       deployer,
       ContractKey.ExchangeHelper,
       ContractType.Standalone,
@@ -41,7 +41,7 @@ async function main() {
       feeConverterImplArgs[1],
       feeConverterImplArgs[2],
     );
-    deployment = await updateDeploymentInfos(
+    deployment = await updateDeploymentMetadata(
       deployer,
       'FeeConverterImplementation',
       ContractType.Implementation,
@@ -56,7 +56,7 @@ async function main() {
     deployer,
   ).deploy(feeConverterProxyArgs[0]);
 
-  const data = await updateDeploymentInfos(
+  const data = await updateDeploymentMetadata(
     deployer,
     'FeeConverterProxy',
     ContractType.Proxy,

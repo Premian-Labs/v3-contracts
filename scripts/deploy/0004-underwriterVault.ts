@@ -12,7 +12,7 @@ import {
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -52,7 +52,7 @@ async function main() {
   const optionMathExternal = await new OptionMathExternal__factory(
     deployer,
   ).deploy();
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.OptionMathExternal,
     ContractType.Standalone,
@@ -92,7 +92,7 @@ async function main() {
     underwriterVaultImplArgs[7],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.UnderwriterVaultImplementation,
     ContractType.Implementation,

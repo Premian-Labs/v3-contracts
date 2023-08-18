@@ -29,7 +29,7 @@ import { Interface } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import { BigNumber, constants } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { updateDeploymentInfos } from './deployment/deployment';
+import { updateDeploymentMetadata } from './deployment/deployment';
 import { ContractKey, ContractType } from './deployment/types';
 
 interface PoolUtilArgs {
@@ -74,7 +74,7 @@ export class PoolUtil {
     // PoolBase
     const poolBaseFactory = new PoolBase__factory(deployer);
     const poolBaseImpl = await poolBaseFactory.deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolBase,
       ContractType.DiamondFacet,
@@ -112,7 +112,7 @@ export class PoolUtil {
       poolCoreImplArgs[6],
       poolCoreImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolCore,
       ContractType.DiamondFacet,
@@ -151,7 +151,7 @@ export class PoolUtil {
       poolDepositWithdrawImplArgs[6],
       poolDepositWithdrawImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolDepositWithdraw,
       ContractType.DiamondFacet,
@@ -189,7 +189,7 @@ export class PoolUtil {
       poolTradeImplArgs[6],
       poolTradeImplArgs[7],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolTrade,
       ContractType.DiamondFacet,
@@ -227,7 +227,7 @@ export class PoolUtil {
 
     // Diamond and facets deployment
     const premiaDiamond = await new Premia__factory(deployer).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PremiaDiamond,
       ContractType.DiamondProxy,
@@ -260,7 +260,7 @@ export class PoolUtil {
       poolFactoryProxyArgs[1],
       poolFactoryProxyArgs[2],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryProxy,
       ContractType.Proxy,
@@ -278,7 +278,7 @@ export class PoolUtil {
     const poolFactoryDeployer = await new PoolFactoryDeployer__factory(
       deployer,
     ).deploy(poolFactoryDeployerArgs[0], poolFactoryDeployerArgs[1]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryDeployer,
       ContractType.Standalone,
@@ -301,7 +301,7 @@ export class PoolUtil {
       poolFactoryImplArgs[2],
       poolFactoryImplArgs[3],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.PoolFactoryImplementation,
       ContractType.Implementation,
@@ -330,7 +330,7 @@ export class PoolUtil {
     const router = await new ERC20Router__factory(deployer).deploy(
       routerArgs[0],
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ERC20Router,
       ContractType.Standalone,
@@ -344,7 +344,7 @@ export class PoolUtil {
       const exchangeHelper = await new ExchangeHelper__factory(
         deployer,
       ).deploy();
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.ExchangeHelper,
         ContractType.Standalone,
@@ -358,7 +358,7 @@ export class PoolUtil {
 
     // UserSettings
     const userSettingsImpl = await new UserSettings__factory(deployer).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.UserSettingsImplementation,
       ContractType.Implementation,
@@ -371,7 +371,7 @@ export class PoolUtil {
     const userSettingsProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(userSettingsProxyArgs[0]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.UserSettingsProxy,
       ContractType.Proxy,
@@ -386,7 +386,7 @@ export class PoolUtil {
     const vaultRegistryImpl = await new VaultRegistry__factory(
       deployer,
     ).deploy();
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.VaultRegistryImplementation,
       ContractType.Implementation,
@@ -399,7 +399,7 @@ export class PoolUtil {
     const vaultRegistryProxy = await new ProxyUpgradeableOwnable__factory(
       deployer,
     ).deploy(vaultRegistryProxyArgs[0]);
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.VaultRegistryProxy,
       ContractType.Proxy,
@@ -428,7 +428,7 @@ export class PoolUtil {
         vxPremiaImplArgs[4],
         vxPremiaImplArgs[5],
       );
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.VxPremiaImplementation,
         ContractType.Implementation,
@@ -441,7 +441,7 @@ export class PoolUtil {
       const vxPremiaProxy = await new VxPremiaProxy__factory(deployer).deploy(
         vxPremiaProxyArgs[0],
       );
-      await updateDeploymentInfos(
+      await updateDeploymentMetadata(
         deployer,
         ContractKey.VxPremiaProxy,
         ContractType.Proxy,
@@ -456,7 +456,7 @@ export class PoolUtil {
     const referralImpl = await new Referral__factory(deployer).deploy(
       poolFactory.address,
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ReferralImplementation,
       ContractType.Implementation,
@@ -469,7 +469,7 @@ export class PoolUtil {
     const referralProxy = await new ReferralProxy__factory(deployer).deploy(
       referralImpl.address,
     );
-    await updateDeploymentInfos(
+    await updateDeploymentMetadata(
       deployer,
       ContractKey.ReferralProxy,
       ContractType.Proxy,

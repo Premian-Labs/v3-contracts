@@ -13,7 +13,7 @@ import {
 } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -38,7 +38,7 @@ async function main() {
   const chainlinkAdapterImpl = await new ChainlinkAdapter__factory(
     deployer,
   ).deploy(chainlinkAdapterImplArgs[0], chainlinkAdapterImplArgs[1]);
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterImplementation,
     ContractType.Implementation,
@@ -51,7 +51,7 @@ async function main() {
   const chainlinkAdapterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(chainlinkAdapterProxyArgs[0]);
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ChainlinkAdapterProxy,
     ContractType.Proxy,

@@ -3,7 +3,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -15,7 +15,7 @@ async function main() {
 
   const args = [deployment.PoolFactoryProxy.address];
   const implementation = await new Referral__factory(deployer).deploy(args[0]);
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.ReferralImplementation,
     ContractType.Implementation,

@@ -44,7 +44,7 @@ export async function initialize(
   return { network, deployment, proposeToMultiSig, proxyManager };
 }
 
-export async function updateDeploymentInfos(
+export async function updateDeploymentMetadata(
   providerOrSigner: Provider | SignerWithAddress,
   objectPath: ContractKey | string,
   contractType: ContractType,
