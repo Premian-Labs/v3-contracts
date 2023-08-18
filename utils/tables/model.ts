@@ -37,9 +37,11 @@ function displayEtherscanUrl() {
 }
 
 function displayFilePathUrl() {
-  if (this.commitHash.length > 0 || this.commitHash !== '') {
-    const contractFilePath = getContractFilePath(this.name);
-    return `[📁](https://github.com/Premian-Labs/premia-v3-contracts-private/blob/${this.commitHash}/${contractFilePath})`;
+  if (
+    (this.commitHash.length > 0 || this.commitHash !== '') &&
+    (this.filePath.length > 0 || this.filePath !== '')
+  ) {
+    return `[📁](https://github.com/Premian-Labs/premia-v3-contracts-private/blob/${this.commitHash}/${this.filePath})`;
   } else return '';
 }
 
@@ -91,6 +93,7 @@ function updateTableView(
   etherscanUrl: string,
 ) {
   for (const key in deploymentMetadata) {
+    // Update Vaults, OptionReward, and OptionPS views
     if (
       chain !== 'Arbitrum Nova' &&
       (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
@@ -104,9 +107,9 @@ function updateTableView(
       });
 
       for (let contract in deploymentMetadata[key]) {
-        let contractData = deploymentMetadata[key][contract];
+        const contractData = deploymentMetadata[key][contract];
 
-        let contractInfo: Contract = {
+        const contractInfo: Contract = {
           name: contract,
           description: '',
           address: contractData.address,
@@ -118,33 +121,36 @@ function updateTableView(
         category.sections[0].contracts.push(contractInfo);
       }
     } else if (key in ContractKey) {
+      // Update Core view
       const category = tableView.categories.core;
       category.chain = chain;
 
       const contractMetadata = CoreContractMetaData[key];
+      const filePath = getContractFilePath(contractMetadata.name);
+      let section = filePath.split('/')[1];
+      // Capitalize first letter of section
+      section = section.charAt(0).toUpperCase() + section.slice(1);
 
-      let sectionIndex = _.findIndex(category.sections, [
-        'name',
-        contractMetadata.section,
-      ]);
+      let sectionIndex = _.findIndex(category.sections, ['name', section]);
 
       if (sectionIndex === -1) {
         category.sections.push({
-          name: contractMetadata.section,
+          name: section,
           contracts: [],
         });
 
         sectionIndex = category.sections.length - 1;
       }
 
-      let contractData = deploymentMetadata[key as ContractKey];
+      const contractData = deploymentMetadata[key as ContractKey];
 
-      let contractInfo: Contract = {
+      const contractInfo: Contract = {
         name: contractMetadata.name,
         description: '',
         address: contractData.address,
         commitHash: contractData.commitHash,
         etherscanUrl,
+        filePath,
         displayAddress,
         displayEtherscanUrl,
         displayFilePathUrl,
