@@ -1,4 +1,5 @@
 export interface DeploymentMetadata {
+  addresses: { treasury: string; insuranceFund: string; lzEndpoint: string };
   tokens: { [symbol: string]: string };
 
   feeConverter: {
@@ -8,10 +9,6 @@ export interface DeploymentMetadata {
   optionPS: { [name: string]: ContractDeploymentMetadata };
   optionReward: { [name: string]: ContractDeploymentMetadata };
   vaults: { [name: string]: ContractDeploymentMetadata };
-
-  treasury: string;
-  insuranceFund: string;
-  lzEndpoint: string;
 
   ChainlinkAdapterImplementation: ContractDeploymentMetadata;
   ChainlinkAdapterProxy: ContractDeploymentMetadata;

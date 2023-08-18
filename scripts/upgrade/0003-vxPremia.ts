@@ -17,7 +17,7 @@ async function main() {
 
   const args = [
     proxyManager,
-    deployment.lzEndpoint,
+    deployment.addresses.lzEndpoint,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
     deployment.ExchangeHelper.address,
@@ -51,7 +51,7 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
+    deployment.addresses.treasury,
     proposer,
     [transaction],
   );

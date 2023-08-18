@@ -1,4 +1,9 @@
 {
+  "addresses": {
+    "treasury": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+    "insuranceFund": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
+    "lzEndpoint": "0x0000000000000000000000000000000000000000"
+  },
   "tokens": {
     "testWETH": "0x80c79fe19E25b34a7677c9B6b1A2801caBfAC985",
     "WETH": "0x7F5bc2250ea57d8ca932898297b1FF9aE1a04999",
@@ -76,9 +81,6 @@
       "owner": ""
     }
   },
-  "treasury": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
-  "insuranceFund": "0x589155f2F38B877D7Ac3C1AcAa2E42Ec8a9bb709",
-  "lzEndpoint": "0x0000000000000000000000000000000000000000",
   "ChainlinkAdapterImplementation": {
     "address": "0xFB3BA76A9522067C8cc28b01f270770dDbAF8505",
     "block": 33787786,

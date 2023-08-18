@@ -49,7 +49,7 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
+    deployment.addresses.treasury,
     proposer,
     [transaction],
   );

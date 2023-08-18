@@ -15,7 +15,7 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   let { deployment } = await initialize(deployer);
 
-  const treasury = deployment.treasury;
+  const treasury = deployment.addresses.treasury;
   const treasuryShare = parseEther('0.5');
 
   if (!deployment.ExchangeHelper.address) {

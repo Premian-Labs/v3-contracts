@@ -86,7 +86,7 @@ async function main() {
     weth,
     chainlinkAdapter,
     deployment.feeConverter.main.address,
-    deployment.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
+    deployment.addresses.insuranceFund, // Not using `feeConverter` here, as this is used to receive ETH, which is not supported by `feeConverter`
     discountPerPool,
     log,
     vxPremia,
