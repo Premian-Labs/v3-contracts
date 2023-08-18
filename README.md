@@ -4,12 +4,12 @@ https://premia.finance
 
 ## Deployments
 
-| Network         | Deployment                |                                                            |
-| --------------- | ------------------------- | ---------------------------------------------------------- |
-| Arbitrum Goerli | Core Contracts            | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         |
-| Arbitrum Goerli | Option Physically Settled | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |
-| Arbitrum Goerli | Option Rewards            | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |
-| Arbitrum Goerli | Vaults                    | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |
+| Deployment                | Arbitrum                                             | Arbitrum Goerli                                            | Arbitrum Nova                                    |
+| ------------------------- | ---------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
+| Core Contracts            | [📜](utils/deployment/arbitrum/coreTable.md)         | [📜](utils/deployment/arbitrumGoerli/coreTable.md)         | [📜](utils/deployment/arbitrumNova/coreTable.md) |
+| Option Physically Settled | [📜](utils/deployment/arbitrum/optionPSTable.md)     | [📜](utils/deployment/arbitrumGoerli/optionPSTable.md)     |                                                  |
+| Option Rewards            | [📜](utils/deployment/arbitrum/optionRewardTable.md) | [📜](utils/deployment/arbitrumGoerli/optionRewardTable.md) |                                                  |
+| Vaults                    | [📜](utils/deployment/arbitrum/vaultsTable.md)       | [📜](utils/deployment/arbitrumGoerli/vaultsTable.md)       |                                                  |
 
 <!---
  | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
