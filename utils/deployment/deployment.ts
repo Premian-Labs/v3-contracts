@@ -1,4 +1,7 @@
+import fs from 'fs';
+import path from 'path';
 import child_process from 'child_process';
+
 import { IOwnable__factory } from '../../typechain';
 import {
   BlockExplorerUrl,
@@ -6,8 +9,8 @@ import {
   ContractKey,
   ContractType,
   DeploymentInfos,
+  DeploymentJsonPath,
 } from './types';
-import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
@@ -52,7 +55,7 @@ export async function updateDeploymentInfos(
 ) {
   const provider = getProvider(providerOrSigner);
   const chainId = (await getNetwork(provider)).chainId;
-  const jsonPath = getDeploymentJsonPath(chainId);
+  const jsonPath = DeploymentJsonPath[chainId];
 
   const data = JSON.parse(
     fs.readFileSync(jsonPath).toString(),
@@ -93,19 +96,6 @@ export async function updateDeploymentInfos(
   }
 
   return data;
-}
-
-export function getDeploymentJsonPath(chainId: ChainID) {
-  switch (chainId) {
-    case ChainID.Arbitrum:
-      return 'utils/deployment/arbitrum.json';
-    case ChainID.ArbitrumGoerli:
-      return 'utils/deployment/arbitrumGoerli.json';
-    case ChainID.ArbitrumNova:
-      return 'utils/deployment/arbitrumNova.json';
-    default:
-      throw new Error('ChainId not implemented');
-  }
 }
 
 export async function getBlockTimestamp(
@@ -149,4 +139,32 @@ export function getProvider(
     (providerOrSigner as SignerWithAddress).provider ??
     (providerOrSigner as Provider)
   );
+}
+
+export function getContractFilePath(contractName: string): string {
+  let contractFilePaths: string[] = [];
+
+  function getContractFilePaths(rootPath: string) {
+    fs.readdirSync(rootPath).forEach((file) => {
+      const absolutePath = path.join(rootPath, file);
+      if (fs.statSync(absolutePath).isDirectory())
+        return getContractFilePaths(absolutePath);
+      else return contractFilePaths.push(absolutePath);
+    });
+  }
+
+  getContractFilePaths('./contracts');
+
+  for (const contractFilePath of contractFilePaths) {
+    const contractFileNameWithExtension =
+      contractFilePath.split('/').pop() ?? '';
+
+    if (contractFileNameWithExtension.length === 0)
+      throw Error('Contract file name is empty');
+
+    if (contractFileNameWithExtension.split('.')[0] === contractName)
+      return contractFilePath;
+  }
+
+  return '';
 }

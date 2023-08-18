@@ -113,6 +113,14 @@ export enum ChainID {
   ArbitrumNova = 42170,
 }
 
+export const ChainName: { [chainId: number]: string } = {
+  [ChainID.Ethereum]: 'Ethereum',
+  [ChainID.Goerli]: 'Goerli',
+  [ChainID.Arbitrum]: 'Arbitrum',
+  [ChainID.ArbitrumGoerli]: 'Arbitrum Goerli',
+  [ChainID.ArbitrumNova]: 'Arbitrum Nova',
+};
+
 export const SafeChainPrefix: { [chainId: number]: string } = {
   [ChainID.Ethereum]: 'eth',
   [ChainID.Goerli]: 'gor',
@@ -126,4 +134,10 @@ export const BlockExplorerUrl: { [chainId: number]: string } = {
   [ChainID.Arbitrum]: 'https://arbiscan.io',
   [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io/',
   [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io/',
+};
+
+export const DeploymentJsonPath: { [chainId: number]: string } = {
+  [ChainID.Arbitrum]: 'utils/deployment/arbitrum.json',
+  [ChainID.ArbitrumGoerli]: 'utils/deployment/arbitrumGoerli.json',
+  [ChainID.ArbitrumNova]: 'utils/deployment/arbitrumNova.json',
 };

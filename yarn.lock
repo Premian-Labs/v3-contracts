@@ -1441,6 +1441,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/mustache@npm:^4":
+  version: 4.2.2
+  resolution: "@types/mustache@npm:4.2.2"
+  checksum: 1fa67a519f4302c96615524be4c8248067da02ca047bae9d4c4bb79977135ac7c15dcc388e7c70b8a817b9497004d5ca5c77a155dcb096bea16d53d4cdbe75d2
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:*":
   version: 20.5.0
   resolution: "@types/node@npm:20.5.0"
@@ -5578,6 +5585,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mustache@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "mustache@npm:4.2.0"
+  bin:
+    mustache: bin/mustache
+  checksum: 928fcb63e3aa44a562bfe9b59ba202cccbe40a46da50be6f0dd831b495be1dd7e38ca4657f0ecab2c1a89dc7bccba0885eab7ee7c1b215830da765758c7e0506
+  languageName: node
+  linkType: hard
+
 "nano-json-stream-parser@npm:^0.1.2":
   version: 0.1.2
   resolution: "nano-json-stream-parser@npm:0.1.2"
@@ -6069,6 +6085,7 @@ __metadata:
     "@typechain/ethers-v5": ^11.1.1
     "@typechain/hardhat": ^7.0.0
     "@types/lodash": ^4
+    "@types/mustache": ^4
     "@types/node": ^18.17.4
     dotenv: ^16.3.1
     ethers: 5.7.2
@@ -6082,6 +6099,7 @@ __metadata:
     husky: ^8.0.3
     lodash: ^4.17.21
     moment-timezone: ^0.5.43
+    mustache: ^4.2.0
     prettier: ^2.8.8
     prettier-plugin-solidity: ^1.1.3
     pretty-quick: ^3.1.3
