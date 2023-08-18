@@ -6,6 +6,7 @@ import {
   BlockExplorerUrl,
   ChainName,
   ContractKey,
+  ContractType,
   DeploymentMetadata,
   DeploymentPath,
 } from '../deployment/types';
@@ -17,7 +18,12 @@ import {
   summaryPartial,
   detailedSummaryPartial,
 } from './template';
-import { TableData, Contract, CoreContractMetaData } from './types';
+import {
+  TableData,
+  Contract,
+  CoreContractMetaData,
+  DescriptionOverride,
+} from './types';
 
 function displayHeader() {
   if (this.name.length > 0 || this.name !== '') return `|**${this.name}**|||||`;
@@ -146,7 +152,7 @@ function updateTableView(
 
       const contractInfo: Contract = {
         name: contractMetadata.name,
-        description: '',
+        description: getContractDescription(key, contractData.contractType),
         address: contractData.address,
         commitHash: contractData.commitHash,
         etherscanUrl,
@@ -191,4 +197,25 @@ function writeTables(deploymentPath: string, chain: string) {
     fs.writeFileSync(tablePath, table);
     console.log(`Table generated at ${tablePath}`);
   }
+}
+
+function getContractDescription(
+  contractKey: string,
+  contractType: ContractType | string,
+) {
+  const override = DescriptionOverride[contractKey];
+  if (override) return override;
+
+  let name = addSpaceBetweenUpperCaseLetters(contractKey);
+
+  // remove the contract type from the name, if it's there
+  const typeInName = name.split(' ').pop() === contractType;
+  if (typeInName) name = name.split(' ').slice(0, -1).join(' ');
+  const type = addSpaceBetweenUpperCaseLetters(contractType);
+
+  return `${name} ${type}`;
+}
+
+function addSpaceBetweenUpperCaseLetters(s: string) {
+  return s.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
