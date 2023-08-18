@@ -1,5 +1,5 @@
-import arbitrum from './deployment/arbitrum.json';
-import arbitrumGoerli from './deployment/arbitrumGoerli.json';
+import arbitrum from './deployment/arbitrum/metadata.json';
+import arbitrumGoerli from './deployment/arbitrumGoerli/metadata.json';
 
 export type Token = { address: string; decimals: number; symbol: string };
 

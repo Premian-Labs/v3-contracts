@@ -8,16 +8,16 @@ import {
   ChainID,
   ContractKey,
   ContractType,
-  DeploymentInfos,
-  DeploymentJsonPath,
+  DeploymentMetadata,
+  DeploymentPath,
 } from './types';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
-import arbitrumDeployment from './arbitrum.json';
-import arbitrumGoerliDeployment from './arbitrumGoerli.json';
+import arbitrumDeployment from './arbitrum/metadata.json';
+import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
 import { ethers } from 'hardhat';
 
 export async function initialize(
@@ -25,7 +25,7 @@ export async function initialize(
 ) {
   const network = await getNetwork(providerOrSigner);
 
-  let deployment: DeploymentInfos;
+  let deployment: DeploymentMetadata;
   let proposeToMultiSig: boolean;
   let proxyManager: string;
 
@@ -55,11 +55,11 @@ export async function updateDeploymentInfos(
 ) {
   const provider = getProvider(providerOrSigner);
   const chainId = (await getNetwork(provider)).chainId;
-  const jsonPath = DeploymentJsonPath[chainId];
+  const metadataJsonPath = DeploymentPath[chainId] + 'metadata.json';
 
   const data = JSON.parse(
-    fs.readFileSync(jsonPath).toString(),
-  ) as DeploymentInfos;
+    fs.readFileSync(metadataJsonPath).toString(),
+  ) as DeploymentMetadata;
 
   const txReceipt = await deployedContract.deployTransaction.wait();
   let owner = '';
@@ -81,7 +81,7 @@ export async function updateDeploymentInfos(
   });
 
   if (writeFile) {
-    fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+    fs.writeFileSync(metadataJsonPath, JSON.stringify(data, undefined, 2));
   }
 
   if (logTxUrl) {

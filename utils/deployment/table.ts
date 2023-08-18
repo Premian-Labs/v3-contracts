@@ -6,8 +6,8 @@ import {
   BlockExplorerUrl,
   ChainName,
   ContractKey,
-  DeploymentInfos,
-  DeploymentJsonPath,
+  DeploymentMetadata,
+  DeploymentPath,
 } from './types';
 import { Network } from '@ethersproject/networks';
 import { getContractFilePath } from './deployment';
@@ -88,13 +88,17 @@ export async function buildTable(network: Network) {
   };
 
   const etherscanUrl = BlockExplorerUrl[network.chainId];
+  const deploymentPath = DeploymentPath[network.chainId];
 
   const deployData = JSON.parse(
-    fs.readFileSync(DeploymentJsonPath[network.chainId]).toString(),
-  ) as DeploymentInfos;
+    fs.readFileSync(`${deploymentPath}/metadata.json`).toString(),
+  ) as DeploymentMetadata;
 
   for (const key in deployData) {
-    if (key === 'vaults' || key === 'optionReward' || key === 'optionPS') {
+    if (
+      chain !== 'Arbitrum Nova' &&
+      (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
+    ) {
       const category = tableData.categories[key];
 
       category.sections.push({
@@ -156,10 +160,15 @@ export async function buildTable(network: Network) {
 
     let template = tableTemplate;
     let partial = detailedSummaryPartial;
+    let pathKey = 'core';
 
-    if (key === 'vaults' || key === 'optionReward' || key === 'optionPS') {
+    if (
+      chain !== 'Arbitrum Nova' &&
+      (key === 'vaults' || key === 'optionReward' || key === 'optionPS')
+    ) {
       template = tableTemplateNoHeader;
       partial = summaryPartial;
+      pathKey = key;
     }
 
     // Generate md file from template
@@ -168,10 +177,8 @@ export async function buildTable(network: Network) {
     // Prettify table markdown
     table = prettier.format(table, { parser: 'markdown' });
 
-    console.log(table);
-
-    // Overwrite table.md
-    // fs.writeFileSync('utils/deployment/table.md', table);
+    // Overwrite {pathKey}Table.md
+    fs.writeFileSync(`${deploymentPath}/${pathKey}Table.md`, table);
   }
 }
 

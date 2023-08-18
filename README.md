@@ -4,9 +4,9 @@ https://premia.finance
 
 ## Deployments
 
-| Network         |                                              |
-| --------------- | -------------------------------------------- |
-| Arbitrum Goerli | [📜](./utils/deployment/arbitrumGoerli.json) |
+| Network         |                                                     |
+| --------------- | --------------------------------------------------- |
+| Arbitrum Goerli | [📜](utils/deployment/arbitrumGoerli/metadata.json) |
 
 <!---
  | Arbitrum Mainnet | [📜](./docs/deployments/ARBITRUM.md) |
