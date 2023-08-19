@@ -6,8 +6,10 @@ import {UD60x18} from "@prb/math/UD60x18.sol";
 
 interface IVaultMining {
     error VaultMining__NotVault(address caller);
+    error VaultMining__InsufficientRewards(address user, UD60x18 rewardsAvailable, UD60x18 rewardsRequested);
 
-    event Claim(address indexed user, address indexed vault, UD60x18 rewardAmount);
+    event AllocateRewards(address indexed user, address indexed vault, UD60x18 rewardAmount);
+    event Claim(address indexed user, UD60x18 rewardAmount);
 
     event UpdateVaultVotes(address indexed vault, UD60x18 votes, UD60x18 vaultUtilisationRate);
 
@@ -29,8 +31,6 @@ interface IVaultMining {
     struct UserInfo {
         // User shares
         UD60x18 shares;
-        // Total allocated unclaimed rewards
-        UD60x18 reward;
         // Reward debt. See explanation below
         UD60x18 rewardDebt;
         //   pending reward = (user.shares * vault.accPremiaPerShare) - user.rewardDebt
@@ -54,8 +54,9 @@ interface IVaultMining {
     /// @notice Return amount of rewards not yet allocated
     function getRewardsAvailable() external view returns (UD60x18);
 
-    /// @notice Return amount of pending rewards (not yet claimed) for a user, on a specific vault
-    function getPendingUserRewards(address user, address vault) external view returns (UD60x18);
+    /// @notice Return amount of pending rewards (not yet claimed) for a user.
+    ///         This accounts for `l.userRewards[user]` and pending rewards of all given vaults
+    function getPendingUserRewards(address user, address[] calldata vaults) external view returns (UD60x18);
 
     /// @notice Return the total amount of votes across all vaults (Used to calculate share of rewards allocation for each vault)
     function getTotalVotes() external view returns (UD60x18);
@@ -69,8 +70,13 @@ interface IVaultMining {
     /// @notice Get the amount of rewards emitted per year
     function getRewardsPerYear() external view returns (UD60x18);
 
-    /// @notice Claim rewards for a list of vaults
-    function claim(address[] memory vaults) external;
+    /// @notice Allocate pending rewards for a list of vaults, and claim given amount of rewards.
+    /// @param vaults The vaults for which to trigger allocation of pending rewards
+    /// @param amount The amount of rewards to claim.
+    function claim(address[] calldata vaults, UD60x18 amount) external;
+
+    /// @notice Allocate pending rewards for a list of vaults, and claim max amount of rewards possible.
+    function claimAll(address[] calldata vaults) external;
 
     /// @notice Trigger an update for a user on a specific vault
     /// This needs to be called by the vault, anytime the user's shares change

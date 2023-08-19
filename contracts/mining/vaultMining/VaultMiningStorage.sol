@@ -16,6 +16,8 @@ library VaultMiningStorage {
         UD60x18 rewardsAvailable;
         mapping(address pool => IVaultMining.VaultInfo infos) vaultInfo;
         mapping(address pool => mapping(address user => IVaultMining.UserInfo info)) userInfo;
+        // Total rewards accumulated by the user and not yet claimed
+        mapping(address user => UD60x18) userRewards;
         // Total votes across all pools
         UD60x18 totalVotes;
     }
