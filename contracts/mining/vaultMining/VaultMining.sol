@@ -138,10 +138,7 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         if (l.userRewards[user] < amount) revert VaultMining__InsufficientRewards(user, l.userRewards[user], amount);
         l.userRewards[user] = l.userRewards[user] - amount;
 
-        IERC20(PREMIA).approve(OPTION_REWARD, amount.unwrap());
-        IOptionReward(OPTION_REWARD).underwrite(user, amount);
-
-        emit Claim(user, amount);
+        _claimRewards(user, amount);
     }
 
     function claimAll(address[] calldata vaults) external nonReentrant {
@@ -154,6 +151,10 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         UD60x18 amount = l.userRewards[user];
         l.userRewards[user] = ZERO;
 
+        _claimRewards(user, amount);
+    }
+
+    function _claimRewards(address user, UD60x18 amount) internal {
         IERC20(PREMIA).approve(OPTION_REWARD, amount.unwrap());
         IOptionReward(OPTION_REWARD).underwrite(user, amount);
 
