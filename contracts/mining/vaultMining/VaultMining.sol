@@ -128,39 +128,33 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
     }
 
     /// @inheritdoc IVaultMining
-    function claim(address[] calldata vaults, UD60x18 amount) external nonReentrant {
-        address user = msg.sender;
-
+    function claimAll(address[] calldata vaults) external nonReentrant {
         VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
 
-        _updateUser(user, vaults);
+        _updateUser(msg.sender, vaults);
+        _claimRewards(l, msg.sender, l.userRewards[msg.sender]);
+    }
 
+    /// @inheritdoc IVaultMining
+    function claim(address[] calldata vaults, UD60x18 amount) external nonReentrant {
+        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
+
+        _updateUser(msg.sender, vaults);
+        _claimRewards(l, msg.sender, amount);
+    }
+
+    function _claimRewards(VaultMiningStorage.Layout storage l, address user, UD60x18 amount) internal {
         if (l.userRewards[user] < amount) revert VaultMining__InsufficientRewards(user, l.userRewards[user], amount);
+
         l.userRewards[user] = l.userRewards[user] - amount;
 
-        _claimRewards(user, amount);
-    }
-
-    function claimAll(address[] calldata vaults) external nonReentrant {
-        address user = msg.sender;
-
-        VaultMiningStorage.Layout storage l = VaultMiningStorage.layout();
-
-        _updateUser(user, vaults);
-
-        UD60x18 amount = l.userRewards[user];
-        l.userRewards[user] = ZERO;
-
-        _claimRewards(user, amount);
-    }
-
-    function _claimRewards(address user, UD60x18 amount) internal {
         IERC20(PREMIA).approve(OPTION_REWARD, amount.unwrap());
         IOptionReward(OPTION_REWARD).underwrite(user, amount);
 
         emit Claim(user, amount);
     }
 
+    /// @inheritdoc IVaultMining
     function updateVaults() public nonReentrant {
         IVaultRegistry.Vault[] memory vaults = IVaultRegistry(VAULT_REGISTRY).getVaults();
 
@@ -242,9 +236,11 @@ contract VaultMining is IVaultMining, OwnableInternal, ReentrancyGuard {
         _updateVault(vault, newTotalShares, utilisationRate);
 
         UD60x18 rewards = (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
-        l.userRewards[user] = l.userRewards[user] + (uInfo.shares * vInfo.accRewardsPerShare) - uInfo.rewardDebt;
 
-        if (rewards > ZERO) emit AllocateRewards(user, vault, rewards);
+        if (rewards > ZERO) {
+            l.userRewards[user] = l.userRewards[user] + rewards;
+            emit AllocateRewards(user, vault, rewards);
+        }
 
         uInfo.rewardDebt = newUserShares * vInfo.accRewardsPerShare;
 
