@@ -11,7 +11,10 @@ import {
   DeploymentPath,
 } from '../deployment/types';
 import { Network } from '@ethersproject/networks';
-import { getContractFilePath } from '../deployment/deployment';
+import {
+  getContractFilePath,
+  getContractFilePaths,
+} from '../deployment/deployment';
 import {
   tableTemplateNoHeader,
   tableTemplate,
@@ -98,6 +101,8 @@ function updateTableView(
   chain: string,
   etherscanUrl: string,
 ) {
+  const contractFilePaths = getContractFilePaths();
+
   for (const key in deploymentMetadata) {
     // Update Vaults, OptionReward, and OptionPS views
     if (key === 'vaults' || key === 'optionReward' || key === 'optionPS') {
@@ -132,7 +137,7 @@ function updateTableView(
       const contractData = deploymentMetadata[key as ContractKey];
       const contractName = inferContractName(key, contractData.contractType);
 
-      const filePath = getContractFilePath(contractName);
+      const filePath = getContractFilePath(contractName, contractFilePaths);
       let section = filePath.split('/')[1];
       // Capitalize first letter of section
       section = section.charAt(0).toUpperCase() + section.slice(1);

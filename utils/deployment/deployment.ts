@@ -169,20 +169,25 @@ export async function verifyContractsOnEtherscan(
   });
 }
 
-export function getContractFilePath(contractName: string): string {
+export function getContractFilePaths(): string[] {
   let contractFilePaths: string[] = [];
 
-  function getContractFilePaths(rootPath: string) {
+  (function _getContractFilePaths(rootPath: string) {
     fs.readdirSync(rootPath).forEach((file) => {
       const absolutePath = path.join(rootPath, file);
       if (fs.statSync(absolutePath).isDirectory())
-        return getContractFilePaths(absolutePath);
+        return _getContractFilePaths(absolutePath);
       else return contractFilePaths.push(absolutePath);
     });
-  }
+  })('./contracts');
 
-  getContractFilePaths('./contracts');
+  return contractFilePaths;
+}
 
+export function getContractFilePath(
+  contractName: string,
+  contractFilePaths: string[],
+): string {
   for (const contractFilePath of contractFilePaths) {
     const contractFileNameWithExtension =
       contractFilePath.split('/').pop() ?? '';
