@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import child_process from 'child_process';
 
 import { IOwnable__factory } from '../../typechain';
