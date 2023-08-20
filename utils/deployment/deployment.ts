@@ -13,6 +13,7 @@ import {
 } from './types';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
+import { run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
@@ -53,6 +54,8 @@ export async function updateDeploymentMetadata(
   deploymentArgs: string[],
   logTxUrl = false,
   writeFile = true,
+  verifyContracts = true,
+  libraries: { [key: string]: string } = {},
 ) {
   const provider = getProvider(providerOrSigner);
   const network = await getNetwork(provider);
@@ -94,6 +97,14 @@ export async function updateDeploymentMetadata(
 
     console.log(
       `Contract deployed: ${deployedContract.address} (${addressUrl})`,
+    );
+  }
+
+  if (verifyContracts) {
+    await verifyContractsOnEtherscan(
+      deployedContract,
+      deploymentArgs,
+      libraries,
     );
   }
 
@@ -143,6 +154,19 @@ export function getProvider(
     (providerOrSigner as SignerWithAddress).provider ??
     (providerOrSigner as Provider)
   );
+}
+
+export async function verifyContractsOnEtherscan(
+  contract: BaseContract,
+  constructorArguments: any[],
+  libraries: any = {},
+) {
+  await contract.deployed();
+  await run('verify:verify', {
+    address: contract.address,
+    constructorArguments,
+    libraries,
+  });
 }
 
 export function getContractFilePath(contractName: string): string {

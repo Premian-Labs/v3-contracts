@@ -62,6 +62,9 @@ async function main() {
     underwriterVaultImpl,
     underwriterVaultImplArgs,
     true,
+    true,
+    true,
+    { OptionMathExternal: deployment.OptionMathExternal.address },
   );
 
   //////////////////////////
