@@ -24,7 +24,7 @@ export async function updateDeploymentInfos(
   logTxUrl = false,
   writeFile = true,
   verifyContracts = true,
-  libraries: any = {},
+  libraries: { [key: string]: string } = {},
 ) {
   const provider = getProvider(providerOrSigner);
   const chainId = (await getNetwork(provider)).chainId;
