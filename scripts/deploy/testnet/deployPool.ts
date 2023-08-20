@@ -1,23 +1,14 @@
 import { PoolFactory__factory } from '../../../typechain';
-import arbitrumGoerliDeployment from '../../../utils/deployment/arbitrumGoerli.json';
 import { PoolKey } from '../../../utils/sdk/types';
 import { getValidMaturity } from '../../../utils/time';
 import { BigNumber } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { ChainID, DeploymentInfos } from '../../../utils/deployment/types';
+import { initialize } from '../../../utils/deployment/deployment';
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const chainId = await deployer.getChainId();
-
-  let deployment: DeploymentInfos;
-
-  if (chainId === ChainID.ArbitrumGoerli) {
-    deployment = arbitrumGoerliDeployment;
-  } else {
-    throw new Error('ChainId not implemented');
-  }
+  let { deployment } = await initialize(deployer);
 
   const poolFactory = PoolFactory__factory.connect(
     deployment.PoolFactoryProxy.address,
