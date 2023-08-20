@@ -6,7 +6,6 @@ import {
   BlockExplorerUrl,
   ChainName,
   ContractKey,
-  ContractType,
   DeploymentMetadata,
   DeploymentPath,
 } from '../deployment/types';
@@ -14,19 +13,16 @@ import { Network } from '@ethersproject/networks';
 import {
   getContractFilePath,
   getContractFilePaths,
-} from '../deployment/deployment';
+  inferContractDescription,
+  inferContractName,
+} from '../file';
 import {
   tableTemplateNoHeader,
   tableTemplate,
   summaryPartial,
   detailedSummaryPartial,
 } from './template';
-import {
-  TableData,
-  Contract,
-  NameOverride,
-  DescriptionOverride,
-} from './types';
+import { TableData, Contract } from './types';
 
 function displayHeader() {
   if (this.name.length > 0 || this.name !== '') return `|**${this.name}**|||||`;
@@ -212,39 +208,4 @@ function writeTables(deploymentPath: string, chain: string) {
     fs.writeFileSync(tablePath, table);
     console.log(`Table generated at ${tablePath}`);
   }
-}
-
-function inferContractName(
-  contractKey: string,
-  contractType: ContractType | string,
-) {
-  const override = NameOverride[contractKey];
-  if (override) return override;
-
-  let name = addSpaceBetweenUpperCaseLetters(contractKey);
-  // remove the contract type from the name, if it's there
-  const typeInName = name.split(' ').pop() === contractType;
-
-  if (typeInName) return name.split(' ').slice(0, -1).join('');
-  return name.split(' ').join('');
-}
-
-function inferContractDescription(
-  contractKey: string,
-  contractType: ContractType | string,
-) {
-  const override = DescriptionOverride[contractKey];
-  if (override) return override;
-
-  let name = addSpaceBetweenUpperCaseLetters(contractKey);
-  // remove the contract type from the name, if it's there
-  const typeInName = name.split(' ').pop() === contractType;
-
-  if (typeInName) name = name.split(' ').slice(0, -1).join(' ');
-  const type = addSpaceBetweenUpperCaseLetters(contractType);
-  return `${name} ${type}`;
-}
-
-function addSpaceBetweenUpperCaseLetters(s: string) {
-  return s.replace(/([a-z])([A-Z])/g, '$1 $2');
 }

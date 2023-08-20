@@ -21,6 +21,7 @@ import arbitrumDeployment from './arbitrum/metadata.json';
 import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
 import { ethers } from 'hardhat';
 import { generateTables } from '../tables/model';
+import { throwIfContractFilePathNotFound } from '../file';
 
 export async function initialize(
   providerOrSigner: Provider | SignerWithAddress,
@@ -57,6 +58,8 @@ export async function updateDeploymentMetadata(
   verifyContracts = true,
   libraries: { [key: string]: string } = {},
 ) {
+  throwIfContractFilePathNotFound(objectPath, contractType);
+
   const provider = getProvider(providerOrSigner);
   const network = await getNetwork(provider);
   const chainId = network.chainId;
@@ -167,37 +170,4 @@ export async function verifyContractsOnEtherscan(
     constructorArguments,
     libraries,
   });
-}
-
-export function getContractFilePaths(): string[] {
-  let contractFilePaths: string[] = [];
-
-  (function _getContractFilePaths(rootPath: string) {
-    fs.readdirSync(rootPath).forEach((file) => {
-      const absolutePath = path.join(rootPath, file);
-      if (fs.statSync(absolutePath).isDirectory())
-        return _getContractFilePaths(absolutePath);
-      else return contractFilePaths.push(absolutePath);
-    });
-  })('./contracts');
-
-  return contractFilePaths;
-}
-
-export function getContractFilePath(
-  contractName: string,
-  contractFilePaths: string[],
-): string {
-  for (const contractFilePath of contractFilePaths) {
-    const contractFileNameWithExtension =
-      contractFilePath.split('/').pop() ?? '';
-
-    if (contractFileNameWithExtension.length === 0)
-      throw Error('Contract file name is empty');
-
-    if (contractFileNameWithExtension.split('.')[0] === contractName)
-      return contractFilePath;
-  }
-
-  return '';
 }
