@@ -6,44 +6,10 @@ export interface DeploymentMetadata {
     main: ContractDeploymentMetadata;
     insuranceFund: ContractDeploymentMetadata;
   };
+  core: { [key in ContractKey]: ContractDeploymentMetadata };
   optionPS: { [name: string]: ContractDeploymentMetadata };
   optionReward: { [name: string]: ContractDeploymentMetadata };
   vaults: { [name: string]: ContractDeploymentMetadata };
-
-  ChainlinkAdapterImplementation: ContractDeploymentMetadata;
-  ChainlinkAdapterProxy: ContractDeploymentMetadata;
-  PremiaDiamond: ContractDeploymentMetadata;
-  PoolFactoryImplementation: ContractDeploymentMetadata;
-  PoolFactoryProxy: ContractDeploymentMetadata;
-  PoolFactoryDeployer: ContractDeploymentMetadata;
-  UserSettingsImplementation: ContractDeploymentMetadata;
-  UserSettingsProxy: ContractDeploymentMetadata;
-  ExchangeHelper: ContractDeploymentMetadata;
-  ReferralImplementation: ContractDeploymentMetadata;
-  ReferralProxy: ContractDeploymentMetadata;
-  VxPremiaImplementation: ContractDeploymentMetadata;
-  VxPremiaProxy: ContractDeploymentMetadata;
-  ERC20Router: ContractDeploymentMetadata;
-  PoolBase: ContractDeploymentMetadata;
-  PoolCore: ContractDeploymentMetadata;
-  PoolDepositWithdraw: ContractDeploymentMetadata;
-  PoolTrade: ContractDeploymentMetadata;
-  OrderbookStream: ContractDeploymentMetadata;
-  VaultRegistryImplementation: ContractDeploymentMetadata;
-  VaultRegistryProxy: ContractDeploymentMetadata;
-  VolatilityOracleImplementation: ContractDeploymentMetadata;
-  VolatilityOracleProxy: ContractDeploymentMetadata;
-  OptionMathExternal: ContractDeploymentMetadata;
-  UnderwriterVaultImplementation: ContractDeploymentMetadata;
-  VaultMiningImplementation: ContractDeploymentMetadata;
-  VaultMiningProxy: ContractDeploymentMetadata;
-  OptionPSFactoryImplementation: ContractDeploymentMetadata;
-  OptionPSFactoryProxy: ContractDeploymentMetadata;
-  OptionPSImplementation: ContractDeploymentMetadata;
-  OptionRewardFactoryImplementation: ContractDeploymentMetadata;
-  OptionRewardFactoryProxy: ContractDeploymentMetadata;
-  OptionRewardImplementation: ContractDeploymentMetadata;
-  FeeConverterImplementation: ContractDeploymentMetadata;
 }
 
 export enum ContractKey {
