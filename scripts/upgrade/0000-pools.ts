@@ -31,6 +31,12 @@ async function main() {
 
   //////////////////////////
 
+  if (!deployment.feeConverter.main.address)
+    throw Error('Main FeeConverter not set');
+
+  if (!deployment.feeConverter.insuranceFund.address)
+    throw Error('Insurance Fund FeeConverter not set');
+
   const deployedFacets = await PoolUtil.deployPoolImplementations(
     deployer,
     poolFactory,
@@ -41,6 +47,7 @@ async function main() {
     deployment.feeConverter.main.address,
     referral,
     vaultRegistry,
+    true,
   );
 
   // Save new addresses
@@ -92,7 +99,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.addresses.treasury,
-    proposer,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

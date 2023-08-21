@@ -73,7 +73,7 @@ async function main() {
     ContractType.Proxy,
     underwriterVaultProxy,
     args,
-    true,
+    { logTxUrl: true },
   );
 
   // Register vault on the VaultRegistry

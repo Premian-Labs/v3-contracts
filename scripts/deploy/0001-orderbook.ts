@@ -13,7 +13,7 @@ async function main() {
     ContractType.Standalone,
     orderbook,
     [],
-    true,
+    { logTxUrl: true },
   );
 }
 

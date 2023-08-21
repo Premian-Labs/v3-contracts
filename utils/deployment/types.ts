@@ -95,8 +95,8 @@ export const BlockExplorerUrl: { [chainId: number]: string } = {
   [ChainID.Ethereum]: 'https://etherscan.io',
   [ChainID.Goerli]: 'https://goerli.etherscan.io',
   [ChainID.Arbitrum]: 'https://arbiscan.io',
-  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io/',
-  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io/',
+  [ChainID.ArbitrumGoerli]: 'https://goerli.arbiscan.io',
+  [ChainID.ArbitrumNova]: 'https://nova.arbiscan.io',
 };
 
 export const DeploymentPath: { [chainId: number]: string } = {

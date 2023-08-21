@@ -27,7 +27,7 @@ async function main() {
       ContractType.Standalone,
       exchangeHelper,
       [],
-      true,
+      { logTxUrl: true },
     );
   }
 
@@ -44,11 +44,11 @@ async function main() {
     );
     deployment = await updateDeploymentMetadata(
       deployer,
-      'FeeConverterImplementation',
+      ContractKey.FeeConverterImplementation,
       ContractType.Implementation,
       feeConverterImpl,
       feeConverterImplArgs,
-      true,
+      { logTxUrl: true },
     );
   }
 
@@ -65,8 +65,7 @@ async function main() {
     ContractType.Proxy,
     feeConverterProxy,
     feeConverterProxyArgs,
-    false,
-    false,
+    { logTxUrl: true },
   );
 
   const feeConverter = FeeConverter__factory.connect(

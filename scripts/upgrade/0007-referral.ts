@@ -21,7 +21,7 @@ async function main() {
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ReferralProxy__factory.connect(
@@ -36,7 +36,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.addresses.treasury,
-    proposer,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

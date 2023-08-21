@@ -19,7 +19,7 @@ async function main() {
     ContractType.Implementation,
     volatilityOracleImplementation,
     [],
-    true,
+    { logTxUrl: true },
   );
 
   const volatilityOracleProxyArgs = [volatilityOracleImplementation.address];
@@ -33,7 +33,7 @@ async function main() {
     ContractType.Proxy,
     volatilityOracleProxy,
     volatilityOracleProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 

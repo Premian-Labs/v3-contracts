@@ -58,7 +58,7 @@ async function main() {
     ContractType.Standalone,
     optionMathExternal,
     [],
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
@@ -98,10 +98,7 @@ async function main() {
     ContractType.Implementation,
     underwriterVaultImpl,
     underwriterVaultImplArgs,
-    true,
-    true,
-    true,
-    { OptionMathExternal: optionMathExternal.address },
+    { logTxUrl: true },
   );
 
   //////////////////////////

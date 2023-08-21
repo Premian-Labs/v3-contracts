@@ -44,7 +44,7 @@ async function main() {
     ContractType.Implementation,
     chainlinkAdapterImpl,
     chainlinkAdapterImplArgs,
-    true,
+    { logTxUrl: true },
   );
 
   const chainlinkAdapterProxyArgs = [chainlinkAdapterImpl.address];
@@ -57,7 +57,7 @@ async function main() {
     ContractType.Proxy,
     chainlinkAdapterProxy,
     chainlinkAdapterProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 
   chainlinkAdapter = chainlinkAdapterProxy.address;

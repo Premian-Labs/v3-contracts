@@ -61,10 +61,15 @@ async function main() {
     ContractType.Implementation,
     underwriterVaultImpl,
     underwriterVaultImplArgs,
-    true,
-    true,
-    true,
-    { OptionMathExternal: deployment.core.OptionMathExternal.address },
+    {
+      logTxUrl: true,
+      verification: {
+        enableVerification: true,
+        libraries: {
+          OptionMathExternal: deployment.core.OptionMathExternal.address,
+        },
+      },
+    },
   );
 
   //////////////////////////
@@ -78,7 +83,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.addresses.treasury,
-    proposer,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

@@ -39,7 +39,7 @@ async function main() {
     ContractType.Implementation,
     vaultMiningImplementation,
     vaultMiningImplementationArgs,
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
@@ -60,7 +60,7 @@ async function main() {
     ContractType.Proxy,
     vaultMiningProxy,
     vaultMiningProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 

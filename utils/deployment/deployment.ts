@@ -12,31 +12,40 @@ import {
 } from './types';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
-import { run } from 'hardhat';
+import { ethers, run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
 import arbitrumDeployment from './arbitrum/metadata.json';
 import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
-import { ethers } from 'hardhat';
 import { generateTables } from '../tables/model';
+
+interface UpdateDeploymentMetadataOptions {
+  logTxUrl?: boolean;
+  skipWriteFile?: boolean;
+  verification?: VerificationOptions;
+}
+
+interface VerificationOptions {
+  enableVerification?: boolean;
+  contract?: string;
+  libraries?: { [key: string]: string };
+}
 
 export async function initialize(
   providerOrSigner: Provider | SignerWithAddress,
 ) {
   const network = await getNetwork(providerOrSigner);
 
-  let deployment: DeploymentMetadata;
+  let deployment: DeploymentMetadata = getDeployment(network.chainId);
   let proposeToMultiSig: boolean;
   let proxyManager: string;
 
   if (network.chainId === ChainID.Arbitrum) {
     proxyManager = '0x89b36CE3491f2258793C7408Bd46aac725973BA2';
-    deployment = arbitrumDeployment;
     proposeToMultiSig = true;
   } else if (network.chainId === ChainID.ArbitrumGoerli) {
     proxyManager = ethers.constants.AddressZero;
-    deployment = arbitrumGoerliDeployment;
     proposeToMultiSig = false;
   } else {
     throw new Error('ChainId not implemented');
@@ -45,17 +54,24 @@ export async function initialize(
   return { network, deployment, proposeToMultiSig, proxyManager };
 }
 
+export function getDeployment(chain: ChainID): DeploymentMetadata {
+  if (chain === ChainID.Arbitrum) return arbitrumDeployment;
+  if (chain === ChainID.ArbitrumGoerli) return arbitrumGoerliDeployment;
+  throw new Error('ChainId not implemented');
+}
+
 export async function updateDeploymentMetadata(
   providerOrSigner: Provider | SignerWithAddress,
   objectPath: ContractKey | string,
   contractType: ContractType,
   deployedContract: BaseContract,
   deploymentArgs: string[],
-  logTxUrl = false,
-  writeFile = true,
-  verifyContracts = true,
-  libraries: { [key: string]: string } = {},
+  options: UpdateDeploymentMetadataOptions = {},
 ) {
+  if (objectPath in ContractKey) {
+    objectPath = 'core.' + objectPath;
+  }
+
   const provider = getProvider(providerOrSigner);
   const network = await getNetwork(provider);
   const chainId = network.chainId;
@@ -84,26 +100,27 @@ export async function updateDeploymentMetadata(
     owner: owner,
   });
 
-  if (writeFile) {
+  if (!options.skipWriteFile) {
     fs.writeFileSync(metadataJsonPath, JSON.stringify(data, undefined, 2));
   }
 
-  if (logTxUrl) {
+  if (options.logTxUrl) {
     const addressUrl = await getAddressUrl(
       deployedContract.address,
       providerOrSigner,
     );
 
     console.log(
-      `Contract deployed: ${deployedContract.address} (${addressUrl})`,
+      `${objectPath} deployed: ${deployedContract.address} (${addressUrl})`,
     );
   }
 
-  if (verifyContracts) {
+  if (options.verification?.enableVerification) {
     await verifyContractsOnEtherscan(
-      deployedContract,
+      deployedContract.address,
       deploymentArgs,
-      libraries,
+      options.verification?.libraries ?? {},
+      options.verification?.contract,
     );
   }
 
@@ -156,13 +173,14 @@ export function getProvider(
 }
 
 export async function verifyContractsOnEtherscan(
-  contract: BaseContract,
-  constructorArguments: any[],
-  libraries: any = {},
+  address: string,
+  constructorArguments: string[],
+  libraries: { [key: string]: string } = {},
+  contractPath: string | undefined = undefined, // Example : contracts/proxy/ProxyUpgradeableOwnable.sol:ProxyUpgradeableOwnable
 ) {
-  await contract.deployed();
   await run('verify:verify', {
-    address: contract.address,
+    address,
+    contract: contractPath,
     constructorArguments,
     libraries,
   });
