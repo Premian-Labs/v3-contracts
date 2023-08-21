@@ -52,35 +52,6 @@ function displayFilePathUrl() {
   } else return '';
 }
 
-let tableView: TableData = {
-  categories: {
-    vaults: {
-      name: 'Vault',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    optionPS: {
-      name: 'Physically Settled Option',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    optionReward: {
-      name: 'Option Reward',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    core: {
-      name: 'Core Contract',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-  },
-};
-
 export async function generateTables(chainId: ChainID, log = false) {
   const chain = ChainName[chainId];
   const etherscanUrl = BlockExplorerUrl[chainId];
@@ -90,11 +61,46 @@ export async function generateTables(chainId: ChainID, log = false) {
     fs.readFileSync(`${deploymentPath}/metadata.json`).toString(),
   ) as DeploymentMetadata;
 
-  updateTableView(deploymentMetadata, chain, etherscanUrl);
-  writeTables(deploymentPath, chain, log);
+  let tableView: TableData = {
+    categories: {
+      vaults: {
+        name: 'Vault',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      optionPS: {
+        name: 'Physically Settled Option',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      optionReward: {
+        name: 'Option Reward',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      core: {
+        name: 'Core Contract',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+    },
+  };
+
+  tableView = updateTableView(
+    tableView,
+    deploymentMetadata,
+    chain,
+    etherscanUrl,
+  );
+  writeTables(tableView, deploymentPath, chain, log);
 }
 
 function updateTableView(
+  tableView: TableData,
   deploymentMetadata: DeploymentMetadata,
   chain: string,
   etherscanUrl: string,
@@ -199,7 +205,12 @@ function updateTableView(
   return tableView;
 }
 
-function writeTables(deploymentPath: string, chain: string, log = false) {
+function writeTables(
+  tableView: TableData,
+  deploymentPath: string,
+  chain: string,
+  log = false,
+) {
   for (const key in tableView.categories) {
     const category = tableView.categories[key];
 
