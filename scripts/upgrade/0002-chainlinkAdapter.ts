@@ -39,7 +39,7 @@ async function main() {
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.ChainlinkAdapterProxy.address,
+    deployment.core.ChainlinkAdapterProxy.address,
     deployer,
   );
 

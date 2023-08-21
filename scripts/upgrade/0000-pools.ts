@@ -20,14 +20,14 @@ async function main() {
   let vxPremia: string;
   let weth: string;
 
-  premiaDiamond = deployment.PremiaDiamond.address;
-  poolFactory = deployment.PoolFactoryProxy.address;
-  router = deployment.ERC20Router.address;
-  referral = deployment.ReferralProxy.address;
-  userSettings = deployment.UserSettingsProxy.address;
-  vxPremia = deployment.VxPremiaProxy.address;
+  premiaDiamond = deployment.core.PremiaDiamond.address;
+  poolFactory = deployment.core.PoolFactoryProxy.address;
+  router = deployment.core.ERC20Router.address;
+  referral = deployment.core.ReferralProxy.address;
+  userSettings = deployment.core.UserSettingsProxy.address;
+  vxPremia = deployment.core.VxPremiaProxy.address;
   weth = deployment.tokens.WETH;
-  vaultRegistry = deployment.VaultRegistryProxy.address;
+  vaultRegistry = deployment.core.VaultRegistryProxy.address;
 
   //////////////////////////
 

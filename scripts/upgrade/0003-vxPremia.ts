@@ -20,8 +20,8 @@ async function main() {
     deployment.addresses.lzEndpoint,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
-    deployment.ExchangeHelper.address,
-    deployment.VaultRegistryProxy.address,
+    deployment.core.ExchangeHelper.address,
+    deployment.core.VaultRegistryProxy.address,
   ];
   const implementation = await new VxPremia__factory(deployer).deploy(
     args[0],
@@ -41,7 +41,7 @@ async function main() {
   );
 
   const proxy = VxPremiaProxy__factory.connect(
-    deployment.VxPremiaProxy.address,
+    deployment.core.VxPremiaProxy.address,
     deployer,
   );
 

@@ -27,7 +27,7 @@ async function main() {
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.UserSettingsProxy.address,
+    deployment.core.UserSettingsProxy.address,
     deployer,
   );
 

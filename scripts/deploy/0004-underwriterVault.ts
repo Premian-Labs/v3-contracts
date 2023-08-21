@@ -41,7 +41,7 @@ async function main() {
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
 
   const vaultRegistry = VaultRegistry__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
   const currentSettings = await vaultRegistry.getSettings(vaultType);
@@ -65,14 +65,14 @@ async function main() {
 
   // Deploy UnderwriterVault implementation
   const underwriterVaultImplArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.feeConverter.insuranceFund.address,
-    deployment.VolatilityOracleProxy.address,
-    deployment.PoolFactoryProxy.address,
-    deployment.ERC20Router.address,
-    deployment.VxPremiaProxy.address,
-    deployment.PremiaDiamond.address,
-    deployment.VaultMiningProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
+    deployment.core.PoolFactoryProxy.address,
+    deployment.core.ERC20Router.address,
+    deployment.core.VxPremiaProxy.address,
+    deployment.core.PremiaDiamond.address,
+    deployment.core.VaultMiningProxy.address,
   ];
 
   const underwriterVaultImpl = await new UnderwriterVault__factory(

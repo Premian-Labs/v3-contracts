@@ -27,7 +27,7 @@ async function main() {
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
 

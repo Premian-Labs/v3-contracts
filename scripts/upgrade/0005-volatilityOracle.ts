@@ -27,7 +27,7 @@ async function main() {
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.VolatilityOracleProxy.address,
+    deployment.core.VolatilityOracleProxy.address,
     deployer,
   );
   const transaction = await proxy.populateTransaction.setImplementation(

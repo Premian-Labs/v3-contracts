@@ -19,8 +19,8 @@ async function main() {
   let premiaDiamond: string;
   let chainlinkAdapter: string;
 
-  premiaDiamond = deployment.PremiaDiamond.address;
-  chainlinkAdapter = deployment.ChainlinkAdapterProxy.address;
+  premiaDiamond = deployment.core.PremiaDiamond.address;
+  chainlinkAdapter = deployment.core.ChainlinkAdapterProxy.address;
 
   //////////////////////////
 
@@ -28,7 +28,7 @@ async function main() {
     premiaDiamond,
     chainlinkAdapter,
     deployment.tokens.WETH,
-    deployment.PoolFactoryDeployer.address,
+    deployment.core.PoolFactoryDeployer.address,
   ];
   const implementation = await new PoolFactory__factory(deployer).deploy(
     args[0],
@@ -46,7 +46,7 @@ async function main() {
   );
 
   const proxy = PoolFactoryProxy__factory.connect(
-    deployment.PoolFactoryProxy.address,
+    deployment.core.PoolFactoryProxy.address,
     deployer,
   );
 
