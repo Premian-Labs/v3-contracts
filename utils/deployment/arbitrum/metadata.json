@@ -140,13 +140,20 @@
       "owner": ""
     },
     "VxPremiaImplementation": {
-      "address": "0x80e3a95c52fe0d64ddff09a011f4e914938ab6d8",
+      "address": "0x3e85E29b822C68bf97b3F5E91EC7C01fe0F4a5b7",
+      "block": 123676586,
+      "commitHash": "c420e2847c59b6f32a359728aceec374020299f7",
       "contractType": "Implementation",
-      "deploymentArgs": [],
-      "commitHash": "",
-      "txHash": "",
-      "block": 0,
-      "timestamp": 0,
+      "deploymentArgs": [
+        "0x89b36CE3491f2258793C7408Bd46aac725973BA2",
+        "0x3c2269811836af69497E5F486A85D7316753cf62",
+        "0x51fC0f6660482Ea73330E414eFd7808811a57Fa2",
+        "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+        "0x0E8a8BB8f951bD1e3294a900b88A4ebf7180179A",
+        "0xBB7456a7661f46ebA8C638cb8CC2Ac181f45F3b9"
+      ],
+      "timestamp": 1692657481,
+      "txHash": "0x017fe5ed0e418333c670cfb04bfa045c7767ec6b3d92adf6747f80da352d9ad7",
       "owner": ""
     },
     "VxPremiaProxy": {
