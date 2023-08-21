@@ -1,18 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import { ContractKey, ContractType } from './deployment/types';
+import { ContractType } from './deployment/types';
 
-export function getContractFilePaths(): string[] {
-  let contractFilePaths: string[] = [];
+export function getContractFilePaths(
+  rootPath: string = './contracts',
+  contractFilePaths: string[] = [],
+) {
+  for (const file of fs.readdirSync(rootPath)) {
+    const absolutePath = path.join(rootPath, file).replaceAll('\\', '/');
 
-  (function _getContractFilePaths(rootPath: string) {
-    fs.readdirSync(rootPath).forEach((file) => {
-      const absolutePath = path.join(rootPath, file);
-      if (fs.statSync(absolutePath).isDirectory())
-        return _getContractFilePaths(absolutePath);
-      else return contractFilePaths.push(absolutePath);
-    });
-  })('./contracts');
+    if (fs.statSync(absolutePath).isDirectory()) {
+      contractFilePaths = getContractFilePaths(absolutePath, contractFilePaths);
+    }
+
+    contractFilePaths.push(absolutePath);
+  }
 
   return contractFilePaths;
 }
@@ -23,29 +25,13 @@ export function getContractFilePath(
 ): string {
   for (const contractFilePath of contractFilePaths) {
     const contractFileNameWithExtension =
-      contractFilePath.split('/').pop() ?? '';
+      contractFilePath.replaceAll('\\', '/').split('/').pop() ?? '';
 
     if (contractFileNameWithExtension.split('.')[0] === contractName)
       return contractFilePath;
   }
 
   return '';
-}
-
-export function throwIfContractFilePathNotFound(
-  contractKey: ContractKey | string,
-  contractType: ContractType,
-) {
-  if (contractKey in ContractKey) {
-    const contractFilePaths = getContractFilePaths();
-    const contractName = inferContractName(contractKey, contractType);
-    const filePath = getContractFilePath(contractName, contractFilePaths);
-    if (filePath === undefined || filePath.length === 0) {
-      throw new Error(
-        `Contract file path not found for ${contractKey} (${contractName})`,
-      );
-    }
-  }
 }
 
 export function inferContractName(

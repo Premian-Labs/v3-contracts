@@ -2,8 +2,10 @@ import fs from 'fs';
 import _ from 'lodash';
 import * as prettier from 'prettier';
 import { render } from 'mustache';
+import path from 'path';
 import {
   BlockExplorerUrl,
+  ChainID,
   ChainName,
   ContractKey,
   DeploymentMetadata,
@@ -79,10 +81,10 @@ let tableView: TableData = {
   },
 };
 
-export async function generateTables(network: Network) {
-  const chain = ChainName[network.chainId];
-  const etherscanUrl = BlockExplorerUrl[network.chainId];
-  const deploymentPath = DeploymentPath[network.chainId];
+export async function generateTables(chainId: ChainID) {
+  const chain = ChainName[chainId];
+  const etherscanUrl = BlockExplorerUrl[chainId];
+  const deploymentPath = DeploymentPath[chainId];
 
   const deploymentMetadata = JSON.parse(
     fs.readFileSync(`${deploymentPath}/metadata.json`).toString(),
@@ -134,11 +136,18 @@ function updateTableView(
       const contractName = inferContractName(key, contractData.contractType);
 
       const filePath = getContractFilePath(contractName, contractFilePaths);
-      let section = filePath.split('/')[1];
-      // Capitalize first letter of section
-      section = section.charAt(0).toUpperCase() + section.slice(1);
 
-      let sectionIndex = _.findIndex(category.sections, ['name', section]);
+      let sectionIndex = -1;
+      let section = '--UNRESOLVED--';
+      if (filePath) {
+        section = filePath.split('/')[1];
+        // Capitalize first letter of section
+        section = section.charAt(0).toUpperCase() + section.slice(1);
+
+        sectionIndex = _.findIndex(category.sections, ['name', section]);
+      } else {
+        console.warn(`[WARNING] No file found for ${contractName}`);
+      }
 
       if (sectionIndex === -1) {
         category.sections.push({
@@ -204,7 +213,7 @@ function writeTables(deploymentPath: string, chain: string) {
     table = prettier.format(table, { parser: 'markdown' });
 
     // Overwrite {pathKey}Table.md
-    const tablePath = `${deploymentPath}/${pathKey}Table.md`;
+    const tablePath = path.join(deploymentPath, pathKey + 'Table.md');
     fs.writeFileSync(tablePath, table);
     console.log(`Table generated at ${tablePath}`);
   }
