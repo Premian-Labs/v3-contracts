@@ -41,14 +41,14 @@ async function main() {
 
   // Deploy UnderwriterVaultProxy
   const vaultType = solidityKeccak256(['string'], ['UnderwriterVault']);
-  const oracleAdapter = deployment.ChainlinkAdapterProxy.address;
+  const oracleAdapter = deployment.core.ChainlinkAdapterProxy.address;
   const name = `Short Volatility - ${baseSymbol}/${quoteSymbol}-${
     isCall ? 'C' : 'P'
   }`;
   const symbol = `pSV-${baseSymbol}/${quoteSymbol}-${isCall ? 'C' : 'P'}`;
 
   const args = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     base,
     quote,
     oracleAdapter,
@@ -73,12 +73,12 @@ async function main() {
     ContractType.Proxy,
     underwriterVaultProxy,
     args,
-    true,
+    { logTxUrl: true },
   );
 
   // Register vault on the VaultRegistry
   const vaultRegistry = VaultRegistry__factory.connect(
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployer,
   );
 

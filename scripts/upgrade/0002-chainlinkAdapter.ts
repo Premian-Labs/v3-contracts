@@ -35,11 +35,11 @@ async function main() {
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ProxyUpgradeableOwnable__factory.connect(
-    deployment.ChainlinkAdapterProxy.address,
+    deployment.core.ChainlinkAdapterProxy.address,
     deployer,
   );
 
@@ -50,7 +50,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.addresses.treasury,
-    proposer,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

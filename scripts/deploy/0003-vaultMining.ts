@@ -18,9 +18,9 @@ async function main() {
   //////////////////////////
 
   const vaultMiningImplementationArgs = [
-    deployment.VaultRegistryProxy.address,
+    deployment.core.VaultRegistryProxy.address,
     deployment.tokens.PREMIA,
-    deployment.VxPremiaProxy.address,
+    deployment.core.VxPremiaProxy.address,
     deployment.optionReward['PREMIA/USDC'].address,
   ];
 
@@ -39,7 +39,7 @@ async function main() {
     ContractType.Implementation,
     vaultMiningImplementation,
     vaultMiningImplementationArgs,
-    true,
+    { logTxUrl: true },
   );
 
   //////////////////////////
@@ -60,7 +60,7 @@ async function main() {
     ContractType.Proxy,
     vaultMiningProxy,
     vaultMiningProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 }
 

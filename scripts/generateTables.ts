@@ -3,7 +3,7 @@ import { ChainID } from '../utils/deployment/types';
 
 async function main() {
   const chain = ChainID.Arbitrum;
-  await generateTables(chain);
+  await generateTables(chain, true);
 }
 
 main()

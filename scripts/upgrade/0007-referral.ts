@@ -13,7 +13,7 @@ async function main() {
 
   //////////////////////////
 
-  const args = [deployment.PoolFactoryProxy.address];
+  const args = [deployment.core.PoolFactoryProxy.address];
   const implementation = await new Referral__factory(deployer).deploy(args[0]);
   await updateDeploymentMetadata(
     deployer,
@@ -21,11 +21,11 @@ async function main() {
     ContractType.Implementation,
     implementation,
     args,
-    true,
+    { logTxUrl: true, verification: { enableVerification: true } },
   );
 
   const proxy = ReferralProxy__factory.connect(
-    deployment.ReferralProxy.address,
+    deployment.core.ReferralProxy.address,
     deployer,
   );
 
@@ -36,7 +36,7 @@ async function main() {
   await proposeOrSendTransaction(
     proposeToMultiSig,
     deployment.addresses.treasury,
-    proposer,
+    proposeToMultiSig ? proposer : deployer,
     [transaction],
   );
 }

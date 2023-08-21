@@ -52,36 +52,7 @@ function displayFilePathUrl() {
   } else return '';
 }
 
-let tableView: TableData = {
-  categories: {
-    vaults: {
-      name: 'Vault',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    optionPS: {
-      name: 'Physically Settled Option',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    optionReward: {
-      name: 'Option Reward',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-    core: {
-      name: 'Core Contract',
-      chain: '',
-      sections: [],
-      displayHeader,
-    },
-  },
-};
-
-export async function generateTables(chainId: ChainID) {
+export async function generateTables(chainId: ChainID, log = false) {
   const chain = ChainName[chainId];
   const etherscanUrl = BlockExplorerUrl[chainId];
   const deploymentPath = DeploymentPath[chainId];
@@ -90,11 +61,46 @@ export async function generateTables(chainId: ChainID) {
     fs.readFileSync(`${deploymentPath}/metadata.json`).toString(),
   ) as DeploymentMetadata;
 
-  updateTableView(deploymentMetadata, chain, etherscanUrl);
-  writeTables(deploymentPath, chain);
+  let tableView: TableData = {
+    categories: {
+      vaults: {
+        name: 'Vault',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      optionPS: {
+        name: 'Physically Settled Option',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      optionReward: {
+        name: 'Option Reward',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+      core: {
+        name: 'Core Contract',
+        chain: '',
+        sections: [],
+        displayHeader,
+      },
+    },
+  };
+
+  tableView = updateTableView(
+    tableView,
+    deploymentMetadata,
+    chain,
+    etherscanUrl,
+  );
+  writeTables(tableView, deploymentPath, chain, log);
 }
 
 function updateTableView(
+  tableView: TableData,
   deploymentMetadata: DeploymentMetadata,
   chain: string,
   etherscanUrl: string,
@@ -199,7 +205,12 @@ function updateTableView(
   return tableView;
 }
 
-function writeTables(deploymentPath: string, chain: string) {
+function writeTables(
+  tableView: TableData,
+  deploymentPath: string,
+  chain: string,
+  log = false,
+) {
   for (const key in tableView.categories) {
     const category = tableView.categories[key];
 
@@ -223,6 +234,9 @@ function writeTables(deploymentPath: string, chain: string) {
     // Overwrite {pathKey}Table.md
     const tablePath = path.join(deploymentPath, pathKey + 'Table.md');
     fs.writeFileSync(tablePath, table);
-    console.log(`Table generated at ${tablePath}`);
+
+    if (log) {
+      console.log(`Table generated at ${tablePath}`);
+    }
   }
 }

@@ -1,6 +1,5 @@
 import { diamondCut } from '../scripts/utils/diamond';
 import {
-  ERC20Mock__factory,
   ERC20Router,
   ERC20Router__factory,
   ExchangeHelper__factory,
@@ -68,6 +67,7 @@ export class PoolUtil {
     feeReceiver: string,
     referralAddress: string,
     vaultRegistry: string,
+    verifyContracts: boolean,
   ) {
     const result: DeployedFacets[] = [];
 
@@ -80,7 +80,7 @@ export class PoolUtil {
       ContractType.DiamondFacet,
       poolBaseImpl,
       [],
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -118,7 +118,7 @@ export class PoolUtil {
       ContractType.DiamondFacet,
       poolCoreImpl,
       poolCoreImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -157,7 +157,7 @@ export class PoolUtil {
       ContractType.DiamondFacet,
       poolDepositWithdrawImpl,
       poolDepositWithdrawImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -195,7 +195,7 @@ export class PoolUtil {
       ContractType.DiamondFacet,
       poolTradeImpl,
       poolTradeImplArgs,
-      true,
+      { logTxUrl: true, verification: { enableVerification: verifyContracts } },
     );
 
     result.push({
@@ -233,7 +233,7 @@ export class PoolUtil {
       ContractType.DiamondProxy,
       premiaDiamond,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -266,7 +266,7 @@ export class PoolUtil {
       ContractType.Proxy,
       poolFactoryProxy,
       poolFactoryProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -284,7 +284,7 @@ export class PoolUtil {
       ContractType.Standalone,
       poolFactoryDeployer,
       poolFactoryDeployerArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -307,7 +307,7 @@ export class PoolUtil {
       ContractType.Implementation,
       poolFactoryImpl,
       poolFactoryImplArgs,
-      true,
+      { logTxUrl: true },
     );
 
     await (
@@ -336,7 +336,7 @@ export class PoolUtil {
       ContractType.Standalone,
       router,
       routerArgs,
-      true,
+      { logTxUrl: true },
     );
 
     // ExchangeHelper
@@ -350,7 +350,7 @@ export class PoolUtil {
         ContractType.Standalone,
         exchangeHelper,
         [],
-        true,
+        { logTxUrl: true },
       );
 
       exchangeHelperAddress = exchangeHelper.address;
@@ -364,7 +364,7 @@ export class PoolUtil {
       ContractType.Implementation,
       userSettingsImpl,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     const userSettingsProxyArgs = [userSettingsImpl.address];
@@ -377,7 +377,7 @@ export class PoolUtil {
       ContractType.Proxy,
       userSettingsProxy,
       userSettingsProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -392,7 +392,7 @@ export class PoolUtil {
       ContractType.Implementation,
       vaultRegistryImpl,
       [],
-      true,
+      { logTxUrl: true },
     );
 
     const vaultRegistryProxyArgs = [vaultRegistryImpl.address];
@@ -405,7 +405,7 @@ export class PoolUtil {
       ContractType.Proxy,
       vaultRegistryProxy,
       vaultRegistryProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     //////////////////////////////////////////////
@@ -434,7 +434,7 @@ export class PoolUtil {
         ContractType.Implementation,
         vxPremiaImpl,
         vxPremiaImplArgs,
-        true,
+        { logTxUrl: true },
       );
 
       const vxPremiaProxyArgs = [vxPremiaImpl.address];
@@ -447,7 +447,7 @@ export class PoolUtil {
         ContractType.Proxy,
         vxPremiaProxy,
         vxPremiaProxyArgs,
-        true,
+        { logTxUrl: true },
       );
       vxPremiaAddress = vxPremiaProxy.address;
     }
@@ -462,7 +462,7 @@ export class PoolUtil {
       ContractType.Implementation,
       referralImpl,
       referralImplArgs,
-      true,
+      { logTxUrl: true },
     );
 
     const referralProxyArgs = [referralImpl.address];
@@ -475,7 +475,7 @@ export class PoolUtil {
       ContractType.Proxy,
       referralProxy,
       referralProxyArgs,
-      true,
+      { logTxUrl: true },
     );
 
     const referral = IReferral__factory.connect(
@@ -495,6 +495,7 @@ export class PoolUtil {
       feeReceiver,
       referral.address,
       vaultRegistryProxy.address,
+      false,
     );
 
     let registeredSelectors = [

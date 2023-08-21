@@ -30,7 +30,7 @@ async function main() {
 
   weth = deployment.tokens.WETH;
   wbtc = deployment.tokens.WBTC;
-  vxPremia = deployment.VxPremiaProxy.address;
+  vxPremia = deployment.core.VxPremiaProxy.address;
 
   //////////////////////////
   // Deploy ChainlinkAdapter
@@ -44,7 +44,7 @@ async function main() {
     ContractType.Implementation,
     chainlinkAdapterImpl,
     chainlinkAdapterImplArgs,
-    true,
+    { logTxUrl: true },
   );
 
   const chainlinkAdapterProxyArgs = [chainlinkAdapterImpl.address];
@@ -57,7 +57,7 @@ async function main() {
     ContractType.Proxy,
     chainlinkAdapterProxy,
     chainlinkAdapterProxyArgs,
-    true,
+    { logTxUrl: true },
   );
 
   chainlinkAdapter = chainlinkAdapterProxy.address;
@@ -92,7 +92,7 @@ async function main() {
     vxPremia,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
-    deployment.ExchangeHelper.address,
+    deployment.core.ExchangeHelper.address,
   );
 }
 

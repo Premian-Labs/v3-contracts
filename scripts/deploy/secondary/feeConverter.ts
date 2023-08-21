@@ -17,8 +17,9 @@ async function main() {
 
   const treasury = deployment.addresses.treasury;
   const treasuryShare = parseEther('0.5');
+  const feeConverterKey = 'main';
 
-  if (!deployment.ExchangeHelper.address) {
+  if (!deployment.core.ExchangeHelper.address) {
     const exchangeHelper = await new ExchangeHelper__factory(deployer).deploy();
     deployment = await updateDeploymentMetadata(
       deployer,
@@ -26,15 +27,15 @@ async function main() {
       ContractType.Standalone,
       exchangeHelper,
       [],
-      true,
+      { logTxUrl: true },
     );
   }
 
-  if (!deployment.FeeConverterImplementation.address) {
+  if (!deployment.core.FeeConverterImplementation.address) {
     const feeConverterImplArgs = [
-      deployment.ExchangeHelper.address,
+      deployment.core.ExchangeHelper.address,
       deployment.tokens.USDC,
-      deployment.VxPremiaProxy.address,
+      deployment.core.VxPremiaProxy.address,
     ];
     const feeConverterImpl = await new FeeConverter__factory(deployer).deploy(
       feeConverterImplArgs[0],
@@ -43,27 +44,28 @@ async function main() {
     );
     deployment = await updateDeploymentMetadata(
       deployer,
-      'FeeConverterImplementation',
+      ContractKey.FeeConverterImplementation,
       ContractType.Implementation,
       feeConverterImpl,
       feeConverterImplArgs,
-      true,
+      { logTxUrl: true },
     );
   }
 
-  const feeConverterProxyArgs = [deployment.FeeConverterImplementation.address];
+  const feeConverterProxyArgs = [
+    deployment.core.FeeConverterImplementation.address,
+  ];
   const feeConverterProxy = await new ProxyUpgradeableOwnable__factory(
     deployer,
   ).deploy(feeConverterProxyArgs[0]);
 
   const data = await updateDeploymentMetadata(
     deployer,
-    'FeeConverterProxy',
+    `feeConverter.${feeConverterKey}`,
     ContractType.Proxy,
     feeConverterProxy,
     feeConverterProxyArgs,
-    false,
-    false,
+    { logTxUrl: true },
   );
 
   const feeConverter = FeeConverter__factory.connect(
@@ -72,7 +74,7 @@ async function main() {
   );
   await feeConverter.setTreasury(treasury, treasuryShare);
 
-  console.log('FeeConverterProxy', (data as any).FeeConverterProxy);
+  console.log('FeeConverterProxy', data.feeConverter[feeConverterKey]);
 }
 
 main()
