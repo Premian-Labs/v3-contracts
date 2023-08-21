@@ -6,7 +6,7 @@ import { ethers } from 'hardhat';
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 
 async function main() {
@@ -33,7 +33,7 @@ async function main() {
     vaultMiningImplementationArgs[3],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningImplementation,
     ContractType.Implementation,
@@ -54,7 +54,7 @@ async function main() {
     vaultMiningProxyArgs[0],
     vaultMiningProxyArgs[1],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VaultMiningProxy,
     ContractType.Proxy,

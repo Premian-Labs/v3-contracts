@@ -9,7 +9,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 import { OptionType, TradeSide } from '../../../utils/sdk/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../../utils/deployment/deployment';
 
 async function main() {
@@ -67,7 +67,7 @@ async function main() {
     args[5],
     args[6] === 'true',
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     `vaults.${symbol}`,
     ContractType.Proxy,

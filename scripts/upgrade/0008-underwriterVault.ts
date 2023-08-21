@@ -7,7 +7,7 @@ import { solidityKeccak256 } from 'ethers/lib/utils';
 import { ContractKey, ContractType } from '../../utils/deployment/types';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -55,7 +55,7 @@ async function main() {
     underwriterVaultImplArgs[7],
   );
 
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.UnderwriterVaultImplementation,
     ContractType.Implementation,
@@ -77,7 +77,7 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
+    deployment.addresses.treasury,
     proposer,
     [transaction],
   );

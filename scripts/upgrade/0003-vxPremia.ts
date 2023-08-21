@@ -3,7 +3,7 @@ import { ContractKey, ContractType } from '../../utils/deployment/types';
 import { ethers } from 'hardhat';
 import {
   initialize,
-  updateDeploymentInfos,
+  updateDeploymentMetadata,
 } from '../../utils/deployment/deployment';
 import { proposeOrSendTransaction } from '../utils/safe';
 
@@ -17,7 +17,7 @@ async function main() {
 
   const args = [
     proxyManager,
-    deployment.lzEndpoint,
+    deployment.addresses.lzEndpoint,
     deployment.tokens.PREMIA,
     deployment.tokens.USDC,
     deployment.ExchangeHelper.address,
@@ -31,7 +31,7 @@ async function main() {
     args[4],
     args[5],
   );
-  await updateDeploymentInfos(
+  await updateDeploymentMetadata(
     deployer,
     ContractKey.VxPremiaImplementation,
     ContractType.Implementation,
@@ -51,7 +51,7 @@ async function main() {
 
   await proposeOrSendTransaction(
     proposeToMultiSig,
-    deployment.treasury,
+    deployment.addresses.treasury,
     proposer,
     [transaction],
   );

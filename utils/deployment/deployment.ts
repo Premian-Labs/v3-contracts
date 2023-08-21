@@ -1,29 +1,32 @@
+import fs from 'fs';
 import child_process from 'child_process';
+
 import { IOwnable__factory } from '../../typechain';
 import {
   BlockExplorerUrl,
   ChainID,
   ContractKey,
   ContractType,
-  DeploymentInfos,
+  DeploymentMetadata,
+  DeploymentPath,
 } from './types';
-import fs from 'fs';
 import { Provider } from '@ethersproject/providers';
 import { BaseContract } from 'ethers';
 import { run } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 import _ from 'lodash';
 import { Network } from '@ethersproject/networks';
-import arbitrumDeployment from './arbitrum.json';
-import arbitrumGoerliDeployment from './arbitrumGoerli.json';
+import arbitrumDeployment from './arbitrum/metadata.json';
+import arbitrumGoerliDeployment from './arbitrumGoerli/metadata.json';
 import { ethers } from 'hardhat';
+import { generateTables } from '../tables/model';
 
 export async function initialize(
   providerOrSigner: Provider | SignerWithAddress,
 ) {
   const network = await getNetwork(providerOrSigner);
 
-  let deployment: DeploymentInfos;
+  let deployment: DeploymentMetadata;
   let proposeToMultiSig: boolean;
   let proxyManager: string;
 
@@ -42,7 +45,7 @@ export async function initialize(
   return { network, deployment, proposeToMultiSig, proxyManager };
 }
 
-export async function updateDeploymentInfos(
+export async function updateDeploymentMetadata(
   providerOrSigner: Provider | SignerWithAddress,
   objectPath: ContractKey | string,
   contractType: ContractType,
@@ -54,12 +57,13 @@ export async function updateDeploymentInfos(
   libraries: { [key: string]: string } = {},
 ) {
   const provider = getProvider(providerOrSigner);
-  const chainId = (await getNetwork(provider)).chainId;
-  const jsonPath = getDeploymentJsonPath(chainId);
+  const network = await getNetwork(provider);
+  const chainId = network.chainId;
+  const metadataJsonPath = DeploymentPath[chainId] + 'metadata.json';
 
   const data = JSON.parse(
-    fs.readFileSync(jsonPath).toString(),
-  ) as DeploymentInfos;
+    fs.readFileSync(metadataJsonPath).toString(),
+  ) as DeploymentMetadata;
 
   const txReceipt = await deployedContract.deployTransaction.wait();
   let owner = '';
@@ -81,7 +85,7 @@ export async function updateDeploymentInfos(
   });
 
   if (writeFile) {
-    fs.writeFileSync(jsonPath, JSON.stringify(data, undefined, 2));
+    fs.writeFileSync(metadataJsonPath, JSON.stringify(data, undefined, 2));
   }
 
   if (logTxUrl) {
@@ -103,20 +107,9 @@ export async function updateDeploymentInfos(
     );
   }
 
-  return data;
-}
+  await generateTables(chainId);
 
-export function getDeploymentJsonPath(chainId: ChainID) {
-  switch (chainId) {
-    case ChainID.Arbitrum:
-      return 'utils/deployment/arbitrum.json';
-    case ChainID.ArbitrumGoerli:
-      return 'utils/deployment/arbitrumGoerli.json';
-    case ChainID.ArbitrumNova:
-      return 'utils/deployment/arbitrumNova.json';
-    default:
-      throw new Error('ChainId not implemented');
-  }
+  return data;
 }
 
 export async function getBlockTimestamp(

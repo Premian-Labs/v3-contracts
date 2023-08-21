@@ -1,4 +1,9 @@
 {
+  "addresses": {
+    "treasury": "",
+    "insuranceFund": "",
+    "lzEndpoint": ""
+  },
   "tokens": {
     "WETH": "",
     "WBTC": "",
@@ -75,9 +80,6 @@
       "owner": ""
     }
   },
-  "treasury": "",
-  "insuranceFund": "",
-  "lzEndpoint": "",
   "ChainlinkAdapterImplementation": {
     "address": "",
     "contractType": "Implementation",
