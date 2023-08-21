@@ -197,6 +197,9 @@ contract VaultMiningTest is Test, Assertions {
     }
 
     function test_vaultMining_DistributeRewardsCorrectly() public {
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
         // Precision used in assertions
         uint256 delta = 1e6;
 
@@ -211,8 +214,8 @@ contract VaultMiningTest is Test, Assertions {
         vaultA.mint(bob, 20e18);
 
         // There is 4 vaults with equal alloc points, with premia reward of 1k per day
-        // Each pool should get 250 reward per day. Lp1 should therefore have 2 * 250 pending reward now
-        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(), 500e18, delta);
+        // Each pool should get 250 reward per day. Lp1 should therefore have 2 * 250 pending reward now for vaultA
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 500e18, delta);
 
         vm.warp(ts + 6 * ONE_DAY);
         vaultA.mint(carol, 30e18);
@@ -221,21 +224,13 @@ contract VaultMiningTest is Test, Assertions {
         vaultA.mint(alice, 10e18);
 
         // Alice should have pending reward of : 2*250 + 3*1/3*250 + 2*1/6*250 = 833.3333333333333
-        assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(),
-            833.3333333333333e18,
-            delta
-        );
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 833.3333333333333e18, delta);
 
         // Bob should have pending reward of: 3*2/3*250 + 2*2/6*250 + 5*2/7*250 = 1023.8095238095239
         vm.warp(ts + 13 * ONE_DAY);
         vaultA.burn(bob, 5e18);
 
-        assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(bob, address(vaultA)).unwrap(),
-            1023.8095238095239e18,
-            delta
-        );
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(bob, vaultList).unwrap(), 1023.8095238095239e18, delta);
 
         vm.warp(ts + 14 * ONE_DAY);
         vaultA.burn(alice, 20e18);
@@ -250,39 +245,33 @@ contract VaultMiningTest is Test, Assertions {
         assertApproxEqAbs(vaultMining.getRewardsAvailable().unwrap(), 200_000e18 - 15_000e18 / 4, delta);
 
         // Alice should have: 833.3333333333333 + 5*2/7*250 + 1*2/6.5*250 = 1267.3992673992673
-        assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(),
-            1267.3992673992673e18,
-            delta
-        );
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 1267.3992673992673e18, delta);
 
         // Bob should have: 1023.8095238095239 + 1*1.5/6.5 * 250 + 1*1.5/4.5*250 = 1164.8351648351647
-        assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(bob, address(vaultA)).unwrap(),
-            1164.8351648351647e18,
-            delta
-        );
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(bob, vaultList).unwrap(), 1164.8351648351647e18, delta);
 
         // Carol should have: 2*3/6*250 + 5*3/7*250 + 1*3/6.5*250 + 1*3/4.5*250 + 1*250 = 1317.7655677655678
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(carol, vaultList).unwrap(), 1317.7655677655678e18, delta);
+
+        address[] memory emptyVaultList = new address[](0);
+        UD60x18 allocatedRewards = vaultMining.getPendingUserRewards(alice, emptyVaultList);
+
+        vaultList[0] = address(vaultB);
         assertApproxEqAbs(
-            vaultMining.getPendingUserRewards(carol, address(vaultA)).unwrap(),
-            1317.7655677655678e18,
+            (vaultMining.getPendingUserRewards(alice, vaultList) - allocatedRewards).unwrap(),
+            4000e18,
             delta
         );
-
-        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultB)).unwrap(), 4000e18, delta);
-
-        address[] memory vaultList = new address[](1);
         vaultList[0] = address(vaultA);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(bob);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         vm.prank(carol);
-        vaultMining.claim(vaultList);
+        vaultMining.claimAll(vaultList);
 
         assertApproxEqAbs(optionReward.balanceOf(alice, 0), 1267.3992673992673e18, delta);
         assertApproxEqAbs(optionReward.balanceOf(bob, 0), 1164.8351648351647e18, delta);
@@ -290,29 +279,29 @@ contract VaultMiningTest is Test, Assertions {
     }
 
     function test_vaultMining_StopDistributingRewards_IfRewardsRunOut() public {
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
         uint256 ts = block.timestamp;
 
         vaultA.mint(alice, 10e18);
         vm.warp(ts + 4 * 200 * ONE_DAY + ONE_DAY);
-        assertEq(vaultMining.getPendingUserRewards(alice, address(vaultA)), 200_000e18);
-
-        address[] memory vaultList = new address[](1);
-        vaultList[0] = address(vaultA);
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 200_000e18);
 
         vm.prank(alice);
-        vaultMining.claim(vaultList);
-        assertEq(vaultMining.getPendingUserRewards(alice, address(vaultA)), 0);
+        vaultMining.claimAll(vaultList);
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 0);
         assertEq(optionReward.balanceOf(alice, 0), 200_000e18);
 
         vm.warp(block.timestamp + ONE_DAY);
-        assertEq(vaultMining.getPendingUserRewards(alice, address(vaultA)), 0);
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 0);
 
         vaultMining.updateVault(address(vaultA));
         vm.prank(admin);
         vaultMining.addRewards(ud(200_000e18));
 
         vm.warp(block.timestamp + ONE_DAY);
-        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, address(vaultA)).unwrap(), 250e18, 1e6);
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 250e18, 1e6);
     }
 
     function test_setRewardsPerYear_UpdateRewardsPerYear() public {
@@ -324,5 +313,82 @@ contract VaultMiningTest is Test, Assertions {
         vm.prank(alice);
         vm.expectRevert(IOwnableInternal.Ownable__NotOwner.selector);
         vaultMining.setRewardsPerYear(ud(1000e18));
+    }
+
+    function test_claim_Success() public {
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
+        uint256 ts = block.timestamp;
+
+        vaultA.mint(alice, 10e18);
+        vm.warp(ts + 4 * 200 * ONE_DAY + ONE_DAY);
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 200_000e18);
+
+        vm.prank(alice);
+        vaultMining.claim(vaultList, ud(50_000e18));
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 150_000e18);
+        assertEq(optionReward.balanceOf(alice, 0), 50_000e18);
+    }
+
+    function test_claim_RevertIf_NotEnoughRewards() public {
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+
+        uint256 ts = block.timestamp;
+
+        vaultA.mint(alice, 10e18);
+        vm.warp(ts + 4 * 200 * ONE_DAY + ONE_DAY);
+        assertEq(vaultMining.getPendingUserRewards(alice, vaultList), 200_000e18);
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IVaultMining.VaultMining__InsufficientRewards.selector,
+                alice,
+                200_000e18,
+                200_001e18
+            )
+        );
+        vaultMining.claim(vaultList, ud(200_001e18));
+    }
+
+    function test_getPendingUserRewards_CorrectlyAccountForRewardsRunningOut() public {
+        uint256 ts = block.timestamp;
+
+        // 4 vaults, each get 250 rewards per day
+        vaultA.mint(alice, 10e18);
+        vaultB.mint(alice, 10e18);
+        vaultC.mint(alice, 10e18);
+        vaultD.mint(alice, 10e18);
+
+        vm.warp(ts + 350 * ONE_DAY);
+
+        address[] memory vaultList = new address[](1);
+        vaultList[0] = address(vaultA);
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 87_500e18, 1e6, "A");
+
+        vaultList = new address[](2);
+        vaultList[0] = address(vaultA);
+        vaultList[1] = address(vaultB);
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 87_500e18 * 2, 1e6, "A + B");
+
+        vaultList = new address[](3);
+        vaultList[0] = address(vaultA);
+        vaultList[1] = address(vaultB);
+        vaultList[2] = address(vaultC);
+        assertApproxEqAbs(vaultMining.getPendingUserRewards(alice, vaultList).unwrap(), 200_000e18, 1e6, "A + B + C");
+
+        vaultList = new address[](4);
+        vaultList[0] = address(vaultA);
+        vaultList[1] = address(vaultB);
+        vaultList[2] = address(vaultC);
+        vaultList[3] = address(vaultD);
+        assertApproxEqAbs(
+            vaultMining.getPendingUserRewards(alice, vaultList).unwrap(),
+            200_000e18,
+            1e6,
+            "A + B + C + D"
+        );
     }
 }
